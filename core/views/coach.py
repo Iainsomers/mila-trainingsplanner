@@ -1,0 +1,581 @@
+from django.http import HttpResponse
+from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.http import require_GET, require_http_methods
+from django.contrib.auth.decorators import login_required
+
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings
+from .common import (
+    _parse_iso_date,
+    _parse_int,
+    _parse_float,
+    _clean_int_list,
+    _plans_targeting_athlete,
+    _ranges_overlap,
+)
+
+from core.zones import (
+    DEFAULT_ZONE_SPEED_MPS,
+    zone_unit_label,
+    parse_manual_zones_required,
+    zones_form_from_speeds,
+)
+
+
+@require_GET
+def dashboard_view(request):
+    return render(request, "core/dashboard.html")
+
+
+@login_required
+@require_GET
+def coach_console_view(request):
+    return render(request, "core/coach_console.html")
+
+
+# -----------------------------
+# Settings (persistent per coach)
+# -----------------------------
+@login_required
+@require_http_methods(["GET", "POST"])
+def settings_view(request):
+    coach_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
+
+    if request.method == "POST":
+        coach_settings.show_all_zones = (request.POST.get("show_all_zones") == "on")
+        coach_settings.highlight_current_week = (request.POST.get("highlight_current_week") == "on")
+        coach_settings.calendar_show_only_core = (request.POST.get("calendar_show_only_core") == "on")
+
+        # ✅ NEW: Weekcolors Y/N
+        coach_settings.weekcolors_enabled = (request.POST.get("weekcolors_enabled") == "on")
+
+        unit = (request.POST.get("zone_input_unit") or "").strip().lower()
+        if unit in ("pace", "kmh"):
+            coach_settings.zone_input_unit = unit
+
+        coach_settings.tb_show_wu = (request.POST.get("tb_show_wu") == "on")
+        coach_settings.tb_show_mob = (request.POST.get("tb_show_mob") == "on")
+        coach_settings.tb_show_sprint = (request.POST.get("tb_show_sprint") == "on")
+        coach_settings.tb_show_core2 = (request.POST.get("tb_show_core2") == "on")
+        coach_settings.tb_show_cd = (request.POST.get("tb_show_cd") == "on")
+
+        coach_settings.save()
+
+        # Sync naar session
+        request.session["show_all_zones"] = coach_settings.show_all_zones
+        request.session["highlight_current_week"] = coach_settings.highlight_current_week
+        request.session["calendar_show_only_core"] = coach_settings.calendar_show_only_core
+        request.session["zone_input_unit"] = coach_settings.zone_input_unit
+
+        # ✅ NEW: Weekcolors Y/N
+        request.session["weekcolors_enabled"] = coach_settings.weekcolors_enabled
+
+        request.session["tb_show_wu"] = coach_settings.tb_show_wu
+        request.session["tb_show_mob"] = coach_settings.tb_show_mob
+        request.session["tb_show_sprint"] = coach_settings.tb_show_sprint
+        request.session["tb_show_core2"] = coach_settings.tb_show_core2
+        request.session["tb_show_cd"] = coach_settings.tb_show_cd
+
+        request.session.modified = True
+        return redirect("/settings/")
+
+    ctx = {
+        "show_all_zones": coach_settings.show_all_zones,
+        "highlight_current_week": coach_settings.highlight_current_week,
+        "calendar_show_only_core": coach_settings.calendar_show_only_core,
+
+        # ✅ NEW: Weekcolors Y/N
+        "weekcolors_enabled": getattr(coach_settings, "weekcolors_enabled", True),
+
+        "zone_input_unit": coach_settings.zone_input_unit or "pace",
+
+        "tb_show_wu": coach_settings.tb_show_wu,
+        "tb_show_mob": coach_settings.tb_show_mob,
+        "tb_show_sprint": coach_settings.tb_show_sprint,
+        "tb_show_core2": coach_settings.tb_show_core2,
+        "tb_show_cd": coach_settings.tb_show_cd,
+    }
+
+    # Sync naar session
+    request.session["show_all_zones"] = ctx["show_all_zones"]
+    request.session["highlight_current_week"] = ctx["highlight_current_week"]
+    request.session["calendar_show_only_core"] = ctx["calendar_show_only_core"]
+    request.session["zone_input_unit"] = ctx["zone_input_unit"]
+
+    # ✅ NEW: Weekcolors Y/N
+    request.session["weekcolors_enabled"] = ctx["weekcolors_enabled"]
+
+    request.session["tb_show_wu"] = ctx["tb_show_wu"]
+    request.session["tb_show_mob"] = ctx["tb_show_mob"]
+    request.session["tb_show_sprint"] = ctx["tb_show_sprint"]
+    request.session["tb_show_core2"] = ctx["tb_show_core2"]
+    request.session["tb_show_cd"] = ctx["tb_show_cd"]
+
+    request.session.modified = True
+
+    return render(request, "core/settings.html", ctx)
+
+
+# -----------------------------
+# Plans CRUD
+# -----------------------------
+@login_required
+@require_GET
+def coach_plans_view(request):
+    plans = TrainingPlan.objects.order_by("name")
+    return render(request, "core/coach_plans.html", {"plans": plans})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def coach_plan_create_view(request):
+    errors = []
+    form = {"name": "", "start_date": "", "end_date": "", "week_phases_enabled": True}
+
+    if request.method == "POST":
+        form["name"] = (request.POST.get("name") or "").strip()
+        form["start_date"] = (request.POST.get("start_date") or "").strip()
+        form["end_date"] = (request.POST.get("end_date") or "").strip()
+
+        # ✅ NEW: plan setting
+        form["week_phases_enabled"] = (request.POST.get("week_phases_enabled") == "on")
+
+        if not form["name"]:
+            errors.append("Naam is verplicht.")
+
+        try:
+            start_d = _parse_iso_date(form["start_date"])
+        except ValueError:
+            start_d = None
+            errors.append("Startdatum is ongeldig (gebruik YYYY-MM-DD).")
+
+        try:
+            end_d = _parse_iso_date(form["end_date"])
+        except ValueError:
+            end_d = None
+            errors.append("Einddatum is ongeldig (gebruik YYYY-MM-DD).")
+
+        if (start_d and not end_d) or (end_d and not start_d):
+            errors.append("Vul óf beide datums in, óf geen (start + eind).")
+
+        if start_d and end_d and start_d > end_d:
+            errors.append("Startdatum mag niet na einddatum liggen.")
+
+        if not errors:
+            TrainingPlan.objects.create(
+                name=form["name"],
+                start_date=start_d,
+                end_date=end_d,
+                week_phases_enabled=form["week_phases_enabled"],
+            )
+            return redirect("coach_plans")
+
+    return render(
+        request,
+        "core/coach_plan_form.html",
+        {"mode": "create", "plan": None, "form": form, "errors": errors},
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def coach_plan_edit_view(request, plan_id: int):
+    plan = get_object_or_404(TrainingPlan, id=plan_id)
+
+    errors = []
+    form = {
+        "name": plan.name or "",
+        "start_date": plan.start_date.isoformat() if plan.start_date else "",
+        "end_date": plan.end_date.isoformat() if plan.end_date else "",
+        # ✅ NEW: plan setting (prefill)
+        "week_phases_enabled": getattr(plan, "week_phases_enabled", True),
+    }
+
+    if request.method == "POST":
+        form["name"] = (request.POST.get("name") or "").strip()
+        form["start_date"] = (request.POST.get("start_date") or "").strip()
+        form["end_date"] = (request.POST.get("end_date") or "").strip()
+
+        # ✅ NEW: plan setting
+        form["week_phases_enabled"] = (request.POST.get("week_phases_enabled") == "on")
+
+        if not form["name"]:
+            errors.append("Naam is verplicht.")
+
+        try:
+            start_d = _parse_iso_date(form["start_date"])
+        except ValueError:
+            start_d = None
+            errors.append("Startdatum is ongeldig (gebruik YYYY-MM-DD).")
+
+        try:
+            end_d = _parse_iso_date(form["end_date"])
+        except ValueError:
+            end_d = None
+            errors.append("Einddatum is ongeldig (gebruik YYYY-MM-DD).")
+
+        if (start_d and not end_d) or (end_d and not start_d):
+            errors.append("Vul óf beide datums in, óf geen (start + eind).")
+
+        if start_d and end_d and start_d > end_d:
+            errors.append("Startdatum mag niet na einddatum liggen.")
+
+        if not errors:
+            plan.name = form["name"]
+            plan.start_date = start_d
+            plan.end_date = end_d
+
+            # ✅ NEW: plan setting save
+            plan.week_phases_enabled = form["week_phases_enabled"]
+
+            plan.save()
+            return redirect("coach_plans")
+
+    return render(
+        request,
+        "core/coach_plan_form.html",
+        {"mode": "edit", "plan": plan, "form": form, "errors": errors},
+    )
+
+
+# -----------------------------
+# Athletes CRUD (zones)
+# -----------------------------
+@login_required
+@require_GET
+def coach_athletes_view(request):
+    athletes = Athlete.objects.order_by("name")
+    return render(request, "core/coach_athletes.html", {"athletes": athletes})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def coach_athlete_create_view(request):
+    unit = request.session.get("zone_input_unit", "pace")
+    unit_label = zone_unit_label(unit)
+
+    errors = []
+    zones_form = zones_form_from_speeds(unit, dict(DEFAULT_ZONE_SPEED_MPS))
+
+    form = {
+        "name": "",
+        "birth_year": "",
+        "gender": "",
+        "vdot": "",
+        "zone_method": "manual",
+        "zone_input_unit": unit,
+        "zone_input_unit_label": unit_label,
+        **zones_form,
+    }
+
+    if request.method == "POST":
+        form["name"] = (request.POST.get("name") or "").strip()
+        form["birth_year"] = (request.POST.get("birth_year") or "").strip()
+        form["gender"] = (request.POST.get("gender") or "").strip()
+        form["vdot"] = (request.POST.get("vdot") or "").strip()
+        form["zone_method"] = (request.POST.get("zone_method") or "").strip() or "manual"
+
+        for z in ("1", "2", "3", "4", "5"):
+            form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
+
+        if not form["name"]:
+            errors.append("Naam is verplicht.")
+
+        try:
+            birth_year = _parse_int(form["birth_year"])
+        except ValueError:
+            birth_year = None
+            errors.append("Geboortejaar is ongeldig (gebruik een getal).")
+        if birth_year is None:
+            errors.append("Geboortejaar is verplicht.")
+        elif birth_year < 1900 or birth_year > 2100:
+            errors.append("Geboortejaar lijkt niet geldig.")
+
+        gender = (form["gender"] or "").strip().upper()
+        if gender not in ("M", "V", "X"):
+            errors.append("Geslacht is verplicht en moet M, V of X zijn.")
+
+        try:
+            vdot = _parse_float(form["vdot"])
+            if vdot is not None and vdot < 0:
+                errors.append("VDOT kan niet negatief zijn.")
+        except ValueError:
+            vdot = None
+            errors.append("VDOT is ongeldig (gebruik een getal).")
+
+        if form["zone_method"] != "manual":
+            errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
+
+        zone_speed_mps, z_errors, normalized_input, other_under = parse_manual_zones_required(
+            request.POST, unit=unit
+        )
+        errors.extend(z_errors)
+
+        for z in ("1", "2", "3", "4", "5"):
+            form[f"z{z}_pace"] = normalized_input.get(z, form[f"z{z}_pace"])
+            form[f"z{z}_other"] = other_under.get(z, form.get(f"z{z}_other", "—"))
+
+        if not errors:
+            Athlete.objects.create(
+                name=form["name"],
+                birth_year=int(birth_year),
+                gender=gender,
+                vdot=vdot,
+                zone_method=form["zone_method"],
+                zone_speed_mps=zone_speed_mps,
+            )
+            return redirect("coach_athletes")
+
+    return render(
+        request,
+        "core/coach_athlete_form.html",
+        {"mode": "create", "athlete": None, "form": form, "errors": errors},
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def coach_athlete_edit_view(request, athlete_id: int):
+    athlete = get_object_or_404(Athlete, id=athlete_id)
+    unit = request.session.get("zone_input_unit", "pace")
+    unit_label = zone_unit_label(unit)
+
+    speeds = athlete.get_zone_speed_mps()
+    zones_form = zones_form_from_speeds(unit, speeds)
+
+    errors = []
+    saved_notice = None
+
+    form = {
+        "name": athlete.name or "",
+        "birth_year": str(athlete.birth_year) if athlete.birth_year else "",
+        "gender": athlete.gender or "",
+        "vdot": (str(athlete.vdot) if athlete.vdot is not None else ""),
+        "zone_method": getattr(athlete, "zone_method", "manual") or "manual",
+        "zone_input_unit": unit,
+        "zone_input_unit_label": unit_label,
+        **zones_form,
+    }
+
+    if request.method == "POST":
+        form["name"] = (request.POST.get("name") or "").strip()
+        form["birth_year"] = (request.POST.get("birth_year") or "").strip()
+        form["gender"] = (request.POST.get("gender") or "").strip()
+        form["vdot"] = (request.POST.get("vdot") or "").strip()
+        form["zone_method"] = (request.POST.get("zone_method") or "").strip() or "manual"
+
+        for z in ("1", "2", "3", "4", "5"):
+            form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
+
+        if not form["name"]:
+            errors.append("Naam is verplicht.")
+
+        try:
+            birth_year = _parse_int(form["birth_year"])
+        except ValueError:
+            birth_year = None
+            errors.append("Geboortejaar is ongeldig (gebruik een getal).")
+        if birth_year is None:
+            errors.append("Geboortejaar is verplicht.")
+        elif birth_year < 1900 or birth_year > 2100:
+            errors.append("Geboortejaar lijkt niet geldig.")
+
+        gender = (form["gender"] or "").strip().upper()
+        if gender not in ("M", "V", "X"):
+            errors.append("Geslacht is verplicht en moet M, V of X zijn.")
+
+        try:
+            vdot = _parse_float(form["vdot"])
+            if vdot is not None and vdot < 0:
+                errors.append("VDOT kan niet negatief zijn.")
+        except ValueError:
+            vdot = None
+            errors.append("VDOT is ongeldig (gebruik een getal).")
+
+        if form["zone_method"] != "manual":
+            errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
+
+        zone_speed_mps, z_errors, normalized_input, other_under = parse_manual_zones_required(
+            request.POST, unit=unit
+        )
+        errors.extend(z_errors)
+
+        for z in ("1", "2", "3", "4", "5"):
+            form[f"z{z}_pace"] = normalized_input.get(z, form[f"z{z}_pace"])
+            form[f"z{z}_other"] = other_under.get(z, form.get(f"z{z}_other", "—"))
+
+        if not errors:
+            athlete.name = form["name"]
+            athlete.birth_year = int(birth_year)
+            athlete.gender = gender
+            athlete.vdot = vdot
+            athlete.zone_method = form["zone_method"]
+            athlete.zone_speed_mps = zone_speed_mps
+            athlete.save()
+
+            saved_notice = "Opgeslagen."
+
+            speeds = athlete.get_zone_speed_mps()
+            zones_form = zones_form_from_speeds(unit, speeds)
+            for k, v in zones_form.items():
+                form[k] = v
+
+    return render(
+        request,
+        "core/coach_athlete_form.html",
+        {"mode": "edit", "athlete": athlete, "form": form, "errors": errors, "saved_notice": saved_notice},
+    )
+
+
+# -----------------------------
+# Groups CRUD
+# -----------------------------
+@login_required
+@require_GET
+def coach_groups_view(request):
+    groups = Group.objects.prefetch_related("athletes").order_by("name")
+    return render(request, "core/coach_groups.html", {"groups": groups})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def coach_group_create_view(request):
+    errors = []
+    athletes_all = Athlete.objects.order_by("name")
+    form = {"name": "", "athlete_ids": []}
+
+    if request.method == "POST":
+        form["name"] = (request.POST.get("name") or "").strip()
+        form["athlete_ids"] = _clean_int_list(request.POST.getlist("athlete_ids"))
+
+        if not form["name"]:
+            errors.append("Groepsnaam is verplicht.")
+
+        if not errors:
+            g = Group.objects.create(name=form["name"])
+            g.athletes.set(Athlete.objects.filter(id__in=form["athlete_ids"]))
+            return redirect("coach_groups")
+
+    return render(
+        request,
+        "core/coach_group_form.html",
+        {"mode": "create", "group": None, "errors": errors, "athletes_all": athletes_all, "form": form},
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def coach_group_edit_view(request, group_id: int):
+    group = get_object_or_404(Group, id=group_id)
+    athletes_all = Athlete.objects.order_by("name")
+
+    selected_ids = set(group.athletes.values_list("id", flat=True))
+    errors = []
+    form = {"name": group.name or "", "athlete_ids": list(selected_ids)}
+
+    if request.method == "POST":
+        form["name"] = (request.POST.get("name") or "").strip()
+        form["athlete_ids"] = _clean_int_list(request.POST.getlist("athlete_ids"))
+
+        if not form["name"]:
+            errors.append("Groepsnaam is verplicht.")
+
+        if not errors:
+            group.name = form["name"]
+            group.save()
+            group.athletes.set(Athlete.objects.filter(id__in=form["athlete_ids"]))
+            return redirect("coach_groups")
+
+    return render(
+        request,
+        "core/coach_group_form.html",
+        {"mode": "edit", "group": group, "errors": errors, "athletes_all": athletes_all, "form": form},
+    )
+
+
+# -----------------------------
+# Assignments (editable)
+# -----------------------------
+@login_required
+@require_GET
+def coach_assignments_view(request):
+    plans = TrainingPlan.objects.prefetch_related("groups", "athletes").order_by("name")
+    rows = []
+    for p in plans:
+        rows.append(
+            {
+                "plan": p,
+                "group_names": list(p.groups.order_by("name").values_list("name", flat=True)),
+                "direct_athletes": list(p.athletes.order_by("name").values_list("name", flat=True)),
+                "count_groups": p.groups.count(),
+                "count_direct": p.athletes.count(),
+                "count_total": len(p.targeted_athlete_ids()),
+            }
+        )
+    return render(request, "core/coach_assignments.html", {"rows": rows})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def coach_assignment_edit_view(request, plan_id: int):
+    plan = get_object_or_404(TrainingPlan, id=plan_id)
+
+    groups_all = Group.objects.order_by("name")
+    athletes_all = Athlete.objects.order_by("name")
+
+    selected_group_ids = set(plan.groups.values_list("id", flat=True))
+    selected_direct_ids = set(plan.athletes.values_list("id", flat=True))
+
+    errors = []
+    form = {"group_ids": list(selected_group_ids), "athlete_ids": list(selected_direct_ids)}
+
+    if request.method == "POST":
+        form["group_ids"] = _clean_int_list(request.POST.getlist("group_ids"))
+        form["athlete_ids"] = _clean_int_list(request.POST.getlist("athlete_ids"))
+
+        if not plan.start_date or not plan.end_date:
+            errors.append("Vul eerst start_date en end_date in bij dit plan voordat je targets koppelt.")
+
+        if plan.start_date and plan.end_date:
+            selected_group_athlete_ids = set(
+                Athlete.objects.filter(groups__id__in=form["group_ids"]).values_list("id", flat=True)
+            )
+            desired_athlete_ids = set(form["athlete_ids"]) | selected_group_athlete_ids
+
+            for aid in sorted(desired_athlete_ids):
+                other_plans = _plans_targeting_athlete(aid).exclude(id=plan.id)
+                for op in other_plans:
+                    if not op.start_date or not op.end_date:
+                        a = Athlete.objects.filter(id=aid).first()
+                        a_name = a.name if a else f"athlete_id={aid}"
+                        errors.append(
+                            f"Overlap/conflict: {a_name} zit al in plan '{op.name}', maar dat plan heeft geen start/einddatum."
+                        )
+                        continue
+                    if _ranges_overlap(plan.start_date, plan.end_date, op.start_date, op.end_date):
+                        a = Athlete.objects.filter(id=aid).first()
+                        a_name = a.name if a else f"athlete_id={aid}"
+                        errors.append(
+                            f"Overlap/conflict: {a_name} zit al in plan '{op.name}' ({op.start_date} t/m {op.end_date})."
+                        )
+
+        if not errors:
+            plan.groups.set(Group.objects.filter(id__in=form["group_ids"]))
+
+            existing_ids = set(PlanMembership.objects.filter(plan=plan).values_list("athlete_id", flat=True))
+            desired_direct_ids = set(form["athlete_ids"])
+
+            to_remove = existing_ids - desired_direct_ids
+            if to_remove:
+                PlanMembership.objects.filter(plan=plan, athlete_id__in=to_remove).delete()
+
+            to_add = desired_direct_ids - existing_ids
+            for aid in to_add:
+                PlanMembership.objects.create(plan=plan, athlete_id=aid)
+
+            return redirect("coach_assignments")
+
+    return render(
+        request,
+        "core/coach_assignment_form.html",
+        {"plan": plan, "groups_all": groups_all, "athletes_all": athletes_all, "errors": errors, "form": form},
+    )

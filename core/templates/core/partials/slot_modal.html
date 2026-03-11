@@ -1,0 +1,214 @@
+<div class="modal fade" id="slotModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">Training plannen</h5>
+          <div class="small text-secondary">
+            {{ day|date:"l d-m-Y" }} · Slot {{ slot_index }}
+            {% if selected_athlete %}
+              · <b>Atleet:</b> {{ selected_athlete.name }}
+              {% if is_override %}
+                · <span class="badge bg-dark">FIX</span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#plan">
+              Plan
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#logs">
+              Logs
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content pt-3">
+
+          <!-- ================= PLAN TAB ================= -->
+          <div class="tab-pane fade show active" id="plan">
+            <form
+              method="post"
+              hx-post="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/"
+              hx-target="#modal-container"
+              hx-swap="innerHTML"
+            >
+              {% csrf_token %}
+
+              {% if selected_plan %}
+                <input type="hidden" name="plan" value="{{ selected_plan.id }}">
+              {% endif %}
+              {% if selected_athlete %}
+                <input type="hidden" name="athlete" value="{{ selected_athlete.id }}">
+              {% endif %}
+
+              <!-- WU -->
+              {% if tb_show_wu %}
+              <div class="mb-3">
+                <label class="form-label"><b>WU</b></label>
+                <textarea name="wu_text" class="form-control" rows="2"
+                  placeholder="Bijv: 15' Z1 of 2km Z1">{{ wu_text }}</textarea>
+
+                {% if wu_feedback %}
+                  <div class="small {% if wu_ok %}text-success{% else %}text-danger{% endif %}">
+                    {{ wu_feedback }}
+                  </div>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              <!-- MOB / TECH -->
+              {% if tb_show_mob %}
+              <div class="mb-3">
+                <label class="form-label"><b>Mob / Tech</b></label>
+                <textarea name="mob_text" class="form-control" rows="2"
+                  placeholder="Bijv: loopscholing, drills, core stability">{{ mob_text }}</textarea>
+                <div class="small text-muted">
+                  Wordt niet geparsed en telt niet mee in belasting.
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- SPRINT -->
+              {% if tb_show_sprint %}
+              <div class="mb-3">
+                <label class="form-label"><b>Sprint (altijd Z6)</b></label>
+                <textarea name="sprint_text" class="form-control" rows="2"
+                  placeholder="Bijv: 6×60m of 4×150m">{{ sprint_text }}</textarea>
+
+                {% if sprint_feedback %}
+                  <div class="small {% if sprint_ok %}text-success{% else %}text-danger{% endif %}">
+                    {{ sprint_feedback }}
+                  </div>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              {% if core_error %}
+                <div class="alert alert-danger">{{ core_error }}</div>
+              {% endif %}
+
+              <!-- CORE -->
+              <div class="mb-3">
+                <label class="form-label"><b>Core (of Alternative)</b></label>
+                <textarea name="core_text" class="form-control" rows="3"
+                  placeholder="Bijv: 6×1000m Z3 of 30' Z2">{{ core_text }}</textarea>
+
+                {% if core_feedback %}
+                  <div class="small {% if core_ok %}text-success{% else %}text-danger{% endif %}">
+                    {{ core_feedback }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <!-- 2ND CORE -->
+              {% if tb_show_core2 %}
+                {% if core2_error %}
+                  <div class="alert alert-danger">{{ core2_error }}</div>
+                {% endif %}
+
+                <div class="mb-3">
+                  <label class="form-label"><b>2nd core</b></label>
+                  <textarea name="core2_text" class="form-control" rows="3"
+                    placeholder="Bijv: 8×200m Z4 of 12' Z2">{{ core2_text }}</textarea>
+                  <div class="small text-muted">
+                    Wordt geparsed en telt mee als hardloopbelasting.
+                  </div>
+
+                  {% if core2_feedback %}
+                    <div class="small {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
+                      {{ core2_feedback }}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              <!-- ALTERNATIVE -->
+              <div class="mb-3">
+                <label class="form-label"><b>Alternative</b></label>
+                <textarea name="alt_text" class="form-control" rows="3"
+                  placeholder="Bijv: alternatief programma / cross / details (zone niet nodig)">{{ alt_text }}</textarea>
+                <div class="small text-muted">
+                  Wordt (nog) niet opgeteld in km/minuten.
+                </div>
+
+                {% if alt_feedback %}
+                  <div class="small {% if alt_ok %}text-success{% else %}text-danger{% endif %}">
+                    {{ alt_feedback }}
+                  </div>
+                {% endif %}
+              </div>
+
+              <!-- CD -->
+              {% if tb_show_cd %}
+              <div class="mb-3">
+                <label class="form-label"><b>CD</b></label>
+                <textarea name="cd_text" class="form-control" rows="2"
+                  placeholder="Bijv: 10' Z1 of 2km Z1">{{ cd_text }}</textarea>
+
+                {% if cd_feedback %}
+                  <div class="small {% if cd_ok %}text-success{% else %}text-danger{% endif %}">
+                    {{ cd_feedback }}
+                  </div>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                  Annuleren
+                </button>
+
+                {% if selected_athlete and selected_plan and is_override %}
+                  <button
+                    type="button"
+                    class="btn btn-outline-dark"
+                    hx-post="/slot-reset-override/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}&athlete={{ selected_athlete.id }}"
+                    hx-swap="none"
+                  >
+                    Reset naar plan
+                  </button>
+                {% endif %}
+
+                <button
+                  type="submit"
+                  class="btn btn-outline-danger"
+                  name="action"
+                  value="delete"
+                >
+                  {% if selected_athlete %}
+                    Maak leeg
+                  {% else %}
+                    Verwijderen
+                  {% endif %}
+                </button>
+
+                <button type="submit" class="btn btn-primary">
+                  Opslaan
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- ================= LOGS TAB ================= -->
+          <div class="tab-pane fade" id="logs">
+            <p class="text-muted mb-0">
+              Logs komen hier (coach-only, later per atleet).
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

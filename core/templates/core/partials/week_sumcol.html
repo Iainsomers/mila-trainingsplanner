@@ -1,0 +1,33 @@
+<div title="{{ w.sum_pct_tooltip|default:'' }}">
+  <div class="sum-total">Tot: {{ w.sum_tot_km|default:"—" }} km</div>
+
+  <div class="sumline">
+    {% if show_all_zones or w.has_z1 %}
+      <span class="pill pill-z1">Z1 {{ w.sum_z1_km|default:"—" }}</span>
+    {% endif %}
+    {% if show_all_zones or w.has_z2 %}
+      <span class="pill pill-z2">Z2 {{ w.sum_z2_km|default:"—" }}</span>
+    {% endif %}
+    {% if show_all_zones or w.has_z3 %}
+      <span class="pill pill-z3">Z3 {{ w.sum_z3_km|default:"—" }}</span>
+    {% endif %}
+  </div>
+
+  <div class="sumline">
+    {% if show_all_zones or w.has_z4 %}
+      <span class="pill pill-z4">Z4 {{ w.sum_z4_km|default:"—" }}</span>
+    {% endif %}
+    {% if show_all_zones or w.has_z5 %}
+      <span class="pill pill-z5">Z5 {{ w.sum_z5_km|default:"—" }}</span>
+    {% endif %}
+    {% if show_all_zones or w.has_z6 %}
+      <span class="pill pill-z6">Z6 {{ w.sum_z6_km|default:"—" }}</span>
+    {% endif %}
+  </div>
+
+  <div class="sumline">
+    {% if show_all_zones or w.has_race %}
+      <span class="pill pill-race">Race {{ w.sum_race_km|default:"—" }}</span>
+    {% endif %}
+  </div>
+</div>

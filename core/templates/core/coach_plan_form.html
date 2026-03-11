@@ -1,0 +1,92 @@
+{% extends "core/base.html" %}
+
+{% block title %}
+  {% if mode == "create" %}Nieuw plan{% else %}Plan bewerken{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">
+        {% if mode == "create" %}Nieuw plan{% else %}Plan bewerken{% endif %}
+      </h1>
+      <p class="text-muted mb-0">
+        {% if mode == "create" %}
+          Maak een trainingsplan aan.
+        {% else %}
+          Pas naam en datums aan.
+        {% endif %}
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'coach_plans' %}" class="btn btn-outline-secondary">Terug</a>
+    </div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label">Naam</label>
+          <input name="name" class="form-control" value="{{ form.name }}" required>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Startdatum</label>
+            <input type="date" name="start_date" class="form-control" value="{{ form.start_date }}">
+            <div class="form-text">Leeg laten mag (maar dan ook einddatum leeg).</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Einddatum</label>
+            <input type="date" name="end_date" class="form-control" value="{{ form.end_date }}">
+          </div>
+        </div>
+
+        <!-- ✅ NEW: Week dropdown gebruiken -->
+        <div class="mt-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="week_phases_enabled"
+            name="week_phases_enabled"
+            {% if form.week_phases_enabled %}checked{% endif %}
+          >
+          <label class="form-check-label" for="week_phases_enabled">
+            Week dropdown gebruiken
+          </label>
+          <div class="form-text">
+            Aan = je kunt per week een fase kiezen (Recovery/Aerobe/Specific/Intense/Taper) die ook zichtbaar is voor atleten.
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            Opslaan
+          </button>
+          <a href="{% url 'coach_plans' %}" class="btn btn-outline-secondary">Annuleren</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if mode == "edit" and plan %}
+    <div class="mt-3 text-muted">
+      Plan ID: {{ plan.id }}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

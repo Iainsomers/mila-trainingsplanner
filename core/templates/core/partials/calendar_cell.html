@@ -1,0 +1,134 @@
+<td id="cell-{{ day|date:'Ymd' }}-{{ slot_index }}"
+    {% if oob %}hx-swap-oob="outerHTML"{% endif %}
+    class="calcell"
+    style="position: relative;">
+
+  <style>
+    .calcell .action-btn {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 80ms ease-in-out;
+    }
+    .calcell:hover .action-btn,
+    .calcell:focus-within .action-btn {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+
+  {# ================= COPY BUTTON ================= #}
+  {% if slot %}
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-secondary action-btn"
+      style="position:absolute; top:4px; left:4px; padding:0px 6px; font-size:11px; line-height:1.2; z-index:2;"
+      hx-post="/slot-copy/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan %}?plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}&athlete={{ selected_athlete.id }}{% endif %}"
+      hx-swap="none"
+      onclick="event.stopPropagation();"
+      title="Kopieer dit slot"
+    >
+      Kopieer
+    </button>
+  {% endif %}
+
+  {# ================= PASTE BUTTON ================= #}
+  {% if request.session.training_clipboard %}
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-primary action-btn"
+      style="position:absolute; top:4px; right:4px; padding:0px 6px; font-size:11px; line-height:1.2; z-index:2;"
+      hx-post="/slot-paste/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan %}?plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}&athlete={{ selected_athlete.id }}{% endif %}"
+      hx-target="#cell-{{ day|date:'Ymd' }}-{{ slot_index }}"
+      hx-swap="outerHTML"
+      onclick="event.stopPropagation();"
+      title="Plak gekopieerde training in dit slot"
+    >
+      Plak
+    </button>
+  {% endif %}
+
+  {# ================= SLOT CONTENT ================= #}
+  {% if slot %}
+    {% with ct=slot.core_text|default:"" %}
+      {% with ctl=ct|lower %}
+        <a class="celllink"
+           href="#"
+           title="{% for seg in slot.segments.all %}{% if seg.text %}{{ seg.type }}: {{ seg.text|escape }}&#10;{% endif %}{% endfor %}"
+           hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan or selected_athlete %}?{% endif %}{% if selected_plan %}plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}{% if selected_plan %}&{% endif %}athlete={{ selected_athlete.id }}{% endif %}"
+           hx-target="#modal-container"
+           hx-swap="innerHTML"
+           {% if "race!" in ctl %}
+             style="background-color:#ff0000;"
+           {% elif "race" in ctl %}
+             style="background-color:#ff7a00;"
+           {% elif "strength" in ctl %}
+             style="background-color:#d9d9d9;"
+           {% elif "z1" in ctl or "z 1" in ctl %}
+             style="background-color:#f8f8f0;"
+           {% elif "z2" in ctl or "z 2" in ctl %}
+             style="background-color:#f7c6d0;"
+           {% elif "z3" in ctl or "z 3" in ctl %}
+             style="background-color:#e5533d;"
+           {% elif "z4" in ctl or "z 4" in ctl %}
+             style="background-color:#bfe7bf;"
+           {% elif "z5" in ctl or "z 5" in ctl %}
+             style="background-color:#b7d7ff;"
+           {% elif "z6" in ctl or "z 6" in ctl %}
+             style="background-color:#f2c200;"
+           {% endif %}
+        >
+          <span class="celltext">
+            {% if display_mode == "core_only" %}
+              {% if slot.core_text %}
+                <div><strong>{{ slot.core_text }}</strong></div>
+              {% endif %}
+              {% for seg in slot.segments.all %}
+                {% if seg.type == "ALT" and seg.text %}
+                  <div>{{ seg.text }}</div>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              {% for seg in slot.segments.all %}
+                {% if seg.text %}
+                  {% if seg.type == "CORE" %}
+                    <div><strong>{{ seg.text }}</strong></div>
+                  {% elif seg.type == "CORE2" %}
+                    <div>2nd: {{ seg.text }}</div>
+                  {% else %}
+                    <div>{{ seg.text }}</div>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          </span>
+        </a>
+      {% endwith %}
+    {% endwith %}
+  {% else %}
+    <a class="celllink"
+       href="#"
+       hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan or selected_athlete %}?{% endif %}{% if selected_plan %}plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}{% if selected_plan %}&{% endif %}athlete={{ selected_athlete.id }}{% endif %}"
+       hx-target="#modal-container"
+       hx-swap="innerHTML">
+      <span class="celltext"></span>
+    </a>
+  {% endif %}
+
+  {% if is_override %}
+    <span
+      class="badge bg-dark"
+      style="
+        position: absolute;
+        bottom: 4px;
+        right: 4px;
+        font-size: 10px;
+        opacity: 0.85;
+        pointer-events: none;
+      "
+      title="Deze training is aangepast voor deze atleet"
+    >
+      FIX
+    </span>
+  {% endif %}
+
+</td>

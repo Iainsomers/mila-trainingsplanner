@@ -1,0 +1,73 @@
+{% extends "core/base.html" %}
+
+{% block title %}Toewijzingen – {{ plan.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">Toewijzingen: {{ plan.name }}</h1>
+      <p class="text-muted mb-0">
+        Koppel groepen en/of directe atleten aan dit plan.
+      </p>
+      <div class="text-muted mt-1">
+        Plan window: {{ plan.start_date|default:"—" }} t/m {{ plan.end_date|default:"—" }}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'coach_assignments' %}" class="btn btn-outline-secondary">Terug</a>
+    </div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="row g-4">
+          <div class="col-md-6">
+            <label class="form-label">Groepen in plan</label>
+            <select name="group_ids" class="form-select" multiple size="12">
+              {% for g in groups_all %}
+                <option value="{{ g.id }}" {% if g.id in form.group_ids %}selected{% endif %}>
+                  {{ g.name }}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">+CTRL om te verwijderen</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Directe atleten in plan</label>
+            <select name="athlete_ids" class="form-select" multiple size="12">
+              {% for a in athletes_all %}
+                <option value="{{ a.id }}" {% if a.id in form.athlete_ids %}selected{% endif %}>
+                  {{ a.name }}{% if a.birth_year %} ({{ a.birth_year }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Direct = via PlanMembership (extra bovenop groepen).</div>
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Opslaan</button>
+          <a href="{% url 'coach_assignments' %}" class="btn btn-outline-secondary">Annuleren</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

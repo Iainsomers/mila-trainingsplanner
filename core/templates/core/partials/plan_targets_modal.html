@@ -1,0 +1,107 @@
+<div class="modal fade" id="planTargetsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">Doelgroep (plan)</h5>
+          <div class="small text-secondary">
+            Plan: <b>{{ plan.name }}</b>
+            {% if plan.start_date and plan.end_date %}
+              · {{ plan.start_date }} t/m {{ plan.end_date }}
+            {% endif %}
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="alert alert-light mb-0">
+              <div><b>Totaal atleten:</b> {{ count_total }}</div>
+              <div class="small text-secondary">
+                Via groepen: {{ count_via_groups }} · Direct gekoppeld: {{ count_direct }}
+                {% if count_extra_direct %}
+                  · Extra direct (niet in groepen): {{ count_extra_direct }}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-6">
+            <div class="card">
+              <div class="card-header">
+                <b>Groepen in dit plan</b> <span class="text-secondary small">({{ count_groups }})</span>
+              </div>
+              <div class="card-body">
+                {% if groups %}
+                  <ul class="mb-0">
+                    {% for g in groups %}
+                      <li>
+                        {{ g.name }}
+                        <span class="text-secondary small">
+                          ({{ g.athletes.count }} atleten in groep)
+                        </span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <div class="text-muted">Geen groepen gekoppeld.</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-6">
+            <div class="card">
+              <div class="card-header">
+                <b>Atleten in dit plan</b> <span class="text-secondary small">({{ count_total }})</span>
+              </div>
+              <div class="card-body" style="max-height: 320px; overflow:auto;">
+                {% if athletes_all %}
+                  <ul class="mb-0">
+                    {% for a in athletes_all %}
+                      <li>
+                        {{ a.name }}
+                        <span class="text-secondary small">({{ a.birth_year }}, {{ a.gender }})</span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <div class="text-muted">Nog geen atleten in dit plan.</div>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if athletes_extra %}
+              <div class="card mt-3">
+                <div class="card-header">
+                  <b>Extra direct gekoppeld</b>
+                  <span class="text-secondary small">(niet via groepen)</span>
+                </div>
+                <div class="card-body">
+                  <ul class="mb-0">
+                    {% for a in athletes_extra %}
+                      <li>{{ a.name }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          Sluiten
+        </button>
+        <a class="btn btn-primary" href="/plans/{{ plan.id }}/targets/">
+          Doelgroep beheren
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>

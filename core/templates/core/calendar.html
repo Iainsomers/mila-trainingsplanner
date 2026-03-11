@@ -1,0 +1,777 @@
+{% extends "core/base.html" %}
+
+{% block title %}Kalender{% endblock %}
+
+{% block extra_head %}
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+
+  <style>
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+    th, td { border: 1px solid #ccc; padding: 6px; vertical-align: top; text-align: left; }
+    th { background: #f5f5f5; }
+
+    .weeklabel { width: 180px; font-weight: bold; background: #fafafa; position: relative; }
+    .sumcol { width: 190px; background: #fafafa; font-size: 12px; line-height: 1.3; }
+    .sumline { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+    .sum-total { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+
+    .slotrow { height: 48px; }
+    tr.week-start td, tr.week-start th { border-top: 3px solid #666; }
+
+    .celllink {
+      display: block;
+      min-height: 32px;
+      text-decoration: none;
+      color: #000;
+      transition: filter 80ms ease-in-out;
+    }
+    .celllink:hover { filter: brightness(0.92); }
+
+    .celltext { font-size: 0.75em; line-height: 1.3; }
+    .celltext strong { font-weight: 700; }
+
+    td { word-wrap: break-word; white-space: normal; }
+
+    .pill { display: inline-block; padding: 1px 6px; border-radius: 6px; margin-right: 4px; }
+    .pill-z1 { background-color: #f8f8f0; }
+    .pill-z2 { background-color: #f7c6d0; }
+    .pill-z3 { background-color: #e5533d; }
+    .pill-z4 { background-color: #bfe7bf; }
+    .pill-z5 { background-color: #b7d7ff; }
+    .pill-z6 { background-color: #f2c200; }
+    .pill-race { background-color: #ff7a00; }
+
+    .week-actions {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 90ms ease-in-out;
+    }
+    .weeklabel:hover .week-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .week-actions .btn {
+      padding-top: 2px;
+      padding-bottom: 2px;
+      line-height: 1.1;
+      font-size: 12px;
+    }
+
+    /* ✅ Highlight de hele huidige week */
+    tr.week-is-current td,
+    tr.week-is-current th {
+      background: #fff9c4; /* lichtgeel */
+    }
+
+    /* =========================
+       Week phase dropdown + kleur
+       ========================= */
+
+    .week-phase-wrap {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 18px;
+    }
+
+    /* Dropdown standaard verborgen, alleen op hover */
+    .week-phase-select {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 90ms ease-in-out;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.2);
+      background: rgba(255,255,255,0.9);
+      width: 140px;
+    }
+
+    .weeklabel:hover .week-phase-select {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .week-phase-label {
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.55);
+    }
+
+    .week-phase-ovr {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.12);
+    }
+
+    /* Kleuren op het week-vak (1e kolom) */
+    .weeklabel.phase-recovery { background: #e8ddff !important; } /* lichtpaars */
+    .weeklabel.phase-aerobe   { background: #e5533d !important; } /* exact z3 */
+    .weeklabel.phase-specific { background: #bfe7bf !important; } /* z4 kleur */
+    .weeklabel.phase-intense  { background: #b7d7ff !important; } /* z5 kleur */
+    .weeklabel.phase-taper    { background: #ff7a00 !important; } /* racekleur (oranje) */
+  </style>
+
+  <script>
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    document.addEventListener("htmx:configRequest", (event) => {
+      const token = getCookie("csrftoken");
+      if (token) event.detail.headers["X-CSRFToken"] = token;
+    });
+
+    const WEEK_PHASE_CLASSES = {
+      "": "",
+      "recovery": "phase-recovery",
+      "aerobe": "phase-aerobe",
+      "specific": "phase-specific",
+      "intense": "phase-intense",
+      "taper": "phase-taper",
+    };
+
+    const WEEK_PHASE_LABELS = {
+      "": "",
+      "recovery": "Recovery",
+      "aerobe": "Aerobe",
+      "specific": "Specific",
+      "intense": "Intense",
+      "taper": "Taper",
+    };
+
+    function applyWeekPhase(td, phaseValue, weekcolorsEnabled) {
+      td.classList.remove(
+        "phase-recovery",
+        "phase-aerobe",
+        "phase-specific",
+        "phase-intense",
+        "phase-taper"
+      );
+
+      const v = (phaseValue || "").trim();
+      const cls = WEEK_PHASE_CLASSES[v] || "";
+      if (weekcolorsEnabled && cls) td.classList.add(cls);
+
+      const labelEl = td.querySelector("[data-week-phase-label]");
+      if (labelEl) {
+        const text = WEEK_PHASE_LABELS[v] || "";
+        labelEl.textContent = text;
+        labelEl.style.display = text ? "inline-block" : "none";
+      }
+    }
+
+    function initWeekPhaseControls() {
+      const tds = document.querySelectorAll("td.weeklabel[data-week-start][data-weekcolors]");
+      tds.forEach((td) => {
+        const sel = td.querySelector("select.week-phase-select");
+        const phase = td.getAttribute("data-week-phase") || "";
+        const weekcolorsEnabled = td.getAttribute("data-weekcolors") === "1";
+
+        applyWeekPhase(td, phase, weekcolorsEnabled);
+
+        if (!sel) return;
+        sel.value = phase;
+
+        sel.addEventListener("change", () => {
+          const v = sel.value || "";
+          td.setAttribute("data-week-phase", v);
+          applyWeekPhase(td, v, weekcolorsEnabled);
+
+          // OVR badge: client-side update (server is truth after refresh)
+          const ovr = td.querySelector("[data-week-phase-ovr]");
+          if (ovr) {
+            const athleteMode = td.getAttribute("data-athlete-mode") === "1";
+            if (athleteMode) {
+              ovr.style.display = v ? "inline-block" : "none";
+            }
+          }
+        });
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", initWeekPhaseControls);
+    document.addEventListener("htmx:afterSwap", initWeekPhaseControls);
+
+    document.addEventListener("htmx:afterSwap", (e) => {
+      if (e.target && e.target.id === "modal-container") {
+        const el = document.getElementById("slotModal");
+        if (el) new bootstrap.Modal(el).show();
+      }
+    });
+
+    document.addEventListener("closeModal", () => {
+      const el = document.getElementById("slotModal");
+      if (!el) return;
+      const instance = bootstrap.Modal.getInstance(el);
+      if (instance) instance.hide();
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+  <h2 class="mb-0">Trainingskalender</h2>
+  <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+</div>
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label class="small text-secondary mb-0">Plan</label>
+
+    <select name="plan" class="form-select form-select-sm" style="width: 220px;" onchange="this.form.submit();">
+      {% if plans %}
+        {% for p in plans %}
+          <option value="{{ p.id }}" {% if selected_plan and p.id == selected_plan.id %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      {% else %}
+        <option value="">(geen plannen)</option>
+      {% endif %}
+    </select>
+
+    {% if selected_athlete %}
+      <input type="hidden" name="athlete" value="{{ selected_athlete.id }}">
+    {% endif %}
+  </form>
+
+  {% if selected_plan %}
+    <form method="get" class="d-flex align-items-center gap-2">
+      <input type="hidden" name="plan" value="{{ selected_plan.id }}">
+      <label class="small text-secondary mb-0">Bekijk als</label>
+
+      <select name="athlete" class="form-select form-select-sm" style="width: 240px;" onchange="this.form.submit();">
+        <option value="" {% if not selected_athlete %}selected{% endif %}>(geen — plan bewerken)</option>
+        {% for a in plan_athletes %}
+          <option value="{{ a.id }}" {% if selected_athlete and a.id == selected_athlete.id %}selected{% endif %}>{{ a.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  {% endif %}
+</div>
+
+{% if selected_athlete %}
+  <div class="alert alert-info py-2">
+    <b>Atleet-modus:</b> wijzigingen worden opgeslagen als <b>fixed override</b> voor <b>{{ selected_athlete.name }}</b>.
+    <div class="small text-muted">Weektype kun je hier per atleet overschrijven (week override).</div>
+  </div>
+{% endif %}
+
+{# ✅ Belangrijk: default_if_none i.p.v. default, zodat False niet terugvalt naar True #}
+{% with highlight_current_week=request.session.highlight_current_week|default_if_none:True %}
+  {% if highlight_current_week %}
+    {% now "Y-m-d" as today_str %}
+  {% endif %}
+
+  <table>
+    <thead>
+      <tr>
+        <th class="weeklabel">Week</th>
+        <th class="sumcol">Totaal</th>
+        <th>Ma</th><th>Di</th><th>Wo</th><th>Do</th><th>Vr</th><th>Za</th><th>Zo</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for w in week_rows %}
+        {% if highlight_current_week %}
+          {% with ws_str=w.week_start|date:"Y-m-d" we_str=w.week_end|date:"Y-m-d" %}
+            {% if ws_str <= today_str and today_str <= we_str %}
+              {% with week_class="week-is-current" %}
+                <tr class="slotrow week-start {{ week_class }}">
+                  <td class="weeklabel" rowspan="2"
+                      data-week-start="{{ w.week_start|date:'Y-m-d' }}"
+                      data-week-phase="{{ w.week_phase|default:'' }}"
+                      data-weekcolors="{% if weekcolors_enabled %}1{% else %}0{% endif %}"
+                      data-athlete-mode="{% if selected_athlete %}1{% else %}0{% endif %}">
+                    Week ({{ w.week_start|date:"d-m" }} – {{ w.week_end|date:"d-m" }})
+
+                    <div class="week-phase-wrap">
+                      <span class="week-phase-label" data-week-phase-label style="{% if not w.week_phase_label %}display:none;{% endif %}">
+                        {{ w.week_phase_label }}
+                      </span>
+
+                      {% if w.week_phase_is_override %}
+                        <span class="week-phase-ovr" data-week-phase-ovr>OVR</span>
+                      {% else %}
+                        <span class="week-phase-ovr" data-week-phase-ovr style="display:none;">OVR</span>
+                      {% endif %}
+
+                      {% if week_phases_enabled and selected_plan %}
+                        {% if not selected_athlete %}
+                          <select class="week-phase-select"
+                                  name="phase"
+                                  aria-label="Week type"
+                                  hx-post="/week-phase/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                                  hx-trigger="change"
+                                  hx-swap="none">
+                            <option value="" {% if not w.week_phase_base %}selected{% endif %}>—</option>
+                            <option value="recovery" {% if w.week_phase_base == "recovery" %}selected{% endif %}>Recovery</option>
+                            <option value="aerobe" {% if w.week_phase_base == "aerobe" %}selected{% endif %}>Aerobe</option>
+                            <option value="specific" {% if w.week_phase_base == "specific" %}selected{% endif %}>Specific</option>
+                            <option value="intense" {% if w.week_phase_base == "intense" %}selected{% endif %}>Intense</option>
+                            <option value="taper" {% if w.week_phase_base == "taper" %}selected{% endif %}>Taper</option>
+                          </select>
+                        {% else %}
+                          <select class="week-phase-select"
+                                  name="phase"
+                                  aria-label="Week type (athlete override)"
+                                  hx-post="/athlete-week-phase/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}&athlete={{ selected_athlete.id }}"
+                                  hx-trigger="change"
+                                  hx-swap="none">
+                            <option value="" {% if not w.week_phase_athlete %}selected{% endif %}>— (reset)</option>
+                            <option value="recovery" {% if w.week_phase_athlete == "recovery" %}selected{% endif %}>Recovery</option>
+                            <option value="aerobe" {% if w.week_phase_athlete == "aerobe" %}selected{% endif %}>Aerobe</option>
+                            <option value="specific" {% if w.week_phase_athlete == "specific" %}selected{% endif %}>Specific</option>
+                            <option value="intense" {% if w.week_phase_athlete == "intense" %}selected{% endif %}>Intense</option>
+                            <option value="taper" {% if w.week_phase_athlete == "taper" %}selected{% endif %}>Taper</option>
+                          </select>
+                        {% endif %}
+                      {% endif %}
+                    </div>
+
+                    {% if selected_plan and not selected_athlete %}
+                      <div class="week-actions">
+                        <button type="button" class="btn btn-outline-primary"
+                          hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                          hx-swap="none"
+                          title="Kopieer deze week (base slots)"
+                        >
+                          Kopieer
+                        </button>
+
+                        {% if has_week_clipboard %}
+                          <form method="post"
+                            hx-post="/week-paste/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                            hx-swap="none"
+                          >
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-dark" title="Plak week (overschrijft base slots, FIX blijft)">
+                              Plak
+                            </button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    {% endif %}
+                  </td>
+
+                  <td class="sumcol" rowspan="2">
+                    <div title="{{ w.sum_pct_tooltip|default:'' }}">
+                      <div class="sum-total">Tot: {{ w.sum_tot_km|default:"—" }} km</div>
+
+                      <div class="sumline">
+                        {% if show_all_zones or w.has_z1 %}
+                          <span class="pill pill-z1">Z1 {{ w.sum_z1_km|default:"—" }}</span>
+                        {% endif %}
+                        {% if show_all_zones or w.has_z2 %}
+                          <span class="pill pill-z2">Z2 {{ w.sum_z2_km|default:"—" }}</span>
+                        {% endif %}
+                        {% if show_all_zones or w.has_z3 %}
+                          <span class="pill pill-z3">Z3 {{ w.sum_z3_km|default:"—" }}</span>
+                        {% endif %}
+                      </div>
+
+                      <div class="sumline">
+                        {% if show_all_zones or w.has_z4 %}
+                          <span class="pill pill-z4">Z4 {{ w.sum_z4_km|default:"—" }}</span>
+                        {% endif %}
+                        {% if show_all_zones or w.has_z5 %}
+                          <span class="pill pill-z5">Z5 {{ w.sum_z5_km|default:"—" }}</span>
+                        {% endif %}
+                        {% if show_all_zones or w.has_z6 %}
+                          <span class="pill pill-z6">Z6 {{ w.sum_z6_km|default:"—" }}</span>
+                        {% endif %}
+                      </div>
+
+                      <div class="sumline">
+                        {% if show_all_zones or w.has_race %}
+                          <span class="pill pill-race">Race {{ w.sum_race_km|default:"—" }}</span>
+                        {% endif %}
+                      </div>
+                      {% if w.alt_z1_min %}
+  <div class="sumline">
+    <span class="pill pill-z1">ALT Z1 {{ w.alt_z1_min }}m</span>
+  </div>
+{% endif %}
+{% if w.alt_z2_min %}
+  <div class="sumline">
+    <span class="pill pill-z2">ALT Z2 {{ w.alt_z2_min }}m</span>
+  </div>
+{% endif %}
+{% if w.alt_z3_min %}
+  <div class="sumline">
+    <span class="pill pill-z3">ALT Z3 {{ w.alt_z3_min }}m</span>
+  </div>
+{% endif %}
+
+
+                      {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                      {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
+                        {% if a1 %}
+                          <div class="sumline">
+                            <span class="pill pill-z1">ALT Z1 {% widthratio a1 60 1 %}m</span>
+                          </div>
+                        {% endif %}
+                        {% if a2 %}
+                          <div class="sumline">
+                            <span class="pill pill-z2">ALT Z2 {% widthratio a2 60 1 %}m</span>
+                          </div>
+                        {% endif %}
+                        {% if a3 %}
+                          <div class="sumline">
+                            <span class="pill pill-z3">ALT Z3 {% widthratio a3 60 1 %}m</span>
+                          </div>
+                        {% endif %}
+                      {% endwith %}
+                    </div>
+                  </td>
+
+                  {% for cell in w.cells1 %}
+                    {% include "core/partials/calendar_cell.html" with day=cell.day slot=cell.slot slot_index=1 selected_plan=selected_plan selected_athlete=selected_athlete is_override=cell.is_override display_mode=display_mode %}
+                  {% endfor %}
+                </tr>
+
+                <tr class="slotrow {{ week_class }}">
+                  {% for cell in w.cells2 %}
+                    {% include "core/partials/calendar_cell.html" with day=cell.day slot=cell.slot slot_index=2 selected_plan=selected_plan selected_athlete=selected_athlete is_override=cell.is_override display_mode=display_mode %}
+                  {% endfor %}
+                </tr>
+              {% endwith %}
+            {% else %}
+              <tr class="slotrow week-start">
+                <td class="weeklabel" rowspan="2"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}"
+                    data-week-phase="{{ w.week_phase|default:'' }}"
+                    data-weekcolors="{% if weekcolors_enabled %}1{% else %}0{% endif %}"
+                    data-athlete-mode="{% if selected_athlete %}1{% else %}0{% endif %}">
+                  Week ({{ w.week_start|date:"d-m" }} – {{ w.week_end|date:"d-m" }})
+
+                  <div class="week-phase-wrap">
+                    <span class="week-phase-label" data-week-phase-label style="{% if not w.week_phase_label %}display:none;{% endif %}">
+                      {{ w.week_phase_label }}
+                    </span>
+
+                    {% if w.week_phase_is_override %}
+                      <span class="week-phase-ovr" data-week-phase-ovr>OVR</span>
+                    {% else %}
+                      <span class="week-phase-ovr" data-week-phase-ovr style="display:none;">OVR</span>
+                    {% endif %}
+
+                    {% if week_phases_enabled and selected_plan %}
+                      {% if not selected_athlete %}
+                        <select class="week-phase-select"
+                                name="phase"
+                                aria-label="Week type"
+                                hx-post="/week-phase/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                                hx-trigger="change"
+                                hx-swap="none">
+                          <option value="" {% if not w.week_phase_base %}selected{% endif %}>—</option>
+                          <option value="recovery" {% if w.week_phase_base == "recovery" %}selected{% endif %}>Recovery</option>
+                          <option value="aerobe" {% if w.week_phase_base == "aerobe" %}selected{% endif %}>Aerobe</option>
+                          <option value="specific" {% if w.week_phase_base == "specific" %}selected{% endif %}>Specific</option>
+                          <option value="intense" {% if w.week_phase_base == "intense" %}selected{% endif %}>Intense</option>
+                          <option value="taper" {% if w.week_phase_base == "taper" %}selected{% endif %}>Taper</option>
+                        </select>
+                      {% else %}
+                        <select class="week-phase-select"
+                                name="phase"
+                                aria-label="Week type (athlete override)"
+                                hx-post="/athlete-week-phase/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}&athlete={{ selected_athlete.id }}"
+                                hx-trigger="change"
+                                hx-swap="none">
+                          <option value="" {% if not w.week_phase_athlete %}selected{% endif %}>— (reset)</option>
+                          <option value="recovery" {% if w.week_phase_athlete == "recovery" %}selected{% endif %}>Recovery</option>
+                          <option value="aerobe" {% if w.week_phase_athlete == "aerobe" %}selected{% endif %}>Aerobe</option>
+                          <option value="specific" {% if w.week_phase_athlete == "specific" %}selected{% endif %}>Specific</option>
+                          <option value="intense" {% if w.week_phase_athlete == "intense" %}selected{% endif %}>Intense</option>
+                          <option value="taper" {% if w.week_phase_athlete == "taper" %}selected{% endif %}>Taper</option>
+                        </select>
+                      {% endif %}
+                    {% endif %}
+                  </div>
+
+                  {% if selected_plan and not selected_athlete %}
+                    <div class="week-actions">
+                      <button type="button" class="btn btn-outline-primary"
+                        hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                        hx-swap="none"
+                        title="Kopieer deze week (base slots)"
+                      >
+                        Kopieer
+                      </button>
+
+                      {% if has_week_clipboard %}
+                        <form method="post"
+                          hx-post="/week-paste/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                          hx-swap="none"
+                        >
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-outline-dark" title="Plak week (overschrijft base slots, FIX blijft)">
+                            Plak
+                          </button>
+                        </form>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td class="sumcol" rowspan="2">
+                  <div title="{{ w.sum_pct_tooltip|default:'' }}">
+                    <div class="sum-total">Tot: {{ w.sum_tot_km|default:"—" }} km</div>
+
+                    <div class="sumline">
+                      {% if show_all_zones or w.has_z1 %}
+                        <span class="pill pill-z1">Z1 {{ w.sum_z1_km|default:"—" }}</span>
+                      {% endif %}
+                      {% if show_all_zones or w.has_z2 %}
+                        <span class="pill pill-z2">Z2 {{ w.sum_z2_km|default:"—" }}</span>
+                      {% endif %}
+                      {% if show_all_zones or w.has_z3 %}
+                        <span class="pill pill-z3">Z3 {{ w.sum_z3_km|default:"—" }}</span>
+                      {% endif %}
+                    </div>
+
+                    <div class="sumline">
+                      {% if show_all_zones or w.has_z4 %}
+                        <span class="pill pill-z4">Z4 {{ w.sum_z4_km|default:"—" }}</span>
+                      {% endif %}
+                      {% if show_all_zones or w.has_z5 %}
+                        <span class="pill pill-z5">Z5 {{ w.sum_z5_km|default:"—" }}</span>
+                      {% endif %}
+                      {% if show_all_zones or w.has_z6 %}
+                        <span class="pill pill-z6">Z6 {{ w.sum_z6_km|default:"—" }}</span>
+                      {% endif %}
+                    </div>
+
+                    <div class="sumline">
+                      {% if show_all_zones or w.has_race %}
+                        <span class="pill pill-race">Race {{ w.sum_race_km|default:"—" }}</span>
+                      {% endif %}
+                    </div>
+                    {% if w.alt_z1_min %}
+  <div class="sumline">
+    <span class="pill pill-z1">ALT Z1 {{ w.alt_z1_min }}m</span>
+  </div>
+{% endif %}
+{% if w.alt_z2_min %}
+  <div class="sumline">
+    <span class="pill pill-z2">ALT Z2 {{ w.alt_z2_min }}m</span>
+  </div>
+{% endif %}
+{% if w.alt_z3_min %}
+  <div class="sumline">
+    <span class="pill pill-z3">ALT Z3 {{ w.alt_z3_min }}m</span>
+  </div>
+{% endif %}
+
+
+                    {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                    {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
+                      {% if a1 or a2 or a3 %}
+                        <div class="sumline">
+                          {% if a1 %}
+                            <span class="pill pill-z1">ALT Z1 {% widthratio a1 60 1 %}m</span>
+                          {% endif %}
+                          {% if a2 %}
+                            <span class="pill pill-z2">ALT Z2 {% widthratio a2 60 1 %}m</span>
+                          {% endif %}
+                          {% if a3 %}
+                            <span class="pill pill-z3">ALT Z3 {% widthratio a3 60 1 %}m</span>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                    {% endwith %}
+                  </div>
+                </td>
+
+                {% for cell in w.cells1 %}
+                  {% include "core/partials/calendar_cell.html" with day=cell.day slot=cell.slot slot_index=1 selected_plan=selected_plan selected_athlete=selected_athlete is_override=cell.is_override display_mode=display_mode %}
+                {% endfor %}
+              </tr>
+
+              <tr class="slotrow">
+                {% for cell in w.cells2 %}
+                  {% include "core/partials/calendar_cell.html" with day=cell.day slot=cell.slot slot_index=2 selected_plan=selected_plan selected_athlete=selected_athlete is_override=cell.is_override display_mode=display_mode %}
+                {% endfor %}
+              </tr>
+            {% endif %}
+          {% endwith %}
+        {% else %}
+          <tr class="slotrow week-start">
+            <td class="weeklabel" rowspan="2"
+                data-week-start="{{ w.week_start|date:'Y-m-d' }}"
+                data-week-phase="{{ w.week_phase|default:'' }}"
+                data-weekcolors="{% if weekcolors_enabled %}1{% else %}0{% endif %}"
+                data-athlete-mode="{% if selected_athlete %}1{% else %}0{% endif %}">
+              Week ({{ w.week_start|date:"d-m" }} – {{ w.week_end|date:"d-m" }})
+
+              <div class="week-phase-wrap">
+                <span class="week-phase-label" data-week-phase-label style="{% if not w.week_phase_label %}display:none;{% endif %}">
+                  {{ w.week_phase_label }}
+                </span>
+
+                {% if w.week_phase_is_override %}
+                  <span class="week-phase-ovr" data-week-phase-ovr>OVR</span>
+                {% else %}
+                  <span class="week-phase-ovr" data-week-phase-ovr style="display:none;">OVR</span>
+                {% endif %}
+
+                {% if week_phases_enabled and selected_plan %}
+                  {% if not selected_athlete %}
+                    <select class="week-phase-select"
+                            name="phase"
+                            aria-label="Week type"
+                            hx-post="/week-phase/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                            hx-trigger="change"
+                            hx-swap="none">
+                      <option value="" {% if not w.week_phase_base %}selected{% endif %}>—</option>
+                      <option value="recovery" {% if w.week_phase_base == "recovery" %}selected{% endif %}>Recovery</option>
+                      <option value="aerobe" {% if w.week_phase_base == "aerobe" %}selected{% endif %}>Aerobe</option>
+                      <option value="specific" {% if w.week_phase_base == "specific" %}selected{% endif %}>Specific</option>
+                      <option value="intense" {% if w.week_phase_base == "intense" %}selected{% endif %}>Intense</option>
+                      <option value="taper" {% if w.week_phase_base == "taper" %}selected{% endif %}>Taper</option>
+                    </select>
+                  {% else %}
+                    <select class="week-phase-select"
+                            name="phase"
+                            aria-label="Week type (athlete override)"
+                            hx-post="/athlete-week-phase/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}&athlete={{ selected_athlete.id }}"
+                            hx-trigger="change"
+                            hx-swap="none">
+                      <option value="" {% if not w.week_phase_athlete %}selected{% endif %}>— (reset)</option>
+                      <option value="recovery" {% if w.week_phase_athlete == "recovery" %}selected{% endif %}>Recovery</option>
+                      <option value="aerobe" {% if w.week_phase_athlete == "aerobe" %}selected{% endif %}>Aerobe</option>
+                      <option value="specific" {% if w.week_phase_athlete == "specific" %}selected{% endif %}>Specific</option>
+                      <option value="intense" {% if w.week_phase_athlete == "intense" %}selected{% endif %}>Intense</option>
+                      <option value="taper" {% if w.week_phase_athlete == "taper" %}selected{% endif %}>Taper</option>
+                    </select>
+                  {% endif %}
+                {% endif %}
+              </div>
+
+              {% if selected_plan and not selected_athlete %}
+                <div class="week-actions">
+                  <button type="button" class="btn btn-outline-primary"
+                    hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                    hx-swap="none"
+                    title="Kopieer deze week (base slots)"
+                  >
+                    Kopieer
+                  </button>
+
+                  {% if has_week_clipboard %}
+                    <form method="post"
+                      hx-post="/week-paste/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
+                      hx-swap="none"
+                    >
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-outline-dark" title="Plak week (overschrijft base slots, FIX blijft)">
+                        Plak
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </td>
+
+            <td class="sumcol" rowspan="2">
+              <div title="{{ w.sum_pct_tooltip|default:'' }}">
+                <div class="sum-total">Tot: {{ w.sum_tot_km|default:"—" }} km</div>
+
+                <div class="sumline">
+                  {% if show_all_zones or w.has_z1 %}
+                    <span class="pill pill-z1">Z1 {{ w.sum_z1_km|default:"—" }}</span>
+                  {% endif %}
+                  {% if show_all_zones or w.has_z2 %}
+                    <span class="pill pill-z2">Z2 {{ w.sum_z2_km|default:"—" }}</span>
+                  {% endif %}
+                  {% if show_all_zones or w.has_z3 %}
+                    <span class="pill pill-z3">Z3 {{ w.sum_z3_km|default:"—" }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="sumline">
+                  {% if show_all_zones or w.has_z4 %}
+                    <span class="pill pill-z4">Z4 {{ w.sum_z4_km|default:"—" }}</span>
+                  {% endif %}
+                  {% if show_all_zones or w.has_z5 %}
+                    <span class="pill pill-z5">Z5 {{ w.sum_z5_km|default:"—" }}</span>
+                  {% endif %}
+                  {% if show_all_zones or w.has_z6 %}
+                    <span class="pill pill-z6">Z6 {{ w.sum_z6_km|default:"—" }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="sumline">
+                  {% if show_all_zones or w.has_race %}
+                    <span class="pill pill-race">Race {{ w.sum_race_km|default:"—" }}</span>
+                  {% endif %}
+                </div>
+                {% if w.alt_z1_min %}
+  <div class="sumline">
+    <span class="pill pill-z1">ALT Z1 {{ w.alt_z1_min }}m</span>
+  </div>
+{% endif %}
+{% if w.alt_z2_min %}
+  <div class="sumline">
+    <span class="pill pill-z2">ALT Z2 {{ w.alt_z2_min }}m</span>
+  </div>
+{% endif %}
+{% if w.alt_z3_min %}
+  <div class="sumline">
+    <span class="pill pill-z3">ALT Z3 {{ w.alt_z3_min }}m</span>
+  </div>
+{% endif %}
+
+
+                {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
+                  {% if a1 or a2 or a3 %}
+                    <div class="sumline">
+                      {% if a1 %}
+                        <span class="pill pill-z1">ALT Z1 {% widthratio a1 60 1 %}m</span>
+                      {% endif %}
+                      {% if a2 %}
+                        <span class="pill pill-z2">ALT Z2 {% widthratio a2 60 1 %}m</span>
+                      {% endif %}
+                      {% if a3 %}
+                        <span class="pill pill-z3">ALT Z3 {% widthratio a3 60 1 %}m</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                {% endwith %}
+              </div>
+            </td>
+
+            {% for cell in w.cells1 %}
+              {% include "core/partials/calendar_cell.html" with day=cell.day slot=cell.slot slot_index=1 selected_plan=selected_plan selected_athlete=selected_athlete is_override=cell.is_override display_mode=display_mode %}
+            {% endfor %}
+          </tr>
+
+          <tr class="slotrow">
+            {% for cell in w.cells2 %}
+              {% include "core/partials/calendar_cell.html" with day=cell.day slot=cell.slot slot_index=2 selected_plan=selected_plan selected_athlete=selected_athlete is_override=cell.is_override display_mode=display_mode %}
+            {% endfor %}
+          </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div id="modal-container"></div>
+{% endwith %}
+
+{% endblock %}

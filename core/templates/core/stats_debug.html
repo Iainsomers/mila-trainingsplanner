@@ -1,0 +1,12 @@
+<h2>Stats debug</h2>
+
+<p><b>Plan:</b> {{ plan }}</p>
+<p><b>Week start:</b> {{ week_start }}</p>
+
+{% if athlete %}
+  <h3>Athlete: {{ athlete.name }}</h3>
+  <pre>{{ athlete_stats }}</pre>
+{% else %}
+  <h3>Group (average)</h3>
+  <pre>{{ group_stats }}</pre>
+{% endif %}

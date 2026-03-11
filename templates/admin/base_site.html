@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block branding %}
+  <h1 id="site-name">
+    <a href="{% url 'admin:index' %}">MiLa Admin</a>
+    <span style="font-weight: normal; margin-left: 12px;">
+      · <a href="/" style="text-decoration:none;">← Dashboard</a>
+      · <a href="/calendar/" style="text-decoration:none;">Kalender</a>
+    </span>
+  </h1>
+{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    /* Verberg 'Recent actions' sidebar op admin index */
+    #content-related { display: none !important; }
+    .dashboard #content { width: 100% !important; }
+  </style>
+{% endblock %}

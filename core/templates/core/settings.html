@@ -1,0 +1,182 @@
+{% extends "core/base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="mb-0">Settings</h1>
+    <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+  </div>
+
+  <form method="post" class="row g-3">
+    {% csrf_token %}
+
+    <!-- Calendar -->
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-1">Calendar</h5>
+          <div class="text-muted small mb-3">
+            Instellingen die bepalen wat je in de kalender ziet.
+          </div>
+
+          <div class="form-check mb-3">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="show_all_zones"
+              name="show_all_zones"
+              {% if show_all_zones %}checked{% endif %}
+            >
+            <label class="form-check-label" for="show_all_zones">
+              Show all zones
+            </label>
+            <div class="form-text">
+              Uit = alleen zones tonen met waarde &gt; 0.
+            </div>
+          </div>
+
+          <div class="form-check mb-3">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="highlight_current_week"
+              name="highlight_current_week"
+              {% if highlight_current_week %}checked{% endif %}
+            >
+            <label class="form-check-label" for="highlight_current_week">
+              Highlight huidige week
+            </label>
+            <div class="form-text">
+              Geeft de hele week waarin vandaag valt een lichtgele achtergrond (als die week zichtbaar is).
+            </div>
+          </div>
+
+          <div class="form-check mb-3">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="calendar_show_only_core"
+              name="calendar_show_only_core"
+              {% if calendar_show_only_core %}checked{% endif %}
+            >
+            <label class="form-check-label" for="calendar_show_only_core">
+              Show only core?
+            </label>
+            <div class="form-text">
+              Aan = alleen core (en alt) tonen in de cel. Uit = alle segmenten tonen. Hovertekst blijft altijd volledig.
+            </div>
+          </div>
+
+          <!-- ✅ NEW: Weekcolors -->
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="weekcolors_enabled"
+              name="weekcolors_enabled"
+              {% if weekcolors_enabled %}checked{% endif %}
+            >
+            <label class="form-check-label" for="weekcolors_enabled">
+              Weekcolors
+            </label>
+            <div class="form-text">
+              Aan = weekfase kleurt het week-vak. Uit = geen kleur, alleen het woord (bijv. Recovery).
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Coach Console -->
+    <div class="col-12 col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-1">Coach Console</h5>
+          <div class="text-muted small mb-3">
+            Instellingen voor invoer en beheer in de Coach Console.
+          </div>
+
+          <label class="form-label mb-1" for="zone_input_unit">Zones invoeren als</label>
+          <select class="form-select" id="zone_input_unit" name="zone_input_unit">
+            <option value="pace" {% if zone_input_unit == "pace" %}selected{% endif %}>min/km</option>
+            <option value="kmh" {% if zone_input_unit == "kmh" %}selected{% endif %}>km/h</option>
+          </select>
+
+          <div class="form-text">
+            Dit beïnvloedt alleen de invoer in het atletenformulier; intern blijft alles m/s.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trainingsbuilder -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-1">Trainingsbuilder</h5>
+          <div class="text-muted small mb-3">
+            Welke segmenten zichtbaar zijn in de slot-editor. Core en Alternative zijn altijd beschikbaar.
+          </div>
+
+          <div class="row g-2">
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tb_show_wu" name="tb_show_wu" {% if tb_show_wu %}checked{% endif %}>
+                <label class="form-check-label" for="tb_show_wu">WU</label>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tb_show_mob" name="tb_show_mob" {% if tb_show_mob %}checked{% endif %}>
+                <label class="form-check-label" for="tb_show_mob">Mob / Tech</label>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tb_show_sprint" name="tb_show_sprint" {% if tb_show_sprint %}checked{% endif %}>
+                <label class="form-check-label" for="tb_show_sprint">Sprint (Z6)</label>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tb_show_core2" name="tb_show_core2" {% if tb_show_core2 %}checked{% endif %}>
+                <label class="form-check-label" for="tb_show_core2">2nd core</label>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tb_show_cd" name="tb_show_cd" {% if tb_show_cd %}checked{% endif %}>
+                <label class="form-check-label" for="tb_show_cd">CD</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-text mt-2">
+            Let op: uitgeschakelde segmenten worden bij opslaan verwijderd uit het slot (zodat er niets “onzichtbaar” blijft meetellen).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="col-12">
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Opslaan</button>
+        <a href="/" class="btn btn-outline-secondary">Annuleren</a>
+      </div>
+    </div>
+
+  </form>
+
+</div>
+
+{% endblock %}
