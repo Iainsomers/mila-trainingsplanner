@@ -37,6 +37,15 @@
                   <td class="text-end">
                     <a class="btn btn-sm btn-outline-primary" href="/calendar/?plan={{ p.id }}">Kalender</a>
                     <a class="btn btn-sm btn-primary" href="{% url 'coach_plan_edit' p.id %}">Bewerk</a>
+
+                    <form method="post" action="{% url 'coach_plan_delete' p.id %}" style="display:inline;">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-danger"
+                        onclick="return confirm('Weet je zeker dat je dit plan wilt verwijderen?');">
+                        Verwijder
+                      </button>
+                    </form>
+
                   </td>
                 </tr>
               {% endfor %}
