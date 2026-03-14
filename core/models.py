@@ -130,7 +130,6 @@ class TrainingPlan(models.Model):
         blank=True,
     )
 
-    # ✅ per plan bepalen of weekfase feature aan staat
     week_phases_enabled = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -150,10 +149,6 @@ class TrainingPlan(models.Model):
 
 
 class PlanWeekPhase(models.Model):
-    """
-    Weekfase (Recovery/Aerobe/...) per plan + week_start.
-    Dit is plan-data (server-side persistent) en moet ook zichtbaar zijn voor atleten.
-    """
     PHASE_CHOICES = [
         ("", "—"),
         ("recovery", "Recovery"),
@@ -189,12 +184,6 @@ class PlanWeekPhase(models.Model):
 
 
 class AthleteWeekPhaseOverride(models.Model):
-    """
-    Coach-only override: weekfase per atleet in een plan.
-    Precedence:
-      - override (als aanwezig) wint
-      - anders PlanWeekPhase (base)
-    """
     PHASE_CHOICES = PlanWeekPhase.PHASE_CHOICES
 
     plan = models.ForeignKey(
@@ -227,9 +216,12 @@ class AthleteWeekPhaseOverride(models.Model):
         return f"{self.plan} · {self.athlete} · {self.week_start} · {p or '—'}"
 
 
-def get_default_plan_id() -> int:
-    plan, _ = TrainingPlan.objects.get_or_create(name="Default")
-    return plan.id
+def get_default_plan_id() -> int | None:
+    try:
+        plan = TrainingPlan.objects.filter(name="Default").only("id").first()
+        return plan.id if plan else None
+    except Exception:
+        return None
 
 
 class PlanMembership(models.Model):
@@ -392,7 +384,7 @@ class TrainingLog(models.Model):
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="logs")
 
     completed = models.BooleanField(default=False)
-    rpe = models.PositiveIntegerField(null=True, blank=True)  # 1–10
+    rpe = models.PositiveIntegerField(null=True, blank=True)
     notes = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
