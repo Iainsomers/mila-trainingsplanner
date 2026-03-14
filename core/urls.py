@@ -58,6 +58,7 @@ urlpatterns = [
     path("coach/plans/", coach_plans_view, name="coach_plans"),
     path("coach/plans/new/", coach_plan_create_view, name="coach_plan_create"),
     path("coach/plans/<int:plan_id>/edit/", coach_plan_edit_view, name="coach_plan_edit"),
+    path("coach/plans/<int:plan_id>/delete/", coach_plan_delete_view, name="coach_plan_delete"),
 
     # Coach: Athletes CRUD
     path("coach/athletes/", coach_athletes_view, name="coach_athletes"),

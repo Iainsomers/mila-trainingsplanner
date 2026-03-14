@@ -237,6 +237,17 @@ def coach_plan_edit_view(request, plan_id: int):
     )
 
 
+
+# -----------------------------
+# Plans DELETE
+# -----------------------------
+@login_required
+@require_http_methods(["POST"])
+def coach_plan_delete_view(request, plan_id: int):
+    plan = get_object_or_404(TrainingPlan, id=plan_id)
+    plan.delete()
+    return redirect("coach_plans")
+
 # -----------------------------
 # Athletes CRUD (zones)
 # -----------------------------
