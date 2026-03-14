@@ -8,6 +8,7 @@ from core.views.coach import (
     coach_plans_view,
     coach_plan_create_view,
     coach_plan_edit_view,
+    coach_plan_delete_view,
     coach_athletes_view,
     coach_athlete_create_view,
     coach_athlete_edit_view,
