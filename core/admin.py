@@ -1,9 +1,6 @@
-# core/admin.py
 from django.contrib import admin
+from core.models import CoachAccess
 
-# Intentionally empty:
-# We keep Django admin for authentication & authorization only
-# (Users / auth Groups / Permissions).
-#
-# All MiLa domain models (plans, athletes, groups, slots, segments, logs)
-# are managed via the Coach Console UI instead of /admin/.
+
+# Alleen CoachAccess zichtbaar maken in admin
+admin.site.register(CoachAccess)
