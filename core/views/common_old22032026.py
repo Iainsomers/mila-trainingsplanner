@@ -220,12 +220,6 @@ def _parse_manual_zone_values_required(post, unit: str):
 # =============================
 # Plan / athlete selection helpers
 # =============================
-def _filter_owned(qs, user):
-    if user.is_superuser:
-        return qs
-    return qs.filter(owner=user)
-
-
 def _ranges_overlap(start_a, end_a, start_b, end_b) -> bool:
     if not (start_a and end_a and start_b and end_b):
         return False
@@ -251,14 +245,12 @@ def _plan_targets_athlete(plan: TrainingPlan, athlete: Athlete) -> bool:
 
 
 def _get_selected_plan(request):
-    owned_plans = _filter_owned(TrainingPlan.objects.all(), request.user)
-
     plan_id = (request.GET.get("plan") or "").strip()
     if not plan_id:
         plan_id = (request.POST.get("plan") or "").strip()
 
     if plan_id.isdigit():
-        p = owned_plans.filter(id=int(plan_id)).first()
+        p = TrainingPlan.objects.filter(id=int(plan_id)).first()
         if p:
             request.session["selected_plan_id"] = p.id
             request.session.modified = True
@@ -266,17 +258,17 @@ def _get_selected_plan(request):
 
     session_pid = request.session.get("selected_plan_id")
     if isinstance(session_pid, int):
-        p = owned_plans.filter(id=session_pid).first()
+        p = TrainingPlan.objects.filter(id=session_pid).first()
         if p:
             return p
 
-    p = owned_plans.filter(name="Default").first()
+    p = TrainingPlan.objects.filter(name="Default").first()
     if p:
         request.session["selected_plan_id"] = p.id
         request.session.modified = True
         return p
 
-    p = owned_plans.order_by("name").first()
+    p = TrainingPlan.objects.order_by("name").first()
     if p:
         request.session["selected_plan_id"] = p.id
         request.session.modified = True
