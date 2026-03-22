@@ -149,6 +149,8 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 
     week_start = _to_week_start(raw_date)
 
+    # ✅ Belangrijk: geen “te strenge” checks hier die 400 geven zonder dat jij het ziet.
+    # We doen alleen een simpele guard: athlete moet in dit plan zitten.
     ids = plan.targeted_athlete_ids() if plan else set()
     if athlete.id not in ids:
         return HttpResponseBadRequest("Athlete not targeted by this plan")
@@ -202,25 +204,27 @@ def calendar_view(request):
         weeks = 8
         end = start + timedelta(days=7 * weeks)
 
+    slot_q = TrainingSlot.objects.filter(date__gte=start, date__lt=end)
     if selected_plan:
-        slot_q = TrainingSlot.objects.filter(date__gte=start, date__lt=end, plan=selected_plan)
-        if selected_athlete:
-            slot_q = slot_q.filter(Q(athlete__isnull=True) | Q(athlete=selected_athlete))
-        else:
-            slot_q = slot_q.filter(athlete__isnull=True)
+        slot_q = slot_q.filter(plan=selected_plan)
+
+    if selected_athlete:
+        slot_q = slot_q.filter(Q(athlete__isnull=True) | Q(athlete=selected_athlete))
     else:
-        slot_q = TrainingSlot.objects.none()
+        slot_q = slot_q.filter(athlete__isnull=True)
 
     slot_q = slot_q.prefetch_related("segments")
     slot_map, has_fix_keys = _build_effective_slot_maps(slot_q)
 
     week_starts = [start + timedelta(days=7 * i) for i in range(weeks)]
 
+    # base plan phases
     base_phase_by_week = {}
     if selected_plan:
         for obj in PlanWeekPhase.objects.filter(plan=selected_plan, week_start__in=week_starts):
             base_phase_by_week[obj.week_start] = (obj.phase or "")
 
+    # athlete overrides
     athlete_phase_by_week = {}
     if selected_plan and selected_athlete:
         for obj in AthleteWeekPhaseOverride.objects.filter(plan=selected_plan, athlete=selected_athlete, week_start__in=week_starts):
@@ -249,11 +253,13 @@ def calendar_view(request):
             cells1.append({"day": day, "slot": slot_map.get(k1), "is_override": (k1 in has_fix_keys)})
             cells2.append({"day": day, "slot": slot_map.get(k2), "is_override": (k2 in has_fix_keys)})
 
+        # totals
         z_m = {str(i): 0.0 for i in range(1, 7)}
         z_time_s = {str(i): 0.0 for i in range(1, 7)}
         race_m = 0.0
         race_time_s = 0.0
 
+        # ✅ ALT minutes (Z1–Z3)
         alt_z1_min = 0
         alt_z2_min = 0
         alt_z3_min = 0
@@ -267,6 +273,7 @@ def calendar_view(request):
             zones = st.get("zones") or {}
             race = st.get("race") or {"distance_m": 0, "duration_s": 0}
 
+            # ✅ ALT: read from stats.py
             alt = st.get("alt_zones") or {}
             alt_z1_min = int(round(float(alt.get("1", {}).get("duration_s", 0) or 0) / 60.0))
             alt_z2_min = int(round(float(alt.get("2", {}).get("duration_s", 0) or 0) / 60.0))
@@ -312,12 +319,15 @@ def calendar_view(request):
             "week_end": week_end,
             "cells1": cells1,
             "cells2": cells2,
+
             "week_phase_base": base_phase,
             "week_phase_athlete": athlete_phase,
             "week_phase": effective_phase,
             "week_phase_is_override": is_phase_override,
             "week_phase_label": phase_label.get(effective_phase, ""),
+
             "sum_tot_km": _format_km(tot_m),
+
             "sum_z1_km": _km_str_with_small(z_m["1"]),
             "sum_z2_km": _km_str_with_small(z_m["2"]),
             "sum_z3_km": _km_str_with_small(z_m["3"]),
@@ -325,6 +335,7 @@ def calendar_view(request):
             "sum_z5_km": _km_str_with_small(z_m["5"]),
             "sum_z6_km": _km_str_with_small(z_m["6"]),
             "sum_race_km": _km_str_with_small(race_m),
+
             "has_z1": has_z["1"],
             "has_z2": has_z["2"],
             "has_z3": has_z["3"],
@@ -332,10 +343,13 @@ def calendar_view(request):
             "has_z5": has_z["5"],
             "has_z6": has_z["6"],
             "has_race": has_race,
+
+            # ✅ ALT minutes for template
             "alt_z1_min": alt_z1_min,
             "alt_z2_min": alt_z2_min,
             "alt_z3_min": alt_z3_min,
             "has_alt": has_alt,
+
             "sum_pct_tooltip": sum_pct_tooltip,
         })
 
@@ -356,6 +370,7 @@ def calendar_view(request):
             "selected_athlete": selected_athlete,
             "show_all_zones": request.session.get("show_all_zones", True),
             "has_week_clipboard": bool(request.session.get("week_clipboard")),
+
             "week_phases_enabled": week_phases_enabled,
             "weekcolors_enabled": weekcolors_enabled,
         },
