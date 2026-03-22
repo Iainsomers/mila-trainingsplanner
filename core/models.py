@@ -72,6 +72,14 @@ class Athlete(models.Model):
         ("lactate", "Lactate"),
     ]
 
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="owned_athletes",
+    )
+
     name = models.CharField(max_length=120, unique=True)
     birth_year = models.PositiveIntegerField()
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
@@ -104,6 +112,14 @@ class Athlete(models.Model):
 
 
 class Group(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="owned_groups",
+    )
+
     name = models.CharField(max_length=120, unique=True)
     athletes = models.ManyToManyField(Athlete, related_name="groups", blank=True)
 
@@ -112,6 +128,14 @@ class Group(models.Model):
 
 
 class TrainingPlan(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="owned_training_plans",
+    )
+
     name = models.CharField(max_length=120, unique=True)
 
     start_date = models.DateField(null=True, blank=True)
