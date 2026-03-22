@@ -22,12 +22,6 @@ from .common import (
 )
 
 
-def _filter_owned(qs, user):
-    if user.is_superuser:
-        return qs
-    return qs.filter(owner=user)
-
-
 def calendar_test(request):
     slots = TrainingSlot.objects.order_by("date", "slot_index", "athlete_id")
     lines = []
@@ -80,7 +74,7 @@ def week_phase_set(request, y: int, m: int, d: int):
         return HttpResponseBadRequest("Missing plan")
 
     try:
-        plan = _filter_owned(TrainingPlan.objects.all(), request.user).get(id=int(plan_id))
+        plan = TrainingPlan.objects.get(id=int(plan_id))
     except Exception:
         return HttpResponseBadRequest("Invalid plan")
 
@@ -130,7 +124,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
         return HttpResponseBadRequest("Missing plan/athlete")
 
     try:
-        plan = _filter_owned(TrainingPlan.objects.all(), request.user).get(id=int(plan_id))
+        plan = TrainingPlan.objects.get(id=int(plan_id))
     except Exception:
         return HttpResponseBadRequest("Invalid plan")
 
@@ -174,10 +168,8 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 
 
 def calendar_view(request):
-    plans = _filter_owned(TrainingPlan.objects.order_by("name"), request.user)
     selected_plan = _get_selected_plan(request)
-    if selected_plan and not _filter_owned(TrainingPlan.objects.filter(id=selected_plan.id), request.user).exists():
-        selected_plan = None
+    plans = TrainingPlan.objects.order_by("name")
     selected_athlete = _get_selected_athlete_from_request(request)
 
     plan_athletes = []
