@@ -430,8 +430,46 @@ class TrainingLog(models.Model):
         super().clean()
 
         if not self.slot_id or not self.athlete_id:
-            return
+            returns
 
         targeted = self.slot.targeted_athlete_ids()
         if targeted and self.athlete_id not in targeted:
             raise ValidationError("Deze atleet hoort niet bij de doelgroep van dit trainingsslot.")
+
+# =============================
+# NEW: Coach access (trainer sharing)
+# =============================
+class CoachAccess(models.Model):
+    """
+    Defines that 'grantee' (trainer) has access to all data owned by 'owner'.
+    Example:
+        owner = trainer B
+        grantee = trainer A
+
+    => Trainer A can see data of trainer B
+    """
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="shared_with_others",
+    )
+
+    grantee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="access_to_other_coaches",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "grantee"],
+                name="unique_coach_access",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.grantee} can access {self.owner}"
