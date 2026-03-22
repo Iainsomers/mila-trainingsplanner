@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q
 
-from core.models import TrainingPlan, Athlete, TrainingSlot, CoachAccess
+from core.models import TrainingPlan, Athlete, TrainingSlot
 
 
 # Backwards-compatible constant (sommige views importeren dit nog)
@@ -223,12 +223,7 @@ def _parse_manual_zone_values_required(post, unit: str):
 def _filter_owned(qs, user):
     if user.is_superuser:
         return qs
-
-    shared_owner_ids = CoachAccess.objects.filter(
-        grantee=user
-    ).values_list("owner_id", flat=True)
-
-    return qs.filter(Q(owner=user) | Q(owner_id__in=shared_owner_ids)).distinct()
+    return qs.filter(owner=user)
 
 
 def _ranges_overlap(start_a, end_a, start_b, end_b) -> bool:
@@ -291,7 +286,7 @@ def _get_selected_plan(request):
 def _get_selected_athlete_from_request(request):
     athlete_id = (request.GET.get("athlete") or request.POST.get("athlete") or "").strip()
     if athlete_id.isdigit():
-        return _filter_owned(Athlete.objects.all(), request.user).filter(id=int(athlete_id)).first()
+        return Athlete.objects.filter(id=int(athlete_id)).first()
     return None
 
 
