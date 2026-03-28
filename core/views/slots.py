@@ -679,25 +679,13 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     # Save CORE
     if core_text:
-        parts = [p.strip() for p in core_text.split("//") if p.strip()]
-
-        # verwijder bestaande CORE segmenten
-        slot.segments.filter(type="CORE").delete()
-
-        order_base = 3
-
-        for i, part in enumerate(parts):
-            seg = slot.segments.create(
-                type="CORE",
-                text=part,
-                order=order_base + i,
-            )
-
-            part_parse = parse_segment_text(part)
-            _apply_parse_to_segment(seg, part_parse)
-
-            seg.parsed_at = now
-            seg.save()
+        if core_seg:
+            core_seg.text = core_text
+        else:
+            core_seg = slot.segments.create(type="CORE", text=core_text, order=3)
+        _apply_parse_to_segment(core_seg, core_parse)
+        core_seg.parsed_at = now
+        core_seg.save()
     else:
         if core_seg:
             core_seg.delete()
