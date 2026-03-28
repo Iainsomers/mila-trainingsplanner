@@ -323,8 +323,9 @@ class TrainingSlot(models.Model):
         return f"{self.plan} · {self.date} – slot {self.slot_index}"
 
     def core_text(self) -> str:
-        core = self.segments.filter(type="CORE").order_by("order", "id").first()
-        return core.text.strip() if core and core.text else ""
+        cores = self.segments.filter(type="CORE").order_by("order", "id")
+        parts = [seg.text.strip() for seg in cores if seg.text and seg.text.strip()]
+        return " // ".join(parts)""
 
     def targeted_athlete_ids(self) -> set[int]:
         if self.athlete_id:

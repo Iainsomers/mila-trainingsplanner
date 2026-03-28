@@ -399,7 +399,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         wu_seg = visible_slot.segments.filter(type="WU").order_by("order", "id").first() if visible_slot else None
         mob_seg = visible_slot.segments.filter(type="MOB").order_by("order", "id").first() if visible_slot else None
         sprint_seg = visible_slot.segments.filter(type="SPR").order_by("order", "id").first() if visible_slot else None
-        core_seg = visible_slot.segments.filter(type="CORE").order_by("order", "id").first() if visible_slot else None
+        core_segs = list(visible_slot.segments.filter(type="CORE").order_by("order", "id")) if visible_slot else []
         core2_seg = visible_slot.segments.filter(type="CORE2").order_by("order", "id").first() if visible_slot else None
         alt_seg = visible_slot.segments.filter(type="ALT").order_by("order", "id").first() if visible_slot else None
         cd_seg = visible_slot.segments.filter(type="CD").order_by("order", "id").first() if visible_slot else None
@@ -420,7 +420,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "wu_text": (wu_seg.text if (wu_seg and tb_show_wu) else ""),
                 "mob_text": (mob_seg.text if (mob_seg and tb_show_mob) else ""),
                 "sprint_text": (sprint_seg.text if (sprint_seg and tb_show_sprint) else ""),
-                "core_text": (core_seg.text if core_seg else ""),
+                "core_text": (" // ".join(seg.text for seg in core_segs if seg.text) if core_segs else ""),
                 "core2_text": (core2_seg.text if (core2_seg and tb_show_core2) else ""),
                 "alt_text": (alt_seg.text if alt_seg else ""),
                 "cd_text": (cd_seg.text if (cd_seg and tb_show_cd) else ""),
