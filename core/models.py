@@ -325,7 +325,7 @@ class TrainingSlot(models.Model):
     def core_text(self) -> str:
         cores = self.segments.filter(type="CORE").order_by("order", "id")
         parts = [seg.text.strip() for seg in cores if seg.text and seg.text.strip()]
-        return " // ".join(parts)""
+        return " // ".join(parts)
 
     def targeted_athlete_ids(self) -> set[int]:
         if self.athlete_id:

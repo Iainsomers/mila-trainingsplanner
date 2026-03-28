@@ -679,16 +679,26 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     # Save CORE
     if core_text:
-        if core_seg:
-            core_seg.text = core_text
-        else:
-            core_seg = slot.segments.create(type="CORE", text=core_text, order=3)
-        _apply_parse_to_segment(core_seg, core_parse)
-        core_seg.parsed_at = now
-        core_seg.save()
+        parts = [p.strip() for p in core_text.split("//") if p.strip()]
+
+        slot.segments.filter(type="CORE").delete()
+
+        for i, part in enumerate(parts):
+            seg = slot.segments.create(
+                type="CORE",
+                text=part,
+                order=3 + i,
+            )
+
+            part_parse = parse_segment_text(part)
+            if not part_parse or not part_parse.ok:
+                continue
+
+            _apply_parse_to_segment(seg, part_parse)
+            seg.parsed_at = now
+            seg.save()
     else:
-        if core_seg:
-            core_seg.delete()
+        slot.segments.filter(type="CORE").delete()
 
     # Save ALT (telt nog niet mee)
         # Save ALT (telt nog niet mee in normale zones, maar wél ALT-minuten mogelijk)
