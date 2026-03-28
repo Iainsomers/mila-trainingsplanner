@@ -290,9 +290,18 @@ def _get_selected_plan(request):
 
 def _get_selected_athlete_from_request(request):
     athlete_id = (request.GET.get("athlete") or request.POST.get("athlete") or "").strip()
-    if athlete_id.isdigit():
-        return _filter_owned(Athlete.objects.all(), request.user).filter(id=int(athlete_id)).first()
-    return None
+    if not athlete_id.isdigit():
+        return None
+
+    athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(athlete_id)).first()
+    if not athlete:
+        return None
+
+    plan = _get_selected_plan(request)
+    if plan and not _plan_targets_athlete(plan, athlete):
+        return None
+
+    return athlete
 
 
 def _forbid_if_athlete_not_in_plan(plan: TrainingPlan, athlete: Athlete):
