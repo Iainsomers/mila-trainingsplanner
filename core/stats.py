@@ -11,6 +11,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
+STATS_SCHEMA_VERSION = "v2"
 
 
 def _stats_version() -> int:
@@ -136,7 +137,7 @@ def base_week_stats(plan, week_start: date_cls):
         return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket(), "t_totals": _empty_t_bucket()}
 
     v = _stats_version()
-    cache_key = f"mila:stats:base:{plan.id}:{week_start.isoformat()}:v{v}"
+    cache_key = f"mila:stats:base:{STATS_SCHEMA_VERSION}:{plan.id}:{week_start.isoformat()}:v{v}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -204,7 +205,7 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
 
     v = _stats_version()
     zones_sig = _athlete_zones_sig(athlete)
-    cache_key = f"mila:stats:athlete:{plan.id}:{athlete.id}:{week_start.isoformat()}:{zones_sig}:v{v}"
+    cache_key = f"mila:stats:athlete:{STATS_SCHEMA_VERSION}:{plan.id}:{athlete.id}:{week_start.isoformat()}:{zones_sig}:v{v}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -272,7 +273,7 @@ def group_week_stats(plan, athletes, week_start: date_cls):
 
     v = _stats_version()
     gsig = _group_sig(athletes)
-    cache_key = f"mila:stats:group:{plan.id}:{week_start.isoformat()}:{gsig}:v{v}"
+    cache_key = f"mila:stats:group:{STATS_SCHEMA_VERSION}:{plan.id}:{week_start.isoformat()}:{gsig}:v{v}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
