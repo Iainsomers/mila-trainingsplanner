@@ -50,6 +50,16 @@ def _empty_alt_bucket():
     return {z: {"duration_s": 0} for z in ("1", "2", "3")}
 
 
+def _empty_t_bucket():
+    return {
+        "800": 0,
+        "1500": 0,
+        "3000": 0,
+        "5000": 0,
+        "10000": 0,
+    }
+
+
 def _norm_m_base(seg, speed_mps: float) -> int:
     nm = int(seg.norm_distance_m or 0)
     if nm > 0:
@@ -123,7 +133,7 @@ def _fetch_week_slots(plan, week_start: date_cls, athlete_ids=None):
 
 def base_week_stats(plan, week_start: date_cls):
     if not plan:
-        return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket()}
+        return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket(), "t_totals": _empty_t_bucket()}
 
     v = _stats_version()
     cache_key = f"mila:stats:base:{plan.id}:{week_start.isoformat()}:v{v}"
@@ -135,6 +145,7 @@ def base_week_stats(plan, week_start: date_cls):
     zones = _empty_zone_bucket(speeds)
     alt_zones = _empty_alt_bucket()
     race = {"distance_m": 0, "duration_s": 0}
+    t_totals = _empty_t_bucket()
 
     base_map, _ = _fetch_week_slots(plan, week_start, athlete_ids=None)
     days = _week_days(week_start)
@@ -157,7 +168,7 @@ def base_week_stats(plan, week_start: date_cls):
                 z_raw = (seg.zone or "").strip()
                 zone = str(z_raw) if z_raw else ("4" if is_race else "")
 
-                # ALT: alleen minuten, Z1–Z3
+                # ALT: alleen minuten, alleen Z1–Z3
                 if seg.type == "ALT":
                     if zone in alt_zones and seg.duration_s:
                         alt_zones[zone]["duration_s"] += int(seg.duration_s)
@@ -171,19 +182,23 @@ def base_week_stats(plan, week_start: date_cls):
                 if nm <= 0:
                     continue
 
+                t = (getattr(seg, "t_type", "") or "").strip()
+                if t in t_totals:
+                    t_totals[t] += int(nm)
+
                 dur = _dur_s(seg, nm, speed)
                 bucket = race if is_race else zones[zone]
                 bucket["distance_m"] += int(nm)
                 bucket["duration_s"] += int(dur)
 
-    out = {"zones": zones, "race": race, "alt_zones": alt_zones}
+    out = {"zones": zones, "race": race, "alt_zones": alt_zones, "t_totals": t_totals}
     cache.set(cache_key, out, STATS_CACHE_TTL_S)
     return out
 
 
 def athlete_week_stats(plan, athlete, week_start: date_cls):
     if not plan or not athlete:
-        return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket()}
+        return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket(), "t_totals": _empty_t_bucket()}
 
     v = _stats_version()
     zones_sig = _athlete_zones_sig(athlete)
@@ -196,6 +211,7 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
     zones = _empty_zone_bucket(speeds)
     alt_zones = _empty_alt_bucket()
     race = {"distance_m": 0, "duration_s": 0}
+    t_totals = _empty_t_bucket()
 
     base_map, override_map = _fetch_week_slots(plan, week_start, athlete_ids=[athlete.id])
     days = _week_days(week_start)
@@ -231,12 +247,16 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 if nm <= 0:
                     continue
 
+                t = (getattr(seg, "t_type", "") or "").strip()
+                if t in t_totals:
+                    t_totals[t] += int(nm)
+
                 dur = _dur_s(seg, nm, speed)
                 bucket = race if is_race else zones[zone]
                 bucket["distance_m"] += int(nm)
                 bucket["duration_s"] += int(dur)
 
-    out = {"zones": zones, "race": race, "alt_zones": alt_zones}
+    out = {"zones": zones, "race": race, "alt_zones": alt_zones, "t_totals": t_totals}
     cache.set(cache_key, out, STATS_CACHE_TTL_S)
     return out
 
@@ -244,7 +264,7 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
 def group_week_stats(plan, athletes, week_start: date_cls):
     athletes = list(athletes or [])
     if not plan or not athletes:
-        return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket()}
+        return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket(), "t_totals": _empty_t_bucket()}
 
     v = _stats_version()
     gsig = _group_sig(athletes)
@@ -260,12 +280,14 @@ def group_week_stats(plan, athletes, week_start: date_cls):
     zones_sum = defaultdict(lambda: {"distance_m": 0, "duration_s": 0})
     alt_sum = defaultdict(lambda: {"duration_s": 0})
     race_sum = {"distance_m": 0, "duration_s": 0}
+    t_sum = defaultdict(int)
 
     for a in athletes:
         speeds = ensure_full_zone_dict(a.get_zone_speed_mps())
         zones_a = _empty_zone_bucket(speeds)
         alt_a = _empty_alt_bucket()
         race_a = {"distance_m": 0, "duration_s": 0}
+        t_a = _empty_t_bucket()
 
         for day in days:
             for slot_index in (1, 2):
@@ -298,6 +320,10 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                     if nm <= 0:
                         continue
 
+                    t = (getattr(seg, "t_type", "") or "").strip()
+                    if t in t_a:
+                        t_a[t] += int(nm)
+
                     dur = _dur_s(seg, nm, speed)
                     bucket = race_a if is_race else zones_a[zone]
                     bucket["distance_m"] += int(nm)
@@ -309,6 +335,9 @@ def group_week_stats(plan, athletes, week_start: date_cls):
 
         for z, vals in alt_a.items():
             alt_sum[str(z)]["duration_s"] += int(vals["duration_s"])
+
+        for t, v in t_a.items():
+            t_sum[t] += int(v)
 
         race_sum["distance_m"] += int(race_a["distance_m"])
         race_sum["duration_s"] += int(race_a["duration_s"])
@@ -332,6 +361,10 @@ def group_week_stats(plan, athletes, week_start: date_cls):
         "duration_s": int(round(race_sum["duration_s"] / n)),
     }
 
-    out = {"zones": zones_avg, "race": race_avg, "alt_zones": alt_avg}
+    t_avg = _empty_t_bucket()
+    for t in t_avg.keys():
+        t_avg[t] = int(round(int(t_sum.get(t, 0)) / n))
+
+    out = {"zones": zones_avg, "race": race_avg, "alt_zones": alt_avg, "t_totals": t_avg}
     cache.set(cache_key, out, STATS_CACHE_TTL_S)
     return out
