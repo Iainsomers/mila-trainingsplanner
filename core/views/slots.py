@@ -31,6 +31,37 @@ STATS_VERSION_KEY = "mila:stats:version"
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
 
 
+def _format_distance_text(distance_m: int) -> str:
+    if int(distance_m) % 1000 == 0:
+        return f"{int(distance_m) // 1000}km"
+    return f"{int(distance_m)}m"
+
+
+def _format_duration_text(duration_s: int) -> str:
+    if int(duration_s) % 60 == 0:
+        return f"{int(duration_s) // 60}'"
+    minutes = int(duration_s) // 60
+    seconds = int(duration_s) % 60
+    return f"{minutes}:{seconds:02d}"
+
+
+def _build_progressive_split_text(parsed, zone: int, index: int) -> str:
+    half_reps = _split_value_evenly(parsed.reps, 2, index)
+    half_distance = _split_value_evenly(parsed.distance_m, 2, index)
+    half_duration = _split_value_evenly(parsed.duration_s, 2, index)
+
+    if parsed.rep_distance_m is not None and half_reps:
+        return f"{half_reps}*{_format_distance_text(parsed.rep_distance_m)} z{zone}"
+
+    if half_distance is not None:
+        return f"{_format_distance_text(half_distance)} z{zone}"
+
+    if half_duration is not None:
+        return f"{_format_duration_text(half_duration)} z{zone}"
+
+    return f"z{zone}"
+
+
 def _core_zone_range_parts(part: str):
     s = (part or "").strip()
     m = _CORE_ZONE_RANGE_RE.match(s)
@@ -44,8 +75,12 @@ def _core_zone_range_parts(part: str):
     if not prefix:
         return None
 
-    first_text = f"{prefix} z{zone_from}"
-    second_text = f"{prefix} z{zone_to}"
+    source_parse = parse_segment_text(f"{prefix} z{zone_from}")
+    if not source_parse.ok:
+        return None
+
+    first_text = _build_progressive_split_text(source_parse, zone_from, 0)
+    second_text = _build_progressive_split_text(source_parse, zone_to, 1)
 
     first_parse = parse_segment_text(first_text)
     second_parse = parse_segment_text(second_text)
