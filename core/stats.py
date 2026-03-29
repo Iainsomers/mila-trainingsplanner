@@ -52,11 +52,11 @@ def _empty_alt_bucket():
 
 def _empty_t_bucket():
     return {
-        "800": 0,
-        "1500": 0,
-        "3000": 0,
-        "5000": 0,
-        "10000": 0,
+        "800": {"distance_m": 0, "duration_s": 0},
+        "1500": {"distance_m": 0, "duration_s": 0},
+        "3000": {"distance_m": 0, "duration_s": 0},
+        "5000": {"distance_m": 0, "duration_s": 0},
+        "10000": {"distance_m": 0, "duration_s": 0},
     }
 
 
@@ -182,11 +182,13 @@ def base_week_stats(plan, week_start: date_cls):
                 if nm <= 0:
                     continue
 
+                dur = _dur_s(seg, nm, speed)
+
                 t = (getattr(seg, "t_type", "") or "").strip()
                 if t in t_totals:
-                    t_totals[t] += int(nm)
+                    t_totals[t]["distance_m"] += int(nm)
+                    t_totals[t]["duration_s"] += int(dur)
 
-                dur = _dur_s(seg, nm, speed)
                 bucket = race if is_race else zones[zone]
                 bucket["distance_m"] += int(nm)
                 bucket["duration_s"] += int(dur)
@@ -247,11 +249,13 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 if nm <= 0:
                     continue
 
+                dur = _dur_s(seg, nm, speed)
+
                 t = (getattr(seg, "t_type", "") or "").strip()
                 if t in t_totals:
-                    t_totals[t] += int(nm)
+                    t_totals[t]["distance_m"] += int(nm)
+                    t_totals[t]["duration_s"] += int(dur)
 
-                dur = _dur_s(seg, nm, speed)
                 bucket = race if is_race else zones[zone]
                 bucket["distance_m"] += int(nm)
                 bucket["duration_s"] += int(dur)
@@ -280,7 +284,7 @@ def group_week_stats(plan, athletes, week_start: date_cls):
     zones_sum = defaultdict(lambda: {"distance_m": 0, "duration_s": 0})
     alt_sum = defaultdict(lambda: {"duration_s": 0})
     race_sum = {"distance_m": 0, "duration_s": 0}
-    t_sum = defaultdict(int)
+    t_sum = _empty_t_bucket()
 
     for a in athletes:
         speeds = ensure_full_zone_dict(a.get_zone_speed_mps())
@@ -320,11 +324,13 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                     if nm <= 0:
                         continue
 
+                    dur = _dur_s(seg, nm, speed)
+
                     t = (getattr(seg, "t_type", "") or "").strip()
                     if t in t_a:
-                        t_a[t] += int(nm)
+                        t_a[t]["distance_m"] += int(nm)
+                        t_a[t]["duration_s"] += int(dur)
 
-                    dur = _dur_s(seg, nm, speed)
                     bucket = race_a if is_race else zones_a[zone]
                     bucket["distance_m"] += int(nm)
                     bucket["duration_s"] += int(dur)
@@ -336,8 +342,9 @@ def group_week_stats(plan, athletes, week_start: date_cls):
         for z, vals in alt_a.items():
             alt_sum[str(z)]["duration_s"] += int(vals["duration_s"])
 
-        for t, v in t_a.items():
-            t_sum[t] += int(v)
+        for t, vals in t_a.items():
+            t_sum[t]["distance_m"] += int(vals["distance_m"])
+            t_sum[t]["duration_s"] += int(vals["duration_s"])
 
         race_sum["distance_m"] += int(race_a["distance_m"])
         race_sum["duration_s"] += int(race_a["duration_s"])
@@ -363,7 +370,8 @@ def group_week_stats(plan, athletes, week_start: date_cls):
 
     t_avg = _empty_t_bucket()
     for t in t_avg.keys():
-        t_avg[t] = int(round(int(t_sum.get(t, 0)) / n))
+        t_avg[t]["distance_m"] = int(round(int(t_sum.get(t, {}).get("distance_m", 0)) / n))
+        t_avg[t]["duration_s"] = int(round(int(t_sum.get(t, {}).get("duration_s", 0)) / n))
 
     out = {"zones": zones_avg, "race": race_avg, "alt_zones": alt_avg, "t_totals": t_avg}
     cache.set(cache_key, out, STATS_CACHE_TTL_S)
