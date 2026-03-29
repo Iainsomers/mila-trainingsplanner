@@ -97,7 +97,7 @@ def _core_zone_range_parts(part: str):
     if not prefix:
         return None
 
-    source_parse = parse_segment_text(f"{prefix} z{zone_from}")
+    source_parse = _parse_core_segment_text(f"{prefix} z{zone_from}")
     if not source_parse.ok:
         return None
 
@@ -120,6 +120,19 @@ def _split_value_evenly(total, pieces, index):
     base = int(total) // pieces
     remainder = int(total) % pieces
     return base + (1 if index < remainder else 0)
+
+
+
+
+_T_TYPE_RE = re.compile(r"\bT\s*(800|1500|3000|5000|10000)\b", re.IGNORECASE)
+
+
+def _parse_core_segment_text(text: str):
+    s = (text or "").strip()
+    if not s:
+        return None
+    zone_required = _T_TYPE_RE.search(s) is None
+    return parse_segment_text(s, zone_required=zone_required)
 
 
 def _bump_stats_version():
@@ -669,8 +682,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     wu_parse = parse_segment_text(wu_text) if wu_text else None
     sprint_parse = parse_segment_text(sprint_text_for_parse) if sprint_text else None
-    core_parse = parse_segment_text(core_text) if core_text else None
-    core2_parse = parse_segment_text(core2_text) if core2_text else None
+    core_parse = _parse_core_segment_text(core_text) if core_text else None
+    core2_parse = _parse_core_segment_text(core2_text) if core2_text else None
     alt_parse = parse_segment_text(alt_text, zone_required=False) if alt_text else None
     cd_parse = parse_segment_text(cd_text) if cd_text else None
 
@@ -823,7 +836,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 order=order,
             )
 
-            part_parse = parse_segment_text(part)
+            part_parse = _parse_core_segment_text(part)
             if not part_parse or not part_parse.ok:
                 order += 1
                 continue
