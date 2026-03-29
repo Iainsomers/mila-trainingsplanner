@@ -45,21 +45,43 @@ def _format_duration_text(duration_s: int) -> str:
     return f"{minutes}:{seconds:02d}"
 
 
-def _build_progressive_split_text(parsed, zone: int, index: int) -> str:
+def _build_progressive_split_parse(parsed, zone: int, index: int):
     half_reps = _split_value_evenly(parsed.reps, 2, index)
     half_distance = _split_value_evenly(parsed.distance_m, 2, index)
     half_duration = _split_value_evenly(parsed.duration_s, 2, index)
 
-    if parsed.rep_distance_m is not None and half_reps:
-        return f"{half_reps}*{_format_distance_text(parsed.rep_distance_m)} z{zone}"
+    if parsed.rep_distance_m is not None and parsed.reps is not None:
+        total_distance = int(half_reps or 0) * int(parsed.rep_distance_m)
+        return {
+            "zone": zone,
+            "distance_m": total_distance,
+            "reps": int(half_reps or 0),
+            "rep_distance_m": int(parsed.rep_distance_m),
+            "duration_s": None,
+            "message": f"Herkannt: progressive split naar Z{zone} → {total_distance}m",
+        }
 
     if half_distance is not None:
-        return f"{_format_distance_text(half_distance)} z{zone}"
+        return {
+            "zone": zone,
+            "distance_m": int(half_distance),
+            "reps": None,
+            "rep_distance_m": None,
+            "duration_s": None,
+            "message": f"Herkannt: progressive split naar Z{zone} → {int(half_distance)}m",
+        }
 
     if half_duration is not None:
-        return f"{_format_duration_text(half_duration)} z{zone}"
+        return {
+            "zone": zone,
+            "distance_m": None,
+            "reps": None,
+            "rep_distance_m": None,
+            "duration_s": int(half_duration),
+            "message": f"Herkannt: progressive split naar Z{zone} → {int(half_duration)}s",
+        }
 
-    return f"z{zone}"
+    return None
 
 
 def _core_zone_range_parts(part: str):
@@ -79,19 +101,14 @@ def _core_zone_range_parts(part: str):
     if not source_parse.ok:
         return None
 
-    first_text = _build_progressive_split_text(source_parse, zone_from, 0)
-    second_text = _build_progressive_split_text(source_parse, zone_to, 1)
+    first_parse = _build_progressive_split_parse(source_parse, zone_from, 0)
+    second_parse = _build_progressive_split_parse(source_parse, zone_to, 1)
 
-    first_parse = parse_segment_text(first_text)
-    second_parse = parse_segment_text(second_text)
-
-    if not first_parse.ok or not second_parse.ok:
+    if not first_parse or not second_parse:
         return None
 
     return {
         "source_text": s,
-        "first_text": first_text,
-        "second_text": second_text,
         "first_parse": first_parse,
         "second_parse": second_parse,
     }
@@ -772,8 +789,13 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                     text=range_parts["source_text"],
                     order=order,
                 )
-                _apply_parse_to_segment(first_seg, range_parts["first_parse"])
-                first_seg.zone = str(range_parts["first_parse"].zone)
+                first_seg.parse_ok = True
+                first_seg.parse_message = range_parts["first_parse"]["message"]
+                first_seg.zone = str(range_parts["first_parse"]["zone"])
+                first_seg.reps = int(range_parts["first_parse"]["reps"] or 1)
+                first_seg.distance_m = range_parts["first_parse"]["rep_distance_m"] if range_parts["first_parse"]["rep_distance_m"] is not None else range_parts["first_parse"]["distance_m"]
+                first_seg.duration_s = range_parts["first_parse"]["duration_s"]
+                first_seg.norm_distance_m = _compute_norm_distance_m(first_seg)
                 first_seg.parsed_at = now
                 first_seg.save()
 
@@ -782,8 +804,13 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                     text="",
                     order=order + 1,
                 )
-                _apply_parse_to_segment(second_seg, range_parts["second_parse"])
-                second_seg.zone = str(range_parts["second_parse"].zone)
+                second_seg.parse_ok = True
+                second_seg.parse_message = range_parts["second_parse"]["message"]
+                second_seg.zone = str(range_parts["second_parse"]["zone"])
+                second_seg.reps = int(range_parts["second_parse"]["reps"] or 1)
+                second_seg.distance_m = range_parts["second_parse"]["rep_distance_m"] if range_parts["second_parse"]["rep_distance_m"] is not None else range_parts["second_parse"]["distance_m"]
+                second_seg.duration_s = range_parts["second_parse"]["duration_s"]
+                second_seg.norm_distance_m = _compute_norm_distance_m(second_seg)
                 second_seg.parsed_at = now
                 second_seg.save()
 
