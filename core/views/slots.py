@@ -734,7 +734,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             if range_parts:
                 first_seg = slot.segments.create(
                     type="CORE",
-                    text=range_parts["source_text"],
+                    text=range_parts["first_text"],
                     order=order,
                 )
                 _apply_parse_to_segment(first_seg, range_parts["first_parse"])
@@ -747,7 +747,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 second_seg = slot.segments.create(
                     type="CORE",
-                    text="",
+                    text=range_parts["second_text"],
                     order=order + 1,
                 )
                 _apply_parse_to_segment(second_seg, range_parts["second_parse"])
