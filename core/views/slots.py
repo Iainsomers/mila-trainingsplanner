@@ -28,7 +28,7 @@ from .common import (
 STATS_VERSION_KEY = "mila:stats:version"
 
 
-_CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*-\s*z\s*([1-6])\s*$", re.IGNORECASE)
+_CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
 
 
 def _core_zone_range_parts(part: str):
