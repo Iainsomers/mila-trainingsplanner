@@ -253,6 +253,13 @@ def calendar_view(request):
         z_time_s = {str(i): 0.0 for i in range(1, 7)}
         race_m = 0.0
         race_time_s = 0.0
+        t_m = {
+            "10000": 0.0,
+            "5000": 0.0,
+            "3000": 0.0,
+            "1500": 0.0,
+            "800": 0.0,
+        }
 
         alt_z1_min = 0
         alt_z2_min = 0
@@ -266,6 +273,7 @@ def calendar_view(request):
 
             zones = st.get("zones") or {}
             race = st.get("race") or {"distance_m": 0, "duration_s": 0}
+            t_totals = st.get("t_totals") or {}
 
             alt = st.get("alt_zones") or {}
             alt_z1_min = int(round(float(alt.get("1", {}).get("duration_s", 0) or 0) / 60.0))
@@ -279,6 +287,9 @@ def calendar_view(request):
 
             race_m = float(race.get("distance_m") or 0)
             race_time_s = float(race.get("duration_s") or 0)
+
+            for t in ("10000", "5000", "3000", "1500", "800"):
+                t_m[t] = float(t_totals.get(t) or 0)
 
         tot_m = sum(z_m.values()) + race_m
         total_time_s = sum(z_time_s.values()) + race_time_s
@@ -298,6 +309,7 @@ def calendar_view(request):
 
         has_z = {z: (z_m[z] > 0) for z in ("1", "2", "3", "4", "5", "6")}
         has_race = (race_m > 0)
+        has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "800")}
 
         base_phase = base_phase_by_week.get(week_start, "")
         athlete_phase = athlete_phase_by_week.get(week_start, "")
@@ -325,6 +337,11 @@ def calendar_view(request):
             "sum_z5_km": _km_str_with_small(z_m["5"]),
             "sum_z6_km": _km_str_with_small(z_m["6"]),
             "sum_race_km": _km_str_with_small(race_m),
+            "sum_t10000_km": _km_str_with_small(t_m["10000"]),
+            "sum_t5000_km": _km_str_with_small(t_m["5000"]),
+            "sum_t3000_km": _km_str_with_small(t_m["3000"]),
+            "sum_t1500_km": _km_str_with_small(t_m["1500"]),
+            "sum_t800_km": _km_str_with_small(t_m["800"]),
             "has_z1": has_z["1"],
             "has_z2": has_z["2"],
             "has_z3": has_z["3"],
@@ -332,6 +349,11 @@ def calendar_view(request):
             "has_z5": has_z["5"],
             "has_z6": has_z["6"],
             "has_race": has_race,
+            "has_t10000": has_t["10000"],
+            "has_t5000": has_t["5000"],
+            "has_t3000": has_t["3000"],
+            "has_t1500": has_t["1500"],
+            "has_t800": has_t["800"],
             "alt_z1_min": alt_z1_min,
             "alt_z2_min": alt_z2_min,
             "alt_z3_min": alt_z3_min,
