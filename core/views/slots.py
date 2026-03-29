@@ -58,6 +58,7 @@ def _build_progressive_split_parse(parsed, zone: int, index: int):
             "reps": int(half_reps or 0),
             "rep_distance_m": int(parsed.rep_distance_m),
             "duration_s": None,
+            "t_type": (parsed.t_type or ""),
             "message": f"Herkannt: progressive split naar Z{zone} → {total_distance}m",
         }
 
@@ -68,6 +69,7 @@ def _build_progressive_split_parse(parsed, zone: int, index: int):
             "reps": None,
             "rep_distance_m": None,
             "duration_s": None,
+            "t_type": (parsed.t_type or ""),
             "message": f"Herkannt: progressive split naar Z{zone} → {int(half_distance)}m",
         }
 
@@ -78,6 +80,7 @@ def _build_progressive_split_parse(parsed, zone: int, index: int):
             "reps": None,
             "rep_distance_m": None,
             "duration_s": int(half_duration),
+            "t_type": (parsed.t_type or ""),
             "message": f"Herkannt: progressive split naar Z{zone} → {int(half_duration)}s",
         }
 
@@ -209,6 +212,7 @@ def week_copy(request, yyyy, mm, dd):
                     "parse_ok": bool(seg.parse_ok),
                     "parse_message": seg.parse_message or "",
                     "special": (getattr(seg, "special", "") or ""),
+                    "t_type": (getattr(seg, "t_type", "") or ""),
                 })
 
             payload["days"][offset_key][str(slot_index)] = segs
@@ -274,6 +278,8 @@ def week_paste(request, yyyy, mm, dd):
                 seg.parse_ok = bool(item.get("parse_ok"))
                 seg.parse_message = item.get("parse_message") or ""
                 seg.special = item.get("special") or ""
+                if hasattr(seg, "t_type"):
+                    seg.t_type = item.get("t_type") or ""
                 seg.parsed_at = now
                 seg.save()
 
@@ -804,6 +810,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 )
                 first_seg.parse_ok = True
                 first_seg.parse_message = range_parts["first_parse"]["message"]
+                if hasattr(first_seg, "t_type"):
+                    first_seg.t_type = range_parts["first_parse"].get("t_type") or ""
                 first_seg.zone = str(range_parts["first_parse"]["zone"])
                 first_seg.reps = int(range_parts["first_parse"]["reps"] or 1)
                 first_seg.distance_m = range_parts["first_parse"]["rep_distance_m"] if range_parts["first_parse"]["rep_distance_m"] is not None else range_parts["first_parse"]["distance_m"]
@@ -819,6 +827,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 )
                 second_seg.parse_ok = True
                 second_seg.parse_message = range_parts["second_parse"]["message"]
+                if hasattr(second_seg, "t_type"):
+                    second_seg.t_type = range_parts["second_parse"].get("t_type") or ""
                 second_seg.zone = str(range_parts["second_parse"]["zone"])
                 second_seg.reps = int(range_parts["second_parse"]["reps"] or 1)
                 second_seg.distance_m = range_parts["second_parse"]["rep_distance_m"] if range_parts["second_parse"]["rep_distance_m"] is not None else range_parts["second_parse"]["distance_m"]
