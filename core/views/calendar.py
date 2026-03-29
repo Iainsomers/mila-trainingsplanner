@@ -289,7 +289,8 @@ def calendar_view(request):
             race_time_s = float(race.get("duration_s") or 0)
 
             for t in ("10000", "5000", "3000", "1500", "800"):
-                t_m[t] = float(t_totals.get(t) or 0)
+                vals = t_totals.get(t) or {"distance_m": 0, "duration_s": 0}
+                t_m[t] = float(vals.get("distance_m") or 0)
 
         tot_m = sum(z_m.values()) + race_m
         total_time_s = sum(z_time_s.values()) + race_time_s
