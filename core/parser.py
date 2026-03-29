@@ -13,22 +13,26 @@ class ParseResult:
     reps: Optional[int] = None          # bij interval
     rep_distance_m: Optional[int] = None
     special: Optional[str] = None       # RACE / IMPORTANT_RACE / STRENGTH
+    t_type: Optional[str] = None        # 800 / 1500 / 3000 / 5000 / 10000
     message: str = ""
     raw: str = ""
 
 
 # --- Special keywords (geen zone nodig) ---
 _RACE_BANG_RE = re.compile(r"\brace!\b", re.IGNORECASE)
-_RACE_RE = re.compile(r"\brace\b", re.IGNORECASE)         # let op: matcht ook in "race!" maar race! checken we eerst
+_RACE_RE = re.compile(r"\brace\b", re.IGNORECASE)
 _STRENGTH_RE = re.compile(r"\bstrength\b", re.IGNORECASE)
+
+# --- T labels ---
+_T_RE = re.compile(r"\bT\s*(800|1500|3000|5000|10000)\b", re.IGNORECASE)
 
 # --- Zone & reguliere parsing ---
 _ZONE_RE = re.compile(r"Z\s*([1-6])\b", re.IGNORECASE)
 
-_DURATION_APOS_RE = re.compile(r"(\d+)\s*['’‘´`′]", re.IGNORECASE)     # 30' / 30’ etc
-_DURATION_MINWORD_RE = re.compile(r"(\d+)\s*min\b", re.IGNORECASE)     # 30 min
-_DURATION_M_RE = re.compile(r"(\d+)\s*m\b", re.IGNORECASE)             # 30m  (AMBIGU met meters!)
-_DURATION_HMS_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b")    # 45:00 / 1:15:00
+_DURATION_APOS_RE = re.compile(r"(\d+)\s*['’‘´`′]", re.IGNORECASE)
+_DURATION_MINWORD_RE = re.compile(r"(\d+)\s*min\b", re.IGNORECASE)
+_DURATION_M_RE = re.compile(r"(\d+)\s*m\b", re.IGNORECASE)
+_DURATION_HMS_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b")
 
 _DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
 
@@ -42,8 +46,6 @@ _DUR_REP_RE = re.compile(
     re.IGNORECASE,
 )
 
-# --- nested reps, bv 2*(10*400m) of 2*10*400m ---
-# Fix: geen trailing \b (faalt bij afsluiten op ')'); gebruik lookahead (?=\s|$)
 _NESTED_REP_DISTANCE_RE = re.compile(
     r"\b(\d+)\s*(?:x|\*|×)\s*\(?\s*(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(m|km|k)\s*\)?(?=\s|$)",
     re.IGNORECASE,
@@ -54,24 +56,60 @@ _NESTED_DUR_REP_RE = re.compile(
     re.IGNORECASE,
 )
 
-# --- set-notatie, bv 3*(600m-400m-300m) of 3*(4'-3'-2') ---
 _SET_RE = re.compile(
     r"\b(\d+)\s*(?:x|\*|×)\s*\(\s*([^)]+?)\s*\)",
     re.IGNORECASE,
 )
 
-# Tokens (fullmatch) voor binnen de ()
 _SET_DISTANCE_TOKEN_RE = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\s*$", re.IGNORECASE)
 _SET_MINUTES_TOKEN_RE = re.compile(r"^\s*(\d+)\s*['’‘´`′]\s*$", re.IGNORECASE)
 _SET_MINWORD_TOKEN_RE = re.compile(r"^\s*(\d+)\s*min\s*$", re.IGNORECASE)
 
 
+def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
+    tm = _T_RE.search(s)
+    t_type = tm.group(1) if tm else None
+
+    zm = _ZONE_RE.search(s)
+    explicit_zone = int(zm.group(1)) if zm else None
+
+    if t_type:
+        if explicit_zone is not None:
+            return explicit_zone, t_type, None
+
+        if t_type in ("800", "1500"):
+            return 5, t_type, None
+
+        if t_type in ("5000", "10000"):
+            return 4, t_type, None
+
+        if t_type == "3000":
+            return None, t_type, ParseResult(
+                ok=False,
+                zone=None,
+                t_type=t_type,
+                message="T3000 vereist expliciet een zone (bv. T3000 Z4 of T3000 Z5).",
+                raw=raw,
+            )
+
+    if explicit_zone is not None:
+        return explicit_zone, t_type, None
+
+    if zone_required:
+        return None, t_type, ParseResult(
+            ok=False,
+            message="Geen zone gevonden (verwacht bv. Z2).",
+            raw=raw,
+        )
+
+    return None, t_type, None
+
+
 def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     """
     Parseert een segment-tekst.
-    - Standaard (zone_required=True): verwacht Z1..Z6 en parsed afstand/duur.
-    - zone_required=False: accepteert tekst zónder zone (handig voor 'alternative' die nu nog niet meetelt).
-      In die modus wordt alleen specials herkend; anders wordt de tekst als 'ok' opgeslagen zonder parsing.
+    - Standaard (zone_required=True): verwacht Z1..Z6 of een T-label met default zone.
+    - zone_required=False: accepteert tekst zónder zone.
     """
     raw = text
     s = (text or "").strip()
@@ -90,6 +128,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=None,
             rep_distance_m=None,
             special="STRENGTH",
+            t_type=None,
             message="Herkannt: Strength (geen zone/afstand parsing nodig).",
             raw=raw,
         )
@@ -101,6 +140,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 ok=False,
                 zone=None,
                 special="IMPORTANT_RACE",
+                t_type=None,
                 message="Herkannt: Race! maar geen afstand gevonden (bv. 5km of 5000m).",
                 raw=raw,
             )
@@ -115,6 +155,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=1,
             rep_distance_m=None,
             special="IMPORTANT_RACE",
+            t_type=None,
             message=f"Herkannt: Race! → {total_m}m",
             raw=raw,
         )
@@ -126,6 +167,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 ok=False,
                 zone=None,
                 special="RACE",
+                t_type=None,
                 message="Herkannt: Race maar geen afstand gevonden (bv. 5km of 5000m).",
                 raw=raw,
             )
@@ -140,25 +182,17 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=1,
             rep_distance_m=None,
             special="RACE",
+            t_type=None,
             message=f"Herkannt: Race → {total_m}m",
             raw=raw,
         )
 
     # -------------------------------------------------
-    # 1) Zone parsing (optioneel)
+    # 1) Zone / T parsing
     # -------------------------------------------------
-    zm = _ZONE_RE.search(s)
-    if not zm and zone_required:
-        return ParseResult(
-        ok=False,
-        message="Geen zone gevonden (verwacht bv. Z2).",
-        raw=raw,
-    )
-
-    zone = zm.group(1) if zm else None
-
-
-    zone = int(zm.group(1))
+    zone, t_type, zone_error = _resolve_zone_and_t(s, zone_required=zone_required, raw=raw)
+    if zone_error:
+        return zone_error
 
     # -------------------------------------------------
     # 1a) nested reps
@@ -182,7 +216,8 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=total_reps,
             rep_distance_m=int(round(rep_m)),
             special=None,
-            message=f"Herkannt: {outer}×({inner}×{int(round(rep_m))}m) in Z{zone} → {total_m}m",
+            t_type=t_type,
+            message=f"Herkannt: {outer}×({inner}×{int(round(rep_m))}m) in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_m}m",
             raw=raw,
         )
 
@@ -197,6 +232,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 ok=False,
                 zone=zone,
                 special=None,
+                t_type=t_type,
                 message="Waarde lijkt meters (te groot voor minuten). Gebruik bij minuten bv 30' of 30 min.",
                 raw=raw,
             )
@@ -212,7 +248,8 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=total_reps,
             rep_distance_m=None,
             special=None,
-            message=f"Herkannt: {outer}×({inner}×{minutes} min) in Z{zone} → {total_s}s",
+            t_type=t_type,
+            message=f"Herkannt: {outer}×({inner}×{minutes} min) in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
             raw=raw,
         )
 
@@ -229,11 +266,11 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             return ParseResult(
                 ok=False,
                 zone=zone,
+                t_type=t_type,
                 message="Set-notatie gevonden, maar geen items binnen de haakjes.",
                 raw=raw,
             )
 
-        # Probeer eerst afstanden
         dist_tokens = []
         all_dist = True
         for p in parts:
@@ -256,11 +293,11 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 reps=reps,
                 rep_distance_m=rep_m,
                 special=None,
-                message=f"Herkannt: {reps}×({inner}) in Z{zone} → {total_m}m",
+                t_type=t_type,
+                message=f"Herkannt: {reps}×({inner}) in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_m}m",
                 raw=raw,
             )
 
-        # Probeer tijden (minuten) met ' of 'min'
         minutes_list = []
         all_min = True
         for p in parts:
@@ -279,6 +316,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 return ParseResult(
                     ok=False,
                     zone=zone,
+                    t_type=t_type,
                     message="Minutenwaarde te groot in set-notatie. Gebruik bij afstand bv 5000m of 5km.",
                     raw=raw,
                 )
@@ -293,19 +331,21 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 reps=reps,
                 rep_distance_m=None,
                 special=None,
-                message=f"Herkannt: {reps}×({inner}) in Z{zone} → {total_s}s",
+                t_type=t_type,
+                message=f"Herkannt: {reps}×({inner}) in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
                 raw=raw,
             )
 
         return ParseResult(
             ok=False,
             zone=zone,
+            t_type=t_type,
             message="Set-notatie gevonden, maar items binnen () zijn niet herkend als afstand (m/km) of tijd (minuten met ' of 'min').",
             raw=raw,
         )
 
     # -------------------------------------------------
-    # 2) Reps-afstand (intervalvorm) bv "6×1000m Z3"
+    # 2) Reps-afstand
     # -------------------------------------------------
     rm = _REP_RE.search(s)
     if rm:
@@ -324,12 +364,13 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=reps,
             rep_distance_m=int(round(rep_m)),
             special=None,
-            message=f"Herkannt: {reps}×{int(round(rep_m))}m in Z{zone} → {total_m}m",
+            t_type=t_type,
+            message=f"Herkannt: {reps}×{int(round(rep_m))}m in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_m}m",
             raw=raw,
         )
 
     # -------------------------------------------------
-    # 3) Reps-duur (minuten) bv "2*30'Z2"
+    # 3) Reps-duur
     # -------------------------------------------------
     drm = _DUR_REP_RE.search(s)
     if drm:
@@ -346,12 +387,13 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 reps=reps,
                 rep_distance_m=None,
                 special=None,
-                message=f"Herkannt: {reps}×{minutes} min in Z{zone} → {total_s}s",
+                t_type=t_type,
+                message=f"Herkannt: {reps}×{minutes} min in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
                 raw=raw,
             )
 
     # -------------------------------------------------
-    # 4) Afstand zonder reps (bv. "5000m Z3", "5kmZ2")
+    # 4) Afstand zonder reps
     # -------------------------------------------------
     am = _DISTANCE_RE.search(s)
     if am:
@@ -366,12 +408,13 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=None,
             rep_distance_m=None,
             special=None,
-            message=f"Herkannt: {value:g}{unit} in Z{zone} → {total_m}m",
+            t_type=t_type,
+            message=f"Herkannt: {value:g}{unit} in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_m}m",
             raw=raw,
         )
 
     # -------------------------------------------------
-    # 5) Duur in minuten (30' / 30 min / 30m)
+    # 5) Duur in minuten
     # -------------------------------------------------
     dm = _DURATION_APOS_RE.search(s) or _DURATION_MINWORD_RE.search(s) or _DURATION_M_RE.search(s)
     if dm:
@@ -382,6 +425,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 ok=False,
                 zone=zone,
                 special=None,
+                t_type=t_type,
                 message="Waarde lijkt meters (te groot voor minuten). Gebruik bij minuten bv 30' of 30 min.",
                 raw=raw,
             )
@@ -395,7 +439,8 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=None,
             rep_distance_m=None,
             special=None,
-            message=f"Herkannt: {minutes} min in Z{zone} → {total_s}s",
+            t_type=t_type,
+            message=f"Herkannt: {minutes} min in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
             raw=raw,
         )
 
@@ -417,7 +462,8 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 reps=None,
                 rep_distance_m=None,
                 special=None,
-                message=f"Herkannt: {a:02d}:{b:02d} in Z{zone} → {total_s}s",
+                t_type=t_type,
+                message=f"Herkannt: {a:02d}:{b:02d} in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
                 raw=raw,
             )
         else:
@@ -433,7 +479,8 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 reps=None,
                 rep_distance_m=None,
                 special=None,
-                message=f"Herkannt: {h:02d}:{m:02d}:{sec:02d} in Z{zone} → {total_s}s",
+                t_type=t_type,
+                message=f"Herkannt: {h:02d}:{m:02d}:{sec:02d} in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
                 raw=raw,
             )
 
@@ -441,7 +488,8 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
         ok=False,
         zone=zone,
         special=None,
-        message="Zone gevonden, maar geen duur/afstand herkend (nog).",
+        t_type=t_type,
+        message="Zone/T gevonden, maar geen duur/afstand herkend (nog).",
         raw=raw,
     )
 

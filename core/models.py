@@ -366,6 +366,16 @@ class TrainingSegment(models.Model):
         ("IMPORTANT_RACE", "Important Race"),
     ]
 
+    T_TYPE_CHOICES = [
+        ("", "—"),
+        ("800", "T800"),
+        ("1500", "T1500"),
+        ("3000", "T3000"),
+        ("5000", "T5000"),
+        ("10000", "T10000"),
+    ]
+
+
     slot = models.ForeignKey(
         TrainingSlot, on_delete=models.CASCADE, related_name="segments"
     )
@@ -377,6 +387,10 @@ class TrainingSegment(models.Model):
 
     special = models.CharField(
         max_length=20, choices=SPECIAL_CHOICES, blank=True, default=""
+    )
+
+    t_type = models.CharField(
+        max_length=10, choices=T_TYPE_CHOICES, blank=True, default=""
     )
 
     reps = models.PositiveIntegerField(default=1)
@@ -395,7 +409,12 @@ class TrainingSegment(models.Model):
         ordering = ["order", "id"]
 
     def __str__(self) -> str:
-        extra = f", {self.special}" if self.special else ""
+        extras = []
+        if self.t_type:
+            extras.append(f"T{self.t_type}")
+        if self.special:
+            extras.append(self.special)
+        extra = f", {', '.join(extras)}" if extras else ""
         return f"{self.slot} – {self.get_type_display()} (Z{self.zone}{extra})"
 
     @property
