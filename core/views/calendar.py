@@ -365,6 +365,9 @@ def calendar_view(request):
 
     week_phases_enabled = bool(getattr(selected_plan, "week_phases_enabled", False)) if selected_plan else False
     weekcolors_enabled = bool(request.session.get("weekcolors_enabled", True))
+    show_all_zones = bool(request.session.get("show_all_zones", True))
+    show_t_totals = bool(request.session.get("show_t_totals", True))
+    show_all_t_totals = bool(request.session.get("show_all_t_totals", True))
 
     return render(
         request,
@@ -376,7 +379,9 @@ def calendar_view(request):
             "selected_plan": selected_plan,
             "plan_athletes": plan_athletes,
             "selected_athlete": selected_athlete,
-            "show_all_zones": request.session.get("show_all_zones", True),
+            "show_all_zones": show_all_zones,
+            "show_t_totals": show_t_totals,
+            "show_all_t_totals": show_all_t_totals,
             "has_week_clipboard": bool(request.session.get("week_clipboard")),
             "week_phases_enabled": week_phases_enabled,
             "weekcolors_enabled": weekcolors_enabled,
