@@ -774,9 +774,6 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 )
                 _apply_parse_to_segment(first_seg, range_parts["first_parse"])
                 first_seg.zone = str(range_parts["first_parse"].zone)
-                first_seg.distance_m = _split_value_evenly(first_seg.distance_m, 2, 0)
-                first_seg.duration_s = _split_value_evenly(first_seg.duration_s, 2, 0)
-                first_seg.norm_distance_m = _split_value_evenly(first_seg.norm_distance_m, 2, 0)
                 first_seg.parsed_at = now
                 first_seg.save()
 
@@ -787,9 +784,6 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 )
                 _apply_parse_to_segment(second_seg, range_parts["second_parse"])
                 second_seg.zone = str(range_parts["second_parse"].zone)
-                second_seg.distance_m = _split_value_evenly(second_seg.distance_m, 2, 1)
-                second_seg.duration_s = _split_value_evenly(second_seg.duration_s, 2, 1)
-                second_seg.norm_distance_m = _split_value_evenly(second_seg.norm_distance_m, 2, 1)
                 second_seg.parsed_at = now
                 second_seg.save()
 
