@@ -27,6 +27,56 @@ def _filter_owned(qs, user):
     return qs.filter(owner=user)
 
 
+def _parse_pr_time_to_seconds(value: str):
+    s = (value or "").strip()
+    if not s:
+        raise ValueError("empty")
+
+    parts = s.split(":")
+    if len(parts) == 2:
+        mm, ss = parts
+        if not (mm.isdigit() and ss.isdigit()):
+            raise ValueError("bad format")
+        minutes = int(mm)
+        seconds = int(ss)
+        if seconds < 0 or seconds >= 60:
+            raise ValueError("bad range")
+        total_s = minutes * 60 + seconds
+        if total_s <= 0:
+            raise ValueError("bad range")
+        return total_s
+
+    if len(parts) == 3:
+        hh, mm, ss = parts
+        if not (hh.isdigit() and mm.isdigit() and ss.isdigit()):
+            raise ValueError("bad format")
+        hours = int(hh)
+        minutes = int(mm)
+        seconds = int(ss)
+        if minutes < 0 or minutes >= 60 or seconds < 0 or seconds >= 60:
+            raise ValueError("bad range")
+        total_s = hours * 3600 + minutes * 60 + seconds
+        if total_s <= 0:
+            raise ValueError("bad range")
+        return total_s
+
+    raise ValueError("bad format")
+
+
+def _format_pr_seconds(value):
+    if value is None:
+        return ""
+    total_s = int(value)
+    if total_s <= 0:
+        return ""
+    hours = total_s // 3600
+    minutes = (total_s % 3600) // 60
+    seconds = total_s % 60
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes}:{seconds:02d}"
+
+
 @require_GET
 def dashboard_view(request):
     return render(request, "core/dashboard.html")
@@ -280,6 +330,11 @@ def coach_athlete_create_view(request):
         "gender": "",
         "vdot": "",
         "zone_method": "manual",
+        "pr_800": "",
+        "pr_1500": "",
+        "pr_3000": "",
+        "pr_5000": "",
+        "pr_10000": "",
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -291,6 +346,11 @@ def coach_athlete_create_view(request):
         form["gender"] = (request.POST.get("gender") or "").strip()
         form["vdot"] = (request.POST.get("vdot") or "").strip()
         form["zone_method"] = (request.POST.get("zone_method") or "").strip() or "manual"
+        form["pr_800"] = (request.POST.get("pr_800") or "").strip()
+        form["pr_1500"] = (request.POST.get("pr_1500") or "").strip()
+        form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
+        form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
+        form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -320,6 +380,36 @@ def coach_athlete_create_view(request):
             vdot = None
             errors.append("VDOT is ongeldig (gebruik een getal).")
 
+        try:
+            pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
+        except ValueError:
+            pr_800_s = None
+            errors.append("T800 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
+        try:
+            pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
+        except ValueError:
+            pr_1500_s = None
+            errors.append("T1500 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
+        try:
+            pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"])
+        except ValueError:
+            pr_3000_s = None
+            errors.append("T3000 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
+        try:
+            pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"])
+        except ValueError:
+            pr_5000_s = None
+            errors.append("T5000 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
+        try:
+            pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"])
+        except ValueError:
+            pr_10000_s = None
+            errors.append("T10000 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
         if form["zone_method"] != "manual":
             errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
 
@@ -341,6 +431,11 @@ def coach_athlete_create_view(request):
                 vdot=vdot,
                 zone_method=form["zone_method"],
                 zone_speed_mps=zone_speed_mps,
+                pr_800_s=pr_800_s,
+                pr_1500_s=pr_1500_s,
+                pr_3000_s=pr_3000_s,
+                pr_5000_s=pr_5000_s,
+                pr_10000_s=pr_10000_s,
             )
             return redirect("coach_athletes")
 
@@ -370,6 +465,11 @@ def coach_athlete_edit_view(request, athlete_id: int):
         "gender": athlete.gender or "",
         "vdot": (str(athlete.vdot) if athlete.vdot is not None else ""),
         "zone_method": getattr(athlete, "zone_method", "manual") or "manual",
+        "pr_800": _format_pr_seconds(getattr(athlete, "pr_800_s", None)),
+        "pr_1500": _format_pr_seconds(getattr(athlete, "pr_1500_s", None)),
+        "pr_3000": _format_pr_seconds(getattr(athlete, "pr_3000_s", None)),
+        "pr_5000": _format_pr_seconds(getattr(athlete, "pr_5000_s", None)),
+        "pr_10000": _format_pr_seconds(getattr(athlete, "pr_10000_s", None)),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -381,6 +481,11 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["gender"] = (request.POST.get("gender") or "").strip()
         form["vdot"] = (request.POST.get("vdot") or "").strip()
         form["zone_method"] = (request.POST.get("zone_method") or "").strip() or "manual"
+        form["pr_800"] = (request.POST.get("pr_800") or "").strip()
+        form["pr_1500"] = (request.POST.get("pr_1500") or "").strip()
+        form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
+        form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
+        form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -410,6 +515,36 @@ def coach_athlete_edit_view(request, athlete_id: int):
             vdot = None
             errors.append("VDOT is ongeldig (gebruik een getal).")
 
+        try:
+            pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
+        except ValueError:
+            pr_800_s = None
+            errors.append("T800 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
+        try:
+            pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
+        except ValueError:
+            pr_1500_s = None
+            errors.append("T1500 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
+        try:
+            pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"])
+        except ValueError:
+            pr_3000_s = None
+            errors.append("T3000 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
+        try:
+            pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"])
+        except ValueError:
+            pr_5000_s = None
+            errors.append("T5000 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
+        try:
+            pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"])
+        except ValueError:
+            pr_10000_s = None
+            errors.append("T10000 is verplicht en moet in formaat m:ss of h:mm:ss zijn.")
+
         if form["zone_method"] != "manual":
             errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
 
@@ -429,6 +564,11 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.vdot = vdot
             athlete.zone_method = form["zone_method"]
             athlete.zone_speed_mps = zone_speed_mps
+            athlete.pr_800_s = pr_800_s
+            athlete.pr_1500_s = pr_1500_s
+            athlete.pr_3000_s = pr_3000_s
+            athlete.pr_5000_s = pr_5000_s
+            athlete.pr_10000_s = pr_10000_s
             athlete.save()
 
             saved_notice = "Opgeslagen."
