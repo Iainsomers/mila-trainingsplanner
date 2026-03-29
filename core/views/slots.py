@@ -1,4 +1,5 @@
 from datetime import date, date as date_cls
+import re
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -25,6 +26,48 @@ from .common import (
 )
 
 STATS_VERSION_KEY = "mila:stats:version"
+
+
+_CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*-\s*z\s*([1-6])\s*$", re.IGNORECASE)
+
+
+def _core_zone_range_parts(part: str):
+    s = (part or "").strip()
+    m = _CORE_ZONE_RANGE_RE.match(s)
+    if not m:
+        return None
+
+    prefix = (m.group(1) or "").strip()
+    zone_from = int(m.group(2))
+    zone_to = int(m.group(3))
+
+    if not prefix:
+        return None
+
+    first_text = f"{prefix} z{zone_from}"
+    second_text = f"{prefix} z{zone_to}"
+
+    first_parse = parse_segment_text(first_text)
+    second_parse = parse_segment_text(second_text)
+
+    if not first_parse.ok or not second_parse.ok:
+        return None
+
+    return {
+        "source_text": s,
+        "first_text": first_text,
+        "second_text": second_text,
+        "first_parse": first_parse,
+        "second_parse": second_parse,
+    }
+
+
+def _split_value_evenly(total, pieces, index):
+    if total is None:
+        return None
+    base = int(total) // pieces
+    remainder = int(total) % pieces
+    return base + (1 if index < remainder else 0)
 
 
 def _bump_stats_version():
@@ -683,20 +726,56 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
         slot.segments.filter(type="CORE").delete()
 
-        for i, part in enumerate(parts):
+        order = 3
+
+        for part in parts:
+            range_parts = _core_zone_range_parts(part)
+
+            if range_parts:
+                first_seg = slot.segments.create(
+                    type="CORE",
+                    text=range_parts["source_text"],
+                    order=order,
+                )
+                _apply_parse_to_segment(first_seg, range_parts["first_parse"])
+                first_seg.zone = str(range_parts["first_parse"].zone)
+                first_seg.distance_m = _split_value_evenly(first_seg.distance_m, 2, 0)
+                first_seg.duration_s = _split_value_evenly(first_seg.duration_s, 2, 0)
+                first_seg.norm_distance_m = _split_value_evenly(first_seg.norm_distance_m, 2, 0)
+                first_seg.parsed_at = now
+                first_seg.save()
+
+                second_seg = slot.segments.create(
+                    type="CORE",
+                    text="",
+                    order=order + 1,
+                )
+                _apply_parse_to_segment(second_seg, range_parts["second_parse"])
+                second_seg.zone = str(range_parts["second_parse"].zone)
+                second_seg.distance_m = _split_value_evenly(second_seg.distance_m, 2, 1)
+                second_seg.duration_s = _split_value_evenly(second_seg.duration_s, 2, 1)
+                second_seg.norm_distance_m = _split_value_evenly(second_seg.norm_distance_m, 2, 1)
+                second_seg.parsed_at = now
+                second_seg.save()
+
+                order += 2
+                continue
+
             seg = slot.segments.create(
                 type="CORE",
                 text=part,
-                order=3 + i,
+                order=order,
             )
 
             part_parse = parse_segment_text(part)
             if not part_parse or not part_parse.ok:
+                order += 1
                 continue
 
             _apply_parse_to_segment(seg, part_parse)
             seg.parsed_at = now
             seg.save()
+            order += 1
     else:
         slot.segments.filter(type="CORE").delete()
 
