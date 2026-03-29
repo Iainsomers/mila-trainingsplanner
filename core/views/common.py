@@ -378,6 +378,9 @@ def _apply_parse_to_segment(seg, parse_res):
     if hasattr(seg, "special"):
         seg.special = (parse_res.special or "")
 
+    if hasattr(seg, "t_type"):
+        seg.t_type = (parse_res.t_type or "")
+
     if parse_res.zone is not None:
         seg.zone = str(parse_res.zone)
 
