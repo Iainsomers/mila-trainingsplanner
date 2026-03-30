@@ -167,7 +167,6 @@ def _core_t_range_parts(part: str):
 
     return {
         "source_text": s,
-        "source_parse": source_parse,
         "first_parse": first_parse,
         "second_parse": second_parse,
     }
@@ -198,7 +197,6 @@ def _core_zone_range_parts(part: str):
 
     return {
         "source_text": s,
-        "source_parse": source_parse,
         "first_parse": first_parse,
         "second_parse": second_parse,
     }
@@ -892,16 +890,41 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 range_parts = _core_t_range_parts(part)
 
             if range_parts:
-                seg = slot.segments.create(
+                first_seg = slot.segments.create(
                     type="CORE",
                     text=range_parts["source_text"],
                     order=order,
                 )
-                _apply_parse_to_segment(seg, range_parts["source_parse"])
-                seg.parse_message = range_parts["source_text"]
-                seg.parsed_at = now
-                seg.save()
-                order += 1
+                first_seg.parse_ok = True
+                first_seg.parse_message = range_parts["first_parse"]["message"]
+                if hasattr(first_seg, "t_type"):
+                    first_seg.t_type = range_parts["first_parse"].get("t_type") or ""
+                first_seg.zone = str(range_parts["first_parse"]["zone"])
+                first_seg.reps = int(range_parts["first_parse"]["reps"] or 1)
+                first_seg.distance_m = range_parts["first_parse"]["rep_distance_m"] if range_parts["first_parse"]["rep_distance_m"] is not None else range_parts["first_parse"]["distance_m"]
+                first_seg.duration_s = range_parts["first_parse"]["duration_s"]
+                first_seg.norm_distance_m = _compute_norm_distance_m(first_seg)
+                first_seg.parsed_at = now
+                first_seg.save()
+
+                second_seg = slot.segments.create(
+                    type="CORE",
+                    text="",
+                    order=order + 1,
+                )
+                second_seg.parse_ok = True
+                second_seg.parse_message = range_parts["second_parse"]["message"]
+                if hasattr(second_seg, "t_type"):
+                    second_seg.t_type = range_parts["second_parse"].get("t_type") or ""
+                second_seg.zone = str(range_parts["second_parse"]["zone"])
+                second_seg.reps = int(range_parts["second_parse"]["reps"] or 1)
+                second_seg.distance_m = range_parts["second_parse"]["rep_distance_m"] if range_parts["second_parse"]["rep_distance_m"] is not None else range_parts["second_parse"]["distance_m"]
+                second_seg.duration_s = range_parts["second_parse"]["duration_s"]
+                second_seg.norm_distance_m = _compute_norm_distance_m(second_seg)
+                second_seg.parsed_at = now
+                second_seg.save()
+
+                order += 2
                 continue
 
             seg = slot.segments.create(
