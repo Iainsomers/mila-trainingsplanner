@@ -12,7 +12,7 @@ from core.models import (
     PlanWeekPhase,
     AthleteWeekPhaseOverride,
 )
-from core.stats import base_week_stats, athlete_week_stats
+from core.stats import base_week_stats, athlete_week_stats, group_week_stats
 from .common import (
     _calendar_display_mode,
     _get_selected_plan,
@@ -269,7 +269,7 @@ def calendar_view(request):
             if selected_athlete:
                 st = athlete_week_stats(selected_plan, selected_athlete, week_start)
             else:
-                st = base_week_stats(selected_plan, week_start)
+                st = group_week_stats(selected_plan, plan_athletes, week_start)
 
             zones = st.get("zones") or {}
             race = st.get("race") or {"distance_m": 0, "duration_s": 0}
