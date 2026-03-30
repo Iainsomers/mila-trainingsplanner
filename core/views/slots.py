@@ -89,6 +89,31 @@ def _build_progressive_split_parse(parsed, zone: int, index: int):
 
 
 
+def _build_progressive_split_text(parse_data: dict) -> str:
+    reps = parse_data.get("reps")
+    rep_distance_m = parse_data.get("rep_distance_m")
+    distance_m = parse_data.get("distance_m")
+    duration_s = parse_data.get("duration_s")
+    zone = parse_data.get("zone")
+    t_type = parse_data.get("t_type") or ""
+
+    parts = []
+
+    if reps is not None and rep_distance_m is not None:
+        parts.append(f"{int(reps)}*{_format_distance_text(int(rep_distance_m))}")
+    elif distance_m is not None:
+        parts.append(_format_distance_text(int(distance_m)))
+    elif duration_s is not None:
+        parts.append(_format_duration_text(int(duration_s)))
+
+    if t_type:
+        parts.append(f"T{t_type}")
+    if zone:
+        parts.append(f"Z{int(zone)}")
+
+    return " ".join(parts).strip()
+
+
 def _t_type_progressive_zone(t_type: str) -> int:
     t = str(t_type or "").strip()
     if t in ("800", "1500"):
@@ -867,7 +892,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             if range_parts:
                 first_seg = slot.segments.create(
                     type="CORE",
-                    text=range_parts["source_text"],
+                    text=_build_progressive_split_text(range_parts["first_parse"]),
                     order=order,
                 )
                 first_seg.parse_ok = True
@@ -884,7 +909,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 second_seg = slot.segments.create(
                     type="CORE",
-                    text="",
+                    text=_build_progressive_split_text(range_parts["second_parse"]),
                     order=order + 1,
                 )
                 second_seg.parse_ok = True
