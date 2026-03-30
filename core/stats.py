@@ -11,7 +11,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v2"
+STATS_SCHEMA_VERSION = "v3"
 
 
 def _stats_version() -> int:
@@ -31,8 +31,13 @@ def _athlete_zones_sig(athlete) -> str:
         z = athlete.get_zone_speed_mps() or {}
     except Exception:
         z = {}
+
+    pr_items = []
+    for t in ("800", "1500", "3000", "5000", "10000"):
+        pr_items.append((t, getattr(athlete, f"pr_{t}_s", None)))
+
     items = sorted((str(k), str(v)) for k, v in z.items())
-    return _sig(repr(items))
+    return _sig(repr(items) + "|" + repr(pr_items))
 
 
 def _group_sig(athletes) -> str:
@@ -64,15 +69,17 @@ def _empty_t_bucket():
 def _t_speed_mps(athlete, t_type: str):
     if not athlete or not t_type:
         return None
+
     field = f"pr_{t_type}_s"
-    val = getattr(athlete, field, None)
-    if not val:
+    pr_s = getattr(athlete, field, None)
+    if not pr_s:
         return None
+
     try:
-        dist = int(t_type)
-        return dist / float(val)
+        return float(int(t_type)) / float(pr_s)
     except Exception:
         return None
+
 
 def _norm_m_base(seg, speed_mps: float) -> int:
     nm = int(seg.norm_distance_m or 0)
@@ -191,9 +198,7 @@ def base_week_stats(plan, week_start: date_cls):
                 if not zone or zone not in speeds:
                     continue
 
-                t = (getattr(seg, "t_type", "") or "").strip()
-                t_speed = _t_speed_mps(athlete, t) if seg.duration_s else None
-                speed = float(t_speed) if t_speed else float(speeds[zone])
+                speed = float(speeds[zone])
                 nm = _norm_m_base(seg, speed)
                 if nm <= 0:
                     continue
