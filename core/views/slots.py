@@ -29,6 +29,7 @@ STATS_VERSION_KEY = "mila:stats:version"
 
 
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
+_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)T\s*(800|1500|3000|5000|10000)\s*(?:-|>)\s*T\s*(800|1500|3000|5000|10000)\s*$", re.IGNORECASE)
 
 
 def _format_distance_text(distance_m: int) -> str:
@@ -85,6 +86,65 @@ def _build_progressive_split_parse(parsed, zone: int, index: int):
         }
 
     return None
+
+
+
+def _t_type_progressive_zone(t_type: str) -> int:
+    t = str(t_type or "").strip()
+    if t in ("800", "1500"):
+        return 5
+    return 4
+
+
+def _parse_progressive_t_source(prefix: str, t_type: str):
+    zone = _t_type_progressive_zone(t_type)
+    return _parse_core_segment_text(f"{prefix} T{t_type} Z{zone}")
+
+
+def _build_progressive_t_split_parse(parsed, t_type: str, index: int):
+    zone = _t_type_progressive_zone(t_type)
+    split_parse = _build_progressive_split_parse(parsed, zone, index)
+    if not split_parse:
+        return None
+
+    split_parse["t_type"] = str(t_type or "")
+    if split_parse.get("distance_m") is not None:
+        split_parse["message"] = f"Herkannt: progressive split naar T{t_type} / Z{zone} → {int(split_parse['distance_m'])}m"
+    elif split_parse.get("duration_s") is not None:
+        split_parse["message"] = f"Herkannt: progressive split naar T{t_type} / Z{zone} → {int(split_parse['duration_s'])}s"
+    else:
+        split_parse["message"] = f"Herkannt: progressive split naar T{t_type} / Z{zone}"
+    return split_parse
+
+
+def _core_t_range_parts(part: str):
+    s = (part or "").strip()
+    m = _CORE_T_RANGE_RE.match(s)
+    if not m:
+        return None
+
+    prefix = (m.group(1) or "").strip()
+    t_from = str(m.group(2))
+    t_to = str(m.group(3))
+
+    if not prefix:
+        return None
+
+    source_parse = _parse_progressive_t_source(prefix, t_from)
+    if not source_parse or not source_parse.ok:
+        return None
+
+    first_parse = _build_progressive_t_split_parse(source_parse, t_from, 0)
+    second_parse = _build_progressive_t_split_parse(source_parse, t_to, 1)
+
+    if not first_parse or not second_parse:
+        return None
+
+    return {
+        "source_text": s,
+        "first_parse": first_parse,
+        "second_parse": second_parse,
+    }
 
 
 def _core_zone_range_parts(part: str):
@@ -801,6 +861,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
         for part in parts:
             range_parts = _core_zone_range_parts(part)
+            if not range_parts:
+                range_parts = _core_t_range_parts(part)
 
             if range_parts:
                 first_seg = slot.segments.create(
