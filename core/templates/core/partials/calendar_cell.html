@@ -16,7 +16,6 @@
     }
   </style>
 
-  {# ================= COPY BUTTON ================= #}
   {% if slot %}
     <button
       type="button"
@@ -31,7 +30,6 @@
     </button>
   {% endif %}
 
-  {# ================= PASTE BUTTON ================= #}
   {% if request.session.training_clipboard %}
     <button
       type="button"
@@ -47,7 +45,6 @@
     </button>
   {% endif %}
 
-  {# ================= SLOT CONTENT ================= #}
   {% if slot %}
     {% with ct=slot.core_text|default:"" %}
       {% with ctl=ct|lower %}
@@ -75,10 +72,6 @@
              style="background-color:#b7d7ff;"
            {% elif "z6" in ctl or "z 6" in ctl %}
              style="background-color:#f2c200;"
-           {% elif "t800" in ctl or "t1500" in ctl %}
-             style="background-color:#b7d7ff;"
-           {% elif "t5000" in ctl or "t10000" in ctl %}
-             style="background-color:#bfe7bf;"
            {% endif %}
         >
           <span class="celltext">
@@ -94,12 +87,14 @@
             {% else %}
               {% for seg in slot.segments.all %}
                 {% if seg.text %}
-                  {% if seg.type == "CORE" %}
-                    <div><strong>{{ seg.text }}</strong></div>
-                  {% elif seg.type == "CORE2" %}
-                    <div>2nd: {{ seg.text }}</div>
-                  {% else %}
-                    <div>{{ seg.text }}</div>
+                  {% if seg.type != "CORE" or forloop.first %}
+                    {% if seg.type == "CORE" %}
+                      <div><strong>{{ seg.text }}</strong></div>
+                    {% elif seg.type == "CORE2" %}
+                      <div>2nd: {{ seg.text }}</div>
+                    {% else %}
+                      <div>{{ seg.text }}</div>
+                    {% endif %}
                   {% endif %}
                 {% endif %}
               {% endfor %}
@@ -121,14 +116,12 @@
   {% if is_override %}
     <span
       class="badge bg-dark"
-      style="
-        position: absolute;
-        bottom: 4px;
-        right: 4px;
-        font-size: 10px;
-        opacity: 0.85;
-        pointer-events: none;
-      "
+      style="position: absolute;
+             bottom: 4px;
+             right: 4px;
+             font-size: 10px;
+             opacity: 0.85;
+             pointer-events: none;"
       title="Deze training is aangepast voor deze atleet"
     >
       FIX
