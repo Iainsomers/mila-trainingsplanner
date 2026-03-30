@@ -29,7 +29,7 @@ STATS_VERSION_KEY = "mila:stats:version"
 
 
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
-_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)T\s*(800|1500|3000|5000|10000)\s*(?:-|>)\s*T\s*(800|1500|3000|5000|10000)\s*$", re.IGNORECASE)
+_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)T\s*(800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*T\s*(800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
 
 
 def _format_distance_text(distance_m: int) -> str:
@@ -114,20 +114,32 @@ def _build_progressive_split_text(parse_data: dict) -> str:
     return " ".join(parts).strip()
 
 
-def _t_type_progressive_zone(t_type: str) -> int:
+def _t_type_progressive_zone(t_type: str, explicit_zone=None):
+    if explicit_zone is not None:
+        return int(explicit_zone)
+
     t = str(t_type or "").strip()
     if t in ("800", "1500"):
         return 5
+    if t in ("5000", "10000"):
+        return 4
+    if t == "3000":
+        return None
     return 4
 
 
-def _parse_progressive_t_source(prefix: str, t_type: str):
-    zone = _t_type_progressive_zone(t_type)
+def _parse_progressive_t_source(prefix: str, t_type: str, explicit_zone=None):
+    zone = _t_type_progressive_zone(t_type, explicit_zone)
+    if zone is None:
+        return None
     return _parse_core_segment_text(f"{prefix} T{t_type} Z{zone}")
 
 
-def _build_progressive_t_split_parse(parsed, t_type: str, index: int):
-    zone = _t_type_progressive_zone(t_type)
+def _build_progressive_t_split_parse(parsed, t_type: str, explicit_zone, index: int):
+    zone = _t_type_progressive_zone(t_type, explicit_zone)
+    if zone is None:
+        return None
+
     split_parse = _build_progressive_split_parse(parsed, zone, index)
     if not split_parse:
         return None
@@ -150,17 +162,19 @@ def _core_t_range_parts(part: str):
 
     prefix = (m.group(1) or "").strip()
     t_from = str(m.group(2))
-    t_to = str(m.group(3))
+    zone_from = int(m.group(3)) if m.group(3) else None
+    t_to = str(m.group(4))
+    zone_to = int(m.group(5)) if m.group(5) else None
 
     if not prefix:
         return None
 
-    source_parse = _parse_progressive_t_source(prefix, t_from)
+    source_parse = _parse_progressive_t_source(prefix, t_from, zone_from)
     if not source_parse or not source_parse.ok:
         return None
 
-    first_parse = _build_progressive_t_split_parse(source_parse, t_from, 0)
-    second_parse = _build_progressive_t_split_parse(source_parse, t_to, 1)
+    first_parse = _build_progressive_t_split_parse(source_parse, t_from, zone_from, 0)
+    second_parse = _build_progressive_t_split_parse(source_parse, t_to, zone_to, 1)
 
     if not first_parse or not second_parse:
         return None
