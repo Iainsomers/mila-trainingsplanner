@@ -892,7 +892,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             if range_parts:
                 first_seg = slot.segments.create(
                     type="CORE",
-                    text=_build_progressive_split_text(range_parts["first_parse"]),
+                    text=range_parts["source_text"],
                     order=order,
                 )
                 first_seg.parse_ok = True
@@ -909,7 +909,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 second_seg = slot.segments.create(
                     type="CORE",
-                    text=_build_progressive_split_text(range_parts["second_parse"]),
+                    text="",
                     order=order + 1,
                 )
                 second_seg.parse_ok = True
