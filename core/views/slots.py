@@ -885,14 +885,21 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         order = 3
 
         for part in parts:
-            range_parts = _core_zone_range_parts(part)
-            if not range_parts:
-                range_parts = _core_t_range_parts(part)
+            zone_range_parts = _core_zone_range_parts(part)
+            t_range_parts = None if zone_range_parts else _core_t_range_parts(part)
+            range_parts = zone_range_parts or t_range_parts
 
             if range_parts:
+                first_text = _build_progressive_split_text(range_parts["first_parse"])
+                second_text = _build_progressive_split_text(range_parts["second_parse"])
+
+                if t_range_parts:
+                    first_text = range_parts["source_text"]
+                    second_text = ""
+
                 first_seg = slot.segments.create(
                     type="CORE",
-                    text=range_parts["source_text"],
+                    text=first_text,
                     order=order,
                 )
                 first_seg.parse_ok = True
@@ -909,7 +916,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 second_seg = slot.segments.create(
                     type="CORE",
-                    text="",
+                    text=second_text,
                     order=order + 1,
                 )
                 second_seg.parse_ok = True
