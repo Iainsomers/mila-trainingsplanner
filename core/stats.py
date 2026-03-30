@@ -61,6 +61,19 @@ def _empty_t_bucket():
     }
 
 
+def _t_speed_mps(athlete, t_type: str):
+    if not athlete or not t_type:
+        return None
+    field = f"pr_{t_type}_s"
+    val = getattr(athlete, field, None)
+    if not val:
+        return None
+    try:
+        dist = int(t_type)
+        return dist / float(val)
+    except Exception:
+        return None
+
 def _norm_m_base(seg, speed_mps: float) -> int:
     nm = int(seg.norm_distance_m or 0)
     if nm > 0:
@@ -178,7 +191,9 @@ def base_week_stats(plan, week_start: date_cls):
                 if not zone or zone not in speeds:
                     continue
 
-                speed = float(speeds[zone])
+                t = (getattr(seg, "t_type", "") or "").strip()
+                t_speed = _t_speed_mps(athlete, t) if seg.duration_s else None
+                speed = float(t_speed) if t_speed else float(speeds[zone])
                 nm = _norm_m_base(seg, speed)
                 if nm <= 0:
                     continue
@@ -245,7 +260,9 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 if not zone or zone not in speeds:
                     continue
 
-                speed = float(speeds[zone])
+                t = (getattr(seg, "t_type", "") or "").strip()
+                t_speed = _t_speed_mps(athlete, t) if seg.duration_s else None
+                speed = float(t_speed) if t_speed else float(speeds[zone])
                 nm = _norm_m_athlete(seg, speed)
                 if nm <= 0:
                     continue
