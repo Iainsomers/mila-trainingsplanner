@@ -268,8 +268,10 @@ def calendar_view(request):
         if selected_plan:
             if selected_athlete:
                 st = athlete_week_stats(selected_plan, selected_athlete, week_start)
-            else:
+            elif plan_athletes:
                 st = group_week_stats(selected_plan, plan_athletes, week_start)
+            else:
+                st = base_week_stats(selected_plan, week_start)
 
             zones = st.get("zones") or {}
             race = st.get("race") or {"distance_m": 0, "duration_s": 0}
