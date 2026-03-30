@@ -47,20 +47,20 @@ def _format_duration_text(duration_s: int) -> str:
 
 
 def _build_progressive_split_parse(parsed, zone: int, index: int):
-    half_reps = _split_value_evenly(parsed.reps, 2, index)
     half_distance = _split_value_evenly(parsed.distance_m, 2, index)
     half_duration = _split_value_evenly(parsed.duration_s, 2, index)
 
     if parsed.rep_distance_m is not None and parsed.reps is not None:
-        total_distance = int(half_reps or 0) * int(parsed.rep_distance_m)
+        total_distance = int(parsed.reps) * int(parsed.rep_distance_m)
+        split_distance = _split_value_evenly(total_distance, 2, index)
         return {
             "zone": zone,
-            "distance_m": total_distance,
-            "reps": int(half_reps or 0),
-            "rep_distance_m": int(parsed.rep_distance_m),
+            "distance_m": int(split_distance or 0),
+            "reps": None,
+            "rep_distance_m": None,
             "duration_s": None,
             "t_type": (parsed.t_type or ""),
-            "message": f"Herkannt: progressive split naar Z{zone} → {total_distance}m",
+            "message": f"Herkannt: progressive split naar Z{zone} → {int(split_distance or 0)}m",
         }
 
     if half_distance is not None:
@@ -207,7 +207,7 @@ def _split_value_evenly(total, pieces, index):
         return None
     base = int(total) // pieces
     remainder = int(total) % pieces
-    return base + (1 if index < remainder else 0)
+    return base + (1 if index >= (pieces - remainder) else 0)
 
 
 
