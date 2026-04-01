@@ -93,14 +93,17 @@
               {% endfor %}
             {% else %}
               {% for seg in slot.segments.all %}
-                {% if seg.text %}
+                {% if seg.text and seg.type != "CORE2" %}
                   {% if seg.type == "CORE" %}
                     <div><strong>{{ seg.text }}</strong></div>
-                  {% elif seg.type == "CORE2" %}
-                    <div>2nd: {{ seg.text }}</div>
                   {% else %}
                     <div>{{ seg.text }}</div>
                   {% endif %}
+                {% endif %}
+              {% endfor %}
+              {% for seg in slot.segments.all %}
+                {% if seg.text and seg.type == "CORE2" %}
+                  <div>2nd: {{ seg.text }}</div>
                 {% endif %}
               {% endfor %}
             {% endif %}
