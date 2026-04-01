@@ -95,7 +95,7 @@
               {% for seg in slot.segments.all %}
                 {% if seg.text and seg.type != "CORE2" %}
                   {% if seg.type == "CORE" %}
-                    <div class="core-line" data-zone="{{ seg.zone|default:'' }}"><strong>{{ seg.text }}</strong></div>
+                    <div class="core-line" data-zone="{{ seg.zone|default:'' }}"><strong style="color: inherit;">{{ seg.text }}</strong></div>
                   {% else %}
                     <div>{{ seg.text }}</div>
                   {% endif %}
