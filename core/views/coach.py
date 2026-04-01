@@ -1,9 +1,11 @@
+from datetime import timedelta
+
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase
 from .common import (
     _parse_iso_date,
     _parse_int,
@@ -98,30 +100,77 @@ def _parse_pr_time_to_seconds(value: str):
     raise ValueError("bad format")
 
 
-def _format_pr_seconds(value):
-    if value is None:
-        return ""
-    try:
-        total_s = float(value)
-    except (TypeError, ValueError):
-        return ""
-    if total_s <= 0:
-        return ""
 
-    hours = int(total_s // 3600)
-    minutes = int((total_s % 3600) // 60)
-    seconds = total_s - (hours * 3600 + minutes * 60)
 
-    if abs(seconds - round(seconds)) < 1e-9:
-        sec_str = f"{int(round(seconds)):02d}"
-    else:
-        sec_str = f"{seconds:05.2f}".rstrip("0").rstrip(".")
-        if seconds < 10:
-            sec_str = f"0{sec_str}"
+def _plan_week_count(start_date, end_date):
+    if not start_date or not end_date:
+        return 0
+    start_week = start_date - timedelta(days=start_date.weekday())
+    end_week = end_date - timedelta(days=end_date.weekday())
+    return ((end_week - start_week).days // 7) + 1
 
-    if hours > 0:
-        return f"{hours}:{minutes:02d}:{sec_str}"
-    return f"{minutes}:{sec_str}"
+
+def _copy_plan_contents(source_plan, target_plan):
+    source_weeks = _plan_week_count(source_plan.start_date, source_plan.end_date)
+    target_weeks = _plan_week_count(target_plan.start_date, target_plan.end_date)
+    weeks_to_copy = min(source_weeks, target_weeks)
+
+    if weeks_to_copy <= 0:
+        return
+
+    source_week0 = source_plan.start_date - timedelta(days=source_plan.start_date.weekday())
+    target_week0 = target_plan.start_date - timedelta(days=target_plan.start_date.weekday())
+
+    source_slots = (
+        TrainingSlot.objects
+        .filter(plan=source_plan, athlete__isnull=True)
+        .prefetch_related("segments")
+        .order_by("date", "slot_index", "id")
+    )
+
+    for source_slot in source_slots:
+        week_index = ((source_slot.date - source_week0).days // 7)
+        if week_index < 0 or week_index >= weeks_to_copy:
+            continue
+
+        target_date = target_week0 + timedelta(days=week_index * 7 + source_slot.date.weekday())
+        target_slot, _ = TrainingSlot.objects.get_or_create(
+            plan=target_plan,
+            athlete=None,
+            date=target_date,
+            slot_index=source_slot.slot_index,
+        )
+        target_slot.segments.all().delete()
+
+        for source_seg in source_slot.segments.order_by("order", "id"):
+            seg = target_slot.segments.create(
+                type=source_seg.type,
+                text=source_seg.text or "",
+                order=source_seg.order or 0,
+            )
+            seg.zone = source_seg.zone or ""
+            seg.reps = source_seg.reps
+            seg.distance_m = source_seg.distance_m
+            seg.duration_s = source_seg.duration_s
+            seg.norm_distance_m = source_seg.norm_distance_m
+            seg.parse_ok = source_seg.parse_ok
+            seg.parse_message = source_seg.parse_message or ""
+            seg.special = getattr(source_seg, "special", "") or ""
+            if hasattr(seg, "t_type"):
+                seg.t_type = getattr(source_seg, "t_type", "") or ""
+            seg.parsed_at = source_seg.parsed_at
+            seg.save()
+
+    if hasattr(PlanWeekPhase, "objects"):
+        PlanWeekPhase.objects.filter(plan=target_plan).delete()
+        for source_phase in PlanWeekPhase.objects.filter(plan=source_plan).order_by("week_index", "id"):
+            if source_phase.week_index is None or source_phase.week_index < 1 or source_phase.week_index > weeks_to_copy:
+                continue
+            PlanWeekPhase.objects.create(
+                plan=target_plan,
+                week_index=source_phase.week_index,
+                phase=source_phase.phase,
+            )
 
 
 @require_GET
@@ -232,12 +281,20 @@ def coach_plans_view(request):
 @require_http_methods(["GET", "POST"])
 def coach_plan_create_view(request):
     errors = []
-    form = {"name": "", "start_date": "", "end_date": "", "week_phases_enabled": True}
+    form = {
+        "name": "",
+        "start_date": "",
+        "end_date": "",
+        "week_phases_enabled": True,
+        "copy_source_plan_id": "",
+    }
+    source_plans = _filter_owned(TrainingPlan.objects.order_by("name"), request.user)
 
     if request.method == "POST":
         form["name"] = (request.POST.get("name") or "").strip()
         form["start_date"] = (request.POST.get("start_date") or "").strip()
         form["end_date"] = (request.POST.get("end_date") or "").strip()
+        form["copy_source_plan_id"] = (request.POST.get("copy_source_plan_id") or "").strip()
 
         # ✅ NEW: plan setting
         form["week_phases_enabled"] = (request.POST.get("week_phases_enabled") == "on")
@@ -263,20 +320,36 @@ def coach_plan_create_view(request):
         if start_d and end_d and start_d > end_d:
             errors.append("Startdatum mag niet na einddatum liggen.")
 
+        source_plan = None
+        if form["copy_source_plan_id"]:
+            try:
+                source_plan_id = int(form["copy_source_plan_id"])
+            except ValueError:
+                source_plan_id = None
+                errors.append("Bronplan is ongeldig.")
+            if source_plan_id is not None:
+                source_plan = _filter_owned(TrainingPlan.objects.all(), request.user).filter(id=source_plan_id).first()
+                if not source_plan:
+                    errors.append("Bronplan is niet gevonden.")
+                elif not start_d or not end_d or not source_plan.start_date or not source_plan.end_date:
+                    errors.append("Plan kopiëren kan alleen als zowel nieuw plan als bronplan een start- en einddatum hebben.")
+
         if not errors:
-            TrainingPlan.objects.create(
+            new_plan = TrainingPlan.objects.create(
                 owner=request.user,
                 name=form["name"],
                 start_date=start_d,
                 end_date=end_d,
                 week_phases_enabled=form["week_phases_enabled"],
             )
+            if source_plan:
+                _copy_plan_contents(source_plan, new_plan)
             return redirect("coach_plans")
 
     return render(
         request,
         "core/coach_plan_form.html",
-        {"mode": "create", "plan": None, "form": form, "errors": errors},
+        {"mode": "create", "plan": None, "form": form, "errors": errors, "source_plans": source_plans},
     )
 
 
