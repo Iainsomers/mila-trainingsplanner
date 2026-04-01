@@ -5,7 +5,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase
 from .common import (
     _parse_iso_date,
     _parse_int,
@@ -161,6 +161,25 @@ def _copy_plan_contents(source_plan, target_plan):
             if getattr(source_seg, "parsed_at", None):
                 seg.parsed_at = source_seg.parsed_at
             seg.save()
+
+
+    source_phases = (
+        PlanWeekPhase.objects
+        .filter(plan=source_plan)
+        .order_by("week_start", "id")
+    )
+
+    for source_phase in source_phases:
+        week_index = ((source_phase.week_start - source_week0).days // 7)
+        if week_index < 0 or week_index >= weeks_to_copy:
+            continue
+
+        target_week_start = target_week0 + timedelta(days=week_index * 7)
+        PlanWeekPhase.objects.update_or_create(
+            plan=target_plan,
+            week_start=target_week_start,
+            defaults={"phase": source_phase.phase or ""},
+        )
 
 
 @require_GET
