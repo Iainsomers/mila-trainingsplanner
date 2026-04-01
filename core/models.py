@@ -96,11 +96,11 @@ class Athlete(models.Model):
         blank=True,
     )
 
-    pr_800_s = models.PositiveIntegerField(null=True, blank=True)
-    pr_1500_s = models.PositiveIntegerField(null=True, blank=True)
-    pr_3000_s = models.PositiveIntegerField(null=True, blank=True)
-    pr_5000_s = models.PositiveIntegerField(null=True, blank=True)
-    pr_10000_s = models.PositiveIntegerField(null=True, blank=True)
+    pr_800_s = models.FloatField(null=True, blank=True)
+    pr_1500_s = models.FloatField(null=True, blank=True)
+    pr_3000_s = models.FloatField(null=True, blank=True)
+    pr_5000_s = models.FloatField(null=True, blank=True)
+    pr_10000_s = models.FloatField(null=True, blank=True)
 
     def __str__(self) -> str:
         return self.name
