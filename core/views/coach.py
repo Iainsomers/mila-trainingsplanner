@@ -101,15 +101,27 @@ def _parse_pr_time_to_seconds(value: str):
 def _format_pr_seconds(value):
     if value is None:
         return ""
-    total_s = int(value)
+    try:
+        total_s = float(value)
+    except (TypeError, ValueError):
+        return ""
     if total_s <= 0:
         return ""
-    hours = total_s // 3600
-    minutes = (total_s % 3600) // 60
-    seconds = total_s % 60
+
+    hours = int(total_s // 3600)
+    minutes = int((total_s % 3600) // 60)
+    seconds = total_s - (hours * 3600 + minutes * 60)
+
+    if abs(seconds - round(seconds)) < 1e-9:
+        sec_str = f"{int(round(seconds)):02d}"
+    else:
+        sec_str = f"{seconds:05.2f}".rstrip("0").rstrip(".")
+        if seconds < 10:
+            sec_str = f"0{sec_str}"
+
     if hours > 0:
-        return f"{hours}:{minutes:02d}:{seconds:02d}"
-    return f"{minutes}:{seconds:02d}"
+        return f"{hours}:{minutes:02d}:{sec_str}"
+    return f"{minutes}:{sec_str}"
 
 
 @require_GET
@@ -419,31 +431,31 @@ def coach_athlete_create_view(request):
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
         except ValueError:
             pr_800_s = None
-            errors.append("T800 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T800 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         try:
             pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
         except ValueError:
             pr_1500_s = None
-            errors.append("T1500 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T1500 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         try:
             pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"])
         except ValueError:
             pr_3000_s = None
-            errors.append("T3000 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T3000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         try:
             pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"])
         except ValueError:
             pr_5000_s = None
-            errors.append("T5000 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T5000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         try:
             pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"])
         except ValueError:
             pr_10000_s = None
-            errors.append("T10000 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T10000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         if form["zone_method"] != "manual":
             errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
@@ -554,31 +566,31 @@ def coach_athlete_edit_view(request, athlete_id: int):
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
         except ValueError:
             pr_800_s = None
-            errors.append("T800 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T800 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         try:
             pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
         except ValueError:
             pr_1500_s = None
-            errors.append("T1500 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T1500 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         try:
             pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"])
         except ValueError:
             pr_3000_s = None
-            errors.append("T3000 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T3000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         try:
             pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"])
         except ValueError:
             pr_5000_s = None
-            errors.append("T5000 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T5000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         try:
             pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"])
         except ValueError:
             pr_10000_s = None
-            errors.append("T10000 is verplicht en moet in formaat m:ss, h:mm:ss, m:ss.ms, h:mm:ss.ms of mm.ss.ms zijn.")
+            errors.append("T10000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
         if form["zone_method"] != "manual":
             errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
