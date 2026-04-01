@@ -146,19 +146,20 @@ def _copy_plan_contents(source_plan, target_plan):
             seg = target_slot.segments.create(
                 type=source_seg.type,
                 text=source_seg.text or "",
-                order=source_seg.order or 0,
+                order=int(source_seg.order or 0),
             )
             seg.zone = source_seg.zone or ""
-            seg.reps = source_seg.reps
-            seg.distance_m = source_seg.distance_m
-            seg.duration_s = source_seg.duration_s
-            seg.norm_distance_m = source_seg.norm_distance_m
-            seg.parse_ok = source_seg.parse_ok
+            seg.reps = int(source_seg.reps or 1)
+            seg.distance_m = source_seg.distance_m if source_seg.distance_m is not None else None
+            seg.duration_s = source_seg.duration_s if source_seg.duration_s is not None else None
+            seg.norm_distance_m = source_seg.norm_distance_m if source_seg.norm_distance_m is not None else None
+            seg.parse_ok = bool(source_seg.parse_ok)
             seg.parse_message = source_seg.parse_message or ""
             seg.special = getattr(source_seg, "special", "") or ""
             if hasattr(seg, "t_type"):
                 seg.t_type = getattr(source_seg, "t_type", "") or ""
-            seg.parsed_at = source_seg.parsed_at
+            if getattr(source_seg, "parsed_at", None):
+                seg.parsed_at = source_seg.parsed_at
             seg.save()
 
 
