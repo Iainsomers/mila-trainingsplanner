@@ -58,6 +58,23 @@
 
         <!-- ✅ NEW: Week dropdown gebruiken -->
         <div class="mt-3 form-check">
+        {% if mode == "create" %}
+        <div class="mt-3">
+          <label class="form-label">Kopieer van bestaand plan (optioneel)</label>
+          <select name="copy_source_plan_id" class="form-select">
+            <option value="">-- geen (leeg plan) --</option>
+            {% for p in source_plans %}
+              <option value="{{ p.id }}" {% if form.copy_source_plan_id == p.id|stringformat:"s" %}selected{% endif %}>
+                {{ p.name }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="form-text">
+            Kies een bestaand plan om te kopiëren. Alleen weken die binnen het nieuwe plan passen worden overgenomen.
+          </div>
+        </div>
+        {% endif %}
+
           <input
             class="form-check-input"
             type="checkbox"
