@@ -163,22 +163,23 @@ def _copy_plan_contents(source_plan, target_plan):
             seg.save()
 
 
-    source_phases = (
-        PlanWeekPhase.objects
-        .filter(plan=source_plan)
-        .order_by("week_start", "id")
-    )
+    source_phase_map = {
+        phase.week_start: (phase.phase or "")
+        for phase in PlanWeekPhase.objects.filter(plan=source_plan)
+    }
 
-    for source_phase in source_phases:
-        week_index = ((source_phase.week_start - source_week0).days // 7)
-        if week_index < 0 or week_index >= weeks_to_copy:
+    for week_index in range(weeks_to_copy):
+        source_week_start = source_week0 + timedelta(days=week_index * 7)
+        target_week_start = target_week0 + timedelta(days=week_index * 7)
+        source_phase_value = source_phase_map.get(source_week_start, None)
+
+        if source_phase_value is None:
             continue
 
-        target_week_start = target_week0 + timedelta(days=week_index * 7)
         PlanWeekPhase.objects.update_or_create(
             plan=target_plan,
             week_start=target_week_start,
-            defaults={"phase": source_phase.phase or ""},
+            defaults={"phase": source_phase_value},
         )
 
 
