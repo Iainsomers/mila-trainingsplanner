@@ -11,7 +11,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v3"
+STATS_SCHEMA_VERSION = "v4"
 
 
 def _stats_version() -> int:

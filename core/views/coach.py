@@ -32,33 +32,66 @@ def _parse_pr_time_to_seconds(value: str):
     if not s:
         raise ValueError("empty")
 
-    parts = s.split(":")
-    if len(parts) == 2:
-        mm, ss = parts
-        if not (mm.isdigit() and ss.isdigit()):
+    if ":" in s:
+        parts = s.split(":")
+        if len(parts) == 2:
+            mm, ss = parts
+            if not mm.isdigit():
+                raise ValueError("bad format")
+            try:
+                minutes = int(mm)
+                seconds = float(ss)
+            except ValueError:
+                raise ValueError("bad format")
+            if seconds < 0 or seconds >= 60:
+                raise ValueError("bad range")
+            total_s = minutes * 60 + seconds
+            if total_s <= 0:
+                raise ValueError("bad range")
+            return total_s
+
+        if len(parts) == 3:
+            hh, mm, ss = parts
+            if not (hh.isdigit() and mm.isdigit()):
+                raise ValueError("bad format")
+            try:
+                hours = int(hh)
+                minutes = int(mm)
+                seconds = float(ss)
+            except ValueError:
+                raise ValueError("bad format")
+            if minutes < 0 or minutes >= 60 or seconds < 0 or seconds >= 60:
+                raise ValueError("bad range")
+            total_s = hours * 3600 + minutes * 60 + seconds
+            if total_s <= 0:
+                raise ValueError("bad range")
+            return total_s
+
+        raise ValueError("bad format")
+
+    dot_parts = s.split(".")
+    if len(dot_parts) == 3:
+        mm, ss, ms = dot_parts
+        if not (mm.isdigit() and ss.isdigit() and ms.isdigit()):
             raise ValueError("bad format")
         minutes = int(mm)
         seconds = int(ss)
+        millis = int(ms)
         if seconds < 0 or seconds >= 60:
             raise ValueError("bad range")
-        total_s = minutes * 60 + seconds
+        total_s = minutes * 60 + seconds + (millis / (10 ** len(ms)))
         if total_s <= 0:
             raise ValueError("bad range")
         return total_s
 
-    if len(parts) == 3:
-        hh, mm, ss = parts
-        if not (hh.isdigit() and mm.isdigit() and ss.isdigit()):
+    if len(dot_parts) == 2:
+        ss, ms = dot_parts
+        if not (ss.isdigit() and ms.isdigit()):
             raise ValueError("bad format")
-        hours = int(hh)
-        minutes = int(mm)
-        seconds = int(ss)
-        if minutes < 0 or minutes >= 60 or seconds < 0 or seconds >= 60:
+        seconds = int(ss) + (int(ms) / (10 ** len(ms)))
+        if seconds <= 0:
             raise ValueError("bad range")
-        total_s = hours * 3600 + minutes * 60 + seconds
-        if total_s <= 0:
-            raise ValueError("bad range")
-        return total_s
+        return seconds
 
     raise ValueError("bad format")
 
