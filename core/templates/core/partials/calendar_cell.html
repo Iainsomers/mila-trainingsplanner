@@ -14,6 +14,9 @@
       opacity: 1;
       pointer-events: auto;
     }
+    .calcell .core-zone-line {
+      display: block;
+    }
   </style>
 
   {# ================= COPY BUTTON ================= #}
@@ -95,7 +98,7 @@
               {% for seg in slot.segments.all %}
                 {% if seg.text and seg.type != "CORE2" %}
                   {% if seg.type == "CORE" %}
-                    <div><strong>{{ seg.text }}</strong></div>
+                    <div class="core-zone-line" data-core-zone="{{ seg.zone|default:'' }}"><strong>{{ seg.text }}</strong></div>
                   {% else %}
                     <div>{{ seg.text }}</div>
                   {% endif %}
@@ -120,6 +123,56 @@
       <span class="celltext"></span>
     </a>
   {% endif %}
+
+  <script>
+    (function() {
+      var cell = document.getElementById("cell-{{ day|date:'Ymd' }}-{{ slot_index }}");
+      if (!cell) return;
+
+      var link = cell.querySelector("a.celllink");
+      if (!link) return;
+
+      var coreLines = Array.prototype.slice.call(cell.querySelectorAll(".core-zone-line[data-core-zone]"));
+      if (coreLines.length < 2) return;
+
+      var zones = coreLines
+        .map(function(line) { return parseInt(line.getAttribute("data-core-zone") || "", 10); })
+        .filter(function(zone) { return zone >= 1 && zone <= 6; });
+
+      var uniqueZones = Array.from(new Set(zones)).sort(function(a, b) { return a - b; });
+      if (uniqueZones.length < 2) return;
+
+      var zoneColors = {
+        1: "#f8f8f0",
+        2: "#f7c6d0",
+        3: "#e5533d",
+        4: "#bfe7bf",
+        5: "#b7d7ff",
+        6: "#f2c200"
+      };
+
+      var bgZone = uniqueZones[Math.floor(uniqueZones.length / 2)];
+      link.style.backgroundColor = zoneColors[bgZone] || "";
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      coreLines.forEach(function(line) {
+        var rawText = line.textContent || "";
+        line.innerHTML = "<strong>" + escapeHtml(rawText).replace(/z\s*([1-6])/gi, function(match, zoneNumber) {
+          var zone = parseInt(zoneNumber, 10);
+          var color = zone === bgZone ? "#000000" : (zoneColors[zone] || "#000000");
+          return '<span style="color:' + color + ';">' + match + '</span>';
+        }) + "</strong>";
+      });
+    })();
+  </script>
 
   {% if is_override %}
     <span
