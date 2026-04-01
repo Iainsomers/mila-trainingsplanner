@@ -787,7 +787,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     wu_parse = parse_segment_text(wu_text) if wu_text else None
     sprint_parse = parse_segment_text(sprint_text_for_parse) if sprint_text else None
-    core_parse = _parse_core_segment_text(core_text) if core_text else None
+    if core_text:
+        core_parse = None
+        for core_part in [p.strip() for p in core_text.split("//") if p.strip()]:
+            core_parse = _parse_core_segment_text(core_part)
+            if core_parse is not None and not core_parse.ok:
+                break
+    else:
+        core_parse = None
     core2_parse = _parse_core_segment_text(core2_text) if core2_text else None
     alt_parse = parse_segment_text(alt_text, zone_required=False) if alt_text else None
     cd_parse = parse_segment_text(cd_text) if cd_text else None
