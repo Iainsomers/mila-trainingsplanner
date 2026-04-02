@@ -13,6 +13,7 @@ from .common import (
     _clean_int_list,
     _plans_targeting_athlete,
     _ranges_overlap,
+    _filter_owned,
 )
 
 from core.zones import (
@@ -21,12 +22,6 @@ from core.zones import (
     parse_manual_zones_required,
     zones_form_from_speeds,
 )
-
-
-def _filter_owned(qs, user):
-    if user.is_superuser:
-        return qs
-    return qs.filter(owner=user)
 
 
 def _parse_pr_time_to_seconds(value: str):
@@ -323,6 +318,7 @@ def coach_plan_create_view(request):
         "end_date": "",
         "week_phases_enabled": True,
         "copy_source_plan_id": "",
+        "is_private": False,
     }
     source_plans = _filter_owned(TrainingPlan.objects.order_by("name"), request.user)
 
@@ -334,6 +330,7 @@ def coach_plan_create_view(request):
 
         # ✅ NEW: plan setting
         form["week_phases_enabled"] = (request.POST.get("week_phases_enabled") == "on")
+        form["is_private"] = (request.POST.get("is_private") == "on")
 
         if not form["name"]:
             errors.append("Naam is verplicht.")
@@ -377,6 +374,7 @@ def coach_plan_create_view(request):
                 start_date=start_d,
                 end_date=end_d,
                 week_phases_enabled=form["week_phases_enabled"],
+                is_private=form["is_private"],
             )
             if source_plan:
                 _copy_plan_contents(source_plan, new_plan)
@@ -401,6 +399,7 @@ def coach_plan_edit_view(request, plan_id: int):
         "end_date": plan.end_date.isoformat() if plan.end_date else "",
         # ✅ NEW: plan setting (prefill)
         "week_phases_enabled": getattr(plan, "week_phases_enabled", True),
+        "is_private": getattr(plan, "is_private", False),
     }
 
     if request.method == "POST":
@@ -410,6 +409,7 @@ def coach_plan_edit_view(request, plan_id: int):
 
         # ✅ NEW: plan setting
         form["week_phases_enabled"] = (request.POST.get("week_phases_enabled") == "on")
+        form["is_private"] = (request.POST.get("is_private") == "on")
 
         if not form["name"]:
             errors.append("Naam is verplicht.")
@@ -439,6 +439,7 @@ def coach_plan_edit_view(request, plan_id: int):
 
             # ✅ NEW: plan setting save
             plan.week_phases_enabled = form["week_phases_enabled"]
+            plan.is_private = form["is_private"]
 
             plan.save()
             return redirect("coach_plans")
@@ -491,6 +492,7 @@ def coach_athlete_create_view(request):
         "pr_3000": "",
         "pr_5000": "",
         "pr_10000": "",
+        "is_private": False,
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -507,6 +509,7 @@ def coach_athlete_create_view(request):
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
         form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
+        form["is_private"] = (request.POST.get("is_private") == "on")
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -592,6 +595,7 @@ def coach_athlete_create_view(request):
                 pr_3000_s=pr_3000_s,
                 pr_5000_s=pr_5000_s,
                 pr_10000_s=pr_10000_s,
+                is_private=form["is_private"],
             )
             return redirect("coach_athletes")
 
@@ -626,6 +630,7 @@ def coach_athlete_edit_view(request, athlete_id: int):
         "pr_3000": _format_pr_seconds(getattr(athlete, "pr_3000_s", None)),
         "pr_5000": _format_pr_seconds(getattr(athlete, "pr_5000_s", None)),
         "pr_10000": _format_pr_seconds(getattr(athlete, "pr_10000_s", None)),
+        "is_private": getattr(athlete, "is_private", False),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -725,6 +730,7 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.pr_3000_s = pr_3000_s
             athlete.pr_5000_s = pr_5000_s
             athlete.pr_10000_s = pr_10000_s
+            athlete.is_private = form["is_private"]
             athlete.save()
 
             saved_notice = "Opgeslagen."
