@@ -647,6 +647,7 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
         form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
+        form["is_private"] = (request.POST.get("is_private") == "on")
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
