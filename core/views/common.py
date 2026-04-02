@@ -228,7 +228,12 @@ def _filter_owned(qs, user):
         grantee=user
     ).values_list("owner_id", flat=True)
 
-    return qs.filter(Q(owner=user) | Q(owner_id__in=shared_owner_ids)).distinct()
+    # owner ziet alles van zichzelf
+    # gedeelde data alleen als niet private
+    return qs.filter(
+        Q(owner=user) |
+        (Q(owner_id__in=shared_owner_ids) & Q(is_private=False))
+    ).distinct()
 
 
 def _ranges_overlap(start_a, end_a, start_b, end_b) -> bool:
