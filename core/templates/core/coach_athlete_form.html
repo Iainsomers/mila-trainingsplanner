@@ -144,6 +144,20 @@
         <div class="mt-4">
           <h6 class="mb-2">PR tijden</h6>
 
+        <div class="mt-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="is_private"
+            name="is_private"
+            {% if form.is_private %}checked{% endif %}
+          >
+          <label class="form-check-label" for="is_private">
+            Privé (alleen zichtbaar voor mij)
+          </label>
+        </div>
+
+
           <div class="row g-3">
             <div class="col-md-2">
               <label class="form-label">T800</label>
