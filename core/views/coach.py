@@ -101,6 +101,32 @@ def _parse_pr_time_to_seconds(value: str):
 
 
 
+def _format_pr_seconds(value):
+    if value is None:
+        return ""
+    try:
+        total_s = float(value)
+    except (TypeError, ValueError):
+        return ""
+    if total_s <= 0:
+        return ""
+
+    hours = int(total_s // 3600)
+    minutes = int((total_s % 3600) // 60)
+    seconds = total_s - (hours * 3600 + minutes * 60)
+
+    if abs(seconds - round(seconds)) < 1e-9:
+        sec_str = f"{int(round(seconds)):02d}"
+    else:
+        sec_str = f"{seconds:05.2f}".rstrip("0").rstrip(".")
+        if seconds < 10:
+            sec_str = f"0{sec_str}"
+
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{sec_str}"
+    return f"{minutes}:{sec_str}"
+
+
 
 def _plan_week_count(start_date, end_date):
     if not start_date or not end_date:
@@ -163,22 +189,23 @@ def _copy_plan_contents(source_plan, target_plan):
             seg.save()
 
 
-    source_phases = (
-        PlanWeekPhase.objects
-        .filter(plan=source_plan)
-        .order_by("week_start", "id")
-    )
+    source_phase_map = {
+        phase.week_start: (phase.phase or "")
+        for phase in PlanWeekPhase.objects.filter(plan=source_plan)
+    }
 
-    for source_phase in source_phases:
-        week_index = ((source_phase.week_start - source_week0).days // 7)
-        if week_index < 0 or week_index >= weeks_to_copy:
+    for week_index in range(weeks_to_copy):
+        source_week_start = source_week0 + timedelta(days=week_index * 7)
+        target_week_start = target_week0 + timedelta(days=week_index * 7)
+        source_phase_value = source_phase_map.get(source_week_start, None)
+
+        if source_phase_value is None:
             continue
 
-        target_week_start = target_week0 + timedelta(days=week_index * 7)
         PlanWeekPhase.objects.update_or_create(
             plan=target_plan,
             week_start=target_week_start,
-            defaults={"phase": source_phase.phase or ""},
+            defaults={"phase": source_phase_value},
         )
 
 
@@ -296,7 +323,6 @@ def coach_plan_create_view(request):
         "end_date": "",
         "week_phases_enabled": True,
         "copy_source_plan_id": "",
-        "is_private": False,
     }
     source_plans = _filter_owned(TrainingPlan.objects.order_by("name"), request.user)
 
@@ -308,7 +334,6 @@ def coach_plan_create_view(request):
 
         # ✅ NEW: plan setting
         form["week_phases_enabled"] = (request.POST.get("week_phases_enabled") == "on")
-        form["is_private"] = (request.POST.get("is_private") == "on")
 
         if not form["name"]:
             errors.append("Naam is verplicht.")
@@ -352,7 +377,6 @@ def coach_plan_create_view(request):
                 start_date=start_d,
                 end_date=end_d,
                 week_phases_enabled=form["week_phases_enabled"],
-                is_private=form["is_private"],
             )
             if source_plan:
                 _copy_plan_contents(source_plan, new_plan)
@@ -377,7 +401,6 @@ def coach_plan_edit_view(request, plan_id: int):
         "end_date": plan.end_date.isoformat() if plan.end_date else "",
         # ✅ NEW: plan setting (prefill)
         "week_phases_enabled": getattr(plan, "week_phases_enabled", True),
-        "is_private": getattr(plan, "is_private", False),
     }
 
     if request.method == "POST":
@@ -416,7 +439,6 @@ def coach_plan_edit_view(request, plan_id: int):
 
             # ✅ NEW: plan setting save
             plan.week_phases_enabled = form["week_phases_enabled"]
-            plan.is_private = form["is_private"]
 
             plan.save()
             return redirect("coach_plans")
@@ -469,7 +491,6 @@ def coach_athlete_create_view(request):
         "pr_3000": "",
         "pr_5000": "",
         "pr_10000": "",
-        "is_private": False,
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -486,7 +507,6 @@ def coach_athlete_create_view(request):
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
         form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
-        form["is_private"] = (request.POST.get("is_private") == "on")
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -572,7 +592,6 @@ def coach_athlete_create_view(request):
                 pr_3000_s=pr_3000_s,
                 pr_5000_s=pr_5000_s,
                 pr_10000_s=pr_10000_s,
-                is_private=form["is_private"],
             )
             return redirect("coach_athletes")
 
@@ -607,7 +626,6 @@ def coach_athlete_edit_view(request, athlete_id: int):
         "pr_3000": _format_pr_seconds(getattr(athlete, "pr_3000_s", None)),
         "pr_5000": _format_pr_seconds(getattr(athlete, "pr_5000_s", None)),
         "pr_10000": _format_pr_seconds(getattr(athlete, "pr_10000_s", None)),
-        "is_private": getattr(athlete, "is_private", False),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -624,7 +642,6 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
         form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
-        form["is_private"] = (request.POST.get("is_private") == "on")
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -708,7 +725,6 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.pr_3000_s = pr_3000_s
             athlete.pr_5000_s = pr_5000_s
             athlete.pr_10000_s = pr_10000_s
-            athlete.is_private = form["is_private"]
             athlete.save()
 
             saved_notice = "Opgeslagen."
