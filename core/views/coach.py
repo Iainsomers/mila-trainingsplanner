@@ -163,23 +163,22 @@ def _copy_plan_contents(source_plan, target_plan):
             seg.save()
 
 
-    source_phase_map = {
-        phase.week_start: (phase.phase or "")
-        for phase in PlanWeekPhase.objects.filter(plan=source_plan)
-    }
+    source_phases = (
+        PlanWeekPhase.objects
+        .filter(plan=source_plan)
+        .order_by("week_start", "id")
+    )
 
-    for week_index in range(weeks_to_copy):
-        source_week_start = source_week0 + timedelta(days=week_index * 7)
-        target_week_start = target_week0 + timedelta(days=week_index * 7)
-        source_phase_value = source_phase_map.get(source_week_start, None)
-
-        if source_phase_value is None:
+    for source_phase in source_phases:
+        week_index = ((source_phase.week_start - source_week0).days // 7)
+        if week_index < 0 or week_index >= weeks_to_copy:
             continue
 
+        target_week_start = target_week0 + timedelta(days=week_index * 7)
         PlanWeekPhase.objects.update_or_create(
             plan=target_plan,
             week_start=target_week_start,
-            defaults={"phase": source_phase_value},
+            defaults={"phase": source_phase.phase or ""},
         )
 
 
@@ -309,7 +308,6 @@ def coach_plan_create_view(request):
 
         # ✅ NEW: plan setting
         form["week_phases_enabled"] = (request.POST.get("week_phases_enabled") == "on")
-        form["is_private"] = (request.POST.get("is_private") == "on")
         form["is_private"] = (request.POST.get("is_private") == "on")
 
         if not form["name"]:
@@ -626,6 +624,7 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
         form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
+        form["is_private"] = (request.POST.get("is_private") == "on")
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
