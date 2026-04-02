@@ -80,6 +80,8 @@ class Athlete(models.Model):
         related_name="owned_athletes",
     )
 
+    is_private = models.BooleanField(default=False)
+
     name = models.CharField(max_length=120, unique=True)
     birth_year = models.PositiveIntegerField()
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
@@ -141,6 +143,8 @@ class TrainingPlan(models.Model):
         on_delete=models.CASCADE,
         related_name="owned_training_plans",
     )
+
+    is_private = models.BooleanField(default=False)
 
     name = models.CharField(max_length=120, unique=True)
 
