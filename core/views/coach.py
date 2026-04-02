@@ -101,6 +101,26 @@ def _parse_pr_time_to_seconds(value: str):
 
 
 
+def _format_pr_seconds(value):
+    if value is None:
+        return ""
+    try:
+        total = float(value)
+    except (TypeError, ValueError):
+        return ""
+
+    if total <= 0:
+        return ""
+
+    minutes = int(total // 60)
+    seconds = total - (minutes * 60)
+
+    # keep milliseconds if present
+    if abs(seconds - int(seconds)) > 1e-6:
+        return f"{minutes}:{seconds:06.3f}".rstrip("0").rstrip(".")
+    else:
+        return f"{minutes}:{int(seconds):02d}"
+
 
 def _plan_week_count(start_date, end_date):
     if not start_date or not end_date:
