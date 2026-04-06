@@ -29,7 +29,7 @@ STATS_VERSION_KEY = "mila:stats:version"
 
 
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
-_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)T\s*(800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*T\s*(800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
+_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)T\s*(8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*T\s*(8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
 
 
 def _format_distance_text(distance_m: int) -> str:
@@ -107,7 +107,7 @@ def _build_progressive_split_text(parse_data: dict) -> str:
         parts.append(_format_duration_text(int(duration_s)))
 
     if t_type:
-        parts.append(f"T{t_type}")
+        parts.append(f"T{_display_t_type_label(t_type)}")
     if zone:
         parts.append(f"Z{int(zone)}")
 
@@ -118,7 +118,7 @@ def _t_type_progressive_zone(t_type: str, explicit_zone=None):
     if explicit_zone is not None:
         return int(explicit_zone)
 
-    t = str(t_type or "").strip()
+    t = _normalize_t_type_label(t_type)
     if t in ("800", "1500"):
         return 5
     if t in ("5000", "10000"):
@@ -132,7 +132,8 @@ def _parse_progressive_t_source(prefix: str, t_type: str, explicit_zone=None):
     zone = _t_type_progressive_zone(t_type, explicit_zone)
     if zone is None:
         return None
-    return _parse_core_segment_text(f"{prefix} T{t_type} Z{zone}")
+    t_type = _normalize_t_type_label(t_type)
+    return _parse_core_segment_text(f"{prefix} T{_display_t_type_label(t_type)} Z{zone}")
 
 
 def _build_progressive_t_split_parse(parsed, t_type: str, explicit_zone, index: int):
@@ -144,13 +145,13 @@ def _build_progressive_t_split_parse(parsed, t_type: str, explicit_zone, index: 
     if not split_parse:
         return None
 
-    split_parse["t_type"] = str(t_type or "")
+    split_parse["t_type"] = _normalize_t_type_label(t_type)
     if split_parse.get("distance_m") is not None:
-        split_parse["message"] = f"Herkannt: progressive split naar T{t_type} / Z{zone} → {int(split_parse['distance_m'])}m"
+        split_parse["message"] = f"Herkannt: progressive split naar T{_display_t_type_label(t_type)} / Z{zone} → {int(split_parse['distance_m'])}m"
     elif split_parse.get("duration_s") is not None:
-        split_parse["message"] = f"Herkannt: progressive split naar T{t_type} / Z{zone} → {int(split_parse['duration_s'])}s"
+        split_parse["message"] = f"Herkannt: progressive split naar T{_display_t_type_label(t_type)} / Z{zone} → {int(split_parse['duration_s'])}s"
     else:
-        split_parse["message"] = f"Herkannt: progressive split naar T{t_type} / Z{zone}"
+        split_parse["message"] = f"Herkannt: progressive split naar T{_display_t_type_label(t_type)} / Z{zone}"
     return split_parse
 
 
@@ -161,9 +162,9 @@ def _core_t_range_parts(part: str):
         return None
 
     prefix = (m.group(1) or "").strip()
-    t_from = str(m.group(2))
+    t_from = _normalize_t_type_label(m.group(2))
     zone_from = int(m.group(3)) if m.group(3) else None
-    t_to = str(m.group(4))
+    t_to = _normalize_t_type_label(m.group(4))
     zone_to = int(m.group(5)) if m.group(5) else None
 
     if not prefix:
@@ -226,7 +227,31 @@ def _split_value_evenly(total, pieces, index):
 
 
 
-_T_TYPE_RE = re.compile(r"\bT\s*(800|1500|3000|5000|10000)\b", re.IGNORECASE)
+def _normalize_t_type_label(value: str) -> str:
+    v = str(value or "").strip()
+    mapping = {
+        "8": "800",
+        "15": "1500",
+        "3": "3000",
+        "5": "5000",
+        "10": "10000",
+    }
+    return mapping.get(v, v)
+
+
+def _display_t_type_label(value: str) -> str:
+    v = _normalize_t_type_label(value)
+    mapping = {
+        "800": "8",
+        "1500": "15",
+        "3000": "3",
+        "5000": "5",
+        "10000": "10",
+    }
+    return mapping.get(v, v)
+
+
+_T_TYPE_RE = re.compile(r"\bT\s*(8|15|3|5|10|800|1500|3000|5000|10000)\b", re.IGNORECASE)
 
 
 def _parse_core_segment_text(text: str):
