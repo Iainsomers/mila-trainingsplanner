@@ -24,7 +24,7 @@ _RACE_RE = re.compile(r"\brace\b", re.IGNORECASE)
 _STRENGTH_RE = re.compile(r"\bstrength\b", re.IGNORECASE)
 
 # --- T labels ---
-_T_RE = re.compile(r"\bT\s*(800|1500|3000|5000|10000)\b", re.IGNORECASE)
+_T_RE = re.compile(r"\bT\s*(10|5|3|15|8|800|1500|3000|5000|10000)\b", re.IGNORECASE)
 
 # --- Zone & reguliere parsing ---
 _ZONE_RE = re.compile(r"Z\s*([1-6])\b", re.IGNORECASE)
@@ -66,9 +66,37 @@ _SET_MINUTES_TOKEN_RE = re.compile(r"^\s*(\d+)\s*['’‘´`′]\s*$", re.IGNORE
 _SET_MINWORD_TOKEN_RE = re.compile(r"^\s*(\d+)\s*min\s*$", re.IGNORECASE)
 
 
+def _normalize_t_type(raw_t: Optional[str]) -> Optional[str]:
+    mapping = {
+        "10": "10000",
+        "5": "5000",
+        "3": "3000",
+        "15": "1500",
+        "8": "800",
+        "10000": "10000",
+        "5000": "5000",
+        "3000": "3000",
+        "1500": "1500",
+        "800": "800",
+    }
+    return mapping.get(str(raw_t or "").strip()) or None
+
+
+def _display_t_type(t_type: Optional[str]) -> str:
+    mapping = {
+        "10000": "10",
+        "5000": "5",
+        "3000": "3",
+        "1500": "15",
+        "800": "8",
+    }
+    return mapping.get(str(t_type or "").strip(), str(t_type or "").strip())
+
+
 def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
     tm = _T_RE.search(s)
-    t_type = tm.group(1) if tm else None
+    raw_t_type = tm.group(1) if tm else None
+    t_type = _normalize_t_type(raw_t_type)
 
     zm = _ZONE_RE.search(s)
     explicit_zone = int(zm.group(1)) if zm else None
@@ -88,7 +116,7 @@ def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
                 ok=False,
                 zone=None,
                 t_type=t_type,
-                message="T3000 vereist expliciet een zone (bv. T3000 Z4 of T3000 Z5).",
+                message="T3 vereist expliciet een zone (bv. T3 Z4 of T3 Z5).",
                 raw=raw,
             )
 
@@ -217,7 +245,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             rep_distance_m=int(round(rep_m)),
             special=None,
             t_type=t_type,
-            message=f"Herkannt: {outer}×({inner}×{int(round(rep_m))}m) in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_m}m",
+            message=f"Herkannt: {outer}×({inner}×{int(round(rep_m))}m) in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_m}m",
             raw=raw,
         )
 
@@ -249,7 +277,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             rep_distance_m=None,
             special=None,
             t_type=t_type,
-            message=f"Herkannt: {outer}×({inner}×{minutes} min) in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
+            message=f"Herkannt: {outer}×({inner}×{minutes} min) in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_s}s",
             raw=raw,
         )
 
@@ -294,7 +322,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 rep_distance_m=rep_m,
                 special=None,
                 t_type=t_type,
-                message=f"Herkannt: {reps}×({inner}) in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_m}m",
+                message=f"Herkannt: {reps}×({inner}) in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_m}m",
                 raw=raw,
             )
 
@@ -332,7 +360,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 rep_distance_m=None,
                 special=None,
                 t_type=t_type,
-                message=f"Herkannt: {reps}×({inner}) in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
+                message=f"Herkannt: {reps}×({inner}) in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_s}s",
                 raw=raw,
             )
 
@@ -365,7 +393,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             rep_distance_m=int(round(rep_m)),
             special=None,
             t_type=t_type,
-            message=f"Herkannt: {reps}×{int(round(rep_m))}m in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_m}m",
+            message=f"Herkannt: {reps}×{int(round(rep_m))}m in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_m}m",
             raw=raw,
         )
 
@@ -388,7 +416,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 rep_distance_m=None,
                 special=None,
                 t_type=t_type,
-                message=f"Herkannt: {reps}×{minutes} min in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
+                message=f"Herkannt: {reps}×{minutes} min in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_s}s",
                 raw=raw,
             )
 
@@ -409,7 +437,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             rep_distance_m=None,
             special=None,
             t_type=t_type,
-            message=f"Herkannt: {value:g}{unit} in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_m}m",
+            message=f"Herkannt: {value:g}{unit} in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_m}m",
             raw=raw,
         )
 
@@ -440,7 +468,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             rep_distance_m=None,
             special=None,
             t_type=t_type,
-            message=f"Herkannt: {minutes} min in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
+            message=f"Herkannt: {minutes} min in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_s}s",
             raw=raw,
         )
 
@@ -463,7 +491,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 rep_distance_m=None,
                 special=None,
                 t_type=t_type,
-                message=f"Herkannt: {a:02d}:{b:02d} in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
+                message=f"Herkannt: {a:02d}:{b:02d} in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_s}s",
                 raw=raw,
             )
         else:
@@ -480,7 +508,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 rep_distance_m=None,
                 special=None,
                 t_type=t_type,
-                message=f"Herkannt: {h:02d}:{m:02d}:{sec:02d} in {('T' + t_type + ' / ') if t_type else ''}Z{zone} → {total_s}s",
+                message=f"Herkannt: {h:02d}:{m:02d}:{sec:02d} in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_s}s",
                 raw=raw,
             )
 
