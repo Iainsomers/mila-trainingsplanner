@@ -24,7 +24,7 @@ _RACE_RE = re.compile(r"\brace\b", re.IGNORECASE)
 _STRENGTH_RE = re.compile(r"\bstrength\b", re.IGNORECASE)
 
 # --- T labels ---
-_T_RE = re.compile(r"\bT\s*(10|5|3|15|8|800|1500|3000|5000|10000)\b", re.IGNORECASE)
+_T_RE = re.compile(r"\b(?:T\s*(10|5|3|15|8|800|1500|3000|5000|10000)|TM|THM|T4)\b", re.IGNORECASE)
 
 # --- Zone & reguliere parsing ---
 _ZONE_RE = re.compile(r"Z\s*([1-6])\b", re.IGNORECASE)
@@ -68,6 +68,9 @@ _SET_MINWORD_TOKEN_RE = re.compile(r"^\s*(\d+)\s*min\s*$", re.IGNORECASE)
 
 def _normalize_t_type(raw_t: Optional[str]) -> Optional[str]:
     mapping = {
+        "TM": "TM",
+        "THM": "THM",
+        "T4": "T4",
         "10": "10000",
         "5": "5000",
         "3": "3000",
@@ -79,23 +82,26 @@ def _normalize_t_type(raw_t: Optional[str]) -> Optional[str]:
         "1500": "1500",
         "800": "800",
     }
-    return mapping.get(str(raw_t or "").strip()) or None
+    return mapping.get(str(raw_t or "").strip().upper()) or None
 
 
 def _display_t_type(t_type: Optional[str]) -> str:
     mapping = {
+        "TM": "M",
+        "THM": "HM",
+        "T4": "4",
         "10000": "10",
         "5000": "5",
         "3000": "3",
         "1500": "15",
         "800": "8",
     }
-    return mapping.get(str(t_type or "").strip(), str(t_type or "").strip())
+    return mapping.get(str(t_type or "").strip().upper(), str(t_type or "").strip())
 
 
 def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
     tm = _T_RE.search(s)
-    raw_t_type = tm.group(1) if tm else None
+    raw_t_type = tm.group(0) if tm else None
     t_type = _normalize_t_type(raw_t_type)
 
     zm = _ZONE_RE.search(s)
@@ -104,6 +110,15 @@ def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
     if t_type:
         if explicit_zone is not None:
             return explicit_zone, t_type, None
+
+        if t_type == "TM":
+            return 2, t_type, None
+
+        if t_type == "THM":
+            return 3, t_type, None
+
+        if t_type == "T4":
+            return 5, t_type, None
 
         if t_type in ("800", "1500"):
             return 5, t_type, None
