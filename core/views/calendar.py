@@ -259,6 +259,9 @@ def calendar_view(request):
             "3000": 0.0,
             "1500": 0.0,
             "800": 0.0,
+            "TM": 0.0,
+            "THM": 0.0,
+            "T4": 0.0,
         }
 
         alt_z1_min = 0
@@ -290,7 +293,7 @@ def calendar_view(request):
             race_m = float(race.get("distance_m") or 0)
             race_time_s = float(race.get("duration_s") or 0)
 
-            for t in ("10000", "5000", "3000", "1500", "800"):
+            for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4"):
                 vals = t_totals.get(t) or {"distance_m": 0, "duration_s": 0}
                 t_m[t] = float(vals.get("distance_m") or 0)
 
@@ -312,7 +315,7 @@ def calendar_view(request):
 
         has_z = {z: (z_m[z] > 0) for z in ("1", "2", "3", "4", "5", "6")}
         has_race = (race_m > 0)
-        has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "800")}
+        has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4")}
 
         base_phase = base_phase_by_week.get(week_start, "")
         athlete_phase = athlete_phase_by_week.get(week_start, "")
@@ -345,6 +348,9 @@ def calendar_view(request):
             "sum_t3000_km": _km_str_with_small(t_m["3000"]),
             "sum_t1500_km": _km_str_with_small(t_m["1500"]),
             "sum_t800_km": _km_str_with_small(t_m["800"]),
+            "sum_tm_km": _km_str_with_small(t_m["TM"]),
+            "sum_thm_km": _km_str_with_small(t_m["THM"]),
+            "sum_t4_km": _km_str_with_small(t_m["T4"]),
             "has_z1": has_z["1"],
             "has_z2": has_z["2"],
             "has_z3": has_z["3"],
@@ -357,6 +363,9 @@ def calendar_view(request):
             "has_t3000": has_t["3000"],
             "has_t1500": has_t["1500"],
             "has_t800": has_t["800"],
+            "has_tm": has_t["TM"],
+            "has_thm": has_t["THM"],
+            "has_t4": has_t["T4"],
             "alt_z1_min": alt_z1_min,
             "alt_z2_min": alt_z2_min,
             "alt_z3_min": alt_z3_min,
