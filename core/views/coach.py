@@ -782,6 +782,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.pr_3000_s = pr_3000_s
             athlete.pr_5000_s = pr_5000_s
             athlete.pr_10000_s = pr_10000_s
+            athlete.pr_tm_s = tm_s
+            athlete.pr_thm_s = thm_s
+            athlete.pr_400_s = t4_s
             athlete.is_private = form["is_private"]
             athlete.save()
 
