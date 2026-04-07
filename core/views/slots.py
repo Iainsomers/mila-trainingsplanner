@@ -29,7 +29,7 @@ STATS_VERSION_KEY = "mila:stats:version"
 
 
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
-_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)T\s*(8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*T\s*(8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
+_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)T\s*(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*T\s*(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
 
 
 def _format_distance_text(distance_m: int) -> str:
@@ -119,10 +119,14 @@ def _t_type_progressive_zone(t_type: str, explicit_zone=None):
         return int(explicit_zone)
 
     t = _normalize_t_type_label(t_type)
-    if t in ("800", "1500"):
+    if t in ("800", "1500", "T4"):
         return 5
     if t in ("5000", "10000"):
         return 4
+    if t == "THM":
+        return 3
+    if t == "TM":
+        return 2
     if t == "3000":
         return None
     return 4
@@ -228,7 +232,7 @@ def _split_value_evenly(total, pieces, index):
 
 
 def _normalize_t_type_label(value: str) -> str:
-    v = str(value or "").strip()
+    v = str(value or "").strip().upper()
     mapping = {
         "8": "800",
         "15": "1500",
@@ -251,7 +255,7 @@ def _display_t_type_label(value: str) -> str:
     return mapping.get(v, v)
 
 
-_T_TYPE_RE = re.compile(r"\bT\s*(8|15|3|5|10|800|1500|3000|5000|10000)\b", re.IGNORECASE)
+_T_TYPE_RE = re.compile(r"\bT\s*(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)\b", re.IGNORECASE)
 
 
 def _parse_core_segment_text(text: str):
@@ -484,6 +488,7 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
                 "parse_ok": bool(seg.parse_ok),
                 "parse_message": seg.parse_message or "",
                 "special": (getattr(seg, "special", "") or ""),
+                "t_type": (getattr(seg, "t_type", "") or ""),
             })
 
     request.session["training_clipboard"] = {
@@ -549,6 +554,8 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
         seg.parse_ok = bool(item.get("parse_ok"))
         seg.parse_message = item.get("parse_message") or ""
         seg.special = item.get("special") or ""
+        if hasattr(seg, "t_type"):
+            seg.t_type = item.get("t_type") or ""
         seg.parsed_at = now
         seg.save()
 
