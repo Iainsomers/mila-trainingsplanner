@@ -412,6 +412,19 @@
                         </div>
 
                         <div class="sumline">
+                          {% if show_all_zones or w.has_tm %}
+                            <span class="pill pill-race">TM {{ w.sum_tm_km|default:"—" }}</span>
+                          {% endif %}
+                          {% if show_all_zones or w.has_thm %}
+                            <span class="pill pill-race">THM {{ w.sum_thm_km|default:"—" }}</span>
+                          {% endif %}
+                          {% if show_all_zones or w.has_t4 %}
+                            <span class="pill pill-race">T4 {{ w.sum_t4_km|default:"—" }}</span>
+                          {% endif %}
+                        </div>
+
+
+                        <div class="sumline">
                           {% if show_all_zones or w.has_t3000 %}
                             <span class="pill pill-race">T3 {{ w.sum_t3000_km|default:"—" }}</span>
                           {% endif %}
