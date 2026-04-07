@@ -24,7 +24,7 @@ _RACE_RE = re.compile(r"\brace\b", re.IGNORECASE)
 _STRENGTH_RE = re.compile(r"\bstrength\b", re.IGNORECASE)
 
 # --- T labels ---
-_T_RE = re.compile(r"\b(?:T\s*(10|5|3|15|8|800|1500|3000|5000|10000)|TM|THM|T4)\b", re.IGNORECASE)
+_T_RE = re.compile(r"\b(?:TM|THM|T4|T\s*(10|5|3|15|8|800|1500|3000|5000|10000))\b", re.IGNORECASE)
 
 # --- Zone & reguliere parsing ---
 _ZONE_RE = re.compile(r"Z\s*([1-6])\b", re.IGNORECASE)
@@ -71,6 +71,11 @@ def _normalize_t_type(raw_t: Optional[str]) -> Optional[str]:
         "TM": "TM",
         "THM": "THM",
         "T4": "T4",
+        "T10": "10000",
+        "T5": "5000",
+        "T3": "3000",
+        "T15": "1500",
+        "T8": "800",
         "10": "10000",
         "5": "5000",
         "3": "3000",
@@ -101,8 +106,11 @@ def _display_t_type(t_type: Optional[str]) -> str:
 
 def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
     tm = _T_RE.search(s)
-    raw_t_type = tm.group(0) if tm else None
-    t_type = _normalize_t_type(raw_t_type)
+    if tm:
+        token = tm.group(0).upper().replace(" ", "")
+    else:
+        token = None
+    t_type = _normalize_t_type(token)
 
     zm = _ZONE_RE.search(s)
     explicit_zone = int(zm.group(1)) if zm else None
