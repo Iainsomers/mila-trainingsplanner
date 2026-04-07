@@ -103,6 +103,9 @@ class Athlete(models.Model):
     pr_3000_s = models.FloatField(null=True, blank=True)
     pr_5000_s = models.FloatField(null=True, blank=True)
     pr_10000_s = models.FloatField(null=True, blank=True)
+    pr_tm_s = models.FloatField(null=True, blank=True)
+    pr_thm_s = models.FloatField(null=True, blank=True)
+    pr_400_s = models.FloatField(null=True, blank=True)
 
     def __str__(self) -> str:
         return self.name
