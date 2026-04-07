@@ -228,11 +228,18 @@ def _filter_owned(qs, user):
         grantee=user
     ).values_list("owner_id", flat=True)
 
-    # owner ziet alles van zichzelf
-    # gedeelde data alleen als niet private
+    has_is_private = any(f.name == "is_private" for f in qs.model._meta.fields)
+
+    if has_is_private:
+        # owner ziet alles van zichzelf
+        # gedeelde data alleen als niet private
+        return qs.filter(
+            Q(owner=user) |
+            (Q(owner_id__in=shared_owner_ids) & Q(is_private=False))
+        ).distinct()
+
     return qs.filter(
-        Q(owner=user) |
-        (Q(owner_id__in=shared_owner_ids) & Q(is_private=False))
+        Q(owner=user) | Q(owner_id__in=shared_owner_ids)
     ).distinct()
 
 
