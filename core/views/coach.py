@@ -492,6 +492,9 @@ def coach_athlete_create_view(request):
         "pr_3000": "",
         "pr_5000": "",
         "pr_10000": "",
+        "tm": "",
+        "thm": "",
+        "t4": "",
         "is_private": False,
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
@@ -509,6 +512,9 @@ def coach_athlete_create_view(request):
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
         form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
+        form["tm"] = (request.POST.get("tm") or "").strip()
+        form["thm"] = (request.POST.get("thm") or "").strip()
+        form["t4"] = (request.POST.get("t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
 
         for z in ("1", "2", "3", "4", "5"):
@@ -569,6 +575,24 @@ def coach_athlete_create_view(request):
             pr_10000_s = None
             errors.append("T10000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
 
+        try:
+            tm_s = _parse_pr_time_to_seconds(form["tm"]) if form["tm"] else None
+        except ValueError:
+            tm_s = None
+            errors.append("TM ongeldig formaat.")
+
+        try:
+            thm_s = _parse_pr_time_to_seconds(form["thm"]) if form["thm"] else None
+        except ValueError:
+            thm_s = None
+            errors.append("THM ongeldig formaat.")
+
+        try:
+            t4_s = _parse_pr_time_to_seconds(form["t4"]) if form["t4"] else None
+        except ValueError:
+            t4_s = None
+            errors.append("T4 ongeldig formaat.")
+
         if form["zone_method"] != "manual":
             errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
 
@@ -595,6 +619,9 @@ def coach_athlete_create_view(request):
                 pr_3000_s=pr_3000_s,
                 pr_5000_s=pr_5000_s,
                 pr_10000_s=pr_10000_s,
+                pr_tm_s=tm_s,
+                pr_thm_s=thm_s,
+                pr_400_s=t4_s,
                 is_private=form["is_private"],
             )
             return redirect("coach_athletes")
@@ -630,6 +657,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
         "pr_3000": _format_pr_seconds(getattr(athlete, "pr_3000_s", None)),
         "pr_5000": _format_pr_seconds(getattr(athlete, "pr_5000_s", None)),
         "pr_10000": _format_pr_seconds(getattr(athlete, "pr_10000_s", None)),
+        "tm": _format_pr_seconds(getattr(athlete, "pr_tm_s", None)),
+        "thm": _format_pr_seconds(getattr(athlete, "pr_thm_s", None)),
+        "t4": _format_pr_seconds(getattr(athlete, "pr_400_s", None)),
         "is_private": getattr(athlete, "is_private", False),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
@@ -647,6 +677,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
         form["pr_10000"] = (request.POST.get("pr_10000") or "").strip()
+        form["tm"] = (request.POST.get("tm") or "").strip()
+        form["thm"] = (request.POST.get("thm") or "").strip()
+        form["t4"] = (request.POST.get("t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
 
         for z in ("1", "2", "3", "4", "5"):
@@ -706,6 +739,24 @@ def coach_athlete_edit_view(request, athlete_id: int):
         except ValueError:
             pr_10000_s = None
             errors.append("T10000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+
+        try:
+            tm_s = _parse_pr_time_to_seconds(form["tm"]) if form["tm"] else None
+        except ValueError:
+            tm_s = None
+            errors.append("TM ongeldig formaat.")
+
+        try:
+            thm_s = _parse_pr_time_to_seconds(form["thm"]) if form["thm"] else None
+        except ValueError:
+            thm_s = None
+            errors.append("THM ongeldig formaat.")
+
+        try:
+            t4_s = _parse_pr_time_to_seconds(form["t4"]) if form["t4"] else None
+        except ValueError:
+            t4_s = None
+            errors.append("T4 ongeldig formaat.")
 
         if form["zone_method"] != "manual":
             errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
