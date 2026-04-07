@@ -403,35 +403,35 @@
                       </div>
                       {% if show_t_totals %}
                         <div class="sumline">
-                          {% if show_all_zones or w.has_t10000 %}
+                          {% if show_all_t_totals or w.has_t10000 %}
                             <span class="pill pill-race">T10 {{ w.sum_t10000_km|default:"—" }}</span>
                           {% endif %}
-                          {% if show_all_zones or w.has_t5000 %}
+                          {% if show_all_t_totals or w.has_t5000 %}
                             <span class="pill pill-race">T5 {{ w.sum_t5000_km|default:"—" }}</span>
                           {% endif %}
                         </div>
 
                         <div class="sumline">
-                          {% if show_all_zones or w.has_tm %}
+                          {% if show_all_t_totals or w.has_tm %}
                             <span class="pill pill-race">TM {{ w.sum_tm_km|default:"—" }}</span>
                           {% endif %}
-                          {% if show_all_zones or w.has_thm %}
+                          {% if show_all_t_totals or w.has_thm %}
                             <span class="pill pill-race">THM {{ w.sum_thm_km|default:"—" }}</span>
                           {% endif %}
-                          {% if show_all_zones or w.has_t4 %}
+                          {% if show_all_t_totals or w.has_t4 %}
                             <span class="pill pill-race">T4 {{ w.sum_t4_km|default:"—" }}</span>
                           {% endif %}
                         </div>
 
 
                         <div class="sumline">
-                          {% if show_all_zones or w.has_t3000 %}
+                          {% if show_all_t_totals or w.has_t3000 %}
                             <span class="pill pill-race">T3 {{ w.sum_t3000_km|default:"—" }}</span>
                           {% endif %}
-                          {% if show_all_zones or w.has_t1500 %}
+                          {% if show_all_t_totals or w.has_t1500 %}
                             <span class="pill pill-race">T15 {{ w.sum_t1500_km|default:"—" }}</span>
                           {% endif %}
-                          {% if show_all_zones or w.has_t800 %}
+                          {% if show_all_t_totals or w.has_t800 %}
                             <span class="pill pill-race">T8 {{ w.sum_t800_km|default:"—" }}</span>
                           {% endif %}
                         </div>
@@ -595,25 +595,37 @@
                       {% if show_all_zones or w.has_race %}
                         <span class="pill pill-race">Race {{ w.sum_race_km|default:"—" }}</span>
                       {% endif %}
-                      {% if show_all_zones or w.has_t10000 %}
+                      {% if show_all_t_totals or w.has_t10000 %}
                         <span class="pill pill-race">T10 {{ w.sum_t10000_km|default:"—" }}</span>
                       {% endif %}
                     </div>
                     {% if show_t_totals %}
                       <div class="sumline">
-                        {% if show_all_zones or w.has_t5000 %}
+                        {% if show_all_t_totals or w.has_t5000 %}
                           <span class="pill pill-race">T5 {{ w.sum_t5000_km|default:"—" }}</span>
                         {% endif %}
                       </div>
 
                       <div class="sumline">
-                        {% if show_all_zones or w.has_t3000 %}
+                        {% if show_all_t_totals or w.has_tm %}
+                          <span class="pill pill-race">TM {{ w.sum_tm_km|default:"—" }}</span>
+                        {% endif %}
+                        {% if show_all_t_totals or w.has_thm %}
+                          <span class="pill pill-race">THM {{ w.sum_thm_km|default:"—" }}</span>
+                        {% endif %}
+                        {% if show_all_t_totals or w.has_t4 %}
+                          <span class="pill pill-race">T4 {{ w.sum_t4_km|default:"—" }}</span>
+                        {% endif %}
+                      </div>
+
+                      <div class="sumline">
+                        {% if show_all_t_totals or w.has_t3000 %}
                           <span class="pill pill-race">T3 {{ w.sum_t3000_km|default:"—" }}</span>
                         {% endif %}
-                        {% if show_all_zones or w.has_t1500 %}
+                        {% if show_all_t_totals or w.has_t1500 %}
                           <span class="pill pill-race">T15 {{ w.sum_t1500_km|default:"—" }}</span>
                         {% endif %}
-                        {% if show_all_zones or w.has_t800 %}
+                        {% if show_all_t_totals or w.has_t800 %}
                           <span class="pill pill-race">T8 {{ w.sum_t800_km|default:"—" }}</span>
                         {% endif %}
                       </div>
@@ -779,22 +791,22 @@
                 </div>
                 {% if show_t_totals %}
                   <div class="sumline">
-                    {% if show_all_zones or w.has_t10000 %}
+                    {% if show_all_t_totals or w.has_t10000 %}
                       <span class="pill pill-race">T10 {{ w.sum_t10000_km|default:"—" }}</span>
                     {% endif %}
-                    {% if show_all_zones or w.has_t5000 %}
+                    {% if show_all_t_totals or w.has_t5000 %}
                       <span class="pill pill-race">T5 {{ w.sum_t5000_km|default:"—" }}</span>
                     {% endif %}
                   </div>
 
                   <div class="sumline">
-                    {% if show_all_zones or w.has_t3000 %}
+                    {% if show_all_t_totals or w.has_t3000 %}
                       <span class="pill pill-race">T3 {{ w.sum_t3000_km|default:"—" }}</span>
                     {% endif %}
-                    {% if show_all_zones or w.has_t1500 %}
+                    {% if show_all_t_totals or w.has_t1500 %}
                       <span class="pill pill-race">T15 {{ w.sum_t1500_km|default:"—" }}</span>
                     {% endif %}
-                    {% if show_all_zones or w.has_t800 %}
+                    {% if show_all_t_totals or w.has_t800 %}
                       <span class="pill pill-race">T8 {{ w.sum_t800_km|default:"—" }}</span>
                     {% endif %}
                   </div>
