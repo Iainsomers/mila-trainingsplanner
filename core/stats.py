@@ -35,6 +35,9 @@ def _athlete_zones_sig(athlete) -> str:
     pr_items = []
     for t in ("800", "1500", "3000", "5000", "10000"):
         pr_items.append((t, getattr(athlete, f"pr_{t}_s", None)))
+    pr_items.append(("TM", getattr(athlete, "pr_tm_s", None)))
+    pr_items.append(("THM", getattr(athlete, "pr_thm_s", None)))
+    pr_items.append(("T4", getattr(athlete, "pr_400_s", None)))
 
     items = sorted((str(k), str(v)) for k, v in z.items())
     return _sig(repr(items) + "|" + repr(pr_items))
@@ -63,6 +66,9 @@ def _empty_t_bucket():
         "3000": {"distance_m": 0, "duration_s": 0},
         "5000": {"distance_m": 0, "duration_s": 0},
         "10000": {"distance_m": 0, "duration_s": 0},
+        "TM": {"distance_m": 0, "duration_s": 0},
+        "THM": {"distance_m": 0, "duration_s": 0},
+        "T4": {"distance_m": 0, "duration_s": 0},
     }
 
 
@@ -70,13 +76,39 @@ def _t_speed_mps(athlete, t_type: str):
     if not athlete or not t_type:
         return None
 
-    field = f"pr_{t_type}_s"
+    field_map = {
+        "800": "pr_800_s",
+        "1500": "pr_1500_s",
+        "3000": "pr_3000_s",
+        "5000": "pr_5000_s",
+        "10000": "pr_10000_s",
+        "TM": "pr_tm_s",
+        "THM": "pr_thm_s",
+        "T4": "pr_400_s",
+    }
+
+    distance_map = {
+        "800": 800.0,
+        "1500": 1500.0,
+        "3000": 3000.0,
+        "5000": 5000.0,
+        "10000": 10000.0,
+        "TM": 42195.0,
+        "THM": 21097.5,
+        "T4": 400.0,
+    }
+
+    field = field_map.get(t_type)
+    distance_m = distance_map.get(t_type)
+    if not field or not distance_m:
+        return None
+
     pr_s = getattr(athlete, field, None)
     if not pr_s:
         return None
 
     try:
-        return float(int(t_type)) / float(pr_s)
+        return float(distance_m) / float(pr_s)
     except Exception:
         return None
 
@@ -383,4 +415,3 @@ def group_week_stats(plan, athletes, week_start: date_cls):
     out = {"zones": zones, "race": race, "alt_zones": alt_zones, "t_totals": t_totals}
     cache.set(cache_key, out, STATS_CACHE_TTL_S)
     return out
-
