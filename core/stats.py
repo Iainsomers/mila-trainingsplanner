@@ -72,6 +72,22 @@ def _empty_t_bucket():
     }
 
 
+
+
+def _normalize_t_type(value: str) -> str:
+    v = str(value or "").strip().upper()
+    mapping = {
+        "T8": "800",
+        "T15": "1500",
+        "T3": "3000",
+        "T5": "5000",
+        "T10": "10000",
+        "TM": "TM",
+        "THM": "THM",
+        "T4": "T4",
+    }
+    return mapping.get(v, v)
+
 def _t_speed_mps(athlete, t_type: str):
     if not athlete or not t_type:
         return None
@@ -97,6 +113,8 @@ def _t_speed_mps(athlete, t_type: str):
         "THM": 21097.5,
         "T4": 400.0,
     }
+
+    t_type = _normalize_t_type(t_type)
 
     field = field_map.get(t_type)
     distance_m = distance_map.get(t_type)
@@ -237,7 +255,7 @@ def base_week_stats(plan, week_start: date_cls):
 
                 dur = _dur_s(seg, nm, speed)
 
-                t = (getattr(seg, "t_type", "") or "").strip()
+                t = _normalize_t_type((getattr(seg, "t_type", "") or "").strip())
                 if t in t_totals:
                     t_totals[t]["distance_m"] += int(nm)
                     t_totals[t]["duration_s"] += int(dur)
@@ -297,7 +315,7 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 if not zone or zone not in speeds:
                     continue
 
-                t = (getattr(seg, "t_type", "") or "").strip()
+                t = _normalize_t_type((getattr(seg, "t_type", "") or "").strip())
                 t_speed = _t_speed_mps(athlete, t) if seg.duration_s else None
                 speed = float(t_speed) if t_speed else float(speeds[zone])
                 nm = _norm_m_athlete(seg, speed)
@@ -306,7 +324,7 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
 
                 dur = _dur_s(seg, nm, speed)
 
-                t = (getattr(seg, "t_type", "") or "").strip()
+                t = _normalize_t_type((getattr(seg, "t_type", "") or "").strip())
                 if t in t_totals:
                     t_totals[t]["distance_m"] += int(nm)
                     t_totals[t]["duration_s"] += int(dur)
@@ -394,7 +412,7 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                 if not zone or zone not in avg_zone_speeds:
                     continue
 
-                t = (getattr(seg, "t_type", "") or "").strip()
+                t = _normalize_t_type((getattr(seg, "t_type", "") or "").strip())
                 t_speed = _avg_t_speed(t) if seg.duration_s else None
                 speed = float(t_speed) if t_speed else float(avg_zone_speeds[zone])
 
