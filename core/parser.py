@@ -198,15 +198,31 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
         value = float(am.group(1).replace(",", "."))
         unit = am.group(2).lower()
         total_m = int(round(_to_meters(value, unit)))
+
+        zone = None
+        t_type = None
+        tm = _T_RE.search(s)
+        if tm:
+            token = tm.group(0).upper().replace(" ", "")
+            t_type = _normalize_t_type(token)
+            if t_type == "TM":
+                zone = 2
+            elif t_type == "THM":
+                zone = 3
+            elif t_type in ("5000", "10000"):
+                zone = 4
+            elif t_type in ("800", "1500", "3000", "T4"):
+                zone = 5
+
         return ParseResult(
             ok=True,
-            zone=None,
+            zone=zone,
             distance_m=total_m,
             duration_s=None,
             reps=1,
             rep_distance_m=None,
             special="IMPORTANT_RACE",
-            t_type=None,
+            t_type=t_type,
             message=f"Herkannt: Race! → {total_m}m",
             raw=raw,
         )
@@ -225,15 +241,31 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
         value = float(am.group(1).replace(",", "."))
         unit = am.group(2).lower()
         total_m = int(round(_to_meters(value, unit)))
+
+        zone = None
+        t_type = None
+        tm = _T_RE.search(s)
+        if tm:
+            token = tm.group(0).upper().replace(" ", "")
+            t_type = _normalize_t_type(token)
+            if t_type == "TM":
+                zone = 2
+            elif t_type == "THM":
+                zone = 3
+            elif t_type in ("5000", "10000"):
+                zone = 4
+            elif t_type in ("800", "1500", "3000", "T4"):
+                zone = 5
+
         return ParseResult(
             ok=True,
-            zone=None,
+            zone=zone,
             distance_m=total_m,
             duration_s=None,
             reps=1,
             rep_distance_m=None,
             special="RACE",
-            t_type=None,
+            t_type=t_type,
             message=f"Herkannt: Race → {total_m}m",
             raw=raw,
         )
