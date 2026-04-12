@@ -8,8 +8,9 @@ from django.utils import timezone
 from django.utils.html import escape
 from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
+from django.db.models import Q
 
-from core.models import TrainingSlot
+from core.models import TrainingSlot, SavedTrainingTemplate
 from core.parser import parse_segment_text
 
 from .common import (
@@ -287,6 +288,37 @@ def _tb_flag(request, key: str, default: bool = True) -> bool:
     if v is None:
         return bool(default)
     return bool(v)
+
+
+
+def _deserialize_slot_template_text(text: str) -> dict:
+    out = {"WU":"","MOB":"","SPR":"","CORE":"","CORE2":"","ALT":"","CD":""}
+    for line in (text or "").splitlines():
+        if "=" in line:
+            k,v = line.split("=",1)
+            out[k.strip().upper()] = v.strip()
+    return out
+
+
+def _saved_templates_for_user(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return SavedTrainingTemplate.objects.none()
+    return SavedTrainingTemplate.objects.filter(
+        Q(owner=user) | Q(owner__shared_with_others__grantee=user)
+    ).distinct().order_by("name", "id")
+
+
+def _serialize_slot_template_text(wu_text, mob_text, sprint_text, core_text, core2_text, alt_text, cd_text) -> str:
+    parts = [
+        f"WU={wu_text or ''}",
+        f"MOB={mob_text or ''}",
+        f"SPR={sprint_text or ''}",
+        f"CORE={core_text or ''}",
+        f"CORE2={core2_text or ''}",
+        f"ALT={alt_text or ''}",
+        f"CD={cd_text or ''}",
+    ]
+    return "\n".join(parts)
 
 
 # -----------------------------
@@ -680,6 +712,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "selected_plan": selected_plan,
                 "selected_athlete": athlete,
                 "is_override": bool(has_fix),
+                "saved_templates": _saved_templates_for_user(request.user),
+                "selected_template_id": "",
+                "template_name": "",
             },
         )
 
@@ -738,6 +773,147 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     alt_text = (request.POST.get("alt_text") or "").strip()
     cd_text = (request.POST.get("cd_text") or "").strip() if tb_show_cd else ""
 
+    if action == "save_template":
+        template_name = (request.POST.get("template_name") or "").strip()
+
+        if not template_name:
+            return render(
+                request,
+                "core/partials/slot_modal.html",
+                {
+                    "day": d,
+                    "slot_index": slot_index,
+
+                    "tb_show_wu": tb_show_wu,
+                    "tb_show_mob": tb_show_mob,
+                    "tb_show_sprint": tb_show_sprint,
+                    "tb_show_core2": tb_show_core2,
+                    "tb_show_cd": tb_show_cd,
+
+                    "wu_text": wu_text,
+                    "mob_text": mob_text,
+                    "sprint_text": sprint_text,
+                    "core_text": core_text,
+                    "core2_text": core2_text,
+                    "alt_text": alt_text,
+                    "cd_text": cd_text,
+
+                    "template_error": "Naam is verplicht.",
+                    "saved_templates": _saved_templates_for_user(request.user),
+                    "selected_template_id": "",
+                    "template_name": template_name,
+
+                    "wu_feedback": "", "wu_ok": None,
+                    "sprint_feedback": "", "sprint_ok": None,
+                    "core_feedback": "", "core_ok": None,
+                    "core2_feedback": "", "core2_ok": None,
+                    "alt_feedback": "", "alt_ok": None,
+                    "cd_feedback": "", "cd_ok": None,
+
+                    "selected_plan": selected_plan,
+                    "selected_athlete": athlete,
+                    "is_override": is_override,
+                },
+            )
+
+        SavedTrainingTemplate.objects.create(
+            owner=request.user,
+            name=template_name,
+            text=_serialize_slot_template_text(
+                wu_text=wu_text,
+                mob_text=mob_text,
+                sprint_text=sprint_text,
+                core_text=core_text,
+                core2_text=core2_text,
+                alt_text=alt_text,
+                cd_text=cd_text,
+            ),
+        )
+
+        return render(
+            request,
+            "core/partials/slot_modal.html",
+            {
+                "day": d,
+                "slot_index": slot_index,
+
+                "tb_show_wu": tb_show_wu,
+                "tb_show_mob": tb_show_mob,
+                "tb_show_sprint": tb_show_sprint,
+                "tb_show_core2": tb_show_core2,
+                "tb_show_cd": tb_show_cd,
+
+                "wu_text": wu_text,
+                "mob_text": mob_text,
+                "sprint_text": sprint_text,
+                "core_text": core_text,
+                "core2_text": core2_text,
+                "alt_text": alt_text,
+                "cd_text": cd_text,
+
+                "template_saved_notice": "Standaard training opgeslagen.",
+                "saved_templates": _saved_templates_for_user(request.user),
+                "selected_template_id": "",
+                "template_name": "",
+
+                "wu_feedback": "", "wu_ok": None,
+                "sprint_feedback": "", "sprint_ok": None,
+                "core_feedback": "", "core_ok": None,
+                "core2_feedback": "", "core2_ok": None,
+                "alt_feedback": "", "alt_ok": None,
+                "cd_feedback": "", "cd_ok": None,
+
+                "selected_plan": selected_plan,
+                "selected_athlete": athlete,
+                "is_override": is_override,
+                "saved_templates": _saved_templates_for_user(request.user),
+                "selected_template_id": str(tpl.id),
+                "template_name": "",
+            },
+        )
+
+    
+    if action == "load_template":
+        template_id = request.POST.get("template_id")
+        if not template_id:
+            return HttpResponse("No template", status=400)
+
+        tpl = SavedTrainingTemplate.objects.filter(
+            Q(owner=request.user) | Q(owner__shared_with_others__grantee=request.user)
+        ).filter(id=template_id).first()
+
+        if not tpl:
+            return HttpResponse("Not allowed", status=403)
+
+        data = _deserialize_slot_template_text(tpl.text)
+
+        return render(
+            request,
+            "core/partials/slot_modal.html",
+            {
+                "day": d,
+                "slot_index": slot_index,
+
+                "tb_show_wu": tb_show_wu,
+                "tb_show_mob": tb_show_mob,
+                "tb_show_sprint": tb_show_sprint,
+                "tb_show_core2": tb_show_core2,
+                "tb_show_cd": tb_show_cd,
+
+                "wu_text": data.get("WU",""),
+                "mob_text": data.get("MOB",""),
+                "sprint_text": data.get("SPR",""),
+                "core_text": data.get("CORE",""),
+                "core2_text": data.get("CORE2",""),
+                "alt_text": data.get("ALT",""),
+                "cd_text": data.get("CD",""),
+
+                "selected_plan": selected_plan,
+                "selected_athlete": athlete,
+                "is_override": is_override,
+            },
+        )
+
     # validatie: Core of Alt moet gevuld zijn
     if not core_text and not alt_text:
         return render(
@@ -762,6 +938,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "cd_text": cd_text,
 
                 "core_error": "Vul Core in, of vul Alternative.",
+                "saved_templates": _saved_templates_for_user(request.user),
+                "selected_template_id": (request.POST.get("template_id") or "").strip(),
+                "template_name": (request.POST.get("template_name") or "").strip(),
 
                 "wu_feedback": "", "wu_ok": None,
                 "sprint_feedback": "", "sprint_ok": None,
@@ -800,6 +979,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "cd_text": cd_text,
 
                 "core2_error": "2nd core mag niet als enige segment in het slot staan.",
+                "saved_templates": _saved_templates_for_user(request.user),
+                "selected_template_id": (request.POST.get("template_id") or "").strip(),
+                "template_name": (request.POST.get("template_name") or "").strip(),
 
                 "wu_feedback": "", "wu_ok": None,
                 "sprint_feedback": "", "sprint_ok": None,

@@ -469,6 +469,29 @@ class TrainingLog(models.Model):
         if targeted and self.athlete_id not in targeted:
             raise ValidationError("Deze atleet hoort niet bij de doelgroep van dit trainingsslot.")
 
+
+class SavedTrainingTemplate(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="saved_training_templates",
+    )
+
+    name = models.CharField(max_length=120)
+    text = models.TextField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name", "id"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 # =============================
 # NEW: Coach access (trainer sharing)
 # =============================
