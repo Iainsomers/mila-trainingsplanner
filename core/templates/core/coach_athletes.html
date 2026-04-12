@@ -1,17 +1,17 @@
 {% extends "core/base.html" %}
 
-{% block title %}Coach Console – Atleten{% endblock %}
+{% block title %}Coach Console – Athletes{% endblock %}
 
 {% block content %}
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-      <h1 class="mb-1">Atleten</h1>
-      <p class="text-muted mb-0">Aanmaken en bewerken van atleten</p>
+      <h1 class="mb-1">Athletes</h1>
+      <p class="text-muted mb-0">Create and edit athletes</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="{% url 'coach_athlete_create' %}" class="btn btn-primary">Nieuwe atleet</a>
-      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Terug</a>
+      <a href="{% url 'coach_athlete_create' %}" class="btn btn-primary">New athlete</a>
+      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>
 
@@ -22,11 +22,11 @@
           <table class="table table-sm align-middle">
             <thead>
               <tr>
-                <th>Naam</th>
-                <th>Geb. jaar</th>
-                <th>Geslacht</th>
+                <th>Name</th>
+                <th>Birth year</th>
+                <th>Gender</th>
                 <th>VDOT</th>
-                <th class="text-end">Acties</th>
+                <th class="text-end">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -37,7 +37,7 @@
                   <td>{{ a.gender|default:"—" }}</td>
                   <td>{{ a.vdot|default:"—" }}</td>
                   <td class="text-end">
-                    <a class="btn btn-sm btn-primary" href="{% url 'coach_athlete_edit' a.id %}">Bewerk</a>
+                    <a class="btn btn-sm btn-primary" href="{% url 'coach_athlete_edit' a.id %}">Edit</a>
                   </td>
                 </tr>
               {% endfor %}
@@ -45,7 +45,7 @@
           </table>
         </div>
       {% else %}
-        <p class="text-muted mb-0">Nog geen atleten. Klik op “Nieuwe atleet”.</p>
+        <p class="text-muted mb-0">No athletes yet. Click “New athlete”.</p>
       {% endif %}
     </div>
   </div>

@@ -1,7 +1,7 @@
 {% extends "core/base.html" %}
 
 {% block title %}
-  {% if mode == "create" %}Nieuw plan{% else %}Plan bewerken{% endif %}
+  {% if mode == "create" %}New plan{% else %}Edit plan{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -9,18 +9,18 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h1 class="mb-1">
-        {% if mode == "create" %}Nieuw plan{% else %}Plan bewerken{% endif %}
+        {% if mode == "create" %}New plan{% else %}Edit plan{% endif %}
       </h1>
       <p class="text-muted mb-0">
         {% if mode == "create" %}
-          Maak een trainingsplan aan.
+          Create a training plan.
         {% else %}
-          Pas naam en datums aan.
+          Edit name and dates.
         {% endif %}
       </p>
     </div>
     <div class="d-flex gap-2">
-      <a href="{% url 'coach_plans' %}" class="btn btn-outline-secondary">Terug</a>
+      <a href="{% url 'coach_plans' %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>
 
@@ -40,27 +40,27 @@
         {% csrf_token %}
 
         <div class="mb-3">
-          <label class="form-label">Naam</label>
+          <label class="form-label">Name</label>
           <input name="name" class="form-control" value="{{ form.name }}" required>
         </div>
 
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label">Startdatum</label>
+            <label class="form-label">Start date</label>
             <input type="date" name="start_date" class="form-control" value="{{ form.start_date }}">
-            <div class="form-text">Leeg laten mag (maar dan ook einddatum leeg).</div>
+            <div class="form-text">Can be left empty (but then end date must also be empty).</div>
           </div>
           <div class="col-md-6">
-            <label class="form-label">Einddatum</label>
+            <label class="form-label">End date</label>
             <input type="date" name="end_date" class="form-control" value="{{ form.end_date }}">
           </div>
         </div>
 
         {% if mode == "create" %}
         <div class="mt-3">
-          <label class="form-label">Kopieer van bestaand plan (optioneel)</label>
+          <label class="form-label">Copy from existing plan (optional)</label>
           <select name="copy_source_plan_id" class="form-select">
-            <option value="">-- geen (leeg plan) --</option>
+            <option value="">-- none (empty plan) --</option>
             {% for p in source_plans %}
               <option value="{{ p.id }}" {% if form.copy_source_plan_id == p.id|stringformat:"s" %}selected{% endif %}>
                 {{ p.name }}
@@ -68,7 +68,7 @@
             {% endfor %}
           </select>
           <div class="form-text">
-            Kies een bestaand plan om te kopiëren. Alleen weken die binnen het nieuwe plan passen worden overgenomen.
+            Select a plan to copy. Only weeks that fit within the new plan are copied.
           </div>
         </div>
         {% endif %}
@@ -82,11 +82,11 @@
             {% if form.is_private %}checked{% endif %}
           >
           <label class="form-check-label" for="is_private">
-            Privé (alleen zichtbaar voor mij)
+            Private (only visible to me)
           </label>
         </div>
 
-        <!-- ✅ NEW: Week dropdown gebruiken -->
+        <!-- ✅ NEW: Enable week dropdown -->
         <div class="mt-3 form-check">
           <input
             class="form-check-input"
@@ -96,18 +96,18 @@
             {% if form.week_phases_enabled %}checked{% endif %}
           >
           <label class="form-check-label" for="week_phases_enabled">
-            Week dropdown gebruiken
+            Enable week dropdown
           </label>
           <div class="form-text">
-            Aan = je kunt per week een fase kiezen (Recovery/Aerobe/Specific/Intense/Taper) die ook zichtbaar is voor atleten.
+            On = you can select a phase per week (Recovery/Aerobic/Specific/Intense/Taper), visible to athletes.
           </div>
         </div>
 
         <div class="mt-4 d-flex gap-2">
           <button type="submit" class="btn btn-primary">
-            Opslaan
+            Save
           </button>
-          <a href="{% url 'coach_plans' %}" class="btn btn-outline-secondary">Annuleren</a>
+          <a href="{% url 'coach_plans' %}" class="btn btn-outline-secondary">Cancel</a>
         </div>
       </form>
     </div>

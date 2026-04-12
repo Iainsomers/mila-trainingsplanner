@@ -20,7 +20,7 @@
         <div class="card-body">
           <h5 class="card-title mb-1">Calendar</h5>
           <div class="text-muted small mb-3">
-            Instellingen die bepalen wat je in de kalender ziet.
+            Settings that determine what you see in the calendar.
           </div>
 
           <div class="form-check mb-3">
@@ -35,7 +35,7 @@
               Show all zones
             </label>
             <div class="form-text">
-              Uit = alleen zones tonen met waarde &gt; 0.
+              Off = only show zones with value > 0.
             </div>
           </div>
 
@@ -48,10 +48,10 @@
               {% if highlight_current_week %}checked{% endif %}
             >
             <label class="form-check-label" for="highlight_current_week">
-              Highlight huidige week
+              Highlight current week
             </label>
             <div class="form-text">
-              Geeft de hele week waarin vandaag valt een lichtgele achtergrond (als die week zichtbaar is).
+              Highlights the entire week containing today with a light yellow background (if that week is visible).
             </div>
           </div>
 
@@ -67,7 +67,7 @@
               Show only core?
             </label>
             <div class="form-text">
-              Aan = alleen core (en alt) tonen in de cel. Uit = alle segmenten tonen. Hovertekst blijft altijd volledig.
+              On = show only core (and alt) in the cell. Off = show all segments. Hover text always remains complete.
             </div>
           </div>
 
@@ -84,7 +84,7 @@
               Weekcolors
             </label>
             <div class="form-text">
-              Aan = weekfase kleurt het week-vak. Uit = geen kleur, alleen het woord (bijv. Recovery).
+              On = week phase colors the week cell. Off = no color, only the label (e.g. Recovery).
             </div>
           </div>
 
@@ -98,29 +98,29 @@
         <div class="card-body">
           <h5 class="card-title mb-1">Coach Console</h5>
           <div class="text-muted small mb-3">
-            Instellingen voor invoer en beheer in de Coach Console.
+            Settings for input and management in the Coach Console.
           </div>
 
-          <label class="form-label mb-1" for="zone_input_unit">Zones invoeren als</label>
+          <label class="form-label mb-1" for="zone_input_unit">Enter zones as</label>
           <select class="form-select" id="zone_input_unit" name="zone_input_unit">
             <option value="pace" {% if zone_input_unit == "pace" %}selected{% endif %}>min/km</option>
             <option value="kmh" {% if zone_input_unit == "kmh" %}selected{% endif %}>km/h</option>
           </select>
 
           <div class="form-text">
-            Dit beïnvloedt alleen de invoer in het atletenformulier; intern blijft alles m/s.
+            This only affects input in the athlete form; internally everything remains m/s.
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Trainingsbuilder -->
+    <!-- Training builder -->
     <div class="col-12">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title mb-1">Trainingsbuilder</h5>
+          <h5 class="card-title mb-1">Training builder</h5>
           <div class="text-muted small mb-3">
-            Welke segmenten zichtbaar zijn in de slot-editor. Core en Alternative zijn altijd beschikbaar.
+            Which segments are visible in the slot editor. Core and Alternative are always available.
           </div>
 
           <div class="row g-2">
@@ -161,7 +161,7 @@
           </div>
 
           <div class="form-text mt-2">
-            Let op: uitgeschakelde segmenten worden bij opslaan verwijderd uit het slot (zodat er niets “onzichtbaar” blijft meetellen).
+            Note: disabled segments are removed from the slot when saving (so nothing invisible remains counted).
           </div>
         </div>
       </div>
@@ -170,8 +170,8 @@
     <!-- Actions -->
     <div class="col-12">
       <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Opslaan</button>
-        <a href="/" class="btn btn-outline-secondary">Annuleren</a>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="/" class="btn btn-outline-secondary">Cancel</a>
       </div>
     </div>
 

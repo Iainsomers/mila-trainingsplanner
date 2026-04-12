@@ -1,17 +1,17 @@
 {% extends "core/base.html" %}
 
-{% block title %}Coach Console – Groepen{% endblock %}
+{% block title %}Coach Console – Groups{% endblock %}
 
 {% block content %}
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-      <h1 class="mb-1">Groepen</h1>
-      <p class="text-muted mb-0">Groepsindeling beheren (incl. atleten)</p>
+      <h1 class="mb-1">Groups</h1>
+      <p class="text-muted mb-0">Manage groups (including athletes)</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="{% url 'coach_group_create' %}" class="btn btn-primary">Nieuwe groep</a>
-      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Terug</a>
+      <a href="{% url 'coach_group_create' %}" class="btn btn-primary">New group</a>
+      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>
 
@@ -22,9 +22,9 @@
           <table class="table table-sm align-middle">
             <thead>
               <tr>
-                <th>Groep</th>
-                <th>Atleten</th>
-                <th class="text-end">Acties</th>
+                <th>Group</th>
+                <th>Athletes</th>
+                <th class="text-end">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -44,7 +44,7 @@
                     {% endwith %}
                   </td>
                   <td class="text-end">
-                    <a class="btn btn-sm btn-primary" href="{% url 'coach_group_edit' g.id %}">Bewerk</a>
+                    <a class="btn btn-sm btn-primary" href="{% url 'coach_group_edit' g.id %}">Edit</a>
                   </td>
                 </tr>
               {% endfor %}
@@ -52,7 +52,7 @@
           </table>
         </div>
       {% else %}
-        <p class="text-muted mb-0">Nog geen groepen. Klik op “Nieuwe groep”.</p>
+        <p class="text-muted mb-0">No groups yet. Click “New group”.</p>
       {% endif %}
     </div>
   </div>

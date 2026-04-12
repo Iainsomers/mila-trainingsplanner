@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}Kalender{% endblock %}
+{% block title %}Calendar{% endblock %}
 
 {% block extra_head %}
   <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
@@ -225,7 +225,7 @@
 {% block content %}
 
 <div class="d-flex align-items-center justify-content-between mb-2">
-  <h2 class="mb-0">Trainingskalender</h2>
+  <h2 class="mb-0">Training Calendar</h2>
   <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
 </div>
 
@@ -239,7 +239,7 @@
           <option value="{{ p.id }}" {% if selected_plan and p.id == selected_plan.id %}selected{% endif %}>{{ p.name }}</option>
         {% endfor %}
       {% else %}
-        <option value="">(geen plannen)</option>
+        <option value="">(no plans)</option>
       {% endif %}
     </select>
 
@@ -251,10 +251,10 @@
   {% if selected_plan %}
     <form method="get" class="d-flex align-items-center gap-2">
       <input type="hidden" name="plan" value="{{ selected_plan.id }}">
-      <label class="small text-secondary mb-0">Bekijk als</label>
+      <label class="small text-secondary mb-0">View as</label>
 
       <select name="athlete" class="form-select form-select-sm" style="width: 240px;" onchange="this.form.submit();">
-        <option value="" {% if not selected_athlete %}selected{% endif %}>(geen — plan bewerken)</option>
+        <option value="" {% if not selected_athlete %}selected{% endif %}>(none — edit plan)</option>
         {% for a in plan_athletes %}
           <option value="{{ a.id }}" {% if selected_athlete and a.id == selected_athlete.id %}selected{% endif %}>{{ a.name }}</option>
         {% endfor %}
@@ -265,8 +265,8 @@
 
 {% if selected_athlete %}
   <div class="alert alert-info py-2">
-    <b>Atleet-modus:</b> wijzigingen worden opgeslagen als <b>fixed override</b> voor <b>{{ selected_athlete.name }}</b>.
-    <div class="small text-muted">Weektype kun je hier per atleet overschrijven (week override).</div>
+    <b>Athlete mode:</b> changes are saved as <b>fixed override</b> voor <b>{{ selected_athlete.name }}</b>.
+    <div class="small text-muted">You can override the week type per athlete here (week override).</div>
   </div>
 {% endif %}
 
@@ -280,8 +280,8 @@
     <thead>
       <tr>
         <th class="weeklabel">Week</th>
-        <th class="sumcol">Totaal</th>
-        <th>Ma</th><th>Di</th><th>Wo</th><th>Do</th><th>Vr</th><th>Za</th><th>Zo</th>
+        <th class="sumcol">Total</th>
+        <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
       </tr>
     </thead>
 
@@ -348,9 +348,9 @@
                         <button type="button" class="btn btn-outline-primary"
                           hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
                           hx-swap="none"
-                          title="Kopieer deze week (base slots)"
+                          title="Copy deze week (base slots)"
                         >
-                          Kopieer
+                          Copy
                         </button>
 
                         {% if has_week_clipboard %}
@@ -359,8 +359,8 @@
                             hx-swap="none"
                           >
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-dark" title="Plak week (overschrijft base slots, FIX blijft)">
-                              Plak
+                            <button type="submit" class="btn btn-outline-dark" title="Paste week (overschrijft base slots, FIX blijft)">
+                              Paste
                             </button>
                           </form>
                         {% endif %}
@@ -370,7 +370,7 @@
 
                   <td class="sumcol" rowspan="2">
                     <div title="{{ w.sum_pct_tooltip|default:'' }}">
-                      <div class="sum-total">Tot: {{ w.sum_tot_km|default:"—" }} km</div>
+                      <div class="sum-total">Total: {{ w.sum_tot_km|default:"—" }} km</div>
 
                       <div class="sumline">
                         {% if show_all_zones or w.has_z1 %}
@@ -543,9 +543,9 @@
                       <button type="button" class="btn btn-outline-primary"
                         hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
                         hx-swap="none"
-                        title="Kopieer deze week (base slots)"
+                        title="Copy deze week (base slots)"
                       >
-                        Kopieer
+                        Copy
                       </button>
 
                       {% if has_week_clipboard %}
@@ -554,8 +554,8 @@
                           hx-swap="none"
                         >
                           {% csrf_token %}
-                          <button type="submit" class="btn btn-outline-dark" title="Plak week (overschrijft base slots, FIX blijft)">
-                            Plak
+                          <button type="submit" class="btn btn-outline-dark" title="Paste week (overschrijft base slots, FIX blijft)">
+                            Paste
                           </button>
                         </form>
                       {% endif %}
@@ -565,7 +565,7 @@
 
                 <td class="sumcol" rowspan="2">
                   <div title="{{ w.sum_pct_tooltip|default:'' }}">
-                    <div class="sum-total">Tot: {{ w.sum_tot_km|default:"—" }} km</div>
+                    <div class="sum-total">Total: {{ w.sum_tot_km|default:"—" }} km</div>
 
                     <div class="sumline">
                       {% if show_all_zones or w.has_z1 %}
@@ -736,9 +736,9 @@
                   <button type="button" class="btn btn-outline-primary"
                     hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
                     hx-swap="none"
-                    title="Kopieer deze week (base slots)"
+                    title="Copy deze week (base slots)"
                   >
-                    Kopieer
+                    Copy
                   </button>
 
                   {% if has_week_clipboard %}
@@ -747,8 +747,8 @@
                       hx-swap="none"
                     >
                       {% csrf_token %}
-                      <button type="submit" class="btn btn-outline-dark" title="Plak week (overschrijft base slots, FIX blijft)">
-                        Plak
+                      <button type="submit" class="btn btn-outline-dark" title="Paste week (overschrijft base slots, FIX blijft)">
+                        Paste
                       </button>
                     </form>
                   {% endif %}
@@ -758,7 +758,7 @@
 
             <td class="sumcol" rowspan="2">
               <div title="{{ w.sum_pct_tooltip|default:'' }}">
-                <div class="sum-total">Tot: {{ w.sum_tot_km|default:"—" }} km</div>
+                <div class="sum-total">Total: {{ w.sum_tot_km|default:"—" }} km</div>
 
                 <div class="sumline">
                   {% if show_all_zones or w.has_z1 %}
