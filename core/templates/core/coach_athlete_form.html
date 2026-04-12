@@ -44,12 +44,120 @@
           document.addEventListener("DOMContentLoaded", function () {
             const form = document.getElementById("athleteForm");
             if (!form) return;
+
             form.addEventListener("keydown", function (e) {
               const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
               if (e.key === "Enter" && tag === "input") {
                 e.preventDefault();
               }
             });
+
+            function parsePrToSeconds(value) {
+              const s = (value || "").trim();
+              if (!s) return null;
+
+              if (s.includes(":")) {
+                const parts = s.split(":");
+                if (parts.length === 2) {
+                  const mm = parseInt(parts[0], 10);
+                  const ss = parseFloat(parts[1]);
+                  if (Number.isNaN(mm) || Number.isNaN(ss) || ss < 0 || ss >= 60) return null;
+                  return (mm * 60) + ss;
+                }
+                if (parts.length === 3) {
+                  const hh = parseInt(parts[0], 10);
+                  const mm = parseInt(parts[1], 10);
+                  const ss = parseFloat(parts[2]);
+                  if (Number.isNaN(hh) || Number.isNaN(mm) || Number.isNaN(ss) || mm < 0 || mm >= 60 || ss < 0 || ss >= 60) return null;
+                  return (hh * 3600) + (mm * 60) + ss;
+                }
+                return null;
+              }
+
+              const dotParts = s.split(".");
+              if (dotParts.length === 3) {
+                const mm = parseInt(dotParts[0], 10);
+                const ss = parseInt(dotParts[1], 10);
+                const ms = parseInt(dotParts[2], 10);
+                if (Number.isNaN(mm) || Number.isNaN(ss) || Number.isNaN(ms) || ss < 0 || ss >= 60) return null;
+                return (mm * 60) + ss + (ms / Math.pow(10, dotParts[2].length));
+              }
+              if (dotParts.length === 2) {
+                const ss = parseInt(dotParts[0], 10);
+                const ms = parseInt(dotParts[1], 10);
+                if (Number.isNaN(ss) || Number.isNaN(ms)) return null;
+                return ss + (ms / Math.pow(10, dotParts[1].length));
+              }
+
+              return null;
+            }
+
+            function formatSeconds(totalSeconds) {
+              if (totalSeconds == null || !Number.isFinite(totalSeconds) || totalSeconds <= 0) return "";
+              const rounded = Math.round(totalSeconds);
+              const hours = Math.floor(rounded / 3600);
+              const minutes = Math.floor((rounded % 3600) / 60);
+              const seconds = rounded % 60;
+
+              if (hours > 0) {
+                return String(hours) + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+              }
+              return String(minutes) + ":" + String(seconds).padStart(2, "0");
+            }
+
+            const fields = {
+              t4: form.querySelector('input[name="t4"]'),
+              t8: form.querySelector('input[name="pr_800"]'),
+              t15: form.querySelector('input[name="pr_1500"]'),
+              t3: form.querySelector('input[name="pr_3000"]'),
+              t5: form.querySelector('input[name="pr_5000"]'),
+              t10: form.querySelector('input[name="pr_10000"]'),
+              thm: form.querySelector('input[name="thm"]'),
+              tm: form.querySelector('input[name="tm"]')
+            };
+
+            const relations = [
+              { target: "t4", source: "t8", factor: 0.422 },
+              { target: "t8", source: "t15", factor: 0.492 },
+              { target: "t15", source: "t3", factor: 0.467 },
+              { target: "t3", source: "t5", factor: 0.576 },
+              { target: "t5", source: "t10", factor: 0.482 },
+              { target: "t10", source: "thm", factor: 0.453 },
+              { target: "thm", source: "tm", factor: 0.478 },
+              { target: "tm", source: "thm", factor: 2.091 },
+              { target: "t8", source: "t4", factor: 1 / 0.422 },
+              { target: "t15", source: "t8", factor: 1 / 0.492 },
+              { target: "t3", source: "t15", factor: 1 / 0.467 },
+              { target: "t5", source: "t3", factor: 1 / 0.576 },
+              { target: "t10", source: "t5", factor: 1 / 0.482 },
+              { target: "thm", source: "t10", factor: 1 / 0.453 },
+              { target: "tm", source: "thm", factor: 1 / 0.478 }
+            ];
+
+            const fillBtn = document.getElementById("fillMissingPbsBtn");
+            if (fillBtn) {
+              fillBtn.addEventListener("click", function () {
+                let changed = true;
+
+                while (changed) {
+                  changed = false;
+
+                  relations.forEach(function (rel) {
+                    const target = fields[rel.target];
+                    const source = fields[rel.source];
+                    if (!target || !source) return;
+
+                    const targetValue = (target.value || "").trim();
+                    const sourceSeconds = parsePrToSeconds(source.value);
+
+                    if (!targetValue && sourceSeconds && sourceSeconds > 0) {
+                      target.value = formatSeconds(sourceSeconds * rel.factor);
+                      changed = true;
+                    }
+                  });
+                }
+              });
+            }
           });
         </script>
 
@@ -199,6 +307,7 @@
         </div>
 
         <div class="mt-4 d-flex gap-2">
+          <button type="button" class="btn btn-outline-primary" id="fillMissingPbsBtn">Fill missing PB's</button>
           <button type="submit" class="btn btn-primary">Save</button>
           <a href="{% url 'coach_athletes' %}" class="btn btn-outline-secondary">Cancel</a>
         </div>
