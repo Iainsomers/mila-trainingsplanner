@@ -403,7 +403,7 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                 t_speed = _avg_t_speed(t) if seg.duration_s else None
                 speed = float(t_speed) if t_speed else float(avg_zone_speeds[zone])
 
-                nm = _norm_m_base(seg, speed)
+                nm = _norm_m_athlete(seg, speed)
                 if nm <= 0:
                     continue
 
