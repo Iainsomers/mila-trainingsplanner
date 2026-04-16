@@ -135,13 +135,7 @@ def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
             return 4, t_type, None
 
         if t_type == "3000":
-            return None, t_type, ParseResult(
-                ok=False,
-                zone=None,
-                t_type=t_type,
-                message="T3 vereist expliciet een zone (bv. T3 Z4 of T3 Z5).",
-                raw=raw,
-            )
+            return 4, t_type, None
 
     if explicit_zone is not None:
         return explicit_zone, t_type, None

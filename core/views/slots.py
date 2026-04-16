@@ -30,7 +30,7 @@ STATS_VERSION_KEY = "mila:stats:version"
 
 
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
-_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)T\s*(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*T\s*(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
+_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)(?:T\s*)?(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*(?:T\s*)?(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
 
 
 def _format_distance_text(distance_m: int) -> str:
@@ -129,7 +129,7 @@ def _t_type_progressive_zone(t_type: str, explicit_zone=None):
     if t == "TM":
         return 2
     if t == "3000":
-        return None
+        return 4
     return 4
 
 
