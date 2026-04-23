@@ -399,3 +399,141 @@ def calendar_view(request):
             "weekcolors_enabled": weekcolors_enabled,
         },
     )
+
+
+def athlete_year_calendar_view(request):
+    year = request.GET.get("year")
+    try:
+        year = int(year) if year else date.today().year
+    except Exception:
+        year = date.today().year
+
+    selected_athlete_id = request.GET.get("athlete", "")
+    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+
+    selected_athlete = None
+    if selected_athlete_id:
+        try:
+            selected_athlete = _filter_owned(Athlete.objects.all(), request.user).get(id=int(selected_athlete_id))
+        except Exception:
+            selected_athlete = None
+            selected_athlete_id = ""
+
+    jan1 = date(year, 1, 1)
+    start = jan1 - timedelta(days=jan1.weekday())
+
+    dec31 = date(year, 12, 31)
+    end = dec31 + timedelta(days=(6 - dec31.weekday()))
+
+    weeks = ((end - start).days // 7) + 1
+
+    slot_map = {}
+    has_fix_keys = set()
+
+    if selected_athlete:
+        owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+        athlete_plans = []
+
+        for plan in owned_plans:
+            if selected_athlete.id not in plan.targeted_athlete_ids():
+                continue
+
+            if plan.start_date and plan.start_date > end:
+                continue
+
+            if plan.end_date and plan.end_date < start:
+                continue
+
+            athlete_plans.append(plan)
+
+        if athlete_plans:
+            slot_q = (
+                TrainingSlot.objects
+                .filter(
+                    plan__in=athlete_plans,
+                    date__gte=start,
+                    date__lte=end,
+                )
+                .filter(Q(athlete__isnull=True) | Q(athlete=selected_athlete))
+                .prefetch_related("segments")
+                .select_related("plan", "athlete")
+            )
+
+            targeted_slots = [
+                slot for slot in slot_q
+                if selected_athlete.id in slot.targeted_athlete_ids()
+            ]
+
+            slot_map, has_fix_keys = _build_effective_slot_maps(targeted_slots)
+
+    week_rows = []
+    d = start
+
+    for _ in range(weeks):
+        week_start = d
+        week_end = d + timedelta(days=6)
+
+        days = [week_start + timedelta(days=i) for i in range(7)]
+
+        cells1 = []
+        cells2 = []
+        cells3 = []
+
+        for day in days:
+            k1 = (day, 1)
+            k2 = (day, 2)
+
+            cells1.append({
+                "day": day,
+                "slot": slot_map.get(k1),
+                "is_override": k1 in has_fix_keys,
+            })
+            cells2.append({
+                "day": day,
+                "slot": slot_map.get(k2),
+                "is_override": k2 in has_fix_keys,
+            })
+            cells3.append({
+                "day": day,
+            })
+
+        week_rows.append({
+            "week_start": week_start,
+            "week_end": week_end,
+            "cells1": cells1,
+            "cells2": cells2,
+            "cells3": cells3,
+        })
+
+        d += timedelta(days=7)
+
+    # --- hiding logic ---
+    hide_mode = request.GET.get("hide", "none")
+
+    today = date.today()
+    current_week_start = today - timedelta(days=today.weekday())
+
+    if hide_mode == "t1":
+        cutoff = current_week_start - timedelta(days=7)
+    elif hide_mode == "t4":
+        cutoff = current_week_start - timedelta(days=28)
+    else:
+        cutoff = None
+
+    if cutoff:
+        week_rows = [w for w in week_rows if w["week_end"] >= cutoff]
+
+    return render(
+        request,
+        "core/athlete_year_calendar.html",
+        {
+            "year": year,
+            "week_rows": week_rows,
+            "today": date.today(),
+            "hide_mode": hide_mode,
+            "athletes": athletes,
+            "selected_athlete_id": str(selected_athlete_id or ""),
+            "selected_athlete": selected_athlete,
+        },
+    )
+

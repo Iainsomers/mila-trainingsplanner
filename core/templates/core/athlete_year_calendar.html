@@ -1,0 +1,265 @@
+{% extends "core/base.html" %}
+
+{% block title %}Athlete Year Calendar{% endblock %}
+
+{% block extra_head %}
+<style>
+  table.year-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .year-table th,
+  .year-table td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    vertical-align: top;
+    text-align: left;
+  }
+
+  .year-table th {
+    background: #f5f5f5;
+  }
+
+  .weeklabel {
+    width: 180px;
+    font-weight: bold;
+    background: #fafafa;
+  }
+
+  .sumcol {
+    width: 120px;
+    background: #fafafa;
+  }
+
+  .slotrow {
+  }
+
+  .current-week td {
+    background: #fff8cc;
+  }
+
+  .slotrow {
+    height: 48px;
+  }
+
+  .daycell {
+    min-height: 32px;
+  }
+
+  .emptyline {
+    min-height: 18px;
+  }
+
+  .slotbox {
+    display: block;
+    min-height: 32px;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .slot-text {
+    margin-bottom: 3px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <h2 class="mb-0">Athlete Year Calendar</h2>
+    <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+  </div>
+
+  <form method="get" class="mb-3">
+    <input name="year" value="{{ year }}" class="form-control form-control-sm" style="width:120px; display:inline-block;">
+    <select name="athlete" class="form-control form-control-sm" style="width:220px; display:inline-block;">
+      <option value="" {% if not selected_athlete_id %}selected{% endif %}>(all athletes)</option>
+      {% for athlete in athletes %}
+        <option value="{{ athlete.id }}" {% if selected_athlete_id == athlete.id|stringformat:"s" %}selected{% endif %}>{{ athlete.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="hide" class="form-control form-control-sm" style="width:180px; display:inline-block;" onchange="this.form.submit()">
+      <option value="none" {% if hide_mode == "none" %}selected{% endif %}>no hiding</option>
+      <option value="t1" {% if hide_mode == "t1" %}selected{% endif %}>hide t-1 week</option>
+      <option value="t4" {% if hide_mode == "t4" %}selected{% endif %}>hide t-4 weeks</option>
+    </select>
+    <button class="btn btn-sm btn-primary">Load</button>
+  </form>
+
+  <table class="year-table">
+    <thead>
+      <tr>
+        <th class="weeklabel">Week</th>
+        <th class="sumcol">Total</th>
+        <th>Mon</th>
+        <th>Tue</th>
+        <th>Wed</th>
+        <th>Thu</th>
+        <th>Fri</th>
+        <th>Sat</th>
+        <th>Sun</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for w in week_rows %}
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          <td class="weeklabel" rowspan="3">
+            {{ w.week_start|date:"d-m" }} – {{ w.week_end|date:"d-m" }}
+          </td>
+          <td class="sumcol" rowspan="3">—</td>
+
+          {% for cell in w.cells1 %}
+            <td>
+              <div class="daycell">
+                {% if cell.slot %}
+                  <div class="slotbox">
+                    {% for seg in cell.slot.segments.all %}
+                      {% if seg.text and seg.type != "CORE2" %}
+                        {% if seg.type == "CORE" %}
+                          <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                            <strong>{{ seg.text }}</strong>
+                          </div>
+                        {% else %}
+                          <div>{{ seg.text }}</div>
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                    {% for seg in cell.slot.segments.all %}
+                      {% if seg.text and seg.type == "CORE2" %}
+                        <div>2nd: {{ seg.text }}</div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </td>
+          {% endfor %}
+        </tr>
+
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          {% for cell in w.cells2 %}
+            <td>
+              <div class="emptyline">
+                {% if cell.slot %}
+                  <div class="slotbox">
+                    {% for seg in cell.slot.segments.all %}
+                      {% if seg.text and seg.type != "CORE2" %}
+                        {% if seg.type == "CORE" %}
+                          <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                            <strong>{{ seg.text }}</strong>
+                          </div>
+                        {% else %}
+                          <div>{{ seg.text }}</div>
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                    {% for seg in cell.slot.segments.all %}
+                      {% if seg.text and seg.type == "CORE2" %}
+                        <div>2nd: {{ seg.text }}</div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </td>
+          {% endfor %}
+        </tr>
+
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          {% for d in w.cells3 %}
+            <td><div class="emptyline"></div></td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+
+<script>
+  (function() {
+    function applyColors() {
+      var zoneColors = {
+        1: "#f8f8f0",
+        2: "#f7c6d0",
+        3: "#e5533d",
+        4: "#bfe7bf",
+        5: "#2f75b5",
+        6: "#f2c200"
+      };
+
+      function lineKm(text) {
+        var s = (text || "").toLowerCase().trim();
+
+        var repMatch = s.match(/(\d+(?:[.,]\d+)?)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
+        if (repMatch) {
+          var reps = parseFloat(repMatch[1].replace(",", "."));
+          var value = parseFloat(repMatch[2].replace(",", "."));
+          var unit = repMatch[3];
+          var km = (unit === "m") ? (value / 1000.0) : value;
+          return reps * km;
+        }
+
+        var distMatch = s.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
+        if (distMatch) {
+          var value = parseFloat(distMatch[1].replace(",", "."));
+          var unit = distMatch[2];
+          return (unit === "m") ? (value / 1000.0) : value;
+        }
+
+        return 0;
+      }
+
+      document.querySelectorAll(".slotbox").forEach(function(box) {
+        var lines = Array.from(box.querySelectorAll(".core-line[data-zone]")).filter(function(line) {
+          return /^[1-6]$/.test((line.getAttribute("data-zone") || "").trim());
+        });
+
+        if (!lines.length) return;
+
+        var totals = {};
+        lines.forEach(function(line) {
+          var z = parseInt(line.getAttribute("data-zone"), 10);
+          totals[z] = (totals[z] || 0) + lineKm(line.textContent || "");
+        });
+
+        var zones = Object.keys(totals).map(function(z) { return parseInt(z, 10); });
+        var mainZone = zones[0];
+
+        zones.forEach(function(z) {
+          if (totals[z] > totals[mainZone]) {
+            mainZone = z;
+          }
+        });
+
+        box.style.backgroundColor = zoneColors[mainZone] || "";
+
+        lines.forEach(function(line) {
+          var z = parseInt(line.getAttribute("data-zone"), 10);
+          var color = z === mainZone ? "#000000" : (zoneColors[z] || "#000000");
+          line.style.setProperty("color", color, "important");
+
+          Array.from(line.querySelectorAll("*")).forEach(function(child) {
+            child.style.setProperty("color", color, "important");
+          });
+        });
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", applyColors);
+    } else {
+      applyColors();
+    }
+
+    window.addEventListener("load", applyColors);
+  })();
+</script>
+
+{% endblock %}
