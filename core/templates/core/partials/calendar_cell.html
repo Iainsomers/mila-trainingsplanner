@@ -95,7 +95,7 @@
               {% for seg in slot.segments.all %}
                 {% if seg.text and seg.type != "CORE2" %}
                   {% if seg.type == "CORE" %}
-                    <div class="core-line" data-zone="{{ seg.zone|default:'' }}"><strong style="color: inherit;">{{ seg.text }}</strong></div>
+                    <div class="core-line" data-zone="{{ seg.zone|default:'' }}" data-t-type="{{ seg.t_type|default:'' }}"><strong style="color: inherit;">{{ seg.text }}</strong></div>
                   {% else %}
                     <div>{{ seg.text }}</div>
                   {% endif %}
@@ -132,31 +132,65 @@
       var coreLines = Array.from(cell.querySelectorAll(".core-line[data-zone]")).filter(function(el) {
         return /^[1-6]$/.test((el.dataset.zone || "").trim());
       });
+      if (!coreLines.length) return;
 
-      var distinctZones = Array.from(new Set(coreLines.map(function(el) {
+      function lineKm(text) {
+        var s = (text || "").toLowerCase().trim();
+
+        var repMatch = s.match(/(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
+        if (repMatch) {
+          var reps = parseInt(repMatch[1], 10);
+          var value = parseFloat(repMatch[2].replace(",", "."));
+          var unit = repMatch[3];
+          var km = (unit === "m") ? (value / 1000.0) : value;
+          return reps * km;
+        }
+
+        var distMatch = s.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
+        if (distMatch) {
+          var value = parseFloat(distMatch[1].replace(",", "."));
+          var unit = distMatch[2];
+          return (unit === "m") ? (value / 1000.0) : value;
+        }
+
+        return 0;
+      }
+
+      function displayZoneForLine(el) {
         return parseInt(el.dataset.zone, 10);
-      }))).sort(function(a, b) {
-        return a - b;
+      }
+
+      var zoneTotals = {};
+      coreLines.forEach(function(el) {
+        var z = displayZoneForLine(el);
+        if (!zoneTotals[z]) zoneTotals[z] = 0;
+        zoneTotals[z] += lineKm(el.innerText || el.textContent || "");
       });
 
-      if (distinctZones.length <= 1) return;
+      var zones = Object.keys(zoneTotals).map(function(z) { return parseInt(z, 10); });
+      if (!zones.length) return;
 
-      var middleZone = distinctZones[Math.floor(distinctZones.length / 2)];
+      var maxZone = zones[0];
+      zones.forEach(function(z) {
+        if (zoneTotals[z] > zoneTotals[maxZone]) {
+          maxZone = z;
+        }
+      });
 
       var zoneColors = {
         1: "#f8f8f0",
-        2: "#e06b93",
+        2: "#f7c6d0",
         3: "#e5533d",
         4: "#bfe7bf",
         5: "#2f75b5",
         6: "#f2c200"
       };
 
-      link.style.backgroundColor = zoneColors[middleZone] || link.style.backgroundColor;
+      link.style.backgroundColor = zoneColors[maxZone] || link.style.backgroundColor;
 
       coreLines.forEach(function(el) {
-        var zone = parseInt(el.dataset.zone, 10);
-        el.style.color = zone === middleZone ? "#000000" : (zoneColors[zone] || "#000000");
+        var zone = displayZoneForLine(el);
+        el.style.color = zone === maxZone ? "#000000" : (zoneColors[zone] || "#000000");
       });
     })();
   </script>
