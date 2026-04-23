@@ -24,6 +24,7 @@ from core.views.calendar import (
     calendar_test,
     week_phase_set,
     athlete_week_phase_set,
+    athlete_year_calendar_view,
 )
 
 from core.views.legacy_targets import (
@@ -78,6 +79,9 @@ urlpatterns = [
     # Calendar
     path("calendar/", calendar_view, name="calendar"),
     path("calendar-test/", calendar_test, name="calendar_test"),
+
+    # Athlete console
+    path("athlete/year/", athlete_year_calendar_view, name="athlete_year_calendar"),
 
     # ✅ Week phase (server-side, HTMX)
     path("week-phase/<int:y>/<int:m>/<int:d>/", week_phase_set, name="week_phase_set"),
