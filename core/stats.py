@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import date as date_cls
 import hashlib
+import re
 
 from django.core.cache import cache
 
@@ -151,6 +152,98 @@ def _dur_s(seg, nm: int, speed_mps: float) -> int:
     return 0
 
 
+
+
+_COMPOUND_SET_RE = re.compile(r"\b(\d+)\s*(?:x|\*|×)\s*\(\s*([^)]+?)\s*\)", re.IGNORECASE)
+_COMPOUND_DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
+_COMPOUND_ZONE_RE = re.compile(r"\bZ\s*([1-6])\b", re.IGNORECASE)
+_COMPOUND_T_RE = re.compile(r"\b(?:T\s*)?(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)\b", re.IGNORECASE)
+
+
+def _normalize_compound_t_type(value: str):
+    v = str(value or "").strip().upper().replace(" ", "")
+    mapping = {
+        "8": "800",
+        "15": "1500",
+        "3": "3000",
+        "5": "5000",
+        "10": "10000",
+        "T8": "800",
+        "T15": "1500",
+        "T3": "3000",
+        "T5": "5000",
+        "T10": "10000",
+        "T800": "800",
+        "T1500": "1500",
+        "T3000": "3000",
+        "T5000": "5000",
+        "T10000": "10000",
+        "TM": "TM",
+        "THM": "THM",
+        "T4": "T4",
+    }
+    return mapping.get(v, v if v in ("800", "1500", "3000", "5000", "10000") else "")
+
+
+def _compound_distance_to_m(value: str, unit: str) -> int:
+    v = float(str(value).replace(",", "."))
+    u = str(unit or "").lower()
+    if u in ("k", "km"):
+        v *= 1000.0
+    return int(round(v))
+
+
+def _compound_rep_loads(seg, default_zone: str, speeds: dict):
+    """
+    Herkent compound reps zoals: 25*(300m z2-100m z1).
+    Geeft losse load-regels terug zonder het opgeslagen segment of de UI-tekst te wijzigen.
+    """
+    text = (getattr(seg, "text", "") or "").strip()
+    match = _COMPOUND_SET_RE.search(text)
+    if not match:
+        return None
+
+    try:
+        outer_reps = int(match.group(1))
+    except Exception:
+        return None
+
+    inner = match.group(2) or ""
+    parts = [p.strip() for p in re.split(r"\s*-\s*", inner) if p.strip()]
+    if len(parts) < 2:
+        return None
+
+    default_t = (getattr(seg, "t_type", "") or "").strip()
+    loads = []
+
+    for part in parts:
+        dm = _COMPOUND_DISTANCE_RE.search(part)
+        if not dm:
+            return None
+
+        dist_m = _compound_distance_to_m(dm.group(1), dm.group(2))
+
+        zm = _COMPOUND_ZONE_RE.search(part)
+        part_zone = str(zm.group(1)) if zm else str(default_zone or "")
+        if not part_zone or part_zone not in speeds:
+            return None
+
+        tm = _COMPOUND_T_RE.search(part)
+        part_t = _normalize_compound_t_type(tm.group(1)) if tm else default_t
+
+        nm = int(outer_reps * dist_m)
+        speed = float(speeds[part_zone])
+        dur = _dur_s(seg, nm, speed)
+
+        loads.append({
+            "zone": part_zone,
+            "t_type": part_t,
+            "distance_m": nm,
+            "duration_s": dur,
+        })
+
+    return loads or None
+
 def _fetch_week_slots(plan, week_start: date_cls, athlete_ids=None):
     days = _week_days(week_start)
 
@@ -229,6 +322,26 @@ def base_week_stats(plan, week_start: date_cls):
                 if not zone or zone not in speeds:
                     continue
 
+                compound_loads = _compound_rep_loads(seg, zone, speeds)
+                if compound_loads:
+                    for load in compound_loads:
+                        load_zone = load["zone"]
+                        nm = int(load["distance_m"])
+                        dur = int(load["duration_s"])
+                        t = (load.get("t_type") or "").strip()
+
+                        if t in t_totals:
+                            t_totals[t]["distance_m"] += int(nm)
+                            t_totals[t]["duration_s"] += int(dur)
+
+                        if is_race:
+                            race["distance_m"] += int(nm)
+                            race["duration_s"] += int(dur)
+
+                        zones[load_zone]["distance_m"] += int(nm)
+                        zones[load_zone]["duration_s"] += int(dur)
+                    continue
+
                 speed = float(speeds[zone])
                 nm = _norm_m_base(seg, speed)
                 if nm <= 0:
@@ -297,6 +410,26 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                     continue
 
                 if not zone or zone not in speeds:
+                    continue
+
+                compound_loads = _compound_rep_loads(seg, zone, speeds)
+                if compound_loads:
+                    for load in compound_loads:
+                        load_zone = load["zone"]
+                        nm = int(load["distance_m"])
+                        dur = int(load["duration_s"])
+                        t = (load.get("t_type") or "").strip()
+
+                        if t in t_totals:
+                            t_totals[t]["distance_m"] += int(nm)
+                            t_totals[t]["duration_s"] += int(dur)
+
+                        if is_race:
+                            race["distance_m"] += int(nm)
+                            race["duration_s"] += int(dur)
+
+                        zones[load_zone]["distance_m"] += int(nm)
+                        zones[load_zone]["duration_s"] += int(dur)
                     continue
 
                 t = (getattr(seg, "t_type", "") or "").strip()
@@ -397,6 +530,26 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                     continue
 
                 if not zone or zone not in avg_zone_speeds:
+                    continue
+
+                compound_loads = _compound_rep_loads(seg, zone, avg_zone_speeds)
+                if compound_loads:
+                    for load in compound_loads:
+                        load_zone = load["zone"]
+                        nm = int(load["distance_m"])
+                        dur = int(load["duration_s"])
+                        t = (load.get("t_type") or "").strip()
+
+                        if t in t_totals:
+                            t_totals[t]["distance_m"] += int(nm)
+                            t_totals[t]["duration_s"] += int(dur)
+
+                        if is_race:
+                            race["distance_m"] += int(nm)
+                            race["duration_s"] += int(dur)
+
+                        zones[load_zone]["distance_m"] += int(nm)
+                        zones[load_zone]["duration_s"] += int(dur)
                     continue
 
                 t = (getattr(seg, "t_type", "") or "").strip()

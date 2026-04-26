@@ -257,6 +257,7 @@ def _display_t_type_label(value: str) -> str:
 
 
 _T_TYPE_RE = re.compile(r"\bT\s*(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)\b", re.IGNORECASE)
+_CORE_REPEATED_SET_RE = re.compile(r"^\s*(\d+)\s*(?:x|\*|×)\s*\(\s*(.+?)\s*\)\s*$", re.IGNORECASE)
 
 
 def _parse_core_segment_text(text: str):
@@ -265,6 +266,18 @@ def _parse_core_segment_text(text: str):
         return None
     zone_required = _T_TYPE_RE.search(s) is None
     return parse_segment_text(s, zone_required=zone_required)
+
+
+def _expand_repeated_core_set_parts(text: str):
+    """
+    Preserve repeated mixed-zone set notation as a single CORE segment.
+
+    Example:
+    25*(300m z2-100m z1)
+    stays exactly as-is.
+    """
+    s = (text or "").strip()
+    return [s] if s else []
 
 
 def _bump_stats_version():
@@ -1004,7 +1017,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if core_text:
         core_parse = None
         for core_part in [p.strip() for p in core_text.split("//") if p.strip()]:
-            core_parse = _parse_core_segment_text(core_part)
+            for expanded_core_part in _expand_repeated_core_set_parts(core_part):
+                core_parse = _parse_core_segment_text(expanded_core_part)
+                if core_parse is not None and not core_parse.ok:
+                    break
             if core_parse is not None and not core_parse.ok:
                 break
     else:
@@ -1113,7 +1129,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     # Save CORE
     if core_text:
-        parts = [p.strip() for p in core_text.split("//") if p.strip()]
+        parts = []
+        for core_part in [p.strip() for p in core_text.split("//") if p.strip()]:
+            parts.extend(_expand_repeated_core_set_parts(core_part))
 
         slot.segments.filter(type="CORE").delete()
 
