@@ -18,20 +18,10 @@ class ParseResult:
     raw: str = ""
 
 
-_RACE_BANG_RE = re.compile(r"\brace!\b", re.IGNORECASE)
-_RACE_RE = re.compile(r"\brace\b", re.IGNORECASE)
-_STRENGTH_RE = re.compile(r"\bstrength\b", re.IGNORECASE)
-
 _T_RE = re.compile(r"\b(?:TM|THM|T4|T\s*(10|5|3|15|8|800|1500|3000|5000|10000))\b", re.IGNORECASE)
 _ZONE_RE = re.compile(r"Z\s*([1-6])\b", re.IGNORECASE)
 
-_DURATION_APOS_RE = re.compile(r"(\d+)\s*['’‘´`′]", re.IGNORECASE)
-_DURATION_MINWORD_RE = re.compile(r"(\d+)\s*min\b", re.IGNORECASE)
-_DURATION_M_RE = re.compile(r"(\d+)\s*m\b", re.IGNORECASE)
-_DURATION_HMS_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b")
-
 _DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
-
 _REP_RE = re.compile(r"\b(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(m|km|k)\b", re.IGNORECASE)
 
 _SET_RE = re.compile(r"\b(\d+)\s*(?:x|\*|×)\s*\(\s*([^)]+?)\s*\)", re.IGNORECASE)
@@ -56,6 +46,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     zm = _ZONE_RE.search(s)
     zone = int(zm.group(1)) if zm else None
 
+    # --- SET ---
     sm = _SET_RE.search(s)
     if sm:
         reps = int(sm.group(1))
@@ -91,6 +82,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 raw=raw,
             )
 
+    # --- REP ---
     rm = _REP_RE.search(s)
     if rm:
         reps = int(rm.group(1))
@@ -105,6 +97,22 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             reps=reps,
             rep_distance_m=int(round(rep_m)),
             message=f"Herkend: {reps}×{int(round(rep_m))}m → {total_m}m",
+            raw=raw,
+        )
+
+    # --- SINGLE DISTANCE (FIX) ---
+    dm = _DISTANCE_RE.search(s)
+    if dm:
+        value = float(dm.group(1).replace(",", "."))
+        unit = dm.group(2).lower()
+        dist_m = int(round(_to_meters(value, unit)))
+        return ParseResult(
+            ok=True,
+            zone=zone,
+            distance_m=dist_m,
+            reps=1,
+            rep_distance_m=dist_m,
+            message=f"Herkend: {int(dist_m)}m",
             raw=raw,
         )
 
