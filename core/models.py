@@ -558,6 +558,7 @@ class AthleteDayComment(models.Model):
 
 class AthleteDayCheck(models.Model):
     date = models.DateField()
+    slot_index = models.PositiveSmallIntegerField(default=1)
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="day_checks")
     checked = models.BooleanField(default=False)
 
@@ -572,8 +573,8 @@ class AthleteDayCheck(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["date", "athlete"],
-                name="unique_check_per_day_athlete",
+                fields=["date", "athlete", "slot_index"],
+                name="unique_check_per_day_athlete_slot",
             )
         ]
 

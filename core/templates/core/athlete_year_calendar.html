@@ -140,7 +140,7 @@
                       {% endif %}
                     {% endfor %}
                     <span class="check-toggle{% if cell.check and cell.check.checked %} is-checked{% endif %}{% if cell.day > today %} disabled{% endif %}"
-                          data-date="{{ cell.day|date:'Y-m-d' }}"
+                          data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}"
                           title="Mark as evaluated"
                           style="position:absolute; right:5px; bottom:3px; cursor:pointer; font-size:14px; line-height:1;">
                       {% if cell.check and cell.check.checked %}{% else %}{% endif %}
@@ -175,7 +175,7 @@
                       {% endif %}
                     {% endfor %}
                     <span class="check-toggle{% if cell.check and cell.check.checked %} is-checked{% endif %}{% if cell.day > today %} disabled{% endif %}"
-                          data-date="{{ cell.day|date:'Y-m-d' }}"
+                          data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}"
                           title="Mark as evaluated"
                           style="position:absolute; right:5px; bottom:3px; cursor:pointer; font-size:14px; line-height:1;">
                       {% if cell.check and cell.check.checked %}{% else %}{% endif %}
@@ -310,6 +310,7 @@
         var formData = new FormData();
         formData.append("date", el.getAttribute("data-date") || "");
         formData.append("toggle_check", "1");
+        formData.append("slot_index", el.getAttribute("data-slot-index") || "1");
 
         fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
           method: "POST",

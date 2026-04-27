@@ -408,6 +408,7 @@ def athlete_year_calendar_view(request):
         date_str = request.POST.get("date")
         text = request.POST.get("comment", "")
         toggle_check = request.POST.get("toggle_check")
+        slot_index_raw = request.POST.get("slot_index")
         athlete = None
 
         if request.user.is_staff:
@@ -427,9 +428,15 @@ def athlete_year_calendar_view(request):
                 d = date.fromisoformat(date_str)
 
                 if toggle_check is not None:
+                    try:
+                        slot_index = int(slot_index_raw)
+                    except Exception:
+                        slot_index = 1
+
                     obj, created = AthleteDayCheck.objects.get_or_create(
                         date=d,
                         athlete=athlete,
+                        slot_index=slot_index,
                         defaults={"updated_by": request.user, "checked": True},
                     )
                     if not created:
@@ -540,27 +547,37 @@ def athlete_year_calendar_view(request):
             k1 = (day, 1)
             k2 = (day, 2)
 
-            check = None
+            check1 = None
+            check2 = None
             if selected_athlete:
                 try:
-                    check = AthleteDayCheck.objects.filter(
+                    check1 = AthleteDayCheck.objects.filter(
                         date=day,
                         athlete=selected_athlete,
+                        slot_index=1,
+                    ).first()
+                    check2 = AthleteDayCheck.objects.filter(
+                        date=day,
+                        athlete=selected_athlete,
+                        slot_index=2,
                     ).first()
                 except Exception:
-                    check = None
+                    check1 = None
+                    check2 = None
 
             cells1.append({
                 "day": day,
                 "slot": slot_map.get(k1),
                 "is_override": k1 in has_fix_keys,
-                "check": check,
+                "check": check1,
+                "slot_index": 1,
             })
             cells2.append({
                 "day": day,
                 "slot": slot_map.get(k2),
                 "is_override": k2 in has_fix_keys,
-                "check": check,
+                "check": check2,
+                "slot_index": 2,
             })
             comment = None
             if selected_athlete:
@@ -572,20 +589,9 @@ def athlete_year_calendar_view(request):
                 except Exception:
                     comment = None
 
-            check = None
-            if selected_athlete:
-                try:
-                    check = AthleteDayCheck.objects.filter(
-                        date=day,
-                        athlete=selected_athlete,
-                    ).first()
-                except Exception:
-                    check = None
-
             cells3.append({
                 "day": day,
                 "comment": comment,
-                "check": check,
             })
 
         week_rows.append({
