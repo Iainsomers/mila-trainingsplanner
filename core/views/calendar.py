@@ -409,25 +409,26 @@ def athlete_year_calendar_view(request):
         year = date.today().year
 
     selected_athlete_id = request.GET.get("athlete", "")
-    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
-
-    # --- Athlete login restriction (username -> athlete name) ---
-    username = (request.user.username or "").strip()
-    inferred_name = username.replace("_", " ")
-    inferred_athlete = Athlete.objects.filter(name__iexact=inferred_name).first()
-
-    if inferred_athlete and not athletes:
-        selected_athlete = inferred_athlete
-        selected_athlete_id = str(inferred_athlete.id)
-        athletes = [inferred_athlete]
-
-
     selected_athlete = None
-    if selected_athlete_id:
-        try:
-            selected_athlete = _filter_owned(Athlete.objects.all(), request.user).get(id=int(selected_athlete_id))
-        except Exception:
-            selected_athlete = None
+
+    if request.user.is_staff:
+        athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+        if selected_athlete_id:
+            try:
+                selected_athlete = _filter_owned(Athlete.objects.all(), request.user).get(id=int(selected_athlete_id))
+            except Exception:
+                selected_athlete = None
+                selected_athlete_id = ""
+    else:
+        username = (request.user.username or "").strip()
+        inferred_name = username.replace("_", " ")
+        selected_athlete = Athlete.objects.filter(name__iexact=inferred_name).first()
+
+        if selected_athlete:
+            athletes = [selected_athlete]
+            selected_athlete_id = str(selected_athlete.id)
+        else:
+            athletes = []
             selected_athlete_id = ""
 
     jan1 = date(year, 1, 1)
@@ -442,7 +443,6 @@ def athlete_year_calendar_view(request):
     has_fix_keys = set()
 
     if selected_athlete:
-        # FIX: non-staff users must see plans where they are targeted
         if request.user.is_staff:
             owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
         else:
