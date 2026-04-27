@@ -76,7 +76,7 @@
 
   <div class="d-flex align-items-center justify-content-between mb-2">
     <h2 class="mb-0">Athlete Year Calendar</h2>
-    <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+    {% if request.user.is_staff %}<a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>{% endif %}
   </div>
 
   <form method="get" class="mb-3">
