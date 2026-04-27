@@ -1,4 +1,5 @@
 from django.urls import path
+from django.contrib.auth import views as auth_views
 
 # Import views explicitly to avoid any name collisions via views/__init__.py
 from core.views.coach import (
@@ -49,6 +50,10 @@ from core.views.stats_debug import stats_debug_view
 
 
 urlpatterns = [
+    # Login / Logout
+    path("login/", auth_views.LoginView.as_view(template_name="core/login.html"), name="login"),
+    path("logout/", auth_views.LogoutView.as_view(next_page="/login/"), name="logout"),
+
     # Dashboard / settings
     path("", dashboard_view, name="dashboard"),
     path("settings/", settings_view, name="settings"),
@@ -83,11 +88,11 @@ urlpatterns = [
     # Athlete console
     path("athlete/year/", athlete_year_calendar_view, name="athlete_year_calendar"),
 
-    # ✅ Week phase (server-side, HTMX)
+    # Week phase
     path("week-phase/<int:y>/<int:m>/<int:d>/", week_phase_set, name="week_phase_set"),
     path("athlete-week-phase/<int:y>/<int:m>/<int:d>/", athlete_week_phase_set, name="athlete_week_phase_set"),
 
-    # Plan targets (legacy; may be removed later)
+    # Plan targets
     path("plans/<int:plan_id>/targets/", plan_targets_view, name="plan_targets"),
     path("plans/<int:plan_id>/targets-modal/", plan_targets_modal, name="plan_targets_modal"),
 
@@ -100,7 +105,7 @@ urlpatterns = [
     path("slot-reset-override/<int:yyyy>/<int:mm>/<int:dd>/<int:slot_index>/", slot_reset_override, name="slot_reset_override"),
     path("slot-clipboard-clear/", slot_clipboard_clear, name="slot_clipboard_clear"),
 
-    # Week copy/paste (BASE only)
+    # Week copy/paste
     path("week-copy/<int:yyyy>/<int:mm>/<int:dd>/", week_copy, name="week_copy"),
     path("week-paste/<int:yyyy>/<int:mm>/<int:dd>/", week_paste, name="week_paste"),
     path("week-clipboard-clear/", week_clipboard_clear, name="week_clipboard_clear"),
