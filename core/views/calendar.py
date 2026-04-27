@@ -483,6 +483,7 @@ def athlete_year_calendar_view(request):
     if request.method == "POST":
         date_str = request.POST.get("date")
         text = request.POST.get("comment", "")
+        check_status = request.POST.get("check_status")
         toggle_check = request.POST.get("toggle_check")
         slot_index_raw = request.POST.get("slot_index")
         athlete = None
@@ -517,7 +518,7 @@ def athlete_year_calendar_view(request):
 
                     _save_athlete_slot_override(request, athlete, d, slot_index, slot_text)
 
-                elif toggle_check is not None:
+                elif check_status is not None or toggle_check is not None:
                     if d > today:
                         return HttpResponse("", status=204)
                     try:
@@ -525,16 +526,43 @@ def athlete_year_calendar_view(request):
                     except Exception:
                         slot_index = 1
 
-                    obj, created = AthleteDayCheck.objects.get_or_create(
+                    allowed_statuses = {
+                        AthleteDayCheck.STATUS_NONE,
+                        AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+                        AthleteDayCheck.STATUS_TOO_HARD_FAST,
+                        AthleteDayCheck.STATUS_ADJUSTED_OK,
+                        AthleteDayCheck.STATUS_LIGHTER_SLOWER,
+                        AthleteDayCheck.STATUS_NOT_DONE,
+                    }
+
+                    status = (check_status or "").strip()
+
+                    if toggle_check is not None and check_status is None:
+                        existing = AthleteDayCheck.objects.filter(
+                            date=d,
+                            athlete=athlete,
+                            slot_index=slot_index,
+                        ).first()
+                        current_status = existing.effective_status if existing else AthleteDayCheck.STATUS_NONE
+                        status = (
+                            AthleteDayCheck.STATUS_NONE
+                            if current_status == AthleteDayCheck.STATUS_DONE_AS_PLANNED
+                            else AthleteDayCheck.STATUS_DONE_AS_PLANNED
+                        )
+
+                    if status not in allowed_statuses:
+                        status = AthleteDayCheck.STATUS_NONE
+
+                    obj, _ = AthleteDayCheck.objects.get_or_create(
                         date=d,
                         athlete=athlete,
                         slot_index=slot_index,
-                        defaults={"updated_by": request.user, "checked": True},
+                        defaults={"updated_by": request.user},
                     )
-                    if not created:
-                        obj.checked = not obj.checked
-                        obj.updated_by = request.user
-                        obj.save()
+                    obj.status = status
+                    obj.checked = bool(status)
+                    obj.updated_by = request.user
+                    obj.save()
 
                 else:
                     AthleteDayComment.objects.update_or_create(

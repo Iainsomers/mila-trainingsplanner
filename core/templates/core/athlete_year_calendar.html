@@ -62,8 +62,72 @@
     line-height: 1.25;
   }
 
-  .check-toggle { width:14px; height:14px; border:1px solid #666; background:#ffffff; display:inline-block; color:transparent; }
-  .check-toggle.is-checked { background:#00cc00 !important; border-color:#00cc00 !important; color:transparent !important; }
+  .check-status-toggle {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #666;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #333333;
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 1;
+  }
+
+  .check-status-toggle.status-done_as_planned {
+    background: #00cc00 !important;
+    border-color: #00cc00 !important;
+    color: #ffffff !important;
+  }
+
+  .check-status-toggle.status-too_hard_fast,
+  .check-status-toggle.status-adjusted_ok,
+  .check-status-toggle.status-lighter_slower {
+    background: #f28c28 !important;
+    border-color: #f28c28 !important;
+    color: #ffffff !important;
+  }
+
+  .check-status-toggle.status-not_done {
+    background: #cc0000 !important;
+    border-color: #cc0000 !important;
+    color: #ffffff !important;
+  }
+
+  .check-status-menu {
+    display: none;
+    position: absolute;
+    right: 5px;
+    bottom: 24px;
+    z-index: 20;
+    min-width: 245px;
+    background: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    padding: 4px;
+  }
+
+  .check-status-menu.is-open {
+    display: block;
+  }
+
+  .check-status-option {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: #ffffff;
+    text-align: left;
+    font-size: 12px;
+    padding: 5px 7px;
+    cursor: pointer;
+  }
+
+  .check-status-option:hover {
+    background: #f5f5f5;
+  }
 
   .slot-text {
     margin-bottom: 3px;
@@ -145,12 +209,22 @@
                         {% endif %}
                       {% endfor %}
                     {% endif %}
-                    <span class="check-toggle{% if cell.check and cell.check.checked %} is-checked{% endif %}{% if cell.day > today %} disabled{% endif %}"
-                          data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}"
-                          title="Mark as evaluated"
-                          style="position:absolute; right:5px; bottom:3px; cursor:pointer; font-size:14px; line-height:1;">
-                      {% if cell.check and cell.check.checked %}{% else %}{% endif %}
-                    </span>
+                    {% with status=cell.check.effective_status|default:"" %}
+                      <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}{% if cell.day > today %} disabled{% endif %}"
+                            data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-status="{{ status }}"
+                            title="Mark training status"
+                            style="position:absolute; right:5px; bottom:3px; cursor:pointer;">
+                        {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                      </span>
+                      <div class="check-status-menu">
+                        <button type="button" class="check-status-option" data-status="">— No status</button>
+                        <button type="button" class="check-status-option" data-status="done_as_planned">✓ Training done as planned</button>
+                        <button type="button" class="check-status-option" data-status="too_hard_fast">↑ Too much / too fast</button>
+                        <button type="button" class="check-status-option" data-status="adjusted_ok">✓ Adjusted, not harder or easier</button>
+                        <button type="button" class="check-status-option" data-status="lighter_slower">↓ Lighter / slower</button>
+                        <button type="button" class="check-status-option" data-status="not_done">✕ Training not done</button>
+                      </div>
+                    {% endwith %}
                   </div>
                 {% endif %}
               </div>
@@ -186,12 +260,22 @@
                         {% endif %}
                       {% endfor %}
                     {% endif %}
-                    <span class="check-toggle{% if cell.check and cell.check.checked %} is-checked{% endif %}{% if cell.day > today %} disabled{% endif %}"
-                          data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}"
-                          title="Mark as evaluated"
-                          style="position:absolute; right:5px; bottom:3px; cursor:pointer; font-size:14px; line-height:1;">
-                      {% if cell.check and cell.check.checked %}{% else %}{% endif %}
-                    </span>
+                    {% with status=cell.check.effective_status|default:"" %}
+                      <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}{% if cell.day > today %} disabled{% endif %}"
+                            data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-status="{{ status }}"
+                            title="Mark training status"
+                            style="position:absolute; right:5px; bottom:3px; cursor:pointer;">
+                        {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                      </span>
+                      <div class="check-status-menu">
+                        <button type="button" class="check-status-option" data-status="">— No status</button>
+                        <button type="button" class="check-status-option" data-status="done_as_planned">✓ Training done as planned</button>
+                        <button type="button" class="check-status-option" data-status="too_hard_fast">↑ Too much / too fast</button>
+                        <button type="button" class="check-status-option" data-status="adjusted_ok">✓ Adjusted, not harder or easier</button>
+                        <button type="button" class="check-status-option" data-status="lighter_slower">↓ Lighter / slower</button>
+                        <button type="button" class="check-status-option" data-status="not_done">✕ Training not done</button>
+                      </div>
+                    {% endwith %}
                   </div>
                 {% endif %}
               </div>
@@ -313,17 +397,66 @@
     return value;
   }
 
+  function statusSymbol(status) {
+    if (status === "done_as_planned") return "✓";
+    if (status === "too_hard_fast") return "↑";
+    if (status === "adjusted_ok") return "✓";
+    if (status === "lighter_slower") return "↓";
+    if (status === "not_done") return "✕";
+    return "";
+  }
+
+  function setStatusVisual(el, status) {
+    el.setAttribute("data-status", status || "");
+    el.textContent = statusSymbol(status || "");
+
+    ["status-none", "status-done_as_planned", "status-too_hard_fast", "status-adjusted_ok", "status-lighter_slower", "status-not_done"].forEach(function(cls) {
+      el.classList.remove(cls);
+    });
+
+    el.classList.add(status ? ("status-" + status) : "status-none");
+  }
+
+  function closeStatusMenus() {
+    document.querySelectorAll(".check-status-menu.is-open").forEach(function(menu) {
+      menu.classList.remove("is-open");
+    });
+  }
+
   function setupCheckToggles() {
-    document.querySelectorAll(".check-toggle").forEach(function(el) {
+    document.querySelectorAll(".check-status-toggle").forEach(function(el) {
       el.addEventListener("click", function(event) {
         event.preventDefault();
         event.stopPropagation();
 
-        
+        if (el.classList.contains("disabled")) return;
+
+        var menu = el.parentElement.querySelector(".check-status-menu");
+        if (!menu) return;
+
+        var wasOpen = menu.classList.contains("is-open");
+        closeStatusMenus();
+
+        if (!wasOpen) {
+          menu.classList.add("is-open");
+        }
+      });
+    });
+
+    document.querySelectorAll(".check-status-option").forEach(function(option) {
+      option.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        var menu = option.closest(".check-status-menu");
+        var el = menu ? menu.parentElement.querySelector(".check-status-toggle") : null;
+        if (!el || el.classList.contains("disabled")) return;
+
+        var status = option.getAttribute("data-status") || "";
 
         var formData = new FormData();
         formData.append("date", el.getAttribute("data-date") || "");
-        formData.append("toggle_check", "1");
+        formData.append("check_status", status);
         formData.append("slot_index", el.getAttribute("data-slot-index") || "1");
 
         fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
@@ -335,12 +468,13 @@
           credentials: "same-origin"
         }).then(function(response) {
           if (!response.ok) return;
-          if (el.classList.contains("disabled")) return;
-          var isChecked = el.classList.contains("is-checked");
-          el.classList.toggle("is-checked", !isChecked);
+          setStatusVisual(el, status);
+          closeStatusMenus();
         }).catch(function() {});
       });
     });
+
+    document.addEventListener("click", closeStatusMenus);
   }
 
   if (document.readyState === "loading") {
@@ -477,11 +611,11 @@
 
   function setupSlotClicks() {
     document.querySelectorAll(".slotbox").forEach(function(el) {
-      el.setAttribute("data-date", el.closest("td").querySelector(".check-toggle")?.getAttribute("data-date") || "");
-      el.setAttribute("data-slot-index", el.closest("td").querySelector(".check-toggle")?.getAttribute("data-slot-index") || "1");
+      el.setAttribute("data-date", el.closest("td").querySelector(".check-status-toggle")?.getAttribute("data-date") || "");
+      el.setAttribute("data-slot-index", el.closest("td").querySelector(".check-status-toggle")?.getAttribute("data-slot-index") || "1");
 
       el.addEventListener("click", function(e) {
-        if (e.target.classList.contains("check-toggle")) return;
+        if (e.target.closest(".check-status-toggle") || e.target.closest(".check-status-menu")) return;
         if (el.classList.contains("disabled")) return;
         e.preventDefault();
         e.stopPropagation();
@@ -564,7 +698,7 @@
   }
 
   document.addEventListener("click", function(event) {
-    if (event.target.closest(".check-toggle")) return;
+    if (event.target.closest(".check-status-toggle") || event.target.closest(".check-status-menu")) return;
 
     var slotBox = event.target.closest(".slotbox");
     if (!slotBox || slotBox.classList.contains("disabled")) return;

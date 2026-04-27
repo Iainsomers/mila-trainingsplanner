@@ -557,10 +557,33 @@ class AthleteDayComment(models.Model):
 
 
 class AthleteDayCheck(models.Model):
+    STATUS_NONE = ""
+    STATUS_DONE_AS_PLANNED = "done_as_planned"
+    STATUS_TOO_HARD_FAST = "too_hard_fast"
+    STATUS_ADJUSTED_OK = "adjusted_ok"
+    STATUS_LIGHTER_SLOWER = "lighter_slower"
+    STATUS_NOT_DONE = "not_done"
+
+    STATUS_CHOICES = [
+        (STATUS_NONE, "—"),
+        (STATUS_DONE_AS_PLANNED, "✓ Training done as planned"),
+        (STATUS_TOO_HARD_FAST, "↑ Too much / too fast"),
+        (STATUS_ADJUSTED_OK, "✓ Adjusted, not harder or easier"),
+        (STATUS_LIGHTER_SLOWER, "↓ Lighter / slower"),
+        (STATUS_NOT_DONE, "✕ Training not done"),
+    ]
+
     date = models.DateField()
     slot_index = models.PositiveSmallIntegerField(default=1)
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="day_checks")
     checked = models.BooleanField(default=False)
+
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        blank=True,
+        default=STATUS_NONE,
+    )
 
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -578,5 +601,13 @@ class AthleteDayCheck(models.Model):
             )
         ]
 
+    @property
+    def effective_status(self):
+        if self.status:
+            return self.status
+        if self.checked:
+            return self.STATUS_DONE_AS_PLANNED
+        return self.STATUS_NONE
+
     def __str__(self):
-        return f"{self.athlete} - {self.date} ({'✓' if self.checked else '✗'})"
+        return f"{self.athlete} - {self.date} ({self.effective_status or '—'})"
