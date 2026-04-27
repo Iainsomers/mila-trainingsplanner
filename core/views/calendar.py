@@ -426,8 +426,11 @@ def athlete_year_calendar_view(request):
         if athlete and date_str:
             try:
                 d = date.fromisoformat(date_str)
+                today = date.today()
 
                 if toggle_check is not None:
+                    if d > today:
+                        return HttpResponse("", status=204)
                     try:
                         slot_index = int(slot_index_raw)
                     except Exception:
@@ -549,7 +552,7 @@ def athlete_year_calendar_view(request):
 
             check1 = None
             check2 = None
-            if selected_athlete:
+            if selected_athlete and day <= date.today():
                 try:
                     check1 = AthleteDayCheck.objects.filter(
                         date=day,
