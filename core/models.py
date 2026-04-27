@@ -554,3 +554,28 @@ class AthleteDayComment(models.Model):
 
     def __str__(self):
         return f"{self.athlete} - {self.date}"
+
+
+class AthleteDayCheck(models.Model):
+    date = models.DateField()
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="day_checks")
+    checked = models.BooleanField(default=False)
+
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="updated_checks",
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["date", "athlete"],
+                name="unique_check_per_day_athlete",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.athlete} - {self.date} ({'✓' if self.checked else '✗'})"

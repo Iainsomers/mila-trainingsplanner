@@ -53,13 +53,17 @@
   }
 
   .slotbox {
+    position: relative;
     display: block;
     min-height: 32px;
     border-radius: 6px;
-    padding: 4px 6px;
+    padding: 4px 18px 4px 6px;
     font-size: 12px;
     line-height: 1.25;
   }
+
+  .check-toggle { width:14px; height:14px; border:1px solid #666; background:#ffffff; display:inline-block; color:transparent; }
+  .check-toggle.is-checked { background:#00cc00 !important; border-color:#00cc00 !important; color:transparent !important; }
 
   .slot-text {
     margin-bottom: 3px;
@@ -135,6 +139,12 @@
                         <div>2nd: {{ seg.text }}</div>
                       {% endif %}
                     {% endfor %}
+                    <span class="check-toggle{% if cell.check and cell.check.checked %} is-checked{% endif %}{% if cell.day > today %} disabled{% endif %}"
+                          data-date="{{ cell.day|date:'Y-m-d' }}"
+                          title="Mark as evaluated"
+                          style="position:absolute; right:5px; bottom:3px; cursor:pointer; font-size:14px; line-height:1;">
+                      {% if cell.check and cell.check.checked %}{% else %}{% endif %}
+                    </span>
                   </div>
                 {% endif %}
               </div>
@@ -164,6 +174,12 @@
                         <div>2nd: {{ seg.text }}</div>
                       {% endif %}
                     {% endfor %}
+                    <span class="check-toggle{% if cell.check and cell.check.checked %} is-checked{% endif %}{% if cell.day > today %} disabled{% endif %}"
+                          data-date="{{ cell.day|date:'Y-m-d' }}"
+                          title="Mark as evaluated"
+                          style="position:absolute; right:5px; bottom:3px; cursor:pointer; font-size:14px; line-height:1;">
+                      {% if cell.check and cell.check.checked %}{% else %}{% endif %}
+                    </span>
                   </div>
                 {% endif %}
               </div>
@@ -173,14 +189,7 @@
 
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for d in w.cells3 %}
-            <td>
-  <div class="comment-display"
-       data-date="{{ d.day|date:'Y-m-d' }}"
-       data-text="{% if d.comment %}{{ d.comment.text|escapejs }}{% endif %}"
-       style="width:100%; height:40px; font-size:12px; cursor:pointer; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">
-       {% if d.comment %}{{ d.comment.text }}{% endif %}
-  </div>
-</td>
+            <td><div class="emptyline"></div></td>
           {% endfor %}
         </tr>
       {% endfor %}
@@ -188,44 +197,6 @@
   </table>
 
 </div>
-
-
-<script>
-  (function() {
-    function setupCommentAutosave() {
-      document.querySelectorAll(".comment-input").forEach(function(textarea) {
-        var timer = null;
-
-        function saveComment() {
-          var form = textarea.closest("form");
-          if (!form) return;
-
-          fetch(form.getAttribute("action") || window.location.href, {
-            method: "POST",
-            body: new FormData(form),
-            credentials: "same-origin"
-          }).catch(function() {});
-        }
-
-        textarea.addEventListener("input", function() {
-          clearTimeout(timer);
-          timer = setTimeout(saveComment, 600);
-        });
-
-        textarea.addEventListener("blur", function() {
-          clearTimeout(timer);
-          saveComment();
-        });
-      });
-    }
-
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", setupCommentAutosave);
-    } else {
-      setupCommentAutosave();
-    }
-  })();
-</script>
 
 <script>
   (function() {
@@ -308,102 +279,54 @@
 </script>
 
 
-
-<div id="commentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:#ffffff; width:420px; max-width:90vw; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-    <textarea id="commentModalTextarea" style="width:100%; height:160px; resize:none; font-size:14px; padding:8px;"></textarea>
-    <div style="text-align:right; margin-top:10px;">
-      <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Annuleren</button>
-      <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary">OK</button>
-    </div>
-  </div>
-</div>
-
 <script>
 (function() {
-  var activeElement = null;
-  var activeDate = "";
-
   function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      var cookies = document.cookie.split(';');
-      for (var i = 0; i < cookies.length; i++) {
-        var cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
+    var value = null;
+    if (document.cookie) {
+      document.cookie.split(";").forEach(function(cookie) {
+        cookie = cookie.trim();
+        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+          value = decodeURIComponent(cookie.substring(name.length + 1));
         }
-      }
+      });
     }
-    return cookieValue;
+    return value;
   }
 
-  function saveComment(dateStr, text) {
-    var url = "?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}";
-    var formData = new FormData();
-    formData.append("date", dateStr);
-    formData.append("comment", text || "");
+  function setupCheckToggles() {
+    document.querySelectorAll(".check-toggle").forEach(function(el) {
+      el.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
 
-    fetch(url, {
-      method: "POST",
-      body: formData,
-      headers: {
-        "X-CSRFToken": getCookie("csrftoken")
-      },
-      credentials: "same-origin"
-    }).catch(function(){});
-  }
+        var formData = new FormData();
+        formData.append("date", el.getAttribute("data-date") || "");
+        formData.append("toggle_check", "1");
 
-  function openModal(el) {
-    activeElement = el;
-    activeDate = el.getAttribute("data-date") || "";
-
-    var modal = document.getElementById("commentModal");
-    var textarea = document.getElementById("commentModalTextarea");
-
-    textarea.value = el.getAttribute("data-text") || "";
-    modal.style.display = "flex";
-    textarea.focus();
-  }
-
-  function closeModal() {
-    document.getElementById("commentModal").style.display = "none";
-    activeElement = null;
-    activeDate = "";
-  }
-
-  function confirmModal() {
-    if (!activeElement || !activeDate) {
-      closeModal();
-      return;
-    }
-
-    var textarea = document.getElementById("commentModalTextarea");
-    var updated = textarea.value || "";
-
-    activeElement.textContent = updated;
-    activeElement.setAttribute("data-text", updated);
-    saveComment(activeDate, updated);
-    closeModal();
-  }
-
-  function setupCommentClicks() {
-    document.querySelectorAll(".comment-display").forEach(function(el) {
-      el.addEventListener("click", function() {
-        openModal(el);
+        fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+          method: "POST",
+          body: formData,
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+          credentials: "same-origin"
+        }).then(function(response) {
+          if (!response.ok) return;
+          if (el.classList.contains("disabled")) return;
+          var isChecked = el.classList.contains("is-checked");
+          el.classList.toggle("is-checked", !isChecked);
+        }).catch(function() {});
       });
     });
-
-    document.getElementById("commentCancelBtn").addEventListener("click", closeModal);
-    document.getElementById("commentOkBtn").addEventListener("click", confirmModal);
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", setupCommentClicks);
+    document.addEventListener("DOMContentLoaded", setupCheckToggles);
   } else {
-    setupCommentClicks();
+    setupCheckToggles();
   }
 })();
 </script>
+
 {% endblock %}

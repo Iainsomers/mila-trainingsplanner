@@ -6,6 +6,7 @@ from django.utils.html import escape
 from django.db.models import Q
 
 from core.models import (
+    AthleteDayCheck,
     AthleteDayComment,
     TrainingSlot,
     TrainingPlan,
@@ -406,6 +407,7 @@ def athlete_year_calendar_view(request):
     if request.method == "POST":
         date_str = request.POST.get("date")
         text = request.POST.get("comment", "")
+        toggle_check = request.POST.get("toggle_check")
         athlete = None
 
         if request.user.is_staff:
@@ -423,11 +425,25 @@ def athlete_year_calendar_view(request):
         if athlete and date_str:
             try:
                 d = date.fromisoformat(date_str)
-                AthleteDayComment.objects.update_or_create(
-                    date=d,
-                    athlete=athlete,
-                    defaults={"text": text, "created_by": request.user},
-                )
+
+                if toggle_check is not None:
+                    obj, created = AthleteDayCheck.objects.get_or_create(
+                        date=d,
+                        athlete=athlete,
+                        defaults={"updated_by": request.user, "checked": True},
+                    )
+                    if not created:
+                        obj.checked = not obj.checked
+                        obj.updated_by = request.user
+                        obj.save()
+
+                else:
+                    AthleteDayComment.objects.update_or_create(
+                        date=d,
+                        athlete=athlete,
+                        defaults={"text": text, "created_by": request.user},
+                    )
+
             except Exception:
                 pass
 
@@ -524,15 +540,27 @@ def athlete_year_calendar_view(request):
             k1 = (day, 1)
             k2 = (day, 2)
 
+            check = None
+            if selected_athlete:
+                try:
+                    check = AthleteDayCheck.objects.filter(
+                        date=day,
+                        athlete=selected_athlete,
+                    ).first()
+                except Exception:
+                    check = None
+
             cells1.append({
                 "day": day,
                 "slot": slot_map.get(k1),
                 "is_override": k1 in has_fix_keys,
+                "check": check,
             })
             cells2.append({
                 "day": day,
                 "slot": slot_map.get(k2),
                 "is_override": k2 in has_fix_keys,
+                "check": check,
             })
             comment = None
             if selected_athlete:
@@ -544,9 +572,20 @@ def athlete_year_calendar_view(request):
                 except Exception:
                     comment = None
 
+            check = None
+            if selected_athlete:
+                try:
+                    check = AthleteDayCheck.objects.filter(
+                        date=day,
+                        athlete=selected_athlete,
+                    ).first()
+                except Exception:
+                    check = None
+
             cells3.append({
                 "day": day,
                 "comment": comment,
+                "check": check,
             })
 
         week_rows.append({
