@@ -411,6 +411,17 @@ def athlete_year_calendar_view(request):
     selected_athlete_id = request.GET.get("athlete", "")
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
 
+    # --- Athlete login restriction (username -> athlete name) ---
+    username = (request.user.username or "").strip()
+    inferred_name = username.replace("_", " ")
+    inferred_athlete = Athlete.objects.filter(name__iexact=inferred_name).first()
+
+    if inferred_athlete and not athletes:
+        selected_athlete = inferred_athlete
+        selected_athlete_id = str(inferred_athlete.id)
+        athletes = [inferred_athlete]
+
+
     selected_athlete = None
     if selected_athlete_id:
         try:
@@ -536,4 +547,3 @@ def athlete_year_calendar_view(request):
             "selected_athlete": selected_athlete,
         },
     )
-
