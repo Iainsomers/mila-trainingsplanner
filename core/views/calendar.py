@@ -650,6 +650,30 @@ def athlete_year_calendar_view(request):
 
             slot_map, has_fix_keys = _build_effective_slot_maps(slot_q)
 
+    phase_label = {
+        "": "",
+        "recovery": "Recovery",
+        "aerobe": "Aerobe",
+        "specific": "Specific",
+        "intense": "Intense",
+        "taper": "Taper",
+    }
+
+    week_starts = [start + timedelta(days=7 * i) for i in range(weeks)]
+    base_phase_by_plan_week = {}
+    athlete_phase_by_plan_week = {}
+
+    if selected_athlete and athlete_plans:
+        for obj in PlanWeekPhase.objects.filter(plan__in=athlete_plans, week_start__in=week_starts):
+            base_phase_by_plan_week[(obj.plan_id, obj.week_start)] = (obj.phase or "")
+
+        for obj in AthleteWeekPhaseOverride.objects.filter(
+            plan__in=athlete_plans,
+            athlete=selected_athlete,
+            week_start__in=week_starts,
+        ):
+            athlete_phase_by_plan_week[(obj.plan_id, obj.week_start)] = (obj.phase or "")
+
     week_rows = []
     d = start
 
@@ -714,12 +738,28 @@ def athlete_year_calendar_view(request):
                 "comment": comment,
             })
 
+        week_phase = ""
+        if selected_athlete and athlete_plans:
+            for plan in athlete_plans:
+                if plan.start_date and plan.start_date > week_end:
+                    continue
+                if plan.end_date and plan.end_date < week_start:
+                    continue
+
+                athlete_phase = athlete_phase_by_plan_week.get((plan.id, week_start), "")
+                base_phase = base_phase_by_plan_week.get((plan.id, week_start), "")
+                week_phase = athlete_phase or base_phase
+                if week_phase:
+                    break
+
         week_rows.append({
             "week_start": week_start,
             "week_end": week_end,
             "cells1": cells1,
             "cells2": cells2,
             "cells3": cells3,
+            "week_phase": week_phase,
+            "week_phase_label": phase_label.get(week_phase, ""),
         })
 
         d += timedelta(days=7)
