@@ -6,6 +6,7 @@ from django.utils.html import escape
 from django.db.models import Q
 
 from core.models import (
+    AthleteDayComment,
     TrainingSlot,
     TrainingPlan,
     Athlete,
@@ -402,6 +403,36 @@ def calendar_view(request):
 
 
 def athlete_year_calendar_view(request):
+    if request.method == "POST":
+        date_str = request.POST.get("date")
+        text = request.POST.get("comment", "")
+        athlete = None
+
+        if request.user.is_staff:
+            athlete_id = request.POST.get("athlete") or request.GET.get("athlete")
+            if athlete_id:
+                try:
+                    athlete = _filter_owned(Athlete.objects.all(), request.user).get(id=int(athlete_id))
+                except Exception:
+                    athlete = None
+        else:
+            username = (request.user.username or "").strip()
+            inferred_name = username.replace("_", " ")
+            athlete = Athlete.objects.filter(name__iexact=inferred_name).first()
+
+        if athlete and date_str:
+            try:
+                d = date.fromisoformat(date_str)
+                AthleteDayComment.objects.update_or_create(
+                    date=d,
+                    athlete=athlete,
+                    defaults={"text": text, "created_by": request.user},
+                )
+            except Exception:
+                pass
+
+        return HttpResponse("", status=204)
+
     year = request.GET.get("year")
     try:
         year = int(year) if year else date.today().year
@@ -474,12 +505,7 @@ def athlete_year_calendar_view(request):
                 .select_related("plan", "athlete")
             )
 
-            targeted_slots = [
-                slot for slot in slot_q
-                if selected_athlete.id in slot.targeted_athlete_ids()
-            ]
-
-            slot_map, has_fix_keys = _build_effective_slot_maps(targeted_slots)
+            slot_map, has_fix_keys = _build_effective_slot_maps(slot_q)
 
     week_rows = []
     d = start
@@ -508,8 +534,19 @@ def athlete_year_calendar_view(request):
                 "slot": slot_map.get(k2),
                 "is_override": k2 in has_fix_keys,
             })
+            comment = None
+            if selected_athlete:
+                try:
+                    comment = AthleteDayComment.objects.filter(
+                        date=day,
+                        athlete=selected_athlete,
+                    ).first()
+                except Exception:
+                    comment = None
+
             cells3.append({
                 "day": day,
+                "comment": comment,
             })
 
         week_rows.append({
