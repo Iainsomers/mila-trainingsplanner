@@ -122,23 +122,29 @@
             <td>
               <div class="daycell">
                 {% if cell.slot %}
-                  <div class="slotbox">
-                    {% for seg in cell.slot.segments.all %}
-                      {% if seg.text and seg.type != "CORE2" %}
-                        {% if seg.type == "CORE" %}
-                          <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
-                            <strong>{{ seg.text }}</strong>
-                          </div>
-                        {% else %}
-                          <div>{{ seg.text }}</div>
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
+                    {% if cell.slot.text %}
+                      <div class="core-line" data-zone="">
+                        <strong>{{ cell.slot.text|linebreaksbr }}</strong>
+                      </div>
+                    {% else %}
+                      {% for seg in cell.slot.segments.all %}
+                        {% if seg.text and seg.type != "CORE2" %}
+                          {% if seg.type == "CORE" %}
+                            <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                              <strong>{{ seg.text }}</strong>
+                            </div>
+                          {% else %}
+                            <div>{{ seg.text }}</div>
+                          {% endif %}
                         {% endif %}
-                      {% endif %}
-                    {% endfor %}
-                    {% for seg in cell.slot.segments.all %}
-                      {% if seg.text and seg.type == "CORE2" %}
-                        <div>2nd: {{ seg.text }}</div>
-                      {% endif %}
-                    {% endfor %}
+                      {% endfor %}
+                      {% for seg in cell.slot.segments.all %}
+                        {% if seg.text and seg.type == "CORE2" %}
+                          <div>2nd: {{ seg.text }}</div>
+                        {% endif %}
+                      {% endfor %}
+                    {% endif %}
                     <span class="check-toggle{% if cell.check and cell.check.checked %} is-checked{% endif %}{% if cell.day > today %} disabled{% endif %}"
                           data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}"
                           title="Mark as evaluated"
@@ -157,23 +163,29 @@
             <td>
               <div class="emptyline">
                 {% if cell.slot %}
-                  <div class="slotbox">
-                    {% for seg in cell.slot.segments.all %}
-                      {% if seg.text and seg.type != "CORE2" %}
-                        {% if seg.type == "CORE" %}
-                          <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
-                            <strong>{{ seg.text }}</strong>
-                          </div>
-                        {% else %}
-                          <div>{{ seg.text }}</div>
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
+                    {% if cell.slot.text %}
+                      <div class="core-line" data-zone="">
+                        <strong>{{ cell.slot.text|linebreaksbr }}</strong>
+                      </div>
+                    {% else %}
+                      {% for seg in cell.slot.segments.all %}
+                        {% if seg.text and seg.type != "CORE2" %}
+                          {% if seg.type == "CORE" %}
+                            <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                              <strong>{{ seg.text }}</strong>
+                            </div>
+                          {% else %}
+                            <div>{{ seg.text }}</div>
+                          {% endif %}
                         {% endif %}
-                      {% endif %}
-                    {% endfor %}
-                    {% for seg in cell.slot.segments.all %}
-                      {% if seg.text and seg.type == "CORE2" %}
-                        <div>2nd: {{ seg.text }}</div>
-                      {% endif %}
-                    {% endfor %}
+                      {% endfor %}
+                      {% for seg in cell.slot.segments.all %}
+                        {% if seg.text and seg.type == "CORE2" %}
+                          <div>2nd: {{ seg.text }}</div>
+                        {% endif %}
+                      {% endfor %}
+                    {% endif %}
                     <span class="check-toggle{% if cell.check and cell.check.checked %} is-checked{% endif %}{% if cell.day > today %} disabled{% endif %}"
                           data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}"
                           title="Mark as evaluated"
@@ -434,6 +446,179 @@
   } else {
     setupCommentClicks();
   }
+})();
+</script>
+
+<div id="modal-container"></div>
+
+<script>
+(function() {
+  function openSlotModal(el) {
+    var date = el.closest("[data-date]") ? el.closest("[data-date]").getAttribute("data-date") : el.getAttribute("data-date");
+    var slotIndex = el.getAttribute("data-slot-index");
+    var plan = el.getAttribute("data-plan-id") || "";
+    var athlete = "{{ selected_athlete_id }}";
+
+    if (!date || !slotIndex) return;
+
+    var parts = date.split("-");
+    var url = `/slot-modal/${parts[0]}/${parts[1]}/${parts[2]}/${slotIndex}/?athlete=${athlete}&plan=${plan}`;
+
+    fetch(url, { credentials: "same-origin" })
+      .then(r => r.text())
+      .then(html => {
+        document.getElementById("modal-container").innerHTML = html;
+        var modalEl = document.getElementById("slotModal");
+        if (!modalEl) return;
+        var modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      });
+  }
+
+  function setupSlotClicks() {
+    document.querySelectorAll(".slotbox").forEach(function(el) {
+      el.setAttribute("data-date", el.closest("td").querySelector(".check-toggle")?.getAttribute("data-date") || "");
+      el.setAttribute("data-slot-index", el.closest("td").querySelector(".check-toggle")?.getAttribute("data-slot-index") || "1");
+
+      el.addEventListener("click", function(e) {
+        if (e.target.classList.contains("check-toggle")) return;
+        if (el.classList.contains("disabled")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openSlotModal(el);
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupSlotClicks);
+  } else {
+    setupSlotClicks();
+  }
+})();
+</script>
+
+<div id="modal-container"></div>
+
+<script>
+(function() {
+  if (window.__athleteYearSlotModalBound) return;
+  window.__athleteYearSlotModalBound = true;
+
+  var activeSlotDate = "";
+  var activeSlotIndex = "";
+
+  function getCookie(name) {
+    var value = null;
+    if (document.cookie) {
+      document.cookie.split(";").forEach(function(cookie) {
+        cookie = cookie.trim();
+        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+          value = decodeURIComponent(cookie.substring(name.length + 1));
+        }
+      });
+    }
+    return value;
+  }
+
+  function collectSlotText(form) {
+    var fields = ["wu_text", "mob_text", "sprint_text", "core_text", "core2_text", "alt_text", "cd_text"];
+    var parts = [];
+
+    fields.forEach(function(name) {
+      var field = form.querySelector('[name="' + name + '"]');
+      if (!field) return;
+
+      var value = (field.value || "").trim();
+      if (value) parts.push(value);
+    });
+
+    return parts.join("\n");
+  }
+
+  function openSlotModal(el) {
+    var date = el.getAttribute("data-date");
+    var slotIndex = el.getAttribute("data-slot-index");
+    var plan = el.getAttribute("data-plan-id") || "";
+    var athlete = "{{ selected_athlete_id }}";
+
+    if (!date || !slotIndex) return;
+
+    activeSlotDate = date;
+    activeSlotIndex = slotIndex;
+
+    var parts = date.split("-");
+    var url = `/slot-modal/${parts[0]}/${parts[1]}/${parts[2]}/${slotIndex}/?athlete=${athlete}&plan=${plan}`;
+
+    fetch(url, { credentials: "same-origin" })
+      .then(function(response) { return response.text(); })
+      .then(function(html) {
+        var container = document.getElementById("modal-container");
+        container.innerHTML = html;
+
+        var modalEl = document.getElementById("slotModal");
+        if (!modalEl) return;
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      });
+  }
+
+  document.addEventListener("click", function(event) {
+    if (event.target.closest(".check-toggle")) return;
+
+    var slotBox = event.target.closest(".slotbox");
+    if (!slotBox || slotBox.classList.contains("disabled")) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    openSlotModal(slotBox);
+  }, true);
+
+  document.addEventListener("submit", function(event) {
+    var form = event.target;
+    if (!form || !form.closest("#modal-container")) return;
+
+    var submitter = event.submitter;
+    if (submitter && submitter.name === "action" && submitter.value && submitter.value !== "save") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    var formData = new FormData();
+    formData.append("date", activeSlotDate);
+    formData.append("slot_index", activeSlotIndex || "1");
+    formData.append("slot_text", collectSlotText(form));
+
+    ["wu_text", "mob_text", "sprint_text", "core_text", "core2_text", "alt_text", "cd_text"].forEach(function(name) {
+      var field = form.querySelector('[name="' + name + '"]');
+      if (field) {
+        formData.append(name, field.value || "");
+      }
+    });
+
+    fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken")
+      },
+      credentials: "same-origin"
+    }).then(function(response) {
+      if (!response.ok) return;
+
+      var modalEl = document.getElementById("slotModal");
+      if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+      }
+
+      window.location.reload();
+    }).catch(function() {});
+  }, true);
 })();
 </script>
 {% endblock %}

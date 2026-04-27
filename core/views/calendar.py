@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import re
 
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
@@ -9,6 +10,7 @@ from core.models import (
     AthleteDayCheck,
     AthleteDayComment,
     TrainingSlot,
+    TrainingSegment,
     TrainingPlan,
     Athlete,
     PlanWeekPhase,
@@ -403,6 +405,80 @@ def calendar_view(request):
     )
 
 
+
+def _zone_from_text(text: str, default: str = "1") -> str:
+    match = re.search(r"\bz\s*([1-6])\b", text or "", re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return default
+
+
+def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
+    if request.user.is_staff:
+        owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+    else:
+        owned_plans = list(TrainingPlan.objects.order_by("name"))
+
+    base_slot = None
+    for plan in owned_plans:
+        if athlete.id not in plan.targeted_athlete_ids():
+            continue
+
+        base_slot = TrainingSlot.objects.filter(
+            plan=plan,
+            date=d,
+            slot_index=slot_index,
+            athlete__isnull=True,
+        ).first()
+
+        if base_slot:
+            break
+
+    if not base_slot:
+        return
+
+    override_slot, _ = TrainingSlot.objects.update_or_create(
+        plan=base_slot.plan,
+        date=d,
+        slot_index=slot_index,
+        athlete=athlete,
+        defaults={},
+    )
+
+    override_slot.segments.all().delete()
+
+    fields = [
+        ("WU", request.POST.get("wu_text", ""), "1"),
+        ("MOB", request.POST.get("mob_text", ""), "1"),
+        ("SPR", request.POST.get("sprint_text", ""), "6"),
+        ("CORE", request.POST.get("core_text", ""), "1"),
+        ("CORE2", request.POST.get("core2_text", ""), "1"),
+        ("ALT", request.POST.get("alt_text", ""), "1"),
+        ("CD", request.POST.get("cd_text", ""), "1"),
+    ]
+
+    has_field_text = any((value or "").strip() for _, value, _ in fields)
+
+    if not has_field_text and (slot_text or "").strip():
+        fields = [("CORE", slot_text, "1")]
+
+    order = 1
+    for segment_type, value, default_zone in fields:
+        text = (value or "").strip()
+        if not text:
+            continue
+
+        TrainingSegment.objects.create(
+            slot=override_slot,
+            order=order,
+            type=segment_type,
+            zone=_zone_from_text(text, default_zone),
+            text=text,
+            parse_ok=False,
+        )
+        order += 1
+
+
 def athlete_year_calendar_view(request):
     if request.method == "POST":
         date_str = request.POST.get("date")
@@ -428,7 +504,20 @@ def athlete_year_calendar_view(request):
                 d = date.fromisoformat(date_str)
                 today = date.today()
 
-                if toggle_check is not None:
+                slot_text = request.POST.get("slot_text")
+
+                if slot_text is not None:
+                    if d > today:
+                        return HttpResponse("", status=204)
+
+                    try:
+                        slot_index = int(slot_index_raw)
+                    except Exception:
+                        slot_index = 1
+
+                    _save_athlete_slot_override(request, athlete, d, slot_index, slot_text)
+
+                elif toggle_check is not None:
                     if d > today:
                         return HttpResponse("", status=204)
                     try:

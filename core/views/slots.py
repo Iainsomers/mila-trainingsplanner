@@ -10,7 +10,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
 from django.db.models import Q
 
-from core.models import TrainingSlot, SavedTrainingTemplate
+from core.models import TrainingSlot, SavedTrainingTemplate, TrainingPlan, Athlete
 from core.parser import parse_segment_text
 
 from .common import (
@@ -667,6 +667,17 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
 
     athlete = _get_selected_athlete_from_request(request)
+    if not athlete and not request.user.is_staff:
+        username = (request.user.username or "").strip()
+        inferred_name = username.replace("_", " ")
+        athlete = Athlete.objects.filter(name__iexact=inferred_name).first()
+
+    if not selected_plan and athlete:
+        for plan in TrainingPlan.objects.order_by("name"):
+            if athlete.id in plan.targeted_athlete_ids():
+                selected_plan = plan
+                break
+
     forbid = _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
