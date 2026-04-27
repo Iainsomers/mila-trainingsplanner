@@ -5,6 +5,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.utils.html import escape
 from django.db.models import Q
+from django.core.cache import cache
 
 from core.models import (
     AthleteDayCheck,
@@ -16,7 +17,7 @@ from core.models import (
     PlanWeekPhase,
     AthleteWeekPhaseOverride,
 )
-from core.stats import base_week_stats, athlete_week_stats, group_week_stats
+from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from .common import (
     _calendar_display_mode,
     _get_selected_plan,
@@ -406,6 +407,13 @@ def calendar_view(request):
 
 
 
+
+def _invalidate_stats_cache():
+    try:
+        cache.incr(STATS_VERSION_KEY)
+    except Exception:
+        cache.set(STATS_VERSION_KEY, 1, None)
+
 def _zone_from_text(text: str, default: str = "1") -> str:
     match = re.search(r"\bz\s*([1-6])\b", text or "", re.IGNORECASE)
     if match:
@@ -517,6 +525,7 @@ def athlete_year_calendar_view(request):
                         slot_index = 1
 
                     _save_athlete_slot_override(request, athlete, d, slot_index, slot_text)
+                    _invalidate_stats_cache()
 
                 elif check_status is not None or toggle_check is not None:
                     if d > today:
@@ -752,6 +761,76 @@ def athlete_year_calendar_view(request):
                 if week_phase:
                     break
 
+        z_m = {str(i): 0.0 for i in range(1, 7)}
+        z_time_s = {str(i): 0.0 for i in range(1, 7)}
+        race_m = 0.0
+        race_time_s = 0.0
+        t_m = {
+            "10000": 0.0,
+            "5000": 0.0,
+            "3000": 0.0,
+            "1500": 0.0,
+            "800": 0.0,
+            "TM": 0.0,
+            "THM": 0.0,
+            "T4": 0.0,
+        }
+
+        alt_z1_min = 0
+        alt_z2_min = 0
+        alt_z3_min = 0
+
+        if selected_athlete and athlete_plans:
+            for plan in athlete_plans:
+                if plan.start_date and plan.start_date > week_end:
+                    continue
+                if plan.end_date and plan.end_date < week_start:
+                    continue
+
+                st = athlete_week_stats(plan, selected_athlete, week_start)
+
+                zones = st.get("zones") or {}
+                race = st.get("race") or {"distance_m": 0, "duration_s": 0}
+                t_totals = st.get("t_totals") or {}
+                alt = st.get("alt_zones") or {}
+
+                alt_z1_min += int(round(float(alt.get("1", {}).get("duration_s", 0) or 0) / 60.0))
+                alt_z2_min += int(round(float(alt.get("2", {}).get("duration_s", 0) or 0) / 60.0))
+                alt_z3_min += int(round(float(alt.get("3", {}).get("duration_s", 0) or 0) / 60.0))
+
+                for z in ("1", "2", "3", "4", "5", "6"):
+                    vals = zones.get(z) or {"distance_m": 0, "duration_s": 0}
+                    z_m[z] += float(vals.get("distance_m") or 0)
+                    z_time_s[z] += float(vals.get("duration_s") or 0)
+
+                race_m += float(race.get("distance_m") or 0)
+                race_time_s += float(race.get("duration_s") or 0)
+
+                for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4"):
+                    vals = t_totals.get(t) or {"distance_m": 0, "duration_s": 0}
+                    t_m[t] += float(vals.get("distance_m") or 0)
+
+        tot_m = sum(z_m.values()) + race_m
+        total_time_s = sum(z_time_s.values()) + race_time_s
+
+        def _fmt_min(t_s: float) -> str:
+            return f"{int(round(float(t_s) / 60.0))}'"
+
+        sum_pct_tooltip = (
+            f"Z1: {_fmt_min(z_time_s['1'])}/{_pct(z_time_s['1'], total_time_s)}\n"
+            f"Z2: {_fmt_min(z_time_s['2'])}/{_pct(z_time_s['2'], total_time_s)}\n"
+            f"Z3: {_fmt_min(z_time_s['3'])}/{_pct(z_time_s['3'], total_time_s)}\n"
+            f"Z4: {_fmt_min(z_time_s['4'])}/{_pct(z_time_s['4'], total_time_s)}\n"
+            f"Z5: {_fmt_min(z_time_s['5'])}/{_pct(z_time_s['5'], total_time_s)}\n"
+            f"Z6: {_fmt_min(z_time_s['6'])}/{_pct(z_time_s['6'], total_time_s)}\n"
+            f"Race: {_fmt_min(race_time_s)}/{_pct(race_time_s, total_time_s)}"
+        )
+
+        has_z = {z: (z_m[z] > 0) for z in ("1", "2", "3", "4", "5", "6")}
+        has_race = (race_m > 0)
+        has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4")}
+        has_alt = (alt_z1_min > 0 or alt_z2_min > 0 or alt_z3_min > 0)
+
         week_rows.append({
             "week_start": week_start,
             "week_end": week_end,
@@ -760,6 +839,42 @@ def athlete_year_calendar_view(request):
             "cells3": cells3,
             "week_phase": week_phase,
             "week_phase_label": phase_label.get(week_phase, ""),
+            "sum_tot_km": _format_km(tot_m),
+            "sum_z1_km": _km_str_with_small(z_m["1"]),
+            "sum_z2_km": _km_str_with_small(z_m["2"]),
+            "sum_z3_km": _km_str_with_small(z_m["3"]),
+            "sum_z4_km": _km_str_with_small(z_m["4"]),
+            "sum_z5_km": _km_str_with_small(z_m["5"]),
+            "sum_z6_km": _km_str_with_small(z_m["6"]),
+            "sum_race_km": _km_str_with_small(race_m),
+            "sum_t10000_km": _km_str_with_small(t_m["10000"]),
+            "sum_t5000_km": _km_str_with_small(t_m["5000"]),
+            "sum_t3000_km": _km_str_with_small(t_m["3000"]),
+            "sum_t1500_km": _km_str_with_small(t_m["1500"]),
+            "sum_t800_km": _km_str_with_small(t_m["800"]),
+            "sum_tm_km": _km_str_with_small(t_m["TM"]),
+            "sum_thm_km": _km_str_with_small(t_m["THM"]),
+            "sum_t4_km": _km_str_with_small(t_m["T4"]),
+            "has_z1": has_z["1"],
+            "has_z2": has_z["2"],
+            "has_z3": has_z["3"],
+            "has_z4": has_z["4"],
+            "has_z5": has_z["5"],
+            "has_z6": has_z["6"],
+            "has_race": has_race,
+            "has_t10000": has_t["10000"],
+            "has_t5000": has_t["5000"],
+            "has_t3000": has_t["3000"],
+            "has_t1500": has_t["1500"],
+            "has_t800": has_t["800"],
+            "has_tm": has_t["TM"],
+            "has_thm": has_t["THM"],
+            "has_t4": has_t["T4"],
+            "alt_z1_min": alt_z1_min,
+            "alt_z2_min": alt_z2_min,
+            "alt_z3_min": alt_z3_min,
+            "has_alt": has_alt,
+            "sum_pct_tooltip": sum_pct_tooltip,
         })
 
         d += timedelta(days=7)

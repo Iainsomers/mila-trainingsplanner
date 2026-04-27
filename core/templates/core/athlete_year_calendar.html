@@ -205,7 +205,31 @@
               </div>
             {% endif %}
           </td>
-          <td class="sumcol" rowspan="3">—</td>
+          <td class="sumcol" rowspan="3">
+            <div style="font-size:11px; line-height:1.35;" title="{{ w.sum_pct_tooltip|default:'' }}">
+              {% if w.sum_tot_km %}
+                <div><strong>Total: {{ w.sum_tot_km }} km</strong></div>
+              {% endif %}
+              {% if w.has_z1 %}<div>Z1 {{ w.sum_z1_km }} km</div>{% endif %}
+              {% if w.has_z2 %}<div>Z2 {{ w.sum_z2_km }} km</div>{% endif %}
+              {% if w.has_z3 %}<div>Z3 {{ w.sum_z3_km }} km</div>{% endif %}
+              {% if w.has_z4 %}<div>Z4 {{ w.sum_z4_km }} km</div>{% endif %}
+              {% if w.has_z5 %}<div>Z5 {{ w.sum_z5_km }} km</div>{% endif %}
+              {% if w.has_z6 %}<div>Z6 {{ w.sum_z6_km }} km</div>{% endif %}
+              {% if w.has_race %}<div>Race {{ w.sum_race_km }} km</div>{% endif %}
+              {% if w.has_t10000 %}<div>T10 {{ w.sum_t10000_km }} km</div>{% endif %}
+              {% if w.has_t5000 %}<div>T5 {{ w.sum_t5000_km }} km</div>{% endif %}
+              {% if w.has_t3000 %}<div>T3 {{ w.sum_t3000_km }} km</div>{% endif %}
+              {% if w.has_t1500 %}<div>T15 {{ w.sum_t1500_km }} km</div>{% endif %}
+              {% if w.has_t800 %}<div>T8 {{ w.sum_t800_km }} km</div>{% endif %}
+              {% if w.has_tm %}<div>TM {{ w.sum_tm_km }} km</div>{% endif %}
+              {% if w.has_thm %}<div>THM {{ w.sum_thm_km }} km</div>{% endif %}
+              {% if w.has_t4 %}<div>T4 {{ w.sum_t4_km }} km</div>{% endif %}
+              {% if w.alt_z1_min %}<div>ALT Z1 {{ w.alt_z1_min }}m</div>{% endif %}
+              {% if w.alt_z2_min %}<div>ALT Z2 {{ w.alt_z2_min }}m</div>{% endif %}
+              {% if w.alt_z3_min %}<div>ALT Z3 {{ w.alt_z3_min }}m</div>{% endif %}
+            </div>
+          </td>
 
           {% for cell in w.cells1 %}
             <td>
