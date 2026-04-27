@@ -442,7 +442,11 @@ def athlete_year_calendar_view(request):
     has_fix_keys = set()
 
     if selected_athlete:
-        owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+        # FIX: non-staff users must see plans where they are targeted
+        if request.user.is_staff:
+            owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+        else:
+            owned_plans = list(TrainingPlan.objects.order_by("name"))
         athlete_plans = []
 
         for plan in owned_plans:
