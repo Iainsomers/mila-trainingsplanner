@@ -28,30 +28,28 @@
     background: #fafafa;
   }
 
-  .week-phase-wrap {
-    margin-top: 6px;
-    min-height: 18px;
-  }
-
-  .week-phase-label {
-    font-size: 12px;
-    font-weight: 700;
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.55);
-  }
-
-  .weeklabel.phase-recovery { background: #e8ddff !important; }
-  .weeklabel.phase-aerobe   { background: #e5533d !important; }
-  .weeklabel.phase-specific { background: #bfe7bf !important; }
-  .weeklabel.phase-intense  { background: #b7d7ff !important; }
-  .weeklabel.phase-taper    { background: #ff7a00 !important; }
-
   .sumcol {
     width: 120px;
     background: #fafafa;
   }
+
+  .total-pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 6px;
+    margin: 0 2px 2px 0;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .total-z1 { background-color: #f8f8f0; }
+  .total-z2 { background-color: #f7c6d0; }
+  .total-z3 { background-color: #e5533d; }
+  .total-z4 { background-color: #bfe7bf; }
+  .total-z5 { background-color: #b7d7ff; }
+  .total-z6 { background-color: #f2c200; }
+  .total-race { background-color: #ff7a00; }
+
 
   .slotrow {
   }
@@ -197,15 +195,33 @@
     <tbody>
       {% for w in week_rows %}
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="3">
+          <td class="weeklabel" rowspan="3">
             {{ w.week_start|date:"d-m" }} – {{ w.week_end|date:"d-m" }}
-            {% if w.week_phase_label %}
-              <div class="week-phase-wrap">
-                <span class="week-phase-label">{{ w.week_phase_label }}</span>
-              </div>
-            {% endif %}
           </td>
-          <td class="sumcol" rowspan="3">—</td>
+          <td class="sumcol" rowspan="3">
+            <div style="font-size:11px; line-height:1.35;">
+              {% if w.has_z1 %}<span class="total-pill total-z1">Z1 {{ w.sum_z1_km }}</span>{% endif %}
+              {% if w.has_z2 %}<span class="total-pill total-z2">Z2 {{ w.sum_z2_km }}</span>{% endif %}
+              {% if w.has_z3 %}<span class="total-pill total-z3">Z3 {{ w.sum_z3_km }}</span>{% endif %}
+              {% if w.has_z4 %}<span class="total-pill total-z4">Z4 {{ w.sum_z4_km }}</span>{% endif %}
+              {% if w.has_z5 %}<span class="total-pill total-z5">Z5 {{ w.sum_z5_km }}</span>{% endif %}
+              {% if w.has_z6 %}<span class="total-pill total-z6">Z6 {{ w.sum_z6_km }}</span>{% endif %}
+              {% if w.has_race %}<span class="total-pill total-race">Race {{ w.sum_race_km }}</span>{% endif %}
+
+              {% if w.has_t10000 %}<span class="total-pill total-race">T10 {{ w.sum_t10000_km }}</span>{% endif %}
+              {% if w.has_t5000 %}<span class="total-pill total-race">T5 {{ w.sum_t5000_km }}</span>{% endif %}
+              {% if w.has_t3000 %}<span class="total-pill total-race">T3 {{ w.sum_t3000_km }}</span>{% endif %}
+              {% if w.has_t1500 %}<span class="total-pill total-race">T15 {{ w.sum_t1500_km }}</span>{% endif %}
+              {% if w.has_t800 %}<span class="total-pill total-race">T8 {{ w.sum_t800_km }}</span>{% endif %}
+              {% if w.has_tm %}<span class="total-pill total-race">TM {{ w.sum_tm_km }}</span>{% endif %}
+              {% if w.has_thm %}<span class="total-pill total-race">THM {{ w.sum_thm_km }}</span>{% endif %}
+              {% if w.has_t4 %}<span class="total-pill total-race">T4 {{ w.sum_t4_km }}</span>{% endif %}
+
+              {% if w.alt_z1_min %}<span class="total-pill total-z1">ALT Z1 {{ w.alt_z1_min }}m</span>{% endif %}
+              {% if w.alt_z2_min %}<span class="total-pill total-z2">ALT Z2 {{ w.alt_z2_min }}m</span>{% endif %}
+              {% if w.alt_z3_min %}<span class="total-pill total-z3">ALT Z3 {{ w.alt_z3_min }}m</span>{% endif %}
+            </div>
+          </td>
 
           {% for cell in w.cells1 %}
             <td>
