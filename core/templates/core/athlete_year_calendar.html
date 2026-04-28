@@ -537,6 +537,7 @@
           if (!response.ok) return;
           setStatusVisual(el, status);
           closeStatusMenus();
+          window.location.reload();
         }).catch(function() {});
       });
     });

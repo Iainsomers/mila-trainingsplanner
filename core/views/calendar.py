@@ -612,6 +612,7 @@ def athlete_year_calendar_view(request):
                     obj.checked = bool(status)
                     obj.updated_by = request.user
                     obj.save()
+                    _invalidate_stats_cache()
 
                 else:
                     AthleteDayComment.objects.update_or_create(
@@ -623,7 +624,9 @@ def athlete_year_calendar_view(request):
             except Exception:
                 pass
 
-        return HttpResponse("", status=204)
+        response = HttpResponse("", status=200)
+        response["HX-Refresh"] = "true"
+        return response
 
     year = request.GET.get("year")
     try:
