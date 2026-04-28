@@ -795,8 +795,19 @@ def athlete_year_calendar_view(request):
                 if plan.end_date and plan.end_date < week_start:
                     continue
 
-                athlete_phase = athlete_phase_by_plan_week.get((plan.id, week_start), "")
-                base_phase = base_phase_by_plan_week.get((plan.id, week_start), "")
+                athlete_phase = ""
+                base_phase = ""
+
+                for (pid, ws), phase in athlete_phase_by_plan_week.items():
+                    if pid == plan.id and week_start <= ws <= week_end:
+                        athlete_phase = phase
+                        break
+
+                for (pid, ws), phase in base_phase_by_plan_week.items():
+                    if pid == plan.id and week_start <= ws <= week_end:
+                        base_phase = phase
+                        break
+
                 week_phase = athlete_phase or base_phase
                 if week_phase:
                     break
