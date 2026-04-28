@@ -6,13 +6,13 @@ import re
 from django.core.cache import cache
 
 from core.zones import ensure_full_zone_dict, DEFAULT_ZONE_SPEED_MPS
-from core.models import TrainingSlot
+from core.models import TrainingSlot, AthleteDayCheck
 from core.views.common import _week_days
 
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v6"
+STATS_SCHEMA_VERSION = "v7"
 
 
 def _stats_version() -> int:
@@ -480,6 +480,15 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
 
     for day in days:
         for slot_index in (1, 2):
+            check = AthleteDayCheck.objects.filter(
+                athlete=athlete,
+                date=day,
+                slot_index=slot_index
+            ).first()
+
+            if check and check.status == AthleteDayCheck.STATUS_NOT_DONE:
+                continue
+
             slot = override_map.get((athlete.id, day, slot_index)) or base_map.get((day, slot_index))
             if not slot:
                 continue

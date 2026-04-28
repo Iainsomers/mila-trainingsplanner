@@ -226,6 +226,7 @@
           </td>
           <td class="sumcol" rowspan="3">
             <div style="font-size:11px; line-height:1.35;">
+              <div style="font-weight:bold; color:#000; margin-bottom:3px;">Total km: {{ w.sum_tot_km }}</div>
               {% if w.has_z1 %}<span class="total-pill total-z1">Z1 {{ w.sum_z1_km }}</span>{% endif %}
               {% if w.has_z2 %}<span class="total-pill total-z2">Z2 {{ w.sum_z2_km }}</span>{% endif %}
               {% if w.has_z3 %}<span class="total-pill total-z3">Z3 {{ w.sum_z3_km }}</span>{% endif %}
