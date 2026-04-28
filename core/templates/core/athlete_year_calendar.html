@@ -171,6 +171,25 @@
   .slot-text {
     margin-bottom: 3px;
   }
+
+  .zones-times-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .zones-times-table th,
+  .zones-times-table td {
+    border: 1px solid #d0d0d0;
+    padding: 5px 7px;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .zones-times-table th {
+    background: #f5f5f5;
+    font-weight: 700;
+  }
 </style>
 {% endblock %}
 
@@ -196,7 +215,43 @@
       <option value="t4" {% if hide_mode == "t4" %}selected{% endif %}>hide t-4 weeks</option>
     </select>
     <button class="btn btn-sm btn-primary">Load</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">zones/times</button>
   </form>
+
+  <div class="modal fade" id="zonesTimesModal" tabindex="-1" aria-labelledby="zonesTimesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="zonesTimesModalLabel">zones/times{% if selected_athlete %} – {{ selected_athlete.name }}{% endif %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="zones-times-table">
+            <thead>
+              <tr>
+                <th>PR</th>
+                <th></th>
+                <th>Per km</th>
+                <th>Per 400m</th>
+                <th>Per 100m</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in zones_times_rows %}
+                <tr>
+                  <td>{{ row.pr }}</td>
+                  <td>{{ row.label }}</td>
+                  <td>{{ row.per_km }}</td>
+                  <td>{{ row.per_400m }}</td>
+                  <td>{{ row.per_100m }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <table class="year-table">
     <thead>
@@ -380,6 +435,15 @@
         5: "#2f75b5",
         6: "#f2c200"
       };
+      var raceColor = "#ff7a00";
+      var raceHardColor = "#cc0000";
+
+      function raceKind(text) {
+        var s = (text || "").toLowerCase();
+        if (/\brace\s*!/.test(s)) return "hard";
+        if (/\brace\b/.test(s)) return "race";
+        return "";
+      }
 
       function lineKm(text) {
         var s = (text || "").toLowerCase().trim();
@@ -404,32 +468,57 @@
       }
 
       document.querySelectorAll(".slotbox").forEach(function(box) {
-        var lines = Array.from(box.querySelectorAll(".core-line[data-zone]")).filter(function(line) {
+        var allCoreLines = Array.from(box.querySelectorAll(".core-line[data-zone]"));
+        var raceLines = allCoreLines.filter(function(line) {
+          return raceKind(line.textContent || "") !== "";
+        });
+        var hasRaceHard = raceLines.some(function(line) {
+          return raceKind(line.textContent || "") === "hard";
+        });
+
+        var lines = allCoreLines.filter(function(line) {
           return /^[1-6]$/.test((line.getAttribute("data-zone") || "").trim());
         });
 
-        if (!lines.length) return;
+        var mainZone = null;
+        if (lines.length) {
+          var totals = {};
+          lines.forEach(function(line) {
+            var z = parseInt(line.getAttribute("data-zone"), 10);
+            totals[z] = (totals[z] || 0) + lineKm(line.textContent || "");
+          });
 
-        var totals = {};
-        lines.forEach(function(line) {
+          var zones = Object.keys(totals).map(function(z) { return parseInt(z, 10); });
+          mainZone = zones[0];
+
+          zones.forEach(function(z) {
+            if (totals[z] > totals[mainZone]) {
+              mainZone = z;
+            }
+          });
+        }
+
+        if (raceLines.length) {
+          box.style.backgroundColor = hasRaceHard ? raceHardColor : raceColor;
+        } else if (mainZone !== null) {
+          box.style.backgroundColor = zoneColors[mainZone] || "";
+        } else {
+          return;
+        }
+
+        allCoreLines.forEach(function(line) {
+          var kind = raceKind(line.textContent || "");
           var z = parseInt(line.getAttribute("data-zone"), 10);
-          totals[z] = (totals[z] || 0) + lineKm(line.textContent || "");
-        });
+          var color = "#000000";
 
-        var zones = Object.keys(totals).map(function(z) { return parseInt(z, 10); });
-        var mainZone = zones[0];
-
-        zones.forEach(function(z) {
-          if (totals[z] > totals[mainZone]) {
-            mainZone = z;
+          if (kind) {
+            color = "#000000";
+          } else if (!raceLines.length && z === mainZone) {
+            color = "#000000";
+          } else if (/^[1-6]$/.test((line.getAttribute("data-zone") || "").trim())) {
+            color = zoneColors[z] || "#000000";
           }
-        });
 
-        box.style.backgroundColor = zoneColors[mainZone] || "";
-
-        lines.forEach(function(line) {
-          var z = parseInt(line.getAttribute("data-zone"), 10);
-          var color = z === mainZone ? "#000000" : (zoneColors[z] || "#000000");
           line.style.setProperty("color", color, "important");
 
           Array.from(line.querySelectorAll("*")).forEach(function(child) {

@@ -396,6 +396,7 @@ def calendar_view(request):
             "selected_plan": selected_plan,
             "plan_athletes": plan_athletes,
             "selected_athlete": selected_athlete,
+            "zones_times_rows": _build_zones_times_rows(selected_athlete),
             "show_all_zones": show_all_zones,
             "show_t_totals": show_t_totals,
             "show_all_t_totals": show_all_t_totals,
@@ -458,6 +459,255 @@ def _zone_from_text(text: str, default: str = "1") -> str:
         return "5"
 
     return default
+
+
+def _format_time_seconds(total_seconds):
+    if total_seconds is None:
+        return ""
+
+    try:
+        seconds = int(round(float(total_seconds)))
+    except Exception:
+        return ""
+
+    if seconds <= 0:
+        return ""
+
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    return f"{minutes:02d}:{secs:02d}"
+
+
+def _seconds_from_time_value(value):
+    if value in (None, ""):
+        return None
+
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+
+        if ":" in raw:
+            try:
+                parts = [int(p) for p in raw.split(":")]
+            except Exception:
+                return None
+
+            if len(parts) == 2:
+                return parts[0] * 60 + parts[1]
+            if len(parts) == 3:
+                return parts[0] * 3600 + parts[1] * 60 + parts[2]
+            return None
+
+        raw = raw.replace(",", ".")
+        try:
+            return float(raw)
+        except Exception:
+            return None
+
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def _format_pace_from_speed(speed_mps, distance_m):
+    try:
+        speed = float(speed_mps or 0)
+    except Exception:
+        return ""
+
+    if speed <= 0:
+        return ""
+
+    return _format_time_seconds(float(distance_m) / speed)
+
+
+def _format_pace_from_seconds_per_km(seconds_per_km, distance_m):
+    try:
+        seconds = float(seconds_per_km or 0) * (float(distance_m) / 1000.0)
+    except Exception:
+        return ""
+
+    if seconds <= 0:
+        return ""
+
+    return _format_time_seconds(seconds)
+
+
+def _first_athlete_attr(athlete, names):
+    for name in names:
+        if hasattr(athlete, name):
+            value = getattr(athlete, name, None)
+            if value not in (None, ""):
+                return name, value
+    return None, None
+
+
+def _athlete_t_pr_seconds(athlete, key):
+    attr_names = {
+        "TM": ["pr_tm_s", "pr_tm", "pr_marathon_s", "pr_marathon", "pr_m_s", "pr_m"],
+        "THM": ["pr_thm_s", "pr_thm", "pr_half_marathon_s", "pr_half_marathon", "pr_hm_s", "pr_hm"],
+        "T10": ["pr_10000_s", "pr_10000", "pr_10k_s", "pr_10k", "pr_t10_s", "pr_t10"],
+        "T5": ["pr_5000_s", "pr_5000", "pr_5k_s", "pr_5k", "pr_t5_s", "pr_t5"],
+        "T3": ["pr_3000_s", "pr_3000", "pr_3k_s", "pr_3k", "pr_t3_s", "pr_t3"],
+        "T15": ["pr_1500_s", "pr_1500", "pr_t15_s", "pr_t15"],
+        "T8": ["pr_800_s", "pr_800", "pr_t8_s", "pr_t8"],
+        "T4": ["pr_t4_s", "pr_t4", "pr_400_s", "pr_400"],
+    }
+    _, value = _first_athlete_attr(athlete, attr_names.get(key, []))
+    return _seconds_from_time_value(value)
+
+
+def _pace_seconds_per_km_from_value(value):
+    if value in (None, ""):
+        return None
+
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+
+        if ":" in raw:
+            seconds = _seconds_from_time_value(raw)
+            return seconds if seconds and seconds > 0 else None
+
+        raw = raw.replace(",", ".")
+        try:
+            numeric = float(raw)
+        except Exception:
+            return None
+
+        if numeric <= 0:
+            return None
+
+        if numeric < 20:
+            return numeric * 60.0
+
+        return numeric
+
+    try:
+        numeric = float(value)
+    except Exception:
+        return None
+
+    if numeric <= 0:
+        return None
+
+    if numeric < 20:
+        return numeric * 60.0
+
+    return numeric
+
+
+def _zone_speed_mps(athlete, label):
+    z = label.lower()
+    zone_num = z.replace("z", "")
+
+    try:
+        speeds = athlete.get_zone_speed_mps()
+    except Exception:
+        speeds = getattr(athlete, "zone_speed_mps", {}) or {}
+
+    if isinstance(speeds, dict):
+        speed_value = speeds.get(zone_num) or speeds.get(str(zone_num))
+        try:
+            speed = float(speed_value or 0)
+        except Exception:
+            speed = 0
+        if speed > 0:
+            return speed
+
+    pace_attr_names = [
+        f"zone_pace_{z}",
+        f"pace_{z}",
+        f"{z}_pace",
+        f"zone_{z}_pace",
+        f"zone_{z}",
+        f"{z}",
+        f"zone_{z}_min_per_km",
+        f"{z}_min_per_km",
+        f"zone_{z}_pace_min_km",
+        f"{z}_pace_min_km",
+        f"zone_time_{z}",
+        f"time_{z}",
+        f"{z}_time",
+    ]
+    _, pace_value = _first_athlete_attr(athlete, pace_attr_names)
+    pace_seconds = _pace_seconds_per_km_from_value(pace_value)
+    if pace_seconds and pace_seconds > 0:
+        return 1000.0 / pace_seconds
+
+    speed_attr_names = [
+        f"zone_speed_{z}",
+        f"speed_{z}",
+    ]
+    _, speed_value = _first_athlete_attr(athlete, speed_attr_names)
+
+    try:
+        speed = float(speed_value or 0)
+    except Exception:
+        return None
+
+    if speed <= 0:
+        return None
+
+    return speed
+
+
+def _build_zones_times_rows(athlete):
+    labels = ["Z1", "Z2", "Z3", "Z4", "Z5", "TM", "THM", "T10", "T5", "T3", "T15", "T8", "T4"]
+    t_distances = {
+        "TM": 42195,
+        "THM": 21097.5,
+        "T10": 10000,
+        "T5": 5000,
+        "T3": 3000,
+        "T15": 1500,
+        "T8": 800,
+        "T4": 400,
+    }
+
+    rows = []
+    if not athlete:
+        for label in labels:
+            rows.append({"pr": "-" if label.startswith("Z") else "", "label": label, "per_km": "", "per_400m": "", "per_100m": ""})
+        return rows
+
+    for label in labels:
+        pr_display = "-" if label.startswith("Z") else ""
+        per_km = ""
+        per_400m = ""
+        per_100m = ""
+
+        if label.startswith("Z"):
+            speed = _zone_speed_mps(athlete, label)
+            per_km = _format_pace_from_speed(speed, 1000)
+            per_400m = _format_pace_from_speed(speed, 400)
+            per_100m = _format_pace_from_speed(speed, 100)
+        else:
+            pr_seconds = _athlete_t_pr_seconds(athlete, label)
+            distance = t_distances.get(label)
+            if pr_seconds and distance:
+                seconds_per_km = float(pr_seconds) / (float(distance) / 1000.0)
+                pr_display = _format_time_seconds(pr_seconds)
+                per_km = _format_pace_from_seconds_per_km(seconds_per_km, 1000)
+                per_400m = _format_pace_from_seconds_per_km(seconds_per_km, 400)
+                per_100m = _format_pace_from_seconds_per_km(seconds_per_km, 100)
+
+        rows.append({
+            "pr": pr_display,
+            "label": label,
+            "per_km": per_km,
+            "per_400m": per_400m,
+            "per_100m": per_100m,
+        })
+
+    return rows
 
 
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
@@ -960,5 +1210,6 @@ def athlete_year_calendar_view(request):
             "athletes": athletes,
             "selected_athlete_id": str(selected_athlete_id or ""),
             "selected_athlete": selected_athlete,
+            "zones_times_rows": _build_zones_times_rows(selected_athlete),
         },
     )
