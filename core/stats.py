@@ -12,7 +12,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v9"
+STATS_SCHEMA_VERSION = "v10"
 
 
 def _stats_version() -> int:
@@ -520,9 +520,6 @@ def base_week_stats(plan, week_start: date_cls):
                 if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t):
                     continue
 
-                if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t):
-                    continue
-
                 if t in t_totals:
                     t_totals[t]["distance_m"] += int(nm)
                     t_totals[t]["duration_s"] += int(dur)
@@ -773,6 +770,9 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                     continue
 
                 dur = _dur_s(seg, nm, speed)
+
+                if _apply_progressive_zone_split(seg, zones, avg_zone_speeds, nm, dur, t_totals, t):
+                    continue
 
                 if t in t_totals:
                     t_totals[t]["distance_m"] += int(nm)
