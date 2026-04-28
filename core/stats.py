@@ -12,7 +12,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v4"
+STATS_SCHEMA_VERSION = "v6"
 
 
 def _stats_version() -> int:
@@ -157,7 +157,7 @@ def _dur_s(seg, nm: int, speed_mps: float) -> int:
 _COMPOUND_SET_RE = re.compile(r"\b(\d+)\s*(?:x|\*|×)\s*\(\s*([^)]+?)\s*\)", re.IGNORECASE)
 _COMPOUND_DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
 _COMPOUND_ZONE_RE = re.compile(r"\bZ\s*([1-6])\b", re.IGNORECASE)
-_COMPOUND_T_RE = re.compile(r"\b(?:T\s*)?(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)\b", re.IGNORECASE)
+_COMPOUND_T_RE = re.compile(r"\b(T\s*(?:800|1500|3000|5000|10000|8|15|3|5|10|4)|TM|THM)\b", re.IGNORECASE)
 
 
 def _normalize_compound_t_type(value: str):
@@ -238,6 +238,98 @@ def _compound_rep_loads(seg, default_zone: str, speeds: dict):
         loads.append({
             "zone": part_zone,
             "t_type": part_t,
+            "distance_m": nm,
+            "duration_s": dur,
+        })
+
+    return loads or None
+
+
+_SIMPLE_REPS_DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
+_SIMPLE_DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
+_SIMPLE_MIN_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(?:'|min\b)", re.IGNORECASE)
+_SIMPLE_TIME_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b")
+
+
+def _text_duration_s(text: str) -> int:
+    tm = _SIMPLE_TIME_RE.search(text or "")
+    if tm:
+        a = int(tm.group(1))
+        b = int(tm.group(2))
+        c = tm.group(3)
+        if c is not None:
+            return (a * 3600) + (b * 60) + int(c)
+        return (a * 60) + b
+
+    mm = _SIMPLE_MIN_RE.search(text or "")
+    if mm:
+        try:
+            return int(round(float(mm.group(1).replace(",", ".")) * 60.0))
+        except Exception:
+            return 0
+
+    return 0
+
+
+def _text_fallback_loads(seg, default_zone: str, speeds: dict, t_speed_func=None):
+    """
+    Fallback voor athlete-overrides die als tekstsegment zijn opgeslagen.
+    De parserstructuur blijft ongemoeid; stats interpreteert alleen de tekst voor totalen.
+    """
+    text = (getattr(seg, "text", "") or "").strip()
+    if not text:
+        return None
+
+    default_t = (getattr(seg, "t_type", "") or "").strip()
+    chunks = []
+    for line in re.split(r"[\n/]+", text):
+        line = line.strip()
+        if line:
+            chunks.append(line)
+
+    loads = []
+    for chunk in chunks or [text]:
+        zm = _COMPOUND_ZONE_RE.search(chunk)
+        zone = str(zm.group(1)) if zm else str(default_zone or "")
+        if not zone or zone not in speeds:
+            continue
+
+        tm = _COMPOUND_T_RE.search(chunk)
+        t_type = _normalize_compound_t_type(tm.group(1)) if tm else default_t
+
+        reps_match = _SIMPLE_REPS_DISTANCE_RE.search(chunk)
+        single_match = _SIMPLE_DISTANCE_RE.search(chunk)
+        duration_s = _text_duration_s(chunk)
+
+        if reps_match:
+            try:
+                reps = float(reps_match.group(1).replace(",", "."))
+                dist_m = _compound_distance_to_m(reps_match.group(2), reps_match.group(3))
+                nm = int(round(reps * dist_m))
+            except Exception:
+                nm = 0
+        elif single_match:
+            nm = _compound_distance_to_m(single_match.group(1), single_match.group(2))
+        elif duration_s:
+            reps_match2 = re.search(r"(\d+)\s*(?:x|\*|×)", chunk)
+            reps2 = int(reps_match2.group(1)) if reps_match2 else 1
+            total_duration = duration_s * reps2
+            t_speed = t_speed_func(t_type) if (t_type and t_speed_func) else None
+            speed = float(t_speed) if t_speed else float(speeds[zone])
+            nm = int(round(total_duration * speed))
+            duration_s = total_duration
+        else:
+            nm = 0
+
+        if nm <= 0:
+            continue
+
+        speed_for_duration = float(speeds[zone])
+        dur = int(duration_s) if duration_s else int(round(float(nm) / speed_for_duration))
+
+        loads.append({
+            "zone": zone,
+            "t_type": t_type,
             "distance_m": nm,
             "duration_s": dur,
         })
@@ -405,8 +497,15 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 zone = str(z_raw) if z_raw else ("4" if is_race else "")
 
                 if seg.type == "ALT":
-                    if zone in alt_zones and seg.duration_s:
-                        alt_zones[zone]["duration_s"] += int(seg.duration_s)
+                    if zone in alt_zones:
+                        alt_duration_s = int(seg.duration_s or 0)
+                        if alt_duration_s <= 0:
+                            alt_duration_s = _text_duration_s(getattr(seg, "text", "") or "")
+                            reps_match = re.search(r"(\d+)\s*(?:x|\*|×)", getattr(seg, "text", "") or "")
+                            if reps_match and alt_duration_s > 0:
+                                alt_duration_s *= int(reps_match.group(1))
+                        if alt_duration_s > 0:
+                            alt_zones[zone]["duration_s"] += int(alt_duration_s)
                     continue
 
                 if not zone or zone not in speeds:
@@ -437,6 +536,26 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 speed = float(t_speed) if t_speed else float(speeds[zone])
                 nm = _norm_m_athlete(seg, speed)
                 if nm <= 0:
+                    fallback_loads = _text_fallback_loads(seg, zone, speeds, lambda tt: _t_speed_mps(athlete, tt))
+                    if fallback_loads:
+                        for load in fallback_loads:
+                            load_zone = load["zone"]
+                            load_nm = int(load["distance_m"])
+                            load_dur = int(load["duration_s"])
+                            load_t = (load.get("t_type") or "").strip()
+
+                            if load_t in t_totals:
+                                t_totals[load_t]["distance_m"] += int(load_nm)
+                                t_totals[load_t]["duration_s"] += int(load_dur)
+
+                            if is_race:
+                                race["distance_m"] += int(load_nm)
+                                race["duration_s"] += int(load_dur)
+
+                            zones[load_zone]["distance_m"] += int(load_nm)
+                            zones[load_zone]["duration_s"] += int(load_dur)
+                        continue
+
                     continue
 
                 dur = _dur_s(seg, nm, speed)

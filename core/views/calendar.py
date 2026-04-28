@@ -414,10 +414,49 @@ def _invalidate_stats_cache():
     except Exception:
         cache.set(STATS_VERSION_KEY, 1, None)
 
+def _t_type_from_text(text: str) -> str:
+    match = re.search(
+        r"\b(T\s*(?:800|1500|3000|5000|10000|8|15|3|5|10|4)|TM|THM)\b",
+        text or "",
+        re.IGNORECASE,
+    )
+    if not match:
+        return ""
+
+    raw = match.group(1).upper().replace(" ", "")
+    mapping = {
+        "T8": "800",
+        "T800": "800",
+        "T15": "1500",
+        "T1500": "1500",
+        "T3": "3000",
+        "T3000": "3000",
+        "T5": "5000",
+        "T5000": "5000",
+        "T10": "10000",
+        "T10000": "10000",
+        "T4": "T4",
+        "TM": "TM",
+        "THM": "THM",
+    }
+    return mapping.get(raw, "")
+
+
 def _zone_from_text(text: str, default: str = "1") -> str:
     match = re.search(r"\bz\s*([1-6])\b", text or "", re.IGNORECASE)
     if match:
         return match.group(1)
+
+    t_type = _t_type_from_text(text)
+    if t_type == "TM":
+        return "2"
+    if t_type == "THM":
+        return "3"
+    if t_type in ("10000", "5000", "3000"):
+        return "4"
+    if t_type in ("1500", "800", "T4"):
+        return "5"
+
     return default
 
 
@@ -481,6 +520,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             order=order,
             type=segment_type,
             zone=_zone_from_text(text, default_zone),
+            t_type=_t_type_from_text(text),
             text=text,
             parse_ok=False,
         )
