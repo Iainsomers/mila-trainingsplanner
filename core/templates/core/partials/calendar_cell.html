@@ -129,6 +129,11 @@
       var link = cell.querySelector("a.celllink");
       if (!link) return;
 
+      
+      var ctl = (link.innerText || "").toLowerCase();
+      if (ctl.includes("race!")) return;
+      if (ctl.includes("race")) return;
+
       var coreLines = Array.from(cell.querySelectorAll(".core-line[data-zone]")).filter(function(el) {
         return /^[1-6]$/.test((el.dataset.zone || "").trim());
       });
