@@ -28,6 +28,27 @@
     background: #fafafa;
   }
 
+  .week-phase-wrap {
+    margin-top: 6px;
+    min-height: 18px;
+  }
+
+  .week-phase-label {
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.55);
+  }
+
+  .weeklabel.phase-recovery { background: #e8ddff !important; }
+  .weeklabel.phase-aerobe   { background: #e5533d !important; }
+  .weeklabel.phase-specific { background: #bfe7bf !important; }
+  .weeklabel.phase-intense  { background: #b7d7ff !important; }
+  .weeklabel.phase-taper    { background: #ff7a00 !important; }
+
+
   .sumcol {
     width: 120px;
     background: #fafafa;
@@ -195,8 +216,13 @@
     <tbody>
       {% for w in week_rows %}
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          <td class="weeklabel" rowspan="3">
+          <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="3">
             {{ w.week_start|date:"d-m" }} – {{ w.week_end|date:"d-m" }}
+            {% if w.week_phase_label %}
+              <div class="week-phase-wrap">
+                <span class="week-phase-label">{{ w.week_phase_label }}</span>
+              </div>
+            {% endif %}
           </td>
           <td class="sumcol" rowspan="3">
             <div style="font-size:11px; line-height:1.35;">
