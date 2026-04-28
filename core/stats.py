@@ -12,7 +12,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v7"
+STATS_SCHEMA_VERSION = "v9"
 
 
 def _stats_version() -> int:
@@ -158,6 +158,61 @@ _COMPOUND_SET_RE = re.compile(r"\b(\d+)\s*(?:x|\*|×)\s*\(\s*([^)]+?)\s*\)", re.
 _COMPOUND_DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
 _COMPOUND_ZONE_RE = re.compile(r"\bZ\s*([1-6])\b", re.IGNORECASE)
 _COMPOUND_T_RE = re.compile(r"\b(T\s*(?:800|1500|3000|5000|10000|8|15|3|5|10|4)|TM|THM)\b", re.IGNORECASE)
+
+
+_PROGRESSIVE_ZONE_RE = re.compile(
+    r"\bZ\s*([1-6])\s*(?:>|-)\s*Z?\s*([1-6])\b",
+    re.IGNORECASE,
+)
+
+
+def _progressive_zone_loads(seg, speeds: dict, total_nm: int, total_duration_s: int, total_speed_mps: float = None):
+    """
+    Herkent progressive zones zoals 4*1000m z2>z3.
+    Het segment blijft één opgeslagen CORE-regel; alleen stats splitst 50/50.
+    """
+    text = (getattr(seg, "text", "") or "").strip()
+    match = _PROGRESSIVE_ZONE_RE.search(text)
+    if not match:
+        return None
+
+    z1 = str(match.group(1))
+    z2 = str(match.group(2))
+    if z1 not in speeds or z2 not in speeds or z1 == z2:
+        return None
+
+    total_nm = int(total_nm or 0)
+    total_duration_s = int(total_duration_s or 0)
+
+    if total_nm <= 0 and total_duration_s <= 0:
+        return None
+
+    if total_duration_s > 0 and total_nm <= 0:
+        half_duration_1 = int(round(float(total_duration_s) / 2.0))
+        half_duration_2 = int(total_duration_s) - half_duration_1
+        loads = []
+        for z, dur in ((z1, half_duration_1), (z2, half_duration_2)):
+            speed = float(total_speed_mps or speeds[z])
+            loads.append({
+                "zone": z,
+                "distance_m": int(round(float(dur) * speed)),
+                "duration_s": int(dur),
+            })
+        return loads
+
+    half_nm_1 = int(round(float(total_nm) / 2.0))
+    half_nm_2 = int(total_nm) - half_nm_1
+
+    loads = []
+    for z, nm in ((z1, half_nm_1), (z2, half_nm_2)):
+        speed = float(speeds[z])
+        loads.append({
+            "zone": z,
+            "distance_m": int(nm),
+            "duration_s": _dur_s(seg, int(nm), speed),
+        })
+
+    return loads or None
 
 
 def _normalize_compound_t_type(value: str):
@@ -336,6 +391,26 @@ def _text_fallback_loads(seg, default_zone: str, speeds: dict, t_speed_func=None
 
     return loads or None
 
+def _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals=None, t=""):
+    progressive_loads = _progressive_zone_loads(seg, speeds, nm, dur, None)
+    if not progressive_loads:
+        return False
+
+    for load in progressive_loads:
+        load_zone = str(load["zone"])
+        load_nm = int(load["distance_m"])
+        load_dur = int(load["duration_s"])
+
+        if t_totals is not None and t in t_totals:
+            t_totals[t]["distance_m"] += load_nm
+            t_totals[t]["duration_s"] += load_dur
+
+        zones[load_zone]["distance_m"] += load_nm
+        zones[load_zone]["duration_s"] += load_dur
+
+    return True
+
+
 def _fetch_week_slots(plan, week_start: date_cls, athlete_ids=None):
     days = _week_days(week_start)
 
@@ -442,6 +517,12 @@ def base_week_stats(plan, week_start: date_cls):
                 dur = _dur_s(seg, nm, speed)
 
                 t = (getattr(seg, "t_type", "") or "").strip()
+                if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t):
+                    continue
+
+                if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t):
+                    continue
+
                 if t in t_totals:
                     t_totals[t]["distance_m"] += int(nm)
                     t_totals[t]["duration_s"] += int(dur)
@@ -570,6 +651,9 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 dur = _dur_s(seg, nm, speed)
 
                 t = (getattr(seg, "t_type", "") or "").strip()
+                if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t):
+                    continue
+
                 if t in t_totals:
                     t_totals[t]["distance_m"] += int(nm)
                     t_totals[t]["duration_s"] += int(dur)
