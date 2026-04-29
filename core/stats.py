@@ -12,7 +12,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v10"
+STATS_SCHEMA_VERSION = "v12"
 
 
 def _stats_version() -> int:
@@ -164,6 +164,38 @@ _PROGRESSIVE_ZONE_RE = re.compile(
     r"\bZ\s*([1-6])\s*(?:>|-)\s*Z?\s*([1-6])\b",
     re.IGNORECASE,
 )
+_PROGRESSIVE_T_RE = re.compile(
+    r"\b(T\s*(?:800|1500|3000|5000|10000|15|8|10|5|3|4)|TM|THM)\s*(?:>|-)\s*(T\s*(?:800|1500|3000|5000|10000|15|8|10|5|3|4)|TM|THM)\b",
+    re.IGNORECASE,
+)
+
+
+def _progressive_t_types(seg):
+    text = (getattr(seg, "text", "") or "").strip()
+    match = _PROGRESSIVE_T_RE.search(text)
+    if not match:
+        return None
+
+    t1 = _normalize_compound_t_type(match.group(1))
+    t2 = _normalize_compound_t_type(match.group(2))
+    if not t1 or not t2 or t1 == t2:
+        return None
+
+    return t1, t2
+
+
+def _default_zone_for_t_type(t_type: str):
+    mapping = {
+        "TM": "2",
+        "THM": "3",
+        "10000": "4",
+        "5000": "4",
+        "3000": "4",
+        "1500": "5",
+        "800": "5",
+        "T4": "5",
+    }
+    return mapping.get(str(t_type or "").strip().upper())
 
 
 def _progressive_zone_loads(seg, speeds: dict, total_nm: int, total_duration_s: int, total_speed_mps: float = None):
@@ -391,19 +423,64 @@ def _text_fallback_loads(seg, default_zone: str, speeds: dict, t_speed_func=None
 
     return loads or None
 
-def _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals=None, t=""):
+def _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals=None, t="", zone=None):
     progressive_loads = _progressive_zone_loads(seg, speeds, nm, dur, None)
-    if not progressive_loads:
-        return False
+    progressive_t = _progressive_t_types(seg)
 
-    for load in progressive_loads:
+    if not progressive_loads:
+        if not progressive_t:
+            return False
+
+        text = (getattr(seg, "text", "") or "").strip()
+        has_explicit_zone = bool(_COMPOUND_ZONE_RE.search(text))
+
+        half_nm_1 = int(round(float(nm or 0) / 2.0))
+        half_nm_2 = int(nm or 0) - half_nm_1
+        half_dur_1 = int(round(float(dur or 0) / 2.0))
+        half_dur_2 = int(dur or 0) - half_dur_1
+
+        z1 = str(zone or getattr(seg, "zone", "") or "")
+        z2 = z1
+        if not has_explicit_zone:
+            z1 = _default_zone_for_t_type(progressive_t[0]) or z1
+            z2 = _default_zone_for_t_type(progressive_t[1]) or z2
+
+        if not z1 or not z2 or z1 not in speeds or z2 not in speeds:
+            return False
+
+        progressive_loads = [
+            {
+                "zone": z1,
+                "t_type": progressive_t[0],
+                "distance_m": half_nm_1,
+                "duration_s": half_dur_1,
+            },
+            {
+                "zone": z2,
+                "t_type": progressive_t[1],
+                "distance_m": half_nm_2,
+                "duration_s": half_dur_2,
+            },
+        ]
+
+    split_count = len(progressive_loads)
+
+    for i, load in enumerate(progressive_loads):
         load_zone = str(load["zone"])
         load_nm = int(load["distance_m"])
         load_dur = int(load["duration_s"])
 
-        if t_totals is not None and t in t_totals:
-            t_totals[t]["distance_m"] += load_nm
-            t_totals[t]["duration_s"] += load_dur
+        if t_totals is not None:
+            if progressive_t:
+                t_key = (load.get("t_type") or "").strip()
+                if not t_key:
+                    t_key = progressive_t[0] if i < split_count / 2 else progressive_t[1]
+                if t_key in t_totals:
+                    t_totals[t_key]["distance_m"] += load_nm
+                    t_totals[t_key]["duration_s"] += load_dur
+            elif t in t_totals:
+                t_totals[t]["distance_m"] += load_nm
+                t_totals[t]["duration_s"] += load_dur
 
         zones[load_zone]["distance_m"] += load_nm
         zones[load_zone]["duration_s"] += load_dur
@@ -517,7 +594,7 @@ def base_week_stats(plan, week_start: date_cls):
                 dur = _dur_s(seg, nm, speed)
 
                 t = (getattr(seg, "t_type", "") or "").strip()
-                if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t):
+                if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t, zone):
                     continue
 
                 if t in t_totals:
@@ -648,7 +725,7 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 dur = _dur_s(seg, nm, speed)
 
                 t = (getattr(seg, "t_type", "") or "").strip()
-                if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t):
+                if _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals, t, zone):
                     continue
 
                 if t in t_totals:
@@ -771,7 +848,7 @@ def group_week_stats(plan, athletes, week_start: date_cls):
 
                 dur = _dur_s(seg, nm, speed)
 
-                if _apply_progressive_zone_split(seg, zones, avg_zone_speeds, nm, dur, t_totals, t):
+                if _apply_progressive_zone_split(seg, zones, avg_zone_speeds, nm, dur, t_totals, t, zone):
                     continue
 
                 if t in t_totals:
