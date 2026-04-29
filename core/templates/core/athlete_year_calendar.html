@@ -190,11 +190,23 @@
     background: #f5f5f5;
     font-weight: 700;
   }
+
+  /* thicker line between weeks */
+  .year-table tbody tr:nth-child(3n) td,
+  .year-table tbody tr:nth-child(3n - 2) td[rowspan="3"] {
+    border-bottom: 3px solid #999 !important;
+  }
+
+  .year-table th,
+  .year-table td {
+    overflow-wrap: anywhere;
+  }
+
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid py-4">
 
   <div class="d-flex align-items-center justify-content-between mb-2">
     <h2 class="mb-0">Athlete Year Calendar</h2>
