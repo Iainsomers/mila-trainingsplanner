@@ -717,9 +717,18 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         owned_plans = list(TrainingPlan.objects.order_by("name"))
 
     base_slot = None
+    existing_override = None
+
     for plan in owned_plans:
         if athlete.id not in plan.targeted_athlete_ids():
             continue
+
+        existing_override = TrainingSlot.objects.filter(
+            plan=plan,
+            date=d,
+            slot_index=slot_index,
+            athlete=athlete,
+        ).first()
 
         base_slot = TrainingSlot.objects.filter(
             plan=plan,
@@ -728,14 +737,15 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             athlete__isnull=True,
         ).first()
 
-        if base_slot:
+        if existing_override or base_slot:
             break
 
-    if not base_slot:
+    source_slot = existing_override or base_slot
+    if not source_slot:
         return
 
     override_slot, _ = TrainingSlot.objects.update_or_create(
-        plan=base_slot.plan,
+        plan=source_slot.plan,
         date=d,
         slot_index=slot_index,
         athlete=athlete,
