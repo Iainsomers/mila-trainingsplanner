@@ -676,9 +676,16 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     if not selected_plan and athlete:
         for plan in TrainingPlan.objects.order_by("name"):
-            if athlete.id in plan.targeted_athlete_ids():
+            if athlete.id not in plan.targeted_athlete_ids():
+                continue
+            if TrainingSlot.objects.filter(plan=plan, date=date(int(yyyy), int(mm), int(dd)), slot_index=int(slot_index)).exists():
                 selected_plan = plan
                 break
+        if not selected_plan:
+            for plan in TrainingPlan.objects.order_by("name"):
+                if athlete.id in plan.targeted_athlete_ids():
+                    selected_plan = plan
+                    break
 
     forbid = _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
