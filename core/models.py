@@ -406,7 +406,7 @@ class TrainingSegment(models.Model):
 
     norm_distance_m = models.PositiveIntegerField(null=True, blank=True)
 
-    text = models.CharField(max_length=300, blank=True)
+    text = models.TextField(blank=True)
 
     parse_ok = models.BooleanField(default=False)
     parse_message = models.CharField(max_length=300, blank=True, default="")
