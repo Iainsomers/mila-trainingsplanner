@@ -16,6 +16,8 @@ from core.views.coach import (
     coach_groups_view,
     coach_group_create_view,
     coach_group_edit_view,
+    coach_athlete_delete_view,
+    coach_group_delete_view,
     coach_assignments_view,
     coach_assignment_edit_view,
 )
@@ -71,11 +73,13 @@ urlpatterns = [
     path("coach/athletes/", coach_athletes_view, name="coach_athletes"),
     path("coach/athletes/new/", coach_athlete_create_view, name="coach_athlete_create"),
     path("coach/athletes/<int:athlete_id>/edit/", coach_athlete_edit_view, name="coach_athlete_edit"),
+    path("coach/athletes/<int:athlete_id>/delete/", coach_athlete_delete_view, name="coach_athlete_delete"),
 
     # Coach: Groups CRUD
     path("coach/groups/", coach_groups_view, name="coach_groups"),
     path("coach/groups/new/", coach_group_create_view, name="coach_group_create"),
     path("coach/groups/<int:group_id>/edit/", coach_group_edit_view, name="coach_group_edit"),
+    path("coach/groups/<int:group_id>/delete/", coach_group_delete_view, name="coach_group_delete"),
 
     # Coach: Assignments (editable)
     path("coach/assignments/", coach_assignments_view, name="coach_assignments"),

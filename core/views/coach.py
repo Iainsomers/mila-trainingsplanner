@@ -955,3 +955,25 @@ def coach_assignment_edit_view(request, plan_id: int):
         "core/coach_assignment_form.html",
         {"plan": plan, "groups_all": groups_all, "athletes_all": athletes_all, "errors": errors, "form": form},
     )
+
+
+# -----------------------------
+# Athletes DELETE
+# -----------------------------
+@login_required
+@require_http_methods(["POST"])
+def coach_athlete_delete_view(request, athlete_id: int):
+    athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
+    athlete.delete()
+    return redirect("coach_athletes")
+
+
+# -----------------------------
+# Groups DELETE
+# -----------------------------
+@login_required
+@require_http_methods(["POST"])
+def coach_group_delete_view(request, group_id: int):
+    group = get_object_or_404(_filter_owned(Group.objects.all(), request.user), id=group_id)
+    group.delete()
+    return redirect("coach_groups")

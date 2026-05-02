@@ -38,6 +38,10 @@
                   <td>{{ a.vdot|default:"—" }}</td>
                   <td class="text-end">
                     <a class="btn btn-sm btn-primary" href="{% url 'coach_athlete_edit' a.id %}">Edit</a>
+                    <form method="post" action="{% url 'coach_athlete_delete' a.id %}" style="display:inline;" onsubmit="return confirm('Weet je zeker dat je deze atleet wilt verwijderen?');">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
                   </td>
                 </tr>
               {% endfor %}
