@@ -236,6 +236,7 @@
                   </button>
                 {% endif %}
 
+                {% if not is_athlete_year_calendar %}
                 <button
                   type="submit"
                   class="btn btn-outline-danger"
@@ -248,6 +249,7 @@
                     Verwijderen
                   {% endif %}
                 </button>
+                {% endif %}
 
                 <button type="submit" class="btn btn-primary">
                   Opslaan

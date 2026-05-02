@@ -676,16 +676,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     if not selected_plan and athlete:
         for plan in TrainingPlan.objects.order_by("name"):
-            if athlete.id not in plan.targeted_athlete_ids():
-                continue
-            if TrainingSlot.objects.filter(plan=plan, date=date(int(yyyy), int(mm), int(dd)), slot_index=int(slot_index)).exists():
+            if athlete.id in plan.targeted_athlete_ids():
                 selected_plan = plan
                 break
-        if not selected_plan:
-            for plan in TrainingPlan.objects.order_by("name"):
-                if athlete.id in plan.targeted_athlete_ids():
-                    selected_plan = plan
-                    break
+
+    is_athlete_year_calendar = (request.GET.get("source") == "athlete_year")
 
     forbid = _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
@@ -745,6 +740,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "selected_plan": selected_plan,
                 "selected_athlete": athlete,
                 "is_override": bool(has_fix),
+                "is_athlete_year_calendar": is_athlete_year_calendar,
                 "saved_templates": _saved_templates_for_user(request.user),
                 "selected_template_id": "",
                 "template_name": "",
