@@ -994,6 +994,26 @@ def athlete_year_calendar_view(request):
         ):
             athlete_phase_by_plan_week[(obj.plan_id, obj.week_start)] = (obj.phase or "")
 
+    # BULK FETCH checks & comments (performance)
+    check_map = {}
+    comment_map = {}
+    if selected_athlete:
+        checks = AthleteDayCheck.objects.filter(
+            athlete=selected_athlete,
+            date__gte=start,
+            date__lte=end,
+        )
+        for c in checks:
+            check_map[(c.date, c.slot_index)] = c
+
+        comments = AthleteDayComment.objects.filter(
+            athlete=selected_athlete,
+            date__gte=start,
+            date__lte=end,
+        )
+        for c in comments:
+            comment_map[c.date] = c
+
     week_rows = []
     d = start
 
@@ -1014,20 +1034,8 @@ def athlete_year_calendar_view(request):
             check1 = None
             check2 = None
             if selected_athlete and day <= date.today():
-                try:
-                    check1 = AthleteDayCheck.objects.filter(
-                        date=day,
-                        athlete=selected_athlete,
-                        slot_index=1,
-                    ).first()
-                    check2 = AthleteDayCheck.objects.filter(
-                        date=day,
-                        athlete=selected_athlete,
-                        slot_index=2,
-                    ).first()
-                except Exception:
-                    check1 = None
-                    check2 = None
+                check1 = check_map.get((day, 1))
+                check2 = check_map.get((day, 2))
 
             cells1.append({
                 "day": day,
@@ -1045,13 +1053,7 @@ def athlete_year_calendar_view(request):
             })
             comment = None
             if selected_athlete:
-                try:
-                    comment = AthleteDayComment.objects.filter(
-                        date=day,
-                        athlete=selected_athlete,
-                    ).first()
-                except Exception:
-                    comment = None
+                comment = comment_map.get(day)
 
             cells3.append({
                 "day": day,
