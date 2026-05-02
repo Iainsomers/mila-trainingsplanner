@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect
 from django.utils.html import escape
 from django.db.models import Q
 from django.core.cache import cache
+from django.contrib.auth.decorators import login_required
 
 from core.models import (
     AthleteDayCheck,
@@ -33,6 +34,7 @@ def _filter_owned(qs, user):
     return qs.filter(owner=user)
 
 
+@login_required
 def calendar_test(request):
     slots = TrainingSlot.objects.order_by("date", "slot_index", "athlete_id")
     lines = []
@@ -76,6 +78,7 @@ def _to_week_start(d: date) -> date:
 # -----------------------------
 # BASE week phase (plan)
 # -----------------------------
+@login_required
 def week_phase_set(request, y: int, m: int, d: int):
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
@@ -119,6 +122,7 @@ def week_phase_set(request, y: int, m: int, d: int):
 # -----------------------------
 # OVERRIDE week phase (athlete)
 # -----------------------------
+@login_required
 def athlete_week_phase_set(request, y: int, m: int, d: int):
     """
     POST /athlete-week-phase/YYYY/MM/DD/?plan=<id>&athlete=<id>
@@ -176,6 +180,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
     return HttpResponse("", status=204)
 
 
+@login_required
 def calendar_view(request):
     plans = _filter_owned(TrainingPlan.objects.order_by("name"), request.user)
     selected_plan = _get_selected_plan(request)
@@ -787,6 +792,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         order += 1
 
 
+@login_required
 def athlete_year_calendar_view(request):
     if request.method == "POST":
         date_str = request.POST.get("date")

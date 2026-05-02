@@ -204,6 +204,7 @@ def _copy_plan_contents(source_plan, target_plan):
         )
 
 
+@login_required
 @require_GET
 def dashboard_view(request):
     return render(request, "core/dashboard.html")

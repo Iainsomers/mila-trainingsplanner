@@ -26,6 +26,15 @@ from .common import (
     _get_effective_slot,
 )
 
+
+def _forbid_if_not_plan_owner(request, plan):
+    if plan and hasattr(plan, "owner"):
+        if request.user.is_staff:
+            return None
+        if plan.owner != request.user:
+            return HttpResponse("Forbidden", status=403)
+    return None
+
 STATS_VERSION_KEY = "mila:stats:version"
 
 
@@ -342,6 +351,9 @@ def _serialize_slot_template_text(wu_text, mob_text, sprint_text, core_text, cor
 @require_http_methods(["POST"])
 def week_copy(request, yyyy, mm, dd):
     selected_plan = _get_selected_plan(request)
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
     if not selected_plan:
         return HttpResponse("No plan", status=400)
 
@@ -403,6 +415,9 @@ def week_copy(request, yyyy, mm, dd):
 @require_http_methods(["POST"])
 def week_paste(request, yyyy, mm, dd):
     selected_plan = _get_selected_plan(request)
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
     if not selected_plan:
         return HttpResponse("No plan", status=400)
 
@@ -493,6 +508,9 @@ def slot_detail(request, slot_id):
 @require_GET
 def slot_open(request, y, m, d, slot_index):
     selected_plan = _get_selected_plan(request)
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
 
     day = date(int(y), int(m), int(d))
     slot, _ = TrainingSlot.objects.get_or_create(
@@ -507,6 +525,9 @@ def slot_open(request, y, m, d, slot_index):
 @require_http_methods(["POST"])
 def slot_copy(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
 
     d = date_cls(int(yyyy), int(mm), int(dd))
     slot_index = int(slot_index)
@@ -557,6 +578,9 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
 @require_http_methods(["POST"])
 def slot_paste(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
 
     clipboard = request.session.get("training_clipboard")
     if not clipboard or not isinstance(clipboard, dict):
@@ -631,6 +655,9 @@ def slot_clipboard_clear(request):
 @require_http_methods(["POST"])
 def slot_reset_override(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
 
     athlete = _get_selected_athlete_from_request(request)
     if not athlete:
@@ -667,6 +694,9 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
 @require_http_methods(["GET", "POST"])
 def slot_modal(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
 
     athlete = _get_selected_athlete_from_request(request)
     if not athlete and not request.user.is_staff:
