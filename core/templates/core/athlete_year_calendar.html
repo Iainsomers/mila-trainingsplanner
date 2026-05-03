@@ -416,7 +416,7 @@
             <td>
               <div class="comment-display"
                    data-date="{{ d.day|date:'Y-m-d' }}"
-                   data-text="{% if d.comment %}{{ d.comment.text|escapejs }}{% endif %}"
+                   data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}"
                    style="width:100%; height:40px; font-size:12px; cursor:pointer; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">
                    {% if d.comment %}{{ d.comment.text }}{% endif %}
               </div>
@@ -678,7 +678,15 @@
     return cookieValue;
   }
 
+  function normalizeCommentText(text) {
+    return (text || "")
+      .replace(/\\u005Cu000D\\u005Cu000A/g, "\n")
+      .replace(/\\u000D\\u000A/g, "\n")
+      .replace(/\\r\\n/g, "\n");
+  }
+
   function saveComment(dateStr, text) {
+    text = normalizeCommentText(text);
     var url = "?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}";
     var formData = new FormData();
     formData.append("date", dateStr);
@@ -701,7 +709,7 @@
     var modal = document.getElementById("commentModal");
     var textarea = document.getElementById("commentModalTextarea");
 
-    textarea.value = el.getAttribute("data-text") || "";
+    textarea.value = normalizeCommentText(el.getAttribute("data-text") || "");
     modal.style.display = "flex";
     textarea.focus();
   }
@@ -719,7 +727,7 @@
     }
 
     var textarea = document.getElementById("commentModalTextarea");
-    var updated = textarea.value || "";
+    var updated = normalizeCommentText(textarea.value || "");
 
     activeElement.textContent = updated;
     activeElement.setAttribute("data-text", updated);
