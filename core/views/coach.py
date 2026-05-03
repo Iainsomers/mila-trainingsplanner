@@ -892,12 +892,23 @@ def coach_group_edit_view(request, group_id: int):
 @login_required
 @require_GET
 def coach_assignments_view(request):
-    plans = _filter_owned(TrainingPlan.objects.prefetch_related("groups", "athletes").order_by("name"), request.user)
+    sort = request.GET.get("sort", "name")
+    if sort == "start":
+        qs = TrainingPlan.objects.order_by("start_date")
+    elif sort == "end":
+        qs = TrainingPlan.objects.order_by("end_date")
+    else:
+        qs = TrainingPlan.objects.order_by(Lower("name"))
+
+    plans = _filter_owned(qs.prefetch_related("groups", "athletes"), request.user)
+
     rows = []
     for p in plans:
         rows.append(
             {
                 "plan": p,
+                "start_date": p.start_date,
+                "end_date": p.end_date,
                 "group_names": list(p.groups.order_by("name").values_list("name", flat=True)),
                 "direct_athletes": list(p.athletes.order_by("name").values_list("name", flat=True)),
                 "count_groups": p.groups.count(),
