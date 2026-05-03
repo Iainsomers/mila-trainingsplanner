@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.db.models.functions import Lower
 
 from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase
 from .common import (
@@ -305,7 +306,15 @@ def settings_view(request):
 @login_required
 @require_GET
 def coach_plans_view(request):
-    plans = _filter_owned(TrainingPlan.objects.order_by("name"), request.user)
+    sort = request.GET.get("sort", "name")
+    if sort == "start":
+        qs = TrainingPlan.objects.order_by("start_date")
+    elif sort == "end":
+        qs = TrainingPlan.objects.order_by("end_date")
+    else:
+        qs = TrainingPlan.objects.order_by(Lower("name"))
+
+    plans = _filter_owned(qs, request.user)
     return render(request, "core/coach_plans.html", {"plans": plans})
 
 
@@ -321,7 +330,15 @@ def coach_plan_create_view(request):
         "copy_source_plan_id": "",
         "is_private": False,
     }
-    source_plans = _filter_owned(TrainingPlan.objects.order_by("name"), request.user)
+    source_sort = request.GET.get("sort", "name")
+    if sort == "start":
+        qs = TrainingPlan.objects.order_by("start_date")
+    elif sort == "end":
+        qs = TrainingPlan.objects.order_by("end_date")
+    else:
+        qs = TrainingPlan.objects.order_by("name")
+
+    plans = _filter_owned(qs, request.user)
 
     if request.method == "POST":
         form["name"] = (request.POST.get("name") or "").strip()
