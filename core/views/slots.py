@@ -705,6 +705,13 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         athlete = Athlete.objects.filter(name__iexact=inferred_name).first()
 
     if not selected_plan and athlete:
+        requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
+        if requested_plan_id.isdigit():
+            requested_plan = TrainingPlan.objects.filter(id=int(requested_plan_id)).first()
+            if requested_plan and athlete.id in requested_plan.targeted_athlete_ids():
+                selected_plan = requested_plan
+
+    if not selected_plan and athlete:
         for plan in TrainingPlan.objects.order_by("name"):
             if athlete.id in plan.targeted_athlete_ids():
                 selected_plan = plan
