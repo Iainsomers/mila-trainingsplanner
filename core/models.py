@@ -93,6 +93,8 @@ class Athlete(models.Model):
         default="manual",
     )
 
+    view_weeks_ahead = models.IntegerField(default=2)
+
     zone_speed_mps = models.JSONField(
         default=default_zone_speed_mps,
         blank=True,

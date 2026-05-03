@@ -514,6 +514,7 @@ def coach_athlete_create_view(request):
         "thm": "",
         "t4": "",
         "is_private": False,
+        "view_weeks_ahead": 2,
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -534,6 +535,7 @@ def coach_athlete_create_view(request):
         form["thm"] = (request.POST.get("thm") or "").strip()
         form["t4"] = (request.POST.get("t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
+        form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -562,6 +564,14 @@ def coach_athlete_create_view(request):
         except ValueError:
             vdot = None
             errors.append("VDOT is ongeldig (gebruik een getal).")
+
+        try:
+            view_weeks_ahead = int(form["view_weeks_ahead"])
+            if view_weeks_ahead < 0:
+                errors.append("Weken vooruit mag niet negatief zijn.")
+        except ValueError:
+            view_weeks_ahead = 2
+            errors.append("Weken vooruit is ongeldig (gebruik een getal).")
 
         try:
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
@@ -632,6 +642,7 @@ def coach_athlete_create_view(request):
                 vdot=vdot,
                 zone_method=form["zone_method"],
                 zone_speed_mps=zone_speed_mps,
+                view_weeks_ahead=view_weeks_ahead,
                 pr_800_s=pr_800_s,
                 pr_1500_s=pr_1500_s,
                 pr_3000_s=pr_3000_s,
@@ -679,6 +690,7 @@ def coach_athlete_edit_view(request, athlete_id: int):
         "thm": _format_pr_seconds(getattr(athlete, "pr_thm_s", None)),
         "t4": _format_pr_seconds(getattr(athlete, "pr_400_s", None)),
         "is_private": getattr(athlete, "is_private", False),
+        "view_weeks_ahead": getattr(athlete, "view_weeks_ahead", 2),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -699,6 +711,7 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["thm"] = (request.POST.get("thm") or "").strip()
         form["t4"] = (request.POST.get("t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
+        form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -727,6 +740,14 @@ def coach_athlete_edit_view(request, athlete_id: int):
         except ValueError:
             vdot = None
             errors.append("VDOT is ongeldig (gebruik een getal).")
+
+        try:
+            view_weeks_ahead = int(form["view_weeks_ahead"])
+            if view_weeks_ahead < 0:
+                errors.append("Weken vooruit mag niet negatief zijn.")
+        except ValueError:
+            view_weeks_ahead = 2
+            errors.append("Weken vooruit is ongeldig (gebruik een getal).")
 
         try:
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
@@ -795,6 +816,7 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.vdot = vdot
             athlete.zone_method = form["zone_method"]
             athlete.zone_speed_mps = zone_speed_mps
+            athlete.view_weeks_ahead = view_weeks_ahead
             athlete.pr_800_s = pr_800_s
             athlete.pr_1500_s = pr_1500_s
             athlete.pr_3000_s = pr_3000_s

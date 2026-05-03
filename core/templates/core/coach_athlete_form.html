@@ -181,6 +181,12 @@
           </div>
         </div>
 
+        <div class="mb-3">
+          <label class="form-label">Weeks visible ahead</label>
+          <input name="view_weeks_ahead" type="number" min="0" class="form-control" value="{{ form.view_weeks_ahead|default_if_none:2 }}">
+          <div class="form-text">0 = only today and earlier, 1 = this week, 2 = this week and next week. Race/Race! remains visible.</div>
+        </div>
+
         <hr class="my-4">
 
         <h5 class="mb-3">Zone Method</h5>
