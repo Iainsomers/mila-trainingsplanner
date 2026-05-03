@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q
 
-from core.models import TrainingPlan, Athlete, TrainingSlot, CoachAccess
+from core.models import TrainingPlan, Athlete, TrainingSlot, CoachAccess, CoachSettings
 
 
 # Backwards-compatible constant (sommige views importeren dit nog)
@@ -17,9 +17,14 @@ def _calendar_display_mode(request) -> str:
     Calendar display mode:
     - core_only: toon alleen core/alt in cell (hover blijft volledig)
     - all: toon alle segmenten in cell
-    Default = core_only
+    Default volgt CoachSettings wanneer de sessie nog geen waarde heeft.
     """
-    show_only_core = request.session.get("calendar_show_only_core", True)
+    if "calendar_show_only_core" in request.session:
+        show_only_core = request.session.get("calendar_show_only_core")
+    else:
+        settings = CoachSettings.objects.filter(user=request.user).first()
+        show_only_core = getattr(settings, "calendar_show_only_core", True)
+
     return "core_only" if bool(show_only_core) else "all"
 
 

@@ -76,6 +76,50 @@ def _to_week_start(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
+def _calendar_display_mode_with_settings(request, settings):
+    mode = _calendar_display_mode(request)
+
+    if (
+        request.GET.get("display_mode")
+        or request.GET.get("display")
+        or request.GET.get("mode")
+        or request.session.get("calendar_display_mode")
+        or request.session.get("display_mode")
+    ):
+        return mode
+
+    for attr in (
+        "calendar_display_mode",
+        "display_mode",
+        "training_display_mode",
+        "slot_display_mode",
+    ):
+        value = getattr(settings, attr, None)
+        if value not in (None, ""):
+            return value
+
+    for attr in (
+        "show_core_only",
+        "core_only",
+        "calendar_core_only",
+        "calendar_show_core_only",
+    ):
+        value = getattr(settings, attr, None)
+        if value is not None:
+            return "core" if bool(value) else "full"
+
+    for attr in (
+        "show_full_training",
+        "show_all_training_parts",
+        "calendar_show_full_training",
+    ):
+        value = getattr(settings, attr, None)
+        if value is not None:
+            return "full" if bool(value) else "core"
+
+    return mode
+
+
 # -----------------------------
 # BASE week phase (plan)
 # -----------------------------
@@ -398,7 +442,7 @@ def calendar_view(request):
         "core/calendar.html",
         {
             "week_rows": week_rows,
-            "display_mode": _calendar_display_mode(request),
+            "display_mode": _calendar_display_mode_with_settings(request, settings),
             "plans": plans,
             "selected_plan": selected_plan,
             "plan_athletes": plan_athletes,
