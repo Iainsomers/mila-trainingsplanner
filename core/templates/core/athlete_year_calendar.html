@@ -195,6 +195,57 @@
   .year-table tbody tr.slotrow:nth-child(3n+1) td {
     border-top: 3px solid #999;
   }
+
+
+  .today-training-block {
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+
+  .today-training-title {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #555555;
+  }
+
+  .today-training-block .slotbox {
+    min-height: 44px;
+    background: #ffffff;
+  }
+
+  .today-training-block .check-status-menu {
+    top: 24px;
+    bottom: auto;
+    z-index: 1065;
+  }
+
+  .today-comment-input {
+    width: 100%;
+    min-height: 95px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 8px;
+    background: #ffffff;
+    font-size: 13px;
+    resize: vertical;
+  }
+
+  .today-comment-display {
+    width: 100%;
+    min-height: 70px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 8px;
+    background: #ffffff;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: pre-wrap;
+  }
+
 </style>
 {% endblock %}
 
@@ -221,6 +272,7 @@
     </select>
     <button class="btn btn-sm btn-primary">Load</button>
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">zones/times</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#todayTrainingModal">today</button>
   </form>
 
   <div class="modal fade" id="zonesTimesModal" tabindex="-1" aria-labelledby="zonesTimesModalLabel" aria-hidden="true">
@@ -253,6 +305,139 @@
               {% endfor %}
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="todayTrainingModal" tabindex="-1" aria-labelledby="todayTrainingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="todayTrainingModalLabel">today{% if selected_athlete %} – {{ selected_athlete.name }}{% endif %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="today-training-block">
+            <div class="today-training-title">Training 1</div>
+            {% for w in week_rows %}
+              {% for cell in w.cells1 %}
+                {% if cell.day == today %}
+                  {% if cell.slot %}
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
+                      {% if cell.slot.text %}
+                        <div class="core-line" data-zone="">
+                          <strong>{{ cell.slot.text|linebreaksbr }}</strong>
+                        </div>
+                      {% else %}
+                        {% for seg in cell.slot.segments.all %}
+                          {% if seg.text and seg.type != "CORE2" %}
+                            {% if seg.type == "CORE" %}
+                              <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                                <strong>{{ seg.text }}</strong>
+                              </div>
+                            {% else %}
+                              <div>{{ seg.text }}</div>
+                            {% endif %}
+                          {% endif %}
+                        {% endfor %}
+                        {% for seg in cell.slot.segments.all %}
+                          {% if seg.text and seg.type == "CORE2" %}
+                            <div>2nd: {{ seg.text }}</div>
+                          {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                      {% with status=cell.check.effective_status|default:"" %}
+                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}"
+                              data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-status="{{ status }}"
+                              title="Mark training status"
+                              style="position:absolute; right:5px; bottom:3px; cursor:pointer;">
+                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                        </span>
+                        <div class="check-status-menu">
+                          <button type="button" class="check-status-option" data-status="">— No status</button>
+                          <button type="button" class="check-status-option" data-status="done_as_planned">✓ Training done as planned</button>
+                          <button type="button" class="check-status-option" data-status="too_hard_fast">↑ Too much / too fast</button>
+                          <button type="button" class="check-status-option" data-status="adjusted_ok">✓ Adjusted, not harder or easier</button>
+                          <button type="button" class="check-status-option" data-status="lighter_slower">↓ Lighter / slower</button>
+                          <button type="button" class="check-status-option" data-status="not_done">✕ Training not done</button>
+                        </div>
+                      {% endwith %}
+                    </div>
+                  {% else %}
+                    <div class="text-muted small">Geen training.</div>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </div>
+
+          <div class="today-training-block">
+            <div class="today-training-title">Training 2</div>
+            {% for w in week_rows %}
+              {% for cell in w.cells2 %}
+                {% if cell.day == today %}
+                  {% if cell.slot %}
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
+                      {% if cell.slot.text %}
+                        <div class="core-line" data-zone="">
+                          <strong>{{ cell.slot.text|linebreaksbr }}</strong>
+                        </div>
+                      {% else %}
+                        {% for seg in cell.slot.segments.all %}
+                          {% if seg.text and seg.type != "CORE2" %}
+                            {% if seg.type == "CORE" %}
+                              <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                                <strong>{{ seg.text }}</strong>
+                              </div>
+                            {% else %}
+                              <div>{{ seg.text }}</div>
+                            {% endif %}
+                          {% endif %}
+                        {% endfor %}
+                        {% for seg in cell.slot.segments.all %}
+                          {% if seg.text and seg.type == "CORE2" %}
+                            <div>2nd: {{ seg.text }}</div>
+                          {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                      {% with status=cell.check.effective_status|default:"" %}
+                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}"
+                              data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-status="{{ status }}"
+                              title="Mark training status"
+                              style="position:absolute; right:5px; bottom:3px; cursor:pointer;">
+                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                        </span>
+                        <div class="check-status-menu">
+                          <button type="button" class="check-status-option" data-status="">— No status</button>
+                          <button type="button" class="check-status-option" data-status="done_as_planned">✓ Training done as planned</button>
+                          <button type="button" class="check-status-option" data-status="too_hard_fast">↑ Too much / too fast</button>
+                          <button type="button" class="check-status-option" data-status="adjusted_ok">✓ Adjusted, not harder or easier</button>
+                          <button type="button" class="check-status-option" data-status="lighter_slower">↓ Lighter / slower</button>
+                          <button type="button" class="check-status-option" data-status="not_done">✕ Training not done</button>
+                        </div>
+                      {% endwith %}
+                    </div>
+                  {% else %}
+                    <div class="text-muted small">Geen training.</div>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </div>
+
+          <div class="today-training-block">
+            <div class="today-training-title">Comment</div>
+            {% for w in week_rows %}
+              {% for d in w.cells3 %}
+                {% if d.day == today %}
+                  <textarea class="today-comment-input"
+                            data-date="{{ d.day|date:'Y-m-d' }}"
+                            placeholder="Schrijf hier je comment...">{% if d.comment %}{{ d.comment.text }}{% endif %}</textarea>
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </div>
         </div>
       </div>
     </div>
@@ -702,6 +887,14 @@
     }).catch(function(){});
   }
 
+  function updateCommentDisplay(dateStr, text) {
+    text = normalizeCommentText(text);
+    document.querySelectorAll('.comment-display[data-date="' + dateStr + '"]').forEach(function(el) {
+      el.textContent = text;
+      el.setAttribute("data-text", text);
+    });
+  }
+
   function openModal(el) {
     activeElement = el;
     activeDate = el.getAttribute("data-date") || "";
@@ -741,6 +934,43 @@
         openModal(el);
       });
     });
+
+    document.querySelectorAll(".today-comment-input").forEach(function(el) {
+      var saveTimer = null;
+
+      function scheduleSave() {
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+        }
+        saveTimer = setTimeout(function() {
+          var dateStr = el.getAttribute("data-date") || "";
+          saveComment(dateStr, el.value || "");
+          updateCommentDisplay(dateStr, el.value || "");
+        }, 450);
+      }
+
+      el.addEventListener("input", scheduleSave);
+      el.addEventListener("blur", function() {
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+          saveTimer = null;
+        }
+        var dateStr = el.getAttribute("data-date") || "";
+        saveComment(dateStr, el.value || "");
+        updateCommentDisplay(dateStr, el.value || "");
+      });
+    });
+
+    var todayModal = document.getElementById("todayTrainingModal");
+    if (todayModal) {
+      todayModal.addEventListener("hide.bs.modal", function() {
+        document.querySelectorAll(".today-comment-input").forEach(function(el) {
+          var dateStr = el.getAttribute("data-date") || "";
+          saveComment(dateStr, el.value || "");
+          updateCommentDisplay(dateStr, el.value || "");
+        });
+      });
+    }
 
     document.getElementById("commentCancelBtn").addEventListener("click", closeModal);
     document.getElementById("commentOkBtn").addEventListener("click", confirmModal);
