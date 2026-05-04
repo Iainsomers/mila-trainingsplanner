@@ -1,0 +1,82 @@
+{% extends "core/base.html" %}
+
+{% block title %}Daily Coach Overview{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h2 class="mb-1">Daily Coach Overview</h2>
+      <p class="text-muted mb-0">{{ date }}{% if group %} – {{ group.name }}{% endif %}</p>
+    </div>
+    <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+  </div>
+
+  <div class="row g-2">
+    {% for r in rows %}
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card h-100">
+          <div class="card-body p-2" style="font-size:12px; line-height:1.25;">
+            <div class="mb-2">
+              <strong style="font-size:14px;">{{ r.athlete.name }}</strong>
+            </div>
+
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <strong>Training 1</strong>
+                {% if r.check1_badge.symbol %}
+                  <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check1_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check1_badge.symbol }}</span>
+                {% endif %}
+              </div>
+              {% if r.slot1 %}
+                {% if r.slot1.text %}
+                  <div>{{ r.slot1.text|linebreaksbr }}</div>
+                {% else %}
+                  {% for seg in r.slot1.segments.all %}
+                    {% if seg.text %}
+                      <div>{{ seg.text }}</div>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </div>
+
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <strong>Training 2</strong>
+                {% if r.check2_badge.symbol %}
+                  <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check2_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check2_badge.symbol }}</span>
+                {% endif %}
+              </div>
+              {% if r.slot2 %}
+                {% if r.slot2.text %}
+                  <div>{{ r.slot2.text|linebreaksbr }}</div>
+                {% else %}
+                  {% for seg in r.slot2.segments.all %}
+                    {% if seg.text %}
+                      <div>{{ seg.text }}</div>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </div>
+
+            <div>
+              <strong>Comment</strong>
+              {% if r.comment %}
+                <div style="max-height:38px; overflow:hidden;">{{ r.comment.text|linebreaksbr }}</div>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

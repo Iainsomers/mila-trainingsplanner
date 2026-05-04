@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <!-- NEW: Athlete Console -->
+    <!-- Athlete Console -->
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body">
@@ -43,6 +43,20 @@
             View athlete-facing tools and yearly planning.
           </p>
           <a href="/athlete/year/" class="btn btn-primary">Year Calendar</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Daily Coach Overview</h5>
+          <p class="card-text">
+            View daily training overview for a group.
+          </p>
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dailyOverviewModal">
+            Open
+          </button>
         </div>
       </div>
     </div>
@@ -71,6 +85,40 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<div class="modal fade" id="dailyOverviewModal" tabindex="-1" aria-labelledby="dailyOverviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="get" action="{% url 'daily_overview' %}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dailyOverviewModalLabel">Daily Coach Overview</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Group</label>
+            <select name="group_id" class="form-control" required>
+              {% for group in groups %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">OK</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}

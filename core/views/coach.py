@@ -208,7 +208,10 @@ def _copy_plan_contents(source_plan, target_plan):
 @login_required
 @require_GET
 def dashboard_view(request):
-    return render(request, "core/dashboard.html")
+    from datetime import date
+
+    groups = _filter_owned(Group.objects.all(), request.user)
+    return render(request, "core/dashboard.html", {"groups": groups, "today": date.today()})
 
 
 @login_required
@@ -1028,3 +1031,110 @@ def coach_group_delete_view(request, group_id: int):
     group = get_object_or_404(_filter_owned(Group.objects.all(), request.user), id=group_id)
     group.delete()
     return redirect("coach_groups")
+
+
+from core.models import AthleteDayCheck, AthleteDayComment
+from core.views.calendar import _build_effective_slot_maps
+
+
+def _daily_check_badge(check):
+    status = check.effective_status if check else ""
+    if status == AthleteDayCheck.STATUS_DONE_AS_PLANNED:
+        return {"symbol": "✓", "color": "#00cc00"}
+    if status == AthleteDayCheck.STATUS_TOO_HARD_FAST:
+        return {"symbol": "↑", "color": "#f28c28"}
+    if status == AthleteDayCheck.STATUS_ADJUSTED_OK:
+        return {"symbol": "✓", "color": "#f28c28"}
+    if status == AthleteDayCheck.STATUS_LIGHTER_SLOWER:
+        return {"symbol": "↓", "color": "#f28c28"}
+    if status == AthleteDayCheck.STATUS_NOT_DONE:
+        return {"symbol": "✕", "color": "#cc0000"}
+    return {"symbol": "", "color": ""}
+
+
+def _daily_status_badge(status):
+    status = (status or "").strip()
+    if status == "done_as_planned":
+        return {"symbol": "✓", "color": "#00cc00"}
+    if status == "too_hard_fast":
+        return {"symbol": "↑", "color": "#f28c28"}
+    if status == "adjusted_ok":
+        return {"symbol": "✓", "color": "#f28c28"}
+    if status == "lighter_slower":
+        return {"symbol": "↓", "color": "#f28c28"}
+    if status == "not_done":
+        return {"symbol": "✕", "color": "#cc0000"}
+    return {"symbol": "", "color": ""}
+
+
+@login_required
+def daily_overview_view(request):
+    from datetime import date
+    from django.db.models import Q
+
+    group_id = request.GET.get("group_id")
+    d = request.GET.get("date")
+
+    if not group_id or not d:
+        return redirect("/")
+
+    try:
+        d = date.fromisoformat(d)
+    except Exception:
+        return redirect("/")
+
+    group = get_object_or_404(_filter_owned(Group.objects.all(), request.user), id=group_id)
+    athletes = list(group.athletes.all().order_by("name"))
+    athlete_ids = [a.id for a in athletes]
+
+    check_map = {}
+    for check in AthleteDayCheck.objects.filter(date=d, athlete_id__in=athlete_ids):
+        check_map[(check.athlete_id, int(check.slot_index or 1))] = check.effective_status
+
+    comment_map = {}
+    for comment in AthleteDayComment.objects.filter(date=d, athlete_id__in=athlete_ids):
+        comment_map[comment.athlete_id] = comment
+
+    rows = []
+
+    for athlete in athletes:
+        athlete_plans = []
+
+        for plan in _filter_owned(TrainingPlan.objects.order_by("name"), request.user):
+            if athlete.id not in plan.targeted_athlete_ids():
+                continue
+            if plan.start_date and plan.start_date > d:
+                continue
+            if plan.end_date and plan.end_date < d:
+                continue
+            athlete_plans.append(plan)
+
+        if athlete_plans:
+            slot_qs = (
+                TrainingSlot.objects
+                .filter(date=d, plan__in=athlete_plans)
+                .filter(Q(athlete__isnull=True) | Q(athlete=athlete))
+                .prefetch_related("segments")
+                .select_related("plan", "athlete")
+            )
+            slot_map, _ = _build_effective_slot_maps(slot_qs)
+        else:
+            slot_map = {}
+
+        status1 = check_map.get((athlete.id, 1), "")
+        status2 = check_map.get((athlete.id, 2), "")
+
+        rows.append({
+            "athlete": athlete,
+            "slot1": slot_map.get((d, 1)),
+            "slot2": slot_map.get((d, 2)),
+            "check1_badge": _daily_status_badge(status1),
+            "check2_badge": _daily_status_badge(status2),
+            "comment": comment_map.get(athlete.id),
+        })
+
+    return render(request, "core/daily_overview.html", {
+        "rows": rows,
+        "date": d,
+        "group": group,
+    })

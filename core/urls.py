@@ -3,6 +3,7 @@ from django.contrib.auth import views as auth_views
 
 # Import views explicitly to avoid any name collisions via views/__init__.py
 from core.views.coach import (
+    daily_overview_view,
     dashboard_view,
     settings_view,
     coach_console_view,
@@ -116,4 +117,5 @@ urlpatterns = [
 
     # Stats debug
     path("stats-debug/", stats_debug_view, name="stats_debug"),
+    path("coach/daily-overview/", daily_overview_view, name="daily_overview"),
 ]
