@@ -2,6 +2,20 @@
 
 {% block title %}Daily Coach Overview{% endblock %}
 
+{% block extra_head %}
+<style>
+  .daily-slotbox {
+    border-radius: 6px;
+    padding: 4px 6px;
+    min-height: 28px;
+  }
+
+  .daily-slotbox-empty {
+    color: #777777;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-3">
   <div class="d-flex align-items-center justify-content-between mb-3">
@@ -22,46 +36,60 @@
             </div>
 
             <div class="mb-2">
-              <div class="d-flex justify-content-between align-items-center">
+              <div class="d-flex justify-content-between align-items-center mb-1">
                 <strong>Training 1</strong>
                 {% if r.check1_badge.symbol %}
                   <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check1_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check1_badge.symbol }}</span>
                 {% endif %}
               </div>
+
               {% if r.slot1 %}
-                {% if r.slot1.text %}
-                  <div>{{ r.slot1.text|linebreaksbr }}</div>
-                {% else %}
-                  {% for seg in r.slot1.segments.all %}
-                    {% if seg.text %}
-                      <div>{{ seg.text }}</div>
-                    {% endif %}
-                  {% endfor %}
-                {% endif %}
+                <div class="daily-slotbox">
+                  {% if r.slot1.text %}
+                    <div class="core-line" data-zone="">{{ r.slot1.text|linebreaksbr }}</div>
+                  {% else %}
+                    {% for seg in r.slot1.segments.all %}
+                      {% if seg.text %}
+                        {% if seg.type == "CORE" %}
+                          <div class="core-line" data-zone="{{ seg.zone|default:'' }}">{{ seg.text }}</div>
+                        {% else %}
+                          <div>{{ seg.text }}</div>
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                </div>
               {% else %}
-                <span class="text-muted">—</span>
+                <div class="daily-slotbox daily-slotbox-empty">—</div>
               {% endif %}
             </div>
 
             <div class="mb-2">
-              <div class="d-flex justify-content-between align-items-center">
+              <div class="d-flex justify-content-between align-items-center mb-1">
                 <strong>Training 2</strong>
                 {% if r.check2_badge.symbol %}
                   <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check2_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check2_badge.symbol }}</span>
                 {% endif %}
               </div>
+
               {% if r.slot2 %}
-                {% if r.slot2.text %}
-                  <div>{{ r.slot2.text|linebreaksbr }}</div>
-                {% else %}
-                  {% for seg in r.slot2.segments.all %}
-                    {% if seg.text %}
-                      <div>{{ seg.text }}</div>
-                    {% endif %}
-                  {% endfor %}
-                {% endif %}
+                <div class="daily-slotbox">
+                  {% if r.slot2.text %}
+                    <div class="core-line" data-zone="">{{ r.slot2.text|linebreaksbr }}</div>
+                  {% else %}
+                    {% for seg in r.slot2.segments.all %}
+                      {% if seg.text %}
+                        {% if seg.type == "CORE" %}
+                          <div class="core-line" data-zone="{{ seg.zone|default:'' }}">{{ seg.text }}</div>
+                        {% else %}
+                          <div>{{ seg.text }}</div>
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                </div>
               {% else %}
-                <span class="text-muted">—</span>
+                <div class="daily-slotbox daily-slotbox-empty">—</div>
               {% endif %}
             </div>
 
@@ -79,4 +107,120 @@
     {% endfor %}
   </div>
 </div>
+
+<script>
+(function() {
+  function applyDailyColors() {
+    var zoneColors = {
+      1: "#f8f8f0",
+      2: "#f7c6d0",
+      3: "#e5533d",
+      4: "#bfe7bf",
+      5: "#2f75b5",
+      6: "#f2c200"
+    };
+    var raceColor = "#ff7a00";
+    var raceHardColor = "#cc0000";
+
+    function raceKind(text) {
+      var s = (text || "").toLowerCase();
+      if (/\brace\s*!/.test(s)) return "hard";
+      if (/\brace\b/.test(s)) return "race";
+      return "";
+    }
+
+    function lineKm(text) {
+      var s = (text || "").toLowerCase().trim();
+
+      var repMatch = s.match(/(\d+(?:[.,]\d+)?)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
+      if (repMatch) {
+        var reps = parseFloat(repMatch[1].replace(",", "."));
+        var value = parseFloat(repMatch[2].replace(",", "."));
+        var unit = repMatch[3];
+        var km = (unit === "m") ? (value / 1000.0) : value;
+        return reps * km;
+      }
+
+      var distMatch = s.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
+      if (distMatch) {
+        var value = parseFloat(distMatch[1].replace(",", "."));
+        var unit = distMatch[2];
+        return (unit === "m") ? (value / 1000.0) : value;
+      }
+
+      return 0;
+    }
+
+    document.querySelectorAll(".daily-slotbox").forEach(function(box) {
+      if (box.classList.contains("daily-slotbox-empty")) return;
+
+      var allCoreLines = Array.from(box.querySelectorAll(".core-line[data-zone]"));
+      var raceLines = allCoreLines.filter(function(line) {
+        return raceKind(line.textContent || "") !== "";
+      });
+      var hasRaceHard = raceLines.some(function(line) {
+        return raceKind(line.textContent || "") === "hard";
+      });
+
+      var lines = allCoreLines.filter(function(line) {
+        return /^[1-6]$/.test((line.getAttribute("data-zone") || "").trim());
+      });
+
+      var mainZone = null;
+      if (lines.length) {
+        var totals = {};
+        lines.forEach(function(line) {
+          var z = parseInt(line.getAttribute("data-zone"), 10);
+          totals[z] = (totals[z] || 0) + lineKm(line.textContent || "");
+        });
+
+        var zones = Object.keys(totals).map(function(z) { return parseInt(z, 10); });
+        mainZone = zones[0];
+
+        zones.forEach(function(z) {
+          if (totals[z] > totals[mainZone]) {
+            mainZone = z;
+          }
+        });
+      }
+
+      if (raceLines.length) {
+        box.style.backgroundColor = hasRaceHard ? raceHardColor : raceColor;
+      } else if (mainZone !== null) {
+        box.style.backgroundColor = zoneColors[mainZone] || "";
+      } else {
+        return;
+      }
+
+      allCoreLines.forEach(function(line) {
+        var kind = raceKind(line.textContent || "");
+        var z = parseInt(line.getAttribute("data-zone"), 10);
+        var color = "#000000";
+
+        if (kind) {
+          color = "#000000";
+        } else if (!raceLines.length && z === mainZone) {
+          color = "#000000";
+        } else if (/^[1-6]$/.test((line.getAttribute("data-zone") || "").trim())) {
+          color = zoneColors[z] || "#000000";
+        }
+
+        line.style.setProperty("color", color, "important");
+
+        Array.from(line.querySelectorAll("*")).forEach(function(child) {
+          child.style.setProperty("color", color, "important");
+        });
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyDailyColors);
+  } else {
+    applyDailyColors();
+  }
+
+  window.addEventListener("load", applyDailyColors);
+})();
+</script>
 {% endblock %}
