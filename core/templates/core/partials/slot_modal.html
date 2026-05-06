@@ -56,7 +56,7 @@
               <div class="mb-3">
                 <label class="form-label"><b>WU</b></label>
                 <textarea name="wu_text" class="form-control" rows="2"
-                  placeholder="Bijv: 15' Z1 of 2km Z1">{{ wu_text }}</textarea>
+                  placeholder="">{{ wu_text }}</textarea>
 
                 {% if wu_feedback %}
                   <div class="small {% if wu_ok %}text-success{% else %}text-danger{% endif %}">
@@ -71,10 +71,7 @@
               <div class="mb-3">
                 <label class="form-label"><b>Mob / Tech</b></label>
                 <textarea name="mob_text" class="form-control" rows="2"
-                  placeholder="Bijv: loopscholing, drills, core stability">{{ mob_text }}</textarea>
-                <div class="small text-muted">
-                  Wordt niet geparsed en telt niet mee in belasting.
-                </div>
+                  placeholder="">{{ mob_text }}</textarea>
               </div>
               {% endif %}
 
@@ -83,7 +80,7 @@
               <div class="mb-3">
                 <label class="form-label"><b>Sprint (altijd Z6)</b></label>
                 <textarea name="sprint_text" class="form-control" rows="2"
-                  placeholder="Bijv: 6×60m of 4×150m">{{ sprint_text }}</textarea>
+                  placeholder="">{{ sprint_text }}</textarea>
 
                 {% if sprint_feedback %}
                   <div class="small {% if sprint_ok %}text-success{% else %}text-danger{% endif %}">
@@ -109,7 +106,7 @@
               <div class="mb-3">
                 <label class="form-label"><b>Core (of Alternative)</b></label>
                 <textarea name="core_text" class="form-control" rows="3"
-                  placeholder="Bijv: 6×1000m Z3 of 30' Z2">{{ core_text }}</textarea>
+                  placeholder="">{{ core_text }}</textarea>
 
                 {% if core_feedback %}
                   <div class="small {% if core_ok %}text-success{% else %}text-danger{% endif %}">
@@ -127,10 +124,7 @@
                 <div class="mb-3">
                   <label class="form-label"><b>2nd core</b></label>
                   <textarea name="core2_text" class="form-control" rows="3"
-                    placeholder="Bijv: 8×200m Z4 of 12' Z2">{{ core2_text }}</textarea>
-                  <div class="small text-muted">
-                    Wordt geparsed en telt mee als hardloopbelasting.
-                  </div>
+                    placeholder="">{{ core2_text }}</textarea>
 
                   {% if core2_feedback %}
                     <div class="small {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
@@ -144,10 +138,7 @@
               <div class="mb-3">
                 <label class="form-label"><b>Alternative</b></label>
                 <textarea name="alt_text" class="form-control" rows="3"
-                  placeholder="Bijv: alternatief programma / cross / details (zone niet nodig)">{{ alt_text }}</textarea>
-                <div class="small text-muted">
-                  Wordt (nog) niet opgeteld in km/minuten.
-                </div>
+                  placeholder="">{{ alt_text }}</textarea>
 
                 {% if alt_feedback %}
                   <div class="small {% if alt_ok %}text-success{% else %}text-danger{% endif %}">
@@ -161,7 +152,7 @@
               <div class="mb-3">
                 <label class="form-label"><b>CD</b></label>
                 <textarea name="cd_text" class="form-control" rows="2"
-                  placeholder="Bijv: 10' Z1 of 2km Z1">{{ cd_text }}</textarea>
+                  placeholder="">{{ cd_text }}</textarea>
 
                 {% if cd_feedback %}
                   <div class="small {% if cd_ok %}text-success{% else %}text-danger{% endif %}">
@@ -180,7 +171,7 @@
                       name="template_name"
                       class="form-control"
                       value="{{ template_name|default:'' }}"
-                      placeholder="Bijv. Drempeltraining 5x1000"
+                      placeholder=""
                     >
                   </div>
                   <div class="col-md-5">
@@ -199,7 +190,7 @@
                   <div class="col-md-7">
                     <label class="form-label mb-1"><b>Load standaard</b></label>
                     <select name="template_id" class="form-select">
-                      <option value="">Kies standaard training…</option>
+                      <option value=""></option>
                       {% for tpl in saved_templates %}
                         <option value="{{ tpl.id }}" {% if selected_template_id|stringformat:"s" == tpl.id|stringformat:"s" %}selected{% endif %}>
                           {{ tpl.name }}
