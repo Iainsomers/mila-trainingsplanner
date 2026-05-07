@@ -61,7 +61,8 @@ def _build_effective_slot_maps(slot_qs):
     has_fix_keys = set(override_map.keys())
     return slot_map, has_fix_keys
 
-def _slot_has_race_marker(slot) -> bool:
+
+def _slot_has_training_content(slot) -> bool:
     if not slot:
         return False
 
@@ -71,40 +72,20 @@ def _slot_has_race_marker(slot) -> bool:
         segments = []
 
     for seg in segments:
-        special = (getattr(seg, "special", "") or "").upper()
-        if special in ("RACE", "IMPORTANT_RACE"):
-            return True
-
-        text = getattr(seg, "text", "") or ""
-        if re.search(r"\brace\s*!?\b", text, re.IGNORECASE):
+        if (getattr(seg, "text", "") or "").strip():
             return True
 
     return False
 
 
-def _athlete_visible_until(athlete) -> date:
-    try:
-        weeks = int(getattr(athlete, "view_weeks_ahead", 2) or 0)
-    except Exception:
-        weeks = 2
+def _year_calendar_display_slot(slot):
+    if not slot:
+        return None
 
-    if weeks < 0:
-        weeks = 0
+    if getattr(slot, "athlete_id", None) and not _slot_has_training_content(slot):
+        return None
 
-    today = date.today()
-    if weeks == 0:
-        return today
-
-    current_week_start = today - timedelta(days=today.weekday())
-    return current_week_start + timedelta(days=(7 * weeks) - 1)
-
-
-def _filter_slots_for_athlete_visibility(slots, athlete):
-    visible_until = _athlete_visible_until(athlete)
-    return [
-        slot for slot in slots
-        if slot.date <= visible_until or _slot_has_race_marker(slot)
-    ]
+    return slot
 
 
 def _km_str_with_small(meters) -> str:
@@ -119,6 +100,50 @@ def _km_str_with_small(meters) -> str:
 
 def _to_week_start(d: date) -> date:
     return d - timedelta(days=d.weekday())
+
+
+def _calendar_display_mode_with_settings(request, settings):
+    mode = _calendar_display_mode(request)
+
+    if (
+        request.GET.get("display_mode")
+        or request.GET.get("display")
+        or request.GET.get("mode")
+        or request.session.get("calendar_display_mode")
+        or request.session.get("display_mode")
+    ):
+        return mode
+
+    for attr in (
+        "calendar_display_mode",
+        "display_mode",
+        "training_display_mode",
+        "slot_display_mode",
+    ):
+        value = getattr(settings, attr, None)
+        if value not in (None, ""):
+            return value
+
+    for attr in (
+        "show_core_only",
+        "core_only",
+        "calendar_core_only",
+        "calendar_show_core_only",
+    ):
+        value = getattr(settings, attr, None)
+        if value is not None:
+            return "core" if bool(value) else "full"
+
+    for attr in (
+        "show_full_training",
+        "show_all_training_parts",
+        "calendar_show_full_training",
+    ):
+        value = getattr(settings, attr, None)
+        if value is not None:
+            return "full" if bool(value) else "core"
+
+    return mode
 
 
 # -----------------------------
@@ -443,7 +468,7 @@ def calendar_view(request):
         "core/calendar.html",
         {
             "week_rows": week_rows,
-            "display_mode": _calendar_display_mode(request),
+            "display_mode": _calendar_display_mode_with_settings(request, settings),
             "plans": plans,
             "selected_plan": selected_plan,
             "plan_athletes": plan_athletes,
@@ -1013,9 +1038,6 @@ def athlete_year_calendar_view(request):
                 .select_related("plan", "athlete")
             )
 
-            if not request.user.is_staff:
-                slot_q = _filter_slots_for_athlete_visibility(list(slot_q), selected_athlete)
-
             slot_map, has_fix_keys = _build_effective_slot_maps(slot_q)
 
     phase_label = {
@@ -1087,14 +1109,14 @@ def athlete_year_calendar_view(request):
 
             cells1.append({
                 "day": day,
-                "slot": slot_map.get(k1),
+                "slot": _year_calendar_display_slot(slot_map.get(k1)),
                 "is_override": k1 in has_fix_keys,
                 "check": check1,
                 "slot_index": 1,
             })
             cells2.append({
                 "day": day,
-                "slot": slot_map.get(k2),
+                "slot": _year_calendar_display_slot(slot_map.get(k2)),
                 "is_override": k2 in has_fix_keys,
                 "check": check2,
                 "slot_index": 2,
