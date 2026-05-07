@@ -310,9 +310,9 @@ def settings_view(request):
 @require_GET
 def coach_plans_view(request):
     sort = request.GET.get("sort", "name")
-    if sort == "start":
+    if source_sort == "start":
         qs = TrainingPlan.objects.order_by("start_date")
-    elif sort == "end":
+    elif source_sort == "end":
         qs = TrainingPlan.objects.order_by("end_date")
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
@@ -334,9 +334,9 @@ def coach_plan_create_view(request):
         "is_private": False,
     }
     source_sort = request.GET.get("sort", "name")
-    if sort == "start":
+    if source_sort == "start":
         qs = TrainingPlan.objects.order_by("start_date")
-    elif sort == "end":
+    elif source_sort == "end":
         qs = TrainingPlan.objects.order_by("end_date")
     else:
         qs = TrainingPlan.objects.order_by("name")
@@ -404,7 +404,7 @@ def coach_plan_create_view(request):
     return render(
         request,
         "core/coach_plan_form.html",
-        {"mode": "create", "plan": None, "form": form, "errors": errors, "source_plans": source_plans},
+        {"mode": "create", "plan": None, "form": form, "errors": errors, "source_plans": plans},
     )
 
 
@@ -918,9 +918,9 @@ def coach_group_edit_view(request, group_id: int):
 @require_GET
 def coach_assignments_view(request):
     sort = request.GET.get("sort", "name")
-    if sort == "start":
+    if source_sort == "start":
         qs = TrainingPlan.objects.order_by("start_date")
-    elif sort == "end":
+    elif source_sort == "end":
         qs = TrainingPlan.objects.order_by("end_date")
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
