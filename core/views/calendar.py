@@ -73,6 +73,22 @@ def _build_effective_slot_maps(slot_qs):
     return slot_map, has_fix_keys
 
 
+
+def _slot_is_visually_empty(slot) -> bool:
+    if not slot:
+        return True
+    try:
+        return not slot.segments.exists()
+    except Exception:
+        return False
+
+
+def _visible_year_slot(slot_map, has_fix_keys, key):
+    slot = slot_map.get(key)
+    if key in has_fix_keys and _slot_is_visually_empty(slot):
+        return None
+    return slot
+
 def _km_str_with_small(meters) -> str:
     try:
         m = float(meters or 0)
@@ -1126,14 +1142,14 @@ def athlete_year_calendar_view(request):
 
             cells1.append({
                 "day": day,
-                "slot": slot_map.get(k1),
+                "slot": _visible_year_slot(slot_map, has_fix_keys, k1),
                 "is_override": k1 in has_fix_keys,
                 "check": check1,
                 "slot_index": 1,
             })
             cells2.append({
                 "day": day,
-                "slot": slot_map.get(k2),
+                "slot": _visible_year_slot(slot_map, has_fix_keys, k2),
                 "is_override": k2 in has_fix_keys,
                 "check": check2,
                 "slot_index": 2,
