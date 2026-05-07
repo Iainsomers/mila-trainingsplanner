@@ -4,6 +4,7 @@ import re
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.utils.html import escape
+from django.utils import timezone
 from django.db.models import Q
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
@@ -20,12 +21,22 @@ from core.models import (
     AthleteWeekPhaseOverride,
 )
 from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
+from core.parser import parse_segment_text
 from .common import (
     _calendar_display_mode,
     _get_selected_plan,
     _get_selected_athlete_from_request,
     _format_km,
     _pct,
+    _apply_parse_to_segment,
+    _compute_norm_distance_m,
+)
+
+from core.views.slots import (
+    _expand_repeated_core_set_parts,
+    _core_zone_range_parts,
+    _core_t_range_parts,
+    _parse_core_segment_text,
 )
 
 
@@ -62,32 +73,6 @@ def _build_effective_slot_maps(slot_qs):
     return slot_map, has_fix_keys
 
 
-def _slot_has_training_content(slot) -> bool:
-    if not slot:
-        return False
-
-    try:
-        segments = list(slot.segments.all())
-    except Exception:
-        segments = []
-
-    for seg in segments:
-        if (getattr(seg, "text", "") or "").strip():
-            return True
-
-    return False
-
-
-def _year_calendar_display_slot(slot):
-    if not slot:
-        return None
-
-    if getattr(slot, "athlete_id", None) and not _slot_has_training_content(slot):
-        return None
-
-    return slot
-
-
 def _km_str_with_small(meters) -> str:
     try:
         m = float(meters or 0)
@@ -100,50 +85,6 @@ def _km_str_with_small(meters) -> str:
 
 def _to_week_start(d: date) -> date:
     return d - timedelta(days=d.weekday())
-
-
-def _calendar_display_mode_with_settings(request, settings):
-    mode = _calendar_display_mode(request)
-
-    if (
-        request.GET.get("display_mode")
-        or request.GET.get("display")
-        or request.GET.get("mode")
-        or request.session.get("calendar_display_mode")
-        or request.session.get("display_mode")
-    ):
-        return mode
-
-    for attr in (
-        "calendar_display_mode",
-        "display_mode",
-        "training_display_mode",
-        "slot_display_mode",
-    ):
-        value = getattr(settings, attr, None)
-        if value not in (None, ""):
-            return value
-
-    for attr in (
-        "show_core_only",
-        "core_only",
-        "calendar_core_only",
-        "calendar_show_core_only",
-    ):
-        value = getattr(settings, attr, None)
-        if value is not None:
-            return "core" if bool(value) else "full"
-
-    for attr in (
-        "show_full_training",
-        "show_all_training_parts",
-        "calendar_show_full_training",
-    ):
-        value = getattr(settings, attr, None)
-        if value is not None:
-            return "full" if bool(value) else "core"
-
-    return mode
 
 
 # -----------------------------
@@ -468,7 +409,7 @@ def calendar_view(request):
         "core/calendar.html",
         {
             "week_rows": week_rows,
-            "display_mode": _calendar_display_mode_with_settings(request, settings),
+            "display_mode": _calendar_display_mode(request),
             "plans": plans,
             "selected_plan": selected_plan,
             "plan_athletes": plan_athletes,
@@ -846,21 +787,97 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if not has_field_text and (slot_text or "").strip():
         fields = [("CORE", slot_text, "1")]
 
+    now = timezone.now()
     order = 1
+
     for segment_type, value, default_zone in fields:
-        text = (value or "").strip()
-        if not text:
+        raw_text = (value or "").strip()
+        if not raw_text:
             continue
 
-        TrainingSegment.objects.create(
+        if segment_type == "CORE":
+            parts = []
+            for core_part in [p.strip() for p in raw_text.split("//") if p.strip()]:
+                parts.extend(_expand_repeated_core_set_parts(core_part))
+
+            for part in parts:
+                zone_range_parts = _core_zone_range_parts(part)
+                t_range_parts = None if zone_range_parts else _core_t_range_parts(part)
+                range_parts = zone_range_parts or t_range_parts
+
+                if range_parts:
+                    source_parse = range_parts["source_parse"]
+                    seg = TrainingSegment.objects.create(
+                        slot=override_slot,
+                        order=order,
+                        type="CORE",
+                        text=range_parts["source_text"],
+                    )
+                    seg.parse_ok = True
+                    seg.parse_message = source_parse.message
+                    if hasattr(seg, "t_type"):
+                        seg.t_type = source_parse.t_type or ""
+                    seg.zone = str(source_parse.zone or "")
+                    seg.reps = int(source_parse.reps or 1)
+                    seg.distance_m = source_parse.rep_distance_m if source_parse.rep_distance_m is not None else source_parse.distance_m
+                    seg.duration_s = source_parse.duration_s
+                    seg.norm_distance_m = _compute_norm_distance_m(seg)
+                    seg.parsed_at = now
+                    seg.save()
+                    order += 1
+                    continue
+
+                seg = TrainingSegment.objects.create(
+                    slot=override_slot,
+                    order=order,
+                    type="CORE",
+                    text=part,
+                )
+                parsed = _parse_core_segment_text(part)
+                if parsed and parsed.ok:
+                    _apply_parse_to_segment(seg, parsed)
+                    seg.parsed_at = now
+                    seg.save()
+                else:
+                    seg.zone = _zone_from_text(part, default_zone)
+                    seg.t_type = _t_type_from_text(part)
+                    seg.parse_ok = False
+                    seg.parsed_at = now
+                    seg.save()
+                order += 1
+
+            continue
+
+        parse_text = raw_text
+        if segment_type == "SPR":
+            parse_text = f"{raw_text} Z6" if not re.search(r"\bz\s*[1-6]\b", raw_text, re.IGNORECASE) else raw_text
+
+        if segment_type == "ALT":
+            parsed = parse_segment_text(parse_text, zone_required=False)
+        else:
+            parsed = parse_segment_text(parse_text)
+
+        seg = TrainingSegment.objects.create(
             slot=override_slot,
             order=order,
             type=segment_type,
-            zone=_zone_from_text(text, default_zone),
-            t_type=_t_type_from_text(text),
-            text=text,
-            parse_ok=False,
+            text=raw_text,
         )
+
+        if parsed and parsed.ok:
+            _apply_parse_to_segment(seg, parsed)
+            if segment_type == "SPR":
+                seg.zone = "6"
+                seg.norm_distance_m = _compute_norm_distance_m(seg)
+            seg.parsed_at = now
+            seg.save()
+        else:
+            seg.zone = _zone_from_text(raw_text, default_zone)
+            seg.t_type = _t_type_from_text(raw_text)
+            seg.parse_ok = False
+            seg.parsed_at = now
+            seg.save()
+
         order += 1
 
 
@@ -1109,14 +1126,14 @@ def athlete_year_calendar_view(request):
 
             cells1.append({
                 "day": day,
-                "slot": _year_calendar_display_slot(slot_map.get(k1)),
+                "slot": slot_map.get(k1),
                 "is_override": k1 in has_fix_keys,
                 "check": check1,
                 "slot_index": 1,
             })
             cells2.append({
                 "day": day,
-                "slot": _year_calendar_display_slot(slot_map.get(k2)),
+                "slot": slot_map.get(k2),
                 "is_override": k2 in has_fix_keys,
                 "check": check2,
                 "slot_index": 2,
