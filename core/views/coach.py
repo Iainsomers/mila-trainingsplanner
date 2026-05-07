@@ -208,10 +208,8 @@ def _copy_plan_contents(source_plan, target_plan):
 @login_required
 @require_GET
 def dashboard_view(request):
-    from datetime import date
-
     groups = _filter_owned(Group.objects.all(), request.user)
-    return render(request, "core/dashboard.html", {"groups": groups, "today": date.today()})
+    return render(request, "core/dashboard.html", {"groups": groups})
 
 
 @login_required
@@ -310,9 +308,9 @@ def settings_view(request):
 @require_GET
 def coach_plans_view(request):
     sort = request.GET.get("sort", "name")
-    if source_sort == "start":
+    if sort == "start":
         qs = TrainingPlan.objects.order_by("start_date")
-    elif source_sort == "end":
+    elif sort == "end":
         qs = TrainingPlan.objects.order_by("end_date")
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
@@ -918,9 +916,9 @@ def coach_group_edit_view(request, group_id: int):
 @require_GET
 def coach_assignments_view(request):
     sort = request.GET.get("sort", "name")
-    if source_sort == "start":
+    if sort == "start":
         qs = TrainingPlan.objects.order_by("start_date")
-    elif source_sort == "end":
+    elif sort == "end":
         qs = TrainingPlan.objects.order_by("end_date")
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
@@ -1037,36 +1035,6 @@ from core.models import AthleteDayCheck, AthleteDayComment
 from core.views.calendar import _build_effective_slot_maps
 
 
-def _daily_check_badge(check):
-    status = check.effective_status if check else ""
-    if status == AthleteDayCheck.STATUS_DONE_AS_PLANNED:
-        return {"symbol": "✓", "color": "#00cc00"}
-    if status == AthleteDayCheck.STATUS_TOO_HARD_FAST:
-        return {"symbol": "↑", "color": "#f28c28"}
-    if status == AthleteDayCheck.STATUS_ADJUSTED_OK:
-        return {"symbol": "✓", "color": "#f28c28"}
-    if status == AthleteDayCheck.STATUS_LIGHTER_SLOWER:
-        return {"symbol": "↓", "color": "#f28c28"}
-    if status == AthleteDayCheck.STATUS_NOT_DONE:
-        return {"symbol": "✕", "color": "#cc0000"}
-    return {"symbol": "", "color": ""}
-
-
-def _daily_status_badge(status):
-    status = (status or "").strip()
-    if status == "done_as_planned":
-        return {"symbol": "✓", "color": "#00cc00"}
-    if status == "too_hard_fast":
-        return {"symbol": "↑", "color": "#f28c28"}
-    if status == "adjusted_ok":
-        return {"symbol": "✓", "color": "#f28c28"}
-    if status == "lighter_slower":
-        return {"symbol": "↓", "color": "#f28c28"}
-    if status == "not_done":
-        return {"symbol": "✕", "color": "#cc0000"}
-    return {"symbol": "", "color": ""}
-
-
 @login_required
 def daily_overview_view(request):
     from datetime import date
@@ -1080,61 +1048,41 @@ def daily_overview_view(request):
 
     try:
         d = date.fromisoformat(d)
-    except Exception:
+    except:
         return redirect("/")
 
-    group = get_object_or_404(_filter_owned(Group.objects.all(), request.user), id=group_id)
-    athletes = list(group.athletes.all().order_by("name"))
-    athlete_ids = [a.id for a in athletes]
+    group = get_object_or_404(Group, id=group_id)
+    athletes = group.athletes.all()
 
-    check_map = {}
-    for check in AthleteDayCheck.objects.filter(date=d, athlete_id__in=athlete_ids):
-        check_map[(check.athlete_id, int(check.slot_index or 1))] = check.effective_status
+    plans = TrainingPlan.objects.all()
 
-    comment_map = {}
-    for comment in AthleteDayComment.objects.filter(date=d, athlete_id__in=athlete_ids):
-        comment_map[comment.athlete_id] = comment
+    slot_qs = TrainingSlot.objects.filter(
+        date=d,
+        plan__in=plans
+    ).filter(
+        Q(athlete__isnull=True) | Q(athlete__in=athletes)
+    ).prefetch_related("segments")
+
+    slot_map, _ = _build_effective_slot_maps(slot_qs)
 
     rows = []
 
     for athlete in athletes:
-        athlete_plans = []
+        s1 = slot_map.get((d, 1))
+        s2 = slot_map.get((d, 2))
 
-        for plan in _filter_owned(TrainingPlan.objects.order_by("name"), request.user):
-            if athlete.id not in plan.targeted_athlete_ids():
-                continue
-            if plan.start_date and plan.start_date > d:
-                continue
-            if plan.end_date and plan.end_date < d:
-                continue
-            athlete_plans.append(plan)
-
-        if athlete_plans:
-            slot_qs = (
-                TrainingSlot.objects
-                .filter(date=d, plan__in=athlete_plans)
-                .filter(Q(athlete__isnull=True) | Q(athlete=athlete))
-                .prefetch_related("segments")
-                .select_related("plan", "athlete")
-            )
-            slot_map, _ = _build_effective_slot_maps(slot_qs)
-        else:
-            slot_map = {}
-
-        status1 = check_map.get((athlete.id, 1), "")
-        status2 = check_map.get((athlete.id, 2), "")
+        check = AthleteDayCheck.objects.filter(date=d, athlete=athlete).first()
+        comment = AthleteDayComment.objects.filter(date=d, athlete=athlete).first()
 
         rows.append({
             "athlete": athlete,
-            "slot1": slot_map.get((d, 1)),
-            "slot2": slot_map.get((d, 2)),
-            "check1_badge": _daily_status_badge(status1),
-            "check2_badge": _daily_status_badge(status2),
-            "comment": comment_map.get(athlete.id),
+            "slot1": s1,
+            "slot2": s2,
+            "check": check,
+            "comment": comment,
         })
 
     return render(request, "core/daily_overview.html", {
         "rows": rows,
-        "date": d,
-        "group": group,
+        "date": d
     })
