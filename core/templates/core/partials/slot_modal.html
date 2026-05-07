@@ -25,11 +25,6 @@
               Plan
             </button>
           </li>
-          <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#logs">
-              Logs
-            </button>
-          </li>
         </ul>
 
         <div class="tab-content pt-3">
@@ -162,6 +157,7 @@
               </div>
               {% endif %}
 
+              {% if not is_athlete_year_calendar %}
               <div class="border rounded p-3 mb-3">
                 <div class="row g-2 align-items-end mb-2">
                   <div class="col-md-7">
@@ -211,6 +207,8 @@
                 </div>
               </div>
 
+              {% endif %}
+
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                   Annuleren
@@ -247,13 +245,6 @@
                 </button>
               </div>
             </form>
-          </div>
-
-          <!-- ================= LOGS TAB ================= -->
-          <div class="tab-pane fade" id="logs">
-            <p class="text-muted mb-0">
-              Logs komen hier (coach-only, later per atleet).
-            </p>
           </div>
 
         </div>
