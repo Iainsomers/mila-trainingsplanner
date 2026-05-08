@@ -414,9 +414,17 @@ def calendar_view(request):
         d += timedelta(days=7)
 
     week_phases_enabled = bool(getattr(selected_plan, "week_phases_enabled", False)) if selected_plan else False
-    settings = CoachSettings.objects.filter(user=request.user).first()
-    weekcolors_enabled = bool(request.session.get("weekcolors_enabled", getattr(settings, "weekcolors_enabled", True)))
-    show_all_zones = bool(request.session.get("show_all_zones", getattr(settings, "show_all_zones", True)))
+    settings, _ = CoachSettings.objects.get_or_create(user=request.user)
+
+    # Sync persistent coach settings to session on calendar load.
+    # This prevents startup/default session values from overriding saved settings.
+    request.session["highlight_current_week"] = bool(getattr(settings, "highlight_current_week", True))
+    request.session["weekcolors_enabled"] = bool(getattr(settings, "weekcolors_enabled", True))
+    request.session["show_all_zones"] = bool(getattr(settings, "show_all_zones", True))
+    request.session.modified = True
+
+    weekcolors_enabled = bool(request.session.get("weekcolors_enabled"))
+    show_all_zones = bool(request.session.get("show_all_zones"))
     show_t_totals = bool(request.session.get("show_t_totals", getattr(settings, "show_t_totals", True)))
     show_all_t_totals = bool(request.session.get("show_all_t_totals", getattr(settings, "show_all_t_totals", True)))
 
