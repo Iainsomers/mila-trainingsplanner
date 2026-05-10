@@ -89,6 +89,20 @@ def _visible_year_slot(slot_map, has_fix_keys, key):
         return None
     return slot
 
+
+def _slot_has_race(slot) -> bool:
+    if not slot:
+        return False
+    try:
+        for seg in slot.segments.all():
+            special = (getattr(seg, "special", "") or "").upper()
+            text = (getattr(seg, "text", "") or "").lower()
+            if special in {"RACE", "IMPORTANT_RACE"} or "race" in text:
+                return True
+    except Exception:
+        return False
+    return False
+
 def _km_str_with_small(meters) -> str:
     try:
         m = float(meters or 0)
@@ -414,17 +428,9 @@ def calendar_view(request):
         d += timedelta(days=7)
 
     week_phases_enabled = bool(getattr(selected_plan, "week_phases_enabled", False)) if selected_plan else False
-    settings, _ = CoachSettings.objects.get_or_create(user=request.user)
-
-    # Sync persistent coach settings to session on calendar load.
-    # This prevents startup/default session values from overriding saved settings.
-    request.session["highlight_current_week"] = bool(getattr(settings, "highlight_current_week", True))
-    request.session["weekcolors_enabled"] = bool(getattr(settings, "weekcolors_enabled", True))
-    request.session["show_all_zones"] = bool(getattr(settings, "show_all_zones", True))
-    request.session.modified = True
-
-    weekcolors_enabled = bool(request.session.get("weekcolors_enabled"))
-    show_all_zones = bool(request.session.get("show_all_zones"))
+    settings = CoachSettings.objects.filter(user=request.user).first()
+    weekcolors_enabled = bool(request.session.get("weekcolors_enabled", getattr(settings, "weekcolors_enabled", True)))
+    show_all_zones = bool(request.session.get("show_all_zones", getattr(settings, "show_all_zones", True)))
     show_t_totals = bool(request.session.get("show_t_totals", getattr(settings, "show_t_totals", True)))
     show_all_t_totals = bool(request.session.get("show_all_t_totals", getattr(settings, "show_all_t_totals", True)))
 
@@ -1036,6 +1042,23 @@ def athlete_year_calendar_view(request):
             athletes = []
             selected_athlete_id = ""
 
+    athlete_self_view = bool(selected_athlete and not request.user.is_staff)
+    visible_until_date = None
+    if athlete_self_view:
+        try:
+            weeks_ahead = int(getattr(selected_athlete, "view_weeks_ahead", 2) or 0)
+        except Exception:
+            weeks_ahead = 2
+        if weeks_ahead < 0:
+            weeks_ahead = 0
+
+        today = date.today()
+        if weeks_ahead == 0:
+            visible_until_date = today
+        else:
+            current_week_start = today - timedelta(days=today.weekday())
+            visible_until_date = current_week_start + timedelta(days=(7 * weeks_ahead) - 1)
+
     jan1 = date(year, 1, 1)
     start = jan1 - timedelta(days=jan1.weekday())
 
@@ -1148,16 +1171,27 @@ def athlete_year_calendar_view(request):
                 check1 = check_map.get((day, 1))
                 check2 = check_map.get((day, 2))
 
+            slot1 = _visible_year_slot(slot_map, has_fix_keys, k1)
+            slot2 = _visible_year_slot(slot_map, has_fix_keys, k2)
+
+            if athlete_self_view and visible_until_date and day > visible_until_date:
+                if not _slot_has_race(slot1):
+                    slot1 = None
+                    check1 = None
+                if not _slot_has_race(slot2):
+                    slot2 = None
+                    check2 = None
+
             cells1.append({
                 "day": day,
-                "slot": _visible_year_slot(slot_map, has_fix_keys, k1),
+                "slot": slot1,
                 "is_override": k1 in has_fix_keys,
                 "check": check1,
                 "slot_index": 1,
             })
             cells2.append({
                 "day": day,
-                "slot": _visible_year_slot(slot_map, has_fix_keys, k2),
+                "slot": slot2,
                 "is_override": k2 in has_fix_keys,
                 "check": check2,
                 "slot_index": 2,
@@ -1329,6 +1363,12 @@ def athlete_year_calendar_view(request):
 
     if cutoff:
         week_rows = [w for w in week_rows if w["week_end"] >= cutoff]
+
+    if athlete_self_view and visible_until_date:
+        week_rows = [
+            w for w in week_rows
+            if w["week_start"] <= visible_until_date or w.get("has_race")
+        ]
 
     return render(
         request,
