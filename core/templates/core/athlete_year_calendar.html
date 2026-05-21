@@ -246,6 +246,49 @@
     white-space: pre-wrap;
   }
 
+  @media (max-width: 768px) {
+    .year-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table.year-table {
+      min-width: 980px;
+    }
+
+    .year-table th,
+    .year-table td {
+      padding: 5px;
+    }
+
+    .slotbox {
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .weeklabel {
+      width: 150px;
+    }
+
+    .sumcol {
+      width: 130px;
+    }
+
+    form.mb-3 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    form.mb-3 input,
+    form.mb-3 select,
+    form.mb-3 button {
+      margin-bottom: 0;
+    }
+  }
+
 </style>
 {% endblock %}
 
@@ -443,6 +486,7 @@
     </div>
   </div>
 
+  <div class="year-table-wrap">
   <table class="year-table">
     <thead>
       <tr>
@@ -611,6 +655,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 
 </div>
 
