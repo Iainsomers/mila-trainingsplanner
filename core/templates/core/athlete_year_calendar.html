@@ -248,13 +248,35 @@
 
   @media (max-width: 768px) {
     .year-table-wrap {
+      display: block;
       width: 100%;
+      max-width: 100vw;
       overflow-x: auto;
+      overflow-y: visible;
       -webkit-overflow-scrolling: touch;
     }
 
     table.year-table {
-      min-width: 980px;
+      width: 1120px !important;
+      min-width: 1120px !important;
+      max-width: none !important;
+      table-layout: fixed;
+    }
+
+    .year-table .weeklabel {
+      width: 150px;
+      min-width: 150px;
+    }
+
+    .year-table .sumcol {
+      width: 150px;
+      min-width: 150px;
+    }
+
+    .year-table th:not(.weeklabel):not(.sumcol),
+    .year-table td:not(.weeklabel):not(.sumcol) {
+      width: 115px;
+      min-width: 115px;
     }
 
     .year-table th,
@@ -265,14 +287,6 @@
     .slotbox {
       font-size: 11px;
       line-height: 1.2;
-    }
-
-    .weeklabel {
-      width: 150px;
-    }
-
-    .sumcol {
-      width: 130px;
     }
 
     form.mb-3 {
