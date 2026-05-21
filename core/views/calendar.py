@@ -1030,6 +1030,9 @@ def athlete_year_calendar_view(request):
             except Exception:
                 selected_athlete = None
                 selected_athlete_id = ""
+        elif athletes:
+            selected_athlete = athletes[0]
+            selected_athlete_id = str(selected_athlete.id)
     else:
         username = (request.user.username or "").strip()
         inferred_name = username.replace("_", " ")
@@ -1349,7 +1352,7 @@ def athlete_year_calendar_view(request):
         d += timedelta(days=7)
 
     # --- hiding logic ---
-    hide_mode = request.GET.get("hide", "none")
+    hide_mode = request.GET.get("hide", "t1")
 
     today = date.today()
     current_week_start = today - timedelta(days=today.weekday())

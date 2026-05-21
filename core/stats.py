@@ -12,7 +12,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v12"
+STATS_SCHEMA_VERSION = "v13"
 
 
 def _stats_version() -> int:
@@ -581,9 +581,9 @@ def base_week_stats(plan, week_start: date_cls):
                         if is_race:
                             race["distance_m"] += int(nm)
                             race["duration_s"] += int(dur)
-
-                        zones[load_zone]["distance_m"] += int(nm)
-                        zones[load_zone]["duration_s"] += int(dur)
+                        else:
+                            zones[load_zone]["distance_m"] += int(nm)
+                            zones[load_zone]["duration_s"] += int(dur)
                     continue
 
                 speed = float(speeds[zone])
@@ -604,9 +604,9 @@ def base_week_stats(plan, week_start: date_cls):
                 if is_race:
                     race["distance_m"] += int(nm)
                     race["duration_s"] += int(dur)
-
-                zones[zone]["distance_m"] += int(nm)
-                zones[zone]["duration_s"] += int(dur)
+                else:
+                    zones[zone]["distance_m"] += int(nm)
+                    zones[zone]["duration_s"] += int(dur)
 
     out = {"zones": zones, "race": race, "alt_zones": alt_zones, "t_totals": t_totals}
     cache.set(cache_key, out, STATS_CACHE_TTL_S)
@@ -690,9 +690,9 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                         if is_race:
                             race["distance_m"] += int(nm)
                             race["duration_s"] += int(dur)
-
-                        zones[load_zone]["distance_m"] += int(nm)
-                        zones[load_zone]["duration_s"] += int(dur)
+                        else:
+                            zones[load_zone]["distance_m"] += int(nm)
+                            zones[load_zone]["duration_s"] += int(dur)
                     continue
 
                 t = (getattr(seg, "t_type", "") or "").strip()
@@ -715,9 +715,9 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                             if is_race:
                                 race["distance_m"] += int(load_nm)
                                 race["duration_s"] += int(load_dur)
-
-                            zones[load_zone]["distance_m"] += int(load_nm)
-                            zones[load_zone]["duration_s"] += int(load_dur)
+                            else:
+                                zones[load_zone]["distance_m"] += int(load_nm)
+                                zones[load_zone]["duration_s"] += int(load_dur)
                         continue
 
                     continue
@@ -735,9 +735,9 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 if is_race:
                     race["distance_m"] += int(nm)
                     race["duration_s"] += int(dur)
-
-                zones[zone]["distance_m"] += int(nm)
-                zones[zone]["duration_s"] += int(dur)
+                else:
+                    zones[zone]["distance_m"] += int(nm)
+                    zones[zone]["duration_s"] += int(dur)
 
     out = {"zones": zones, "race": race, "alt_zones": alt_zones, "t_totals": t_totals}
     cache.set(cache_key, out, STATS_CACHE_TTL_S)
@@ -833,9 +833,9 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                         if is_race:
                             race["distance_m"] += int(nm)
                             race["duration_s"] += int(dur)
-
-                        zones[load_zone]["distance_m"] += int(nm)
-                        zones[load_zone]["duration_s"] += int(dur)
+                        else:
+                            zones[load_zone]["distance_m"] += int(nm)
+                            zones[load_zone]["duration_s"] += int(dur)
                     continue
 
                 t = (getattr(seg, "t_type", "") or "").strip()
@@ -858,9 +858,9 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                 if is_race:
                     race["distance_m"] += int(nm)
                     race["duration_s"] += int(dur)
-
-                zones[zone]["distance_m"] += int(nm)
-                zones[zone]["duration_s"] += int(dur)
+                else:
+                    zones[zone]["distance_m"] += int(nm)
+                    zones[zone]["duration_s"] += int(dur)
 
     out = {"zones": zones, "race": race, "alt_zones": alt_zones, "t_totals": t_totals}
     cache.set(cache_key, out, STATS_CACHE_TTL_S)
