@@ -262,6 +262,12 @@ def calendar_view(request):
             selected_plan = _filter_accessible(TrainingPlan.objects.all(), request.user).get(id=int(plan_id))
         except Exception:
             selected_plan = None
+    else:
+        fallback_plan = _get_selected_plan(request)
+        if fallback_plan and _filter_accessible(TrainingPlan.objects.filter(id=fallback_plan.id), request.user).exists():
+            selected_plan = fallback_plan
+        else:
+            selected_plan = plans.first()
 
     selected_athlete = _get_selected_athlete_from_request(request)
     if selected_athlete and not _filter_accessible(Athlete.objects.filter(id=selected_athlete.id), request.user).exists():
