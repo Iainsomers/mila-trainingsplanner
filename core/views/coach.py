@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Lower
@@ -480,6 +481,12 @@ def coach_plan_edit_view(request, plan_id: int):
 @require_http_methods(["POST"])
 def coach_plan_delete_view(request, plan_id: int):
     plan = get_object_or_404(_filter_owned(TrainingPlan.objects.all(), request.user), id=plan_id)
+
+    if plan.targeted_athlete_ids():
+        return HttpResponse(
+            f'<script>alert("Pls remove athletes from plan first."); window.location.href = "{reverse("coach_plans")}";</script>'
+        )
+
     plan.delete()
     return redirect("coach_plans")
 
