@@ -270,11 +270,8 @@
   </div>
 {% endif %}
 
-{# ✅ Belangrijk: default_if_none i.p.v. default, zodat False niet terugvalt naar True #}
-{% with highlight_current_week=request.session.highlight_current_week|default_if_none:True %}
-  {% if highlight_current_week %}
-    {% now "Y-m-d" as today_str %}
-  {% endif %}
+{% with highlight_current_week=True %}
+  {% now "Y-m-d" as today_str %}
 
   <table>
     <thead>
