@@ -12,11 +12,16 @@ def copy_day_comments_to_am_report(apps, schema_editor):
             athlete=day_comment.athlete,
             date=day_comment.date,
             slot_index=1,
+            defaults={
+                "updated_by": day_comment.created_by,
+            },
         )
 
         if not (check.comment or "").strip():
             check.comment = day_comment.text
-            check.save(update_fields=["comment"])
+            if not check.updated_by_id:
+                check.updated_by = day_comment.created_by
+            check.save(update_fields=["comment", "updated_by"])
 
 
 def reverse_copy_day_comments_to_am_report(apps, schema_editor):
