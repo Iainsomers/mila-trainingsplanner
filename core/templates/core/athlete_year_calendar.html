@@ -261,6 +261,74 @@
     resize: vertical;
   }
 
+  .report-status-select.status-done_as_planned {
+    background: #00cc00 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+  }
+
+  .report-status-select.status-too_hard_fast,
+  .report-status-select.status-adjusted_ok,
+  .report-status-select.status-lighter_slower {
+    background: #f28c28 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+  }
+
+  .report-status-select.status-not_done {
+    background: #cc0000 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+  }
+
+
+
+  .comment-display {
+    width: 100%;
+    min-height: 54px;
+    font-size: 11px;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .report-preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    height: 100%;
+  }
+
+  .report-preview-half {
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 3px 4px;
+    background: #ffffff;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .report-preview-top {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+
+  .report-preview-rpe {
+    font-weight: 700;
+    color: #333333;
+  }
+
+  .report-preview-text {
+    color: #555555;
+    line-height: 1.2;
+    max-height: 26px;
+    overflow: hidden;
+    white-space: normal;
+    word-break: break-word;
+  }
+
   .today-comment-display {
     width: 100%;
     min-height: 70px;
@@ -431,22 +499,6 @@
                           {% endif %}
                         {% endfor %}
                       {% endif %}
-                      {% with status=cell.check.effective_status|default:"" %}
-                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}"
-                              data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-status="{{ status }}"
-                              title="Mark training status"
-                              style="position:absolute; right:5px; bottom:3px; cursor:pointer;">
-                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
-                        </span>
-                        <div class="check-status-menu">
-                          <button type="button" class="check-status-option" data-status="">— No status</button>
-                          <button type="button" class="check-status-option" data-status="done_as_planned">✓ Training done as planned</button>
-                          <button type="button" class="check-status-option" data-status="too_hard_fast">↑ Too much / too fast</button>
-                          <button type="button" class="check-status-option" data-status="adjusted_ok">✓ Adjusted, not harder or easier</button>
-                          <button type="button" class="check-status-option" data-status="lighter_slower">↓ Lighter / slower</button>
-                          <button type="button" class="check-status-option" data-status="not_done">✕ Training not done</button>
-                        </div>
-                      {% endwith %}
                     </div>
                   {% else %}
                     <div class="text-muted small">Geen training.</div>
@@ -485,22 +537,6 @@
                           {% endif %}
                         {% endfor %}
                       {% endif %}
-                      {% with status=cell.check.effective_status|default:"" %}
-                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}"
-                              data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-status="{{ status }}"
-                              title="Mark training status"
-                              style="position:absolute; right:5px; bottom:3px; cursor:pointer;">
-                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
-                        </span>
-                        <div class="check-status-menu">
-                          <button type="button" class="check-status-option" data-status="">— No status</button>
-                          <button type="button" class="check-status-option" data-status="done_as_planned">✓ Training done as planned</button>
-                          <button type="button" class="check-status-option" data-status="too_hard_fast">↑ Too much / too fast</button>
-                          <button type="button" class="check-status-option" data-status="adjusted_ok">✓ Adjusted, not harder or easier</button>
-                          <button type="button" class="check-status-option" data-status="lighter_slower">↓ Lighter / slower</button>
-                          <button type="button" class="check-status-option" data-status="not_done">✕ Training not done</button>
-                        </div>
-                      {% endwith %}
                     </div>
                   {% else %}
                     <div class="text-muted small">Geen training.</div>
@@ -607,22 +643,6 @@
                         {% endif %}
                       {% endfor %}
                     {% endif %}
-                    {% with status=cell.check.effective_status|default:"" %}
-                      <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}{% if cell.day > today %} disabled{% endif %}"
-                            data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-status="{{ status }}"
-                            title="Mark training status"
-                            style="position:absolute; right:5px; bottom:3px; cursor:pointer;">
-                        {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
-                      </span>
-                      <div class="check-status-menu">
-                        <button type="button" class="check-status-option" data-status="">— No status</button>
-                        <button type="button" class="check-status-option" data-status="done_as_planned">✓ Training done as planned</button>
-                        <button type="button" class="check-status-option" data-status="too_hard_fast">↑ Too much / too fast</button>
-                        <button type="button" class="check-status-option" data-status="adjusted_ok">✓ Adjusted, not harder or easier</button>
-                        <button type="button" class="check-status-option" data-status="lighter_slower">↓ Lighter / slower</button>
-                        <button type="button" class="check-status-option" data-status="not_done">✕ Training not done</button>
-                      </div>
-                    {% endwith %}
                   </div>
                 {% endif %}
               </div>
@@ -658,22 +678,6 @@
                         {% endif %}
                       {% endfor %}
                     {% endif %}
-                    {% with status=cell.check.effective_status|default:"" %}
-                      <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}{% if cell.day > today %} disabled{% endif %}"
-                            data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-status="{{ status }}"
-                            title="Mark training status"
-                            style="position:absolute; right:5px; bottom:3px; cursor:pointer;">
-                        {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
-                      </span>
-                      <div class="check-status-menu">
-                        <button type="button" class="check-status-option" data-status="">— No status</button>
-                        <button type="button" class="check-status-option" data-status="done_as_planned">✓ Training done as planned</button>
-                        <button type="button" class="check-status-option" data-status="too_hard_fast">↑ Too much / too fast</button>
-                        <button type="button" class="check-status-option" data-status="adjusted_ok">✓ Adjusted, not harder or easier</button>
-                        <button type="button" class="check-status-option" data-status="lighter_slower">↓ Lighter / slower</button>
-                        <button type="button" class="check-status-option" data-status="not_done">✕ Training not done</button>
-                      </div>
-                    {% endwith %}
                   </div>
                 {% endif %}
               </div>
@@ -686,9 +690,37 @@
             <td>
               <div class="comment-display"
                    data-date="{{ d.day|date:'Y-m-d' }}"
-                   data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}"
-                   style="width:100%; height:40px; font-size:12px; cursor:pointer; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">
-                   {% if d.comment %}{{ d.comment.text }}{% endif %}
+                   data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
+                   data-t1-rpe="{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% endif %}"
+                   data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
+                   data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
+                   data-t2-rpe="{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% endif %}"
+                   data-t2-comment="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% endif %}"
+                   data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}">
+                <div class="report-preview-grid">
+                  <div class="report-preview-half">
+                    <div class="report-preview-top">
+                      {% with status=d.check1.effective_status|default:"" %}
+                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
+                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                        </span>
+                      {% endwith %}
+                      <span class="report-preview-rpe">RPE: {% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
+                    </div>
+                    <div class="report-preview-text">{% if d.check1.comment %}{{ d.check1.comment }}{% endif %}</div>
+                  </div>
+                  <div class="report-preview-half">
+                    <div class="report-preview-top">
+                      {% with status=d.check2.effective_status|default:"" %}
+                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
+                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                        </span>
+                      {% endwith %}
+                      <span class="report-preview-rpe">RPE: {% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
+                    </div>
+                    <div class="report-preview-text">{% if d.check2.comment %}{{ d.check2.comment }}{% endif %}</div>
+                  </div>
+                </div>
               </div>
             </td>
           {% endfor %}
@@ -919,154 +951,105 @@
 })();
 </script>
 
+
 <div id="commentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:#ffffff; width:420px; max-width:90vw; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-    <textarea id="commentModalTextarea" style="width:100%; height:160px; resize:none; font-size:14px; padding:8px;"></textarea>
+  <div style="background:#ffffff; width:720px; max-width:95vw; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+    <h5>Verslag</h5>
+    <table class="table table-sm">
+      <tr><th></th><th>Training AM</th><th></th><th>Training PM</th></tr>
+      <tr>
+        <td>Done?</td>
+        <td><select id="reportT1Status" class="form-control form-control-sm report-field report-status-select"><option value="">—</option><option value="done_as_planned">✓ Done</option><option value="too_hard_fast">↑ More/too fast</option><option value="adjusted_ok">✓ Adjusted</option><option value="lighter_slower">↓ Less, slower</option><option value="not_done">✕ Not done</option></select></td>
+        <td>Done?</td>
+        <td><select id="reportT2Status" class="form-control form-control-sm report-field report-status-select"><option value="">—</option><option value="done_as_planned">✓ Done</option><option value="too_hard_fast">↑ More/too fast</option><option value="adjusted_ok">✓ Adjusted</option><option value="lighter_slower">↓ Less, slower</option><option value="not_done">✕ Not done</option></select></td>
+      </tr>
+      <tr>
+        <td>RPE</td>
+        <td><input id="reportT1Rpe" type="number" min="0" max="10" class="form-control form-control-sm report-field"></td>
+        <td>RPE</td>
+        <td><input id="reportT2Rpe" type="number" min="0" max="10" class="form-control form-control-sm report-field"></td>
+      </tr>
+      <tr>
+        <td>Comment</td>
+        <td><textarea id="reportT1Comment" class="form-control form-control-sm report-field" rows="3"></textarea></td>
+        <td>Comment</td>
+        <td><textarea id="reportT2Comment" class="form-control form-control-sm report-field" rows="3"></textarea></td>
+      </tr>
+    </table>
+    <div id="reportValidationMsg" class="text-danger small mb-2"></div>
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Annuleren</button>
-      <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary">OK</button>
+      <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary" disabled>OK</button>
     </div>
   </div>
 </div>
 
 <script>
 (function() {
-  var activeElement = null;
   var activeDate = "";
-
   function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      var cookies = document.cookie.split(';');
-      for (var i = 0; i < cookies.length; i++) {
-        var cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
+    var v = null;
+    if (document.cookie) document.cookie.split(";").forEach(function(c){ c=c.trim(); if(c.substring(0,name.length+1)===(name+"=")) v=decodeURIComponent(c.substring(name.length+1)); });
+    return v;
   }
+  function val(id){ return (document.getElementById(id).value || "").trim(); }
 
-  function normalizeCommentText(text) {
-    return (text || "")
-      .replace(/\\u005Cu000D\\u005Cu000A/g, "\n")
-      .replace(/\\u000D\\u000A/g, "\n")
-      .replace(/\\r\\n/g, "\n");
+  function updateReportStatusColor(selectEl){
+    if (!selectEl) return;
+    ["status-done_as_planned", "status-too_hard_fast", "status-adjusted_ok", "status-lighter_slower", "status-not_done"].forEach(function(cls){ selectEl.classList.remove(cls); });
+    var status = (selectEl.value || "").trim();
+    if (status) selectEl.classList.add("status-" + status);
   }
-
-  function saveComment(dateStr, text) {
-    text = normalizeCommentText(text);
-    var url = "?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}";
-    var formData = new FormData();
-    formData.append("date", dateStr);
-    formData.append("comment", text || "");
-
-    fetch(url, {
-      method: "POST",
-      body: formData,
-      headers: {
-        "X-CSRFToken": getCookie("csrftoken")
-      },
-      credentials: "same-origin"
-    }).catch(function(){});
+  function updateAllReportStatusColors(){
+    updateReportStatusColor(document.getElementById("reportT1Status"));
+    updateReportStatusColor(document.getElementById("reportT2Status"));
   }
-
-  function updateCommentDisplay(dateStr, text) {
-    text = normalizeCommentText(text);
-    document.querySelectorAll('.comment-display[data-date="' + dateStr + '"]').forEach(function(el) {
-      el.textContent = text;
-      el.setAttribute("data-text", text);
-    });
+  function setVal(id, value){ document.getElementById(id).value = value || ""; }
+  function filled(prefix){ return !!(val(prefix+"Status") || val(prefix+"Rpe") || val(prefix+"Comment")); }
+  function complete(prefix){
+    if (!filled(prefix)) return true;
+    var rpe = val(prefix+"Rpe"), comment = val(prefix+"Comment");
+    return !!val(prefix+"Status") && rpe !== "" && !isNaN(parseInt(rpe,10)) && parseInt(rpe,10) >= 0 && parseInt(rpe,10) <= 10 && comment.length >= 4;
   }
-
-  function openModal(el) {
-    activeElement = el;
-    activeDate = el.getAttribute("data-date") || "";
-
-    var modal = document.getElementById("commentModal");
-    var textarea = document.getElementById("commentModalTextarea");
-
-    textarea.value = normalizeCommentText(el.getAttribute("data-text") || "");
-    modal.style.display = "flex";
-    textarea.focus();
+  function validate(){
+    updateAllReportStatusColors();
+    var ok = complete("reportT1") && complete("reportT2");
+    document.getElementById("commentOkBtn").disabled = !ok;
+    document.getElementById("reportValidationMsg").textContent = ok ? "" : "Vul per training niets in, of Done + RPE 0-10 + comment minimaal 4 letters.";
   }
-
-  function closeModal() {
-    document.getElementById("commentModal").style.display = "none";
-    activeElement = null;
-    activeDate = "";
+  function post(slotIndex, status, rpe, comment){
+    var fd = new FormData();
+    fd.append("date", activeDate);
+    fd.append("slot_index", slotIndex);
+    fd.append("report_submit", "1");
+    fd.append("check_status", status || "");
+    fd.append("rpe", rpe || "");
+    fd.append("report_comment", comment || "");
+    return fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {method:"POST", body:fd, headers:{"X-CSRFToken":getCookie("csrftoken")}, credentials:"same-origin"});
   }
-
-  function confirmModal() {
-    if (!activeElement || !activeDate) {
-      closeModal();
-      return;
-    }
-
-    var textarea = document.getElementById("commentModalTextarea");
-    var updated = normalizeCommentText(textarea.value || "");
-
-    activeElement.textContent = updated;
-    activeElement.setAttribute("data-text", updated);
-    saveComment(activeDate, updated);
-    closeModal();
-  }
-
-  function setupCommentClicks() {
-    document.querySelectorAll(".comment-display").forEach(function(el) {
-      el.addEventListener("click", function() {
-        openModal(el);
-      });
-    });
-
-    document.querySelectorAll(".today-comment-input").forEach(function(el) {
-      var saveTimer = null;
-
-      function scheduleSave() {
-        if (saveTimer) {
-          clearTimeout(saveTimer);
-        }
-        saveTimer = setTimeout(function() {
-          var dateStr = el.getAttribute("data-date") || "";
-          saveComment(dateStr, el.value || "");
-          updateCommentDisplay(dateStr, el.value || "");
-        }, 450);
-      }
-
-      el.addEventListener("input", scheduleSave);
-      el.addEventListener("blur", function() {
-        if (saveTimer) {
-          clearTimeout(saveTimer);
-          saveTimer = null;
-        }
-        var dateStr = el.getAttribute("data-date") || "";
-        saveComment(dateStr, el.value || "");
-        updateCommentDisplay(dateStr, el.value || "");
-      });
-    });
-
-    var todayModal = document.getElementById("todayTrainingModal");
-    if (todayModal) {
-      todayModal.addEventListener("hide.bs.modal", function() {
-        document.querySelectorAll(".today-comment-input").forEach(function(el) {
-          var dateStr = el.getAttribute("data-date") || "";
-          saveComment(dateStr, el.value || "");
-          updateCommentDisplay(dateStr, el.value || "");
-        });
-      });
-    }
-
-    document.getElementById("commentCancelBtn").addEventListener("click", closeModal);
-    document.getElementById("commentOkBtn").addEventListener("click", confirmModal);
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", setupCommentClicks);
-  } else {
-    setupCommentClicks();
-  }
+  document.querySelectorAll(".comment-display").forEach(function(el){
+    el.addEventListener("click", function(event){
+      event.preventDefault(); event.stopImmediatePropagation();
+      activeDate = el.getAttribute("data-date") || "";
+      setVal("reportT1Status", el.getAttribute("data-t1-status"));
+      setVal("reportT1Rpe", el.getAttribute("data-t1-rpe"));
+      setVal("reportT1Comment", el.getAttribute("data-t1-comment"));
+      setVal("reportT2Status", el.getAttribute("data-t2-status"));
+      setVal("reportT2Rpe", el.getAttribute("data-t2-rpe"));
+      setVal("reportT2Comment", el.getAttribute("data-t2-comment"));
+      document.getElementById("commentModal").style.display = "flex";
+      validate();
+    }, true);
+  });
+  document.querySelectorAll(".report-field").forEach(function(el){ el.addEventListener("input", validate); el.addEventListener("change", validate); });
+  document.getElementById("commentCancelBtn").addEventListener("click", function(){ document.getElementById("commentModal").style.display = "none"; });
+  document.getElementById("commentOkBtn").addEventListener("click", function(){
+    if (this.disabled) return;
+    Promise.all([
+      post(1, val("reportT1Status"), val("reportT1Rpe"), val("reportT1Comment")),
+      post(2, val("reportT2Status"), val("reportT2Rpe"), val("reportT2Comment"))
+    ]).then(function(){ window.location.reload(); });
+  });
 })();
 </script>
 
@@ -1098,8 +1081,11 @@
 
   function setupSlotClicks() {
     document.querySelectorAll(".slotbox").forEach(function(el) {
-      el.setAttribute("data-date", el.closest("td").querySelector(".check-status-toggle")?.getAttribute("data-date") || "");
-      el.setAttribute("data-slot-index", el.closest("td").querySelector(".check-status-toggle")?.getAttribute("data-slot-index") || "1");
+      var statusToggle = el.closest("td") ? el.closest("td").querySelector(".check-status-toggle") : null;
+      if (statusToggle) {
+        el.setAttribute("data-date", statusToggle.getAttribute("data-date") || el.getAttribute("data-date") || "");
+        el.setAttribute("data-slot-index", statusToggle.getAttribute("data-slot-index") || el.getAttribute("data-slot-index") || "1");
+      }
 
       el.addEventListener("click", function(e) {
         if (e.target.closest(".check-status-toggle") || e.target.closest(".check-status-menu")) return;

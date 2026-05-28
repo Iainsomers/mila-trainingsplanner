@@ -961,6 +961,7 @@ def athlete_year_calendar_view(request):
         text = request.POST.get("comment", "")
         check_status = request.POST.get("check_status")
         toggle_check = request.POST.get("toggle_check")
+        report_submit = request.POST.get("report_submit")
         slot_index_raw = request.POST.get("slot_index")
         athlete = None
 
@@ -995,7 +996,7 @@ def athlete_year_calendar_view(request):
                     _save_athlete_slot_override(request, athlete, d, slot_index, slot_text)
                     _invalidate_stats_cache()
 
-                elif check_status is not None or toggle_check is not None:
+                elif check_status is not None or toggle_check is not None or report_submit is not None:
                     if d > today:
                         return HttpResponse("", status=204)
                     try:
@@ -1038,6 +1039,13 @@ def athlete_year_calendar_view(request):
                     )
                     obj.status = status
                     obj.checked = bool(status)
+
+                    if report_submit is not None:
+                        rpe_raw = (request.POST.get("rpe") or "").strip()
+                        comment_raw = (request.POST.get("report_comment") or "").strip()
+                        obj.rpe = int(rpe_raw) if rpe_raw.isdigit() and 0 <= int(rpe_raw) <= 10 else None
+                        obj.comment = comment_raw
+
                     obj.updated_by = request.user
                     obj.save()
                     _invalidate_stats_cache()
@@ -1249,6 +1257,8 @@ def athlete_year_calendar_view(request):
             cells3.append({
                 "day": day,
                 "comment": comment,
+                "check1": check1,
+                "check2": check2,
             })
 
         week_phase = ""

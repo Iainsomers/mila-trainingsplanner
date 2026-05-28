@@ -579,6 +579,8 @@ class AthleteDayCheck(models.Model):
     slot_index = models.PositiveSmallIntegerField(default=1)
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="day_checks")
     checked = models.BooleanField(default=False)
+    rpe = models.PositiveSmallIntegerField(null=True, blank=True)
+    comment = models.TextField(blank=True, default="")
 
     status = models.CharField(
         max_length=30,
