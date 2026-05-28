@@ -10,7 +10,7 @@ def copy_day_comments_to_am_report(apps, schema_editor):
     for day_comment in AthleteDayComment.objects.exclude(text__isnull=True).exclude(text__exact=""):
         check, created = AthleteDayCheck.objects.get_or_create(
             athlete=day_comment.athlete,
-            day=day_comment.day,
+            date=day_comment.date,
             slot_index=1,
         )
 
