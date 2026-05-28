@@ -394,12 +394,10 @@
   @media (max-width: 1200px) {
     .year-table-wrap {
       display: block;
-      width: 100%;
-      max-width: 100vw;
-      overflow-x: auto;
-      overflow-y: visible;
-      -webkit-overflow-scrolling: touch;
-      touch-action: pan-x pan-y pinch-zoom;
+      width: max-content;
+      max-width: none;
+      overflow: visible;
+      touch-action: auto;
     }
 
     table.year-table {
