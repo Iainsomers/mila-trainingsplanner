@@ -27,7 +27,7 @@ def reverse_copy_day_comments_to_am_report(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0033_athlete_day_check_report_fields"),
+        ("core", "0033_athletedaycheck_comment_athletedaycheck_rpe"),
     ]
 
     operations = [
