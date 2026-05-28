@@ -3,7 +3,7 @@
 {% block title %}Athlete Year Calendar{% endblock %}
 
 {% block extra_head %}
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=5, user-scalable=yes">
 <style>
   table.year-table {
     width: 100%;
@@ -385,6 +385,7 @@
       overflow-x: auto;
       overflow-y: visible;
       -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y pinch-zoom;
     }
 
     table.year-table {
