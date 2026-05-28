@@ -1259,6 +1259,8 @@ def athlete_year_calendar_view(request):
                 "comment": comment,
                 "check1": check1,
                 "check2": check2,
+                "has_slot1": bool(slot1),
+                "has_slot2": bool(slot2),
             })
 
         week_phase = ""

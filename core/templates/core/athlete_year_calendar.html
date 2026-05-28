@@ -304,6 +304,10 @@
     height: 100%;
   }
 
+  .report-preview-grid.single {
+    grid-template-columns: 1fr;
+  }
+
   .report-preview-half {
     border: 1px solid #d0d0d0;
     border-radius: 6px;
@@ -333,6 +337,32 @@
     overflow: hidden;
     white-space: normal;
     word-break: break-word;
+  }
+
+  .report-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .report-form-grid.single {
+    grid-template-columns: 1fr;
+  }
+
+  .report-form-section {
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fafafa;
+  }
+
+  .report-form-section.is-hidden {
+    display: none;
+  }
+
+  .report-form-title {
+    font-weight: 700;
+    margin-bottom: 8px;
   }
 
   .today-comment-display {
@@ -697,37 +727,45 @@
             <td>
               <div class="comment-display"
                    data-date="{{ d.day|date:'Y-m-d' }}"
+                   data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
                    data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
                    data-t1-rpe="{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% endif %}"
                    data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
+                   data-t2-enabled="{% if d.has_slot2 %}1{% else %}0{% endif %}"
                    data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
                    data-t2-rpe="{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% endif %}"
                    data-t2-comment="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% endif %}"
                    data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}">
-                <div class="report-preview-grid">
-                  <div class="report-preview-half">
-                    <div class="report-preview-top">
-                      {% with status=d.check1.effective_status|default:"" %}
-                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
-                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
-                        </span>
-                      {% endwith %}
-                      <span class="report-preview-rpe">{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
-                    </div>
-                    <div class="report-preview-text">{% if d.check1.comment %}{{ d.check1.comment }}{% endif %}</div>
+                {% if d.has_slot1 or d.has_slot2 %}
+                  <div class="report-preview-grid{% if d.has_slot1 and not d.has_slot2 or d.has_slot2 and not d.has_slot1 %} single{% endif %}">
+                    {% if d.has_slot1 %}
+                      <div class="report-preview-half">
+                        <div class="report-preview-top">
+                          {% with status=d.check1.effective_status|default:"" %}
+                            <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
+                              {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                            </span>
+                          {% endwith %}
+                          <span class="report-preview-rpe">{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
+                        </div>
+                        <div class="report-preview-text">{% if d.check1.comment %}{{ d.check1.comment }}{% endif %}</div>
+                      </div>
+                    {% endif %}
+                    {% if d.has_slot2 %}
+                      <div class="report-preview-half">
+                        <div class="report-preview-top">
+                          {% with status=d.check2.effective_status|default:"" %}
+                            <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
+                              {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                            </span>
+                          {% endwith %}
+                          <span class="report-preview-rpe">{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
+                        </div>
+                        <div class="report-preview-text">{% if d.check2.comment %}{{ d.check2.comment }}{% endif %}</div>
+                      </div>
+                    {% endif %}
                   </div>
-                  <div class="report-preview-half">
-                    <div class="report-preview-top">
-                      {% with status=d.check2.effective_status|default:"" %}
-                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
-                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
-                        </span>
-                      {% endwith %}
-                      <span class="report-preview-rpe">{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
-                    </div>
-                    <div class="report-preview-text">{% if d.check2.comment %}{{ d.check2.comment }}{% endif %}</div>
-                  </div>
-                </div>
+                {% endif %}
               </div>
             </td>
           {% endfor %}
@@ -962,28 +1000,54 @@
 <div id="commentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
   <div style="background:#ffffff; width:720px; max-width:95vw; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
     <h5>Verslag</h5>
-    <table class="table table-sm">
-      <tr><th></th><th>Training AM</th><th></th><th>Training PM</th></tr>
-      <tr>
-        <td>Done?</td>
-        <td><select id="reportT1Status" class="form-control form-control-sm report-field report-status-select"><option value="">—</option><option value="done_as_planned">✓ Done</option><option value="too_hard_fast">↑ More/too fast</option><option value="adjusted_ok">✓ Adjusted</option><option value="lighter_slower">↓ Less, slower</option><option value="not_done">✕ Not done</option></select></td>
-        <td>Done?</td>
-        <td><select id="reportT2Status" class="form-control form-control-sm report-field report-status-select"><option value="">—</option><option value="done_as_planned">✓ Done</option><option value="too_hard_fast">↑ More/too fast</option><option value="adjusted_ok">✓ Adjusted</option><option value="lighter_slower">↓ Less, slower</option><option value="not_done">✕ Not done</option></select></td>
-      </tr>
-      <tr>
-        <td>RPE</td>
-        <td><input id="reportT1Rpe" type="number" min="0" max="10" class="form-control form-control-sm report-field"></td>
-        <td>RPE</td>
-        <td><input id="reportT2Rpe" type="number" min="0" max="10" class="form-control form-control-sm report-field"></td>
-      </tr>
-      <tr>
-        <td>Comment</td>
-        <td><textarea id="reportT1Comment" class="form-control form-control-sm report-field" rows="3"></textarea></td>
-        <td>Comment</td>
-        <td><textarea id="reportT2Comment" class="form-control form-control-sm report-field" rows="3"></textarea></td>
-      </tr>
-    </table>
-    <div id="reportValidationMsg" class="text-danger small mb-2"></div>
+    <div id="reportFormGrid" class="report-form-grid">
+      <div id="reportT1Section" class="report-form-section" data-report-slot="1">
+        <div class="report-form-title">Training AM</div>
+        <div class="mb-2">
+          <label class="form-label mb-1">Done?</label>
+          <select id="reportT1Status" class="form-control form-control-sm report-field report-status-select">
+            <option value="">—</option>
+            <option value="done_as_planned">✓ Done</option>
+            <option value="too_hard_fast">↑ More/too fast</option>
+            <option value="adjusted_ok">✓ Adjusted</option>
+            <option value="lighter_slower">↓ Less, slower</option>
+            <option value="not_done">✕ Not done</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label mb-1">RPE</label>
+          <input id="reportT1Rpe" type="number" min="0" max="10" class="form-control form-control-sm report-field">
+        </div>
+        <div>
+          <label class="form-label mb-1">Comment</label>
+          <textarea id="reportT1Comment" class="form-control form-control-sm report-field" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div id="reportT2Section" class="report-form-section" data-report-slot="2">
+        <div class="report-form-title">Training PM</div>
+        <div class="mb-2">
+          <label class="form-label mb-1">Done?</label>
+          <select id="reportT2Status" class="form-control form-control-sm report-field report-status-select">
+            <option value="">—</option>
+            <option value="done_as_planned">✓ Done</option>
+            <option value="too_hard_fast">↑ More/too fast</option>
+            <option value="adjusted_ok">✓ Adjusted</option>
+            <option value="lighter_slower">↓ Less, slower</option>
+            <option value="not_done">✕ Not done</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label mb-1">RPE</label>
+          <input id="reportT2Rpe" type="number" min="0" max="10" class="form-control form-control-sm report-field">
+        </div>
+        <div>
+          <label class="form-label mb-1">Comment</label>
+          <textarea id="reportT2Comment" class="form-control form-control-sm report-field" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+    <div id="reportValidationMsg" class="text-danger small mb-2 mt-2"></div>
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Annuleren</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary" disabled>OK</button>
@@ -1011,9 +1075,28 @@
     updateReportStatusColor(document.getElementById("reportT1Status"));
     updateReportStatusColor(document.getElementById("reportT2Status"));
   }
+  function section(prefix){
+    return document.getElementById(prefix === "reportT1" ? "reportT1Section" : "reportT2Section");
+  }
+  function enabled(prefix){
+    var el = section(prefix);
+    return !!el && !el.classList.contains("is-hidden");
+  }
+  function setSectionVisible(prefix, isVisible){
+    var el = section(prefix);
+    if (!el) return;
+    el.classList.toggle("is-hidden", !isVisible);
+  }
+  function updateReportGrid(){
+    var grid = document.getElementById("reportFormGrid");
+    if (!grid) return;
+    var count = (enabled("reportT1") ? 1 : 0) + (enabled("reportT2") ? 1 : 0);
+    grid.classList.toggle("single", count === 1);
+  }
   function setVal(id, value){ document.getElementById(id).value = value || ""; }
   function filled(prefix){ return !!(val(prefix+"Status") || val(prefix+"Rpe") || val(prefix+"Comment")); }
   function complete(prefix){
+    if (!enabled(prefix)) return true;
     if (!filled(prefix)) return true;
     var rpe = val(prefix+"Rpe"), comment = val(prefix+"Comment");
     return !!val(prefix+"Status") && rpe !== "" && !isNaN(parseInt(rpe,10)) && parseInt(rpe,10) >= 0 && parseInt(rpe,10) <= 10 && comment.length >= 4;
@@ -1038,6 +1121,12 @@
     el.addEventListener("click", function(event){
       event.preventDefault(); event.stopImmediatePropagation();
       activeDate = el.getAttribute("data-date") || "";
+      var t1Enabled = (el.getAttribute("data-t1-enabled") === "1");
+      var t2Enabled = (el.getAttribute("data-t2-enabled") === "1");
+      if (!t1Enabled && !t2Enabled) return;
+      setSectionVisible("reportT1", t1Enabled);
+      setSectionVisible("reportT2", t2Enabled);
+      updateReportGrid();
       setVal("reportT1Status", el.getAttribute("data-t1-status"));
       setVal("reportT1Rpe", el.getAttribute("data-t1-rpe"));
       setVal("reportT1Comment", el.getAttribute("data-t1-comment"));
@@ -1052,10 +1141,14 @@
   document.getElementById("commentCancelBtn").addEventListener("click", function(){ document.getElementById("commentModal").style.display = "none"; });
   document.getElementById("commentOkBtn").addEventListener("click", function(){
     if (this.disabled) return;
-    Promise.all([
-      post(1, val("reportT1Status"), val("reportT1Rpe"), val("reportT1Comment")),
-      post(2, val("reportT2Status"), val("reportT2Rpe"), val("reportT2Comment"))
-    ]).then(function(){ window.location.reload(); });
+    var requests = [];
+    if (enabled("reportT1")) {
+      requests.push(post(1, val("reportT1Status"), val("reportT1Rpe"), val("reportT1Comment")));
+    }
+    if (enabled("reportT2")) {
+      requests.push(post(2, val("reportT2Status"), val("reportT2Rpe"), val("reportT2Comment")));
+    }
+    Promise.all(requests).then(function(){ window.location.reload(); });
   });
 })();
 </script>
