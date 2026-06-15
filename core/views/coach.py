@@ -7,7 +7,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Lower
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate
 from .common import (
     _parse_iso_date,
     _parse_int,
@@ -219,6 +219,71 @@ def dashboard_view(request):
 @require_GET
 def coach_console_view(request):
     return render(request, "core/coach_console.html")
+
+
+def _normalize_saved_training_order(user):
+    templates = list(
+        SavedTrainingTemplate.objects
+        .filter(owner=user)
+        .order_by("sort_order", "name", "id")
+    )
+
+    changed = []
+    for index, template in enumerate(templates, start=1):
+        if template.sort_order != index:
+            template.sort_order = index
+            changed.append(template)
+
+    if changed:
+        SavedTrainingTemplate.objects.bulk_update(changed, ["sort_order"])
+
+    return templates
+
+
+@login_required
+@require_GET
+def coach_saved_trainings_view(request):
+    templates = _normalize_saved_training_order(request.user)
+    return render(request, "core/coach_saved_trainings.html", {"templates": templates})
+
+
+@login_required
+@require_http_methods(["POST"])
+def coach_saved_training_delete_view(request, template_id: int):
+    template = get_object_or_404(
+        SavedTrainingTemplate.objects.filter(owner=request.user),
+        id=template_id,
+    )
+    template.delete()
+    _normalize_saved_training_order(request.user)
+    return redirect("coach_saved_trainings")
+
+
+@login_required
+@require_http_methods(["POST"])
+def coach_saved_training_move_view(request, template_id: int, direction: str):
+    templates = _normalize_saved_training_order(request.user)
+    current_index = next((i for i, template in enumerate(templates) if template.id == template_id), None)
+
+    if current_index is None:
+        return redirect("coach_saved_trainings")
+
+    if direction == "up":
+        target_index = current_index - 1
+    elif direction == "down":
+        target_index = current_index + 1
+    else:
+        return redirect("coach_saved_trainings")
+
+    if target_index < 0 or target_index >= len(templates):
+        return redirect("coach_saved_trainings")
+
+    current = templates[current_index]
+    target = templates[target_index]
+    current.sort_order, target.sort_order = target.sort_order, current.sort_order
+    SavedTrainingTemplate.objects.bulk_update([current, target], ["sort_order"])
+
+    return redirect("coach_saved_trainings")
 
 
 # -----------------------------

@@ -1,0 +1,65 @@
+{% extends "core/base.html" %}
+
+{% block title %}Standaardtrainingen{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">Standaardtrainingen</h1>
+    </div>
+    <div>
+      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Back to coach console</a>
+    </div>
+  </div>
+
+  {% if templates %}
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 24%;">Naam</th>
+              <th>Inhoud</th>
+              <th style="width: 190px;">Volgorde</th>
+              <th style="width: 110px;">Actie</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for template in templates %}
+              <tr>
+                <td><strong>{{ template.name }}</strong></td>
+                <td>
+                  <div style="white-space: pre-wrap; font-size: 12px; line-height: 1.3; max-height: 84px; overflow: auto;">{{ template.text }}</div>
+                </td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <form method="post" action="{% url 'coach_saved_training_move' template.id 'up' %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" {% if forloop.first %}disabled{% endif %}>↑</button>
+                    </form>
+                    <form method="post" action="{% url 'coach_saved_training_move' template.id 'down' %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-secondary" {% if forloop.last %}disabled{% endif %}>↓</button>
+                    </form>
+                  </div>
+                </td>
+                <td>
+                  <form method="post" action="{% url 'coach_saved_training_delete' template.id %}" onsubmit="return confirm('Standaardtraining verwijderen?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info">Er zijn nog geen standaardtrainingen opgeslagen.</div>
+  {% endif %}
+
+</div>
+{% endblock %}

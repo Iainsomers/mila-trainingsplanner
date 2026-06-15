@@ -483,12 +483,13 @@ class SavedTrainingTemplate(models.Model):
 
     name = models.CharField(max_length=120)
     text = models.TextField()
+    sort_order = models.PositiveIntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["name", "id"]
+        ordering = ["sort_order", "name", "id"]
 
     def __str__(self) -> str:
         return self.name

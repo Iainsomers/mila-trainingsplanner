@@ -21,6 +21,9 @@ from core.views.coach import (
     coach_group_delete_view,
     coach_assignments_view,
     coach_assignment_edit_view,
+    coach_saved_trainings_view,
+    coach_saved_training_delete_view,
+    coach_saved_training_move_view,
 )
 
 from core.views.calendar import (
@@ -85,6 +88,11 @@ urlpatterns = [
     # Coach: Assignments (editable)
     path("coach/assignments/", coach_assignments_view, name="coach_assignments"),
     path("coach/assignments/<int:plan_id>/edit/", coach_assignment_edit_view, name="coach_assignment_edit"),
+
+    # Coach: Saved training templates
+    path("coach/saved-trainings/", coach_saved_trainings_view, name="coach_saved_trainings"),
+    path("coach/saved-trainings/<int:template_id>/delete/", coach_saved_training_delete_view, name="coach_saved_training_delete"),
+    path("coach/saved-trainings/<int:template_id>/move/<str:direction>/", coach_saved_training_move_view, name="coach_saved_training_move"),
 
     # Calendar
     path("calendar/", calendar_view, name="calendar"),
