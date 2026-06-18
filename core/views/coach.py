@@ -207,13 +207,58 @@ def _copy_plan_contents(source_plan, target_plan):
         )
 
 
+def _identity_value(value):
+    return "".join(ch.lower() for ch in (value or "") if ch.isalnum())
+
+
+def _athlete_for_user(user):
+    if not user or not user.is_authenticated:
+        return None
+
+    athlete_fields = {field.name for field in Athlete._meta.get_fields()}
+    if "user" in athlete_fields:
+        athlete = Athlete.objects.filter(user=user).first()
+        if athlete:
+            return athlete
+
+    candidates = []
+    for value in (
+        getattr(user, "username", ""),
+        getattr(user, "email", ""),
+        getattr(user, "first_name", ""),
+        getattr(user, "last_name", ""),
+        f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}",
+    ):
+        normalized = _identity_value(value)
+        if normalized:
+            candidates.append(normalized)
+
+    if not candidates:
+        return None
+
+    for athlete in Athlete.objects.select_related("owner").order_by("owner_id", "name", "id"):
+        athlete_name = _identity_value(getattr(athlete, "name", ""))
+        if athlete_name and athlete_name in candidates:
+            return athlete
+
+    return None
+
+
 @login_required
 @require_GET
 def dashboard_view(request):
     from datetime import date
 
-    groups = _filter_owned(Group.objects.all(), request.user)
-    return render(request, "core/dashboard.html", {"groups": groups, "today": date.today()})
+    athlete = _athlete_for_user(request.user)
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.all(), request.user)
+
+    return render(request, "core/dashboard.html", {
+        "groups": groups,
+        "today": date.today(),
+        "is_athlete_user": is_athlete_user,
+        "current_athlete": athlete,
+    })
 
 
 @login_required
@@ -573,19 +618,57 @@ def race_select_view(request):
     if period_mode not in allowed_periods:
         period_mode = "full"
 
+    current_athlete = _athlete_for_user(request.user)
+    is_athlete_user = bool(current_athlete and not request.user.is_staff and not request.user.is_superuser)
+    data_owner = request.user
+
+    race_owner_ids = []
+    if is_athlete_user:
+        owner_ids = set()
+
+        if getattr(current_athlete, "owner_id", None):
+            owner_ids.add(current_athlete.owner_id)
+
+        for plan in TrainingPlan.objects.order_by("id"):
+            try:
+                if current_athlete.id in plan.targeted_athlete_ids():
+                    owner_id = getattr(plan, "owner_id", None)
+                    if owner_id:
+                        owner_ids.add(owner_id)
+            except Exception:
+                continue
+
+        for group in Group.objects.filter(athletes=current_athlete):
+            owner_id = getattr(group, "owner_id", None)
+            if owner_id:
+                owner_ids.add(owner_id)
+
+        race_owner_ids = sorted(owner_ids)
+    else:
+        race_owner_ids = [request.user.id]
+
     scope_mode = (request.GET.get("scope") or request.POST.get("scope") or "group").strip().lower()
     if scope_mode not in ("group", "athlete"):
         scope_mode = "group"
+    if is_athlete_user:
+        scope_mode = "athlete"
 
     period = _race_calendar_period_bounds(year, period_mode, today)
     start_date = period["start_date"]
     end_date = period["end_date"]
 
-    groups = list(_filter_owned(Group.objects.prefetch_related("athletes").order_by("name"), request.user))
-    all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    if is_athlete_user:
+        groups = []
+        all_athletes = [current_athlete]
+    else:
+        groups = list(_filter_owned(Group.objects.prefetch_related("athletes").order_by("name"), data_owner))
+        all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), data_owner))
 
     selected_group_id = (request.GET.get("group") or request.POST.get("group") or "").strip()
     selected_athlete_id = (request.GET.get("athlete") or request.POST.get("athlete") or "").strip()
+    if is_athlete_user:
+        selected_group_id = ""
+        selected_athlete_id = str(current_athlete.id)
 
     selected_group = None
     if selected_group_id:
@@ -618,7 +701,7 @@ def race_select_view(request):
 
     races = list(
         RaceEvent.objects
-        .filter(owner=request.user, date__gte=start_date, date__lte=end_date)
+        .filter(owner_id__in=race_owner_ids, date__gte=start_date, date__lte=end_date)
         .prefetch_related("distances")
         .order_by("date", "name", "id")
     )
@@ -635,25 +718,40 @@ def race_select_view(request):
         for athlete in athletes:
             for race in races:
                 allowed_distance_ids = {str(distance.id) for distance in distances_by_race_id.get(race.id, [])}
-                coach_selected_ids = {
-                    value for value in request.POST.getlist(f"coach_distances_{race.id}_{athlete.id}")
-                    if value in allowed_distance_ids
-                }
-                target_selected_ids = {
-                    value for value in request.POST.getlist(f"target_distances_{race.id}_{athlete.id}")
+                athlete_selected_ids = {
+                    value for value in request.POST.getlist(f"athlete_distances_{race.id}_{athlete.id}")
                     if value in allowed_distance_ids
                 }
 
-                posted_selected_ids = list(coach_selected_ids | target_selected_ids)[:3]
-                posted_selected_id_set = set(posted_selected_ids)
+                if not is_athlete_user:
+                    coach_selected_ids = {
+                        value for value in request.POST.getlist(f"coach_distances_{race.id}_{athlete.id}")
+                        if value in allowed_distance_ids
+                    }
+                    target_selected_ids = {
+                        value for value in request.POST.getlist(f"target_distances_{race.id}_{athlete.id}")
+                        if value in allowed_distance_ids
+                    }
+                    posted_selected_ids = list(coach_selected_ids | target_selected_ids)[:3]
+                    posted_selected_id_set = set(posted_selected_ids)
+                else:
+                    coach_selected_ids = set()
+                    target_selected_ids = set()
+                    posted_selected_ids = list(athlete_selected_ids)[:3]
+                    posted_selected_id_set = set(posted_selected_ids)
 
                 for distance in distances_by_race_id.get(race.id, []):
                     distance_id = str(distance.id)
-                    coach_selected = distance_id in coach_selected_ids and distance_id in posted_selected_id_set
-                    target_selected = distance_id in target_selected_ids and distance_id in posted_selected_id_set
-
                     existing_entry = RaceEntry.objects.filter(race_distance=distance, athlete=athlete).first()
-                    athlete_selected = bool(getattr(existing_entry, "athlete_selected", False))
+
+                    if is_athlete_user:
+                        coach_selected = bool(existing_entry and existing_entry.coach_selected)
+                        target_selected = bool(existing_entry and existing_entry.target_selected)
+                        athlete_selected = distance_id in athlete_selected_ids and distance_id in posted_selected_id_set
+                    else:
+                        coach_selected = distance_id in coach_selected_ids and distance_id in posted_selected_id_set
+                        target_selected = distance_id in target_selected_ids and distance_id in posted_selected_id_set
+                        athlete_selected = bool(getattr(existing_entry, "athlete_selected", False))
 
                     if not coach_selected and not athlete_selected and not target_selected:
                         if existing_entry:
@@ -751,6 +849,20 @@ def race_select_view(request):
     else:
         query_base += f"&group={selected_group_id}"
 
+    all_period_races_count = RaceEvent.objects.filter(date__gte=start_date, date__lte=end_date).count()
+    race_select_debug = {
+        "user": getattr(request.user, "username", ""),
+        "athlete": getattr(current_athlete, "name", "") if current_athlete else "",
+        "athlete_id": getattr(current_athlete, "id", "") if current_athlete else "",
+        "athlete_owner_id": getattr(current_athlete, "owner_id", "") if current_athlete else "",
+        "race_owner_ids": race_owner_ids,
+        "period": f"{start_date} – {end_date}",
+        "athletes_count": len(athletes),
+        "races_count": len(races),
+        "race_distances_count": len(race_distances),
+        "all_period_races_count": all_period_races_count,
+    }
+
     return render(request, "core/race_select.html", {
         "year": year,
         "previous_year": period["previous_year"],
@@ -770,6 +882,9 @@ def race_select_view(request):
         "athletes": athletes,
         "rows": rows,
         "month_rows": month_rows,
+        "is_athlete_user": is_athlete_user,
+        "current_athlete": current_athlete,
+        "race_select_debug": race_select_debug,
     })
 
 

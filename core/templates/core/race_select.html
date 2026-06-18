@@ -11,7 +11,9 @@
       <div class="text-muted small">{{ period_label }} · {% if scope_mode == "athlete" %}Athlete{% else %}Group{% endif %}</div>
     </div>
     <div class="d-flex gap-2">
-      <a href="/race-calendar/?year={{ year }}&view=calendar&period={{ period_mode }}" class="btn btn-sm btn-outline-secondary">Race Calendar</a>
+      {% if not is_athlete_user %}
+        <a href="/race-calendar/?year={{ year }}&view=calendar&period={{ period_mode }}" class="btn btn-sm btn-outline-secondary">Race Calendar</a>
+      {% endif %}
       <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
     </div>
   </div>
@@ -42,6 +44,7 @@
     </div>
   </div>
 
+  {% if not is_athlete_user %}
   <form method="get" class="d-flex align-items-center gap-2 mb-3 flex-wrap">
     <input type="hidden" name="year" value="{{ year }}">
     <input type="hidden" name="view" value="{{ view_mode }}">
@@ -67,7 +70,7 @@
       </select>
     {% endif %}
   </form>
-
+  {% endif %}
   {% if scope_mode == "group" and not groups %}
     <div class="alert alert-warning">No groups found. Create a group first.</div>
   {% elif scope_mode == "athlete" and not all_athletes %}
@@ -154,18 +157,25 @@
                                      class="race-select-counted"
                                      name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                      value="{{ distance_cell.distance.id }}"
+                                      {% if is_athlete_user %}disabled{% endif %}
                                      {% if distance_cell.coach_selected %}checked{% endif %}>
                             </label>
                             <label class="race-check text-muted" title="Athlete selected">
                               <input type="checkbox"
+                                     {% if is_athlete_user %}
+                                       class="race-select-counted"
+                                       name="athlete_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                       value="{{ distance_cell.distance.id }}"
+                                     {% endif %}
                                      {% if distance_cell.athlete_selected %}checked{% endif %}
-                                     disabled>
+                                     {% if not is_athlete_user %}disabled{% endif %}>
                             </label>
                             <label class="race-check" title="Target race">
                               <input type="checkbox"
                                      class="race-select-counted"
                                      name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                      value="{{ distance_cell.distance.id }}"
+                                      {% if is_athlete_user %}disabled{% endif %}
                                      {% if distance_cell.target_selected %}checked{% endif %}>
                             </label>
                           </div>
@@ -198,18 +208,25 @@
                                              class="race-select-counted"
                                              name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                              value="{{ distance_cell.distance.id }}"
+                                      {% if is_athlete_user %}disabled{% endif %}
                                              {% if distance_cell.coach_selected %}checked{% endif %}>
                                     </label>
                                     <label class="race-check text-muted" title="Athlete selected">
                                       <input type="checkbox"
+                                             {% if is_athlete_user %}
+                                               class="race-select-counted"
+                                               name="athlete_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                               value="{{ distance_cell.distance.id }}"
+                                             {% endif %}
                                              {% if distance_cell.athlete_selected %}checked{% endif %}
-                                             disabled>
+                                             {% if not is_athlete_user %}disabled{% endif %}>
                                     </label>
                                     <label class="race-check" title="Target race">
                                       <input type="checkbox"
                                              class="race-select-counted"
                                              name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                              value="{{ distance_cell.distance.id }}"
+                                      {% if is_athlete_user %}disabled{% endif %}
                                              {% if distance_cell.target_selected %}checked{% endif %}>
                                     </label>
                                   </div>
@@ -251,18 +268,25 @@
                                    class="race-select-counted"
                                    name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                    value="{{ distance_cell.distance.id }}"
+                                      {% if is_athlete_user %}disabled{% endif %}
                                    {% if distance_cell.coach_selected %}checked{% endif %}>
                           </label>
                           <label class="race-check text-muted" title="Athlete selected">
                             <input type="checkbox"
+                                   {% if is_athlete_user %}
+                                     class="race-select-counted"
+                                     name="athlete_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                     value="{{ distance_cell.distance.id }}"
+                                   {% endif %}
                                    {% if distance_cell.athlete_selected %}checked{% endif %}
-                                   disabled>
+                                   {% if not is_athlete_user %}disabled{% endif %}>
                           </label>
                           <label class="race-check" title="Target race">
                             <input type="checkbox"
                                    class="race-select-counted"
                                    name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                    value="{{ distance_cell.distance.id }}"
+                                      {% if is_athlete_user %}disabled{% endif %}
                                    {% if distance_cell.target_selected %}checked{% endif %}>
                           </label>
                         </div>
@@ -304,18 +328,25 @@
                                        class="race-select-counted"
                                        name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                        value="{{ distance_cell.distance.id }}"
+                                      {% if is_athlete_user %}disabled{% endif %}
                                        {% if distance_cell.coach_selected %}checked{% endif %}>
                               </label>
                               <label class="race-check text-muted" title="Athlete selected">
                                 <input type="checkbox"
+                                       {% if is_athlete_user %}
+                                         class="race-select-counted"
+                                         name="athlete_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                         value="{{ distance_cell.distance.id }}"
+                                       {% endif %}
                                        {% if distance_cell.athlete_selected %}checked{% endif %}
-                                       disabled>
+                                       {% if not is_athlete_user %}disabled{% endif %}>
                               </label>
                               <label class="race-check" title="Target race">
                                 <input type="checkbox"
                                        class="race-select-counted"
                                        name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                        value="{{ distance_cell.distance.id }}"
+                                      {% if is_athlete_user %}disabled{% endif %}
                                        {% if distance_cell.target_selected %}checked{% endif %}>
                               </label>
                             </div>
@@ -332,7 +363,13 @@
           </div>
         {% endif %}
 
-        <div class="small text-muted mb-2 mt-2">Checkboxes: coach, athlete(read-only), target. Target only counts as a target race when coach + athlete + target are all checked.</div>
+        <div class="small text-muted mb-2 mt-2">
+          {% if is_athlete_user %}
+            Checkboxes: coach(read-only), athlete, target(read-only). Target only counts as a target race when coach + athlete + target are all checked.
+          {% else %}
+            Checkboxes: coach, athlete(read-only), target. Target only counts as a target race when coach + athlete + target are all checked.
+          {% endif %}
+        </div>
         <button type="submit" class="btn btn-primary">Save</button>
       {% endif %}
     </form>

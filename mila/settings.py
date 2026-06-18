@@ -29,11 +29,13 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     "core",
+    "debug_toolbar",
 ]
 
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -121,5 +123,9 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Auth redirects
-LOGIN_REDIRECT_URL = "/athlete/year/"
+LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
