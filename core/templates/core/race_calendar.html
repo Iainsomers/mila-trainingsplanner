@@ -1,0 +1,440 @@
+{% extends "core/base.html" %}
+
+{% block title %}Race Calendar{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">Race Calendar</h1>
+      <div class="text-muted">{{ period_label }}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/race-select/" class="btn btn-outline-secondary">Race Select</a>
+      <a href="/?" class="btn btn-outline-secondary">Back to dashboard</a>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+    <div class="d-flex align-items-center gap-2">
+      {% if period_mode != "current_next" %}
+        <a href="?year={{ previous_year }}&view={{ view_mode }}&period={{ period_mode }}" class="btn btn-sm btn-outline-secondary">← {{ previous_year }}</a>
+        <a href="?year={{ next_year }}&view={{ view_mode }}&period={{ period_mode }}" class="btn btn-sm btn-outline-secondary">{{ next_year }} →</a>
+      {% endif %}
+    </div>
+
+    <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
+      <a href="?year={{ year }}&view=list&period={{ period_mode }}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
+      <a href="?year={{ year }}&view=calendar&period={{ period_mode }}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <span class="small text-muted">Period:</span>
+    <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Period">
+      {% for option in period_options %}
+        <a href="?year={{ option.year }}&view={{ view_mode }}&period={{ option.key }}"
+           class="btn {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
+          {{ option.label }}
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Add race</h5>
+
+      {% if errors %}
+        <div class="alert alert-danger py-2">
+          {% for error in errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" class="row g-2 align-items-end">
+        {% csrf_token %}
+        <input type="hidden" name="view" value="{{ view_mode }}">
+        <input type="hidden" name="period" value="{{ period_mode }}">
+          <input type="hidden" name="period" value="{{ period_mode }}">
+                  <input type="hidden" name="period" value="{{ period_mode }}">
+                <input type="hidden" name="period" value="{{ period_mode }}">
+                        <input type="hidden" name="period" value="{{ period_mode }}">
+                          <input type="hidden" name="period" value="{{ period_mode }}">
+                              <input type="hidden" name="period" value="{{ period_mode }}">
+        <input type="hidden" name="period" value="{{ period_mode }}">
+        <div class="col-12 col-md-6">
+          <label class="form-label">Name</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+        </div>
+        <div class="col-12 col-md-3">
+          <button type="submit" class="btn btn-primary w-100">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if view_mode == "calendar" %}
+    <div class="year-calendar-grid">
+      {% for month in month_rows %}
+        <div class="card race-month-card">
+          <div class="card-header py-2 fw-bold">{{ month.name }}</div>
+          <div class="card-body p-2">
+            <table class="race-month-table">
+              <thead>
+                <tr>
+                  <th>Mon</th>
+                  <th>Tue</th>
+                  <th>Wed</th>
+                  <th>Thu</th>
+                  <th>Fri</th>
+                  <th>Sat</th>
+                  <th>Sun</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for week in month.weeks %}
+                  <tr>
+                    {% for cell in week %}
+                      <td class="race-day-cell{% if not cell.in_month %} outside-month{% endif %}"
+                          data-date="{{ cell.day|date:'Y-m-d' }}"
+                          {% if cell.in_month %}data-bs-toggle="modal" data-bs-target="#addRaceDateModal"{% endif %}>
+                        <div class="race-day-number">
+                          <span>{{ cell.day|date:"j" }}</span>
+                          {% if cell.in_month %}<span class="race-day-add">+</span>{% endif %}
+                        </div>
+                        {% for row in cell.races %}
+                          <button type="button"
+                                  class="race-calendar-event"
+                                  data-bs-toggle="modal"
+                                  data-bs-target="#raceModal{{ row.race.id }}">
+                            {{ row.race.name }}
+                          </button>
+                        {% endfor %}
+                      </td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Races</h5>
+
+        {% if race_rows %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th style="width: 140px;">Date</th>
+                  <th style="width: 220px;">Name</th>
+                  <th>Distances</th>
+                  <th style="width: 120px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+  {% for row in race_rows %}
+                  {% with race=row.race distances=row.distances %}
+                  <tr>
+                    <td>{{ race.date|date:"d-m-Y" }}</td>
+                    <td>{{ race.name }}</td>
+                    <td>
+                      <div class="mb-2">
+                        {% for distance in distances %}
+                          <span class="badge text-bg-light border me-1 mb-1">
+                            {{ distance.display_distance }}
+                            <form method="post" action="{% url 'race_calendar_distance_delete' race.id distance.id %}" class="d-inline">
+                              {% csrf_token %}
+                              <input type="hidden" name="view" value="{{ view_mode }}">
+                              <input type="hidden" name="period" value="{{ period_mode }}">
+                              <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1" style="font-size: 11px; text-decoration: none;">×</button>
+                            </form>
+                          </span>
+                        {% empty %}
+                          <span class="text-muted small">No distances yet.</span>
+                        {% endfor %}
+                      </div>
+
+                      <form method="post" action="{% url 'race_calendar_distance_add' race.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="view" value="{{ view_mode }}">
+                        <input type="hidden" name="period" value="{{ period_mode }}">
+                        <div class="row g-2 align-items-start">
+                          <div class="col-12 col-lg-8">
+                            <div class="d-flex flex-wrap gap-2">
+                              {% for value, label in distance_choices %}
+                                {% if value != "custom" %}
+                                  <label class="form-check form-check-inline small mb-0">
+                                    <input class="form-check-input" type="checkbox" name="distances" value="{{ value }}">
+                                    <span class="form-check-label">{{ label }}</span>
+                                  </label>
+                                {% endif %}
+                              {% endfor %}
+                            </div>
+                          </div>
+                          <div class="col-12 col-md-4 col-lg-2">
+                            <input type="number" name="custom_distance_m" min="1" class="form-control form-control-sm" placeholder="x meter">
+                          </div>
+                          <div class="col-12 col-md-4 col-lg-2">
+                            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Save distances</button>
+                          </div>
+                        </div>
+                      </form>
+                    </td>
+                    <td class="text-end">
+                      <form method="post" action="{% url 'race_calendar_delete' race.id %}" onsubmit="return confirm('Delete this race?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="view" value="{{ view_mode }}">
+                        <input type="hidden" name="period" value="{{ period_mode }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% endwith %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-muted">No races for this period yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% for row in race_rows %}
+    {% with race=row.race distances=row.distances %}
+      <div class="modal fade" id="raceModal{{ race.id }}" tabindex="-1" aria-labelledby="raceModal{{ race.id }}Label" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div>
+                <h5 class="modal-title" id="raceModal{{ race.id }}Label">{{ race.name }}</h5>
+                <div class="text-muted small">{{ race.date|date:"d-m-Y" }}</div>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <h6>Distances</h6>
+              <form method="post" action="{% url 'race_calendar_distance_add' race.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="view" value="{{ view_mode }}">
+                <input type="hidden" name="period" value="{{ period_mode }}">
+
+                <div class="mb-3 race-existing-distances">
+                  {% for distance in distances %}
+                    <span class="badge text-bg-light border me-1 mb-1 race-distance-badge">
+                      {{ distance.display_distance }}
+                      <input type="checkbox" name="remove_distances" value="{{ distance.id }}" class="race-remove-distance-input d-none">
+                      <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 race-remove-distance-btn" style="font-size: 11px; text-decoration: none;">×</button>
+                    </span>
+                  {% empty %}
+                    <span class="text-muted small">No distances yet.</span>
+                  {% endfor %}
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                  {% for value, label in distance_choices %}
+                    {% if value != "custom" %}
+                      <label class="form-check form-check-inline small mb-0">
+                        <input class="form-check-input" type="checkbox" name="distances" value="{{ value }}">
+                        <span class="form-check-label">{{ label }}</span>
+                      </label>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                <div class="row g-2 align-items-end">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label">Custom distance</label>
+                    <input type="number" name="custom_distance_m" min="1" class="form-control form-control-sm" placeholder="x meter">
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">Save distances</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <form method="post" action="{% url 'race_calendar_delete' race.id %}" onsubmit="return confirm('Delete this race?');">
+                {% csrf_token %}
+                <input type="hidden" name="view" value="{{ view_mode }}">
+                <input type="hidden" name="period" value="{{ period_mode }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Delete race</button>
+              </form>
+              <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endwith %}
+  {% endfor %}
+
+  <div class="modal fade" id="addRaceDateModal" tabindex="-1" aria-labelledby="addRaceDateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="view" value="{{ view_mode }}">
+          <input type="hidden" name="period" value="{{ period_mode }}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addRaceDateModalLabel">Add race</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Date</label>
+              <input type="date" name="date" id="addRaceDateInput" class="form-control" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-sm btn-primary">Add</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+(function() {
+  var addRaceModal = document.getElementById("addRaceDateModal");
+  if (addRaceModal) {
+    addRaceModal.addEventListener("show.bs.modal", function(event) {
+      var trigger = event.relatedTarget;
+      var date = trigger ? (trigger.getAttribute("data-date") || "") : "";
+      var input = document.getElementById("addRaceDateInput");
+      if (input && date) input.value = date;
+    });
+  }
+
+  document.querySelectorAll(".race-calendar-event").forEach(function(button) {
+    button.addEventListener("click", function(event) {
+      event.stopPropagation();
+    });
+  });
+
+  document.querySelectorAll(".race-remove-distance-btn").forEach(function(button) {
+    button.addEventListener("click", function(event) {
+      event.preventDefault();
+      var badge = button.closest(".race-distance-badge");
+      var input = badge ? badge.querySelector(".race-remove-distance-input") : null;
+      if (!badge || !input) return;
+      input.checked = true;
+      badge.style.display = "none";
+    });
+  });
+})();
+</script>
+
+<style>
+  .year-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .race-month-card {
+    min-width: 0;
+  }
+
+  .race-month-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 11px;
+  }
+
+  .race-month-table th,
+  .race-month-table td {
+    border: 1px solid #d0d0d0;
+    vertical-align: top;
+    padding: 3px;
+  }
+
+  .race-month-table th {
+    background: #f8f9fa;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .race-month-table td {
+    height: 62px;
+    background: #ffffff;
+  }
+
+  .race-day-cell {
+    cursor: pointer;
+  }
+
+  .race-day-cell:hover {
+    background: #fff8ec;
+  }
+
+  .race-month-table td.outside-month {
+    background: #f7f7f7;
+    color: #aaaaaa;
+  }
+
+  .race-day-number {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .race-day-add {
+    color: #999999;
+    font-weight: 700;
+  }
+
+  .race-calendar-event {
+    display: block;
+    width: 100%;
+    border: 1px solid #ffbf80;
+    border-radius: 4px;
+    background: #fff3e0;
+    padding: 1px 3px;
+    margin-bottom: 2px;
+    text-align: left;
+    font-size: 10px;
+    line-height: 1.15;
+    color: #000000;
+    cursor: pointer;
+  }
+
+  .race-calendar-event:hover {
+    background: #ffe0b2;
+  }
+
+  @media (max-width: 992px) {
+    .year-calendar-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 576px) {
+    .year-calendar-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}

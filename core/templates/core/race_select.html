@@ -1,0 +1,641 @@
+{% extends "core/base.html" %}
+
+{% block title %}Race Select{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h1 class="mb-1">Race Select</h1>
+      <div class="text-muted small">{{ period_label }} · {% if scope_mode == "athlete" %}Athlete{% else %}Group{% endif %}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/race-calendar/?year={{ year }}&view=calendar&period={{ period_mode }}" class="btn btn-sm btn-outline-secondary">Race Calendar</a>
+      <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+    <div class="d-flex align-items-center gap-2">
+      {% if period_mode != "current_next" %}
+        <a href="?year={{ previous_year }}&view={{ view_mode }}&period={{ period_mode }}&scope={{ scope_mode }}{% if scope_mode == 'athlete' %}&athlete={{ selected_athlete_id }}{% else %}&group={{ selected_group_id }}{% endif %}" class="btn btn-sm btn-outline-secondary">← {{ previous_year }}</a>
+        <a href="?year={{ next_year }}&view={{ view_mode }}&period={{ period_mode }}&scope={{ scope_mode }}{% if scope_mode == 'athlete' %}&athlete={{ selected_athlete_id }}{% else %}&group={{ selected_group_id }}{% endif %}" class="btn btn-sm btn-outline-secondary">{{ next_year }} →</a>
+      {% endif %}
+    </div>
+
+    <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
+      <a href="?year={{ year }}&view=list&period={{ period_mode }}&scope={{ scope_mode }}{% if scope_mode == 'athlete' %}&athlete={{ selected_athlete_id }}{% else %}&group={{ selected_group_id }}{% endif %}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
+      <a href="?year={{ year }}&view=calendar&period={{ period_mode }}&scope={{ scope_mode }}{% if scope_mode == 'athlete' %}&athlete={{ selected_athlete_id }}{% else %}&group={{ selected_group_id }}{% endif %}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <span class="small text-muted">Period:</span>
+    <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Period">
+      {% for option in period_options %}
+        <a href="?year={{ option.year }}&view={{ view_mode }}&period={{ option.key }}&scope={{ scope_mode }}{% if scope_mode == 'athlete' %}&athlete={{ selected_athlete_id }}{% else %}&group={{ selected_group_id }}{% endif %}"
+           class="btn {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
+          {{ option.label }}
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <form method="get" class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <input type="hidden" name="year" value="{{ year }}">
+    <input type="hidden" name="view" value="{{ view_mode }}">
+    <input type="hidden" name="period" value="{{ period_mode }}">
+
+    <label class="small text-muted mb-0">Show</label>
+    <select name="scope" class="form-select form-select-sm" style="width: 130px;" onchange="this.form.submit();">
+      <option value="group" {% if scope_mode == "group" %}selected{% endif %}>Group</option>
+      <option value="athlete" {% if scope_mode == "athlete" %}selected{% endif %}>Athlete</option>
+    </select>
+
+    {% if scope_mode == "athlete" %}
+      <select name="athlete" class="form-select form-select-sm" style="width: 240px;" onchange="this.form.submit();">
+        {% for athlete in all_athletes %}
+          <option value="{{ athlete.id }}" {% if selected_athlete and selected_athlete.id == athlete.id %}selected{% endif %}>{{ athlete.name }}</option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <select name="group" class="form-select form-select-sm" style="width: 240px;" onchange="this.form.submit();">
+        {% for group in groups %}
+          <option value="{{ group.id }}" {% if selected_group and selected_group.id == group.id %}selected{% endif %}>{{ group.name }}</option>
+        {% endfor %}
+      </select>
+    {% endif %}
+  </form>
+
+  {% if scope_mode == "group" and not groups %}
+    <div class="alert alert-warning">No groups found. Create a group first.</div>
+  {% elif scope_mode == "athlete" and not all_athletes %}
+    <div class="alert alert-warning">No athletes found. Create an athlete first.</div>
+  {% elif not athletes %}
+    <div class="alert alert-warning">No athletes found for this selection.</div>
+  {% elif not rows %}
+    <div class="alert alert-info">No races found for this period. Add races and distances in Race Calendar first.</div>
+  {% else %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="view" value="{{ view_mode }}">
+      <input type="hidden" name="period" value="{{ period_mode }}">
+      <input type="hidden" name="scope" value="{{ scope_mode }}">
+      <input type="hidden" name="group" value="{{ selected_group_id }}">
+      <input type="hidden" name="athlete" value="{{ selected_athlete_id }}">
+
+      {% if view_mode == "calendar" %}
+        <div class="race-select-calendar-grid">
+          {% for month in month_rows %}
+            <div class="card race-month-card">
+              <div class="card-header py-2 fw-bold">{{ month.name }}</div>
+              <div class="card-body p-2">
+                <table class="race-month-table">
+                  <thead>
+                    <tr>
+                      <th>Mon</th>
+                      <th>Tue</th>
+                      <th>Wed</th>
+                      <th>Thu</th>
+                      <th>Fri</th>
+                      <th>Sat</th>
+                      <th>Sun</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for week in month.weeks %}
+                      <tr>
+                        {% for cell in week %}
+                          <td class="race-day-cell{% if not cell.in_month %} outside-month{% endif %}">
+                            <div class="race-day-number">{{ cell.day|date:"j" }}</div>
+                            {% for row in cell.races %}
+                              <button type="button"
+                                      class="race-calendar-event race-select-state-empty"
+                                      data-race-id="{{ row.race.id }}"
+                                      data-bs-toggle="modal"
+                                      data-bs-target="#raceSelectModal{{ row.race.id }}">
+                                {{ row.race.name }}
+                              </button>
+                            {% endfor %}
+                          </td>
+                        {% endfor %}
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% for row in rows %}
+          <div class="modal fade" id="raceSelectModal{{ row.race.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <div>
+                    <h5 class="modal-title">{{ row.race.name }}</h5>
+                    <div class="text-muted small">{{ row.race.date|date:"d-m-Y" }}</div>
+                  </div>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  {% if scope_mode == "athlete" %}
+                    {% for cell in row.cells %}
+                      <h6>{{ cell.athlete.name }}</h6>
+                      <div class="race-modal-distance-list race-athlete-cell" data-max="3" data-race-id="{{ row.race.id }}">
+                        {% for distance_cell in cell.distance_cells %}
+                          <div class="race-distance-line">
+                            <span class="race-distance-label">{{ distance_cell.distance.display_distance }}</span>
+                            <label class="race-check" title="Coach selected">
+                              <input type="checkbox"
+                                     class="race-select-counted"
+                                     name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                     value="{{ distance_cell.distance.id }}"
+                                     {% if distance_cell.coach_selected %}checked{% endif %}>
+                            </label>
+                            <label class="race-check text-muted" title="Athlete selected">
+                              <input type="checkbox"
+                                     {% if distance_cell.athlete_selected %}checked{% endif %}
+                                     disabled>
+                            </label>
+                            <label class="race-check" title="Target race">
+                              <input type="checkbox"
+                                     class="race-select-counted"
+                                     name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                     value="{{ distance_cell.distance.id }}"
+                                     {% if distance_cell.target_selected %}checked{% endif %}>
+                            </label>
+                          </div>
+                        {% empty %}
+                          <span class="text-muted small">No distances yet.</span>
+                        {% endfor %}
+                      </div>
+                    {% endfor %}
+                  {% else %}
+                    <div class="race-select-scroll">
+                      <table class="table table-sm table-bordered align-middle race-select-table">
+                        <thead class="table-light">
+                          <tr>
+                            <th class="race-sticky-col">Athlete</th>
+                            {% for distance in row.distances %}
+                              <th class="text-center race-athlete-header">{{ distance.display_distance }}</th>
+                            {% endfor %}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for cell in row.cells %}
+                            <tr>
+                              <td class="race-sticky-col"><strong>{{ cell.athlete.name }}</strong></td>
+                              {% for distance_cell in cell.distance_cells %}
+                                <td class="race-athlete-cell" data-max="3" data-race-id="{{ row.race.id }}">
+                                  <div class="race-distance-line">
+                                    <span class="race-distance-label d-none">{{ distance_cell.distance.display_distance }}</span>
+                                    <label class="race-check" title="Coach selected">
+                                      <input type="checkbox"
+                                             class="race-select-counted"
+                                             name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                             value="{{ distance_cell.distance.id }}"
+                                             {% if distance_cell.coach_selected %}checked{% endif %}>
+                                    </label>
+                                    <label class="race-check text-muted" title="Athlete selected">
+                                      <input type="checkbox"
+                                             {% if distance_cell.athlete_selected %}checked{% endif %}
+                                             disabled>
+                                    </label>
+                                    <label class="race-check" title="Target race">
+                                      <input type="checkbox"
+                                             class="race-select-counted"
+                                             name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                             value="{{ distance_cell.distance.id }}"
+                                             {% if distance_cell.target_selected %}checked{% endif %}>
+                                    </label>
+                                  </div>
+                                </td>
+                              {% endfor %}
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                  <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        {% if scope_mode == "athlete" %}
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">{{ selected_athlete.name }}</h5>
+              {% for row in rows %}
+                <div class="race-athlete-list-row">
+                  <div class="race-athlete-list-race">
+                    <strong>{{ row.race.name }}</strong><br>
+                    <span class="text-muted small">{{ row.race.date|date:"d-m-Y" }}</span>
+                  </div>
+                  {% for cell in row.cells %}
+                    <div class="race-athlete-cell" data-max="3" data-race-id="{{ row.race.id }}">
+                      {% for distance_cell in cell.distance_cells %}
+                        <div class="race-distance-line">
+                          <span class="race-distance-label">{{ distance_cell.distance.display_distance }}</span>
+                          <label class="race-check" title="Coach selected">
+                            <input type="checkbox"
+                                   class="race-select-counted"
+                                   name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                   value="{{ distance_cell.distance.id }}"
+                                   {% if distance_cell.coach_selected %}checked{% endif %}>
+                          </label>
+                          <label class="race-check text-muted" title="Athlete selected">
+                            <input type="checkbox"
+                                   {% if distance_cell.athlete_selected %}checked{% endif %}
+                                   disabled>
+                          </label>
+                          <label class="race-check" title="Target race">
+                            <input type="checkbox"
+                                   class="race-select-counted"
+                                   name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                   value="{{ distance_cell.distance.id }}"
+                                   {% if distance_cell.target_selected %}checked{% endif %}>
+                          </label>
+                        </div>
+                      {% empty %}
+                        <span class="text-muted small">No distances yet.</span>
+                      {% endfor %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <div class="race-select-scroll">
+            <table class="table table-sm table-bordered align-middle race-select-table">
+              <thead class="table-light">
+                <tr>
+                  <th class="race-sticky-col">Race</th>
+                  {% for athlete in athletes %}
+                    <th class="text-center race-athlete-header">{{ athlete.name }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rows %}
+                  <tr>
+                    <td class="race-sticky-col">
+                      <strong>{{ row.race.name }}</strong><br>
+                      <span class="text-muted small">{{ row.race.date|date:"d-m-Y" }}</span>
+                    </td>
+                    {% for cell in row.cells %}
+                      <td class="race-athlete-cell" data-max="3" data-race-id="{{ row.race.id }}">
+                        {% if cell.distance_cells %}
+                          {% for distance_cell in cell.distance_cells %}
+                            <div class="race-distance-line">
+                              <span class="race-distance-label">{{ distance_cell.distance.display_distance }}</span>
+                              <label class="race-check" title="Coach selected">
+                                <input type="checkbox"
+                                       class="race-select-counted"
+                                       name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                       value="{{ distance_cell.distance.id }}"
+                                       {% if distance_cell.coach_selected %}checked{% endif %}>
+                              </label>
+                              <label class="race-check text-muted" title="Athlete selected">
+                                <input type="checkbox"
+                                       {% if distance_cell.athlete_selected %}checked{% endif %}
+                                       disabled>
+                              </label>
+                              <label class="race-check" title="Target race">
+                                <input type="checkbox"
+                                       class="race-select-counted"
+                                       name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
+                                       value="{{ distance_cell.distance.id }}"
+                                       {% if distance_cell.target_selected %}checked{% endif %}>
+                              </label>
+                            </div>
+                          {% endfor %}
+                        {% else %}
+                          <span class="text-muted small">—</span>
+                        {% endif %}
+                      </td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+
+        <div class="small text-muted mb-2 mt-2">Checkboxes: coach, athlete(read-only), target. Target only counts as a target race when coach + athlete + target are all checked.</div>
+        <button type="submit" class="btn btn-primary">Save</button>
+      {% endif %}
+    </form>
+  {% endif %}
+
+</div>
+
+<style>
+  .race-select-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .race-select-table {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    table-layout: fixed;
+  }
+
+  .race-select-table .race-sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    width: 220px;
+    min-width: 220px;
+    max-width: 220px;
+    background: #ffffff;
+    box-shadow: 2px 0 0 rgba(0,0,0,0.08);
+    white-space: normal;
+  }
+
+  .race-select-table thead .race-sticky-col {
+    z-index: 3;
+    background: #f8f9fa;
+  }
+
+  .race-select-table .race-athlete-header,
+  .race-select-table .race-athlete-cell {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+  }
+
+  .race-select-table td,
+  .race-select-table th {
+    vertical-align: top;
+  }
+
+  .race-distance-line {
+    display: grid;
+    grid-template-columns: minmax(34px, 1fr) auto auto auto;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2px;
+    font-size: 11px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .race-distance-line:last-child {
+    margin-bottom: 0;
+  }
+
+  .race-distance-label {
+    font-weight: 600;
+  }
+
+  .race-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0;
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  .race-check input {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+  }
+
+  .race-select-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .race-month-card {
+    min-width: 0;
+  }
+
+  .race-month-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 11px;
+  }
+
+  .race-month-table th,
+  .race-month-table td {
+    border: 1px solid #d0d0d0;
+    vertical-align: top;
+    padding: 3px;
+  }
+
+  .race-month-table th {
+    background: #f8f9fa;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .race-month-table td {
+    height: 62px;
+    background: #ffffff;
+  }
+
+  .race-month-table td.outside-month {
+    background: #f7f7f7;
+    color: #aaaaaa;
+  }
+
+  .race-day-number {
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .race-calendar-event {
+    display: block;
+    width: 100%;
+    border: 1px solid #ffbf80;
+    border-radius: 4px;
+    background: #fff3e0;
+    padding: 1px 3px;
+    margin-bottom: 2px;
+    text-align: left;
+    font-size: 10px;
+    line-height: 1.15;
+    color: #000000;
+  }
+
+  .race-modal-distance-list {
+    max-width: 320px;
+  }
+
+  .race-modal-distance-list .race-distance-line {
+    grid-template-columns: minmax(48px, 1fr) 28px 28px 28px;
+  }
+
+  .race-modal-distance-list .race-check {
+    justify-content: center;
+  }
+
+
+  .race-athlete-list-row {
+    display: grid;
+    grid-template-columns: 220px minmax(180px, 320px);
+    gap: 12px;
+    border-top: 1px solid #e0e0e0;
+    padding: 8px 0;
+  }
+
+  .race-athlete-list-row:first-of-type {
+    border-top: 0;
+  }
+
+
+  .race-select-state-empty {
+    background: #f1f3f5 !important;
+    border-color: #d0d5da !important;
+  }
+
+  .race-select-state-one {
+    background: #d9ecff !important;
+    border-color: #9ecbf5 !important;
+  }
+
+  .race-select-state-two {
+    background: #fff3e0 !important;
+    border-color: #ffbf80 !important;
+  }
+
+  .race-select-state-three {
+    background: #ffd6d6 !important;
+    border-color: #ff8a8a !important;
+  }
+
+  .race-athlete-cell {
+    transition: background 80ms ease-in-out, border-color 80ms ease-in-out;
+  }
+
+  .race-athlete-list-row {
+    border-radius: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .race-modal-distance-list {
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 6px;
+  }
+
+  @media (max-width: 992px) {
+    .race-select-calendar-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .race-select-calendar-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .race-athlete-list-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  function selectedDistanceCount(cell) {
+    var selected = {};
+
+    cell.querySelectorAll("input[type='checkbox']").forEach(function(input) {
+      if (!input.checked) return;
+
+      var line = input.closest(".race-distance-line");
+      var label = line ? line.querySelector(".race-distance-label") : null;
+      var key = input.value || (label ? label.textContent : "");
+      if (key) selected[key] = true;
+    });
+
+    return Object.keys(selected).length;
+  }
+
+  function activeCheckboxCount(cell) {
+    var count = 0;
+    cell.querySelectorAll("input[type='checkbox']").forEach(function(input) {
+      if (input.checked) count += 1;
+    });
+    return count;
+  }
+
+  function stateClassForCount(count) {
+    if (count >= 3) return "race-select-state-three";
+    if (count === 2) return "race-select-state-two";
+    if (count === 1) return "race-select-state-one";
+    return "race-select-state-empty";
+  }
+
+  function applySelectionColor(cell) {
+    cell.classList.remove(
+      "race-select-state-empty",
+      "race-select-state-one",
+      "race-select-state-two",
+      "race-select-state-three"
+    );
+    cell.classList.add(stateClassForCount(activeCheckboxCount(cell)));
+  }
+
+  function maxStateCountForRace(raceId) {
+    var maxCount = 0;
+    document.querySelectorAll(".race-athlete-cell[data-race-id='" + raceId + "']").forEach(function(cell) {
+      maxCount = Math.max(maxCount, activeCheckboxCount(cell));
+    });
+    return maxCount;
+  }
+
+  function applyRaceEventColor(raceId) {
+    if (!raceId) return;
+    var cls = stateClassForCount(maxStateCountForRace(raceId));
+    document.querySelectorAll(".race-calendar-event[data-race-id='" + raceId + "']").forEach(function(button) {
+      button.classList.remove(
+        "race-select-state-empty",
+        "race-select-state-one",
+        "race-select-state-two",
+        "race-select-state-three"
+      );
+      button.classList.add(cls);
+    });
+  }
+
+  document.querySelectorAll(".race-athlete-cell").forEach(function(cell) {
+    applySelectionColor(cell);
+    applyRaceEventColor(cell.getAttribute("data-race-id") || "");
+
+    cell.querySelectorAll("input[type='checkbox']").forEach(function(input) {
+      input.addEventListener("change", function() {
+        var max = parseInt(cell.getAttribute("data-max") || "3", 10);
+        if (selectedDistanceCount(cell) > max) {
+          input.checked = false;
+          alert("Select at most " + max + " distances per athlete per race.");
+        }
+        applySelectionColor(cell);
+        applyRaceEventColor(cell.getAttribute("data-race-id") || "");
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

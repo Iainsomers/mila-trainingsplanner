@@ -7,6 +7,7 @@ from core.views.coach import (
     dashboard_view,
     settings_view,
     coach_console_view,
+    races_overview_view,
     coach_plans_view,
     coach_plan_create_view,
     coach_plan_edit_view,
@@ -24,6 +25,11 @@ from core.views.coach import (
     coach_saved_trainings_view,
     coach_saved_training_delete_view,
     coach_saved_training_move_view,
+    race_calendar_view,
+    race_calendar_delete_view,
+    race_calendar_distance_add_view,
+    race_calendar_distance_delete_view,
+    race_select_view,
 )
 
 from core.views.calendar import (
@@ -66,6 +72,7 @@ urlpatterns = [
 
     # Coach console
     path("coach/", coach_console_view, name="coach_console"),
+    path("races/", races_overview_view, name="races_overview"),
 
     # Coach: Plans CRUD
     path("coach/plans/", coach_plans_view, name="coach_plans"),
@@ -93,6 +100,13 @@ urlpatterns = [
     path("coach/saved-trainings/", coach_saved_trainings_view, name="coach_saved_trainings"),
     path("coach/saved-trainings/<int:template_id>/delete/", coach_saved_training_delete_view, name="coach_saved_training_delete"),
     path("coach/saved-trainings/<int:template_id>/move/<str:direction>/", coach_saved_training_move_view, name="coach_saved_training_move"),
+
+    # Race calendar
+    path("race-calendar/", race_calendar_view, name="race_calendar"),
+    path("race-calendar/<int:race_id>/delete/", race_calendar_delete_view, name="race_calendar_delete"),
+    path("race-calendar/<int:race_id>/distances/add/", race_calendar_distance_add_view, name="race_calendar_distance_add"),
+    path("race-calendar/<int:race_id>/distances/<int:distance_id>/delete/", race_calendar_distance_delete_view, name="race_calendar_distance_delete"),
+    path("race-select/", race_select_view, name="race_select"),
 
     # Calendar
     path("calendar/", calendar_view, name="calendar"),

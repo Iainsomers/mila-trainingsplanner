@@ -495,6 +495,112 @@ class SavedTrainingTemplate(models.Model):
         return self.name
 
 
+class RaceEvent(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="race_events",
+    )
+
+    name = models.CharField(max_length=160)
+    date = models.DateField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["date", "name", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.name} · {self.date}"
+
+
+class RaceEventDistance(models.Model):
+    DISTANCE_CHOICES = [
+        ("300", "300m"),
+        ("400", "400m"),
+        ("600", "600m"),
+        ("800", "800m"),
+        ("1000", "1000m"),
+        ("1500", "1500m"),
+        ("1609", "1609m"),
+        ("3000", "3000m"),
+        ("5000", "5000m"),
+        ("10000", "10000m"),
+        ("custom", "x meter"),
+    ]
+
+    race = models.ForeignKey(
+        RaceEvent,
+        on_delete=models.CASCADE,
+        related_name="distances",
+    )
+    distance = models.CharField(max_length=20, choices=DISTANCE_CHOICES)
+    custom_distance_m = models.PositiveIntegerField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["race__date", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["race", "distance", "custom_distance_m"],
+                name="unique_race_event_distance",
+            )
+        ]
+
+    @property
+    def display_distance(self) -> str:
+        if self.distance == "custom" and self.custom_distance_m:
+            return f"{self.custom_distance_m}m"
+        return dict(self.DISTANCE_CHOICES).get(self.distance, self.distance)
+
+    def __str__(self) -> str:
+        return f"{self.race} · {self.display_distance}"
+
+class RaceEntry(models.Model):
+    race_distance = models.ForeignKey(
+        RaceEventDistance,
+        on_delete=models.CASCADE,
+        related_name="entries",
+    )
+    athlete = models.ForeignKey(
+        Athlete,
+        on_delete=models.CASCADE,
+        related_name="race_entries",
+    )
+
+    coach_selected = models.BooleanField(default=False)
+    athlete_selected = models.BooleanField(default=False)
+    target_selected = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["race_distance__race__date", "race_distance__id", "athlete__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["race_distance", "athlete"],
+                name="unique_race_entry_per_distance_athlete",
+            )
+        ]
+
+    def __str__(self) -> str:
+        flags = []
+        if self.coach_selected:
+            flags.append("coach")
+        if self.athlete_selected:
+            flags.append("athlete")
+        if self.target_selected:
+            flags.append("target")
+        suffix = ", ".join(flags) if flags else "—"
+        return f"{self.race_distance} · {self.athlete} · {suffix}"
+
+
 # =============================
 # NEW: Coach access (trainer sharing)
 # =============================

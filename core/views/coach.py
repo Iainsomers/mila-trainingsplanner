@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import date, timedelta
+import calendar as py_calendar
 
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -7,7 +8,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Lower
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry
 from .common import (
     _parse_iso_date,
     _parse_int,
@@ -221,6 +222,12 @@ def coach_console_view(request):
     return render(request, "core/coach_console.html")
 
 
+@login_required
+@require_GET
+def races_overview_view(request):
+    return render(request, "core/races.html")
+
+
 def _normalize_saved_training_order(user):
     templates = list(
         SavedTrainingTemplate.objects
@@ -284,6 +291,486 @@ def coach_saved_training_move_view(request, template_id: int, direction: str):
     SavedTrainingTemplate.objects.bulk_update([current, target], ["sort_order"])
 
     return redirect("coach_saved_trainings")
+
+
+def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full"):
+    view_mode = "calendar" if view_mode == "calendar" else "list"
+    allowed_periods = {"full", "outdoor", "indoor", "current_next"}
+    period_mode = period_mode if period_mode in allowed_periods else "full"
+    return redirect(f"/race-calendar/?year={year}&view={view_mode}&period={period_mode}")
+
+
+def _race_distance_sort_value(distance):
+    try:
+        if distance.distance == "custom" and distance.custom_distance_m:
+            return int(distance.custom_distance_m)
+        return int(distance.distance)
+    except (TypeError, ValueError):
+        return 999999
+
+
+def _sorted_race_distances(race):
+    return sorted(
+        list(race.distances.all()),
+        key=lambda distance: (_race_distance_sort_value(distance), distance.id),
+    )
+
+
+def _add_months(d, months):
+    month_index = (d.month - 1) + int(months)
+    year = d.year + (month_index // 12)
+    month = (month_index % 12) + 1
+    day = min(d.day, py_calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def _race_calendar_period_bounds(year, period_mode, today):
+    if period_mode == "outdoor":
+        start_date = date(year, 4, 1)
+        end_date = date(year, 10, 31)
+        label = f"Outdoor {year}"
+        previous_year = year - 1
+        next_year = year + 1
+    elif period_mode == "indoor":
+        start_date = date(year, 11, 1)
+        end_date = date(year + 1, 3, 31)
+        label = f"Indoor {year}/{str(year + 1)[-2:]}"
+        previous_year = year - 1
+        next_year = year + 1
+    elif period_mode == "current_next":
+        start_date = date(today.year, today.month, 1)
+        next_month = _add_months(start_date, 1)
+        after_next_month = _add_months(start_date, 2)
+        end_date = after_next_month - timedelta(days=1)
+        label = f"{start_date.strftime('%B %Y')} / {next_month.strftime('%B %Y')}"
+        previous_year = year - 1
+        next_year = year + 1
+    else:
+        start_date = date(year, 1, 1)
+        end_date = date(year, 12, 31)
+        label = f"Full year {year}"
+        previous_year = year - 1
+        next_year = year + 1
+
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "label": label,
+        "previous_year": previous_year,
+        "next_year": next_year,
+    }
+
+
+def _race_calendar_month_sequence(start_date, end_date):
+    months = []
+    current = date(start_date.year, start_date.month, 1)
+    last = date(end_date.year, end_date.month, 1)
+
+    while current <= last:
+        months.append((current.year, current.month))
+        current = _add_months(current, 1)
+
+    return months
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def race_calendar_view(request):
+    today = date.today()
+
+    try:
+        year = int(request.GET.get("year") or request.POST.get("year") or today.year)
+    except ValueError:
+        year = today.year
+
+    if year < 2000 or year > 2100:
+        year = today.year
+
+    view_mode = (request.GET.get("view") or request.POST.get("view") or "calendar").strip().lower()
+    if view_mode not in ("list", "calendar"):
+        view_mode = "list"
+
+    period_mode = (request.GET.get("period") or request.POST.get("period") or "full").strip().lower()
+    allowed_periods = {"full", "outdoor", "indoor", "current_next"}
+    if period_mode not in allowed_periods:
+        period_mode = "full"
+
+    period = _race_calendar_period_bounds(year, period_mode, today)
+    start_date = period["start_date"]
+    end_date = period["end_date"]
+
+    errors = []
+
+    if request.method == "POST":
+        name = (request.POST.get("name") or "").strip()
+        date_raw = (request.POST.get("date") or "").strip()
+
+        if not name:
+            errors.append("Name is required.")
+
+        try:
+            race_date = date.fromisoformat(date_raw)
+        except Exception:
+            race_date = None
+            errors.append("Date is invalid.")
+
+        if not errors and race_date:
+            RaceEvent.objects.create(
+                owner=request.user,
+                name=name,
+                date=race_date,
+            )
+            return _race_calendar_redirect_for_year(year, view_mode, period_mode)
+
+    races = list(
+        RaceEvent.objects
+        .filter(owner=request.user, date__gte=start_date, date__lte=end_date)
+        .prefetch_related("distances")
+        .order_by("date", "name", "id")
+    )
+    race_rows = [
+        {"race": race, "distances": _sorted_race_distances(race)}
+        for race in races
+    ]
+
+    race_rows_by_id = {row["race"].id: row for row in race_rows}
+    races_by_date = {}
+    for row in race_rows:
+        races_by_date.setdefault(row["race"].date, []).append(row)
+
+    month_rows = []
+    cal = py_calendar.Calendar(firstweekday=0)
+    month_names = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ]
+
+    for month_year, month in _race_calendar_month_sequence(start_date, end_date):
+        weeks = []
+        for week in cal.monthdatescalendar(month_year, month):
+            weeks.append([
+                {
+                    "day": day,
+                    "in_month": day.month == month,
+                    "races": races_by_date.get(day, []),
+                }
+                for day in week
+            ])
+        month_rows.append({
+            "year": month_year,
+            "month": month,
+            "name": f"{month_names[month - 1]} {month_year}",
+            "weeks": weeks,
+        })
+
+    period_options = [
+        {"key": "current_next", "label": "Current / next month", "year": today.year},
+        {"key": "outdoor", "label": f"Outdoor {year}", "year": year},
+        {"key": "indoor", "label": f"Indoor {year}/{str(year + 1)[-2:]}", "year": year},
+        {"key": "full", "label": f"Full year {year}", "year": year},
+    ]
+
+    return render(request, "core/race_calendar.html", {
+        "year": year,
+        "previous_year": period["previous_year"],
+        "next_year": period["next_year"],
+        "view_mode": view_mode,
+        "period_mode": period_mode,
+        "period_label": period["label"],
+        "period_options": period_options,
+        "race_rows": race_rows,
+        "race_rows_by_id": race_rows_by_id,
+        "month_rows": month_rows,
+        "distance_choices": RaceEventDistance.DISTANCE_CHOICES,
+        "errors": errors,
+        "today": today,
+    })
+
+
+
+@login_required
+@require_http_methods(["POST"])
+def race_calendar_delete_view(request, race_id: int):
+    race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
+    year = race.date.year
+    view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
+    period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
+    race.delete()
+    return _race_calendar_redirect_for_year(year, view_mode, period_mode)
+
+
+@login_required
+@require_http_methods(["POST"])
+def race_calendar_distance_add_view(request, race_id: int):
+    race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
+    selected_distances = request.POST.getlist("distances")
+    remove_distance_ids = request.POST.getlist("remove_distances")
+    custom_raw = (request.POST.get("custom_distance_m") or "").strip()
+    allowed = {value for value, _ in RaceEventDistance.DISTANCE_CHOICES}
+
+    if remove_distance_ids:
+        RaceEventDistance.objects.filter(race=race, id__in=remove_distance_ids).delete()
+
+    for distance in selected_distances:
+        distance = (distance or "").strip()
+        if not distance or distance == "custom" or distance not in allowed:
+            continue
+
+        RaceEventDistance.objects.get_or_create(
+            race=race,
+            distance=distance,
+            custom_distance_m=None,
+        )
+
+    if custom_raw:
+        try:
+            custom_distance_m = int(custom_raw)
+        except ValueError:
+            custom_distance_m = None
+
+        if custom_distance_m and custom_distance_m > 0:
+            RaceEventDistance.objects.get_or_create(
+                race=race,
+                distance="custom",
+                custom_distance_m=custom_distance_m,
+            )
+
+    view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
+    period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
+    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode)
+
+
+@login_required
+@require_http_methods(["POST"])
+def race_calendar_distance_delete_view(request, race_id: int, distance_id: int):
+    race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
+    distance = get_object_or_404(RaceEventDistance.objects.filter(race=race), id=distance_id)
+    view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
+    period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
+    distance.delete()
+    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def race_select_view(request):
+    today = date.today()
+
+    try:
+        year = int(request.GET.get("year") or request.POST.get("year") or today.year)
+    except ValueError:
+        year = today.year
+
+    if year < 2000 or year > 2100:
+        year = today.year
+
+    view_mode = (request.GET.get("view") or request.POST.get("view") or "calendar").strip().lower()
+    if view_mode not in ("list", "calendar"):
+        view_mode = "list"
+
+    period_mode = (request.GET.get("period") or request.POST.get("period") or "full").strip().lower()
+    allowed_periods = {"full", "outdoor", "indoor", "current_next"}
+    if period_mode not in allowed_periods:
+        period_mode = "full"
+
+    scope_mode = (request.GET.get("scope") or request.POST.get("scope") or "group").strip().lower()
+    if scope_mode not in ("group", "athlete"):
+        scope_mode = "group"
+
+    period = _race_calendar_period_bounds(year, period_mode, today)
+    start_date = period["start_date"]
+    end_date = period["end_date"]
+
+    groups = list(_filter_owned(Group.objects.prefetch_related("athletes").order_by("name"), request.user))
+    all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+
+    selected_group_id = (request.GET.get("group") or request.POST.get("group") or "").strip()
+    selected_athlete_id = (request.GET.get("athlete") or request.POST.get("athlete") or "").strip()
+
+    selected_group = None
+    if selected_group_id:
+        try:
+            selected_group = next((g for g in groups if g.id == int(selected_group_id)), None)
+        except ValueError:
+            selected_group = None
+
+    if selected_group is None and groups:
+        selected_group = groups[0]
+        selected_group_id = str(selected_group.id)
+
+    selected_athlete = None
+    if selected_athlete_id:
+        try:
+            selected_athlete = next((a for a in all_athletes if a.id == int(selected_athlete_id)), None)
+        except ValueError:
+            selected_athlete = None
+
+    if selected_athlete is None and all_athletes:
+        selected_athlete = all_athletes[0]
+        selected_athlete_id = str(selected_athlete.id)
+
+    if scope_mode == "athlete":
+        athletes = [selected_athlete] if selected_athlete else []
+    elif selected_group:
+        athletes = list(selected_group.athletes.order_by("name"))
+    else:
+        athletes = []
+
+    races = list(
+        RaceEvent.objects
+        .filter(owner=request.user, date__gte=start_date, date__lte=end_date)
+        .prefetch_related("distances")
+        .order_by("date", "name", "id")
+    )
+
+    race_distances = []
+    distances_by_race_id = {}
+    for race in races:
+        distances = _sorted_race_distances(race)
+        distances_by_race_id[race.id] = distances
+        for distance in distances:
+            race_distances.append(distance)
+
+    if request.method == "POST":
+        for athlete in athletes:
+            for race in races:
+                allowed_distance_ids = {str(distance.id) for distance in distances_by_race_id.get(race.id, [])}
+                coach_selected_ids = {
+                    value for value in request.POST.getlist(f"coach_distances_{race.id}_{athlete.id}")
+                    if value in allowed_distance_ids
+                }
+                target_selected_ids = {
+                    value for value in request.POST.getlist(f"target_distances_{race.id}_{athlete.id}")
+                    if value in allowed_distance_ids
+                }
+
+                posted_selected_ids = list(coach_selected_ids | target_selected_ids)[:3]
+                posted_selected_id_set = set(posted_selected_ids)
+
+                for distance in distances_by_race_id.get(race.id, []):
+                    distance_id = str(distance.id)
+                    coach_selected = distance_id in coach_selected_ids and distance_id in posted_selected_id_set
+                    target_selected = distance_id in target_selected_ids and distance_id in posted_selected_id_set
+
+                    existing_entry = RaceEntry.objects.filter(race_distance=distance, athlete=athlete).first()
+                    athlete_selected = bool(getattr(existing_entry, "athlete_selected", False))
+
+                    if not coach_selected and not athlete_selected and not target_selected:
+                        if existing_entry:
+                            existing_entry.delete()
+                        continue
+
+                    RaceEntry.objects.update_or_create(
+                        race_distance=distance,
+                        athlete=athlete,
+                        defaults={
+                            "coach_selected": coach_selected,
+                            "athlete_selected": athlete_selected,
+                            "target_selected": target_selected,
+                        },
+                    )
+
+        if scope_mode == "athlete":
+            return redirect(f"/race-select/?year={year}&view={view_mode}&period={period_mode}&scope=athlete&athlete={selected_athlete_id}")
+        return redirect(f"/race-select/?year={year}&view={view_mode}&period={period_mode}&scope=group&group={selected_group_id}")
+
+    entries = {
+        (entry.race_distance_id, entry.athlete_id): entry
+        for entry in RaceEntry.objects.filter(
+            race_distance__in=race_distances,
+            athlete__in=athletes,
+        )
+    }
+
+    rows = []
+    races_by_date = {}
+
+    for race in races:
+        distances = distances_by_race_id.get(race.id, [])
+        cells = []
+
+        for athlete in athletes:
+            distance_cells = []
+            for distance in distances:
+                entry = entries.get((distance.id, athlete.id))
+                distance_cells.append({
+                    "distance": distance,
+                    "coach_selected": bool(entry and entry.coach_selected),
+                    "athlete_selected": bool(entry and getattr(entry, "athlete_selected", False)),
+                    "target_selected": bool(entry and entry.target_selected),
+                })
+
+            cells.append({
+                "athlete": athlete,
+                "distance_cells": distance_cells,
+            })
+
+        row = {
+            "race": race,
+            "distances": distances,
+            "cells": cells,
+        }
+        rows.append(row)
+        races_by_date.setdefault(race.date, []).append(row)
+
+    month_rows = []
+    cal = py_calendar.Calendar(firstweekday=0)
+    month_names = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ]
+
+    for month_year, month in _race_calendar_month_sequence(start_date, end_date):
+        weeks = []
+        for week in cal.monthdatescalendar(month_year, month):
+            weeks.append([
+                {
+                    "day": day,
+                    "in_month": day.month == month,
+                    "races": races_by_date.get(day, []),
+                }
+                for day in week
+            ])
+        month_rows.append({
+            "year": month_year,
+            "month": month,
+            "name": f"{month_names[month - 1]} {month_year}",
+            "weeks": weeks,
+        })
+
+    period_options = [
+        {"key": "current_next", "label": "Current / next month", "year": today.year},
+        {"key": "outdoor", "label": f"Outdoor {year}", "year": year},
+        {"key": "indoor", "label": f"Indoor {year}/{str(year + 1)[-2:]}", "year": year},
+        {"key": "full", "label": f"Full year {year}", "year": year},
+    ]
+
+    query_base = f"year={year}&view={view_mode}&period={period_mode}&scope={scope_mode}"
+    if scope_mode == "athlete":
+        query_base += f"&athlete={selected_athlete_id}"
+    else:
+        query_base += f"&group={selected_group_id}"
+
+    return render(request, "core/race_select.html", {
+        "year": year,
+        "previous_year": period["previous_year"],
+        "next_year": period["next_year"],
+        "view_mode": view_mode,
+        "period_mode": period_mode,
+        "period_label": period["label"],
+        "period_options": period_options,
+        "scope_mode": scope_mode,
+        "query_base": query_base,
+        "groups": groups,
+        "selected_group": selected_group,
+        "selected_group_id": selected_group_id,
+        "all_athletes": all_athletes,
+        "selected_athlete": selected_athlete,
+        "selected_athlete_id": selected_athlete_id,
+        "athletes": athletes,
+        "rows": rows,
+        "month_rows": month_rows,
+    })
 
 
 # -----------------------------
