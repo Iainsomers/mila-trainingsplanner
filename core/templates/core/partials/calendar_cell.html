@@ -25,9 +25,9 @@
       hx-post="/slot-copy/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan %}?plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}&athlete={{ selected_athlete.id }}{% endif %}"
       hx-swap="none"
       onclick="event.stopPropagation();"
-      title="Kopieer dit slot"
+      title="Copy this slot"
     >
-      Kopieer
+      Copy
     </button>
   {% endif %}
 
@@ -41,9 +41,9 @@
       hx-target="#cell-{{ day|date:'Ymd' }}-{{ slot_index }}"
       hx-swap="outerHTML"
       onclick="event.stopPropagation();"
-      title="Plak gekopieerde training in dit slot"
+      title="Paste copied training into this slot"
     >
-      Plak
+      Paste
     </button>
   {% endif %}
 

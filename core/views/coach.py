@@ -7,8 +7,11 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Lower
+from django.core.cache import cache
 
 from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry
+from core.parser import parse_segment_text
+from core.stats import STATS_VERSION_KEY
 from .common import (
     _parse_iso_date,
     _parse_int,
@@ -359,6 +362,185 @@ def _sorted_race_distances(race):
         list(race.distances.all()),
         key=lambda distance: (_race_distance_sort_value(distance), distance.id),
     )
+
+
+def _race_distance_m(distance):
+    try:
+        if distance.distance == "custom" and distance.custom_distance_m:
+            return int(distance.custom_distance_m)
+        return int(distance.distance)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _race_training_marker(distance_m):
+    try:
+        d = int(distance_m or 0)
+    except (TypeError, ValueError):
+        d = 0
+
+    if d <= 200:
+        return "Z6"
+    if d <= 599:
+        return "T4"
+    if d <= 1000:
+        return "T8"
+    if d <= 2000:
+        return "T15"
+    if d <= 3500:
+        return "T3"
+    if d <= 6000:
+        return "T5"
+    if d <= 12000:
+        return "T10"
+    if d <= 25000:
+        return "THM"
+    return "TM"
+
+
+def _race_training_zone_fallback(distance_m):
+    try:
+        d = int(distance_m or 0)
+    except (TypeError, ValueError):
+        d = 0
+
+    if d <= 200:
+        return "6"
+    if d <= 599:
+        return "5"
+    if d <= 1000:
+        return "5"
+    if d <= 2000:
+        return "5"
+    if d <= 3500:
+        return "4"
+    if d <= 6000:
+        return "4"
+    if d <= 12000:
+        return "4"
+    if d <= 25000:
+        return "3"
+    return "2"
+
+
+def _race_selected_count(entry):
+    if not entry:
+        return 0
+
+    coach_selected = bool(entry.coach_selected)
+    athlete_selected = bool(getattr(entry, "athlete_selected", False))
+    target_selected = bool(entry.target_selected)
+
+    if coach_selected and athlete_selected and target_selected:
+        return 3
+    if coach_selected and athlete_selected:
+        return 2
+    if coach_selected or athlete_selected or target_selected:
+        return 1
+    return 0
+
+
+def _race_line_text(race, distance, selected_count):
+    distance_m = _race_distance_m(distance)
+    marker = _race_training_marker(distance_m)
+    race_label = "Race!" if selected_count >= 3 else "Race"
+    return f'"{race.name}" {distance_m}m {marker} {race_label}'
+
+
+def _plans_for_race_override(athlete, race):
+    race_date = race.date
+
+    plans = []
+    for plan in TrainingPlan.objects.all().order_by("start_date", "id"):
+        if plan.start_date and race_date < plan.start_date:
+            continue
+        if plan.end_date and race_date > plan.end_date:
+            continue
+        try:
+            if athlete.id in plan.targeted_athlete_ids():
+                plans.append(plan)
+        except Exception:
+            continue
+
+    return plans
+
+
+def _invalidate_race_training_stats_cache():
+    try:
+        cache.incr(STATS_VERSION_KEY)
+    except Exception:
+        cache.set(STATS_VERSION_KEY, 1, None)
+
+
+def _sync_race_training_override(athlete, race):
+    plans = _plans_for_race_override(athlete, race)
+    if not plans:
+        return
+
+    entries = list(
+        RaceEntry.objects
+        .filter(
+            athlete=athlete,
+            race_distance__race__date=race.date,
+        )
+        .select_related("race_distance", "race_distance__race")
+        .order_by("race_distance__race__name", "race_distance__id")
+    )
+
+    selected_entries = [entry for entry in entries if _race_selected_count(entry) > 0]
+
+    changed = False
+
+    for plan in plans:
+        existing_slot = TrainingSlot.objects.filter(
+            plan=plan,
+            athlete=athlete,
+            date=race.date,
+            slot_index=2,
+        ).prefetch_related("segments").first()
+
+        if not selected_entries:
+            if existing_slot:
+                existing_segments = list(existing_slot.segments.all())
+                if existing_segments and all((seg.special or "") in ("RACE", "IMPORTANT_RACE") for seg in existing_segments):
+                    existing_slot.delete()
+                    changed = True
+            continue
+
+        slot, _ = TrainingSlot.objects.update_or_create(
+            plan=plan,
+            athlete=athlete,
+            date=race.date,
+            slot_index=2,
+            defaults={},
+        )
+        slot.segments.all().delete()
+
+        for order, entry in enumerate(selected_entries, start=1):
+            distance = entry.race_distance
+            selected_count = _race_selected_count(entry)
+            text = _race_line_text(distance.race, distance, selected_count)
+            parsed = parse_segment_text(text, zone_required=False)
+
+            segment = slot.segments.create(
+                order=order,
+                type="CORE",
+                text=text,
+                zone=str(parsed.zone or _race_training_zone_fallback(_race_distance_m(distance))),
+                special=(parsed.special or ("IMPORTANT_RACE" if selected_count >= 3 else "RACE")),
+                t_type=(parsed.t_type or ""),
+                reps=int(parsed.reps or 1),
+                distance_m=parsed.rep_distance_m or parsed.distance_m or _race_distance_m(distance),
+                duration_s=parsed.duration_s,
+                norm_distance_m=parsed.distance_m or _race_distance_m(distance),
+                parse_ok=bool(parsed.ok),
+                parse_message=parsed.message or "",
+            )
+            segment.save()
+        changed = True
+
+    if changed:
+        _invalidate_race_training_stats_cache()
 
 
 def _add_months(d, months):
@@ -715,8 +897,11 @@ def race_select_view(request):
             race_distances.append(distance)
 
     if request.method == "POST":
+        affected_race_athletes = set()
+
         for athlete in athletes:
             for race in races:
+                affected_race_athletes.add((athlete.id, race.id))
                 allowed_distance_ids = {str(distance.id) for distance in distances_by_race_id.get(race.id, [])}
                 athlete_selected_ids = {
                     value for value in request.POST.getlist(f"athlete_distances_{race.id}_{athlete.id}")
@@ -767,6 +952,14 @@ def race_select_view(request):
                             "target_selected": target_selected,
                         },
                     )
+
+        athlete_by_id = {athlete.id: athlete for athlete in athletes}
+        race_by_id = {race.id: race for race in races}
+        for athlete_id, race_id in affected_race_athletes:
+            athlete_obj = athlete_by_id.get(athlete_id)
+            race_obj = race_by_id.get(race_id)
+            if athlete_obj and race_obj:
+                _sync_race_training_override(athlete_obj, race_obj)
 
         if scope_mode == "athlete":
             return redirect(f"/race-select/?year={year}&view={view_mode}&period={period_mode}&scope=athlete&athlete={selected_athlete_id}")

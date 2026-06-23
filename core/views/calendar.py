@@ -322,7 +322,13 @@ def calendar_view(request):
 
     plan_athletes = []
     if selected_plan:
-        ids = selected_plan.targeted_athlete_ids()
+        ids = set(selected_plan.targeted_athlete_ids())
+        ids |= set(
+            TrainingSlot.objects
+            .filter(plan=selected_plan, athlete__isnull=False)
+            .values_list("athlete_id", flat=True)
+        )
+        ids.discard(None)
         plan_athletes = list(_filter_accessible(Athlete.objects.filter(id__in=ids).order_by("name"), request.user))
         if selected_athlete and selected_athlete.id not in ids:
             return redirect(f"/calendar/?plan={selected_plan.id}")
@@ -1173,9 +1179,19 @@ def athlete_year_calendar_view(request):
         else:
             owned_plans = list(TrainingPlan.objects.order_by("name"))
         athlete_plans = []
+        override_plan_ids = set(
+            TrainingSlot.objects
+            .filter(athlete=selected_athlete, date__gte=start, date__lte=end)
+            .values_list("plan_id", flat=True)
+        )
 
         for plan in owned_plans:
-            if selected_athlete.id not in plan.targeted_athlete_ids():
+            try:
+                plan_targets_athlete = selected_athlete.id in plan.targeted_athlete_ids()
+            except Exception:
+                plan_targets_athlete = False
+
+            if not plan_targets_athlete and plan.id not in override_plan_ids:
                 continue
 
             if plan.start_date and plan.start_date > end:

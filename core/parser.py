@@ -19,7 +19,7 @@ class ParseResult:
 
 
 # --- Special keywords (geen zone nodig) ---
-_RACE_BANG_RE = re.compile(r"\brace!\b", re.IGNORECASE)
+_RACE_BANG_RE = re.compile(r"\brace\s*!", re.IGNORECASE)
 _RACE_RE = re.compile(r"\brace\b", re.IGNORECASE)
 _STRENGTH_RE = re.compile(r"\bstrength\b", re.IGNORECASE)
 
