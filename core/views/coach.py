@@ -1385,6 +1385,9 @@ def coach_athlete_create_view(request):
         "t4": "",
         "is_private": False,
         "view_weeks_ahead": 2,
+        "training_reports_enabled": True,
+        "week_report_enabled": False,
+        "daily_vitals_enabled": False,
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -1406,6 +1409,9 @@ def coach_athlete_create_view(request):
         form["t4"] = (request.POST.get("t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
+        form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
+        form["week_report_enabled"] = (request.POST.get("week_report_enabled") == "on")
+        form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -1513,6 +1519,9 @@ def coach_athlete_create_view(request):
                 zone_method=form["zone_method"],
                 zone_speed_mps=zone_speed_mps,
                 view_weeks_ahead=view_weeks_ahead,
+                training_reports_enabled=form["training_reports_enabled"],
+                week_report_enabled=form["week_report_enabled"],
+                daily_vitals_enabled=form["daily_vitals_enabled"],
                 pr_800_s=pr_800_s,
                 pr_1500_s=pr_1500_s,
                 pr_3000_s=pr_3000_s,
@@ -1561,6 +1570,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
         "t4": _format_pr_seconds(getattr(athlete, "pr_400_s", None)),
         "is_private": getattr(athlete, "is_private", False),
         "view_weeks_ahead": getattr(athlete, "view_weeks_ahead", 2),
+        "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
+        "week_report_enabled": getattr(athlete, "week_report_enabled", False),
+        "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -1582,6 +1594,18 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["t4"] = (request.POST.get("t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
+        form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
+        form["week_report_enabled"] = (request.POST.get("week_report_enabled") == "on")
+        form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
+
+        athlete.training_reports_enabled = form["training_reports_enabled"]
+        athlete.week_report_enabled = form["week_report_enabled"]
+        athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
+        athlete.save(update_fields=[
+            "training_reports_enabled",
+            "week_report_enabled",
+            "daily_vitals_enabled",
+        ])
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -1687,6 +1711,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.zone_method = form["zone_method"]
             athlete.zone_speed_mps = zone_speed_mps
             athlete.view_weeks_ahead = view_weeks_ahead
+            athlete.training_reports_enabled = form["training_reports_enabled"]
+            athlete.week_report_enabled = form["week_report_enabled"]
+            athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
             athlete.pr_800_s = pr_800_s
             athlete.pr_1500_s = pr_1500_s
             athlete.pr_3000_s = pr_3000_s

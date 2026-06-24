@@ -95,6 +95,10 @@ class Athlete(models.Model):
 
     view_weeks_ahead = models.IntegerField(default=2)
 
+    training_reports_enabled = models.BooleanField(default=True)
+    week_report_enabled = models.BooleanField(default=False)
+    daily_vitals_enabled = models.BooleanField(default=False)
+
     zone_speed_mps = models.JSONField(
         default=default_zone_speed_mps,
         blank=True,
@@ -638,6 +642,72 @@ class CoachAccess(models.Model):
 
     def __str__(self):
         return f"{self.grantee} can access {self.owner}"
+
+class AthleteWeekReport(models.Model):
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="week_reports")
+    week_start = models.DateField()
+
+    comm_athlete = models.TextField(blank=True, default="")
+    comm_trainer = models.TextField(blank=True, default="")
+    match_report = models.TextField(blank=True, default="")
+    injuries = models.TextField(blank=True, default="")
+
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="updated_week_reports",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["athlete", "week_start"],
+                name="unique_week_report_per_athlete_week",
+            )
+        ]
+        ordering = ["-week_start", "athlete__name"]
+
+    def __str__(self):
+        return f"{self.athlete} - week {self.week_start}"
+
+
+class AthleteDailyVital(models.Model):
+    date = models.DateField()
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="daily_vitals")
+
+    sleep_hours = models.FloatField(null=True, blank=True)
+    sleep_quality = models.PositiveSmallIntegerField(null=True, blank=True)
+    morning_hr = models.PositiveSmallIntegerField(null=True, blank=True)
+    hrv = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="updated_daily_vitals",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["date", "athlete"],
+                name="unique_daily_vitals_per_day_athlete",
+            )
+        ]
+        ordering = ["-date", "athlete__name"]
+
+    def __str__(self):
+        return f"{self.athlete} - vitals {self.date}"
+
 
 class AthleteDayComment(models.Model):
     date = models.DateField()

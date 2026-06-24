@@ -1,6 +1,10 @@
 {% extends "core/base.html" %}
 
-{% block title %}Athlete Year Calendar{% endblock %}
+{% block title %}Athlete Year Calendar
+
+
+
+{% endblock %}
 
 {% block extra_head %}
 <meta name="viewport" content="width=1200, initial-scale=0.35, minimum-scale=0.25, maximum-scale=5, user-scalable=yes">
@@ -239,8 +243,113 @@
   }
 
   /* Thicker borders between weeks (apply to all columns) */
-  .year-table tbody tr.slotrow:nth-child(3n+1) td {
+  .year-table tbody tr.week-start-row td {
     border-top: 3px solid #999;
+  }
+
+  .week-report-col {
+    width: 190px;
+    min-width: 190px;
+    background: #fafafa;
+  }
+
+  .week-report-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    height: 100%;
+  }
+
+  .week-report-box {
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 3px;
+    min-height: 76px;
+  }
+
+  .week-report-title {
+    font-size: 10px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+
+  .week-report-field {
+    width: 100%;
+    min-height: 52px;
+    border: 0;
+    background: rgba(255,255,255,0.72);
+    font-size: 11px;
+    line-height: 1.2;
+    resize: vertical;
+    padding: 3px;
+  }
+
+  .week-report-field:disabled {
+    background: rgba(255,255,255,0.35);
+    color: #555555;
+  }
+
+  .week-report-athlete { background: #fff8cc; }
+  .week-report-trainer { background: #dff0d8; }
+  .week-report-match { background: #ffd9a8; }
+  .week-report-injuries { background: #eadcff; }
+
+  .daily-vitals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    min-height: 54px;
+  }
+
+  .daily-vital-cell {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .daily-vital-icon {
+    width: 18px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1;
+    flex: 0 0 auto;
+  }
+
+  .daily-vital-input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    padding: 1px 3px;
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .daily-vitals-avg {
+    margin-top: 7px;
+    font-size: 11px;
+    line-height: 1.25;
+    font-weight: 400;
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    column-gap: 4px;
+    row-gap: 2px;
+    align-items: center;
+  }
+
+  .daily-vitals-avg-icon {
+    width: 18px;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .daily-vitals-avg-value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
 
@@ -377,6 +486,33 @@
   .report-form-title {
     font-weight: 700;
     margin-bottom: 8px;
+  }
+
+
+
+
+
+  .week-report-field {
+    cursor: text;
+  }
+
+  .week-report-field:focus {
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 3001 !important;
+    width: min(720px, 94vw) !important;
+    height: min(360px, 70vh) !important;
+    min-height: 260px !important;
+    padding: 12px !important;
+    border: 2px solid #333333 !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.28) !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    outline: none !important;
   }
 
   .today-comment-display {
@@ -630,6 +766,7 @@
       <tr>
         <th class="weeklabel">Week</th>
         <th class="sumcol">Total</th>
+        {% if show_week_reports %}<th class="week-report-col">Week report</th>{% endif %}
         <th>Mon</th>
         <th>Tue</th>
         <th>Wed</th>
@@ -642,17 +779,25 @@
 
     <tbody>
       {% for w in week_rows %}
-        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="3">
+        <tr class="slotrow week-start-row {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="{{ ayc_rowspan }}">
             <div>{{ w.week_start|date:"d-m" }}</div>
             <div>{{ w.week_end|date:"d-m" }}</div>
+            {% if show_daily_vitals %}
+              <div class="daily-vitals-avg">
+                <span class="daily-vitals-avg-icon">🛏</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.sleep_hours }}</span>
+                <span class="daily-vitals-avg-icon">💤</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.sleep_quality }}</span>
+                <span class="daily-vitals-avg-icon">♥</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.morning_hr }}</span>
+                <span class="daily-vitals-avg-icon">📈</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.hrv }}</span>
+              </div>
+            {% endif %}
             {% if w.week_phase_label %}
               <div class="week-phase-wrap">
                 <span class="week-phase-label">{{ w.week_phase_label }}</span>
               </div>
             {% endif %}
           </td>
-          <td class="sumcol week-summary-tooltip" rowspan="3" title="{{ w.sum_pct_tooltip }}" data-tooltip="{{ w.sum_pct_tooltip|escape }}">
+          <td class="sumcol week-summary-tooltip" rowspan="{{ ayc_rowspan }}" title="{{ w.sum_pct_tooltip }}" data-tooltip="{{ w.sum_pct_tooltip|escape }}">
             <div style="font-size:11px; line-height:1.35;">
               <div style="font-weight:bold; color:#000; margin-bottom:3px;">Tot km: {{ w.sum_tot_km }}</div>
               {% if w.has_z1 %}<span class="total-pill total-z1">Z1 {{ w.sum_z1_km }}</span>{% endif %}
@@ -677,6 +822,35 @@
               {% if w.alt_z3_min %}<span class="total-pill total-z3">ALT Z3 {{ w.alt_z3_min }}m</span>{% endif %}
             </div>
           </td>
+
+          {% if show_week_reports %}
+          <td class="week-report-col" rowspan="{{ ayc_rowspan }}">
+            <div class="week-report-grid">
+              <div class="week-report-box week-report-athlete">
+                <div class="week-report-title">Comm Ath</div>
+                <textarea class="week-report-field"
+                          data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="comm_athlete"
+                          {% if is_coach_user %}readonly{% endif %}>{% if w.week_report %}{{ w.week_report.comm_athlete }}{% endif %}</textarea>
+              </div>
+              <div class="week-report-box week-report-trainer">
+                <div class="week-report-title">Comm Trainer</div>
+                <textarea class="week-report-field"
+                          data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="comm_trainer"
+                          {% if not is_coach_user %}readonly{% endif %}>{% if w.week_report %}{{ w.week_report.comm_trainer }}{% endif %}</textarea>
+              </div>
+              <div class="week-report-box week-report-match">
+                <div class="week-report-title">Matchreport</div>
+                <textarea class="week-report-field"
+                          data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="match_report">{% if w.week_report %}{{ w.week_report.match_report }}{% endif %}</textarea>
+              </div>
+              <div class="week-report-box week-report-injuries">
+                <div class="week-report-title">Injuries</div>
+                <textarea class="week-report-field"
+                          data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="injuries">{% if w.week_report %}{{ w.week_report.injuries }}{% endif %}</textarea>
+              </div>
+            </div>
+          </td>
+          {% endif %}
 
           {% for cell in w.cells1 %}
             <td>
@@ -747,6 +921,7 @@
           {% endfor %}
         </tr>
 
+        {% if show_training_reports %}
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for d in w.cells3 %}
             <td>
@@ -795,6 +970,64 @@
             </td>
           {% endfor %}
         </tr>
+        {% endif %}
+
+        {% if show_daily_vitals %}
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          {% for cell in w.cells4 %}
+            <td>
+              <div class="daily-vitals-grid">
+                <div class="daily-vital-cell">
+                  <span class="daily-vital-icon" title="Sleep hours">🛏</span>
+                  <input class="daily-vital-input"
+                         type="number"
+                         inputmode="decimal"
+                         step="0.01"
+                         min="0"
+                         data-date="{{ cell.day|date:'Y-m-d' }}"
+                         data-field="sleep_hours"
+                         value="{% if cell.vitals and cell.vitals.sleep_hours != None %}{{ cell.vitals.sleep_hours }}{% endif %}">
+                </div>
+                <div class="daily-vital-cell">
+                  <span class="daily-vital-icon" title="Sleep quality">💤</span>
+                  <input class="daily-vital-input"
+                         type="number"
+                         inputmode="numeric"
+                         step="1"
+                         min="1"
+                         max="10"
+                         data-date="{{ cell.day|date:'Y-m-d' }}"
+                         data-field="sleep_quality"
+                         value="{% if cell.vitals and cell.vitals.sleep_quality != None %}{{ cell.vitals.sleep_quality }}{% endif %}">
+                </div>
+                <div class="daily-vital-cell">
+                  <span class="daily-vital-icon" title="Morning heart rate">♥</span>
+                  <input class="daily-vital-input"
+                         type="number"
+                         inputmode="numeric"
+                         step="1"
+                         min="0"
+                         data-date="{{ cell.day|date:'Y-m-d' }}"
+                         data-field="morning_hr"
+                         value="{% if cell.vitals and cell.vitals.morning_hr != None %}{{ cell.vitals.morning_hr }}{% endif %}">
+                </div>
+                <div class="daily-vital-cell">
+                  <span class="daily-vital-icon" title="HRV">📈</span>
+                  <input class="daily-vital-input"
+                         type="number"
+                         inputmode="numeric"
+                         step="1"
+                         min="0"
+                         data-date="{{ cell.day|date:'Y-m-d' }}"
+                         data-field="hrv"
+                         value="{% if cell.vitals and cell.vitals.hrv != None %}{{ cell.vitals.hrv }}{% endif %}">
+                </div>
+              </div>
+            </td>
+          {% endfor %}
+        </tr>
+        {% endif %}
+
       {% endfor %}
     </tbody>
   </table>
@@ -1174,6 +1407,109 @@
       requests.push(post(2, val("reportT2Status"), val("reportT2Rpe"), val("reportT2Comment")));
     }
     Promise.all(requests).then(function(){ window.location.reload(); });
+  });
+})();
+</script>
+
+<script>
+(function() {
+  function getCookie(name) {
+    var v = null;
+    if (document.cookie) document.cookie.split(";").forEach(function(c){ c=c.trim(); if(c.substring(0,name.length+1)===(name+"=")) v=decodeURIComponent(c.substring(name.length+1)); });
+    return v;
+  }
+
+  function postWeekReport(el) {
+    if (!el || el.disabled) return;
+    var weekStart = el.getAttribute("data-week-start") || "";
+    var field = el.getAttribute("data-field") || "";
+    if (!weekStart || !field) return;
+
+    var fd = new FormData();
+    fd.append("date", weekStart);
+    fd.append("week_start", weekStart);
+    fd.append("week_report_submit", "1");
+    fd.append("field", field);
+    fd.append("value", el.value || "");
+
+    fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+      method: "POST",
+      body: fd,
+      headers: {"X-CSRFToken": getCookie("csrftoken")},
+      credentials: "same-origin"
+    });
+  }
+
+  document.querySelectorAll(".week-report-field").forEach(function(el) {
+    el.addEventListener("blur", function() { postWeekReport(el); });
+    el.addEventListener("change", function() { postWeekReport(el); });
+  });
+})();
+</script>
+
+<script>
+(function() {
+  function getCookie(name) {
+    var v = null;
+    if (document.cookie) document.cookie.split(";").forEach(function(c){ c=c.trim(); if(c.substring(0,name.length+1)===(name+"=")) v=decodeURIComponent(c.substring(name.length+1)); });
+    return v;
+  }
+
+  function normalizeValue(el) {
+    var field = el.getAttribute("data-field") || "";
+    var raw = (el.value || "").trim().replace(",", ".");
+    if (!raw) return "";
+
+    if (field === "sleep_hours") {
+      var f = parseFloat(raw);
+      if (!Number.isFinite(f)) return "";
+      return f.toFixed(2);
+    }
+
+    var i = parseInt(raw, 10);
+    if (!Number.isFinite(i)) return "";
+    return String(i);
+  }
+
+  function postDailyVital(el) {
+    if (!el) return;
+    var day = el.getAttribute("data-date") || "";
+    var field = el.getAttribute("data-field") || "";
+    if (!day || !field) return;
+
+    var value = normalizeValue(el);
+    if ((el.value || "").trim() && value === "") {
+      el.value = "";
+      return;
+    }
+    el.value = value;
+
+    var fd = new FormData();
+    fd.append("date", day);
+    fd.append("daily_vitals_submit", "1");
+    fd.append("field", field);
+    fd.append("value", value);
+
+    var lastSaved = el.getAttribute("data-last-saved-value") || "";
+    if (lastSaved === value) return;
+    el.setAttribute("data-last-saved-value", value);
+
+    fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+      method: "POST",
+      body: fd,
+      headers: {"X-CSRFToken": getCookie("csrftoken")},
+      credentials: "same-origin"
+    }).then(function(response) {
+      if (response.ok) {
+        window.location.reload();
+      }
+    }).catch(function() {});
+  }
+
+  document.querySelectorAll(".daily-vital-input").forEach(function(el) {
+    el.setAttribute("data-last-saved-value", normalizeValue(el));
+    el.addEventListener("change", function() { postDailyVital(el); });
+    el.addEventListener("blur", function() { postDailyVital(el); });
   });
 })();
 </script>

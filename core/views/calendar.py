@@ -19,6 +19,8 @@ from core.models import (
     Athlete,
     PlanWeekPhase,
     AthleteWeekPhaseOverride,
+    AthleteWeekReport,
+    AthleteDailyVital,
     CoachAccess,
 )
 from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
@@ -1015,6 +1017,9 @@ def athlete_year_calendar_view(request):
         check_status = request.POST.get("check_status")
         toggle_check = request.POST.get("toggle_check")
         report_submit = request.POST.get("report_submit")
+        week_report_submit = request.POST.get("week_report_submit")
+        daily_vitals_submit = request.POST.get("daily_vitals_submit")
+        week_start_raw = request.POST.get("week_start")
         slot_index_raw = request.POST.get("slot_index")
         athlete = None
 
@@ -1046,6 +1051,67 @@ def athlete_year_calendar_view(request):
 
                     _save_athlete_slot_override(request, athlete, d, slot_index, slot_text)
                     _invalidate_stats_cache()
+
+                elif week_report_submit is not None:
+                    try:
+                        week_start = date.fromisoformat(week_start_raw or "")
+                    except Exception:
+                        week_start = d - timedelta(days=d.weekday())
+
+                    field = (request.POST.get("field") or "").strip()
+                    value = request.POST.get("value") or ""
+                    is_coach_user = bool(request.user.is_staff or request.user.is_superuser)
+                    allowed_fields = {"match_report", "injuries"}
+                    if is_coach_user:
+                        allowed_fields.add("comm_trainer")
+                    else:
+                        allowed_fields.add("comm_athlete")
+
+                    if field in allowed_fields:
+                        report, _ = AthleteWeekReport.objects.get_or_create(
+                            athlete=athlete,
+                            week_start=week_start,
+                            defaults={"updated_by": request.user},
+                        )
+                        setattr(report, field, value)
+                        report.updated_by = request.user
+                        report.save()
+
+                elif daily_vitals_submit is not None:
+                    if d > today:
+                        return HttpResponse("", status=204)
+
+                    field = (request.POST.get("field") or "").strip()
+                    raw_value = (request.POST.get("value") or "").strip()
+                    allowed_fields = {"sleep_hours", "sleep_quality", "morning_hr", "hrv"}
+
+                    if field in allowed_fields:
+                        vital, _ = AthleteDailyVital.objects.get_or_create(
+                            athlete=athlete,
+                            date=d,
+                            defaults={"updated_by": request.user},
+                        )
+
+                        if raw_value == "":
+                            value = None
+                        elif field == "sleep_hours":
+                            try:
+                                value = round(float(raw_value.replace(",", ".")), 2)
+                            except Exception:
+                                value = None
+                        else:
+                            try:
+                                value = int(raw_value)
+                            except Exception:
+                                value = None
+
+                        if field == "sleep_quality" and value is not None:
+                            if value < 1 or value > 10:
+                                value = None
+
+                        setattr(vital, field, value)
+                        vital.updated_by = request.user
+                        vital.save()
 
                 elif check_status is not None or toggle_check is not None or report_submit is not None:
                     if d > today:
@@ -1146,6 +1212,11 @@ def athlete_year_calendar_view(request):
             selected_athlete_id = ""
 
     athlete_self_view = bool(selected_athlete and not request.user.is_staff)
+    show_training_reports = bool(selected_athlete and getattr(selected_athlete, "training_reports_enabled", True))
+    show_week_reports = bool(selected_athlete and getattr(selected_athlete, "week_report_enabled", False))
+    show_daily_vitals = bool(selected_athlete and getattr(selected_athlete, "daily_vitals_enabled", False))
+    ayc_rowspan = 2 + (1 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
+    is_coach_user = bool(request.user.is_staff or request.user.is_superuser)
     visible_until_date = None
     if athlete_self_view:
         try:
@@ -1261,6 +1332,25 @@ def athlete_year_calendar_view(request):
         for c in comments:
             comment_map[c.date] = c
 
+    week_report_map = {}
+    if selected_athlete:
+        reports = AthleteWeekReport.objects.filter(
+            athlete=selected_athlete,
+            week_start__in=week_starts,
+        )
+        for r in reports:
+            week_report_map[r.week_start] = r
+
+    daily_vitals_map = {}
+    if selected_athlete:
+        vitals = AthleteDailyVital.objects.filter(
+            athlete=selected_athlete,
+            date__gte=start,
+            date__lte=end,
+        )
+        for v in vitals:
+            daily_vitals_map[v.date] = v
+
     week_rows = []
     d = start
 
@@ -1273,6 +1363,7 @@ def athlete_year_calendar_view(request):
         cells1 = []
         cells2 = []
         cells3 = []
+        cells4 = []
 
         for day in days:
             k1 = (day, 1)
@@ -1320,6 +1411,10 @@ def athlete_year_calendar_view(request):
                 "check2": check2,
                 "has_slot1": bool(slot1),
                 "has_slot2": bool(slot2),
+            })
+            cells4.append({
+                "day": day,
+                "vitals": daily_vitals_map.get(day),
             })
 
         week_phase = ""
@@ -1417,12 +1512,44 @@ def athlete_year_calendar_view(request):
         has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4")}
         has_alt = (alt_z1_min > 0 or alt_z2_min > 0 or alt_z3_min > 0)
 
+        def _vitals_week_avg(field_name, decimals=0):
+            values = []
+            for cell in cells4:
+                vital = cell.get("vitals")
+                if not vital:
+                    continue
+                value = getattr(vital, field_name, None)
+                if value is None:
+                    continue
+                try:
+                    values.append(float(value))
+                except (TypeError, ValueError):
+                    continue
+
+            if len(values) < 3:
+                return "NA"
+
+            avg = sum(values) / len(values)
+            if decimals == 2:
+                return f"{avg:.1f}"
+            return f"{avg:.1f}"
+
+        daily_vitals_avg = {
+            "sleep_hours": _vitals_week_avg("sleep_hours", decimals=2),
+            "sleep_quality": _vitals_week_avg("sleep_quality"),
+            "morning_hr": _vitals_week_avg("morning_hr"),
+            "hrv": _vitals_week_avg("hrv"),
+        }
+
         week_rows.append({
             "week_start": week_start,
             "week_end": week_end,
+            "week_report": week_report_map.get(week_start),
             "cells1": cells1,
             "cells2": cells2,
             "cells3": cells3,
+            "cells4": cells4,
+            "daily_vitals_avg": daily_vitals_avg,
             "week_phase": week_phase,
             "week_phase_label": phase_label.get(week_phase, ""),
             "sum_tot_km": _format_km(tot_m),
@@ -1498,6 +1625,11 @@ def athlete_year_calendar_view(request):
             "athletes": athletes,
             "selected_athlete_id": str(selected_athlete_id or ""),
             "selected_athlete": selected_athlete,
+            "show_training_reports": show_training_reports,
+            "show_week_reports": show_week_reports,
+            "show_daily_vitals": show_daily_vitals,
+            "ayc_rowspan": ayc_rowspan,
+            "is_coach_user": is_coach_user,
             "zones_times_rows": _build_zones_times_rows(selected_athlete),
         },
     )
