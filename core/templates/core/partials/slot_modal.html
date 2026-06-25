@@ -1,12 +1,36 @@
 <div class="modal fade" id="slotModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog slot-modal-dialog">
     <div class="modal-content">
 
-      <div class="modal-header">
+      <style>
+        #slotModal .modal-header { padding-top: .45rem; padding-bottom: .45rem; }
+        #slotModal .modal-body { font-size: .9rem; }
+        #slotModal .form-label { margin-bottom: .15rem; font-size: .8rem; }
+        #slotModal .slot-modal-dialog { max-width: 890px; }
+        #slotModal textarea.form-control { min-height: 58px; padding: .3rem .45rem; font-size: .88rem; line-height: 1.25; }
+        #slotModal textarea.compact-tall { min-height: 78px; }
+        #slotModal .compact-main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem .75rem; }
+        #slotModal .compact-field { margin-bottom: 0 !important; }
+        #slotModal .compact-field-wide { grid-column: 1 / -1; }
+        #slotModal .compact-feedback { font-size: .75rem; line-height: 1.15; margin-top: .15rem; }
+        #slotModal .alert { padding: .35rem .55rem; margin-bottom: .5rem; font-size: .85rem; }
+        #slotModal .compact-template-box { padding: .55rem !important; margin-bottom: .55rem !important; }
+        #slotModal .compact-template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem .75rem; }
+        #slotModal .compact-template-action { display: grid; grid-template-columns: 1fr auto; gap: .4rem; align-items: end; }
+        #slotModal .compact-actions { padding-top: .35rem; }
+        @media (max-width: 768px) {
+          #slotModal .slot-modal-dialog { max-width: 96vw; }
+          #slotModal .compact-main-grid { grid-template-columns: 1fr; }
+          #slotModal .compact-template-grid { grid-template-columns: 1fr; }
+          #slotModal .compact-field-wide { grid-column: auto; }
+        }
+      </style>
+
+      <div class="modal-header py-2">
         <div>
-          <h5 class="modal-title mb-0">Training plannen</h5>
+          <h6 class="modal-title mb-0">Training plannen</h6>
           <div class="small text-secondary">
-            {{ day|date:"l d-m-Y" }} · Slot {{ slot_index }}
+            {{ day|date:"d-m-Y" }} · Slot {{ slot_index }}
             {% if selected_athlete %}
               · <b>Atleet:</b> {{ selected_athlete.name }}
               {% if is_override %}
@@ -18,19 +42,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
-      <div class="modal-body">
-        <ul class="nav nav-tabs" role="tablist">
-          <li class="nav-item">
-            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#plan">
-              Plan
-            </button>
-          </li>
-        </ul>
-
-        <div class="tab-content pt-3">
-
-          <!-- ================= PLAN TAB ================= -->
-          <div class="tab-pane fade show active" id="plan">
+      <div class="modal-body py-2">
             <form
               method="post"
               hx-post="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/"
@@ -46,15 +58,16 @@
                 <input type="hidden" name="athlete" value="{{ selected_athlete.id }}">
               {% endif %}
 
+              <div class="compact-main-grid">
               <!-- WU -->
               {% if tb_show_wu %}
-              <div class="mb-3">
+              <div class="mb-2 compact-field">
                 <label class="form-label"><b>WU</b></label>
                 <textarea name="wu_text" class="form-control" rows="2"
                   placeholder="">{{ wu_text }}</textarea>
 
                 {% if wu_feedback %}
-                  <div class="small {% if wu_ok %}text-success{% else %}text-danger{% endif %}">
+                  <div class="small compact-feedback {% if wu_ok %}text-success{% else %}text-danger{% endif %}">
                     {{ wu_feedback }}
                   </div>
                 {% endif %}
@@ -63,7 +76,7 @@
 
               <!-- MOB / TECH -->
               {% if tb_show_mob %}
-              <div class="mb-3">
+              <div class="mb-2 compact-field">
                 <label class="form-label"><b>Mob / Tech</b></label>
                 <textarea name="mob_text" class="form-control" rows="2"
                   placeholder="">{{ mob_text }}</textarea>
@@ -72,71 +85,71 @@
 
               <!-- SPRINT -->
               {% if tb_show_sprint %}
-              <div class="mb-3">
-                <label class="form-label"><b>Sprint (altijd Z6)</b></label>
+              <div class="mb-2 compact-field">
+                <label class="form-label"><b>Sprint Z6</b></label>
                 <textarea name="sprint_text" class="form-control" rows="2"
                   placeholder="">{{ sprint_text }}</textarea>
 
                 {% if sprint_feedback %}
-                  <div class="small {% if sprint_ok %}text-success{% else %}text-danger{% endif %}">
+                  <div class="small compact-feedback {% if sprint_ok %}text-success{% else %}text-danger{% endif %}">
                     {{ sprint_feedback }}
                   </div>
                 {% endif %}
               </div>
               {% endif %}
 
-              {% if core_error %}
-                <div class="alert alert-danger">{{ core_error }}</div>
-              {% endif %}
-
-              {% if template_error %}
-                <div class="alert alert-danger">{{ template_error }}</div>
-              {% endif %}
-
-              {% if template_saved_notice %}
-                <div class="alert alert-success">{{ template_saved_notice }}</div>
-              {% endif %}
-
-              <!-- CORE -->
-              <div class="mb-3">
-                <label class="form-label"><b>Core (of Alternative)</b></label>
-                <textarea name="core_text" class="form-control" rows="3"
-                  placeholder="">{{ core_text }}</textarea>
-
-                {% if core_feedback %}
-                  <div class="small {% if core_ok %}text-success{% else %}text-danger{% endif %}">
-                    {{ core_feedback }}
-                  </div>
-                {% endif %}
-              </div>
-
               <!-- 2ND CORE -->
               {% if tb_show_core2 %}
                 {% if core2_error %}
-                  <div class="alert alert-danger">{{ core2_error }}</div>
+                  <div class="alert alert-danger compact-field-wide">{{ core2_error }}</div>
                 {% endif %}
 
-                <div class="mb-3">
+                <div class="mb-2 compact-field">
                   <label class="form-label"><b>2nd core</b></label>
-                  <textarea name="core2_text" class="form-control" rows="3"
+                  <textarea name="core2_text" class="form-control" rows="2"
                     placeholder="">{{ core2_text }}</textarea>
 
                   {% if core2_feedback %}
-                    <div class="small {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
+                    <div class="small compact-feedback {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
                       {{ core2_feedback }}
                     </div>
                   {% endif %}
                 </div>
               {% endif %}
 
+              {% if core_error %}
+                <div class="alert alert-danger compact-field-wide">{{ core_error }}</div>
+              {% endif %}
+
+              {% if template_error %}
+                <div class="alert alert-danger compact-field-wide">{{ template_error }}</div>
+              {% endif %}
+
+              {% if template_saved_notice %}
+                <div class="alert alert-success compact-field-wide">{{ template_saved_notice }}</div>
+              {% endif %}
+
+              <!-- CORE -->
+              <div class="mb-2 compact-field compact-field-wide">
+                <label class="form-label"><b>Core</b></label>
+                <textarea name="core_text" class="form-control compact-tall" rows="3"
+                  placeholder="">{{ core_text }}</textarea>
+
+                {% if core_feedback %}
+                  <div class="small compact-feedback {% if core_ok %}text-success{% else %}text-danger{% endif %}">
+                    {{ core_feedback }}
+                  </div>
+                {% endif %}
+              </div>
+
               <!-- ALTERNATIVE -->
-              <div class="mb-3">
+              <div class="mb-2 compact-field">
                 <label class="form-label"><b>Alternative</b></label>
-                <textarea name="alt_text" class="form-control" rows="3"
+                <textarea name="alt_text" class="form-control compact-tall" rows="3"
                   placeholder="">{{ alt_text }}</textarea>
 
                 {% if alt_feedback %}
-                  <div class="small {% if alt_ok %}text-success{% else %}text-danger{% endif %}">
+                  <div class="small compact-feedback {% if alt_ok %}text-success{% else %}text-danger{% endif %}">
                     {{ alt_feedback }}
                   </div>
                 {% endif %}
@@ -144,64 +157,64 @@
 
               <!-- CD -->
               {% if tb_show_cd %}
-              <div class="mb-3">
+              <div class="mb-2 compact-field">
                 <label class="form-label"><b>CD</b></label>
                 <textarea name="cd_text" class="form-control" rows="2"
                   placeholder="">{{ cd_text }}</textarea>
 
                 {% if cd_feedback %}
-                  <div class="small {% if cd_ok %}text-success{% else %}text-danger{% endif %}">
+                  <div class="small compact-feedback {% if cd_ok %}text-success{% else %}text-danger{% endif %}">
                     {{ cd_feedback }}
                   </div>
                 {% endif %}
               </div>
               {% endif %}
 
+              </div>
+
               {% if not is_athlete_year_calendar %}
-              <div class="border rounded p-3 mb-3">
-                <div class="row g-2 align-items-end mb-2">
-                  <div class="col-md-7">
-                    <label class="form-label mb-1"><b>Naam standaard training</b></label>
-                    <input
-                      type="text"
-                      name="template_name"
-                      class="form-control"
-                      value="{{ template_name|default:'' }}"
-                      placeholder=""
-                    >
-                  </div>
-                  <div class="col-md-5">
+              <div class="border rounded compact-template-box">
+                <div class="compact-template-grid">
+                  <div class="compact-template-action">
+                    <div>
+                      <label class="form-label mb-1"><b>Save standaard</b></label>
+                      <input
+                        type="text"
+                        name="template_name"
+                        class="form-control form-control-sm"
+                        value="{{ template_name|default:'' }}"
+                        placeholder=""
+                      >
+                    </div>
                     <button
                       type="submit"
-                      class="btn btn-outline-primary w-100"
+                      class="btn btn-sm btn-outline-primary"
                       name="action"
                       value="save_template"
                     >
-                      Save standaard
+                      Save
                     </button>
                   </div>
-                </div>
 
-                <div class="row g-2 align-items-end">
-                  <div class="col-md-7">
-                    <label class="form-label mb-1"><b>Load standaard</b></label>
-                    <select name="template_id" class="form-select">
-                      <option value=""></option>
-                      {% for tpl in saved_templates %}
-                        <option value="{{ tpl.id }}" {% if selected_template_id|stringformat:"s" == tpl.id|stringformat:"s" %}selected{% endif %}>
-                          {{ tpl.name }}
-                        </option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                  <div class="col-md-5">
+                  <div class="compact-template-action">
+                    <div>
+                      <label class="form-label mb-1"><b>Load standaard</b></label>
+                      <select name="template_id" class="form-select form-select-sm">
+                        <option value=""></option>
+                        {% for tpl in saved_templates %}
+                          <option value="{{ tpl.id }}" {% if selected_template_id|stringformat:"s" == tpl.id|stringformat:"s" %}selected{% endif %}>
+                            {{ tpl.name }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </div>
                     <button
                       type="submit"
-                      class="btn btn-outline-secondary w-100"
+                      class="btn btn-sm btn-outline-secondary"
                       name="action"
                       value="load_template"
                     >
-                      Load standaard
+                      Load
                     </button>
                   </div>
                 </div>
@@ -209,15 +222,15 @@
 
               {% endif %}
 
-              <div class="d-flex justify-content-end gap-2">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+              <div class="d-flex justify-content-end gap-2 compact-actions">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
                   Annuleren
                 </button>
 
                 {% if selected_athlete and selected_plan and is_override %}
                   <button
                     type="button"
-                    class="btn btn-outline-dark"
+                    class="btn btn-sm btn-outline-dark"
                     hx-post="/slot-reset-override/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}&athlete={{ selected_athlete.id }}"
                     hx-swap="none"
                   >
@@ -228,7 +241,7 @@
                 {% if not is_athlete_year_calendar %}
                 <button
                   type="submit"
-                  class="btn btn-outline-danger"
+                  class="btn btn-sm btn-outline-danger"
                   name="action"
                   value="delete"
                 >
@@ -240,14 +253,11 @@
                 </button>
                 {% endif %}
 
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-sm btn-primary">
                   Opslaan
                 </button>
               </div>
             </form>
-          </div>
-
-        </div>
       </div>
 
     </div>
