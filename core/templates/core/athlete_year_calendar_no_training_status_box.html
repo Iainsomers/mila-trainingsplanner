@@ -1,0 +1,1275 @@
+{% extends "core/base.html" %}
+
+{% block title %}Athlete Year Calendar{% endblock %}
+
+{% block extra_head %}
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  table.year-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .year-table th,
+  .year-table td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    vertical-align: top;
+    text-align: left;
+  }
+
+  .year-table th {
+    background: #f5f5f5;
+  }
+
+  .weeklabel {
+    width: 180px;
+    font-weight: bold;
+    background: #fafafa;
+  }
+
+  .week-phase-wrap {
+    margin-top: 6px;
+    min-height: 18px;
+  }
+
+  .week-phase-label {
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.55);
+  }
+
+  .weeklabel.phase-recovery { background: #e8ddff !important; }
+  .weeklabel.phase-aerobe   { background: #e5533d !important; }
+  .weeklabel.phase-specific { background: #bfe7bf !important; }
+  .weeklabel.phase-intense  { background: #b7d7ff !important; }
+  .weeklabel.phase-taper    { background: #ff7a00 !important; }
+
+
+  .sumcol {
+    width: 120px;
+    background: #fafafa;
+  }
+
+  .total-pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 6px;
+    margin: 0 2px 2px 0;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .total-z1 { background-color: #f8f8f0; }
+  .total-z2 { background-color: #f7c6d0; }
+  .total-z3 { background-color: #e5533d; }
+  .total-z4 { background-color: #bfe7bf; }
+  .total-z5 { background-color: #b7d7ff; }
+  .total-z6 { background-color: #f2c200; }
+  .total-race { background-color: #ff7a00; }
+
+  .week-summary-tooltip {
+    position: relative;
+    cursor: help;
+  }
+
+  .week-summary-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 8px;
+    top: 28px;
+    z-index: 9999;
+    min-width: 180px;
+    max-width: 260px;
+    padding: 7px 9px;
+    border: 1px solid #999;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #000000;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.35;
+    white-space: pre-line;
+    pointer-events: none;
+  }
+
+
+  .slotrow {
+  }
+
+  .current-week td {
+    background: #fff8cc;
+  }
+
+  .slotrow {
+    height: 48px;
+  }
+
+  .daycell {
+    min-height: 32px;
+  }
+
+  .emptyline {
+    min-height: 18px;
+  }
+
+  .slotbox {
+    position: relative;
+    display: block;
+    min-height: 32px;
+    border-radius: 6px;
+    padding: 4px 18px 4px 6px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .check-status-toggle {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #666;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #333333;
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 1;
+  }
+
+  .check-status-toggle.status-done_as_planned {
+    background: #00cc00 !important;
+    border-color: #00cc00 !important;
+    color: #ffffff !important;
+  }
+
+  .check-status-toggle.status-too_hard_fast,
+  .check-status-toggle.status-adjusted_ok,
+  .check-status-toggle.status-lighter_slower {
+    background: #f28c28 !important;
+    border-color: #f28c28 !important;
+    color: #ffffff !important;
+  }
+
+  .check-status-toggle.status-not_done {
+    background: #cc0000 !important;
+    border-color: #cc0000 !important;
+    color: #ffffff !important;
+  }
+
+  .check-status-menu {
+    display: none;
+    position: absolute;
+    right: 5px;
+    bottom: 24px;
+    z-index: 20;
+    min-width: 245px;
+    background: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    padding: 4px;
+  }
+
+  .check-status-menu.is-open {
+    display: block;
+  }
+
+  .check-status-option {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: #ffffff;
+    text-align: left;
+    font-size: 12px;
+    padding: 5px 7px;
+    cursor: pointer;
+  }
+
+  .check-status-option:hover {
+    background: #f5f5f5;
+  }
+
+  .slot-text {
+    margin-bottom: 3px;
+  }
+
+  .zones-times-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .zones-times-table th,
+  .zones-times-table td {
+    border: 1px solid #d0d0d0;
+    padding: 5px 7px;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .zones-times-table th {
+    background: #f5f5f5;
+    font-weight: 700;
+  }
+
+  /* Thicker borders between weeks (apply to all columns) */
+  .year-table tbody tr.slotrow:nth-child(3n+1) td {
+    border-top: 3px solid #999;
+  }
+
+
+  .today-training-block {
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+
+  .today-training-title {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: #555555;
+  }
+
+  .today-training-block .slotbox {
+    min-height: 44px;
+    background: #ffffff;
+  }
+
+  .today-training-block .check-status-menu {
+    top: 24px;
+    bottom: auto;
+    z-index: 1065;
+  }
+
+  .today-comment-input {
+    width: 100%;
+    min-height: 95px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 8px;
+    background: #ffffff;
+    font-size: 13px;
+    resize: vertical;
+  }
+
+  .report-status-select.status-done_as_planned {
+    background: #00cc00 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+  }
+
+  .report-status-select.status-too_hard_fast,
+  .report-status-select.status-adjusted_ok,
+  .report-status-select.status-lighter_slower {
+    background: #f28c28 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+  }
+
+  .report-status-select.status-not_done {
+    background: #cc0000 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+  }
+
+
+
+  .comment-display {
+    width: 100%;
+    min-height: 54px;
+    font-size: 11px;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .report-preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    height: 100%;
+  }
+
+  .report-preview-half {
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 3px 4px;
+    background: #ffffff;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .report-preview-top {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+
+  .report-preview-rpe {
+    font-weight: 700;
+    color: #333333;
+  }
+
+  .report-preview-text {
+    color: #555555;
+    line-height: 1.2;
+    max-height: 26px;
+    overflow: hidden;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .today-comment-display {
+    width: 100%;
+    min-height: 70px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 8px;
+    background: #ffffff;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: pre-wrap;
+  }
+
+  @media (max-width: 768px) {
+    .year-table-wrap {
+      display: block;
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: auto;
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table.year-table {
+      width: 1120px !important;
+      min-width: 1120px !important;
+      max-width: none !important;
+      table-layout: fixed;
+    }
+
+    .year-table .weeklabel {
+      width: 150px;
+      min-width: 150px;
+    }
+
+    .year-table .sumcol {
+      width: 150px;
+      min-width: 150px;
+    }
+
+    .year-table th:not(.weeklabel):not(.sumcol),
+    .year-table td:not(.weeklabel):not(.sumcol) {
+      width: 115px;
+      min-width: 115px;
+    }
+
+    .year-table th,
+    .year-table td {
+      padding: 5px;
+    }
+
+    .slotbox {
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    form.mb-3 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    form.mb-3 input,
+    form.mb-3 select,
+    form.mb-3 button {
+      margin-bottom: 0;
+    }
+  }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <h2 class="mb-0">Athlete Year Calendar</h2>
+    {% if request.user.is_staff %}<a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>{% endif %}
+  </div>
+
+  <form method="get" class="mb-3">
+    <input name="year" value="{{ year }}" class="form-control form-control-sm" style="width:120px; display:inline-block;">
+    <select name="athlete" class="form-control form-control-sm" style="width:220px; display:inline-block;">
+      <option value="" {% if not selected_athlete_id %}selected{% endif %}>(all athletes)</option>
+      {% for athlete in athletes %}
+        <option value="{{ athlete.id }}" {% if selected_athlete_id == athlete.id|stringformat:"s" %}selected{% endif %}>{{ athlete.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="hide" class="form-control form-control-sm" style="width:180px; display:inline-block;" onchange="this.form.submit()">
+      <option value="none" {% if hide_mode == "none" %}selected{% endif %}>no hiding</option>
+      <option value="t1" {% if hide_mode == "t1" %}selected{% endif %}>hide t-1 week</option>
+      <option value="t4" {% if hide_mode == "t4" %}selected{% endif %}>hide t-4 weeks</option>
+    </select>
+    <button class="btn btn-sm btn-primary">Load</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">zones/times</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#todayTrainingModal">today</button>
+  </form>
+
+  <div class="modal fade" id="zonesTimesModal" tabindex="-1" aria-labelledby="zonesTimesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="zonesTimesModalLabel">zones/times{% if selected_athlete %} – {{ selected_athlete.name }}{% endif %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <table class="zones-times-table">
+            <thead>
+              <tr>
+                <th>PR</th>
+                <th></th>
+                <th>Per km</th>
+                <th>Per 400m</th>
+                <th>Per 100m</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in zones_times_rows %}
+                <tr>
+                  <td>{{ row.pr }}</td>
+                  <td>{{ row.label }}</td>
+                  <td>{{ row.per_km }}</td>
+                  <td>{{ row.per_400m }}</td>
+                  <td>{{ row.per_100m }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="todayTrainingModal" tabindex="-1" aria-labelledby="todayTrainingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="todayTrainingModalLabel">today{% if selected_athlete %} – {{ selected_athlete.name }}{% endif %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="today-training-block">
+            <div class="today-training-title">Training 1</div>
+            {% for w in week_rows %}
+              {% for cell in w.cells1 %}
+                {% if cell.day == today %}
+                  {% if cell.slot %}
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
+                      {% if cell.slot.text %}
+                        <div class="core-line" data-zone="">
+                          <strong>{{ cell.slot.text|linebreaksbr }}</strong>
+                        </div>
+                      {% else %}
+                        {% for seg in cell.slot.segments.all %}
+                          {% if seg.text and seg.type != "CORE2" %}
+                            {% if seg.type == "CORE" %}
+                              <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                                <strong>{{ seg.text }}</strong>
+                              </div>
+                            {% else %}
+                              <div>{{ seg.text }}</div>
+                            {% endif %}
+                          {% endif %}
+                        {% endfor %}
+                        {% for seg in cell.slot.segments.all %}
+                          {% if seg.text and seg.type == "CORE2" %}
+                            <div>2nd: {{ seg.text }}</div>
+                          {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <div class="text-muted small">Geen training.</div>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </div>
+
+          <div class="today-training-block">
+            <div class="today-training-title">Training 2</div>
+            {% for w in week_rows %}
+              {% for cell in w.cells2 %}
+                {% if cell.day == today %}
+                  {% if cell.slot %}
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
+                      {% if cell.slot.text %}
+                        <div class="core-line" data-zone="">
+                          <strong>{{ cell.slot.text|linebreaksbr }}</strong>
+                        </div>
+                      {% else %}
+                        {% for seg in cell.slot.segments.all %}
+                          {% if seg.text and seg.type != "CORE2" %}
+                            {% if seg.type == "CORE" %}
+                              <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                                <strong>{{ seg.text }}</strong>
+                              </div>
+                            {% else %}
+                              <div>{{ seg.text }}</div>
+                            {% endif %}
+                          {% endif %}
+                        {% endfor %}
+                        {% for seg in cell.slot.segments.all %}
+                          {% if seg.text and seg.type == "CORE2" %}
+                            <div>2nd: {{ seg.text }}</div>
+                          {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                    </div>
+                  {% else %}
+                    <div class="text-muted small">Geen training.</div>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </div>
+
+          <div class="today-training-block">
+            <div class="today-training-title">Comment</div>
+            {% for w in week_rows %}
+              {% for d in w.cells3 %}
+                {% if d.day == today %}
+                  <textarea class="today-comment-input"
+                            data-date="{{ d.day|date:'Y-m-d' }}"
+                            placeholder="Schrijf hier je comment...">{% if d.comment %}{{ d.comment.text }}{% endif %}</textarea>
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="year-table-wrap">
+  <table class="year-table">
+    <thead>
+      <tr>
+        <th class="weeklabel">Week</th>
+        <th class="sumcol">Total</th>
+        <th>Mon</th>
+        <th>Tue</th>
+        <th>Wed</th>
+        <th>Thu</th>
+        <th>Fri</th>
+        <th>Sat</th>
+        <th>Sun</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for w in week_rows %}
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="3">
+            {{ w.week_start|date:"d-m" }} – {{ w.week_end|date:"d-m" }}
+            {% if w.week_phase_label %}
+              <div class="week-phase-wrap">
+                <span class="week-phase-label">{{ w.week_phase_label }}</span>
+              </div>
+            {% endif %}
+          </td>
+          <td class="sumcol week-summary-tooltip" rowspan="3" title="{{ w.sum_pct_tooltip }}" data-tooltip="{{ w.sum_pct_tooltip|escape }}">
+            <div style="font-size:11px; line-height:1.35;">
+              <div style="font-weight:bold; color:#000; margin-bottom:3px;">Total km: {{ w.sum_tot_km }}</div>
+              {% if w.has_z1 %}<span class="total-pill total-z1">Z1 {{ w.sum_z1_km }}</span>{% endif %}
+              {% if w.has_z2 %}<span class="total-pill total-z2">Z2 {{ w.sum_z2_km }}</span>{% endif %}
+              {% if w.has_z3 %}<span class="total-pill total-z3">Z3 {{ w.sum_z3_km }}</span>{% endif %}
+              {% if w.has_z4 %}<span class="total-pill total-z4">Z4 {{ w.sum_z4_km }}</span>{% endif %}
+              {% if w.has_z5 %}<span class="total-pill total-z5">Z5 {{ w.sum_z5_km }}</span>{% endif %}
+              {% if w.has_z6 %}<span class="total-pill total-z6">Z6 {{ w.sum_z6_km }}</span>{% endif %}
+              {% if w.has_race %}<span class="total-pill total-race">Race {{ w.sum_race_km }}</span>{% endif %}
+
+              {% if w.has_t10000 %}<span class="total-pill total-race">T10 {{ w.sum_t10000_km }}</span>{% endif %}
+              {% if w.has_t5000 %}<span class="total-pill total-race">T5 {{ w.sum_t5000_km }}</span>{% endif %}
+              {% if w.has_t3000 %}<span class="total-pill total-race">T3 {{ w.sum_t3000_km }}</span>{% endif %}
+              {% if w.has_t1500 %}<span class="total-pill total-race">T15 {{ w.sum_t1500_km }}</span>{% endif %}
+              {% if w.has_t800 %}<span class="total-pill total-race">T8 {{ w.sum_t800_km }}</span>{% endif %}
+              {% if w.has_tm %}<span class="total-pill total-race">TM {{ w.sum_tm_km }}</span>{% endif %}
+              {% if w.has_thm %}<span class="total-pill total-race">THM {{ w.sum_thm_km }}</span>{% endif %}
+              {% if w.has_t4 %}<span class="total-pill total-race">T4 {{ w.sum_t4_km }}</span>{% endif %}
+
+              {% if w.alt_z1_min %}<span class="total-pill total-z1">ALT Z1 {{ w.alt_z1_min }}m</span>{% endif %}
+              {% if w.alt_z2_min %}<span class="total-pill total-z2">ALT Z2 {{ w.alt_z2_min }}m</span>{% endif %}
+              {% if w.alt_z3_min %}<span class="total-pill total-z3">ALT Z3 {{ w.alt_z3_min }}m</span>{% endif %}
+            </div>
+          </td>
+
+          {% for cell in w.cells1 %}
+            <td>
+              <div class="daycell">
+                {% if cell.slot %}
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
+                    {% if cell.slot.text %}
+                      <div class="core-line" data-zone="">
+                        <strong>{{ cell.slot.text|linebreaksbr }}</strong>
+                      </div>
+                    {% else %}
+                      {% for seg in cell.slot.segments.all %}
+                        {% if seg.text and seg.type != "CORE2" %}
+                          {% if seg.type == "CORE" %}
+                            <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                              <strong>{{ seg.text }}</strong>
+                            </div>
+                          {% else %}
+                            <div>{{ seg.text }}</div>
+                          {% endif %}
+                        {% endif %}
+                      {% endfor %}
+                      {% for seg in cell.slot.segments.all %}
+                        {% if seg.text and seg.type == "CORE2" %}
+                          <div>2nd: {{ seg.text }}</div>
+                        {% endif %}
+                      {% endfor %}
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </div>
+            </td>
+          {% endfor %}
+        </tr>
+
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          {% for cell in w.cells2 %}
+            <td>
+              <div class="emptyline">
+                {% if cell.slot %}
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
+                    {% if cell.slot.text %}
+                      <div class="core-line" data-zone="">
+                        <strong>{{ cell.slot.text|linebreaksbr }}</strong>
+                      </div>
+                    {% else %}
+                      {% for seg in cell.slot.segments.all %}
+                        {% if seg.text and seg.type != "CORE2" %}
+                          {% if seg.type == "CORE" %}
+                            <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
+                              <strong>{{ seg.text }}</strong>
+                            </div>
+                          {% else %}
+                            <div>{{ seg.text }}</div>
+                          {% endif %}
+                        {% endif %}
+                      {% endfor %}
+                      {% for seg in cell.slot.segments.all %}
+                        {% if seg.text and seg.type == "CORE2" %}
+                          <div>2nd: {{ seg.text }}</div>
+                        {% endif %}
+                      {% endfor %}
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </div>
+            </td>
+          {% endfor %}
+        </tr>
+
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          {% for d in w.cells3 %}
+            <td>
+              <div class="comment-display"
+                   data-date="{{ d.day|date:'Y-m-d' }}"
+                   data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
+                   data-t1-rpe="{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% endif %}"
+                   data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
+                   data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
+                   data-t2-rpe="{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% endif %}"
+                   data-t2-comment="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% endif %}"
+                   data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}">
+                <div class="report-preview-grid">
+                  <div class="report-preview-half">
+                    <div class="report-preview-top">
+                      {% with status=d.check1.effective_status|default:"" %}
+                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
+                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                        </span>
+                      {% endwith %}
+                      <span class="report-preview-rpe">RPE: {% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
+                    </div>
+                    <div class="report-preview-text">{% if d.check1.comment %}{{ d.check1.comment }}{% endif %}</div>
+                  </div>
+                  <div class="report-preview-half">
+                    <div class="report-preview-top">
+                      {% with status=d.check2.effective_status|default:"" %}
+                        <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
+                          {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                        </span>
+                      {% endwith %}
+                      <span class="report-preview-rpe">RPE: {% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
+                    </div>
+                    <div class="report-preview-text">{% if d.check2.comment %}{{ d.check2.comment }}{% endif %}</div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+</div>
+
+<script>
+  (function() {
+    function applyColors() {
+      var zoneColors = {
+        1: "#f8f8f0",
+        2: "#f7c6d0",
+        3: "#e5533d",
+        4: "#bfe7bf",
+        5: "#2f75b5",
+        6: "#f2c200"
+      };
+      var raceColor = "#ff7a00";
+      var raceHardColor = "#cc0000";
+
+      function raceKind(text) {
+        var s = (text || "").toLowerCase();
+        if (/\brace\s*!/.test(s)) return "hard";
+        if (/\brace\b/.test(s)) return "race";
+        return "";
+      }
+
+      function lineKm(text) {
+        var s = (text || "").toLowerCase().trim();
+
+        var repMatch = s.match(/(\d+(?:[.,]\d+)?)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
+        if (repMatch) {
+          var reps = parseFloat(repMatch[1].replace(",", "."));
+          var value = parseFloat(repMatch[2].replace(",", "."));
+          var unit = repMatch[3];
+          var km = (unit === "m") ? (value / 1000.0) : value;
+          return reps * km;
+        }
+
+        var distMatch = s.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
+        if (distMatch) {
+          var value = parseFloat(distMatch[1].replace(",", "."));
+          var unit = distMatch[2];
+          return (unit === "m") ? (value / 1000.0) : value;
+        }
+
+        return 0;
+      }
+
+      document.querySelectorAll(".slotbox").forEach(function(box) {
+        var allCoreLines = Array.from(box.querySelectorAll(".core-line[data-zone]"));
+        var raceLines = allCoreLines.filter(function(line) {
+          return raceKind(line.textContent || "") !== "";
+        });
+        var hasRaceHard = raceLines.some(function(line) {
+          return raceKind(line.textContent || "") === "hard";
+        });
+
+        var lines = allCoreLines.filter(function(line) {
+          return /^[1-6]$/.test((line.getAttribute("data-zone") || "").trim());
+        });
+
+        var mainZone = null;
+        if (lines.length) {
+          var totals = {};
+          lines.forEach(function(line) {
+            var z = parseInt(line.getAttribute("data-zone"), 10);
+            totals[z] = (totals[z] || 0) + lineKm(line.textContent || "");
+          });
+
+          var zones = Object.keys(totals).map(function(z) { return parseInt(z, 10); });
+          mainZone = zones[0];
+
+          zones.forEach(function(z) {
+            if (totals[z] > totals[mainZone]) {
+              mainZone = z;
+            }
+          });
+        }
+
+        if (raceLines.length) {
+          box.style.backgroundColor = hasRaceHard ? raceHardColor : raceColor;
+        } else if (mainZone !== null) {
+          box.style.backgroundColor = zoneColors[mainZone] || "";
+        } else {
+          return;
+        }
+
+        allCoreLines.forEach(function(line) {
+          var kind = raceKind(line.textContent || "");
+          var z = parseInt(line.getAttribute("data-zone"), 10);
+          var color = "#000000";
+
+          if (kind) {
+            color = "#000000";
+          } else if (!raceLines.length && z === mainZone) {
+            color = "#000000";
+          } else if (/^[1-6]$/.test((line.getAttribute("data-zone") || "").trim())) {
+            color = zoneColors[z] || "#000000";
+          }
+
+          line.style.setProperty("color", color, "important");
+
+          Array.from(line.querySelectorAll("*")).forEach(function(child) {
+            child.style.setProperty("color", color, "important");
+          });
+        });
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", applyColors);
+    } else {
+      applyColors();
+    }
+
+    window.addEventListener("load", applyColors);
+  })();
+</script>
+
+
+<script>
+(function() {
+  function getCookie(name) {
+    var value = null;
+    if (document.cookie) {
+      document.cookie.split(";").forEach(function(cookie) {
+        cookie = cookie.trim();
+        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+          value = decodeURIComponent(cookie.substring(name.length + 1));
+        }
+      });
+    }
+    return value;
+  }
+
+  function statusSymbol(status) {
+    if (status === "done_as_planned") return "✓";
+    if (status === "too_hard_fast") return "↑";
+    if (status === "adjusted_ok") return "✓";
+    if (status === "lighter_slower") return "↓";
+    if (status === "not_done") return "✕";
+    return "";
+  }
+
+  function setStatusVisual(el, status) {
+    el.setAttribute("data-status", status || "");
+    el.textContent = statusSymbol(status || "");
+
+    ["status-none", "status-done_as_planned", "status-too_hard_fast", "status-adjusted_ok", "status-lighter_slower", "status-not_done"].forEach(function(cls) {
+      el.classList.remove(cls);
+    });
+
+    el.classList.add(status ? ("status-" + status) : "status-none");
+  }
+
+  function closeStatusMenus() {
+    document.querySelectorAll(".check-status-menu.is-open").forEach(function(menu) {
+      menu.classList.remove("is-open");
+    });
+  }
+
+  function setupCheckToggles() {
+    document.querySelectorAll(".check-status-toggle").forEach(function(el) {
+      el.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (el.classList.contains("disabled")) return;
+
+        var menu = el.parentElement.querySelector(".check-status-menu");
+        if (!menu) return;
+
+        var wasOpen = menu.classList.contains("is-open");
+        closeStatusMenus();
+
+        if (!wasOpen) {
+          menu.classList.add("is-open");
+        }
+      });
+    });
+
+    document.querySelectorAll(".check-status-option").forEach(function(option) {
+      option.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        var menu = option.closest(".check-status-menu");
+        var el = menu ? menu.parentElement.querySelector(".check-status-toggle") : null;
+        if (!el || el.classList.contains("disabled")) return;
+
+        var status = option.getAttribute("data-status") || "";
+
+        var formData = new FormData();
+        formData.append("date", el.getAttribute("data-date") || "");
+        formData.append("check_status", status);
+        formData.append("slot_index", el.getAttribute("data-slot-index") || "1");
+
+        fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+          method: "POST",
+          body: formData,
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+          credentials: "same-origin"
+        }).then(function(response) {
+          if (!response.ok) return;
+          setStatusVisual(el, status);
+          closeStatusMenus();
+          window.location.reload();
+        }).catch(function() {});
+      });
+    });
+
+    document.addEventListener("click", closeStatusMenus);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupCheckToggles);
+  } else {
+    setupCheckToggles();
+  }
+})();
+</script>
+
+
+<div id="commentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#ffffff; width:720px; max-width:95vw; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+    <h5>Verslag</h5>
+    <table class="table table-sm">
+      <tr><th></th><th>Training AM</th><th></th><th>Training PM</th></tr>
+      <tr>
+        <td>Done?</td>
+        <td><select id="reportT1Status" class="form-control form-control-sm report-field report-status-select"><option value="">—</option><option value="done_as_planned">✓ Done</option><option value="too_hard_fast">↑ More/too fast</option><option value="adjusted_ok">✓ Adjusted</option><option value="lighter_slower">↓ Less, slower</option><option value="not_done">✕ Not done</option></select></td>
+        <td>Done?</td>
+        <td><select id="reportT2Status" class="form-control form-control-sm report-field report-status-select"><option value="">—</option><option value="done_as_planned">✓ Done</option><option value="too_hard_fast">↑ More/too fast</option><option value="adjusted_ok">✓ Adjusted</option><option value="lighter_slower">↓ Less, slower</option><option value="not_done">✕ Not done</option></select></td>
+      </tr>
+      <tr>
+        <td>RPE</td>
+        <td><input id="reportT1Rpe" type="number" min="0" max="10" class="form-control form-control-sm report-field"></td>
+        <td>RPE</td>
+        <td><input id="reportT2Rpe" type="number" min="0" max="10" class="form-control form-control-sm report-field"></td>
+      </tr>
+      <tr>
+        <td>Comment</td>
+        <td><textarea id="reportT1Comment" class="form-control form-control-sm report-field" rows="3"></textarea></td>
+        <td>Comment</td>
+        <td><textarea id="reportT2Comment" class="form-control form-control-sm report-field" rows="3"></textarea></td>
+      </tr>
+    </table>
+    <div id="reportValidationMsg" class="text-danger small mb-2"></div>
+    <div style="text-align:right; margin-top:10px;">
+      <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Annuleren</button>
+      <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary" disabled>OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var activeDate = "";
+  function getCookie(name) {
+    var v = null;
+    if (document.cookie) document.cookie.split(";").forEach(function(c){ c=c.trim(); if(c.substring(0,name.length+1)===(name+"=")) v=decodeURIComponent(c.substring(name.length+1)); });
+    return v;
+  }
+  function val(id){ return (document.getElementById(id).value || "").trim(); }
+
+  function updateReportStatusColor(selectEl){
+    if (!selectEl) return;
+    ["status-done_as_planned", "status-too_hard_fast", "status-adjusted_ok", "status-lighter_slower", "status-not_done"].forEach(function(cls){ selectEl.classList.remove(cls); });
+    var status = (selectEl.value || "").trim();
+    if (status) selectEl.classList.add("status-" + status);
+  }
+  function updateAllReportStatusColors(){
+    updateReportStatusColor(document.getElementById("reportT1Status"));
+    updateReportStatusColor(document.getElementById("reportT2Status"));
+  }
+  function setVal(id, value){ document.getElementById(id).value = value || ""; }
+  function filled(prefix){ return !!(val(prefix+"Status") || val(prefix+"Rpe") || val(prefix+"Comment")); }
+  function complete(prefix){
+    if (!filled(prefix)) return true;
+    var rpe = val(prefix+"Rpe"), comment = val(prefix+"Comment");
+    return !!val(prefix+"Status") && rpe !== "" && !isNaN(parseInt(rpe,10)) && parseInt(rpe,10) >= 0 && parseInt(rpe,10) <= 10 && comment.length >= 4;
+  }
+  function validate(){
+    updateAllReportStatusColors();
+    var ok = complete("reportT1") && complete("reportT2");
+    document.getElementById("commentOkBtn").disabled = !ok;
+    document.getElementById("reportValidationMsg").textContent = ok ? "" : "Vul per training niets in, of Done + RPE 0-10 + comment minimaal 4 letters.";
+  }
+  function post(slotIndex, status, rpe, comment){
+    var fd = new FormData();
+    fd.append("date", activeDate);
+    fd.append("slot_index", slotIndex);
+    fd.append("report_submit", "1");
+    fd.append("check_status", status || "");
+    fd.append("rpe", rpe || "");
+    fd.append("report_comment", comment || "");
+    return fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {method:"POST", body:fd, headers:{"X-CSRFToken":getCookie("csrftoken")}, credentials:"same-origin"});
+  }
+  document.querySelectorAll(".comment-display").forEach(function(el){
+    el.addEventListener("click", function(event){
+      event.preventDefault(); event.stopImmediatePropagation();
+      activeDate = el.getAttribute("data-date") || "";
+      setVal("reportT1Status", el.getAttribute("data-t1-status"));
+      setVal("reportT1Rpe", el.getAttribute("data-t1-rpe"));
+      setVal("reportT1Comment", el.getAttribute("data-t1-comment"));
+      setVal("reportT2Status", el.getAttribute("data-t2-status"));
+      setVal("reportT2Rpe", el.getAttribute("data-t2-rpe"));
+      setVal("reportT2Comment", el.getAttribute("data-t2-comment"));
+      document.getElementById("commentModal").style.display = "flex";
+      validate();
+    }, true);
+  });
+  document.querySelectorAll(".report-field").forEach(function(el){ el.addEventListener("input", validate); el.addEventListener("change", validate); });
+  document.getElementById("commentCancelBtn").addEventListener("click", function(){ document.getElementById("commentModal").style.display = "none"; });
+  document.getElementById("commentOkBtn").addEventListener("click", function(){
+    if (this.disabled) return;
+    Promise.all([
+      post(1, val("reportT1Status"), val("reportT1Rpe"), val("reportT1Comment")),
+      post(2, val("reportT2Status"), val("reportT2Rpe"), val("reportT2Comment"))
+    ]).then(function(){ window.location.reload(); });
+  });
+})();
+</script>
+
+<div id="modal-container"></div>
+
+<script>
+(function() {
+  function openSlotModal(el) {
+    var date = el.closest("[data-date]") ? el.closest("[data-date]").getAttribute("data-date") : el.getAttribute("data-date");
+    var slotIndex = el.getAttribute("data-slot-index");
+    var plan = el.getAttribute("data-plan-id") || "";
+    var athlete = "{{ selected_athlete_id }}";
+
+    if (!date || !slotIndex) return;
+
+    var parts = date.split("-");
+    var url = `/slot-modal/${parts[0]}/${parts[1]}/${parts[2]}/${slotIndex}/?athlete=${athlete}&plan=${plan}&source=athlete_year`;
+
+    fetch(url, { credentials: "same-origin" })
+      .then(r => r.text())
+      .then(html => {
+        document.getElementById("modal-container").innerHTML = html;
+        var modalEl = document.getElementById("slotModal");
+        if (!modalEl) return;
+        var modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      });
+  }
+
+  function setupSlotClicks() {
+    document.querySelectorAll(".slotbox").forEach(function(el) {
+      var statusToggle = el.closest("td") ? el.closest("td").querySelector(".check-status-toggle") : null;
+      if (statusToggle) {
+        el.setAttribute("data-date", statusToggle.getAttribute("data-date") || el.getAttribute("data-date") || "");
+        el.setAttribute("data-slot-index", statusToggle.getAttribute("data-slot-index") || el.getAttribute("data-slot-index") || "1");
+      }
+
+      el.addEventListener("click", function(e) {
+        if (e.target.closest(".check-status-toggle") || e.target.closest(".check-status-menu")) return;
+        if (el.classList.contains("disabled")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openSlotModal(el);
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupSlotClicks);
+  } else {
+    setupSlotClicks();
+  }
+})();
+</script>
+
+<div id="modal-container"></div>
+
+<script>
+(function() {
+  if (window.__athleteYearSlotModalBound) return;
+  window.__athleteYearSlotModalBound = true;
+
+  var activeSlotDate = "";
+  var activeSlotIndex = "";
+
+  function getCookie(name) {
+    var value = null;
+    if (document.cookie) {
+      document.cookie.split(";").forEach(function(cookie) {
+        cookie = cookie.trim();
+        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+          value = decodeURIComponent(cookie.substring(name.length + 1));
+        }
+      });
+    }
+    return value;
+  }
+
+  function collectSlotText(form) {
+    var fields = ["wu_text", "mob_text", "sprint_text", "core_text", "core2_text", "alt_text", "cd_text"];
+    var parts = [];
+
+    fields.forEach(function(name) {
+      var field = form.querySelector('[name="' + name + '"]');
+      if (!field) return;
+
+      var value = (field.value || "").trim();
+      if (value) parts.push(value);
+    });
+
+    return parts.join("\n");
+  }
+
+  function prepareSlotForm(container, date, slotIndex) {
+    var form = container.querySelector("form");
+    if (!form) return;
+
+    form.setAttribute("data-athlete-year-form", "1");
+    form.setAttribute("data-date", date || "");
+    form.setAttribute("data-slot-index", slotIndex || "1");
+
+    ["hx-post", "hx-target", "hx-swap"].forEach(function(attr) {
+      form.removeAttribute(attr);
+    });
+  }
+
+  function openSlotModal(el) {
+    var date = el.getAttribute("data-date");
+    var slotIndex = el.getAttribute("data-slot-index");
+    var plan = el.getAttribute("data-plan-id") || "";
+    var athlete = "{{ selected_athlete_id }}";
+
+    if (!date || !slotIndex) return;
+
+    activeSlotDate = date;
+    activeSlotIndex = slotIndex;
+
+    var parts = date.split("-");
+    var url = `/slot-modal/${parts[0]}/${parts[1]}/${parts[2]}/${slotIndex}/?athlete=${athlete}&plan=${plan}&source=athlete_year`;
+
+    fetch(url, { credentials: "same-origin" })
+      .then(function(response) { return response.text(); })
+      .then(function(html) {
+        var container = document.getElementById("modal-container");
+        container.innerHTML = html;
+        prepareSlotForm(container, activeSlotDate, activeSlotIndex);
+
+        var modalEl = document.getElementById("slotModal");
+        if (!modalEl) return;
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      });
+  }
+
+  document.addEventListener("click", function(event) {
+    if (event.target.closest(".check-status-toggle") || event.target.closest(".check-status-menu")) return;
+
+    var slotBox = event.target.closest(".slotbox");
+    if (!slotBox || slotBox.classList.contains("disabled")) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    openSlotModal(slotBox);
+  }, true);
+
+  document.addEventListener("click", function(event) {
+    var resetButton = event.target.closest('button[hx-post*="slot-reset-override"]');
+    if (!resetButton) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    var url = resetButton.getAttribute("hx-post");
+    if (!url) return;
+
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken")
+      },
+      credentials: "same-origin"
+    }).then(function(response) {
+      if (!response.ok) return;
+
+      var modalEl = document.getElementById("slotModal");
+      if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+      }
+
+      window.location.reload();
+    }).catch(function() {});
+  }, true);
+
+  document.addEventListener("submit", function(event) {
+    var form = event.target;
+    if (!form || !form.closest("#modal-container")) return;
+    if (form.getAttribute("data-athlete-year-form") !== "1") return;
+
+    var submitter = event.submitter;
+    if (submitter && submitter.name === "action" && submitter.value && submitter.value !== "save") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    var formData = new FormData();
+    formData.append("date", activeSlotDate || form.getAttribute("data-date") || "");
+    formData.append("slot_index", activeSlotIndex || form.getAttribute("data-slot-index") || "1");
+    formData.append("slot_text", collectSlotText(form));
+
+    ["wu_text", "mob_text", "sprint_text", "core_text", "core2_text", "alt_text", "cd_text"].forEach(function(name) {
+      var field = form.querySelector('[name="' + name + '"]');
+      if (field) {
+        formData.append(name, field.value || "");
+      }
+    });
+
+    fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken")
+      },
+      credentials: "same-origin"
+    }).then(function(response) {
+      if (!response.ok) return;
+
+      var modalEl = document.getElementById("slotModal");
+      if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+      }
+
+      window.location.reload();
+    }).catch(function() {});
+  }, true);
+})();
+</script>
+{% endblock %}
