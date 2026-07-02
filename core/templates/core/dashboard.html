@@ -28,6 +28,21 @@
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body">
+          <h5 class="card-title">Flex Planner</h5>
+          <p class="card-text">
+            Plan multiple athletes simultaneously.
+          </p>
+          <a href="/flex-planner/" class="btn btn-primary">Go to Flex Planner</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+
+    {% if not is_athlete_user %}
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
           <h5 class="card-title">Coach Console</h5>
           <p class="card-text">
             Manage plans, athletes, groups, and assignments.
