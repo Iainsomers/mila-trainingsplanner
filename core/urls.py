@@ -34,6 +34,7 @@ from core.views.coach import (
 
 from core.views.calendar import (
     calendar_view,
+    flex_planner_view,
     calendar_test,
     week_phase_set,
     athlete_week_phase_set,
@@ -110,6 +111,7 @@ urlpatterns = [
 
     # Calendar
     path("calendar/", calendar_view, name="calendar"),
+    path("flex-planner/", flex_planner_view, name="flex_planner"),
     path("calendar-test/", calendar_test, name="calendar_test"),
 
     # Athlete console
