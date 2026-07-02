@@ -1167,6 +1167,12 @@ def settings_view(request):
 # -----------------------------
 # Plans CRUD
 # -----------------------------
+
+
+def _exclude_flex_planner_plans(qs):
+    return qs.exclude(name="Flex Planner")
+
+
 @login_required
 @require_GET
 def coach_plans_view(request):
@@ -1178,7 +1184,7 @@ def coach_plans_view(request):
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
 
-    plans = _filter_owned(qs, request.user)
+    plans = _exclude_flex_planner_plans(_filter_owned(qs, request.user))
     return render(request, "core/coach_plans.html", {"plans": plans})
 
 
@@ -1202,7 +1208,7 @@ def coach_plan_create_view(request):
     else:
         qs = TrainingPlan.objects.order_by("name")
 
-    plans = _filter_owned(qs, request.user)
+    plans = _exclude_flex_planner_plans(_filter_owned(qs, request.user))
 
     if request.method == "POST":
         form["name"] = (request.POST.get("name") or "").strip()
@@ -1243,7 +1249,7 @@ def coach_plan_create_view(request):
                 source_plan_id = None
                 errors.append("Bronplan is ongeldig.")
             if source_plan_id is not None:
-                source_plan = _filter_owned(TrainingPlan.objects.all(), request.user).filter(id=source_plan_id).first()
+                source_plan = _exclude_flex_planner_plans(_filter_owned(TrainingPlan.objects.all(), request.user)).filter(id=source_plan_id).first()
                 if not source_plan:
                     errors.append("Bronplan is niet gevonden.")
                 elif not start_d or not end_d or not source_plan.start_date or not source_plan.end_date:

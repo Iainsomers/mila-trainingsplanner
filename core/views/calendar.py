@@ -17,6 +17,7 @@ from core.models import (
     TrainingSegment,
     TrainingPlan,
     Athlete,
+    Group,
     PlanWeekPhase,
     AthleteWeekPhaseOverride,
     AthleteWeekReport,
@@ -279,7 +280,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
     week_start = _to_week_start(raw_date)
 
     ids = plan.targeted_athlete_ids() if plan else set()
-    if athlete.id not in ids:
+    if athlete.id not in ids and not _is_flex_planner_plan(plan):
         return HttpResponseBadRequest("Athlete not targeted by this plan")
 
     phase = (request.POST.get("phase") or "").strip()
@@ -302,7 +303,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 
 @login_required
 def calendar_view(request):
-    plans = _filter_accessible(TrainingPlan.objects.order_by("name"), request.user)
+    plans = _filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name="Flex Planner")
 
     selected_plan = None
     plan_id = request.GET.get("plan")
@@ -553,6 +554,369 @@ def calendar_view(request):
     )
 
 
+
+
+def _is_flex_planner_plan(plan) -> bool:
+    return bool(plan and (getattr(plan, "name", "") or "").strip() == "Flex Planner")
+
+
+def _get_or_create_flex_planner_plan(user, start: date, end: date):
+    if not user or not getattr(user, "is_authenticated", False):
+        return None
+
+    fields = {field.name for field in TrainingPlan._meta.get_fields()}
+    qs = TrainingPlan.objects.filter(name="Flex Planner")
+    if "owner" in fields:
+        qs = qs.filter(owner=user)
+
+    plan = qs.order_by("id").first()
+    if not plan:
+        kwargs = {"name": "Flex Planner"}
+        if "owner" in fields:
+            kwargs["owner"] = user
+        if "description" in fields:
+            kwargs["description"] = "Automatically created fallback plan for Flex Planner cells without a regular plan."
+        if "start_date" in fields:
+            kwargs["start_date"] = start
+        if "end_date" in fields:
+            kwargs["end_date"] = end - timedelta(days=1)
+        if "is_active" in fields:
+            kwargs["is_active"] = True
+        if "is_private" in fields:
+            kwargs["is_private"] = True
+        if "week_phases_enabled" in fields:
+            kwargs["week_phases_enabled"] = True
+        plan = TrainingPlan.objects.create(**kwargs)
+    else:
+        changed = []
+        if "start_date" in fields and (not plan.start_date or plan.start_date > start):
+            plan.start_date = start
+            changed.append("start_date")
+        if "end_date" in fields:
+            target_end = end - timedelta(days=1)
+            if not plan.end_date or plan.end_date < target_end:
+                plan.end_date = target_end
+                changed.append("end_date")
+        if "is_active" in fields and not getattr(plan, "is_active", True):
+            plan.is_active = True
+            changed.append("is_active")
+        if "is_private" in fields and not getattr(plan, "is_private", False):
+            plan.is_private = True
+            changed.append("is_private")
+        if "week_phases_enabled" in fields and not getattr(plan, "week_phases_enabled", False):
+            plan.week_phases_enabled = True
+            changed.append("week_phases_enabled")
+        if changed:
+            plan.save(update_fields=changed)
+
+    return plan
+
+
+def _flex_check_payload(check):
+    if not check:
+        return None
+
+    status = (getattr(check, "effective_status", None) or getattr(check, "status", "") or "").strip()
+    rpe = getattr(check, "rpe", None)
+    comment = (getattr(check, "comment", "") or "").strip()
+
+    status_none = getattr(AthleteDayCheck, "STATUS_NONE", "")
+    if (not status or status == status_none) and rpe is None and not comment:
+        return None
+
+    status_done = getattr(AthleteDayCheck, "STATUS_DONE_AS_PLANNED", "done_as_planned")
+    status_too_hard = getattr(AthleteDayCheck, "STATUS_TOO_HARD_FAST", "too_hard_fast")
+    status_adjusted = getattr(AthleteDayCheck, "STATUS_ADJUSTED_OK", "adjusted_ok")
+    status_lighter = getattr(AthleteDayCheck, "STATUS_LIGHTER_SLOWER", "lighter_slower")
+    status_not_done = getattr(AthleteDayCheck, "STATUS_NOT_DONE", "not_done")
+
+    visuals = {
+        status_done: {"icon": "✓", "label": "Done as planned"},
+        status_too_hard: {"icon": "↑", "label": "Too hard/fast"},
+        status_adjusted: {"icon": "✓", "label": "Adjusted"},
+        status_lighter: {"icon": "↓", "label": "Lighter/slower"},
+        status_not_done: {"icon": "✕", "label": "Not done"},
+        "done": {"icon": "✓", "label": "Done as planned"},
+        "done_as_planned": {"icon": "✓", "label": "Done as planned"},
+        "too_hard_fast": {"icon": "↑", "label": "Too hard/fast"},
+        "adjusted_ok": {"icon": "✓", "label": "Adjusted"},
+        "lighter_slower": {"icon": "↓", "label": "Lighter/slower"},
+        "not_done": {"icon": "✕", "label": "Not done"},
+    }
+
+    visual = visuals.get(status, {"icon": "✓", "label": status.replace("_", " ").strip().title() if status else "Report"})
+    try:
+        display = check.get_status_display()
+        if display:
+            visual = {**visual, "label": display}
+    except Exception:
+        pass
+
+    return {
+        "status": status,
+        "icon": visual["icon"],
+        "label": visual["label"],
+        "rpe": rpe,
+        "comment": comment,
+    }
+
+
+@login_required
+def flex_planner_view(request):
+    """
+    Experimental multi-athlete planner.
+
+    V1:
+    - no new models
+    - no migrations
+    - reads existing TrainingPlan / TrainingSlot data
+    - opens the existing slot modal with plan + athlete
+    """
+    accessible_athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request.user))
+    accessible_groups = list(_filter_accessible(Group.objects.prefetch_related("athletes").order_by("name"), request.user))
+    accessible_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name="Flex Planner"))
+
+    today = date.today()
+    default_start = today - timedelta(days=today.weekday())
+
+    start_raw = (request.GET.get("start") or "").strip()
+    try:
+        start = date.fromisoformat(start_raw) if start_raw else default_start
+    except Exception:
+        start = default_start
+    start = start - timedelta(days=start.weekday())
+
+    weeks_raw = (request.GET.get("weeks") or "2").strip()
+    try:
+        weeks = int(weeks_raw)
+    except Exception:
+        weeks = 2
+    weeks = max(1, min(5, weeks))
+
+    selected_group_value = (request.GET.get("group") or "all").strip()
+    selected_group = None
+    selected_group_athlete_ids = []
+    if selected_group_value and selected_group_value != "all":
+        try:
+            selected_group = next((g for g in accessible_groups if g.id == int(selected_group_value)), None)
+        except Exception:
+            selected_group = None
+    if selected_group:
+        selected_group_athlete_ids = list(selected_group.athletes.values_list("id", flat=True))
+
+    if selected_group:
+        visible_athlete_ids = set(selected_group_athlete_ids)
+        visible_athletes = [a for a in accessible_athletes if a.id in visible_athlete_ids]
+    else:
+        selected_group_value = "all"
+        visible_athletes = accessible_athletes
+        visible_athlete_ids = {a.id for a in visible_athletes}
+
+    selected_athlete_ids_raw = request.GET.getlist("athletes")
+    selected_athlete_ids = []
+    for raw_id in selected_athlete_ids_raw:
+        try:
+            athlete_id = int(raw_id)
+        except Exception:
+            continue
+        if athlete_id in visible_athlete_ids:
+            selected_athlete_ids.append(athlete_id)
+
+    if not selected_athlete_ids:
+        if selected_group_athlete_ids:
+            selected_athlete_ids = [a.id for a in visible_athletes]
+        else:
+            selected_athlete_ids = [a.id for a in visible_athletes[:8]]
+
+    selected_athlete_ids = selected_athlete_ids[:20]
+    selected_athlete_ids_set = set(selected_athlete_ids)
+
+    selected_athletes = [a for a in visible_athletes if a.id in selected_athlete_ids_set]
+
+    end = start + timedelta(days=7 * weeks)
+    week_starts = [start + timedelta(days=7 * i) for i in range(weeks)]
+    flex_plan = _get_or_create_flex_planner_plan(request.user, start, end) if selected_athletes else None
+
+    # Determine which plans are relevant per athlete/date.
+    # Current project rule: an athlete should not be in overlapping plans for the same dates.
+    plan_targets = {}
+    for plan in accessible_plans:
+        if _is_flex_planner_plan(plan):
+            continue
+        try:
+            target_ids = set(plan.targeted_athlete_ids())
+        except Exception:
+            target_ids = set()
+        if target_ids:
+            plan_targets[plan.id] = target_ids
+
+    relevant_plan_ids = set()
+    plan_for_athlete_day = {}
+
+    for athlete in selected_athletes:
+        for day_offset in range((end - start).days):
+            day = start + timedelta(days=day_offset)
+            matching_plan = None
+
+            for plan in accessible_plans:
+                target_ids = plan_targets.get(plan.id, set())
+                if athlete.id not in target_ids:
+                    continue
+                if plan.start_date and plan.start_date > day:
+                    continue
+                if plan.end_date and plan.end_date < day:
+                    continue
+
+                matching_plan = plan
+                break
+
+            if matching_plan:
+                plan_for_athlete_day[(athlete.id, day)] = matching_plan
+                relevant_plan_ids.add(matching_plan.id)
+            elif flex_plan:
+                plan_for_athlete_day[(athlete.id, day)] = flex_plan
+                relevant_plan_ids.add(flex_plan.id)
+
+    slot_lookup = {}
+    has_fix_keys = set()
+
+    if relevant_plan_ids and selected_athlete_ids:
+        slot_qs = (
+            TrainingSlot.objects
+            .filter(
+                plan_id__in=relevant_plan_ids,
+                date__gte=start,
+                date__lt=end,
+            )
+            .filter(Q(athlete__isnull=True) | Q(athlete_id__in=selected_athlete_ids))
+            .prefetch_related("segments")
+            .select_related("plan", "athlete")
+        )
+
+        for slot in slot_qs:
+            athlete_key = slot.athlete_id or None
+            slot_lookup[(slot.plan_id, athlete_key, slot.date, slot.slot_index)] = slot
+            if slot.athlete_id:
+                has_fix_keys.add((slot.plan_id, slot.athlete_id, slot.date, slot.slot_index))
+
+    check_lookup = {}
+    if selected_athlete_ids:
+        for check in AthleteDayCheck.objects.filter(
+            athlete_id__in=selected_athlete_ids,
+            date__gte=start,
+            date__lt=end,
+        ):
+            check_lookup[(check.athlete_id, check.date, check.slot_index)] = check
+
+    base_phase_by_plan_week = {}
+    athlete_phase_by_plan_week = {}
+
+    if relevant_plan_ids:
+        for obj in PlanWeekPhase.objects.filter(plan_id__in=relevant_plan_ids, week_start__in=week_starts):
+            base_phase_by_plan_week[(obj.plan_id, obj.week_start)] = (obj.phase or "")
+
+    if relevant_plan_ids and selected_athlete_ids:
+        for obj in AthleteWeekPhaseOverride.objects.filter(
+            plan_id__in=relevant_plan_ids,
+            athlete_id__in=selected_athlete_ids,
+            week_start__in=week_starts,
+        ):
+            athlete_phase_by_plan_week[(obj.plan_id, obj.athlete_id, obj.week_start)] = (obj.phase or "")
+
+    week_rows = []
+    for week_start in week_starts:
+        days = [week_start + timedelta(days=i) for i in range(7)]
+        athlete_rows = []
+
+        for athlete in selected_athletes:
+            am_cells = []
+            pm_cells = []
+
+            for day in days:
+                plan = plan_for_athlete_day.get((athlete.id, day))
+
+                for slot_index, target_cells in ((1, am_cells), (2, pm_cells)):
+                    slot = None
+                    is_override = False
+                    no_plan = bool(flex_plan and plan and plan.id == flex_plan.id)
+
+                    if plan:
+                        override_slot = slot_lookup.get((plan.id, athlete.id, day, slot_index))
+                        base_slot = slot_lookup.get((plan.id, None, day, slot_index))
+                        slot = override_slot or base_slot
+                        is_override = override_slot is not None
+
+                    target_cells.append({
+                        "day": day,
+                        "slot_index": slot_index,
+                        "plan": plan,
+                        "plan_id": plan.id if plan else "",
+                        "slot": None if _slot_is_visually_empty(slot) else slot,
+                        "is_override": is_override,
+                        "no_plan": no_plan,
+                        "check": _flex_check_payload(check_lookup.get((athlete.id, day, slot_index))),
+                    })
+
+            week_phase = ""
+            week_phase_plan_id = ""
+
+            for day in days:
+                plan = plan_for_athlete_day.get((athlete.id, day))
+                if not plan:
+                    continue
+
+                athlete_phase = athlete_phase_by_plan_week.get((plan.id, athlete.id, week_start), "")
+                base_phase = base_phase_by_plan_week.get((plan.id, week_start), "")
+                week_phase = athlete_phase or base_phase
+                week_phase_plan_id = plan.id
+                break
+
+            athlete_rows.append({
+                "athlete": athlete,
+                "am_cells": am_cells,
+                "pm_cells": pm_cells,
+                "week_phase": week_phase,
+                "week_phase_plan_id": week_phase_plan_id,
+            })
+
+        week_rows.append({
+            "week_start": week_start,
+            "week_end": week_start + timedelta(days=6),
+            "days": days,
+            "athlete_rows": athlete_rows,
+        })
+
+    prev_start = start - timedelta(days=7)
+    next_start = start + timedelta(days=7)
+
+    selected_query = "&".join(f"athletes={athlete_id}" for athlete_id in selected_athlete_ids)
+    prev_url = f"?start={prev_start.isoformat()}&weeks={weeks}"
+    next_url = f"?start={next_start.isoformat()}&weeks={weeks}"
+    prev_url += f"&group={selected_group_value}"
+    next_url += f"&group={selected_group_value}"
+    if selected_query:
+        prev_url += f"&{selected_query}"
+        next_url += f"&{selected_query}"
+
+    return render(
+        request,
+        "core/flex_planner.html",
+        {
+            "athletes": visible_athletes,
+            "groups": accessible_groups,
+            "selected_group": selected_group,
+            "selected_group_value": selected_group_value,
+            "selected_athletes": selected_athletes,
+            "selected_athlete_ids": selected_athlete_ids_set,
+            "week_rows": week_rows,
+            "start": start,
+            "weeks": weeks,
+            "prev_url": prev_url,
+            "next_url": next_url,
+            "max_athletes": 20,
+            "max_weeks": 5,
+        },
+    )
 
 
 def _invalidate_stats_cache():

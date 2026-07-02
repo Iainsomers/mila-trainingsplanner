@@ -1,0 +1,1203 @@
+{% extends "core/base.html" %}
+
+{% block title %}Flex Planner{% endblock %}
+
+{% block extra_head %}
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+
+  <style>
+    .flex-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .flex-group-help {
+      font-size: 11px;
+      color: #777;
+    }
+
+    .flex-athlete-picker {
+      max-height: 170px;
+      overflow: auto;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 4px 10px;
+      min-width: min(760px, 100%);
+    }
+
+    .flex-week {
+      margin-bottom: 24px;
+    }
+
+    .flex-week-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 8px 0 6px;
+    }
+
+    .flex-week-phase-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 6px 8px;
+      margin: 0 0 6px;
+      border: 1px solid #d5d5d5;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+
+    .flex-week-phase-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .flex-week-phase-label {
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.06);
+    }
+
+    .flex-week-phase-label.phase-recovery { background: #e8ddff; }
+    .flex-week-phase-label.phase-aerobe { background: #e5533d; }
+    .flex-week-phase-label.phase-specific { background: #bfe7bf; }
+    .flex-week-phase-label.phase-intense { background: #b7d7ff; }
+    .flex-week-phase-label.phase-taper { background: #ff7a00; }
+
+    .flex-week-phase-select {
+      width: 140px;
+    }
+
+    .flex-table-wrap {
+      overflow-x: auto;
+      border: 1px solid #cccccc;
+      border-radius: 8px;
+    }
+
+    table.flex-table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1120px;
+      table-layout: fixed;
+      font-size: 12px;
+    }
+
+    .flex-table th,
+    .flex-table td {
+      border: 1px solid #d5d5d5;
+      padding: 3px 4px;
+      vertical-align: top;
+    }
+
+    .flex-table th {
+      background: #f5f5f5;
+      font-weight: 700;
+    }
+
+    .flex-athlete-col {
+      width: 145px;
+      background: #fafafa;
+      font-weight: 700;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+    }
+
+    .flex-athlete-col.phase-recovery { background: #e8ddff; }
+    .flex-athlete-col.phase-aerobe { background: #e5533d; }
+    .flex-athlete-col.phase-specific { background: #bfe7bf; }
+    .flex-athlete-col.phase-intense { background: #b7d7ff; }
+    .flex-athlete-col.phase-taper { background: #ff7a00; }
+
+    .flex-athlete-phase-wrap {
+      margin-top: 5px;
+    }
+
+    .flex-athlete-phase-wrap .form-select {
+      font-weight: 400;
+      background-color: inherit;
+    }
+
+    .flex-athlete-phase-wrap {
+      margin-top: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+      flex-direction: column;
+    }
+
+    .flex-total-col {
+      width: 165px;
+      background: #fafafa;
+      position: sticky;
+      left: 145px;
+      z-index: 2;
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .flex-total-main {
+      font-weight: 700;
+      font-size: 14px;
+      color: #000;
+      margin-bottom: 4px;
+    }
+
+    .flex-total-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px 4px;
+      overflow: visible;
+      margin-bottom: 2px;
+      align-items: flex-start;
+    }
+
+    .flex-total-content {
+      max-height: 92px;
+      overflow: hidden;
+    }
+
+    .flex-day-cell {
+      height: 48px;
+      padding: 0 !important;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .flex-slot-label {
+      width: 38px;
+      background: #fafafa;
+      font-weight: 700;
+      text-align: center;
+      position: sticky;
+      left: 310px;
+      z-index: 2;
+    }
+
+    .flex-day-head {
+      text-align: center;
+    }
+
+    .flex-cell {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      display: block;
+      box-sizing: border-box;
+      color: #000;
+      text-decoration: none;
+      border: 0 !important;
+      border-radius: 0;
+      margin: 0;
+      padding: 0;
+    }
+
+    .flex-cell:hover {
+      filter: brightness(0.93);
+    }
+
+    .flex-cell-dragging {
+      opacity: 0.55;
+    }
+
+    .flex-cell-drop-target {
+      outline: 2px dashed rgba(0,0,0,0.45);
+      outline-offset: -2px;
+    }
+
+    .flex-cell-empty {
+      background: #ffffff;
+    }
+
+    .flex-cell-noplan {
+      background: #f6f6f6;
+      color: #777;
+      cursor: pointer;
+    }
+
+    .flex-celltext {
+      position: absolute;
+      inset: 0;
+      padding: 2px 3px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      font-size: 11px;
+      line-height: 1.2;
+      word-break: break-word;
+      scrollbar-width: none;
+    }
+
+    .flex-celltext::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
+    }
+
+    .flex-report-btn,
+    .flex-delete-btn {
+      position: absolute;
+      z-index: 4;
+      border: 0;
+      border-radius: 50%;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      background: rgba(255,255,255,0.78);
+      color: #111;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .flex-report-btn {
+      top: 2px;
+      right: 2px;
+      width: 20px;
+      height: 20px;
+      font-size: 15px;
+      font-weight: 900;
+      text-shadow: 0 0 0 currentColor;
+      background: rgba(255,255,255,0.9);
+    }
+
+    .flex-report-status-done,
+    .flex-report-status-done_as_planned,
+    .flex-report-status-adjusted_ok {
+      color: #0b7a22;
+    }
+
+    .flex-report-status-not_done {
+      color: #c00000;
+    }
+
+    .flex-report-status-too_hard_fast,
+    .flex-report-status-lighter_slower {
+      color: #b45f00;
+    }
+
+    .flex-delete-btn {
+      right: 2px;
+      bottom: 2px;
+      width: 16px;
+      height: 16px;
+      font-size: 11px;
+      opacity: 0;
+      color: #a00000;
+    }
+
+    .flex-day-cell:hover .flex-delete-btn {
+      opacity: 1;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 6px;
+      margin: 0 2px 2px 0;
+    }
+
+    .pill-z1 { background-color: #f8f8f0; }
+    .pill-z2 { background-color: #f7c6d0; }
+    .pill-z3 { background-color: #e5533d; }
+    .pill-z4 { background-color: #bfe7bf; }
+    .pill-z5 { background-color: #b7d7ff; }
+    .pill-z6 { background-color: #f2c200; }
+    .pill-race { background-color: #ff7a00; }
+
+    .flex-muted {
+      font-size: 11px;
+      color: #777;
+    }
+  </style>
+
+  <script>
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+
+    document.addEventListener("htmx:configRequest", (event) => {
+      const token = getCookie("csrftoken");
+      if (token) event.detail.headers["X-CSRFToken"] = token;
+    });
+
+    document.addEventListener("htmx:afterSwap", (e) => {
+      if (e.target && e.target.id === "modal-container") {
+        const el = document.getElementById("slotModal");
+        if (el) new bootstrap.Modal(el).show();
+      }
+    });
+
+    document.addEventListener("closeModal", () => {
+      const el = document.getElementById("slotModal");
+      if (!el) return;
+      const instance = bootstrap.Modal.getInstance(el);
+      if (instance) instance.hide();
+    });
+
+    function limitAthleteSelection(maxCount) {
+      const boxes = Array.from(document.querySelectorAll("[data-flex-athlete-checkbox]"));
+      const checked = boxes.filter((box) => box.checked);
+      if (checked.length <= maxCount) return true;
+      alert("Maximum " + maxCount + " athletes in this test version.");
+      return false;
+    }
+
+    function submitFlexPlannerForm(form, maxCount) {
+      if (!form) return;
+      if (!limitAthleteSelection(maxCount)) return;
+      form.submit();
+    }
+
+    const FLEX_ZONE_SPEEDS_MPS = {
+      "1": 3.0,
+      "2": 3.5,
+      "3": 4.0,
+      "4": 4.5,
+      "5": 5.0,
+      "6": 8.5
+    };
+
+    function flexKm(meters) {
+      const m = Number(meters || 0);
+      if (m > 0 && m < 50) return "<0.1";
+      return (m / 1000).toFixed(1);
+    }
+
+    function flexPct(part, total) {
+      if (!total) return "—";
+      return ((100 * Number(part || 0)) / Number(total)).toFixed(1) + "%";
+    }
+
+    function flexMinutes(seconds) {
+      return Math.round(Number(seconds || 0) / 60) + "'";
+    }
+
+    function flexZoneFromClass(el) {
+      for (let z = 1; z <= 6; z += 1) {
+        if (el.classList.contains("pill-z" + z)) return String(z);
+      }
+      return "";
+    }
+
+    function flexNormalizeTKey(value) {
+      const s = (value || "").toUpperCase().replace(/\s+/g, "");
+      const mapping = {
+        "TM": "TM", "THM": "THM", "T4": "T4",
+        "T10": "10000", "T10000": "10000", "10000": "10000",
+        "T5": "5000", "T5000": "5000", "5000": "5000",
+        "T3": "3000", "T3000": "3000", "3000": "3000",
+        "T15": "1500", "T1500": "1500", "1500": "1500",
+        "T8": "800", "T800": "800", "800": "800"
+      };
+      return mapping[s] || "";
+    }
+
+    function flexTKey(text) {
+      const s = (text || "").toUpperCase().replace(/\s+/g, "");
+      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
+      return m ? flexNormalizeTKey(m[1]) : "";
+    }
+
+    function flexProgressiveTKeys(text) {
+      const s = (text || "").toUpperCase().replace(/\s+/g, "");
+      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
+      if (!m) return null;
+      const a = flexNormalizeTKey(m[1]);
+      const b = flexNormalizeTKey(m[2]);
+      return (a && b && a !== b) ? [a, b] : null;
+    }
+
+    function flexNumberAttr(el, name) {
+      const raw = el.getAttribute(name);
+      if (raw === null || raw === "") return 0;
+      const n = Number(String(raw).replace(",", "."));
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function flexMetersFromValue(value, unit) {
+      const n = Number(String(value || "0").replace(",", "."));
+      const u = String(unit || "m").toLowerCase();
+      return (u === "km" || u === "k") ? n * 1000 : n;
+    }
+
+    function flexDurationSeconds(text) {
+      const s = text || "";
+      let m = s.match(/(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(?:['’‘´`′]|min\b)/i);
+      if (m) return Number(m[1]) * Number(String(m[2]).replace(",", ".")) * 60;
+      m = s.match(/\b(\d+(?:[.,]\d+)?)\s*(?:['’‘´`′]|min\b)/i);
+      if (m) return Number(String(m[1]).replace(",", ".")) * 60;
+      return 0;
+    }
+
+    function flexBaseDistanceMeters(text) {
+      const s = text || "";
+      let m = s.match(/(\d+)\s*(?:x|\*|×)\s*\(?\s*(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\s*\)?/i);
+      if (m) return Number(m[1]) * Number(m[2]) * flexMetersFromValue(m[3], m[4]);
+      m = s.match(/(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/i);
+      if (m) return Number(m[1]) * flexMetersFromValue(m[2], m[3]);
+      m = s.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/i);
+      if (m) return flexMetersFromValue(m[1], m[2]);
+      return 0;
+    }
+
+    function flexCompoundLoads(text, fallbackZone) {
+      const s = text || "";
+      const match = s.match(/\b(\d+)\s*(?:x|\*|×)\s*\(([^)]+)\)/i);
+      if (!match) return null;
+
+      const reps = Number(match[1]);
+      const inner = match[2] || "";
+      const parts = inner.split(/\s*-\s*/).filter(Boolean);
+      if (parts.length < 2) return null;
+
+      const loads = [];
+      for (const part of parts) {
+        const dm = part.match(/(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/i);
+        if (!dm) return null;
+        const zm = part.match(/\bz\s*([1-6])\b/i);
+        const zone = zm ? zm[1] : fallbackZone;
+        loads.push({
+          zone: zone,
+          meters: reps * flexMetersFromValue(dm[1], dm[2]),
+          tKey: flexTKey(part) || flexTKey(s),
+          race: /race/i.test(s)
+        });
+      }
+      return loads;
+    }
+
+    function flexLoadsForSegment(el) {
+      const text = (el.textContent || "").trim();
+      const dataZone = (el.getAttribute("data-flex-zone") || "").trim();
+      const fallbackZone = dataZone || flexZoneFromClass(el) || "1";
+      const dataTKey = flexNormalizeTKey(el.getAttribute("data-flex-t") || "");
+      const dataSpecial = (el.getAttribute("data-flex-special") || "").toUpperCase();
+      const isRace = dataSpecial === "RACE" || dataSpecial === "IMPORTANT_RACE" || el.classList.contains("pill-race") || /race/i.test(text);
+
+      const compound = flexCompoundLoads(text, fallbackZone);
+      if (compound) {
+        return compound.map((load) => ({...load, race: isRace || load.race}));
+      }
+
+      const reps = flexNumberAttr(el, "data-flex-reps") || 1;
+      const distanceM = flexNumberAttr(el, "data-flex-distance");
+      const durationS = flexNumberAttr(el, "data-flex-duration");
+      const normM = flexNumberAttr(el, "data-flex-norm");
+
+      let meters = normM;
+      if (!meters && distanceM) meters = reps * distanceM;
+      if (!meters) meters = flexBaseDistanceMeters(text);
+      if (!meters && durationS) {
+        meters = durationS * Number(FLEX_ZONE_SPEEDS_MPS[fallbackZone] || 0);
+      }
+      if (!meters) {
+        const parsedDuration = flexDurationSeconds(text);
+        if (parsedDuration) meters = parsedDuration * Number(FLEX_ZONE_SPEEDS_MPS[fallbackZone] || 0);
+      }
+
+      if (!meters) return [];
+
+      const progressive = text.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
+      const tRange = flexProgressiveTKeys(text);
+      const tKey = dataTKey || flexTKey(text);
+
+      if (progressive && progressive[1] !== progressive[2]) {
+        return [
+          {zone: progressive[1], meters: meters / 2, tKey: tRange ? tRange[0] : tKey, race: isRace},
+          {zone: progressive[2], meters: meters / 2, tKey: tRange ? tRange[1] : tKey, race: isRace}
+        ];
+      }
+
+      if (tRange) {
+        return [
+          {zone: fallbackZone, meters: meters / 2, tKey: tRange[0], race: isRace},
+          {zone: fallbackZone, meters: meters / 2, tKey: tRange[1], race: isRace}
+        ];
+      }
+
+      return [{zone: fallbackZone, meters: meters, tKey: tKey, race: isRace}];
+    }
+
+    function flexPill(cls, label, value) {
+      return `<span class="pill ${cls}">${label} ${value}</span>`;
+    }
+
+    function updateFlexTotalsFromVisibleRows() {
+      document.querySelectorAll("[data-flex-total-cell]").forEach((totalCell) => {
+        const firstRow = totalCell.closest("tr");
+        const secondRow = firstRow ? firstRow.nextElementSibling : null;
+        const segmentEls = [
+          ...firstRow.querySelectorAll("[data-flex-segment]"),
+          ...(secondRow ? secondRow.querySelectorAll("[data-flex-segment]") : [])
+        ];
+
+        const zMeters = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
+        const zSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
+        const tMeters = {"10000": 0, "5000": 0, "3000": 0, "1500": 0, "800": 0, "TM": 0, "THM": 0, "T4": 0};
+        let raceMeters = 0;
+        let raceSeconds = 0;
+
+        segmentEls.forEach((el) => {
+          flexLoadsForSegment(el).forEach((load) => {
+            const z = load.zone || "1";
+            const speed = Number(FLEX_ZONE_SPEEDS_MPS[z] || 0);
+            const meters = Number(load.meters || 0);
+            const seconds = speed > 0 ? meters / speed : 0;
+
+            if (load.race) {
+              raceMeters += meters;
+              raceSeconds += seconds;
+            } else if (zMeters[z] !== undefined) {
+              zMeters[z] += meters;
+              zSeconds[z] += seconds;
+            }
+
+            if (load.tKey && tMeters[load.tKey] !== undefined) {
+              tMeters[load.tKey] += meters;
+            }
+          });
+        });
+
+        const totalMeters = Object.values(zMeters).reduce((a, b) => a + b, 0) + raceMeters;
+        const totalSeconds = Object.values(zSeconds).reduce((a, b) => a + b, 0) + raceSeconds;
+        const lines = [];
+
+        lines.push(`<div class="flex-total-main">Total: ${flexKm(totalMeters)} km</div>`);
+
+        let line = "";
+        ["1", "2", "3"].forEach((z) => {
+          if (zMeters[z] > 0) line += flexPill("pill-z" + z, "Z" + z, flexKm(zMeters[z]));
+        });
+        if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
+
+        line = "";
+        ["4", "5", "6"].forEach((z) => {
+          if (zMeters[z] > 0) line += flexPill("pill-z" + z, "Z" + z, flexKm(zMeters[z]));
+        });
+        if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
+
+        if (raceMeters > 0) {
+          lines.push(`<div class="flex-total-line">${flexPill("pill-race", "Race", flexKm(raceMeters))}</div>`);
+        }
+
+        line = "";
+        [["10000", "T10"], ["5000", "T5"], ["TM", "TM"], ["THM", "THM"], ["T4", "T4"]].forEach(([key, label]) => {
+          if (tMeters[key] > 0) line += flexPill("pill-race", label, flexKm(tMeters[key]));
+        });
+        if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
+
+        line = "";
+        [["3000", "T3"], ["1500", "T15"], ["800", "T8"]].forEach(([key, label]) => {
+          if (tMeters[key] > 0) line += flexPill("pill-race", label, flexKm(tMeters[key]));
+        });
+        if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
+
+        totalCell.innerHTML = `<div title="Z1: ${flexMinutes(zSeconds["1"])}/${flexPct(zSeconds["1"], totalSeconds)}\nZ2: ${flexMinutes(zSeconds["2"])}/${flexPct(zSeconds["2"], totalSeconds)}\nZ3: ${flexMinutes(zSeconds["3"])}/${flexPct(zSeconds["3"], totalSeconds)}\nZ4: ${flexMinutes(zSeconds["4"])}/${flexPct(zSeconds["4"], totalSeconds)}\nZ5: ${flexMinutes(zSeconds["5"])}/${flexPct(zSeconds["5"], totalSeconds)}\nZ6: ${flexMinutes(zSeconds["6"])}/${flexPct(zSeconds["6"], totalSeconds)}\nRace: ${flexMinutes(raceSeconds)}/${flexPct(raceSeconds, totalSeconds)}">${lines.join("")}</div>`;
+      });
+    }
+
+
+    let flexDragCopyUrl = "";
+
+    function flexPost(url, body) {
+      const token = getCookie("csrftoken");
+      const options = {
+        method: "POST",
+        credentials: "same-origin",
+        headers: token ? {"X-CSRFToken": token} : {}
+      };
+      if (body) options.body = body;
+      return fetch(url, options).then((response) => {
+        if (!response.ok) {
+          throw new Error("Request failed: " + response.status);
+        }
+        return response;
+      });
+    }
+
+    function initFlexReportAndDeleteButtons() {
+      document.querySelectorAll("[data-flex-report-btn]").forEach((btn) => {
+        btn.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          const status = btn.getAttribute("data-flex-report-status") || "—";
+          const rpe = btn.getAttribute("data-flex-report-rpe") || "—";
+          const comment = btn.getAttribute("data-flex-report-comment") || "";
+
+          const statusEl = document.getElementById("flexReportStatus");
+          const rpeEl = document.getElementById("flexReportRpe");
+          const commentEl = document.getElementById("flexReportComment");
+          if (statusEl) statusEl.textContent = status;
+          if (rpeEl) rpeEl.textContent = rpe;
+          if (commentEl) commentEl.textContent = comment || "—";
+
+          const modalEl = document.getElementById("flexReportModal");
+          if (modalEl && window.bootstrap) new bootstrap.Modal(modalEl).show();
+        });
+      });
+
+      document.querySelectorAll("[data-flex-delete-btn]").forEach((btn) => {
+        btn.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          if (!confirm("Delete training?")) return;
+
+          const url = btn.getAttribute("data-flex-delete-url") || "";
+          if (!url) return;
+
+          const body = new FormData();
+          body.append("action", "delete");
+
+          flexPost(url, body)
+            .then(() => window.location.reload())
+            .catch(() => {
+              alert("Delete failed.");
+            });
+        });
+      });
+    }
+
+    function initFlexDragCopy() {
+      document.querySelectorAll("[data-flex-copy-url]").forEach((cell) => {
+        cell.setAttribute("draggable", "true");
+      });
+    }
+
+    document.addEventListener("dragstart", (event) => {
+      const cell = event.target.closest("[data-flex-copy-url]");
+      if (!cell) return;
+
+      flexDragCopyUrl = cell.getAttribute("data-flex-copy-url") || "";
+      cell.classList.add("flex-cell-dragging");
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "copy";
+        event.dataTransfer.setData("text/plain", flexDragCopyUrl);
+      }
+    });
+
+    document.addEventListener("dragend", (event) => {
+      const cell = event.target.closest("[data-flex-copy-url]");
+      if (cell) cell.classList.remove("flex-cell-dragging");
+      document.querySelectorAll(".flex-cell-drop-target").forEach((el) => el.classList.remove("flex-cell-drop-target"));
+    });
+
+    document.addEventListener("dragover", (event) => {
+      const target = event.target.closest("[data-flex-paste-url]");
+      if (!target || !flexDragCopyUrl) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+      target.classList.add("flex-cell-drop-target");
+    });
+
+    document.addEventListener("dragleave", (event) => {
+      const target = event.target.closest("[data-flex-paste-url]");
+      if (target) target.classList.remove("flex-cell-drop-target");
+    });
+
+    document.addEventListener("drop", (event) => {
+      const target = event.target.closest("[data-flex-paste-url]");
+      if (!target || !flexDragCopyUrl) return;
+
+      event.preventDefault();
+      target.classList.remove("flex-cell-drop-target");
+
+      const copyUrl = flexDragCopyUrl;
+      const pasteUrl = target.getAttribute("data-flex-paste-url") || "";
+      if (!copyUrl || !pasteUrl) return;
+
+      flexPost(copyUrl)
+        .then(() => flexPost(pasteUrl))
+        .then(() => window.location.reload())
+        .catch(() => {
+          alert("Copy failed.");
+        });
+    });
+
+
+
+    function flexPlanIdFromRows(firstRow) {
+      const rows = [firstRow, firstRow ? firstRow.nextElementSibling : null].filter(Boolean);
+      for (const row of rows) {
+        const el = row.querySelector("[data-flex-paste-url*='plan='], [data-flex-copy-url*='plan=']");
+        if (!el) continue;
+        const url = el.getAttribute("data-flex-paste-url") || el.getAttribute("data-flex-copy-url") || "";
+        const match = url.match(/[?&]plan=(\d+)/);
+        if (match) return match[1];
+      }
+      return "";
+    }
+
+    function flexApplyWeekPhaseClass(select, value) {
+      const cell = select ? select.closest(".flex-athlete-col") : null;
+      if (!cell) return;
+      cell.classList.remove("phase-recovery", "phase-aerobe", "phase-specific", "phase-intense", "phase-taper");
+      if (value) cell.classList.add("phase-" + value);
+    }
+
+    function flexFallbackWeekPhaseUrl(select) {
+      const existing = select.getAttribute("data-flex-week-phase-url") || "";
+      if (existing) return existing;
+
+      const firstRow = select.closest("tr");
+      const planId = flexPlanIdFromRows(firstRow);
+      const athleteId = select.getAttribute("data-flex-athlete-id") || "";
+      const y = select.getAttribute("data-flex-week-y") || "";
+      const m = select.getAttribute("data-flex-week-m") || "";
+      const d = select.getAttribute("data-flex-week-d") || "";
+      if (!planId || !athleteId || !y || !m || !d) return "";
+
+      return `/athlete-week-phase/${y}/${m}/${d}/?plan=${planId}&athlete=${athleteId}`;
+    }
+
+    function flexWeekPhaseStorageKey(select) {
+      const url = flexFallbackWeekPhaseUrl(select);
+      const athleteId = select.getAttribute("data-flex-athlete-id") || "";
+      const y = select.getAttribute("data-flex-week-y") || "";
+      const m = select.getAttribute("data-flex-week-m") || "";
+      const d = select.getAttribute("data-flex-week-d") || "";
+      const planMatch = url.match(/[?&]plan=(\d+)/);
+      const planId = planMatch ? planMatch[1] : "";
+      if (!planId || !athleteId || !y || !m || !d) return "";
+      return `mila:flex-week-phase:${planId}:${athleteId}:${y}-${m}-${d}`;
+    }
+
+    function flexInitialWeekPhaseValue(select) {
+      return select.getAttribute("data-flex-server-week-phase") || "";
+    }
+
+    function bindFlexWeekPhaseSelect(select) {
+      if (!select || select.getAttribute("data-flex-week-phase-bound") === "1") return;
+      select.setAttribute("data-flex-week-phase-bound", "1");
+
+      const initialUrl = flexFallbackWeekPhaseUrl(select);
+      if (initialUrl) {
+        select.setAttribute("data-flex-week-phase-url", initialUrl);
+        select.disabled = false;
+      }
+
+      const initialValue = flexInitialWeekPhaseValue(select);
+      select.value = initialValue;
+      flexApplyWeekPhaseClass(select, initialValue);
+
+      select.addEventListener("change", () => {
+        const url = flexFallbackWeekPhaseUrl(select);
+        if (!url) {
+          select.value = flexInitialWeekPhaseValue(select);
+          flexApplyWeekPhaseClass(select, select.value || "");
+          alert("Geen plan gevonden voor deze atleet/week.");
+          return;
+        }
+
+        const value = select.value || "";
+        flexApplyWeekPhaseClass(select, value);
+
+        const token = getCookie("csrftoken");
+        const body = new URLSearchParams();
+        body.set("phase", value);
+
+        fetch(url, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: token ? {"X-CSRFToken": token, "Content-Type": "application/x-www-form-urlencoded"} : {"Content-Type": "application/x-www-form-urlencoded"},
+          body: body.toString()
+        }).then((response) => {
+          if (!response.ok) throw new Error("Saving week type failed");
+          window.location.reload();
+        }).catch(() => alert("Saving week type failed."));
+      });
+    }
+
+    function initFlexWeekPhaseControls() {
+      document.querySelectorAll("select[data-flex-week-phase-select]").forEach(bindFlexWeekPhaseSelect);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      updateFlexTotalsFromVisibleRows();
+      initFlexDragCopy();
+      initFlexWeekPhaseControls();
+      initFlexReportAndDeleteButtons();
+    });
+    document.addEventListener("htmx:afterSwap", () => {
+      updateFlexTotalsFromVisibleRows();
+      initFlexDragCopy();
+      initFlexWeekPhaseControls();
+      initFlexReportAndDeleteButtons();
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+  <h2 class="mb-0">Flex Planner</h2>
+  <div class="d-flex gap-2">
+    <a href="/calendar/" class="btn btn-sm btn-outline-secondary">Training Calendar</a>
+    <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+  </div>
+</div>
+
+<form method="get" class="mb-3" onsubmit="return limitAthleteSelection({{ max_athletes }});">
+  <div class="flex-toolbar">
+    <div>
+      <label class="form-label mb-1 small text-secondary">Start week</label>
+      <input type="date" name="start" class="form-control form-control-sm" value="{{ start|date:'Y-m-d' }}" onchange="submitFlexPlannerForm(this.form, {{ max_athletes }});">
+    </div>
+
+    <div>
+      <label class="form-label mb-1 small text-secondary">Weeks</label>
+      <select name="weeks" class="form-select form-select-sm" onchange="submitFlexPlannerForm(this.form, {{ max_athletes }});">
+        {% for n in "12345" %}
+          <option value="{{ n }}" {% if weeks|stringformat:"s" == n %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label mb-1 small text-secondary">Group</label>
+      <select name="group" class="form-select form-select-sm" style="width: 220px;" onchange="submitFlexPlannerForm(this.form, {{ max_athletes }});">
+        <option value="all" {% if selected_group_value == "all" %}selected{% endif %}>all</option>
+        {% for group in groups %}
+          <option value="{{ group.id }}" {% if selected_group and group.id == selected_group.id %}selected{% endif %}>{{ group.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+
+    <div>
+      <a href="{{ prev_url }}" class="btn btn-sm btn-outline-secondary">← Previous week</a>
+      <a href="{{ next_url }}" class="btn btn-sm btn-outline-secondary">Next week →</a>
+    </div>
+  </div>
+
+  {% if selected_group or selected_group_value == "all" %}
+    <div class="small text-secondary mb-1">
+      {% if selected_group %}Group: <b>{{ selected_group.name }}</b>{% elif selected_group_value == "all" %}Group: <b>all</b>{% endif %}
+    </div>
+  {% endif %}
+  <div class="flex-athlete-picker">
+    {% for athlete in athletes %}
+      <label class="small">
+        <input
+          type="checkbox"
+          name="athletes"
+          value="{{ athlete.id }}"
+          data-flex-athlete-checkbox
+          onchange="submitFlexPlannerForm(this.form, {{ max_athletes }});"
+          {% if athlete.id in selected_athlete_ids %}checked{% endif %}
+        >
+        {{ athlete.name }}
+      </label>
+    {% empty %}
+      <div class="text-muted small">Geen atleten gevonden.</div>
+    {% endfor %}
+  </div>
+</form>
+
+{% if selected_athletes %}
+  {% for week in week_rows %}
+    <section class="flex-week">
+      <div class="flex-week-title">
+        <h5 class="mb-0">
+          Week {{ week.week_start|date:"W" }}
+          <span class="text-secondary small">
+            {{ week.week_start|date:"d-m" }} t/m {{ week.week_end|date:"d-m-Y" }}
+          </span>
+        </h5>
+
+      </div>
+
+      <div class="flex-table-wrap">
+        <table class="flex-table">
+          <thead>
+            <tr>
+              <th class="flex-athlete-col">Atleet</th>
+              <th class="flex-total-col">Total</th>
+              <th class="flex-slot-label">Slot</th>
+              {% for day in week.days %}
+                <th class="flex-day-head">
+                  {{ day|date:"D" }}<br>
+                  <span class="text-secondary">{{ day|date:"d-m" }}</span>
+                </th>
+              {% endfor %}
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for row in week.athlete_rows %}
+              <tr>
+                <td class="flex-athlete-col {% if row.week_phase %}phase-{{ row.week_phase }}{% endif %}" rowspan="2">
+                  <div>{{ row.athlete.name }}</div>
+                  <div class="flex-athlete-phase-wrap">
+                    <select
+                      class="form-select form-select-sm flex-week-phase-select"
+                      name="phase"
+                      aria-label="Week type"
+                      data-flex-week-phase-select
+                      data-flex-server-week-phase="{{ row.week_phase|default:'' }}"
+                      data-flex-week-phase-url="{% if row.week_phase_plan_id %}/athlete-week-phase/{{ week.week_start|date:'Y' }}/{{ week.week_start|date:'m' }}/{{ week.week_start|date:'d' }}/?plan={{ row.week_phase_plan_id }}&athlete={{ row.athlete.id }}{% endif %}"
+                      data-flex-athlete-id="{{ row.athlete.id }}"
+                      data-flex-week-y="{{ week.week_start|date:'Y' }}"
+                      data-flex-week-m="{{ week.week_start|date:'m' }}"
+                      data-flex-week-d="{{ week.week_start|date:'d' }}"
+                    >
+                      <option value="" {% if not row.week_phase %}selected{% endif %}>—</option>
+                      <option value="recovery" {% if row.week_phase == "recovery" %}selected{% endif %}>Recovery</option>
+                      <option value="aerobe" {% if row.week_phase == "aerobe" %}selected{% endif %}>Aerobe</option>
+                      <option value="specific" {% if row.week_phase == "specific" %}selected{% endif %}>Specific</option>
+                      <option value="intense" {% if row.week_phase == "intense" %}selected{% endif %}>Intense</option>
+                      <option value="taper" {% if row.week_phase == "taper" %}selected{% endif %}>Taper</option>
+                    </select>
+                  </div>
+                </td>
+                <td class="flex-total-col" rowspan="2" data-flex-total-cell>
+                  <div class="flex-total-content" title="{{ row.sum_pct_tooltip|default:'' }}">
+                    <div class="flex-total-main">Total: {{ row.sum_tot_km|default:"—" }} km</div>
+
+                    <div class="flex-total-line">
+                      {% if row.has_z1 %}<span class="pill pill-z1">Z1 {{ row.sum_z1_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_z2 %}<span class="pill pill-z2">Z2 {{ row.sum_z2_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_z3 %}<span class="pill pill-z3">Z3 {{ row.sum_z3_km|default:"—" }}</span>{% endif %}
+                    </div>
+
+                    <div class="flex-total-line">
+                      {% if row.has_z4 %}<span class="pill pill-z4">Z4 {{ row.sum_z4_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_z5 %}<span class="pill pill-z5">Z5 {{ row.sum_z5_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_z6 %}<span class="pill pill-z6">Z6 {{ row.sum_z6_km|default:"—" }}</span>{% endif %}
+                    </div>
+
+                    {% if row.has_race %}
+                      <div class="flex-total-line">
+                        <span class="pill pill-race">Race {{ row.sum_race_km|default:"—" }}</span>
+                      </div>
+                    {% endif %}
+
+                    <div class="flex-total-line">
+                      {% if row.has_t10000 %}<span class="pill pill-race">T10 {{ row.sum_t10000_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_t5000 %}<span class="pill pill-race">T5 {{ row.sum_t5000_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_tm %}<span class="pill pill-race">TM {{ row.sum_tm_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_thm %}<span class="pill pill-race">THM {{ row.sum_thm_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_t4 %}<span class="pill pill-race">T4 {{ row.sum_t4_km|default:"—" }}</span>{% endif %}
+                    </div>
+
+                    <div class="flex-total-line">
+                      {% if row.has_t3000 %}<span class="pill pill-race">T3 {{ row.sum_t3000_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_t1500 %}<span class="pill pill-race">T15 {{ row.sum_t1500_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_t800 %}<span class="pill pill-race">T8 {{ row.sum_t800_km|default:"—" }}</span>{% endif %}
+                    </div>
+
+                    {% if row.alt_z1_min %}
+                      <div class="flex-total-line"><span class="pill pill-z1">ALT Z1 {{ row.alt_z1_min }}m</span></div>
+                    {% endif %}
+                    {% if row.alt_z2_min %}
+                      <div class="flex-total-line"><span class="pill pill-z2">ALT Z2 {{ row.alt_z2_min }}m</span></div>
+                    {% endif %}
+                    {% if row.alt_z3_min %}
+                      <div class="flex-total-line"><span class="pill pill-z3">ALT Z3 {{ row.alt_z3_min }}m</span></div>
+                    {% endif %}
+                  </div>
+                </td>
+                <td class="flex-slot-label">AM</td>
+                {% for cell in row.am_cells %}
+                  <td class="flex-day-cell">
+                    {% if cell.no_plan %}
+                      <a
+                        class="flex-cell {% if cell.slot %}{% else %}flex-cell-empty{% endif %}"
+                        href="#"
+                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"{% endif %}
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"
+                        hx-get="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML"
+                      >
+                        {% if cell.slot %}
+                          <div class="flex-celltext">
+                            {% for seg in cell.slot.segments.all %}
+                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
+                                <span class="pill pill-race" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% elif seg.zone %}
+                                <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% else %}
+                                <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% endif %}
+                            {% endfor %}
+                          </div>
+                        {% else %}
+                        {% endif %}
+                      </a>
+                    {% else %}
+                      <a
+                        class="flex-cell {% if cell.slot %}{% else %}flex-cell-empty{% endif %}"
+                        href="#"
+                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"{% endif %}
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"
+                        hx-get="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML"
+                      >
+                        {% if cell.slot %}
+                          <div class="flex-celltext">
+                            {% for seg in cell.slot.segments.all %}
+                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
+                                <span class="pill pill-race" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% elif seg.zone %}
+                                <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% else %}
+                                <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% endif %}
+                            {% endfor %}
+                          </div>
+                        {% endif %}
+                      </a>
+                    {% endif %}
+                      {% if cell.slot and cell.check %}
+                        <button
+                          type="button"
+                          class="flex-report-btn flex-report-status-{{ cell.check.status|default:'' }}"
+                          data-flex-report-btn
+                          data-flex-report-status="{{ cell.check.label|default:'' }}"
+                          data-flex-report-rpe="{{ cell.check.rpe|default_if_none:'' }}"
+                          data-flex-report-comment="{{ cell.check.comment|default:'' }}"
+                          title="View report"
+                        >{{ cell.check.icon }}</button>
+                      {% endif %}
+                      {% if cell.slot %}
+                        <button
+                          type="button"
+                          class="flex-delete-btn"
+                          data-flex-delete-btn
+                          data-flex-delete-url="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/{{ cell.slot_index }}/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                          title="Delete training"
+                        >×</button>
+                      {% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+
+              <tr>
+                <td class="flex-slot-label">PM</td>
+                {% for cell in row.pm_cells %}
+                  <td class="flex-day-cell">
+                    {% if cell.no_plan %}
+                      <a
+                        class="flex-cell {% if cell.slot %}{% else %}flex-cell-empty{% endif %}"
+                        href="#"
+                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"{% endif %}
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"
+                        hx-get="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML"
+                      >
+                        {% if cell.slot %}
+                          <div class="flex-celltext">
+                            {% for seg in cell.slot.segments.all %}
+                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
+                                <span class="pill pill-race" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% elif seg.zone %}
+                                <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% else %}
+                                <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% endif %}
+                            {% endfor %}
+                          </div>
+                        {% else %}
+                        {% endif %}
+                      </a>
+                    {% else %}
+                      <a
+                        class="flex-cell {% if cell.slot %}{% else %}flex-cell-empty{% endif %}"
+                        href="#"
+                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"{% endif %}
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"
+                        hx-get="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML"
+                      >
+                        {% if cell.slot %}
+                          <div class="flex-celltext">
+                            {% for seg in cell.slot.segments.all %}
+                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
+                                <span class="pill pill-race" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% elif seg.zone %}
+                                <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% else %}
+                                <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+                              {% endif %}
+                            {% endfor %}
+                          </div>
+                        {% endif %}
+                      </a>
+                    {% endif %}
+                      {% if cell.slot and cell.check %}
+                        <button
+                          type="button"
+                          class="flex-report-btn flex-report-status-{{ cell.check.status|default:'' }}"
+                          data-flex-report-btn
+                          data-flex-report-status="{{ cell.check.label|default:'' }}"
+                          data-flex-report-rpe="{{ cell.check.rpe|default_if_none:'' }}"
+                          data-flex-report-comment="{{ cell.check.comment|default:'' }}"
+                          title="View report"
+                        >{{ cell.check.icon }}</button>
+                      {% endif %}
+                      {% if cell.slot %}
+                        <button
+                          type="button"
+                          class="flex-delete-btn"
+                          data-flex-delete-btn
+                          data-flex-delete-url="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/{{ cell.slot_index }}/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                          title="Delete training"
+                        >×</button>
+                      {% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endfor %}
+{% else %}
+  <div class="alert alert-info">Select one or more athletes.</div>
+{% endif %}
+
+<div class="modal fade" id="flexReportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title">Training report</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body small">
+        <div><strong>Status:</strong> <span id="flexReportStatus">—</span></div>
+        <div><strong>RPE:</strong> <span id="flexReportRpe">—</span></div>
+        <div class="mt-2"><strong>Comment:</strong></div>
+        <div id="flexReportComment" style="white-space: pre-wrap;">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-container"></div>
+
+{% endblock %}

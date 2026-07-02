@@ -38,6 +38,28 @@ def _forbid_if_not_plan_owner(request, plan):
 STATS_VERSION_KEY = "mila:stats:version"
 
 
+def _is_flex_planner_plan(plan) -> bool:
+    return bool(plan and (getattr(plan, "name", "") or "").strip() == "Flex Planner")
+
+
+def _is_flex_source(request) -> bool:
+    return (request.GET.get("source") == "flex") or (request.POST.get("source") == "flex")
+
+
+def _get_flex_athlete_from_request(request, selected_plan):
+    if not (_is_flex_source(request) and _is_flex_planner_plan(selected_plan)):
+        return None
+
+    athlete_id = (request.GET.get("athlete") or request.POST.get("athlete") or "").strip()
+    if not athlete_id.isdigit():
+        return None
+
+    qs = Athlete.objects.filter(id=int(athlete_id))
+    if not request.user.is_superuser:
+        qs = qs.filter(owner=request.user)
+    return qs.first()
+
+
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
 _CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)(?:T\s*)?(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*(?:T\s*)?(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
 
@@ -533,7 +555,9 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
     slot_index = int(slot_index)
 
     athlete = _get_selected_athlete_from_request(request)
-    forbid = _forbid_if_athlete_not_in_plan(selected_plan, athlete)
+    if not athlete:
+        athlete = _get_flex_athlete_from_request(request, selected_plan)
+    forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
 
@@ -594,7 +618,9 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
     slot_index = int(slot_index)
 
     athlete = _get_selected_athlete_from_request(request)
-    forbid = _forbid_if_athlete_not_in_plan(selected_plan, athlete)
+    if not athlete:
+        athlete = _get_flex_athlete_from_request(request, selected_plan)
+    forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
 
@@ -663,7 +689,7 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
     if not athlete:
         return HttpResponse("No athlete", status=400)
 
-    forbid = _forbid_if_athlete_not_in_plan(selected_plan, athlete)
+    forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
 
@@ -704,11 +730,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         inferred_name = username.replace("_", " ")
         athlete = Athlete.objects.filter(name__iexact=inferred_name).first()
 
+    if not athlete:
+        athlete = _get_flex_athlete_from_request(request, selected_plan)
+
     if not selected_plan and athlete:
         requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
         if requested_plan_id.isdigit():
             requested_plan = TrainingPlan.objects.filter(id=int(requested_plan_id)).first()
-            if requested_plan and athlete.id in requested_plan.targeted_athlete_ids():
+            if requested_plan and (athlete.id in requested_plan.targeted_athlete_ids() or _is_flex_planner_plan(requested_plan)):
                 selected_plan = requested_plan
 
     if not selected_plan and athlete:
@@ -719,7 +748,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     is_athlete_year_calendar = (request.GET.get("source") == "athlete_year")
 
-    forbid = _forbid_if_athlete_not_in_plan(selected_plan, athlete)
+    forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
 
@@ -784,23 +813,38 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             },
         )
 
-    # POST: maak slot (base/override)
-    if athlete:
-        slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=athlete)
-        is_override = True
-    else:
-        slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=None)
-        is_override = False
-
     action = (request.POST.get("action") or "").strip().lower()
 
     # Delete action
     if action == "delete" and athlete:
-        slot.segments.all().delete()
+        if visible_slot and getattr(visible_slot, "athlete_id", None):
+            visible_slot.delete()
+        elif visible_slot:
+            empty_override, _ = TrainingSlot.objects.get_or_create(
+                date=d,
+                slot_index=slot_index,
+                plan=selected_plan,
+                athlete=athlete,
+            )
+            empty_override.segments.all().delete()
+        else:
+            TrainingSlot.objects.filter(
+                date=d,
+                slot_index=slot_index,
+                plan=selected_plan,
+                athlete=athlete,
+            ).delete()
+
         _bump_stats_version()
+
+        if request.GET.get("source") == "flex":
+            resp = HttpResponse("")
+            resp["HX-Refresh"] = "true"
+            return resp
+
         cell_html = render_to_string(
             "core/partials/calendar_cell.html",
-            {"day": d, "slot": slot, "slot_index": slot_index, "oob": True, "selected_athlete": athlete, "is_override": True},
+            {"day": d, "slot": None, "slot_index": slot_index, "oob": True, "selected_athlete": athlete, "is_override": True},
             request=request,
         )
         resp = HttpResponse(cell_html)
@@ -809,7 +853,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         return resp
 
     if action == "delete" and not athlete:
-        slot.delete()
+        if visible_slot:
+            visible_slot.delete()
         _bump_stats_version()
         cell_html = render_to_string(
             "core/partials/calendar_cell.html",
@@ -820,6 +865,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         resp["HX-Trigger"] = "closeModal"
         resp["HX-Refresh"] = "true"
         return resp
+
+    # POST: maak slot (base/override)
+    if athlete:
+        slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=athlete)
+        is_override = True
+    else:
+        slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=None)
+        is_override = False
 
     # bestaande segmenten
     wu_seg = slot.segments.filter(type="WU").order_by("order", "id").first()
