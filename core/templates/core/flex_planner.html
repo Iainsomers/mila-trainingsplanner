@@ -490,6 +490,11 @@
     }
 
     function flexLoadsForSegment(el) {
+      const segType = (el.getAttribute("data-flex-type") || "").toUpperCase();
+      if (["MOB", "TECH"].includes(segType)) {
+        return [];
+      }
+
       const text = (el.textContent || "").trim();
       const dataZone = (el.getAttribute("data-flex-zone") || "").trim();
       const fallbackZone = dataZone || flexZoneFromClass(el) || "1";
