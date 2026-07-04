@@ -91,6 +91,13 @@
                   <div>{{ seg.text }}</div>
                 {% endif %}
               {% endfor %}
+              {% if not slot.core_text %}
+                {% for seg in slot.segments.all %}
+                  {% if seg.type == "MOB" and seg.text %}
+                    <div>{{ seg.text }}</div>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
             {% else %}
               {% for seg in slot.segments.all %}
                 {% if seg.text and seg.type != "CORE2" %}

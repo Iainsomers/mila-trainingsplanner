@@ -107,6 +107,10 @@
       font-weight: 700;
     }
 
+    .flex-table tr.flex-athlete-row-start > td {
+      border-top: 3px solid #777;
+    }
+
     .flex-athlete-col {
       width: 145px;
       background: #fafafa;
@@ -945,7 +949,7 @@
 
           <tbody>
             {% for row in week.athlete_rows %}
-              <tr>
+              <tr class="flex-athlete-row-start">
                 <td class="flex-athlete-col {% if row.week_phase %}phase-{{ row.week_phase }}{% endif %}" rowspan="2">
                   <div>{{ row.athlete.name }}</div>
                   <div class="flex-athlete-phase-wrap">

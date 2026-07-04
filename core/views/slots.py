@@ -1033,8 +1033,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             },
         )
 
-    # validatie: Core of Alt moet gevuld zijn
-    if not core_text and not alt_text:
+    # validatie: Core, Mob/Tech of Alt moet gevuld zijn
+    if not core_text and not mob_text and not alt_text:
         return render(
             request,
             "core/partials/slot_modal.html",
@@ -1056,7 +1056,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "alt_text": alt_text,
                 "cd_text": cd_text,
 
-                "core_error": "Vul Core in, of vul Alternative.",
+                "core_error": "Vul Core, Mob/Tech of Alternative in.",
                 "saved_templates": _saved_templates_for_user(request.user),
                 "selected_template_id": (request.POST.get("template_id") or "").strip(),
                 "template_name": (request.POST.get("template_name") or "").strip(),
