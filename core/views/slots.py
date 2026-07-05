@@ -39,7 +39,8 @@ STATS_VERSION_KEY = "mila:stats:version"
 
 
 def _is_flex_planner_plan(plan) -> bool:
-    return bool(plan and (getattr(plan, "name", "") or "").strip() == "Flex Planner")
+    name = (getattr(plan, "name", "") or "").strip()
+    return bool(plan and name.startswith("Flex Planner"))
 
 
 def _is_flex_source(request) -> bool:

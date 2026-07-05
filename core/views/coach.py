@@ -1170,7 +1170,7 @@ def settings_view(request):
 
 
 def _exclude_flex_planner_plans(qs):
-    return qs.exclude(name="Flex Planner")
+    return qs.exclude(name__startswith="Flex Planner")
 
 
 @login_required

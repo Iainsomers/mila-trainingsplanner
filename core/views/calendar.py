@@ -303,7 +303,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 
 @login_required
 def calendar_view(request):
-    plans = _filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name="Flex Planner")
+    plans = _filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name__startswith="Flex Planner")
 
     selected_plan = None
     plan_id = request.GET.get("plan")
@@ -557,7 +557,13 @@ def calendar_view(request):
 
 
 def _is_flex_planner_plan(plan) -> bool:
-    return bool(plan and (getattr(plan, "name", "") or "").strip() == "Flex Planner")
+    name = (getattr(plan, "name", "") or "").strip()
+    return bool(plan and name.startswith("Flex Planner"))
+
+
+def _flex_planner_plan_name(user) -> str:
+    user_id = getattr(user, "id", None) or getattr(user, "pk", None) or "unknown"
+    return f"Flex Planner {user_id}"
 
 
 def _get_or_create_flex_planner_plan(user, start: date, end: date):
@@ -565,13 +571,13 @@ def _get_or_create_flex_planner_plan(user, start: date, end: date):
         return None
 
     fields = {field.name for field in TrainingPlan._meta.get_fields()}
-    qs = TrainingPlan.objects.filter(name="Flex Planner")
+    qs = TrainingPlan.objects.filter(name__startswith="Flex Planner")
     if "owner" in fields:
         qs = qs.filter(owner=user)
 
     plan = qs.order_by("id").first()
     if not plan:
-        kwargs = {"name": "Flex Planner"}
+        kwargs = {"name": _flex_planner_plan_name(user)}
         if "owner" in fields:
             kwargs["owner"] = user
         if "description" in fields:
@@ -674,7 +680,7 @@ def flex_planner_view(request):
     """
     accessible_athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request.user))
     accessible_groups = list(_filter_accessible(Group.objects.prefetch_related("athletes").order_by("name"), request.user))
-    accessible_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name="Flex Planner"))
+    accessible_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name__startswith="Flex Planner"))
 
     today = date.today()
     default_start = today - timedelta(days=today.weekday())
