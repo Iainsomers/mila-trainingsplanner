@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='raceeventdistance',
             name='distance',
-            field=models.CharField(choices=[('300', '300m'), ('400', '400m'), ('600', '600m'), ('800', '800m'), ('1000', '1000m'), ('1500', '1500m'), ('1609', '1609m'), ('3000', '3000m'), ('5000', '5000m'), ('10000', '10000m'), ('1000S', '1000S'), ('1500S', '1500S'), ('2000S', '2000S'), ('3000S', '3000S'), ('custom', 'x meter')], max_length=20),
+            field=models.CharField(choices=[('300', '300m'), ('400', '400m'), ('600', '600m'), ('800', '800m'), ('1000', '1000m'), ('1500', '1500m'), ('1609', '1609m'), ('3000', '3000m'), ('5000', '5000m'), ('10000', '10000m'), ('1000S', '1000m S'), ('1500S', '1500m S'), ('2000S', '2000m S'), ('3000S', '3000m S'), ('custom', 'x meter')], max_length=20),
         ),
     ]

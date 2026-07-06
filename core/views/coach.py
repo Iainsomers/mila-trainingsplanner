@@ -348,13 +348,45 @@ def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="fu
     return redirect(f"/race-calendar/?year={year}&view={view_mode}&period={period_mode}")
 
 
-def _race_distance_sort_value(distance):
+def _race_distance_raw_value(distance):
+    if distance.distance == "custom" and distance.custom_distance_m:
+        return str(distance.custom_distance_m)
+    return str(distance.distance or "")
+
+
+def _race_distance_numeric_value(distance):
+    raw = _race_distance_raw_value(distance)
+    digits = ""
+    for char in raw:
+        if char.isdigit():
+            digits += char
+        elif digits:
+            break
+
     try:
-        if distance.distance == "custom" and distance.custom_distance_m:
-            return int(distance.custom_distance_m)
-        return int(distance.distance)
+        return int(digits)
     except (TypeError, ValueError):
+        return 0
+
+
+def _race_distance_is_steeple(distance):
+    return _race_distance_raw_value(distance).upper().endswith("S")
+
+
+def _race_distance_sort_value(distance):
+    meters = _race_distance_numeric_value(distance)
+    if not meters:
         return 999999
+    if _race_distance_is_steeple(distance):
+        return 100000 + meters
+    return meters
+
+
+def _race_distance_m(distance):
+    try:
+        return _race_distance_numeric_value(distance)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _sorted_race_distances(race):
@@ -362,15 +394,6 @@ def _sorted_race_distances(race):
         list(race.distances.all()),
         key=lambda distance: (_race_distance_sort_value(distance), distance.id),
     )
-
-
-def _race_distance_m(distance):
-    try:
-        if distance.distance == "custom" and distance.custom_distance_m:
-            return int(distance.custom_distance_m)
-        return int(distance.distance)
-    except (TypeError, ValueError):
-        return 0
 
 
 def _race_training_marker(distance_m):
@@ -444,7 +467,8 @@ def _race_line_text(race, distance, selected_count):
     distance_m = _race_distance_m(distance)
     marker = _race_training_marker(distance_m)
     race_label = "Race!" if selected_count >= 3 else "Race"
-    return f'"{race.name}" {distance_m}m {marker} {race_label}'
+    steeple = " S" if _race_distance_is_steeple(distance) else ""
+    return f'"{race.name}" {distance_m}m{steeple} {marker} {race_label}'
 
 
 def _plans_for_race_override(athlete, race):
