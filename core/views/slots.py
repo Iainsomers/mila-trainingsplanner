@@ -1194,6 +1194,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if wu_text:
         if wu_seg:
             wu_seg.text = wu_text
+            wu_seg.order = 0
         else:
             wu_seg = slot.segments.create(type="WU", text=wu_text, order=0)
         _apply_parse_to_segment(wu_seg, wu_parse)
@@ -1206,6 +1207,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # Save MOB
     if mob_text:
         if mob_seg:
+            mob_seg.order = 1
             _apply_mob_only(mob_seg, mob_text)
             mob_seg.save()
         else:
@@ -1220,6 +1222,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if sprint_text:
         if sprint_seg:
             sprint_seg.text = sprint_text
+            sprint_seg.order = 2
         else:
             sprint_seg = slot.segments.create(type="SPR", text=sprint_text, order=2)
         _apply_parse_to_segment(sprint_seg, sprint_parse)
@@ -1232,6 +1235,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             sprint_seg.delete()
 
     # Save CORE
+    next_followup_order = 3
     if core_text:
         parts = []
         for core_part in [p.strip() for p in core_text.split("//") if p.strip()]:
@@ -1284,6 +1288,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             seg.parsed_at = now
             seg.save()
             order += 1
+        next_followup_order = order
     else:
         slot.segments.filter(type="CORE").delete()
 
@@ -1292,9 +1297,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if alt_text:
         if alt_seg:
             alt_seg.text = alt_text
-            alt_seg.order = 6
+            alt_seg.order = next_followup_order + 2
         else:
-            alt_seg = slot.segments.create(type="ALT", text=alt_text, order=6)
+            alt_seg = slot.segments.create(type="ALT", text=alt_text, order=next_followup_order + 2)
 
         alt_seg.reps = 1
         alt_seg.distance_m = None
@@ -1324,9 +1329,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if core2_text:
         if core2_seg:
             core2_seg.text = core2_text
-            core2_seg.order = 4
+            core2_seg.order = next_followup_order
         else:
-            core2_seg = slot.segments.create(type="CORE2", text=core2_text, order=4)
+            core2_seg = slot.segments.create(type="CORE2", text=core2_text, order=next_followup_order)
         _apply_parse_to_segment(core2_seg, core2_parse)
         core2_seg.norm_distance_m = _compute_norm_distance_m(core2_seg)
         core2_seg.parsed_at = now
@@ -1339,9 +1344,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if cd_text:
         if cd_seg:
             cd_seg.text = cd_text
-            cd_seg.order = 5
+            cd_seg.order = next_followup_order + 1
         else:
-            cd_seg = slot.segments.create(type="CD", text=cd_text, order=5)
+            cd_seg = slot.segments.create(type="CD", text=cd_text, order=next_followup_order + 1)
         _apply_parse_to_segment(cd_seg, cd_parse)
         cd_seg.parsed_at = now
         cd_seg.save()

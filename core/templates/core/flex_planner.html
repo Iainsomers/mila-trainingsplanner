@@ -254,7 +254,9 @@
     }
 
     .flex-report-btn,
-    .flex-delete-btn {
+    .flex-delete-btn,
+    .flex-copy-btn,
+    .flex-paste-btn {
       position: absolute;
       z-index: 4;
       border: 0;
@@ -308,6 +310,44 @@
 
     .flex-day-cell:hover .flex-delete-btn {
       opacity: 1;
+    }
+
+    .flex-copy-btn,
+    .flex-paste-btn {
+      left: 2px;
+      bottom: 2px;
+      width: 16px;
+      height: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      opacity: 0;
+    }
+
+    .flex-copy-btn {
+      color: #0b5ed7;
+    }
+
+    .flex-paste-btn {
+      color: #0b7a22;
+      display: none;
+    }
+
+    .flex-day-cell:hover .flex-copy-btn {
+      opacity: 1;
+    }
+
+    .flex-paste-mode .flex-copy-btn {
+      display: none;
+    }
+
+    .flex-paste-mode .flex-paste-btn {
+      display: flex;
+      opacity: 0.95;
+    }
+
+    .flex-cell-copy-source {
+      outline: 2px solid #0b5ed7;
+      outline-offset: -2px;
     }
 
     .pill {
@@ -672,6 +712,8 @@
 
 
     let flexDragCopyUrl = "";
+    const flexClickPasteActiveKey = "mila:flex-click-paste-active";
+    const flexClickCopyUrlKey = "mila:flex-click-copy-url";
 
     function flexPost(url, body) {
       const token = getCookie("csrftoken");
@@ -687,6 +729,52 @@
         }
         return response;
       });
+    }
+
+    function flexStorageGet(key) {
+      try {
+        return sessionStorage.getItem(key) || "";
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function flexStorageSet(key, value) {
+      try {
+        sessionStorage.setItem(key, value);
+      } catch (error) {}
+    }
+
+    function flexStorageRemove(key) {
+      try {
+        sessionStorage.removeItem(key);
+      } catch (error) {}
+    }
+
+    function clearFlexClickPasteMode() {
+      document.body.classList.remove("flex-paste-mode");
+      document.querySelectorAll(".flex-cell-copy-source").forEach((el) => el.classList.remove("flex-cell-copy-source"));
+      flexStorageRemove(flexClickPasteActiveKey);
+      flexStorageRemove(flexClickCopyUrlKey);
+    }
+
+    function setFlexClickPasteMode(copyUrl) {
+      document.body.classList.add("flex-paste-mode");
+      flexStorageSet(flexClickPasteActiveKey, "1");
+      flexStorageSet(flexClickCopyUrlKey, copyUrl);
+      document.querySelectorAll(".flex-cell-copy-source").forEach((el) => el.classList.remove("flex-cell-copy-source"));
+      document.querySelectorAll("[data-flex-copy-url]").forEach((cell) => {
+        if ((cell.getAttribute("data-flex-copy-url") || "") === copyUrl) {
+          cell.classList.add("flex-cell-copy-source");
+        }
+      });
+    }
+
+    function restoreFlexClickPasteMode() {
+      if (flexStorageGet(flexClickPasteActiveKey) !== "1") return;
+      const copyUrl = flexStorageGet(flexClickCopyUrlKey);
+      if (!copyUrl) return;
+      setFlexClickPasteMode(copyUrl);
     }
 
     function initFlexReportAndDeleteButtons() {
@@ -738,6 +826,50 @@
         cell.setAttribute("draggable", "true");
       });
     }
+
+    document.addEventListener("click", (event) => {
+      const copyBtn = event.target.closest("[data-flex-copy-btn]");
+      if (copyBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const copyUrl = copyBtn.getAttribute("data-flex-copy-url") || "";
+        if (!copyUrl) return;
+
+        if (document.body.classList.contains("flex-paste-mode") && flexStorageGet(flexClickCopyUrlKey) === copyUrl) {
+          clearFlexClickPasteMode();
+          return;
+        }
+
+        flexPost(copyUrl)
+          .then(() => setFlexClickPasteMode(copyUrl))
+          .catch(() => {
+            alert("Copy failed.");
+          });
+        return;
+      }
+
+      const pasteBtn = event.target.closest("[data-flex-paste-btn]");
+      if (pasteBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (flexStorageGet(flexClickPasteActiveKey) !== "1") return;
+
+        const pasteUrl = pasteBtn.getAttribute("data-flex-paste-url") || "";
+        if (!pasteUrl) return;
+
+        flexPost(pasteUrl)
+          .then(() => window.location.reload())
+          .catch(() => {
+            alert("Paste failed.");
+          });
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") clearFlexClickPasteMode();
+    });
 
     document.addEventListener("dragstart", (event) => {
       const cell = event.target.closest("[data-flex-copy-url]");
@@ -891,6 +1023,7 @@
       updateFlexTotalsFromVisibleRows();
       applyFlexProgressivePillColors();
       initFlexDragCopy();
+      restoreFlexClickPasteMode();
       initFlexWeekPhaseControls();
       initFlexReportAndDeleteButtons();
     });
@@ -898,6 +1031,7 @@
       updateFlexTotalsFromVisibleRows();
       applyFlexProgressivePillColors();
       initFlexDragCopy();
+      restoreFlexClickPasteMode();
       initFlexWeekPhaseControls();
       initFlexReportAndDeleteButtons();
     });
@@ -1081,8 +1215,8 @@
                       <a
                         class="flex-cell {% if cell.slot %}{% else %}flex-cell-empty{% endif %}"
                         href="#"
-                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"{% endif %}
-                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"
+                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"{% endif %}
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
                         hx-get="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
@@ -1106,8 +1240,8 @@
                       <a
                         class="flex-cell {% if cell.slot %}{% else %}flex-cell-empty{% endif %}"
                         href="#"
-                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"{% endif %}
-                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"
+                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"{% endif %}
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
                         hx-get="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
@@ -1127,6 +1261,22 @@
                         {% endif %}
                       </a>
                     {% endif %}
+                      {% if cell.slot %}
+                        <button
+                          type="button"
+                          class="flex-copy-btn"
+                          data-flex-copy-btn
+                          data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                          title="Copy training"
+                        >c</button>
+                      {% endif %}
+                      <button
+                        type="button"
+                        class="flex-paste-btn"
+                        data-flex-paste-btn
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/1/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                        title="Paste training"
+                      >p</button>
                       {% if cell.slot and cell.check %}
                         <button
                           type="button"
@@ -1159,8 +1309,8 @@
                       <a
                         class="flex-cell {% if cell.slot %}{% else %}flex-cell-empty{% endif %}"
                         href="#"
-                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"{% endif %}
-                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"
+                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"{% endif %}
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
                         hx-get="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
@@ -1184,8 +1334,8 @@
                       <a
                         class="flex-cell {% if cell.slot %}{% else %}flex-cell-empty{% endif %}"
                         href="#"
-                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"{% endif %}
-                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}"
+                        {% if cell.slot %}data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"{% endif %}
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
                         hx-get="/slot-modal/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
@@ -1205,6 +1355,22 @@
                         {% endif %}
                       </a>
                     {% endif %}
+                      {% if cell.slot %}
+                        <button
+                          type="button"
+                          class="flex-copy-btn"
+                          data-flex-copy-btn
+                          data-flex-copy-url="/slot-copy/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                          title="Copy training"
+                        >c</button>
+                      {% endif %}
+                      <button
+                        type="button"
+                        class="flex-paste-btn"
+                        data-flex-paste-btn
+                        data-flex-paste-url="/slot-paste/{{ cell.day|date:'Y' }}/{{ cell.day|date:'m' }}/{{ cell.day|date:'d' }}/2/?plan={{ cell.plan_id }}&athlete={{ row.athlete.id }}&source=flex"
+                        title="Paste training"
+                      >p</button>
                       {% if cell.slot and cell.check %}
                         <button
                           type="button"
