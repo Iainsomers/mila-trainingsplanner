@@ -430,6 +430,33 @@
       return (a && b && a !== b) ? [a, b] : null;
     }
 
+    function flexTColor(tKey) {
+      const mapping = {
+        "10000": "#bfe7bf",
+        "5000": "#bfe7bf",
+        "3000": "#bfe7bf",
+        "1500": "#b7d7ff",
+        "800": "#b7d7ff",
+        "TM": "#f7c6d0",
+        "THM": "#e5533d",
+        "T4": "#b7d7ff"
+      };
+      return mapping[tKey] || "";
+    }
+
+    function applyFlexProgressivePillColors() {
+      document.querySelectorAll("[data-flex-segment]").forEach((el) => {
+        const tRange = flexProgressiveTKeys(el.textContent || "");
+        if (!tRange) return;
+
+        const leftColor = flexTColor(tRange[0]);
+        const rightColor = flexTColor(tRange[1]);
+        if (!leftColor || !rightColor) return;
+
+        el.style.background = `linear-gradient(30deg, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
+      });
+    }
+
     function flexNumberAttr(el, name) {
       const raw = el.getAttribute(name);
       if (raw === null || raw === "") return 0;
@@ -843,12 +870,14 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       updateFlexTotalsFromVisibleRows();
+      applyFlexProgressivePillColors();
       initFlexDragCopy();
       initFlexWeekPhaseControls();
       initFlexReportAndDeleteButtons();
     });
     document.addEventListener("htmx:afterSwap", () => {
       updateFlexTotalsFromVisibleRows();
+      applyFlexProgressivePillColors();
       initFlexDragCopy();
       initFlexWeekPhaseControls();
       initFlexReportAndDeleteButtons();
