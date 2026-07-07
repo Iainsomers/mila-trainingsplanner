@@ -711,7 +711,6 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
     )
     resp = HttpResponse(cell_html)
     resp["HX-Trigger"] = "closeModal"
-    resp["HX-Refresh"] = "true"
     return resp
 
 
@@ -838,7 +837,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
         _bump_stats_version()
 
-        if request.GET.get("source") == "flex":
+        if _is_flex_source(request):
             resp = HttpResponse("")
             resp["HX-Refresh"] = "true"
             return resp
@@ -850,7 +849,6 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         )
         resp = HttpResponse(cell_html)
         resp["HX-Trigger"] = "closeModal"
-        resp["HX-Refresh"] = "true"
         return resp
 
     if action == "delete" and not athlete:
@@ -864,7 +862,6 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         )
         resp = HttpResponse(cell_html)
         resp["HX-Trigger"] = "closeModal"
-        resp["HX-Refresh"] = "true"
         return resp
 
     # POST: maak slot (base/override)
@@ -1354,6 +1351,12 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     _bump_stats_version()
 
+    if _is_flex_source(request):
+        resp = HttpResponse("")
+        resp["HX-Trigger"] = "closeModal"
+        resp["HX-Refresh"] = "true"
+        return resp
+
     cell_html = render_to_string(
         "core/partials/calendar_cell.html",
         {"day": d, "slot": slot, "slot_index": slot_index, "oob": True, "selected_athlete": athlete, "is_override": is_override},
@@ -1361,5 +1364,4 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     )
     resp = HttpResponse(cell_html)
     resp["HX-Trigger"] = "closeModal"
-    resp["HX-Refresh"] = "true"
     return resp

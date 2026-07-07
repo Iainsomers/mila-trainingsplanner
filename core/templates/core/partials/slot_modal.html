@@ -57,6 +57,11 @@
               {% if selected_athlete %}
                 <input type="hidden" name="athlete" value="{{ selected_athlete.id }}">
               {% endif %}
+              {% if request.GET.source %}
+                <input type="hidden" name="source" value="{{ request.GET.source }}">
+              {% elif request.POST.source %}
+                <input type="hidden" name="source" value="{{ request.POST.source }}">
+              {% endif %}
 
               <div class="compact-main-grid">
               <!-- WU -->

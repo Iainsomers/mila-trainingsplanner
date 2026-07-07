@@ -444,13 +444,32 @@
       return mapping[tKey] || "";
     }
 
+    function flexProgressiveZones(text) {
+      const s = text || "";
+      const m = s.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
+      return (m && m[1] !== m[2]) ? [m[1], m[2]] : null;
+    }
+
+    function flexZoneColor(zone) {
+      const mapping = {
+        "1": "#f8f8f0",
+        "2": "#f7c6d0",
+        "3": "#e5533d",
+        "4": "#bfe7bf",
+        "5": "#b7d7ff",
+        "6": "#f2c200"
+      };
+      return mapping[String(zone || "")] || "";
+    }
+
     function applyFlexProgressivePillColors() {
       document.querySelectorAll("[data-flex-segment]").forEach((el) => {
-        const tRange = flexProgressiveTKeys(el.textContent || "");
-        if (!tRange) return;
+        const text = el.textContent || "";
+        const tRange = flexProgressiveTKeys(text);
+        const zoneRange = tRange ? null : flexProgressiveZones(text);
 
-        const leftColor = flexTColor(tRange[0]);
-        const rightColor = flexTColor(tRange[1]);
+        const leftColor = tRange ? flexTColor(tRange[0]) : flexZoneColor(zoneRange ? zoneRange[0] : "");
+        const rightColor = tRange ? flexTColor(tRange[1]) : flexZoneColor(zoneRange ? zoneRange[1] : "");
         if (!leftColor || !rightColor) return;
 
         el.style.background = `linear-gradient(30deg, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
