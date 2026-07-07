@@ -1,0 +1,121 @@
+{% extends "core/base.html" %}
+
+{% block title %}WU settings{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">WU settings</h1>
+    </div>
+    <div>
+      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Back to coach console</a>
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th class="text-center">Auto WU/CD</th>
+            <th style="width: 150px;">WU m</th>
+            <th style="width: 150px;">CD m</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="4"><strong>Groepen</strong></td>
+          </tr>
+          {% for group in groups %}
+            <tr>
+              <td>{{ group.name }}</td>
+              <td class="text-center">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  name="group_{{ group.id }}_enabled"
+                  {% if group.auto_wucd_enabled %}checked{% endif %}
+                >
+              </td>
+              <td>
+                <input
+                  type="number"
+                  class="form-control form-control-sm"
+                  name="group_{{ group.id }}_wu_m"
+                  min="0"
+                  step="100"
+                  value="{{ group.auto_wu_m }}"
+                >
+              </td>
+              <td>
+                <input
+                  type="number"
+                  class="form-control form-control-sm"
+                  name="group_{{ group.id }}_cd_m"
+                  min="0"
+                  step="100"
+                  value="{{ group.auto_cd_m }}"
+                >
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="text-muted">No groups yet.</td>
+            </tr>
+          {% endfor %}
+
+          <tr>
+            <td colspan="4"><strong>Atleten</strong></td>
+          </tr>
+          {% for athlete in athletes %}
+            <tr>
+              <td>{{ athlete.name }}</td>
+              <td class="text-center">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  name="athlete_{{ athlete.id }}_enabled"
+                  {% if athlete.auto_wucd_enabled %}checked{% endif %}
+                >
+              </td>
+              <td>
+                <input
+                  type="number"
+                  class="form-control form-control-sm"
+                  name="athlete_{{ athlete.id }}_wu_m"
+                  min="0"
+                  step="100"
+                  value="{{ athlete.auto_wu_m }}"
+                >
+              </td>
+              <td>
+                <input
+                  type="number"
+                  class="form-control form-control-sm"
+                  name="athlete_{{ athlete.id }}_cd_m"
+                  min="0"
+                  step="100"
+                  value="{{ athlete.auto_cd_m }}"
+                >
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="text-muted">No athletes yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

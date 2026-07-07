@@ -47,6 +47,11 @@ class CoachSettings(models.Model):
     tb_show_core2 = models.BooleanField(default=True)
     tb_show_cd = models.BooleanField(default=True)
 
+    # Default WU/CD settings for newly created athletes.
+    auto_wucd_enabled = models.BooleanField(default=False)
+    auto_wu_m = models.PositiveIntegerField(default=0)
+    auto_cd_m = models.PositiveIntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -99,6 +104,10 @@ class Athlete(models.Model):
     week_report_enabled = models.BooleanField(default=False)
     daily_vitals_enabled = models.BooleanField(default=False)
 
+    auto_wucd_enabled = models.BooleanField(default=False)
+    auto_wu_m = models.PositiveIntegerField(default=0)
+    auto_cd_m = models.PositiveIntegerField(default=0)
+
     zone_speed_mps = models.JSONField(
         default=default_zone_speed_mps,
         blank=True,
@@ -139,6 +148,10 @@ class Group(models.Model):
 
     name = models.CharField(max_length=120, unique=True)
     athletes = models.ManyToManyField(Athlete, related_name="groups", blank=True)
+
+    auto_wucd_enabled = models.BooleanField(default=False)
+    auto_wu_m = models.PositiveIntegerField(default=0)
+    auto_cd_m = models.PositiveIntegerField(default=0)
 
     def __str__(self) -> str:
         return self.name

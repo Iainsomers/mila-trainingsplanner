@@ -12,6 +12,7 @@ from django.core.cache import cache
 from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
+from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
 from .common import (
     _parse_iso_date,
     _parse_int,
@@ -270,6 +271,42 @@ def coach_console_view(request):
     return render(request, "core/coach_console.html")
 
 
+def _clean_non_negative_int(value):
+    try:
+        return max(0, int((value or "").strip() or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def coach_wucd_settings_view(request):
+    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    groups = list(_filter_owned(Group.objects.order_by("name"), request.user))
+
+    if request.method == "POST":
+        for athlete in athletes:
+            prefix = f"athlete_{athlete.id}"
+            athlete.auto_wucd_enabled = request.POST.get(f"{prefix}_enabled") == "on"
+            athlete.auto_wu_m = _clean_non_negative_int(request.POST.get(f"{prefix}_wu_m"))
+            athlete.auto_cd_m = _clean_non_negative_int(request.POST.get(f"{prefix}_cd_m"))
+            athlete.save(update_fields=["auto_wucd_enabled", "auto_wu_m", "auto_cd_m"])
+
+        for group in groups:
+            prefix = f"group_{group.id}"
+            group.auto_wucd_enabled = request.POST.get(f"{prefix}_enabled") == "on"
+            group.auto_wu_m = _clean_non_negative_int(request.POST.get(f"{prefix}_wu_m"))
+            group.auto_cd_m = _clean_non_negative_int(request.POST.get(f"{prefix}_cd_m"))
+            group.save(update_fields=["auto_wucd_enabled", "auto_wu_m", "auto_cd_m"])
+
+        return redirect("coach_wucd_settings")
+
+    return render(request, "core/coach_wucd_settings.html", {
+        "athletes": athletes,
+        "groups": groups,
+    })
+
+
 @login_required
 @require_GET
 def races_overview_view(request):
@@ -496,6 +533,12 @@ def _invalidate_race_training_stats_cache():
         cache.set(STATS_VERSION_KEY, 1, None)
 
 
+def _is_generated_race_or_wucd_segment(seg):
+    if seg.type in ("WU", "CD"):
+        return True
+    return (seg.special or "") in ("RACE", "IMPORTANT_RACE")
+
+
 def _sync_race_training_override(athlete, race):
     plans = _plans_for_race_override(athlete, race)
     if not plans:
@@ -526,7 +569,7 @@ def _sync_race_training_override(athlete, race):
         if not selected_entries:
             if existing_slot:
                 existing_segments = list(existing_slot.segments.all())
-                if existing_segments and all((seg.special or "") in ("RACE", "IMPORTANT_RACE") for seg in existing_segments):
+                if existing_segments and all(_is_generated_race_or_wucd_segment(seg) for seg in existing_segments):
                     existing_slot.delete()
                     changed = True
             continue
@@ -539,6 +582,10 @@ def _sync_race_training_override(athlete, race):
             defaults={},
         )
         slot.segments.all().delete()
+
+        auto_wu_text, auto_cd_text = auto_wucd_texts_for_target(athlete=athlete, plan=plan)
+        if auto_wu_text:
+            create_parsed_wucd_segment(slot, "WU", auto_wu_text, 0)
 
         for order, entry in enumerate(selected_entries, start=1):
             distance = entry.race_distance
@@ -561,6 +608,9 @@ def _sync_race_training_override(athlete, race):
                 parse_message=parsed.message or "",
             )
             segment.save()
+
+        if auto_cd_text:
+            create_parsed_wucd_segment(slot, "CD", auto_cd_text, len(selected_entries) + 1)
         changed = True
 
     if changed:

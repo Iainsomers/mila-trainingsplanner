@@ -26,6 +26,7 @@ from core.models import (
 )
 from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from core.parser import parse_segment_text
+from core.wucd import apply_auto_wucd_texts
 from .common import (
     _calendar_display_mode,
     _get_selected_plan,
@@ -42,6 +43,16 @@ from core.views.slots import (
     _core_t_range_parts,
     _parse_core_segment_text,
 )
+
+
+def _athlete_plan_for_day(athlete_plans, day):
+    for plan in athlete_plans or []:
+        if plan.start_date and plan.start_date > day:
+            continue
+        if plan.end_date and plan.end_date < day:
+            continue
+        return plan
+    return None
 
 
 def _shared_owner_ids(user):
@@ -1234,6 +1245,24 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
     base_slot = None
     existing_override = None
+    selected_plan = None
+    requested_plan_id = (request.POST.get("plan") or request.GET.get("plan") or "").strip()
+
+    if requested_plan_id.isdigit():
+        for plan in owned_plans:
+            if plan.id != int(requested_plan_id):
+                continue
+            try:
+                if athlete.id not in plan.targeted_athlete_ids():
+                    continue
+            except Exception:
+                continue
+            if plan.start_date and plan.start_date > d:
+                continue
+            if plan.end_date and plan.end_date < d:
+                continue
+            selected_plan = plan
+            break
 
     for plan in owned_plans:
         if athlete.id not in plan.targeted_athlete_ids():
@@ -1254,14 +1283,15 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         ).first()
 
         if existing_override or base_slot:
+            selected_plan = plan
             break
 
     source_slot = existing_override or base_slot
-    if not source_slot:
+    if not source_slot and not selected_plan:
         return
 
     override_slot, _ = TrainingSlot.objects.update_or_create(
-        plan=source_slot.plan,
+        plan=source_slot.plan if source_slot else selected_plan,
         date=d,
         slot_index=slot_index,
         athlete=athlete,
@@ -1284,6 +1314,21 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
     if not has_field_text and (slot_text or "").strip():
         fields = [("CORE", slot_text, "1")]
+    elif has_field_text:
+        core_text = (request.POST.get("core_text") or "").strip()
+        wu_text = request.POST.get("wu_text") or ""
+        cd_text = request.POST.get("cd_text") or ""
+        if core_text:
+            wu_text, cd_text = apply_auto_wucd_texts(athlete, source_slot.plan if source_slot else selected_plan, core_text, wu_text.strip(), cd_text.strip())
+            fields = [
+                ("WU", wu_text, "1"),
+                ("MOB", request.POST.get("mob_text", ""), "1"),
+                ("SPR", request.POST.get("sprint_text", ""), "6"),
+                ("CORE", core_text, "1"),
+                ("CORE2", request.POST.get("core2_text", ""), "1"),
+                ("ALT", request.POST.get("alt_text", ""), "1"),
+                ("CD", cd_text, "1"),
+            ]
 
     now = timezone.now()
     order = 1
@@ -1747,6 +1792,7 @@ def athlete_year_calendar_view(request):
 
             slot1 = _visible_year_slot(slot_map, has_fix_keys, k1)
             slot2 = _visible_year_slot(slot_map, has_fix_keys, k2)
+            day_plan = _athlete_plan_for_day(athlete_plans, day) if selected_athlete else None
 
             if athlete_self_view and visible_until_date and day > visible_until_date:
                 if not _slot_has_race(slot1):
@@ -1762,6 +1808,7 @@ def athlete_year_calendar_view(request):
                 "is_override": k1 in has_fix_keys,
                 "check": check1,
                 "slot_index": 1,
+                "plan_id": slot1.plan_id if slot1 else (day_plan.id if day_plan else ""),
             })
             cells2.append({
                 "day": day,
@@ -1769,6 +1816,7 @@ def athlete_year_calendar_view(request):
                 "is_override": k2 in has_fix_keys,
                 "check": check2,
                 "slot_index": 2,
+                "plan_id": slot2.plan_id if slot2 else (day_plan.id if day_plan else ""),
             })
             comment = None
             if selected_athlete:

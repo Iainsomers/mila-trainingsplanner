@@ -12,6 +12,7 @@ from django.db.models import Q
 
 from core.models import TrainingSlot, SavedTrainingTemplate, TrainingPlan, Athlete
 from core.parser import parse_segment_text
+from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
 
 from .common import (
     _get_selected_plan,
@@ -889,6 +890,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     core2_text = (request.POST.get("core2_text") or "").strip() if tb_show_core2 else ""
     alt_text = (request.POST.get("alt_text") or "").strip()
     cd_text = (request.POST.get("cd_text") or "").strip() if tb_show_cd else ""
+    if core_text:
+        wu_text, cd_text = apply_auto_wucd_texts(athlete, selected_plan, core_text, wu_text, cd_text)
 
     if action == "save_template":
         template_name = (request.POST.get("template_name") or "").strip()
@@ -1354,6 +1357,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if cd_seg:
             cd_seg.delete()
 
+    sync_athlete_auto_wucd_overrides(slot, selected_plan, core_text)
     _bump_stats_version()
 
     if _is_flex_source(request):

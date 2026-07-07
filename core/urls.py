@@ -7,6 +7,7 @@ from core.views.coach import (
     dashboard_view,
     settings_view,
     coach_console_view,
+    coach_wucd_settings_view,
     races_overview_view,
     coach_plans_view,
     coach_plan_create_view,
@@ -73,6 +74,7 @@ urlpatterns = [
 
     # Coach console
     path("coach/", coach_console_view, name="coach_console"),
+    path("coach/wu-settings/", coach_wucd_settings_view, name="coach_wucd_settings"),
     path("races/", races_overview_view, name="races_overview"),
 
     # Coach: Plans CRUD
