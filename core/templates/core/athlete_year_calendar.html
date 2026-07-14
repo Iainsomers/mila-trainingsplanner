@@ -150,7 +150,23 @@
     padding: 4px 18px 4px 6px;
     font-size: 12px;
     line-height: 1.25;
+    background: #ffffff;
   }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 6px;
+    margin: 0 2px 2px 0;
+  }
+
+  .pill-z1 { background-color: #f8f8f0; }
+  .pill-z2 { background-color: #f7c6d0; }
+  .pill-z3 { background-color: #e5533d; }
+  .pill-z4 { background-color: #bfe7bf; }
+  .pill-z5 { background-color: #b7d7ff; }
+  .pill-z6 { background-color: #f2c200; }
+  .pill-race { background-color: #ff7a00; }
 
   .check-status-toggle {
     width: 18px;
@@ -608,7 +624,7 @@
 
   <form method="get" class="mb-3">
     <input name="year" value="{{ year }}" class="form-control form-control-sm" style="width:120px; display:inline-block;">
-    <select name="athlete" class="form-control form-control-sm" style="width:220px; display:inline-block;">
+    <select name="athlete" class="form-control form-control-sm" style="width:220px; display:inline-block;" onchange="this.form.submit()">
       <option value="" {% if not selected_athlete_id %}selected{% endif %}>(all athletes)</option>
       {% for athlete in athletes %}
         <option value="{{ athlete.id }}" {% if selected_athlete_id == athlete.id|stringformat:"s" %}selected{% endif %}>{{ athlete.name }}</option>
@@ -619,7 +635,6 @@
       <option value="t1" {% if hide_mode == "t1" %}selected{% endif %}>hide t-1 week</option>
       <option value="t4" {% if hide_mode == "t4" %}selected{% endif %}>hide t-4 weeks</option>
     </select>
-    <button class="btn btn-sm btn-primary">Load</button>
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">zones/times</button>
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#todayTrainingModal">today</button>
   </form>
@@ -673,29 +688,8 @@
               {% for cell in w.cells1 %}
                 {% if cell.day == today %}
                   {% if cell.slot %}
-                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
-                      {% if cell.slot.text %}
-                        <div class="core-line" data-zone="">
-                          <strong>{{ cell.slot.text|linebreaksbr }}</strong>
-                        </div>
-                      {% else %}
-                        {% for seg in cell.slot.segments.all %}
-                          {% if seg.text and seg.type != "CORE2" %}
-                            {% if seg.type == "CORE" %}
-                              <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
-                                <strong>{{ seg.text }}</strong>
-                              </div>
-                            {% else %}
-                              <div>{{ seg.text }}</div>
-                            {% endif %}
-                          {% endif %}
-                        {% endfor %}
-                        {% for seg in cell.slot.segments.all %}
-                          {% if seg.text and seg.type == "CORE2" %}
-                            <div>2nd: {{ seg.text }}</div>
-                          {% endif %}
-                        {% endfor %}
-                      {% endif %}
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                      {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                     </div>
                   {% else %}
                     {% if cell.plan_id %}
@@ -716,29 +710,8 @@
               {% for cell in w.cells2 %}
                 {% if cell.day == today %}
                   {% if cell.slot %}
-                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
-                      {% if cell.slot.text %}
-                        <div class="core-line" data-zone="">
-                          <strong>{{ cell.slot.text|linebreaksbr }}</strong>
-                        </div>
-                      {% else %}
-                        {% for seg in cell.slot.segments.all %}
-                          {% if seg.text and seg.type != "CORE2" %}
-                            {% if seg.type == "CORE" %}
-                              <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
-                                <strong>{{ seg.text }}</strong>
-                              </div>
-                            {% else %}
-                              <div>{{ seg.text }}</div>
-                            {% endif %}
-                          {% endif %}
-                        {% endfor %}
-                        {% for seg in cell.slot.segments.all %}
-                          {% if seg.text and seg.type == "CORE2" %}
-                            <div>2nd: {{ seg.text }}</div>
-                          {% endif %}
-                        {% endfor %}
-                      {% endif %}
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                      {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                     </div>
                   {% else %}
                     {% if cell.plan_id %}
@@ -866,29 +839,8 @@
             <td>
               <div class="daycell">
                 {% if cell.slot %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
-                    {% if cell.slot.text %}
-                      <div class="core-line" data-zone="">
-                        <strong>{{ cell.slot.text|linebreaksbr }}</strong>
-                      </div>
-                    {% else %}
-                      {% for seg in cell.slot.segments.all %}
-                        {% if seg.text and seg.type != "CORE2" %}
-                          {% if seg.type == "CORE" %}
-                            <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
-                              <strong>{{ seg.text }}</strong>
-                            </div>
-                          {% else %}
-                            <div>{{ seg.text }}</div>
-                          {% endif %}
-                        {% endif %}
-                      {% endfor %}
-                      {% for seg in cell.slot.segments.all %}
-                        {% if seg.text and seg.type == "CORE2" %}
-                          <div>2nd: {{ seg.text }}</div>
-                        {% endif %}
-                      {% endfor %}
-                    {% endif %}
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                    {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                   </div>
                 {% elif cell.plan_id %}
                   <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
@@ -904,29 +856,8 @@
             <td>
               <div class="emptyline">
                 {% if cell.slot %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.slot.plan_id }}">
-                    {% if cell.slot.text %}
-                      <div class="core-line" data-zone="">
-                        <strong>{{ cell.slot.text|linebreaksbr }}</strong>
-                      </div>
-                    {% else %}
-                      {% for seg in cell.slot.segments.all %}
-                        {% if seg.text and seg.type != "CORE2" %}
-                          {% if seg.type == "CORE" %}
-                            <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
-                              <strong>{{ seg.text }}</strong>
-                            </div>
-                          {% else %}
-                            <div>{{ seg.text }}</div>
-                          {% endif %}
-                        {% endif %}
-                      {% endfor %}
-                      {% for seg in cell.slot.segments.all %}
-                        {% if seg.text and seg.type == "CORE2" %}
-                          <div>2nd: {{ seg.text }}</div>
-                        {% endif %}
-                      {% endfor %}
-                    {% endif %}
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                    {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                   </div>
                 {% elif cell.plan_id %}
                   <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
@@ -1162,6 +1093,85 @@
     }
 
     window.addEventListener("load", applyColors);
+  })();
+</script>
+
+<script>
+  (function() {
+    function flexNormalizeTKey(value) {
+      const s = (value || "").toUpperCase().replace(/\s+/g, "");
+      const mapping = {
+        "TM": "TM", "THM": "THM", "T4": "T4",
+        "T10": "10000", "T10000": "10000", "10000": "10000",
+        "T5": "5000", "T5000": "5000", "5000": "5000",
+        "T3": "3000", "T3000": "3000", "3000": "3000",
+        "T15": "1500", "T1500": "1500", "1500": "1500",
+        "T8": "800", "T800": "800", "800": "800"
+      };
+      return mapping[s] || "";
+    }
+
+    function flexProgressiveTKeys(text) {
+      const s = (text || "").toUpperCase().replace(/\s+/g, "");
+      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
+      if (!m) return null;
+      const a = flexNormalizeTKey(m[1]);
+      const b = flexNormalizeTKey(m[2]);
+      return (a && b && a !== b) ? [a, b] : null;
+    }
+
+    function flexTColor(tKey) {
+      const mapping = {
+        "10000": "#bfe7bf",
+        "5000": "#bfe7bf",
+        "3000": "#bfe7bf",
+        "1500": "#b7d7ff",
+        "800": "#b7d7ff",
+        "TM": "#f7c6d0",
+        "THM": "#e5533d",
+        "T4": "#b7d7ff"
+      };
+      return mapping[tKey] || "";
+    }
+
+    function flexProgressiveZones(text) {
+      const s = text || "";
+      const m = s.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
+      return (m && m[1] !== m[2]) ? [m[1], m[2]] : null;
+    }
+
+    function flexZoneColor(zone) {
+      const mapping = {
+        "1": "#f8f8f0",
+        "2": "#f7c6d0",
+        "3": "#e5533d",
+        "4": "#bfe7bf",
+        "5": "#b7d7ff",
+        "6": "#f2c200"
+      };
+      return mapping[String(zone || "")] || "";
+    }
+
+    function applyFlexProgressivePillColors() {
+      document.querySelectorAll("[data-flex-segment]").forEach((el) => {
+        const text = el.textContent || "";
+        const tRange = flexProgressiveTKeys(text);
+        const zoneRange = tRange ? null : flexProgressiveZones(text);
+
+        const leftColor = tRange ? flexTColor(tRange[0]) : flexZoneColor(zoneRange ? zoneRange[0] : "");
+        const rightColor = tRange ? flexTColor(tRange[1]) : flexZoneColor(zoneRange ? zoneRange[1] : "");
+        if (!leftColor || !rightColor) return;
+
+        el.style.background = `linear-gradient(30deg, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", applyFlexProgressivePillColors);
+    } else {
+      applyFlexProgressivePillColors();
+    }
+    window.addEventListener("load", applyFlexProgressivePillColors);
   })();
 </script>
 

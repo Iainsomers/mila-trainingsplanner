@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}Coach Console – Athletes{% endblock %}
+{% block title %}Athletes{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -11,7 +11,7 @@
     </div>
     <div class="d-flex gap-2">
       <a href="{% url 'coach_athlete_create' %}" class="btn btn-primary">New athlete</a>
-      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Back</a>
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>
 
@@ -24,8 +24,8 @@
               <tr>
                 <th>Name</th>
                 <th>Birth year</th>
+                <th>Age</th>
                 <th>Gender</th>
-                <th>VDOT</th>
                 <th class="text-end">Actions</th>
               </tr>
             </thead>
@@ -33,9 +33,9 @@
               {% for a in athletes %}
                 <tr>
                   <td>{{ a.name }}</td>
-                  <td>{{ a.birth_year|default:"—" }}</td>
-                  <td>{{ a.gender|default:"—" }}</td>
-                  <td>{{ a.vdot|default:"—" }}</td>
+                  <td>{{ a.birth_year|default:"-" }}</td>
+                  <td>{{ a.age|default:"-" }}</td>
+                  <td>{{ a.gender|default:"-" }}</td>
                   <td class="text-end">
                     <a class="btn btn-sm btn-primary" href="{% url 'coach_athlete_edit' a.id %}">Edit</a>
                     <form method="post" action="{% url 'coach_athlete_delete' a.id %}" style="display:inline;" onsubmit="return confirm('Weet je zeker dat je deze atleet wilt verwijderen?');">
@@ -49,7 +49,7 @@
           </table>
         </div>
       {% else %}
-        <p class="text-muted mb-0">No athletes yet. Click “New athlete”.</p>
+        <p class="text-muted mb-0">No athletes yet. Click New athlete.</p>
       {% endif %}
     </div>
   </div>

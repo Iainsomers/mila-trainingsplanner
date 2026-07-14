@@ -7,6 +7,11 @@ from core.views.coach import (
     dashboard_view,
     settings_view,
     coach_console_view,
+    planning_overview_view,
+    athlete_base_planning_view,
+    trainer_planning_view,
+    trainer_planning_detail_view,
+    trainer_planning_delete_view,
     coach_wucd_settings_view,
     races_overview_view,
     coach_plans_view,
@@ -74,6 +79,11 @@ urlpatterns = [
 
     # Coach console
     path("coach/", coach_console_view, name="coach_console"),
+    path("planning/", planning_overview_view, name="planning_overview"),
+    path("planning/base/", athlete_base_planning_view, name="athlete_base_planning"),
+    path("planning/trainer/", trainer_planning_view, name="trainer_planning"),
+    path("planning/trainer/<int:plan_id>/", trainer_planning_detail_view, name="trainer_planning_detail"),
+    path("planning/trainer/<int:plan_id>/delete/", trainer_planning_delete_view, name="trainer_planning_delete"),
     path("coach/wu-settings/", coach_wucd_settings_view, name="coach_wucd_settings"),
     path("races/", races_overview_view, name="races_overview"),
 

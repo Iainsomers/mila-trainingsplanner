@@ -1,0 +1,24 @@
+<input type="hidden" id="slot_{{ slot.id }}_mode" name="slot_{{ slot.id }}_mode" value="{{ slot.mode }}">
+<input type="hidden" id="slot_{{ slot.id }}_training_text" name="slot_{{ slot.id }}_training_text" value="{{ slot.training_text }}">
+<input type="hidden" id="slot_{{ slot.id }}_trainer_plan" name="slot_{{ slot.id }}_trainer_plan" value="{{ slot.trainer_plan_id|default:'' }}">
+
+<button
+  type="button"
+  class="base-slot-button"
+  data-base-slot-id="{{ slot.id }}"
+>
+  <span class="base-slot-time">{{ slot_label }}</span>
+  <span class="base-slot-value">
+    {% if slot.mode == "trainer" and slot.trainer_plan %}
+      <span class="base-pill base-pill-group">{{ slot.trainer_plan.name }}</span>
+    {% elif slot.mode == "training" and slot.training_text %}
+      {% for part in slot.display_parts %}
+        <span class="base-pill {{ part.pill_class }}">{{ part.text }}</span>
+      {% empty %}
+        <span class="base-pill base-pill-z1">Individuele training</span>
+      {% endfor %}
+    {% else %}
+      <span class="base-pill base-pill-rest">Rust</span>
+    {% endif %}
+  </span>
+</button>

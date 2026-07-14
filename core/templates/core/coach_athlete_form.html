@@ -33,11 +33,15 @@
       </ul>
     </div>
   {% endif %}
+  {% if saved_notice %}
+    <div class="alert alert-success">{{ saved_notice }}</div>
+  {% endif %}
 
   <div class="card mb-3">
     <div class="card-body">
       <form method="post" id="athleteForm">
         {% csrf_token %}
+        <input type="hidden" name="zone_method" value="manual">
 
         <script>
           // Prevent Enter in inputs from submitting the form
@@ -161,6 +165,26 @@
           });
         </script>
 
+        <ul class="nav nav-tabs mb-3" id="athleteInputTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link {% if not active_tab or active_tab == 'general' %}active{% endif %}" id="general-tab" data-bs-toggle="tab" data-bs-target="#general-pane" type="button" role="tab">General</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'zones' %}active{% endif %}" id="zones-tab" data-bs-toggle="tab" data-bs-target="#zones-pane" type="button" role="tab">Zone/PR's</button>
+          </li>
+          {% if mode == "edit" and athlete %}
+            <li class="nav-item" role="presentation">
+              <button class="nav-link {% if active_tab == 'base-planning' %}active{% endif %}" id="base-planning-tab" data-bs-toggle="tab" data-bs-target="#base-planning-pane" type="button" role="tab">Base planning</button>
+            </li>
+          {% endif %}
+          <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'wu-settings' %}active{% endif %}" id="wu-settings-tab" data-bs-toggle="tab" data-bs-target="#wu-settings-pane" type="button" role="tab">WU settings</button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <div class="tab-pane fade {% if not active_tab or active_tab == 'general' %}show active{% endif %}" id="general-pane" role="tabpanel" aria-labelledby="general-tab">
+
         <div class="mb-3">
           <label class="form-label">Name</label>
           <input name="name" class="form-control" value="{{ form.name }}" required>
@@ -232,22 +256,8 @@
           <div class="form-text">Training reports controls the existing 3rd row in the Athlete Year Calendar. Existing report data is preserved when hidden.</div>
         </div>
 
-        <hr class="my-4">
-
-        <h5 class="mb-3">Zone Method</h5>
-
-        <div class="row g-3 align-items-end">
-          <div class="col-md-4">
-            <label class="form-label">Method</label>
-            <select name="zone_method" class="form-select">
-              <option value="manual" {% if form.zone_method == "manual" %}selected{% endif %}>Manual</option>
-              <option value="pb" {% if form.zone_method == "pb" %}selected{% endif %}>PB</option>
-              <option value="hr" {% if form.zone_method == "hr" %}selected{% endif %}>HR</option>
-              <option value="lactate" {% if form.zone_method == "lactate" %}selected{% endif %}>Lactate</option>
-            </select>
-            <div class="form-text">Only <b>manual</b> is valid. Others follow     </div>
           </div>
-        </div>
+          <div class="tab-pane fade {% if active_tab == 'zones' %}show active{% endif %}" id="zones-pane" role="tabpanel" aria-labelledby="zones-tab">
 
         <div class="mt-4">
           <h6 class="mb-2">Zones ({{ form.zone_input_unit_label }})</h6>
@@ -301,7 +311,10 @@
         </div>
 
         <div class="mt-4">
-          <h6 class="mb-2">PR times</h6>
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <h6 class="mb-0">PR times</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="fillMissingPbsBtn">Fill missing PB's</button>
+          </div>
 
         <div class="mt-3 form-check">
           <input
@@ -321,34 +334,42 @@
             <div class="col-md-2">
               <label class="form-label">T4</label>
               <input name="t4" class="form-control" value="{{ form.t4 }}" placeholder="e.g. 56">
+              <input name="target_t4" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T8</label>
               <input name="pr_800" class="form-control" value="{{ form.pr_800 }}" placeholder="e.g. 2:00" required>
+              <input name="target_pr_800" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T15</label>
               <input name="pr_1500" class="form-control" value="{{ form.pr_1500 }}" placeholder="e.g. 4:10" required>
+              <input name="target_pr_1500" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T3</label>
               <input name="pr_3000" class="form-control" value="{{ form.pr_3000 }}" placeholder="e.g. 9:20" required>
+              <input name="target_pr_3000" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T5</label>
               <input name="pr_5000" class="form-control" value="{{ form.pr_5000 }}" placeholder="e.g. 15:40" required>
+              <input name="target_pr_5000" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T10</label>
               <input name="pr_10000" class="form-control" value="{{ form.pr_10000 }}" placeholder="e.g. 30:20" required>
+              <input name="target_pr_10000" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">THM</label>
               <input name="thm" class="form-control" value="{{ form.thm }}" placeholder="e.g. 1:12:30">
+              <input name="target_thm" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">TM</label>
               <input name="tm" class="form-control" value="{{ form.tm }}" placeholder="e.g. 2:30:00">
+              <input name="target_tm" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
             </div>
           </div>
 
@@ -357,8 +378,51 @@
           </div>
         </div>
 
+          </div>
+          {% if mode == "edit" and athlete %}
+            <div class="tab-pane fade {% if active_tab == 'base-planning' %}show active{% endif %}" id="base-planning-pane" role="tabpanel" aria-labelledby="base-planning-tab">
+              <div class="mb-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}" target="_blank">Open full page</a>
+              </div>
+              <iframe
+                src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1"
+                style="width:100%; min-height:780px; border:1px solid #ddd; border-radius:6px;"
+                title="Athlete base planning"
+              ></iframe>
+            </div>
+          {% endif %}
+          <div class="tab-pane fade {% if active_tab == 'wu-settings' %}show active{% endif %}" id="wu-settings-pane" role="tabpanel" aria-labelledby="wu-settings-tab">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-3">
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="auto_wucd_enabled"
+                    name="auto_wucd_enabled"
+                    {% if form.auto_wucd_enabled %}checked{% endif %}
+                  >
+                  <label class="form-check-label" for="auto_wucd_enabled">Auto WU/CD</label>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">WU m</label>
+                <input name="auto_wu_m" type="number" min="0" step="100" class="form-control" value="{{ form.auto_wu_m }}">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">CD m</label>
+                <input name="auto_cd_m" type="number" min="0" step="100" class="form-control" value="{{ form.auto_cd_m }}">
+              </div>
+              {% if mode == "edit" %}
+                <div class="col-md-3">
+                  <button type="submit" name="action" value="save_wucd" class="btn btn-primary" formnovalidate>Save WU settings</button>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
         <div class="mt-4 d-flex gap-2">
-          <button type="button" class="btn btn-outline-primary" id="fillMissingPbsBtn">Fill missing PB's</button>
           <button type="submit" class="btn btn-primary">Save</button>
           <a href="{% url 'coach_athletes' %}" class="btn btn-outline-secondary">Cancel</a>
         </div>

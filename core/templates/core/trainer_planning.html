@@ -1,0 +1,106 @@
+{% extends "core/base.html" %}
+
+{% block title %}Trainer planning{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">Trainer planning</h1>
+      <p class="text-muted mb-0">Create trainer calendars with AM/PM training slots.</p>
+    </div>
+    <div>
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+    </div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Trainer calendars</h5>
+
+          {% if plannings %}
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for p in plannings %}
+                    <tr>
+                      <td>{{ p.name }}</td>
+                      <td class="text-end">
+                        <a class="btn btn-sm btn-primary" href="{% url 'trainer_planning_detail' p.id %}">Open</a>
+                        <form method="post" action="{% url 'trainer_planning_delete' p.id %}" style="display:inline;">
+                          {% csrf_token %}
+                          <button
+                            class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Weet je zeker dat je deze trainerplanning wilt verwijderen?');"
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">No trainer planning yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title">New trainer planning</h5>
+
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input name="name" class="form-control" value="{{ form.name }}" required>
+            </div>
+
+            <div class="mt-3 form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="is_private"
+                name="is_private"
+                {% if form.is_private %}checked{% endif %}
+              >
+              <label class="form-check-label" for="is_private">
+                Private
+              </label>
+            </div>
+
+            <div class="mt-4">
+              <button type="submit" class="btn btn-primary w-100">Create</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,352 @@
+{% extends "core/base.html" %}
+
+{% block title %}Trainer planning - {{ plan.name }}{% endblock %}
+
+{% block extra_head %}
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+
+  <style>
+    .trainer-planning-table {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .trainer-planning-table th,
+    .trainer-planning-table td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .trainer-planning-table th {
+      background: #f5f5f5;
+    }
+
+    .trainer-planning-slot {
+      width: 72px;
+      font-weight: 700;
+      background: #fafafa;
+    }
+
+    .trainer-day-cell {
+      height: 96px;
+      word-wrap: break-word;
+      white-space: normal;
+      padding: 0;
+    }
+
+    .trainer-cell {
+      display: block;
+      min-height: 96px;
+      text-decoration: none;
+      color: #000;
+      padding: 6px;
+      transition: filter 80ms ease-in-out;
+    }
+
+    .trainer-cell:hover {
+      filter: brightness(0.92);
+    }
+
+    .trainer-cell-empty {
+      background: #fff;
+    }
+
+    .trainer-celltext {
+      font-size: 0.78em;
+      line-height: 1.3;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 6px;
+      margin: 0 2px 2px 0;
+    }
+
+    .pill-z1 { background-color: #f8f8f0; }
+    .pill-z2 { background-color: #f7c6d0; }
+    .pill-z3 { background-color: #e5533d; }
+    .pill-z4 { background-color: #bfe7bf; }
+    .pill-z5 { background-color: #b7d7ff; }
+    .pill-z6 { background-color: #f2c200; }
+    .pill-race { background-color: #ff7a00; }
+
+    .trainer-title-input {
+      border: 0;
+      box-shadow: none;
+      padding-left: 0;
+      background: transparent;
+      max-width: 32rem;
+    }
+
+    .trainer-title-input:focus {
+      border: 0;
+      box-shadow: none;
+      background: #fff;
+    }
+  </style>
+
+  <script>
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+
+    document.addEventListener("htmx:configRequest", (event) => {
+      const token = getCookie("csrftoken");
+      if (token) event.detail.headers["X-CSRFToken"] = token;
+    });
+
+    function flexNormalizeTKey(value) {
+      const s = (value || "").toUpperCase().replace(/\s+/g, "");
+      const mapping = {
+        "TM": "TM", "THM": "THM", "T4": "T4",
+        "T10": "10000", "T10000": "10000", "10000": "10000",
+        "T5": "5000", "T5000": "5000", "5000": "5000",
+        "T3": "3000", "T3000": "3000", "3000": "3000",
+        "T15": "1500", "T1500": "1500", "1500": "1500",
+        "T8": "800", "T800": "800", "800": "800"
+      };
+      return mapping[s] || "";
+    }
+
+    function flexProgressiveTKeys(text) {
+      const s = (text || "").toUpperCase().replace(/\s+/g, "");
+      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
+      if (!m) return null;
+      const a = flexNormalizeTKey(m[1]);
+      const b = flexNormalizeTKey(m[2]);
+      return (a && b && a !== b) ? [a, b] : null;
+    }
+
+    function flexTColor(tKey) {
+      const mapping = {
+        "10000": "#bfe7bf",
+        "5000": "#bfe7bf",
+        "3000": "#bfe7bf",
+        "1500": "#b7d7ff",
+        "800": "#b7d7ff",
+        "TM": "#f7c6d0",
+        "THM": "#e5533d",
+        "T4": "#b7d7ff"
+      };
+      return mapping[tKey] || "";
+    }
+
+    function flexProgressiveZones(text) {
+      const s = text || "";
+      const m = s.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
+      return (m && m[1] !== m[2]) ? [m[1], m[2]] : null;
+    }
+
+    function flexZoneColor(zone) {
+      const mapping = {
+        "1": "#f8f8f0",
+        "2": "#f7c6d0",
+        "3": "#e5533d",
+        "4": "#bfe7bf",
+        "5": "#b7d7ff",
+        "6": "#f2c200"
+      };
+      return mapping[String(zone || "")] || "";
+    }
+
+    function applyFlexProgressivePillColors() {
+      document.querySelectorAll("[data-flex-segment]").forEach((el) => {
+        const text = el.textContent || "";
+        const tRange = flexProgressiveTKeys(text);
+        const zoneRange = tRange ? null : flexProgressiveZones(text);
+
+        const leftColor = tRange ? flexTColor(tRange[0]) : flexZoneColor(zoneRange ? zoneRange[0] : "");
+        const rightColor = tRange ? flexTColor(tRange[1]) : flexZoneColor(zoneRange ? zoneRange[1] : "");
+        if (!leftColor || !rightColor) return;
+
+        el.style.background = `linear-gradient(30deg, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
+      });
+    }
+
+    document.addEventListener("htmx:afterSwap", function(evt) {
+      if (evt.detail && evt.detail.target && evt.detail.target.id === "modal-container") {
+        const modalEl = document.getElementById("slotModal");
+        if (modalEl && window.bootstrap) {
+          window.currentSlotModal = new bootstrap.Modal(modalEl);
+          window.currentSlotModal.show();
+        }
+      }
+      applyFlexProgressivePillColors();
+    });
+
+    document.addEventListener("htmx:afterSettle", applyFlexProgressivePillColors);
+
+    document.addEventListener("closeModal", function() {
+      if (window.currentSlotModal) {
+        window.currentSlotModal.hide();
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+      applyFlexProgressivePillColors();
+
+      const nameInput = document.getElementById("trainerPlanName");
+      const backLink = document.getElementById("trainerPlanningBack");
+      const autoWucdEnabled = document.getElementById("trainerAutoWucdEnabled");
+      const autoWuM = document.getElementById("trainerAutoWuM");
+      const autoCdM = document.getElementById("trainerAutoCdM");
+      if (!nameInput) return;
+
+      let lastSavedName = nameInput.value || "";
+      let lastSavedSettings = "";
+
+      function settingsSignature() {
+        return [
+          autoWucdEnabled && autoWucdEnabled.checked ? "1" : "0",
+          autoWuM ? (autoWuM.value || "") : "",
+          autoCdM ? (autoCdM.value || "") : ""
+        ].join("|");
+      }
+      lastSavedSettings = settingsSignature();
+
+      function saveName() {
+        const value = (nameInput.value || "").trim();
+        const currentSettings = settingsSignature();
+        if (!value || (value === lastSavedName && currentSettings === lastSavedSettings)) return Promise.resolve();
+
+        const body = new URLSearchParams();
+        body.set("name", value);
+        body.set("autosave", "1");
+        if (autoWucdEnabled && autoWucdEnabled.checked) body.set("auto_wucd_enabled", "on");
+        body.set("auto_wu_m", autoWuM ? (autoWuM.value || "0") : "0");
+        body.set("auto_cd_m", autoCdM ? (autoCdM.value || "0") : "0");
+
+        return fetch(window.location.href, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken") || "",
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: body.toString()
+        }).then(function(response) {
+          if (response.ok) {
+            lastSavedName = value;
+            lastSavedSettings = currentSettings;
+          }
+        }).catch(function() {});
+      }
+
+      nameInput.addEventListener("blur", saveName);
+      [autoWucdEnabled, autoWuM, autoCdM].forEach(function(el) {
+        if (el) el.addEventListener("change", saveName);
+      });
+      nameInput.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveName().then(function() {
+            nameInput.blur();
+          });
+        }
+      });
+
+      if (backLink) {
+        backLink.addEventListener("click", function(event) {
+          event.preventDefault();
+          saveName().finally(function() {
+            window.location.href = backLink.href;
+          });
+        });
+      }
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <input
+        id="trainerPlanName"
+        name="name"
+        class="form-control form-control-lg fw-bold trainer-title-input"
+        value="{{ plan.name }}"
+        required
+      >
+      <p class="text-muted mb-0">Trainer planning · {{ week_start }} t/m {{ week_end }}</p>
+    </div>
+    <div>
+      <a id="trainerPlanningBack" href="{% url 'trainer_planning' %}" class="btn btn-outline-secondary">Back</a>
+    </div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+    <a class="btn btn-outline-secondary" href="{% url 'trainer_planning_detail' plan.id %}?date={{ prev_week|date:'Y-m-d' }}">Previous week</a>
+
+    <form method="get" class="d-flex align-items-end gap-2">
+      <div>
+        <label class="form-label mb-1">Week date</label>
+        <input type="date" name="date" class="form-control" value="{{ date_value }}">
+      </div>
+      <button type="submit" class="btn btn-primary">Go</button>
+    </form>
+
+    <a class="btn btn-outline-secondary" href="{% url 'trainer_planning_detail' plan.id %}?date={{ next_week|date:'Y-m-d' }}">Next week</a>
+
+    <div class="d-flex align-items-end gap-2 ms-lg-3">
+      <div class="form-check mb-2">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="trainerAutoWucdEnabled"
+          {% if plan.auto_wucd_enabled %}checked{% endif %}
+        >
+        <label class="form-check-label" for="trainerAutoWucdEnabled">Auto WU/CD</label>
+      </div>
+      <div>
+        <label class="form-label mb-1">WU m</label>
+        <input id="trainerAutoWuM" type="number" min="0" step="100" class="form-control form-control-sm" value="{{ plan.auto_wu_m }}" style="width: 6.5rem;">
+      </div>
+      <div>
+        <label class="form-label mb-1">CD m</label>
+        <input id="trainerAutoCdM" type="number" min="0" step="100" class="form-control form-control-sm" value="{{ plan.auto_cd_m }}" style="width: 6.5rem;">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="trainer-planning-table">
+      <thead>
+        <tr>
+          <th class="trainer-planning-slot"></th>
+          {% for day in days %}
+            <th>{{ day|date:"D d-m" }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <th class="trainer-planning-slot">{{ row.label }}</th>
+            {% for cell in row.cells %}
+              {% include "core/partials/trainer_planning_cell.html" with day=cell.day slot=cell.slot slot_index=row.slot_index selected_plan=selected_plan %}
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="modal-container"></div>
+{% endblock %}

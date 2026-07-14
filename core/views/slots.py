@@ -44,6 +44,10 @@ def _is_flex_planner_plan(plan) -> bool:
     return bool(plan and name.startswith("Flex Planner"))
 
 
+def _is_trainer_planning_plan(plan) -> bool:
+    return bool(plan and getattr(plan, "plan_kind", "") == TrainingPlan.PLAN_KIND_TRAINER)
+
+
 def _is_flex_source(request) -> bool:
     return (request.GET.get("source") == "flex") or (request.POST.get("source") == "flex")
 
@@ -660,11 +664,11 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
 
     _bump_stats_version()
 
-    cell_html = render_to_string(
-        "core/partials/calendar_cell.html",
-        {"day": d, "slot": slot, "slot_index": slot_index, "oob": True, "selected_athlete": athlete, "is_override": is_override},
-        request=request,
-    )
+    cell_template = "core/partials/trainer_planning_cell.html" if _is_trainer_planning_plan(selected_plan) else "core/partials/calendar_cell.html"
+    cell_context = {"day": d, "slot": slot, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan}
+    if not _is_trainer_planning_plan(selected_plan):
+        cell_context.update({"selected_athlete": athlete, "is_override": is_override})
+    cell_html = render_to_string(cell_template, cell_context, request=request)
     resp = HttpResponse(cell_html)
     resp["HX-Refresh"] = "true"
     return resp
@@ -707,7 +711,7 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
 
     cell_html = render_to_string(
         "core/partials/calendar_cell.html",
-        {"day": d, "slot": base_slot, "slot_index": slot_index, "oob": True, "selected_athlete": athlete, "is_override": False},
+        {"day": d, "slot": base_slot, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan, "selected_athlete": athlete, "is_override": False},
         request=request,
     )
     resp = HttpResponse(cell_html)
@@ -845,7 +849,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
         cell_html = render_to_string(
             "core/partials/calendar_cell.html",
-            {"day": d, "slot": None, "slot_index": slot_index, "oob": True, "selected_athlete": athlete, "is_override": True},
+            {"day": d, "slot": None, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan, "selected_athlete": athlete, "is_override": True},
             request=request,
         )
         resp = HttpResponse(cell_html)
@@ -856,11 +860,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if visible_slot:
             visible_slot.delete()
         _bump_stats_version()
-        cell_html = render_to_string(
-            "core/partials/calendar_cell.html",
-            {"day": d, "slot": None, "slot_index": slot_index, "oob": True, "selected_athlete": None, "is_override": False},
-            request=request,
-        )
+        cell_template = "core/partials/trainer_planning_cell.html" if _is_trainer_planning_plan(selected_plan) else "core/partials/calendar_cell.html"
+        cell_context = {"day": d, "slot": None, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan}
+        if not _is_trainer_planning_plan(selected_plan):
+            cell_context.update({"selected_athlete": None, "is_override": False})
+        cell_html = render_to_string(cell_template, cell_context, request=request)
         resp = HttpResponse(cell_html)
         resp["HX-Trigger"] = "closeModal"
         return resp
@@ -1366,11 +1370,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         resp["HX-Refresh"] = "true"
         return resp
 
-    cell_html = render_to_string(
-        "core/partials/calendar_cell.html",
-        {"day": d, "slot": slot, "slot_index": slot_index, "oob": True, "selected_athlete": athlete, "is_override": is_override},
-        request=request,
-    )
+    cell_template = "core/partials/trainer_planning_cell.html" if _is_trainer_planning_plan(selected_plan) else "core/partials/calendar_cell.html"
+    cell_context = {"day": d, "slot": slot, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan}
+    if not _is_trainer_planning_plan(selected_plan):
+        cell_context.update({"selected_athlete": athlete, "is_override": is_override})
+    cell_html = render_to_string(cell_template, cell_context, request=request)
     resp = HttpResponse(cell_html)
     resp["HX-Trigger"] = "closeModal"
     return resp

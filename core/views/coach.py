@@ -5,11 +5,13 @@ from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Lower
 from django.core.cache import cache
+from django.db import IntegrityError, transaction
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -251,15 +253,10 @@ def _athlete_for_user(user):
 @login_required
 @require_GET
 def dashboard_view(request):
-    from datetime import date
-
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
-    groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.all(), request.user)
 
     return render(request, "core/dashboard.html", {
-        "groups": groups,
-        "today": date.today(),
         "is_athlete_user": is_athlete_user,
         "current_athlete": athlete,
     })
@@ -268,7 +265,499 @@ def dashboard_view(request):
 @login_required
 @require_GET
 def coach_console_view(request):
-    return render(request, "core/coach_console.html")
+    return redirect("planning_overview")
+
+
+@login_required
+@require_GET
+def planning_overview_view(request):
+    athlete = _athlete_for_user(request.user)
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.order_by("name"), request.user)
+    return render(request, "core/planning.html", {
+        "groups": groups,
+        "today": date.today(),
+        "is_athlete_user": is_athlete_user,
+    })
+
+
+def _trainer_planning_qs(user):
+    return _filter_owned(
+        TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER),
+        user,
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def trainer_planning_view(request):
+    errors = []
+    form = {
+        "name": "",
+        "is_private": False,
+    }
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "create").strip()
+
+        form["name"] = (request.POST.get("name") or "").strip()
+        form["is_private"] = (request.POST.get("is_private") == "on")
+
+        if not form["name"]:
+            errors.append("Naam is verplicht.")
+
+        if not errors:
+            try:
+                plan = TrainingPlan.objects.create(
+                    owner=request.user,
+                    name=form["name"],
+                    plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+                    start_date=None,
+                    end_date=None,
+                    week_phases_enabled=False,
+                    is_private=form["is_private"],
+                )
+            except IntegrityError:
+                errors.append("Er bestaat al een planning met deze naam.")
+            else:
+                if (request.POST.get("next") or "").strip() == "overview":
+                    return redirect("trainer_planning")
+                return redirect("trainer_planning_detail", plan_id=plan.id)
+
+    plannings = _trainer_planning_qs(request.user).order_by(Lower("name"))
+    return render(
+        request,
+        "core/trainer_planning.html",
+        {"plannings": plannings, "form": form, "errors": errors},
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def trainer_planning_delete_view(request, plan_id: int):
+    plan = get_object_or_404(_trainer_planning_qs(request.user), id=plan_id)
+    plan.delete()
+    return redirect("trainer_planning")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def trainer_planning_detail_view(request, plan_id: int):
+    plan = get_object_or_404(_trainer_planning_qs(request.user), id=plan_id)
+    errors = []
+
+    if request.method == "POST":
+        new_name = (request.POST.get("name") or "").strip()
+        plan.auto_wucd_enabled = request.POST.get("auto_wucd_enabled") == "on"
+        plan.auto_wu_m = _clean_non_negative_int(request.POST.get("auto_wu_m"))
+        plan.auto_cd_m = _clean_non_negative_int(request.POST.get("auto_cd_m"))
+        if not new_name:
+            errors.append("Naam is verplicht.")
+        elif _trainer_planning_qs(request.user).exclude(id=plan.id).filter(name=new_name).exists():
+            errors.append("Er bestaat al een planning met deze naam.")
+        else:
+            plan.name = new_name
+            try:
+                plan.save(update_fields=["name", "auto_wucd_enabled", "auto_wu_m", "auto_cd_m", "updated_at"])
+            except IntegrityError:
+                errors.append("Er bestaat al een planning met deze naam.")
+            else:
+                if request.POST.get("autosave") == "1":
+                    return HttpResponse("", status=204)
+                if (request.POST.get("next") or "").strip() == "overview":
+                    return redirect("trainer_planning")
+                return redirect("trainer_planning_detail", plan_id=plan.id)
+
+    date_value = (request.GET.get("date") or "").strip()
+    try:
+        anchor_day = _parse_iso_date(date_value) if date_value else date.today()
+    except ValueError:
+        anchor_day = date.today()
+
+    week_start = anchor_day - timedelta(days=anchor_day.weekday())
+    prev_week = week_start - timedelta(days=7)
+    next_week = week_start + timedelta(days=7)
+    days = [week_start + timedelta(days=i) for i in range(7)]
+
+    slots = (
+        TrainingSlot.objects
+        .filter(plan=plan, athlete__isnull=True, date__in=days)
+        .prefetch_related("segments")
+    )
+    slot_map = {(slot.date, int(slot.slot_index)): slot for slot in slots}
+
+    rows = []
+    for slot_index, label in ((1, "AM"), (2, "PM")):
+        rows.append({
+            "slot_index": slot_index,
+            "label": label,
+            "cells": [
+                {"day": day, "slot": slot_map.get((day, slot_index))}
+                for day in days
+            ],
+        })
+
+    return render(
+        request,
+        "core/trainer_planning_detail.html",
+        {
+            "plan": plan,
+            "week_start": week_start,
+            "week_end": week_start + timedelta(days=6),
+            "prev_week": prev_week,
+            "next_week": next_week,
+            "date_value": anchor_day.isoformat(),
+            "days": days,
+            "rows": rows,
+            "selected_plan": plan,
+            "selected_athlete": None,
+            "display_mode": "core_only",
+            "errors": errors,
+        },
+    )
+
+
+def _parse_month_day(value: str):
+    value = (value or "").strip()
+    parts = value.split("-")
+    if len(parts) != 2:
+        raise ValueError("bad month-day")
+
+    day = int(parts[0])
+    month = int(parts[1])
+    if month < 1 or month > 12:
+        raise ValueError("bad month")
+    if day < 1 or day > py_calendar.monthrange(2024, month)[1]:
+        raise ValueError("bad day")
+    return month, day
+
+
+def _month_day_index(month: int, day: int) -> int:
+    return date(2024, int(month), int(day)).timetuple().tm_yday
+
+
+def _block_covered_days(start_month: int, start_day: int, end_month: int, end_day: int):
+    start_idx = _month_day_index(start_month, start_day)
+    end_idx = _month_day_index(end_month, end_day)
+    if start_idx <= end_idx:
+        return set(range(start_idx, end_idx + 1))
+    return set(range(start_idx, 367)) | set(range(1, end_idx + 1))
+
+
+def _validate_base_planning_coverage(block_values):
+    coverage = {}
+    for value in block_values:
+        days = _block_covered_days(
+            value["start_month"],
+            value["start_day"],
+            value["end_month"],
+            value["end_day"],
+        )
+        for day_index in days:
+            coverage.setdefault(day_index, []).append(value["label"] or f"Block {value['sort_order']}")
+
+    missing = [day_index for day_index in range(1, 367) if day_index not in coverage]
+    overlap = [day_index for day_index, labels in coverage.items() if len(labels) > 1]
+
+    errors = []
+    if missing:
+        errors.append("Niet elke dag van het jaar is gecovered.")
+    if overlap:
+        errors.append("Er zijn overlappende datumranges.")
+    return errors
+
+
+def _ensure_base_block_slots(block):
+    existing = {
+        (slot.weekday, slot.slot_index)
+        for slot in block.slots.all()
+    }
+    to_create = []
+    for weekday in range(7):
+        for slot_index in (1, 2):
+            if (weekday, slot_index) not in existing:
+                to_create.append(AthleteBasePlanningSlot(
+                    block=block,
+                    weekday=weekday,
+                    slot_index=slot_index,
+                    mode=AthleteBasePlanningSlot.MODE_REST,
+                ))
+    if to_create:
+        AthleteBasePlanningSlot.objects.bulk_create(to_create)
+
+
+def _base_training_display_parts(text: str):
+    labels = {
+        "WU": "WU",
+        "MOB": "Mob",
+        "SPR": "Sprint",
+        "CORE": "Core",
+        "CORE2": "2nd",
+        "ALT": "Alt",
+        "CD": "CD",
+    }
+    values = {key: "" for key in labels}
+    raw = (text or "").strip()
+    if not raw:
+        return []
+
+    saw_key = False
+    for line in raw.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip().upper()
+        if key in values:
+            values[key] = value.strip()
+            saw_key = True
+
+    if not saw_key:
+        values["CORE"] = raw
+
+    return [
+        {"label": labels[key], "text": values[key]}
+        for key in ("WU", "MOB", "SPR", "CORE", "CORE2", "ALT", "CD")
+        if values[key]
+    ]
+
+
+def _base_pill_class(text: str):
+    s = (text or "").lower()
+    if "race" in s:
+        return "base-pill-race"
+    if "z6" in s or "z 6" in s:
+        return "base-pill-z6"
+    if "z5" in s or "z 5" in s or "t8" in s or "t15" in s or "t800" in s or "t1500" in s or "t4" in s:
+        return "base-pill-z5"
+    if "z4" in s or "z 4" in s or "t3" in s or "t5" in s or "t10" in s or "t3000" in s or "t5000" in s or "t10000" in s:
+        return "base-pill-z4"
+    if "z3" in s or "z 3" in s or "thm" in s:
+        return "base-pill-z3"
+    if "z2" in s or "z 2" in s or "tm" in s:
+        return "base-pill-z2"
+    return "base-pill-z1"
+
+
+def _decorate_base_slot(slot):
+    if not slot:
+        return slot
+    parts = _base_training_display_parts(getattr(slot, "training_text", ""))
+    for part in parts:
+        part["pill_class"] = _base_pill_class(part["text"])
+    slot.display_parts = parts
+    return slot
+
+
+def _base_planning_rows(block):
+    slots = {
+        (slot.weekday, slot.slot_index): _decorate_base_slot(slot)
+        for slot in block.slots.all()
+    }
+    day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    rows = []
+    for weekday, label in enumerate(day_labels):
+        rows.append({
+            "weekday": weekday,
+            "label": label,
+            "am": slots.get((weekday, 1)),
+            "pm": slots.get((weekday, 2)),
+        })
+    return rows
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+@xframe_options_sameorigin
+def athlete_base_planning_view(request):
+    embedded = (request.GET.get("embedded") == "1") or (request.POST.get("embedded") == "1")
+    redirect_suffix = "&embedded=1" if embedded else ""
+    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    selected_athlete = None
+    selected_id = (request.POST.get("athlete_id") or request.GET.get("athlete") or "").strip()
+    if selected_id.isdigit():
+        selected_athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(selected_id)).first()
+    if not selected_athlete and athletes:
+        selected_athlete = athletes[0]
+
+    errors = []
+    saved = False
+
+    if request.method == "POST" and selected_athlete:
+        action = (request.POST.get("action") or "").strip()
+
+        if action == "add_block":
+            sort_order = selected_athlete.base_planning_blocks.count() + 1
+            block = AthleteBasePlanningBlock.objects.create(
+                athlete=selected_athlete,
+                label=f"Block {sort_order}",
+                start_month=1,
+                start_day=1,
+                end_month=12,
+                end_day=31,
+                sort_order=sort_order,
+            )
+            _ensure_base_block_slots(block)
+            return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
+
+        if action == "copy_from":
+            source_id = (request.POST.get("copy_from_athlete_id") or "").strip()
+            source_athlete = None
+            if source_id.isdigit():
+                source_athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(source_id)).first()
+
+            if not source_athlete:
+                errors.append("Kies een geldige atleet om van te kopieren.")
+            elif source_athlete.id == selected_athlete.id:
+                errors.append("Kies een andere atleet om van te kopieren.")
+            else:
+                source_blocks = (
+                    AthleteBasePlanningBlock.objects
+                    .filter(athlete=source_athlete)
+                    .prefetch_related("slots")
+                    .order_by("sort_order", "start_month", "start_day", "id")
+                )
+                with transaction.atomic():
+                    AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete).delete()
+                    for source_block in source_blocks:
+                        target_block = AthleteBasePlanningBlock.objects.create(
+                            athlete=selected_athlete,
+                            label=source_block.label,
+                            start_month=source_block.start_month,
+                            start_day=source_block.start_day,
+                            end_month=source_block.end_month,
+                            end_day=source_block.end_day,
+                            sort_order=source_block.sort_order,
+                        )
+                        for source_slot in source_block.slots.all():
+                            AthleteBasePlanningSlot.objects.create(
+                                block=target_block,
+                                weekday=source_slot.weekday,
+                                slot_index=source_slot.slot_index,
+                                mode=source_slot.mode,
+                                trainer_plan=source_slot.trainer_plan,
+                                training_text=source_slot.training_text,
+                            )
+                return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
+
+        if action == "save":
+            block_ids = [
+                int(value)
+                for value in request.POST.getlist("block_id")
+                if str(value).isdigit()
+            ]
+            blocks = {
+                block.id: block
+                for block in AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, id__in=block_ids)
+            }
+
+            block_values = []
+            delete_ids = {
+                int(value)
+                for value in request.POST.getlist("delete_block")
+                if str(value).isdigit()
+            }
+
+            for index, block_id in enumerate(block_ids, start=1):
+                if block_id in delete_ids:
+                    continue
+                block = blocks.get(block_id)
+                if not block:
+                    continue
+                prefix = f"block_{block_id}"
+                label = (request.POST.get(f"{prefix}_label") or "").strip()
+                try:
+                    start_month, start_day = _parse_month_day(request.POST.get(f"{prefix}_start"))
+                    end_month, end_day = _parse_month_day(request.POST.get(f"{prefix}_end"))
+                except (TypeError, ValueError):
+                    errors.append("Gebruik datumformaat DD-MM, bijvoorbeeld 01-03.")
+                    continue
+
+                block_values.append({
+                    "id": block_id,
+                    "label": label,
+                    "start_month": start_month,
+                    "start_day": start_day,
+                    "end_month": end_month,
+                    "end_day": end_day,
+                    "sort_order": index,
+                })
+
+            if not block_values:
+                errors.append("Er moet minimaal een datumblok zijn.")
+
+            errors.extend(_validate_base_planning_coverage(block_values))
+
+            if not errors:
+                trainer_plans = {
+                    plan.id: plan
+                    for plan in _trainer_planning_qs(request.user)
+                }
+                with transaction.atomic():
+                    AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, id__in=delete_ids).delete()
+                    for value in block_values:
+                        block = blocks[value["id"]]
+                        block.label = value["label"]
+                        block.start_month = value["start_month"]
+                        block.start_day = value["start_day"]
+                        block.end_month = value["end_month"]
+                        block.end_day = value["end_day"]
+                        block.sort_order = value["sort_order"]
+                        block.save()
+                        _ensure_base_block_slots(block)
+
+                        for slot in block.slots.all():
+                            prefix = f"slot_{slot.id}"
+                            mode = (request.POST.get(f"{prefix}_mode") or AthleteBasePlanningSlot.MODE_REST).strip()
+                            if mode not in {
+                                AthleteBasePlanningSlot.MODE_REST,
+                                AthleteBasePlanningSlot.MODE_TRAINING,
+                                AthleteBasePlanningSlot.MODE_TRAINER,
+                            }:
+                                mode = AthleteBasePlanningSlot.MODE_REST
+
+                            slot.mode = mode
+                            slot.training_text = (request.POST.get(f"{prefix}_training_text") or "").strip() if mode == AthleteBasePlanningSlot.MODE_TRAINING else ""
+
+                            trainer_plan_id = (request.POST.get(f"{prefix}_trainer_plan") or "").strip()
+                            if mode == AthleteBasePlanningSlot.MODE_TRAINER and trainer_plan_id.isdigit():
+                                slot.trainer_plan = trainer_plans.get(int(trainer_plan_id))
+                            else:
+                                slot.trainer_plan = None
+                            slot.save()
+                saved = True
+
+    blocks = []
+    if selected_athlete:
+        block_qs = (
+            AthleteBasePlanningBlock.objects
+            .filter(athlete=selected_athlete)
+            .prefetch_related("slots", "slots__trainer_plan")
+            .order_by("sort_order", "start_month", "start_day", "id")
+        )
+        for block in block_qs:
+            _ensure_base_block_slots(block)
+        block_qs = (
+            AthleteBasePlanningBlock.objects
+            .filter(athlete=selected_athlete)
+            .prefetch_related("slots", "slots__trainer_plan")
+            .order_by("sort_order", "start_month", "start_day", "id")
+        )
+        blocks = [{"block": block, "rows": _base_planning_rows(block)} for block in block_qs]
+
+    return render(
+        request,
+        "core/athlete_base_planning.html",
+        {
+            "athletes": athletes,
+            "selected_athlete": selected_athlete,
+            "blocks": blocks,
+            "trainer_plans": _trainer_planning_qs(request.user).order_by(Lower("name")),
+            "errors": errors,
+            "saved": saved,
+            "mode_choices": AthleteBasePlanningSlot.MODE_CHOICES,
+            "embedded": embedded,
+        },
+    )
 
 
 def _clean_non_negative_int(value):
@@ -282,7 +771,6 @@ def _clean_non_negative_int(value):
 @require_http_methods(["GET", "POST"])
 def coach_wucd_settings_view(request):
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
-    groups = list(_filter_owned(Group.objects.order_by("name"), request.user))
 
     if request.method == "POST":
         for athlete in athletes:
@@ -292,18 +780,10 @@ def coach_wucd_settings_view(request):
             athlete.auto_cd_m = _clean_non_negative_int(request.POST.get(f"{prefix}_cd_m"))
             athlete.save(update_fields=["auto_wucd_enabled", "auto_wu_m", "auto_cd_m"])
 
-        for group in groups:
-            prefix = f"group_{group.id}"
-            group.auto_wucd_enabled = request.POST.get(f"{prefix}_enabled") == "on"
-            group.auto_wu_m = _clean_non_negative_int(request.POST.get(f"{prefix}_wu_m"))
-            group.auto_cd_m = _clean_non_negative_int(request.POST.get(f"{prefix}_cd_m"))
-            group.save(update_fields=["auto_wucd_enabled", "auto_wu_m", "auto_cd_m"])
-
         return redirect("coach_wucd_settings")
 
     return render(request, "core/coach_wucd_settings.html", {
         "athletes": athletes,
-        "groups": groups,
     })
 
 
@@ -1247,6 +1727,10 @@ def _exclude_flex_planner_plans(qs):
     return qs.exclude(name__startswith="Flex Planner")
 
 
+def _exclude_non_legacy_plans(qs):
+    return _exclude_flex_planner_plans(qs).exclude(plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
+
+
 @login_required
 @require_GET
 def coach_plans_view(request):
@@ -1258,7 +1742,7 @@ def coach_plans_view(request):
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
 
-    plans = _exclude_flex_planner_plans(_filter_owned(qs, request.user))
+    plans = _exclude_non_legacy_plans(_filter_owned(qs, request.user))
     return render(request, "core/coach_plans.html", {"plans": plans})
 
 
@@ -1282,7 +1766,7 @@ def coach_plan_create_view(request):
     else:
         qs = TrainingPlan.objects.order_by("name")
 
-    plans = _exclude_flex_planner_plans(_filter_owned(qs, request.user))
+    plans = _exclude_non_legacy_plans(_filter_owned(qs, request.user))
 
     if request.method == "POST":
         form["name"] = (request.POST.get("name") or "").strip()
@@ -1323,7 +1807,7 @@ def coach_plan_create_view(request):
                 source_plan_id = None
                 errors.append("Bronplan is ongeldig.")
             if source_plan_id is not None:
-                source_plan = _exclude_flex_planner_plans(_filter_owned(TrainingPlan.objects.all(), request.user)).filter(id=source_plan_id).first()
+                source_plan = _exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request.user)).filter(id=source_plan_id).first()
                 if not source_plan:
                     errors.append("Bronplan is niet gevonden.")
                 elif not start_d or not end_d or not source_plan.start_date or not source_plan.end_date:
@@ -1352,7 +1836,7 @@ def coach_plan_create_view(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_plan_edit_view(request, plan_id: int):
-    plan = get_object_or_404(_filter_owned(TrainingPlan.objects.all(), request.user), id=plan_id)
+    plan = get_object_or_404(_exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request.user)), id=plan_id)
 
     errors = []
     form = {
@@ -1420,7 +1904,7 @@ def coach_plan_edit_view(request, plan_id: int):
 @login_required
 @require_http_methods(["POST"])
 def coach_plan_delete_view(request, plan_id: int):
-    plan = get_object_or_404(_filter_owned(TrainingPlan.objects.all(), request.user), id=plan_id)
+    plan = get_object_or_404(_exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request.user)), id=plan_id)
 
     if plan.targeted_athlete_ids():
         return HttpResponse(
@@ -1436,7 +1920,13 @@ def coach_plan_delete_view(request, plan_id: int):
 @login_required
 @require_GET
 def coach_athletes_view(request):
-    athletes = _filter_owned(Athlete.objects.order_by("name"), request.user)
+    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    current_year = date.today().year
+    for athlete in athletes:
+        try:
+            athlete.age = current_year - int(athlete.birth_year)
+        except (TypeError, ValueError):
+            athlete.age = None
     return render(request, "core/coach_athletes.html", {"athletes": athletes})
 
 
@@ -1468,12 +1958,30 @@ def coach_athlete_create_view(request):
         "training_reports_enabled": True,
         "week_report_enabled": False,
         "daily_vitals_enabled": False,
+        "auto_wucd_enabled": False,
+        "auto_wu_m": 0,
+        "auto_cd_m": 0,
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
     }
 
     if request.method == "POST":
+        if (request.POST.get("action") or "").strip() == "save_wucd":
+            athlete.auto_wucd_enabled = request.POST.get("auto_wucd_enabled") == "on"
+            athlete.auto_wu_m = _clean_non_negative_int(request.POST.get("auto_wu_m"))
+            athlete.auto_cd_m = _clean_non_negative_int(request.POST.get("auto_cd_m"))
+            athlete.save(update_fields=["auto_wucd_enabled", "auto_wu_m", "auto_cd_m"])
+            form["auto_wucd_enabled"] = athlete.auto_wucd_enabled
+            form["auto_wu_m"] = athlete.auto_wu_m
+            form["auto_cd_m"] = athlete.auto_cd_m
+            saved_notice = "WU settings opgeslagen."
+            return render(
+                request,
+                "core/coach_athlete_form.html",
+                {"mode": "edit", "athlete": athlete, "form": form, "errors": errors, "saved_notice": saved_notice, "active_tab": "wu-settings"},
+            )
+
         form["name"] = (request.POST.get("name") or "").strip()
         form["birth_year"] = (request.POST.get("birth_year") or "").strip()
         form["gender"] = (request.POST.get("gender") or "").strip()
@@ -1492,6 +2000,9 @@ def coach_athlete_create_view(request):
         form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
         form["week_report_enabled"] = (request.POST.get("week_report_enabled") == "on")
         form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
+        form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
+        form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
+        form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -1528,6 +2039,9 @@ def coach_athlete_create_view(request):
         except ValueError:
             view_weeks_ahead = 2
             errors.append("Weken vooruit is ongeldig (gebruik een getal).")
+
+        auto_wu_m = _clean_non_negative_int(form["auto_wu_m"])
+        auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
 
         try:
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
@@ -1602,6 +2116,9 @@ def coach_athlete_create_view(request):
                 training_reports_enabled=form["training_reports_enabled"],
                 week_report_enabled=form["week_report_enabled"],
                 daily_vitals_enabled=form["daily_vitals_enabled"],
+                auto_wucd_enabled=form["auto_wucd_enabled"],
+                auto_wu_m=auto_wu_m,
+                auto_cd_m=auto_cd_m,
                 pr_800_s=pr_800_s,
                 pr_1500_s=pr_1500_s,
                 pr_3000_s=pr_3000_s,
@@ -1653,6 +2170,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
+        "auto_wucd_enabled": getattr(athlete, "auto_wucd_enabled", False),
+        "auto_wu_m": getattr(athlete, "auto_wu_m", 0),
+        "auto_cd_m": getattr(athlete, "auto_cd_m", 0),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -1677,15 +2197,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
         form["week_report_enabled"] = (request.POST.get("week_report_enabled") == "on")
         form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
-
-        athlete.training_reports_enabled = form["training_reports_enabled"]
-        athlete.week_report_enabled = form["week_report_enabled"]
-        athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
-        athlete.save(update_fields=[
-            "training_reports_enabled",
-            "week_report_enabled",
-            "daily_vitals_enabled",
-        ])
+        form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
+        form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
+        form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -1722,6 +2236,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
         except ValueError:
             view_weeks_ahead = 2
             errors.append("Weken vooruit is ongeldig (gebruik een getal).")
+
+        auto_wu_m = _clean_non_negative_int(form["auto_wu_m"])
+        auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
 
         try:
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
@@ -1794,6 +2311,9 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.week_report_enabled = form["week_report_enabled"]
             athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
+            athlete.auto_wucd_enabled = form["auto_wucd_enabled"]
+            athlete.auto_wu_m = auto_wu_m
+            athlete.auto_cd_m = auto_cd_m
             athlete.pr_800_s = pr_800_s
             athlete.pr_1500_s = pr_1500_s
             athlete.pr_3000_s = pr_3000_s

@@ -1,0 +1,514 @@
+{% extends "core/base.html" %}
+
+{% block title %}Athlete base planning{% endblock %}
+
+{% block extra_head %}
+  <style>
+    {% if embedded %}
+      nav,
+      .navbar {
+        display: none !important;
+      }
+    {% endif %}
+
+    .base-week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .base-day-column {
+      border: 1px solid #d2d2d2;
+      background: #fafafa;
+      min-width: 0;
+    }
+
+    .base-day-title {
+      padding: 6px 8px;
+      font-weight: 700;
+      border-bottom: 1px solid #d2d2d2;
+      background: #f1f1f1;
+      text-align: center;
+    }
+
+    .base-slot-button {
+      width: 100%;
+      min-height: 74px;
+      border: 0;
+      border-bottom: 1px solid #e2e2e2;
+      background: #fff;
+      padding: 8px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      color: #111;
+    }
+
+    .base-slot-button:hover {
+      filter: brightness(0.96);
+    }
+
+    .base-slot-time {
+      font-size: 11px;
+      font-weight: 700;
+      opacity: 0.65;
+      text-transform: uppercase;
+    }
+
+    .base-slot-value {
+      font-size: 13px;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .base-slot-empty .base-slot-value {
+      color: #777;
+    }
+
+    .base-pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      line-height: 1.25;
+      margin: 1px 2px 1px 0;
+    }
+
+    .base-pill-rest { background: #eeeeee; }
+    .base-pill-group { background: #7CFF6B; }
+    .base-pill-z1 { background-color: #f8f8f0; }
+    .base-pill-z2 { background-color: #f7c6d0; }
+    .base-pill-z3 { background-color: #e5533d; color: #111; }
+    .base-pill-z4 { background-color: #bfe7bf; }
+    .base-pill-z5 { background-color: #b7d7ff; }
+    .base-pill-z6 { background-color: #f2c200; }
+    .base-pill-race { background-color: #ff7a00; }
+
+    .base-training-fields {
+      display: none;
+    }
+
+    .base-group-fields {
+      display: none;
+    }
+
+    .base-modal-mode-training .base-training-fields {
+      display: block;
+    }
+
+    .base-modal-mode-trainer .base-group-fields {
+      display: block;
+    }
+
+    @media (max-width: 900px) {
+      .base-week-grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  {% if not embedded %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h1 class="mb-1">Athlete base planning</h1>
+        <p class="text-muted mb-0">Date-range week patterns per athlete.</p>
+      </div>
+      <div>
+        <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if errors %}
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        {% for e in errors %}
+          <li>{{ e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if saved %}
+    <div class="alert alert-success">Saved.</div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex flex-wrap align-items-end gap-2">
+        {% if not embedded %}
+          <form method="get">
+            <select name="athlete" class="form-select form-select-sm" onchange="this.form.submit()">
+              {% for athlete in athletes %}
+                <option value="{{ athlete.id }}" {% if selected_athlete and athlete.id == selected_athlete.id %}selected{% endif %}>
+                  {{ athlete.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </form>
+        {% endif %}
+
+        {% if selected_athlete %}
+          <form method="post" class="d-flex align-items-end gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+            <input type="hidden" name="action" value="copy_from">
+            {% if embedded %}<input type="hidden" name="embedded" value="1">{% endif %}
+            <select name="copy_from_athlete_id" class="form-select form-select-sm" onchange="if (this.value) this.form.submit();">
+              <option value="">Copy van...</option>
+              {% for athlete in athletes %}
+                {% if athlete.id != selected_athlete.id %}
+                  <option value="{{ athlete.id }}">{{ athlete.name }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </form>
+
+          <button type="submit" name="action" value="save" form="basePlanningForm" class="btn btn-primary btn-sm">Save</button>
+          <button type="submit" name="action" value="add_block" form="basePlanningForm" class="btn btn-outline-primary btn-sm">Add block</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if selected_athlete %}
+    <form method="post" id="basePlanningForm">
+      {% csrf_token %}
+      <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+      {% if embedded %}<input type="hidden" name="embedded" value="1">{% endif %}
+
+      {% if blocks %}
+        {% for item in blocks %}
+          {% with block=item.block %}
+            <input type="hidden" name="block_id" value="{{ block.id }}">
+
+            <div class="card mb-4">
+              <div class="card-body">
+                <div class="row g-3 align-items-end mb-3">
+                  <div class="col-md-4">
+                    <input name="block_{{ block.id }}_label" class="form-control form-control-sm" value="{{ block.label }}" placeholder="Naam">
+                  </div>
+                  <div class="col-md-2">
+                    <input name="block_{{ block.id }}_start" class="form-control form-control-sm" value="{{ block.start_md }}" placeholder="DD-MM">
+                  </div>
+                  <div class="col-md-2">
+                    <input name="block_{{ block.id }}_end" class="form-control form-control-sm" value="{{ block.end_md }}" placeholder="DD-MM">
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="delete_block" value="{{ block.id }}" id="delete_block_{{ block.id }}">
+                      <label class="form-check-label" for="delete_block_{{ block.id }}">Delete this block on save</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="base-week-grid">
+                  {% for row in item.rows %}
+                    <div class="base-day-column">
+                      <div class="base-day-title">{{ row.label }}</div>
+
+                      {% with slot=row.am slot_label="AM" %}
+                        {% include "core/partials/base_planning_slot_button.html" %}
+                      {% endwith %}
+
+                      {% with slot=row.pm slot_label="PM" %}
+                        {% include "core/partials/base_planning_slot_button.html" %}
+                      {% endwith %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% endwith %}
+        {% endfor %}
+      {% else %}
+        <div class="card">
+          <div class="card-body">
+            <p class="text-muted mb-3">No base planning blocks yet.</p>
+            <button type="submit" name="action" value="add_block" class="btn btn-primary">Create default year block</button>
+          </div>
+        </div>
+      {% endif %}
+    </form>
+  {% else %}
+    <div class="card">
+      <div class="card-body">
+        <p class="text-muted mb-0">No athletes yet.</p>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<div class="modal fade" id="baseSlotModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" id="baseSlotModalContent">
+      <div class="modal-header">
+        <h5 class="modal-title" id="baseSlotModalTitle">Base planning slot</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="baseSlotActiveId">
+
+        <div class="mb-3">
+          <select id="baseSlotMode" class="form-select form-select-sm">
+            <option value="rest">Rust</option>
+            <option value="training">Individuele training</option>
+            <option value="trainer">Groep</option>
+          </select>
+        </div>
+
+        <div class="base-training-fields">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label small mb-1">WU</label>
+              <input id="baseTrainingWu" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small mb-1">Mob/Tech</label>
+              <input id="baseTrainingMob" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small mb-1">Sprint</label>
+              <input id="baseTrainingSprint" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small mb-1">Core</label>
+              <input id="baseTrainingCore" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small mb-1">2nd Core</label>
+              <input id="baseTrainingCore2" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small mb-1">Alternative</label>
+              <input id="baseTrainingAlt" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small mb-1">CD</label>
+              <input id="baseTrainingCd" class="form-control form-control-sm">
+            </div>
+          </div>
+        </div>
+
+        <div class="base-group-fields">
+          <select id="baseSlotTrainerPlan" class="form-select form-select-sm">
+            <option value="">Choose group...</option>
+            {% for plan in trainer_plans %}
+              <option value="{{ plan.id }}">{{ plan.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="baseSlotApply">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const modalEl = document.getElementById("baseSlotModal");
+    if (!modalEl) return;
+
+    const modalContent = document.getElementById("baseSlotModalContent");
+    const activeIdInput = document.getElementById("baseSlotActiveId");
+    const modeSelect = document.getElementById("baseSlotMode");
+    const groupSelect = document.getElementById("baseSlotTrainerPlan");
+    const applyButton = document.getElementById("baseSlotApply");
+    const groupNames = {};
+
+    Array.from(groupSelect.options).forEach((option) => {
+      if (option.value) {
+        groupNames[option.value] = option.text;
+      }
+    });
+
+    const fields = {
+      WU: document.getElementById("baseTrainingWu"),
+      MOB: document.getElementById("baseTrainingMob"),
+      SPR: document.getElementById("baseTrainingSprint"),
+      CORE: document.getElementById("baseTrainingCore"),
+      CORE2: document.getElementById("baseTrainingCore2"),
+      ALT: document.getElementById("baseTrainingAlt"),
+      CD: document.getElementById("baseTrainingCd")
+    };
+
+    let modal = null;
+
+    function getModal() {
+      if (!modal && window.bootstrap) {
+        modal = new bootstrap.Modal(modalEl);
+      }
+      return modal;
+    }
+
+    function parseTraining(text) {
+      const data = { WU: "", MOB: "", SPR: "", CORE: "", CORE2: "", ALT: "", CD: "" };
+      const raw = (text || "").trim();
+      if (!raw) return data;
+
+      let sawKey = false;
+      raw.split(/\r?\n/).forEach((line) => {
+        const idx = line.indexOf("=");
+        if (idx > 0) {
+          const key = line.slice(0, idx).trim().toUpperCase();
+          if (Object.prototype.hasOwnProperty.call(data, key)) {
+            data[key] = line.slice(idx + 1).trim();
+            sawKey = true;
+          }
+        }
+      });
+
+      if (!sawKey) {
+        data.CORE = raw;
+      }
+      return data;
+    }
+
+    function serializeTraining() {
+      return Object.keys(fields).map((key) => {
+        return key + "=" + (fields[key].value || "").trim();
+      }).join("\n");
+    }
+
+    function visibleTrainingParts(text) {
+      const data = parseTraining(text);
+      const labels = {
+        WU: "WU",
+        MOB: "Mob",
+        SPR: "Sprint",
+        CORE: "Core",
+        CORE2: "2nd",
+        ALT: "Alt",
+        CD: "CD"
+      };
+      return ["WU", "MOB", "SPR", "CORE", "CORE2", "ALT", "CD"]
+        .filter((key) => data[key])
+        .map((key) => ({ key: key, label: labels[key], text: data[key] }));
+    }
+
+    function pillClassForText(text) {
+      const s = (text || "").toLowerCase();
+      if (s.includes("race!")) return "base-pill-race";
+      if (s.includes("race")) return "base-pill-race";
+      if (/\bz\s*6\b/.test(s)) return "base-pill-z6";
+      if (/\bz\s*5\b/.test(s) || /\bt\s*(8|15|800|1500|4)\b/.test(s)) return "base-pill-z5";
+      if (/\bz\s*4\b/.test(s) || /\bt\s*(3|5|10|3000|5000|10000)\b/.test(s)) return "base-pill-z4";
+      if (/\bz\s*3\b/.test(s) || /\bthm\b/.test(s)) return "base-pill-z3";
+      if (/\bz\s*2\b/.test(s) || /\btm\b/.test(s)) return "base-pill-z2";
+      if (/\bz\s*1\b/.test(s)) return "base-pill-z1";
+      return "base-pill-z1";
+    }
+
+    function setModalMode(mode) {
+      modalContent.classList.remove("base-modal-mode-rest", "base-modal-mode-training", "base-modal-mode-trainer");
+      modalContent.classList.add("base-modal-mode-" + mode);
+    }
+
+    function updateButton(slotId) {
+      const modeInput = document.getElementById("slot_" + slotId + "_mode");
+      const trainingInput = document.getElementById("slot_" + slotId + "_training_text");
+      const trainerInput = document.getElementById("slot_" + slotId + "_trainer_plan");
+      const button = document.querySelector('[data-base-slot-id="' + slotId + '"]');
+      if (!modeInput || !trainingInput || !trainerInput || !button) return;
+
+      const valueEl = button.querySelector(".base-slot-value");
+      const mode = modeInput.value || "rest";
+      button.classList.toggle("base-slot-empty", false);
+
+      if (mode === "rest") {
+        valueEl.innerHTML = '<span class="base-pill base-pill-rest">Rust</span>';
+        return;
+      }
+
+      if (mode === "trainer") {
+        const label = groupNames[trainerInput.value] || "Groep";
+        valueEl.innerHTML = '<span class="base-pill base-pill-group">' + escapeHtml(label) + '</span>';
+        return;
+      }
+
+      const parts = visibleTrainingParts(trainingInput.value);
+      if (!parts.length) {
+        valueEl.innerHTML = '<span class="base-pill base-pill-z1">Individuele training</span>';
+        return;
+      }
+
+      valueEl.innerHTML = parts.map((part) => {
+        const pillClass = pillClassForText(part.text);
+        return '<span class="base-pill ' + pillClass + '">' + escapeHtml(part.text) + '</span>';
+      }).join(" ");
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    document.querySelectorAll("[data-base-slot-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const slotId = button.dataset.baseSlotId;
+        const modeInput = document.getElementById("slot_" + slotId + "_mode");
+        const trainingInput = document.getElementById("slot_" + slotId + "_training_text");
+        const trainerInput = document.getElementById("slot_" + slotId + "_trainer_plan");
+        if (!modeInput || !trainingInput || !trainerInput) return;
+
+        activeIdInput.value = slotId;
+        modeSelect.value = modeInput.value || "rest";
+        groupSelect.value = trainerInput.value || "";
+
+        const training = parseTraining(trainingInput.value);
+        Object.keys(fields).forEach((key) => {
+          fields[key].value = training[key] || "";
+        });
+
+        setModalMode(modeSelect.value);
+        const instance = getModal();
+        if (instance) instance.show();
+      });
+    });
+
+    modeSelect.addEventListener("change", () => {
+      setModalMode(modeSelect.value || "rest");
+    });
+
+    applyButton.addEventListener("click", () => {
+      const slotId = activeIdInput.value;
+      const modeInput = document.getElementById("slot_" + slotId + "_mode");
+      const trainingInput = document.getElementById("slot_" + slotId + "_training_text");
+      const trainerInput = document.getElementById("slot_" + slotId + "_trainer_plan");
+      if (!modeInput || !trainingInput || !trainerInput) return;
+
+      const mode = modeSelect.value || "rest";
+      modeInput.value = mode;
+
+      if (mode === "training") {
+        trainingInput.value = serializeTraining();
+        trainerInput.value = "";
+      } else if (mode === "trainer") {
+        trainingInput.value = "";
+        trainerInput.value = groupSelect.value || "";
+      } else {
+        trainingInput.value = "";
+        trainerInput.value = "";
+      }
+
+      updateButton(slotId);
+      const instance = getModal();
+      if (instance) instance.hide();
+    });
+
+    document.querySelectorAll("[data-base-slot-id]").forEach((button) => {
+      updateButton(button.dataset.baseSlotId);
+    });
+  })();
+</script>
+{% endblock %}

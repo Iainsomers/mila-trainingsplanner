@@ -5,7 +5,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.utils.html import escape
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 
@@ -18,6 +18,8 @@ from core.models import (
     TrainingPlan,
     Athlete,
     Group,
+    AthleteBasePlanningBlock,
+    AthleteBasePlanningSlot,
     PlanWeekPhase,
     AthleteWeekPhaseOverride,
     AthleteWeekReport,
@@ -314,7 +316,11 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 
 @login_required
 def calendar_view(request):
-    plans = _filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name__startswith="Flex Planner")
+    plans = (
+        _filter_accessible(TrainingPlan.objects.order_by("name"), request.user)
+        .exclude(name__startswith="Flex Planner")
+        .exclude(plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
+    )
 
     selected_plan = None
     plan_id = request.GET.get("plan")
@@ -329,6 +335,9 @@ def calendar_view(request):
             selected_plan = fallback_plan
         else:
             selected_plan = plans.first()
+
+    if selected_plan and getattr(selected_plan, "plan_kind", "") == TrainingPlan.PLAN_KIND_TRAINER:
+        return redirect("trainer_planning_detail", plan_id=selected_plan.id)
 
     selected_athlete = _get_selected_athlete_from_request(request)
     if selected_athlete and not _filter_accessible(Athlete.objects.filter(id=selected_athlete.id), request.user).exists():
@@ -678,6 +687,122 @@ def _flex_check_payload(check):
     }
 
 
+class _VirtualSegmentList:
+    def __init__(self, segments):
+        self._segments = segments
+
+    def all(self):
+        return self._segments
+
+
+class _VirtualSegment:
+    def __init__(self, text, type="CORE", zone="", special="", t_type="", reps=1, distance_m=None, duration_s=None, norm_distance_m=None):
+        self.text = text or ""
+        self.type = type
+        self.zone = str(zone or "")
+        self.special = special or ""
+        self.t_type = t_type or ""
+        self.reps = reps or 1
+        self.distance_m = distance_m
+        self.duration_s = duration_s
+        self.norm_distance_m = norm_distance_m
+
+
+class _VirtualSlot:
+    def __init__(self, segments, plan_id=None):
+        self.segments = _VirtualSegmentList(segments)
+        self.plan_id = plan_id
+
+    def core_text(self):
+        return " // ".join(seg.text for seg in self.segments.all() if seg.type == "CORE" and seg.text)
+
+
+def _parse_base_training_text(text):
+    values = {"WU": "", "MOB": "", "SPR": "", "CORE": "", "CORE2": "", "ALT": "", "CD": ""}
+    raw = (text or "").strip()
+    if not raw:
+        return values
+
+    saw_key = False
+    for line in raw.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip().upper()
+        if key in values:
+            values[key] = value.strip()
+            saw_key = True
+
+    if not saw_key:
+        values["CORE"] = raw
+
+    return values
+
+
+def _virtual_segment_from_text(seg_type, text):
+    parsed = _parse_core_segment_text(text) if seg_type in {"CORE", "CORE2"} else parse_segment_text(text, zone_required=False)
+    if parsed and getattr(parsed, "ok", False):
+        return _VirtualSegment(
+            text=text,
+            type=seg_type,
+            zone=str(parsed.zone or ""),
+            special=getattr(parsed, "special", "") or "",
+            t_type=getattr(parsed, "t_type", "") or "",
+            reps=getattr(parsed, "reps", 1) or 1,
+            distance_m=getattr(parsed, "rep_distance_m", None) or getattr(parsed, "distance_m", None),
+            duration_s=getattr(parsed, "duration_s", None),
+            norm_distance_m=getattr(parsed, "distance_m", None),
+        )
+    return _VirtualSegment(text=text, type=seg_type)
+
+
+def _virtual_slot_from_base_training(text):
+    values = _parse_base_training_text(text)
+    order = ("WU", "MOB", "SPR", "CORE", "CORE2", "ALT", "CD")
+    segments = [
+        _virtual_segment_from_text(seg_type, values[seg_type])
+        for seg_type in order
+        if values.get(seg_type)
+    ]
+    return _VirtualSlot(segments) if segments else None
+
+
+def _month_day_index_for_flex(day):
+    return date(2024, day.month, day.day).timetuple().tm_yday
+
+
+def _base_block_covers_day(block, day):
+    start_idx = date(2024, block.start_month, block.start_day).timetuple().tm_yday
+    end_idx = date(2024, block.end_month, block.end_day).timetuple().tm_yday
+    day_idx = _month_day_index_for_flex(day)
+    if start_idx <= end_idx:
+        return start_idx <= day_idx <= end_idx
+    return day_idx >= start_idx or day_idx <= end_idx
+
+
+def _base_planning_slot_for_day(base_blocks_by_athlete, athlete_id, day, slot_index):
+    for block in base_blocks_by_athlete.get(athlete_id, []):
+        if not _base_block_covers_day(block, day):
+            continue
+        for base_slot in getattr(block, "_prefetched_base_slots", []):
+            if base_slot.weekday == day.weekday() and base_slot.slot_index == slot_index:
+                return base_slot
+    return None
+
+
+def _get_athlete_year_flex_plan(user, athlete, start, end):
+    if not athlete:
+        return None
+    if user.is_staff:
+        return _get_or_create_flex_planner_plan(user, start, end)
+    return (
+        TrainingPlan.objects
+        .filter(owner=getattr(athlete, "owner", None), name__startswith="Flex Planner")
+        .order_by("id")
+        .first()
+    )
+
+
 @login_required
 def flex_planner_view(request):
     """
@@ -738,12 +863,6 @@ def flex_planner_view(request):
             continue
         if athlete_id in visible_athlete_ids:
             selected_athlete_ids.append(athlete_id)
-
-    if not selected_athlete_ids:
-        if selected_group_athlete_ids:
-            selected_athlete_ids = [a.id for a in visible_athletes]
-        else:
-            selected_athlete_ids = [a.id for a in visible_athletes[:8]]
 
     selected_athlete_ids = selected_athlete_ids[:20]
     selected_athlete_ids_set = set(selected_athlete_ids)
@@ -840,6 +959,38 @@ def flex_planner_view(request):
         ):
             athlete_phase_by_plan_week[(obj.plan_id, obj.athlete_id, obj.week_start)] = (obj.phase or "")
 
+    base_blocks_by_athlete = {}
+    trainer_plan_ids = set()
+    if selected_athlete_ids:
+        base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
+        base_blocks = (
+            AthleteBasePlanningBlock.objects
+            .filter(athlete_id__in=selected_athlete_ids)
+            .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
+            .order_by("athlete_id", "sort_order", "start_month", "start_day", "id")
+        )
+        for block in base_blocks:
+            base_blocks_by_athlete.setdefault(block.athlete_id, []).append(block)
+            for base_slot in getattr(block, "_prefetched_base_slots", []):
+                if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_slot.trainer_plan_id:
+                    trainer_plan_ids.add(base_slot.trainer_plan_id)
+
+    trainer_slot_lookup = {}
+    if trainer_plan_ids:
+        trainer_slot_qs = (
+            TrainingSlot.objects
+            .filter(
+                plan_id__in=trainer_plan_ids,
+                athlete__isnull=True,
+                date__gte=start,
+                date__lt=end,
+            )
+            .prefetch_related("segments")
+            .select_related("plan")
+        )
+        for trainer_slot in trainer_slot_qs:
+            trainer_slot_lookup[(trainer_slot.plan_id, trainer_slot.date, trainer_slot.slot_index)] = trainer_slot
+
     week_rows = []
     for week_start in week_starts:
         days = [week_start + timedelta(days=i) for i in range(7)]
@@ -862,6 +1013,19 @@ def flex_planner_view(request):
                         base_slot = slot_lookup.get((plan.id, None, day, slot_index))
                         slot = override_slot or base_slot
                         is_override = override_slot is not None
+
+                    if not slot:
+                        base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, athlete.id, day, slot_index)
+                        if base_planning_slot:
+                            if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                                slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                            elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
+                                slot = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, slot_index))
+                                if _slot_is_visually_empty(slot) and base_planning_slot.trainer_plan:
+                                    slot = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
+                            if slot and flex_plan:
+                                plan = flex_plan
+                                no_plan = False
 
                     target_cells.append({
                         "day": day,
@@ -1253,10 +1417,11 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             if plan.id != int(requested_plan_id):
                 continue
             try:
-                if athlete.id not in plan.targeted_athlete_ids():
+                if athlete.id not in plan.targeted_athlete_ids() and not _is_flex_planner_plan(plan):
                     continue
             except Exception:
-                continue
+                if not _is_flex_planner_plan(plan):
+                    continue
             if plan.start_date and plan.start_date > d:
                 continue
             if plan.end_date and plan.end_date < d:
@@ -1264,27 +1429,28 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             selected_plan = plan
             break
 
-    for plan in owned_plans:
-        if athlete.id not in plan.targeted_athlete_ids():
-            continue
+    if not selected_plan:
+        for plan in owned_plans:
+            if athlete.id not in plan.targeted_athlete_ids():
+                continue
 
-        existing_override = TrainingSlot.objects.filter(
-            plan=plan,
-            date=d,
-            slot_index=slot_index,
-            athlete=athlete,
-        ).first()
+            existing_override = TrainingSlot.objects.filter(
+                plan=plan,
+                date=d,
+                slot_index=slot_index,
+                athlete=athlete,
+            ).first()
 
-        base_slot = TrainingSlot.objects.filter(
-            plan=plan,
-            date=d,
-            slot_index=slot_index,
-            athlete__isnull=True,
-        ).first()
+            base_slot = TrainingSlot.objects.filter(
+                plan=plan,
+                date=d,
+                slot_index=slot_index,
+                athlete__isnull=True,
+            ).first()
 
-        if existing_override or base_slot:
-            selected_plan = plan
-            break
+            if existing_override or base_slot:
+                selected_plan = plan
+                break
 
     source_slot = existing_override or base_slot
     if not source_slot and not selected_plan:
@@ -1658,12 +1824,20 @@ def athlete_year_calendar_view(request):
 
     slot_map = {}
     has_fix_keys = set()
+    flex_plan = None
+    base_blocks_by_athlete = {}
+    trainer_slot_lookup = {}
 
     if selected_athlete:
         if request.user.is_staff:
             owned_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request.user))
         else:
             owned_plans = list(TrainingPlan.objects.order_by("name"))
+
+        flex_plan = _get_athlete_year_flex_plan(request.user, selected_athlete, start, end)
+        if flex_plan and flex_plan not in owned_plans:
+            owned_plans.append(flex_plan)
+
         athlete_plans = []
         override_plan_ids = set(
             TrainingSlot.objects
@@ -1676,6 +1850,8 @@ def athlete_year_calendar_view(request):
                 plan_targets_athlete = selected_athlete.id in plan.targeted_athlete_ids()
             except Exception:
                 plan_targets_athlete = False
+            if _is_flex_planner_plan(plan):
+                plan_targets_athlete = True
 
             if not plan_targets_athlete and plan.id not in override_plan_ids:
                 continue
@@ -1702,6 +1878,35 @@ def athlete_year_calendar_view(request):
             )
 
             slot_map, has_fix_keys = _build_effective_slot_maps(slot_q)
+
+        base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
+        base_blocks = (
+            AthleteBasePlanningBlock.objects
+            .filter(athlete=selected_athlete)
+            .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
+            .order_by("sort_order", "start_month", "start_day", "id")
+        )
+        trainer_plan_ids = set()
+        for block in base_blocks:
+            base_blocks_by_athlete.setdefault(block.athlete_id, []).append(block)
+            for base_slot in getattr(block, "_prefetched_base_slots", []):
+                if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_slot.trainer_plan_id:
+                    trainer_plan_ids.add(base_slot.trainer_plan_id)
+
+        if trainer_plan_ids:
+            trainer_slot_qs = (
+                TrainingSlot.objects
+                .filter(
+                    plan_id__in=trainer_plan_ids,
+                    athlete__isnull=True,
+                    date__gte=start,
+                    date__lte=end,
+                )
+                .prefetch_related("segments")
+                .select_related("plan")
+            )
+            for trainer_slot in trainer_slot_qs:
+                trainer_slot_lookup[(trainer_slot.plan_id, trainer_slot.date, trainer_slot.slot_index)] = trainer_slot
 
     phase_label = {
         "": "",
@@ -1793,6 +1998,40 @@ def athlete_year_calendar_view(request):
             slot1 = _visible_year_slot(slot_map, has_fix_keys, k1)
             slot2 = _visible_year_slot(slot_map, has_fix_keys, k2)
             day_plan = _athlete_plan_for_day(athlete_plans, day) if selected_athlete else None
+            plan1 = slot1.plan if slot1 else day_plan
+            plan2 = slot2.plan if slot2 else day_plan
+
+            if selected_athlete and not slot1:
+                base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, selected_athlete.id, day, 1)
+                if base_planning_slot:
+                    if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                        slot1 = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                    elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
+                        slot1 = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, 1))
+                        if _slot_is_visually_empty(slot1) and base_planning_slot.trainer_plan:
+                            slot1 = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
+                    if slot1 and flex_plan:
+                        plan1 = flex_plan
+                        try:
+                            slot1.plan_id = flex_plan.id
+                        except Exception:
+                            pass
+
+            if selected_athlete and not slot2:
+                base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, selected_athlete.id, day, 2)
+                if base_planning_slot:
+                    if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                        slot2 = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                    elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
+                        slot2 = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, 2))
+                        if _slot_is_visually_empty(slot2) and base_planning_slot.trainer_plan:
+                            slot2 = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
+                    if slot2 and flex_plan:
+                        plan2 = flex_plan
+                        try:
+                            slot2.plan_id = flex_plan.id
+                        except Exception:
+                            pass
 
             if athlete_self_view and visible_until_date and day > visible_until_date:
                 if not _slot_has_race(slot1):
@@ -1808,7 +2047,7 @@ def athlete_year_calendar_view(request):
                 "is_override": k1 in has_fix_keys,
                 "check": check1,
                 "slot_index": 1,
-                "plan_id": slot1.plan_id if slot1 else (day_plan.id if day_plan else ""),
+                "plan_id": slot1.plan_id if slot1 and getattr(slot1, "plan_id", None) else (plan1.id if plan1 else ""),
             })
             cells2.append({
                 "day": day,
@@ -1816,7 +2055,7 @@ def athlete_year_calendar_view(request):
                 "is_override": k2 in has_fix_keys,
                 "check": check2,
                 "slot_index": 2,
-                "plan_id": slot2.plan_id if slot2 else (day_plan.id if day_plan else ""),
+                "plan_id": slot2.plan_id if slot2 and getattr(slot2, "plan_id", None) else (plan2.id if plan2 else ""),
             })
             comment = None
             if selected_athlete:

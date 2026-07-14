@@ -1,0 +1,27 @@
+<td id="cell-{{ day|date:'Ymd' }}-{{ slot_index }}"
+    {% if oob %}hx-swap-oob="outerHTML"{% endif %}
+    class="trainer-day-cell">
+  <a
+    class="trainer-cell {% if slot %}{% else %}trainer-cell-empty{% endif %}"
+    href="#"
+    hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}"
+    hx-target="#modal-container"
+    hx-swap="innerHTML"
+  >
+    {% if slot %}
+      <div class="trainer-celltext">
+        {% for seg in slot.segments.all %}
+          {% if seg.text %}
+            {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
+              <span class="pill pill-race" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+            {% elif seg.zone %}
+              <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+            {% else %}
+              <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.text }}</span>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </a>
+</td>

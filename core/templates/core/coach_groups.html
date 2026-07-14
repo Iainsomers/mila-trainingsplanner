@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}Coach Console – Groups{% endblock %}
+{% block title %}Groups{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -11,7 +11,7 @@
     </div>
     <div class="d-flex gap-2">
       <a href="{% url 'coach_group_create' %}" class="btn btn-primary">New group</a>
-      <a href="{% url 'coach_console' %}" class="btn btn-outline-secondary">Back</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>
 

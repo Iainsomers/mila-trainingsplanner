@@ -25,6 +25,10 @@ def auto_wucd_texts_for_target(athlete=None, plan=None):
     if not plan:
         return "", ""
 
+    auto_wu_text, auto_cd_text = _auto_wucd_texts_from_obj(plan)
+    if auto_wu_text or auto_cd_text:
+        return auto_wu_text, auto_cd_text
+
     groups = plan.groups.all().order_by("name", "id")
     if athlete:
         groups = groups.filter(athletes=athlete)

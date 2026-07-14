@@ -10,76 +10,15 @@
 
   <div class="row g-4">
 
-    {% if not is_athlete_user %}
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title">Calendar</h5>
-          <p class="card-text">
-            View and edit training plans.
-          </p>
-          <a href="/calendar/" class="btn btn-primary">Go to calendar</a>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    {% if not is_athlete_user %}
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title">Flex Planner</h5>
-          <p class="card-text">
-            Plan multiple athletes simultaneously.
-          </p>
-          <a href="/flex-planner/" class="btn btn-primary">Go to Flex Planner</a>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-
-    {% if not is_athlete_user %}
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title">Coach Console</h5>
-          <p class="card-text">
-            Manage plans, athletes, groups, and assignments.
-          </p>
-          <a href="/coach/" class="btn btn-primary">Go to coach console</a>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Athlete Console -->
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title">Athlete Console</h5>
-          <p class="card-text">
-            View athlete-facing tools and yearly planning.
-          </p>
-          <a href="/athlete/year/" class="btn btn-primary">Year Calendar</a>
-        </div>
-      </div>
-    </div>
-
-
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body d-flex flex-column">
-          <h5 class="card-title">Races</h5>
+          <h5 class="card-title">Planning</h5>
           <p class="card-text">
-            {% if is_athlete_user %}Select your races.{% else %}Manage races and race selections.{% endif %}
+            {% if is_athlete_user %}View your year planning and races.{% else %}Manage athletes, base planning, trainer planning, and flex planning.{% endif %}
           </p>
           <div class="mt-auto">
-            {% if is_athlete_user %}
-              <a href="/race-select/?scope=athlete" class="btn btn-primary">Race Select</a>
-            {% else %}
-              <a href="/races/" class="btn btn-primary">Go to Races</a>
-            {% endif %}
+            <a href="{% url 'planning_overview' %}" class="btn btn-primary">Go to planning</a>
           </div>
         </div>
       </div>
@@ -88,28 +27,14 @@
     {% if not is_athlete_user %}
     <div class="col-md-4">
       <div class="card h-100">
-        <div class="card-body">
-          <h5 class="card-title">Daily Coach Overview</h5>
-          <p class="card-text">
-            View daily training overview for a group.
-          </p>
-          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dailyOverviewModal">
-            Open
-          </button>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    {% if not is_athlete_user %}
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
+        <div class="card-body d-flex flex-column">
           <h5 class="card-title">Settings</h5>
           <p class="card-text">
             General settings.
           </p>
-          <a href="/settings/" class="btn btn-primary">Go to settings</a>
+          <div class="mt-auto">
+            <a href="/settings/" class="btn btn-primary">Go to settings</a>
+          </div>
         </div>
       </div>
     </div>
@@ -118,12 +43,14 @@
     {% if not is_athlete_user %}
     <div class="col-md-4">
       <div class="card h-100">
-        <div class="card-body">
+        <div class="card-body d-flex flex-column">
           <h5 class="card-title">Admin</h5>
           <p class="card-text">
             Authentication &amp; authorization (users, groups, permissions).
           </p>
-          <a href="/admin/" class="btn btn-outline-secondary">Go to admin</a>
+          <div class="mt-auto">
+            <a href="/admin/" class="btn btn-outline-secondary">Go to admin</a>
+          </div>
         </div>
       </div>
     </div>
@@ -131,40 +58,4 @@
 
   </div>
 </div>
-
-{% if not is_athlete_user %}
-<div class="modal fade" id="dailyOverviewModal" tabindex="-1" aria-labelledby="dailyOverviewModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="get" action="{% url 'daily_overview' %}">
-        <div class="modal-header">
-          <h5 class="modal-title" id="dailyOverviewModalLabel">Daily Coach Overview</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Date</label>
-            <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Group</label>
-            <select name="group_id" class="form-control" required>
-              {% for group in groups %}
-                <option value="{{ group.id }}">{{ group.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">OK</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-{% endif %}
 {% endblock %}

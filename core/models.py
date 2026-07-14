@@ -158,6 +158,13 @@ class Group(models.Model):
 
 
 class TrainingPlan(models.Model):
+    PLAN_KIND_LEGACY = "legacy"
+    PLAN_KIND_TRAINER = "trainer"
+    PLAN_KIND_CHOICES = [
+        (PLAN_KIND_LEGACY, "Legacy plan"),
+        (PLAN_KIND_TRAINER, "Trainer planning"),
+    ]
+
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -169,6 +176,13 @@ class TrainingPlan(models.Model):
     is_private = models.BooleanField(default=False)
 
     name = models.CharField(max_length=120, unique=True)
+
+    plan_kind = models.CharField(
+        max_length=20,
+        choices=PLAN_KIND_CHOICES,
+        default=PLAN_KIND_LEGACY,
+        db_index=True,
+    )
 
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -185,6 +199,10 @@ class TrainingPlan(models.Model):
         related_name="plans",
         blank=True,
     )
+
+    auto_wucd_enabled = models.BooleanField(default=False)
+    auto_wu_m = models.PositiveIntegerField(default=0)
+    auto_cd_m = models.PositiveIntegerField(default=0)
 
     week_phases_enabled = models.BooleanField(default=True)
 
@@ -305,6 +323,89 @@ class PlanMembership(models.Model):
 
     def __str__(self) -> str:
         return f"{self.plan} – {self.athlete}"
+
+
+class AthleteBasePlanningBlock(models.Model):
+    athlete = models.ForeignKey(
+        Athlete,
+        on_delete=models.CASCADE,
+        related_name="base_planning_blocks",
+    )
+
+    label = models.CharField(max_length=120, blank=True, default="")
+    start_month = models.PositiveSmallIntegerField()
+    start_day = models.PositiveSmallIntegerField()
+    end_month = models.PositiveSmallIntegerField()
+    end_day = models.PositiveSmallIntegerField()
+    sort_order = models.PositiveIntegerField(default=1)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["athlete__name", "sort_order", "start_month", "start_day", "id"]
+
+    def __str__(self) -> str:
+        label = self.label or f"{self.start_day:02d}-{self.start_month:02d} t/m {self.end_day:02d}-{self.end_month:02d}"
+        return f"{self.athlete} - {label}"
+
+    @property
+    def start_md(self) -> str:
+        return f"{self.start_day:02d}-{self.start_month:02d}"
+
+    @property
+    def end_md(self) -> str:
+        return f"{self.end_day:02d}-{self.end_month:02d}"
+
+
+class AthleteBasePlanningSlot(models.Model):
+    MODE_REST = "rest"
+    MODE_TRAINING = "training"
+    MODE_TRAINER = "trainer"
+    MODE_CHOICES = [
+        (MODE_REST, "Rust"),
+        (MODE_TRAINING, "Training"),
+        (MODE_TRAINER, "Groep"),
+    ]
+
+    WEEKDAY_CHOICES = [
+        (0, "Monday"),
+        (1, "Tuesday"),
+        (2, "Wednesday"),
+        (3, "Thursday"),
+        (4, "Friday"),
+        (5, "Saturday"),
+        (6, "Sunday"),
+    ]
+
+    block = models.ForeignKey(
+        AthleteBasePlanningBlock,
+        on_delete=models.CASCADE,
+        related_name="slots",
+    )
+    weekday = models.PositiveSmallIntegerField(choices=WEEKDAY_CHOICES)
+    slot_index = models.PositiveSmallIntegerField(choices=[(1, "AM"), (2, "PM")])
+    mode = models.CharField(max_length=20, choices=MODE_CHOICES, default=MODE_REST)
+    trainer_plan = models.ForeignKey(
+        TrainingPlan,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="base_planning_slots",
+    )
+    training_text = models.TextField(blank=True, default="")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["block", "weekday", "slot_index"],
+                name="unique_base_planning_slot_per_block_weekday_slot",
+            )
+        ]
+        ordering = ["block__sort_order", "weekday", "slot_index"]
+
+    def __str__(self) -> str:
+        return f"{self.block} - {self.weekday}/{self.slot_index}: {self.mode}"
 
 
 class TrainingSlot(models.Model):
