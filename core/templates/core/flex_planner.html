@@ -804,8 +804,6 @@
           event.preventDefault();
           event.stopPropagation();
 
-          if (!confirm("Delete training?")) return;
-
           const url = btn.getAttribute("data-flex-delete-url") || "";
           if (!url) return;
 

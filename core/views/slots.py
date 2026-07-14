@@ -832,6 +832,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 athlete=athlete,
             )
             empty_override.segments.all().delete()
+        elif _is_flex_source(request) or is_athlete_year_calendar:
+            empty_override, _ = TrainingSlot.objects.get_or_create(
+                date=d,
+                slot_index=slot_index,
+                plan=selected_plan,
+                athlete=athlete,
+            )
+            empty_override.segments.all().delete()
         else:
             TrainingSlot.objects.filter(
                 date=d,

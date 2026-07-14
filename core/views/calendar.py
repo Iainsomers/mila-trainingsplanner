@@ -888,6 +888,8 @@ def flex_planner_view(request):
 
     relevant_plan_ids = set()
     plan_for_athlete_day = {}
+    if flex_plan:
+        relevant_plan_ids.add(flex_plan.id)
 
     for athlete in selected_athletes:
         for day_offset in range((end - start).days):
@@ -1013,6 +1015,14 @@ def flex_planner_view(request):
                         base_slot = slot_lookup.get((plan.id, None, day, slot_index))
                         slot = override_slot or base_slot
                         is_override = override_slot is not None
+
+                    if flex_plan:
+                        flex_override_slot = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
+                        if flex_override_slot is not None:
+                            slot = flex_override_slot
+                            plan = flex_plan
+                            is_override = True
+                            no_plan = False
 
                     if not slot:
                         base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, athlete.id, day, slot_index)
