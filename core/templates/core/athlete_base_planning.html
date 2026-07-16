@@ -189,7 +189,7 @@
               <div class="card-body">
                 <div class="row g-3 align-items-end mb-3">
                   <div class="col-md-4">
-                    <input name="block_{{ block.id }}_label" class="form-control form-control-sm" value="{{ block.label }}" placeholder="Naam">
+                    <input name="block_{{ block.id }}_label" class="form-control form-control-sm" value="{{ block.label }}" placeholder="Name">
                   </div>
                   <div class="col-md-2">
                     <input name="block_{{ block.id }}_start" class="form-control form-control-sm" value="{{ block.start_md }}" placeholder="DD-MM">
@@ -254,9 +254,9 @@
 
         <div class="mb-3">
           <select id="baseSlotMode" class="form-select form-select-sm">
-            <option value="rest">Rust</option>
+            <option value="rest">Rest</option>
             <option value="training">Individuele training</option>
-            <option value="trainer">Groep</option>
+            <option value="trainer">Group</option>
           </select>
         </div>
 
@@ -422,12 +422,12 @@
       button.classList.toggle("base-slot-empty", false);
 
       if (mode === "rest") {
-        valueEl.innerHTML = '<span class="base-pill base-pill-rest">Rust</span>';
+        valueEl.innerHTML = '<span class="base-pill base-pill-rest">Rest</span>';
         return;
       }
 
       if (mode === "trainer") {
-        const label = groupNames[trainerInput.value] || "Groep";
+        const label = groupNames[trainerInput.value] || "Group";
         valueEl.innerHTML = '<span class="base-pill base-pill-group">' + escapeHtml(label) + '</span>';
         return;
       }

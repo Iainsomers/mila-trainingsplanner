@@ -620,7 +620,10 @@
 
   <div class="d-flex align-items-center justify-content-between mb-2">
     <h2 class="mb-0">Athlete Year Calendar</h2>
-    <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+    <div class="d-flex gap-2">
+      <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+    </div>
   </div>
 
   <form method="get" class="mb-3">
@@ -697,7 +700,7 @@
                       <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
                       </div>
                     {% else %}
-                      <div class="text-muted small">Geen training.</div>
+                      <div class="text-muted small">No training.</div>
                     {% endif %}
                   {% endif %}
                 {% endif %}
@@ -719,7 +722,7 @@
                       <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
                       </div>
                     {% else %}
-                      <div class="text-muted small">Geen training.</div>
+                      <div class="text-muted small">No training.</div>
                     {% endif %}
                   {% endif %}
                 {% endif %}
@@ -1334,7 +1337,7 @@
     </div>
     <div id="reportValidationMsg" class="text-danger small mb-2 mt-2"></div>
     <div style="text-align:right; margin-top:10px;">
-      <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Annuleren</button>
+      <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary" disabled>OK</button>
     </div>
   </div>
@@ -1390,7 +1393,7 @@
     updateAllReportStatusColors();
     var ok = complete("reportT1") && complete("reportT2");
     document.getElementById("commentOkBtn").disabled = !ok;
-    document.getElementById("reportValidationMsg").textContent = ok ? "" : "Vul per training niets in, of Done + RPE 0-10 + comment minimaal 4 letters.";
+    document.getElementById("reportValidationMsg").textContent = ok ? "" : "For each training, leave everything empty or enter Done + RPE 0-10 + a comment of at least 4 letters.";
   }
   function post(slotIndex, status, rpe, comment){
     var fd = new FormData();

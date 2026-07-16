@@ -34,7 +34,7 @@ class CoachSettings(models.Model):
     highlight_current_week = models.BooleanField(default=True)
     calendar_show_only_core = models.BooleanField(default=True)
 
-    # ✅ Weekcolors Y/N (als No: toon alleen woord, geen kleur)
+    # Weekcolors Y/N (when No: show only the word, no color)
     weekcolors_enabled = models.BooleanField(default=True)
 
     # Coach Console
@@ -52,6 +52,9 @@ class CoachSettings(models.Model):
     auto_wu_m = models.PositiveIntegerField(default=0)
     auto_cd_m = models.PositiveIntegerField(default=0)
 
+    # Daily Coach Overview: saved quick-selection of athletes.
+    dco_train_athlete_ids = models.JSONField(default=list, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -65,9 +68,9 @@ class Athlete(models.Model):
     Later we can link Athlete <-> User for athlete login.
     """
     GENDER_CHOICES = [
-        ("M", "Man"),
-        ("V", "Vrouw"),
-        ("X", "Anders"),
+        ("M", "Male"),
+        ("V", "Female"),
+        ("X", "Other"),
     ]
 
     ZONE_METHOD_CHOICES = [
@@ -371,9 +374,9 @@ class AthleteBasePlanningSlot(models.Model):
     MODE_TRAINING = "training"
     MODE_TRAINER = "trainer"
     MODE_CHOICES = [
-        (MODE_REST, "Rust"),
+        (MODE_REST, "Rest"),
         (MODE_TRAINING, "Training"),
-        (MODE_TRAINER, "Groep"),
+        (MODE_TRAINER, "Group"),
     ]
 
     WEEKDAY_CHOICES = [
@@ -561,7 +564,7 @@ class TrainingSegment(models.Model):
     def clean(self):
         super().clean()
         if self.type in ("CORE", "CORE2", "ALT") and not (self.text or "").strip():
-            raise ValidationError("Dit segment moet een tekst hebben (bijv. '6×1000m' of een alternatief).")
+            raise ValidationError("This segment must have text, for example '6×1000m' or an alternative.")
 
 
 class TrainingLog(models.Model):
@@ -595,7 +598,7 @@ class TrainingLog(models.Model):
 
         targeted = self.slot.targeted_athlete_ids()
         if targeted and self.athlete_id not in targeted:
-            raise ValidationError("Deze atleet hoort niet bij de doelgroep van dit trainingsslot.")
+            raise ValidationError("This athlete is not part of the target group for this training slot.")
 
 
 class SavedTrainingTemplate(models.Model):

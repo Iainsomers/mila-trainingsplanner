@@ -149,7 +149,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 
     week_start = _to_week_start(raw_date)
 
-    # ✅ Belangrijk: geen “te strenge” checks hier die 400 geven zonder dat jij het ziet.
+    # Important: no overly strict checks here that return 400 without being visible.
     # We doen alleen een simpele guard: athlete moet in dit plan zitten.
     ids = plan.targeted_athlete_ids() if plan else set()
     if athlete.id not in ids:

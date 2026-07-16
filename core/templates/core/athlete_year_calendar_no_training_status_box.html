@@ -501,7 +501,7 @@
                       {% endif %}
                     </div>
                   {% else %}
-                    <div class="text-muted small">Geen training.</div>
+                    <div class="text-muted small">No training.</div>
                   {% endif %}
                 {% endif %}
               {% endfor %}
@@ -539,7 +539,7 @@
                       {% endif %}
                     </div>
                   {% else %}
-                    <div class="text-muted small">Geen training.</div>
+                    <div class="text-muted small">No training.</div>
                   {% endif %}
                 {% endif %}
               {% endfor %}
@@ -978,7 +978,7 @@
     </table>
     <div id="reportValidationMsg" class="text-danger small mb-2"></div>
     <div style="text-align:right; margin-top:10px;">
-      <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Annuleren</button>
+      <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary" disabled>OK</button>
     </div>
   </div>
@@ -1015,7 +1015,7 @@
     updateAllReportStatusColors();
     var ok = complete("reportT1") && complete("reportT2");
     document.getElementById("commentOkBtn").disabled = !ok;
-    document.getElementById("reportValidationMsg").textContent = ok ? "" : "Vul per training niets in, of Done + RPE 0-10 + comment minimaal 4 letters.";
+    document.getElementById("reportValidationMsg").textContent = ok ? "" : "For each training, leave everything empty or enter Done + RPE 0-10 + a comment of at least 4 letters.";
   }
   function post(slotIndex, status, rpe, comment){
     var fd = new FormData();

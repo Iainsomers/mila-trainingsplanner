@@ -15,9 +15,9 @@ CALENDAR_DISPLAY_MODE = "core_only"
 def _calendar_display_mode(request) -> str:
     """
     Calendar display mode:
-    - core_only: toon alleen core/alt in cell (hover blijft volledig)
-    - all: toon alle segmenten in cell
-    Default volgt CoachSettings wanneer de sessie nog geen waarde heeft.
+    - core_only: show only core/alt in the cell (hover stays complete)
+    - all: show all segments in the cell
+    Default follows CoachSettings when the session does not have a value yet.
     """
     if "calendar_show_only_core" in request.session:
         show_only_core = request.session.get("calendar_show_only_core")
@@ -182,7 +182,7 @@ def _parse_manual_zone_values_required(post, unit: str):
     for z in ("1", "2", "3", "4", "5"):
         raw = (post.get(f"z{z}_pace") or "").strip()
         if not raw:
-            errors.append(f"Z{z}: waarde is verplicht.")
+            errors.append(f"Z{z}: value is required.")
             out_mps[z] = None
             normalized_input[z] = ""
             other_under[z] = "—"
@@ -191,7 +191,7 @@ def _parse_manual_zone_values_required(post, unit: str):
         try:
             mps = float(_pace_to_mps(raw)) if unit == "pace" else float(_kmh_to_mps(raw))
         except Exception:
-            errors.append(f"Z{z}: ongeldig ({'bijv. 4:30' if unit=='pace' else 'bijv. 15'}).")
+            errors.append(f"Z{z}: invalid ({'e.g. 4:30' if unit=='pace' else 'e.g. 15'}).")
             out_mps[z] = None
             normalized_input[z] = raw
             other_under[z] = "—"

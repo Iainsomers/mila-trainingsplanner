@@ -56,7 +56,7 @@ def _empty_zone_bucket(speeds: dict):
 
 
 def _empty_alt_bucket():
-    # Alleen minuten, alleen Z1–Z3
+    # Minutes only, Z1-Z3 only
     return {z: {"duration_s": 0} for z in ("1", "2", "3")}
 
 
@@ -201,7 +201,7 @@ def _default_zone_for_t_type(t_type: str):
 def _progressive_zone_loads(seg, speeds: dict, total_nm: int, total_duration_s: int, total_speed_mps: float = None):
     """
     Herkent progressive zones zoals 4*1000m z2>z3.
-    Het segment blijft één opgeslagen CORE-regel; alleen stats splitst 50/50.
+    The segment remains one saved CORE line; only stats splits it 50/50.
     """
     text = (getattr(seg, "text", "") or "").strip()
     match = _PROGRESSIVE_ZONE_RE.search(text)
@@ -283,7 +283,7 @@ def _compound_distance_to_m(value: str, unit: str) -> int:
 def _compound_rep_loads(seg, default_zone: str, speeds: dict):
     """
     Herkent compound reps zoals: 25*(300m z2-100m z1).
-    Geeft losse load-regels terug zonder het opgeslagen segment of de UI-tekst te wijzigen.
+    Returns separate load rows without changing the saved segment or UI text.
     """
     text = (getattr(seg, "text", "") or "").strip()
     match = _COMPOUND_SET_RE.search(text)
@@ -360,8 +360,8 @@ def _text_duration_s(text: str) -> int:
 
 def _text_fallback_loads(seg, default_zone: str, speeds: dict, t_speed_func=None):
     """
-    Fallback voor athlete-overrides die als tekstsegment zijn opgeslagen.
-    De parserstructuur blijft ongemoeid; stats interpreteert alleen de tekst voor totalen.
+    Fallback for athlete overrides saved as text segments.
+    The parser structure stays untouched; stats only interprets the text for totals.
     """
     text = (getattr(seg, "text", "") or "").strip()
     if not text:

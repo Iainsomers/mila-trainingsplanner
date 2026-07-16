@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Doelgroep beheren</title>
+    <title>Manage target group</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   </head>
@@ -10,25 +10,25 @@
   <body class="p-3">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div>
-        <h3 class="mb-0">Doelgroep beheren</h3>
+        <h3 class="mb-0">Manage target group</h3>
         <div class="text-secondary small">
           Plan: <b>{{ plan.name }}</b>
           {% if plan.start_date and plan.end_date %}
             · {{ plan.start_date }} t/m {{ plan.end_date }}
           {% else %}
-            · <span class="text-danger">geen start/einddatum</span>
+            · <span class="text-danger">no start/end date</span>
           {% endif %}
         </div>
       </div>
 
       <a class="btn btn-sm btn-outline-secondary" href="/calendar/?plan={{ plan.id }}">
-        Terug naar kalender
+        Back to calendar
       </a>
     </div>
 
     {% if errors %}
       <div class="alert alert-danger">
-        <div class="fw-bold mb-2">Opslaan geblokkeerd:</div>
+        <div class="fw-bold mb-2">Save blocked:</div>
         <ul class="mb-0">
           {% for e in errors %}
             <li>{{ e }}</li>
@@ -43,8 +43,8 @@
       <div class="col-12 col-lg-6">
         <div class="card">
           <div class="card-header">
-            <b>Groepen</b>
-            <span class="text-secondary small">(koppelen aan plan)</span>
+            <b>Groups</b>
+            <span class="text-secondary small">(link to plan)</span>
           </div>
           <div class="card-body">
             {% if groups %}
@@ -64,7 +64,7 @@
                 </div>
               {% endfor %}
             {% else %}
-              <div class="text-muted">Geen groepen gevonden.</div>
+              <div class="text-muted">No groups found.</div>
             {% endif %}
           </div>
         </div>
@@ -73,8 +73,8 @@
       <div class="col-12 col-lg-6">
         <div class="card">
           <div class="card-header">
-            <b>Individuele atleten</b>
-            <span class="text-secondary small">(extra bovenop groepen)</span>
+            <b>Individual athletes</b>
+            <span class="text-secondary small">(extra on top of groups)</span>
           </div>
           <div class="card-body">
             {% if athletes %}
@@ -94,7 +94,7 @@
                 </div>
               {% endfor %}
             {% else %}
-              <div class="text-muted">Geen atleten gevonden.</div>
+              <div class="text-muted">No athletes found.</div>
             {% endif %}
           </div>
         </div>
@@ -102,10 +102,10 @@
 
       <div class="col-12 d-flex justify-content-end gap-2">
         <a class="btn btn-outline-secondary" href="/calendar/?plan={{ plan.id }}">
-          Annuleren
+          Cancel
         </a>
         <button type="submit" class="btn btn-primary">
-          Opslaan
+          Save
         </button>
       </div>
     </form>
@@ -115,8 +115,8 @@
     <div class="text-muted small">
       Regels:
       <ul class="mb-0">
-        <li>Start- en einddatum van het plan moeten ingevuld zijn om een doelgroep te koppelen.</li>
-        <li>Een atleet mag niet in twee plannen zitten waarvan de datums overlappen.</li>
+        <li>The plan start and end date must be filled in to link a target group.</li>
+        <li>An athlete cannot be in two plans with overlapping dates.</li>
       </ul>
     </div>
   </body>

@@ -4,7 +4,7 @@
 
       <div class="modal-header">
         <div>
-          <h5 class="modal-title mb-0">Doelgroep (plan)</h5>
+          <h5 class="modal-title mb-0">Target group (plan)</h5>
           <div class="small text-secondary">
             Plan: <b>{{ plan.name }}</b>
             {% if plan.start_date and plan.end_date %}
@@ -19,11 +19,11 @@
         <div class="row g-3">
           <div class="col-12">
             <div class="alert alert-light mb-0">
-              <div><b>Totaal atleten:</b> {{ count_total }}</div>
+              <div><b>Total athletes:</b> {{ count_total }}</div>
               <div class="small text-secondary">
-                Via groepen: {{ count_via_groups }} · Direct gekoppeld: {{ count_direct }}
+                Via groups: {{ count_via_groups }} · Directly linked: {{ count_direct }}
                 {% if count_extra_direct %}
-                  · Extra direct (niet in groepen): {{ count_extra_direct }}
+                  · Extra direct (not in groups): {{ count_extra_direct }}
                 {% endif %}
               </div>
             </div>
@@ -32,7 +32,7 @@
           <div class="col-12 col-lg-6">
             <div class="card">
               <div class="card-header">
-                <b>Groepen in dit plan</b> <span class="text-secondary small">({{ count_groups }})</span>
+                <b>Groups in this plan</b> <span class="text-secondary small">({{ count_groups }})</span>
               </div>
               <div class="card-body">
                 {% if groups %}
@@ -41,13 +41,13 @@
                       <li>
                         {{ g.name }}
                         <span class="text-secondary small">
-                          ({{ g.athletes.count }} atleten in groep)
+                          ({{ g.athletes.count }} athletes in group)
                         </span>
                       </li>
                     {% endfor %}
                   </ul>
                 {% else %}
-                  <div class="text-muted">Geen groepen gekoppeld.</div>
+                  <div class="text-muted">No groups linked.</div>
                 {% endif %}
               </div>
             </div>
@@ -56,7 +56,7 @@
           <div class="col-12 col-lg-6">
             <div class="card">
               <div class="card-header">
-                <b>Atleten in dit plan</b> <span class="text-secondary small">({{ count_total }})</span>
+                <b>Athletes in this plan</b> <span class="text-secondary small">({{ count_total }})</span>
               </div>
               <div class="card-body" style="max-height: 320px; overflow:auto;">
                 {% if athletes_all %}
@@ -69,7 +69,7 @@
                     {% endfor %}
                   </ul>
                 {% else %}
-                  <div class="text-muted">Nog geen atleten in dit plan.</div>
+                  <div class="text-muted">No athletes in this plan yet.</div>
                 {% endif %}
               </div>
             </div>
@@ -77,8 +77,8 @@
             {% if athletes_extra %}
               <div class="card mt-3">
                 <div class="card-header">
-                  <b>Extra direct gekoppeld</b>
-                  <span class="text-secondary small">(niet via groepen)</span>
+                  <b>Extra directly linked</b>
+                  <span class="text-secondary small">(not via groups)</span>
                 </div>
                 <div class="card-body">
                   <ul class="mb-0">
@@ -98,7 +98,7 @@
           Sluiten
         </button>
         <a class="btn btn-primary" href="/plans/{{ plan.id }}/targets/">
-          Doelgroep beheren
+          Manage target group
         </a>
       </div>
 

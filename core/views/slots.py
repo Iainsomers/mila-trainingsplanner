@@ -98,7 +98,7 @@ def _build_progressive_split_parse(parsed, zone: int, index: int):
             "rep_distance_m": None,
             "duration_s": None,
             "t_type": (parsed.t_type or ""),
-            "message": f"Herkannt: progressive split naar Z{zone} → {int(split_distance or 0)}m",
+            "message": f"Recognized: progressive split to Z{zone} → {int(split_distance or 0)}m",
         }
 
     if half_distance is not None:
@@ -109,7 +109,7 @@ def _build_progressive_split_parse(parsed, zone: int, index: int):
             "rep_distance_m": None,
             "duration_s": None,
             "t_type": (parsed.t_type or ""),
-            "message": f"Herkannt: progressive split naar Z{zone} → {int(half_distance)}m",
+            "message": f"Recognized: progressive split to Z{zone} → {int(half_distance)}m",
         }
 
     if half_duration is not None:
@@ -120,7 +120,7 @@ def _build_progressive_split_parse(parsed, zone: int, index: int):
             "rep_distance_m": None,
             "duration_s": int(half_duration),
             "t_type": (parsed.t_type or ""),
-            "message": f"Herkannt: progressive split naar Z{zone} → {int(half_duration)}s",
+            "message": f"Recognized: progressive split to Z{zone} → {int(half_duration)}s",
         }
 
     return None
@@ -189,11 +189,11 @@ def _build_progressive_t_split_parse(parsed, t_type: str, explicit_zone, index: 
 
     split_parse["t_type"] = _normalize_t_type_label(t_type)
     if split_parse.get("distance_m") is not None:
-        split_parse["message"] = f"Herkannt: progressive split naar T{_display_t_type_label(t_type)} / Z{zone} → {int(split_parse['distance_m'])}m"
+        split_parse["message"] = f"Recognized: progressive split to T{_display_t_type_label(t_type)} / Z{zone} → {int(split_parse['distance_m'])}m"
     elif split_parse.get("duration_s") is not None:
-        split_parse["message"] = f"Herkannt: progressive split naar T{_display_t_type_label(t_type)} / Z{zone} → {int(split_parse['duration_s'])}s"
+        split_parse["message"] = f"Recognized: progressive split to T{_display_t_type_label(t_type)} / Z{zone} → {int(split_parse['duration_s'])}s"
     else:
-        split_parse["message"] = f"Herkannt: progressive split naar T{_display_t_type_label(t_type)} / Z{zone}"
+        split_parse["message"] = f"Recognized: progressive split to T{_display_t_type_label(t_type)} / Z{zone}"
     return split_parse
 
 
@@ -885,7 +885,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=None)
         is_override = False
 
-    # bestaande segmenten
+    # existing segments
     wu_seg = slot.segments.filter(type="WU").order_by("order", "id").first()
     mob_seg = slot.segments.filter(type="MOB").order_by("order", "id").first()
     sprint_seg = slot.segments.filter(type="SPR").order_by("order", "id").first()
@@ -894,7 +894,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     alt_seg = slot.segments.filter(type="ALT").order_by("order", "id").first()
     cd_seg = slot.segments.filter(type="CD").order_by("order", "id").first()
 
-    # input teksten (respecteer toggles)
+    # input texts (respect toggles)
     wu_text = (request.POST.get("wu_text") or "").strip() if tb_show_wu else ""
     mob_text = (request.POST.get("mob_text") or "").strip() if tb_show_mob else ""
     sprint_text = (request.POST.get("sprint_text") or "").strip() if tb_show_sprint else ""
@@ -930,7 +930,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                     "alt_text": alt_text,
                     "cd_text": cd_text,
 
-                    "template_error": "Naam is verplicht.",
+                    "template_error": "Name is required.",
                     "saved_templates": _saved_templates_for_user(request.user),
                     "selected_template_id": "",
                     "template_name": template_name,
@@ -983,7 +983,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "alt_text": alt_text,
                 "cd_text": cd_text,
 
-                "template_saved_notice": "Standaard training opgeslagen.",
+                "template_saved_notice": "Saved training stored.",
                 "saved_templates": _saved_templates_for_user(request.user),
                 "selected_template_id": "",
                 "template_name": "",
@@ -1069,7 +1069,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "alt_text": alt_text,
                 "cd_text": cd_text,
 
-                "core_error": "Vul Core, Mob/Tech of Alternative in.",
+                "core_error": "Fill in Core, Mob/Tech, or Alternative.",
                 "saved_templates": _saved_templates_for_user(request.user),
                 "selected_template_id": (request.POST.get("template_id") or "").strip(),
                 "template_name": (request.POST.get("template_name") or "").strip(),
@@ -1308,7 +1308,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         slot.segments.filter(type="CORE").delete()
 
     # Save ALT (telt nog niet mee)
-        # Save ALT (telt nog niet mee in normale zones, maar wél ALT-minuten mogelijk)
+        # Save ALT (does not count in normal zones yet, but ALT minutes are possible)
     if alt_text:
         if alt_seg:
             alt_seg.text = alt_text

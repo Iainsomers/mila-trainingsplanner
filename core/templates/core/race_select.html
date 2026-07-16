@@ -11,10 +11,8 @@
       <div class="text-muted small">{{ period_label }} · {% if scope_mode == "athlete" %}Athlete{% else %}Group{% endif %}</div>
     </div>
     <div class="d-flex gap-2">
-      {% if not is_athlete_user %}
-        <a href="/race-calendar/?year={{ year }}&view=calendar&period={{ period_mode }}" class="btn btn-sm btn-outline-secondary">Race Calendar</a>
-      {% endif %}
-      <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+      <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
     </div>
   </div>
 

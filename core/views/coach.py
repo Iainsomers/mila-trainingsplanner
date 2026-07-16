@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 import calendar as py_calendar
+from urllib.parse import urlencode
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -10,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Lower
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
 
 from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot
 from core.parser import parse_segment_text
@@ -135,14 +137,14 @@ def _parse_optional_target_prs(post):
     values = {}
     errors = []
     fields = (
-        ("target_pr_800", "target_pr_800_s", "Doel T800"),
-        ("target_pr_1500", "target_pr_1500_s", "Doel T1500"),
-        ("target_pr_3000", "target_pr_3000_s", "Doel T3000"),
-        ("target_pr_5000", "target_pr_5000_s", "Doel T5000"),
-        ("target_pr_10000", "target_pr_10000_s", "Doel T10000"),
-        ("target_tm", "target_pr_tm_s", "Doel TM"),
-        ("target_thm", "target_pr_thm_s", "Doel THM"),
-        ("target_t4", "target_pr_400_s", "Doel T4"),
+        ("target_pr_800", "target_pr_800_s", "Goal T800"),
+        ("target_pr_1500", "target_pr_1500_s", "Goal T1500"),
+        ("target_pr_3000", "target_pr_3000_s", "Goal T3000"),
+        ("target_pr_5000", "target_pr_5000_s", "Goal T5000"),
+        ("target_pr_10000", "target_pr_10000_s", "Goal T10000"),
+        ("target_tm", "target_pr_tm_s", "Goal TM"),
+        ("target_thm", "target_pr_thm_s", "Goal THM"),
+        ("target_t4", "target_pr_400_s", "Goal T4"),
     )
 
     for form_key, model_field, label in fields:
@@ -154,7 +156,7 @@ def _parse_optional_target_prs(post):
             values[model_field] = _parse_pr_time_to_seconds(raw)
         except ValueError:
             values[model_field] = None
-            errors.append(f"{label} ongeldig formaat.")
+            errors.append(f"{label} invalid format.")
 
     return values, errors
 
@@ -332,7 +334,7 @@ def trainer_planning_view(request):
         form["is_private"] = (request.POST.get("is_private") == "on")
 
         if not form["name"]:
-            errors.append("Naam is verplicht.")
+            errors.append("Name is required.")
 
         if not errors:
             try:
@@ -380,7 +382,7 @@ def trainer_planning_detail_view(request, plan_id: int):
         plan.auto_wu_m = _clean_non_negative_int(request.POST.get("auto_wu_m"))
         plan.auto_cd_m = _clean_non_negative_int(request.POST.get("auto_cd_m"))
         if not new_name:
-            errors.append("Naam is verplicht.")
+            errors.append("Name is required.")
         elif _trainer_planning_qs(request.user).exclude(id=plan.id).filter(name=new_name).exists():
             errors.append("Er bestaat al een planning met deze naam.")
         else:
@@ -518,7 +520,7 @@ def _validate_base_planning_coverage(block_values):
 
     errors = []
     if missing:
-        errors.append("Niet elke dag van het jaar is gecovered.")
+        errors.append("Not every day of the year is covered.")
     if overlap:
         errors.append("Er zijn overlappende datumranges.")
     return errors
@@ -663,9 +665,9 @@ def athlete_base_planning_view(request):
                 source_athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(source_id)).first()
 
             if not source_athlete:
-                errors.append("Kies een geldige atleet om van te kopieren.")
+                errors.append("Choose a valid athlete to copy from.")
             elif source_athlete.id == selected_athlete.id:
-                errors.append("Kies een andere atleet om van te kopieren.")
+                errors.append("Choose a different athlete to copy from.")
             else:
                 source_blocks = (
                     AthleteBasePlanningBlock.objects
@@ -726,7 +728,7 @@ def athlete_base_planning_view(request):
                     start_month, start_day = _parse_month_day(request.POST.get(f"{prefix}_start"))
                     end_month, end_day = _parse_month_day(request.POST.get(f"{prefix}_end"))
                 except (TypeError, ValueError):
-                    errors.append("Gebruik datumformaat DD-MM, bijvoorbeeld 01-03.")
+                    errors.append("Use date format DD-MM, for example 01-03.")
                     continue
 
                 block_values.append({
@@ -1757,7 +1759,7 @@ def settings_view(request):
 
         coach_settings.save()
 
-        # Sync naar session
+        # Sync to session
         request.session["show_all_zones"] = coach_settings.show_all_zones
         request.session["highlight_current_week"] = coach_settings.highlight_current_week
         request.session["calendar_show_only_core"] = coach_settings.calendar_show_only_core
@@ -1792,7 +1794,7 @@ def settings_view(request):
         "tb_show_cd": coach_settings.tb_show_cd,
     }
 
-    # Sync naar session
+    # Sync to session
     request.session["show_all_zones"] = ctx["show_all_zones"]
     request.session["highlight_current_week"] = ctx["highlight_current_week"]
     request.session["calendar_show_only_core"] = ctx["calendar_show_only_core"]
@@ -1873,22 +1875,22 @@ def coach_plan_create_view(request):
         form["is_private"] = (request.POST.get("is_private") == "on")
 
         if not form["name"]:
-            errors.append("Naam is verplicht.")
+            errors.append("Name is required.")
 
         try:
             start_d = _parse_iso_date(form["start_date"])
         except ValueError:
             start_d = None
-            errors.append("Startdatum is ongeldig (gebruik YYYY-MM-DD).")
+            errors.append("Start date is invalid (use YYYY-MM-DD).")
 
         try:
             end_d = _parse_iso_date(form["end_date"])
         except ValueError:
             end_d = None
-            errors.append("Einddatum is ongeldig (gebruik YYYY-MM-DD).")
+            errors.append("End date is invalid (use YYYY-MM-DD).")
 
         if (start_d and not end_d) or (end_d and not start_d):
-            errors.append("Vul óf beide datums in, óf geen (start + eind).")
+            errors.append("Enter either both dates or neither date (start + end).")
 
         if start_d and end_d and start_d > end_d:
             errors.append("Startdatum mag niet na einddatum liggen.")
@@ -1899,13 +1901,13 @@ def coach_plan_create_view(request):
                 source_plan_id = int(form["copy_source_plan_id"])
             except ValueError:
                 source_plan_id = None
-                errors.append("Bronplan is ongeldig.")
+                errors.append("Source plan is invalid.")
             if source_plan_id is not None:
                 source_plan = _exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request.user)).filter(id=source_plan_id).first()
                 if not source_plan:
-                    errors.append("Bronplan is niet gevonden.")
+                    errors.append("Source plan was not found.")
                 elif not start_d or not end_d or not source_plan.start_date or not source_plan.end_date:
-                    errors.append("Plan kopiëren kan alleen als zowel nieuw plan als bronplan een start- en einddatum hebben.")
+                    errors.append("Copying a plan is only possible when both the new plan and the source plan have a start and end date.")
 
         if not errors:
             new_plan = TrainingPlan.objects.create(
@@ -1952,22 +1954,22 @@ def coach_plan_edit_view(request, plan_id: int):
         form["is_private"] = (request.POST.get("is_private") == "on")
 
         if not form["name"]:
-            errors.append("Naam is verplicht.")
+            errors.append("Name is required.")
 
         try:
             start_d = _parse_iso_date(form["start_date"])
         except ValueError:
             start_d = None
-            errors.append("Startdatum is ongeldig (gebruik YYYY-MM-DD).")
+            errors.append("Start date is invalid (use YYYY-MM-DD).")
 
         try:
             end_d = _parse_iso_date(form["end_date"])
         except ValueError:
             end_d = None
-            errors.append("Einddatum is ongeldig (gebruik YYYY-MM-DD).")
+            errors.append("End date is invalid (use YYYY-MM-DD).")
 
         if (start_d and not end_d) or (end_d and not start_d):
-            errors.append("Vul óf beide datums in, óf geen (start + eind).")
+            errors.append("Enter either both dates or neither date (start + end).")
 
         if start_d and end_d and start_d > end_d:
             errors.append("Startdatum mag niet na einddatum liggen.")
@@ -2077,7 +2079,7 @@ def coach_athlete_create_view(request):
             form["auto_wucd_enabled"] = athlete.auto_wucd_enabled
             form["auto_wu_m"] = athlete.auto_wu_m
             form["auto_cd_m"] = athlete.auto_cd_m
-            saved_notice = "WU settings opgeslagen."
+            saved_notice = "WU settings saved."
             return render(
                 request,
                 "core/coach_athlete_form.html",
@@ -2118,21 +2120,21 @@ def coach_athlete_create_view(request):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
 
         if not form["name"]:
-            errors.append("Naam is verplicht.")
+            errors.append("Name is required.")
 
         try:
             birth_year = _parse_int(form["birth_year"])
         except ValueError:
             birth_year = None
-            errors.append("Geboortejaar is ongeldig (gebruik een getal).")
+            errors.append("Birth year is invalid (use a number).")
         if birth_year is None:
-            errors.append("Geboortejaar is verplicht.")
+            errors.append("Birth year is required.")
         elif birth_year < 1900 or birth_year > 2100:
-            errors.append("Geboortejaar lijkt niet geldig.")
+            errors.append("Birth year does not look valid.")
 
         gender = (form["gender"] or "").strip().upper()
         if gender not in ("M", "V", "X"):
-            errors.append("Geslacht is verplicht en moet M, V of X zijn.")
+            errors.append("Gender is required and must be M, V, or X.")
 
         try:
             vdot = _parse_float(form["vdot"])
@@ -2140,15 +2142,15 @@ def coach_athlete_create_view(request):
                 errors.append("VDOT kan niet negatief zijn.")
         except ValueError:
             vdot = None
-            errors.append("VDOT is ongeldig (gebruik een getal).")
+            errors.append("VDOT is invalid (use a number).")
 
         try:
             view_weeks_ahead = int(form["view_weeks_ahead"])
             if view_weeks_ahead < 0:
-                errors.append("Weken vooruit mag niet negatief zijn.")
+                errors.append("Weeks ahead cannot be negative.")
         except ValueError:
             view_weeks_ahead = 2
-            errors.append("Weken vooruit is ongeldig (gebruik een getal).")
+            errors.append("Weeks ahead is invalid (use a number).")
 
         auto_wu_m = _clean_non_negative_int(form["auto_wu_m"])
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
@@ -2157,68 +2159,68 @@ def coach_athlete_create_view(request):
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
         except ValueError:
             pr_800_s = None
-            errors.append("T800 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T800 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
         except ValueError:
             pr_1500_s = None
-            errors.append("T1500 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T1500 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"])
         except ValueError:
             pr_3000_s = None
-            errors.append("T3000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T3000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"])
         except ValueError:
             pr_5000_s = None
-            errors.append("T5000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T5000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"])
         except ValueError:
             pr_10000_s = None
-            errors.append("T10000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T10000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             tm_s = _parse_pr_time_to_seconds(form["tm"]) if form["tm"] else None
         except ValueError:
             tm_s = None
-            errors.append("TM ongeldig formaat.")
+            errors.append("TM invalid format.")
 
         try:
             thm_s = _parse_pr_time_to_seconds(form["thm"]) if form["thm"] else None
         except ValueError:
             thm_s = None
-            errors.append("THM ongeldig formaat.")
+            errors.append("THM invalid format.")
 
         try:
             t4_s = _parse_pr_time_to_seconds(form["t4"]) if form["t4"] else None
         except ValueError:
             t4_s = None
-            errors.append("T4 ongeldig formaat.")
+            errors.append("T4 invalid format.")
 
         target_pr_800_s, target_pr_1500_s, target_pr_3000_s = None, None, None
         target_pr_5000_s, target_pr_10000_s, target_tm_s = None, None, None
         target_thm_s, target_t4_s = None, None
         for key, label in (
-            ("target_pr_800", "Doel T800"),
-            ("target_pr_1500", "Doel T1500"),
-            ("target_pr_3000", "Doel T3000"),
-            ("target_pr_5000", "Doel T5000"),
-            ("target_pr_10000", "Doel T10000"),
-            ("target_tm", "Doel TM"),
-            ("target_thm", "Doel THM"),
-            ("target_t4", "Doel T4"),
+            ("target_pr_800", "Goal T800"),
+            ("target_pr_1500", "Goal T1500"),
+            ("target_pr_3000", "Goal T3000"),
+            ("target_pr_5000", "Goal T5000"),
+            ("target_pr_10000", "Goal T10000"),
+            ("target_tm", "Goal TM"),
+            ("target_thm", "Goal THM"),
+            ("target_t4", "Goal T4"),
         ):
             try:
                 value = _parse_pr_time_to_seconds(form[key]) if form[key] else None
             except ValueError:
                 value = None
-                errors.append(f"{label} ongeldig formaat.")
+                errors.append(f"{label} invalid format.")
             if key == "target_pr_800":
                 target_pr_800_s = value
             elif key == "target_pr_1500":
@@ -2237,7 +2239,7 @@ def coach_athlete_create_view(request):
                 target_t4_s = value
 
         if form["zone_method"] != "manual":
-            errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
+            errors.append("Zone method is not supported yet. Choose 'manual' for now.")
 
         zone_speed_mps, z_errors, normalized_input, other_under = parse_manual_zones_required(
             request.POST, unit=unit
@@ -2377,21 +2379,21 @@ def coach_athlete_edit_view(request, athlete_id: int):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
 
         if not form["name"]:
-            errors.append("Naam is verplicht.")
+            errors.append("Name is required.")
 
         try:
             birth_year = _parse_int(form["birth_year"])
         except ValueError:
             birth_year = None
-            errors.append("Geboortejaar is ongeldig (gebruik een getal).")
+            errors.append("Birth year is invalid (use a number).")
         if birth_year is None:
-            errors.append("Geboortejaar is verplicht.")
+            errors.append("Birth year is required.")
         elif birth_year < 1900 or birth_year > 2100:
-            errors.append("Geboortejaar lijkt niet geldig.")
+            errors.append("Birth year does not look valid.")
 
         gender = (form["gender"] or "").strip().upper()
         if gender not in ("M", "V", "X"):
-            errors.append("Geslacht is verplicht en moet M, V of X zijn.")
+            errors.append("Gender is required and must be M, V, or X.")
 
         try:
             vdot = _parse_float(form["vdot"])
@@ -2399,15 +2401,15 @@ def coach_athlete_edit_view(request, athlete_id: int):
                 errors.append("VDOT kan niet negatief zijn.")
         except ValueError:
             vdot = None
-            errors.append("VDOT is ongeldig (gebruik een getal).")
+            errors.append("VDOT is invalid (use a number).")
 
         try:
             view_weeks_ahead = int(form["view_weeks_ahead"])
             if view_weeks_ahead < 0:
-                errors.append("Weken vooruit mag niet negatief zijn.")
+                errors.append("Weeks ahead cannot be negative.")
         except ValueError:
             view_weeks_ahead = 2
-            errors.append("Weken vooruit is ongeldig (gebruik een getal).")
+            errors.append("Weeks ahead is invalid (use a number).")
 
         auto_wu_m = _clean_non_negative_int(form["auto_wu_m"])
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
@@ -2416,68 +2418,68 @@ def coach_athlete_edit_view(request, athlete_id: int):
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
         except ValueError:
             pr_800_s = None
-            errors.append("T800 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T800 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
         except ValueError:
             pr_1500_s = None
-            errors.append("T1500 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T1500 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"])
         except ValueError:
             pr_3000_s = None
-            errors.append("T3000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T3000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"])
         except ValueError:
             pr_5000_s = None
-            errors.append("T5000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T5000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"])
         except ValueError:
             pr_10000_s = None
-            errors.append("T10000 is verplicht en moet in formaat m:ss(.ms), h:mm:ss(.ms) of mm.ss.ms zijn.")
+            errors.append("T10000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
 
         try:
             tm_s = _parse_pr_time_to_seconds(form["tm"]) if form["tm"] else None
         except ValueError:
             tm_s = None
-            errors.append("TM ongeldig formaat.")
+            errors.append("TM invalid format.")
 
         try:
             thm_s = _parse_pr_time_to_seconds(form["thm"]) if form["thm"] else None
         except ValueError:
             thm_s = None
-            errors.append("THM ongeldig formaat.")
+            errors.append("THM invalid format.")
 
         try:
             t4_s = _parse_pr_time_to_seconds(form["t4"]) if form["t4"] else None
         except ValueError:
             t4_s = None
-            errors.append("T4 ongeldig formaat.")
+            errors.append("T4 invalid format.")
 
         target_pr_800_s, target_pr_1500_s, target_pr_3000_s = None, None, None
         target_pr_5000_s, target_pr_10000_s, target_tm_s = None, None, None
         target_thm_s, target_t4_s = None, None
         for key, label in (
-            ("target_pr_800", "Doel T800"),
-            ("target_pr_1500", "Doel T1500"),
-            ("target_pr_3000", "Doel T3000"),
-            ("target_pr_5000", "Doel T5000"),
-            ("target_pr_10000", "Doel T10000"),
-            ("target_tm", "Doel TM"),
-            ("target_thm", "Doel THM"),
-            ("target_t4", "Doel T4"),
+            ("target_pr_800", "Goal T800"),
+            ("target_pr_1500", "Goal T1500"),
+            ("target_pr_3000", "Goal T3000"),
+            ("target_pr_5000", "Goal T5000"),
+            ("target_pr_10000", "Goal T10000"),
+            ("target_tm", "Goal TM"),
+            ("target_thm", "Goal THM"),
+            ("target_t4", "Goal T4"),
         ):
             try:
                 value = _parse_pr_time_to_seconds(form[key]) if form[key] else None
             except ValueError:
                 value = None
-                errors.append(f"{label} ongeldig formaat.")
+                errors.append(f"{label} invalid format.")
             if key == "target_pr_800":
                 target_pr_800_s = value
             elif key == "target_pr_1500":
@@ -2496,7 +2498,7 @@ def coach_athlete_edit_view(request, athlete_id: int):
                 target_t4_s = value
 
         if form["zone_method"] != "manual":
-            errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
+            errors.append("Zone method is not supported yet. Choose 'manual' for now.")
 
         zone_speed_mps, z_errors, normalized_input, other_under = parse_manual_zones_required(
             request.POST, unit=unit
@@ -2589,7 +2591,7 @@ def coach_group_create_view(request):
         form["athlete_ids"] = _clean_int_list(request.POST.getlist("athlete_ids"))
 
         if not form["name"]:
-            errors.append("Groepsnaam is verplicht.")
+            errors.append("Group name is required.")
 
         if not errors:
             g = Group.objects.create(owner=request.user, name=form["name"])
@@ -2618,7 +2620,7 @@ def coach_group_edit_view(request, group_id: int):
         form["athlete_ids"] = _clean_int_list(request.POST.getlist("athlete_ids"))
 
         if not form["name"]:
-            errors.append("Groepsnaam is verplicht.")
+            errors.append("Group name is required.")
 
         if not errors:
             group.name = form["name"]
@@ -2685,7 +2687,7 @@ def coach_assignment_edit_view(request, plan_id: int):
         form["athlete_ids"] = _clean_int_list(request.POST.getlist("athlete_ids"))
 
         if not plan.start_date or not plan.end_date:
-            errors.append("Vul eerst start_date en end_date in bij dit plan voordat je targets koppelt.")
+            errors.append("Fill in start_date and end_date for this plan before linking targets.")
 
         if plan.start_date and plan.end_date:
             selected_group_athlete_ids = set(
@@ -2700,14 +2702,14 @@ def coach_assignment_edit_view(request, plan_id: int):
                         a = Athlete.objects.filter(id=aid).first()
                         a_name = a.name if a else f"athlete_id={aid}"
                         errors.append(
-                            f"Overlap/conflict: {a_name} zit al in plan '{op.name}', maar dat plan heeft geen start/einddatum."
+                            f"Overlap/conflict: {a_name} is already in plan '{op.name}', but that plan has no start/end date."
                         )
                         continue
                     if _ranges_overlap(plan.start_date, plan.end_date, op.start_date, op.end_date):
                         a = Athlete.objects.filter(id=aid).first()
                         a_name = a.name if a else f"athlete_id={aid}"
                         errors.append(
-                            f"Overlap/conflict: {a_name} zit al in plan '{op.name}' ({op.start_date} t/m {op.end_date})."
+                            f"Overlap/conflict: {a_name} is already in plan '{op.name}' ({op.start_date} to {op.end_date})."
                         )
 
         if not errors:
@@ -2755,7 +2757,18 @@ def coach_group_delete_view(request, group_id: int):
     return redirect("coach_groups")
 
 from core.models import AthleteDayCheck, AthleteDayComment
-from core.views.calendar import _build_effective_slot_maps
+from core.views.calendar import (
+    _VirtualSegment,
+    _VirtualSlot,
+    _annotate_slot_segment_display_times,
+    _base_planning_slot_for_day,
+    _get_athlete_year_flex_plan,
+    _is_flex_planner_plan,
+    _slot_has_race,
+    _slot_is_visually_empty,
+    _virtual_race_slot_from_entries,
+    _virtual_slot_from_base_training,
+)
 
 
 def _daily_status_badge(status):
@@ -2778,19 +2791,70 @@ def daily_overview_view(request):
     from datetime import date
     from django.db.models import Q
 
-    group_id = request.GET.get("group_id")
-    d = request.GET.get("date")
+    today = date.today()
+    date_value = (request.GET.get("date") or today.isoformat()).strip()
+    slot_filter = (request.GET.get("slots") or "both").strip().lower()
+    if slot_filter not in {"am", "pm", "both"}:
+        slot_filter = "both"
 
-    if not group_id or not d:
-        return redirect("/")
+    selection_mode = (request.GET.get("selection") or "all").strip().lower()
+    if selection_mode not in {"all", "selection", "trains"}:
+        selection_mode = "all"
 
     try:
-        d = date.fromisoformat(d)
+        d = date.fromisoformat(date_value)
     except Exception:
-        return redirect("/")
+        d = today
+        date_value = d.isoformat()
 
-    group = get_object_or_404(_filter_owned(Group.objects.all(), request.user), id=group_id)
-    athletes = list(group.athletes.all().order_by("name"))
+    all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    all_athlete_ids = {athlete.id for athlete in all_athletes}
+    coach_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
+    dco_train_athlete_ids = {
+        int(value)
+        for value in (coach_settings.dco_train_athlete_ids or [])
+        if str(value).isdigit() and int(value) in all_athlete_ids
+    }
+
+    if request.method == "POST" and request.POST.get("action") == "save_dco_trains":
+        new_train_ids = [
+            int(value)
+            for value in request.POST.getlist("train_athletes")
+            if str(value).isdigit() and int(value) in all_athlete_ids
+        ]
+        coach_settings.dco_train_athlete_ids = new_train_ids
+        coach_settings.save(update_fields=["dco_train_athlete_ids", "updated_at"])
+
+        redirect_query = {
+            "date": request.POST.get("date") or date_value,
+            "slots": request.POST.get("slots") or slot_filter,
+            "selection": request.POST.get("selection") or selection_mode,
+        }
+        posted_selected = [
+            value
+            for value in request.POST.getlist("athletes")
+            if str(value).isdigit() and int(value) in all_athlete_ids
+        ]
+        if redirect_query["selection"] == "selection":
+            redirect_query["athletes"] = posted_selected
+        return redirect(f"{reverse('daily_overview')}?{urlencode(redirect_query, doseq=True)}")
+
+    selected_athlete_ids = {
+        int(value)
+        for value in request.GET.getlist("athletes")
+        if str(value).isdigit()
+    }
+
+    if selection_mode == "selection":
+        athletes = [athlete for athlete in all_athletes if athlete.id in selected_athlete_ids]
+    elif selection_mode == "trains":
+        athletes = [athlete for athlete in all_athletes if athlete.id in dco_train_athlete_ids]
+        selected_athlete_ids = set(dco_train_athlete_ids)
+    else:
+        athletes = all_athletes
+        selected_athlete_ids = {athlete.id for athlete in athletes}
+
+    show_results = request.GET.get("ok") == "1"
     athlete_ids = [a.id for a in athletes]
 
     check_map = {}
@@ -2801,46 +2865,177 @@ def daily_overview_view(request):
     for comment in AthleteDayComment.objects.filter(date=d, athlete_id__in=athlete_ids):
         comment_map[comment.athlete_id] = comment
 
-    rows = []
+    accessible_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user).exclude(name__startswith="Flex Planner"))
+    flex_plan = _get_athlete_year_flex_plan(request.user, athletes[0] if athletes else None, d, d + timedelta(days=1))
+
+    plan_targets = {}
+    for plan in accessible_plans:
+        if _is_flex_planner_plan(plan):
+            continue
+        try:
+            target_ids = set(plan.targeted_athlete_ids())
+        except Exception:
+            target_ids = set()
+        if target_ids:
+            plan_targets[plan.id] = target_ids
+
+    relevant_plan_ids = set()
+    plan_for_athlete = {}
+    if flex_plan:
+        relevant_plan_ids.add(flex_plan.id)
 
     for athlete in athletes:
-        athlete_plans = []
-
-        for plan in _filter_owned(TrainingPlan.objects.order_by("name"), request.user):
-            if athlete.id not in plan.targeted_athlete_ids():
+        matching_plan = None
+        for plan in accessible_plans:
+            if athlete.id not in plan_targets.get(plan.id, set()):
                 continue
             if plan.start_date and plan.start_date > d:
                 continue
             if plan.end_date and plan.end_date < d:
                 continue
-            athlete_plans.append(plan)
+            matching_plan = plan
+            break
 
-        if athlete_plans:
-            slot_qs = (
-                TrainingSlot.objects
-                .filter(date=d, plan__in=athlete_plans)
-                .filter(Q(athlete__isnull=True) | Q(athlete=athlete))
-                .prefetch_related("segments")
-                .select_related("plan", "athlete")
-            )
-            slot_map, _ = _build_effective_slot_maps(slot_qs)
-        else:
-            slot_map = {}
+        if matching_plan:
+            plan_for_athlete[athlete.id] = matching_plan
+            relevant_plan_ids.add(matching_plan.id)
+        elif flex_plan:
+            plan_for_athlete[athlete.id] = flex_plan
+            relevant_plan_ids.add(flex_plan.id)
+
+    slot_lookup = {}
+    has_fix_keys = set()
+    if relevant_plan_ids and athlete_ids:
+        slot_qs = (
+            TrainingSlot.objects
+            .filter(plan_id__in=relevant_plan_ids, date=d)
+            .filter(Q(athlete__isnull=True) | Q(athlete_id__in=athlete_ids))
+            .prefetch_related("segments")
+            .select_related("plan", "athlete")
+        )
+        for slot in slot_qs:
+            slot_lookup[(slot.plan_id, slot.athlete_id or None, slot.date, int(slot.slot_index))] = slot
+            if slot.athlete_id:
+                has_fix_keys.add((slot.plan_id, slot.athlete_id, slot.date, int(slot.slot_index)))
+
+    base_blocks_by_athlete = {}
+    trainer_plan_ids = set()
+    if athlete_ids:
+        base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
+        base_blocks = (
+            AthleteBasePlanningBlock.objects
+            .filter(athlete_id__in=athlete_ids)
+            .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
+            .order_by("athlete_id", "sort_order", "start_month", "start_day", "id")
+        )
+        for block in base_blocks:
+            base_blocks_by_athlete.setdefault(block.athlete_id, []).append(block)
+            for base_slot in getattr(block, "_prefetched_base_slots", []):
+                if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_slot.trainer_plan_id:
+                    trainer_plan_ids.add(base_slot.trainer_plan_id)
+
+    trainer_slot_lookup = {}
+    if trainer_plan_ids:
+        trainer_slot_qs = (
+            TrainingSlot.objects
+            .filter(plan_id__in=trainer_plan_ids, athlete__isnull=True, date=d)
+            .prefetch_related("segments")
+            .select_related("plan")
+        )
+        for trainer_slot in trainer_slot_qs:
+            trainer_slot_lookup[(trainer_slot.plan_id, trainer_slot.date, int(trainer_slot.slot_index))] = trainer_slot
+
+    race_entries_by_athlete = {}
+    if athlete_ids:
+        race_entry_qs = (
+            RaceEntry.objects
+            .filter(athlete_id__in=athlete_ids, race_distance__race__date=d)
+            .filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True))
+            .select_related("race_distance", "race_distance__race")
+            .order_by("race_distance__race__name", "race_distance__id")
+        )
+        for entry in race_entry_qs:
+            race_entries_by_athlete.setdefault(entry.athlete_id, []).append(entry)
+
+    def effective_daily_slot(athlete, slot_index):
+        plan = plan_for_athlete.get(athlete.id)
+        slot = None
+        is_override = False
+        flex_blocks_base = False
+
+        if plan:
+            override_slot = slot_lookup.get((plan.id, athlete.id, d, slot_index))
+            base_slot = slot_lookup.get((plan.id, None, d, slot_index))
+            slot = override_slot or base_slot
+            is_override = override_slot is not None
+
+        if flex_plan:
+            flex_override_slot = slot_lookup.get((flex_plan.id, athlete.id, d, slot_index))
+            if flex_override_slot is not None:
+                if _slot_is_visually_empty(flex_override_slot):
+                    if not _slot_has_race(slot):
+                        slot = None
+                        flex_blocks_base = True
+                else:
+                    slot = flex_override_slot
+                    is_override = True
+
+        if slot_index == 2 and not is_override:
+            race_slot = _virtual_race_slot_from_entries(race_entries_by_athlete.get(athlete.id, []))
+            if race_slot:
+                slot = race_slot
+
+        if not slot and not flex_blocks_base:
+            base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, athlete.id, d, slot_index)
+            if base_planning_slot:
+                if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                    slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
+                    slot = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, d, slot_index))
+                    if _slot_is_visually_empty(slot) and base_planning_slot.trainer_plan:
+                        slot = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
+
+        _annotate_slot_segment_display_times(slot, athlete)
+        return None if _slot_is_visually_empty(slot) else slot
+
+    rows = []
+
+    for athlete in athletes:
 
         status1 = check_map.get((athlete.id, 1), "")
         status2 = check_map.get((athlete.id, 2), "")
+        slot1 = effective_daily_slot(athlete, 1)
+        slot2 = effective_daily_slot(athlete, 2)
 
         rows.append({
             "athlete": athlete,
-            "slot1": slot_map.get((d, 1)),
-            "slot2": slot_map.get((d, 2)),
+            "slot1": slot1,
+            "slot2": slot2,
             "check1_badge": _daily_status_badge(status1),
             "check2_badge": _daily_status_badge(status2),
             "comment": comment_map.get(athlete.id),
         })
 
+    selection_query = {
+        "date": date_value,
+        "slots": slot_filter,
+        "selection": selection_mode,
+    }
+    if selection_mode == "selection":
+        selection_query["athletes"] = [str(athlete_id) for athlete_id in sorted(selected_athlete_ids)]
+    selection_url = f"{reverse('daily_overview')}?{urlencode(selection_query, doseq=True)}"
+
     return render(request, "core/daily_overview.html", {
         "rows": rows,
         "date": d,
-        "group": group,
+        "date_value": date_value,
+        "slot_filter": slot_filter,
+        "selection_mode": selection_mode,
+        "all_athletes": all_athletes,
+        "selected_athlete_ids": selected_athlete_ids,
+        "dco_train_athlete_ids": dco_train_athlete_ids,
+        "show_results": show_results,
+        "show_am": slot_filter in {"am", "both"},
+        "show_pm": slot_filter in {"pm", "both"},
+        "selection_url": selection_url,
     })

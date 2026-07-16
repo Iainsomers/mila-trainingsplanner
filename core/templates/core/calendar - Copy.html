@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}Kalender{% endblock %}
+{% block title %}Calendar{% endblock %}
 
 {% block extra_head %}
   <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
@@ -69,7 +69,7 @@
     }
 
     /* =========================
-       Week phase dropdown + kleur
+       Week phase dropdown + color
        ========================= */
 
     .week-phase-wrap {
@@ -118,9 +118,9 @@
     /* Kleuren op het week-vak (1e kolom) */
     .weeklabel.phase-recovery { background: #e8ddff !important; } /* lichtpaars */
     .weeklabel.phase-aerobe   { background: #e5533d !important; } /* exact z3 */
-    .weeklabel.phase-specific { background: #bfe7bf !important; } /* z4 kleur */
-    .weeklabel.phase-intense  { background: #b7d7ff !important; } /* z5 kleur */
-    .weeklabel.phase-taper    { background: #ff7a00 !important; } /* racekleur (oranje) */
+    .weeklabel.phase-specific { background: #bfe7bf !important; } /* z4 color */
+    .weeklabel.phase-intense  { background: #b7d7ff !important; } /* z5 color */
+    .weeklabel.phase-taper    { background: #ff7a00 !important; } /* race color (orange) */
   </style>
 
   <script>
@@ -239,7 +239,7 @@
           <option value="{{ p.id }}" {% if selected_plan and p.id == selected_plan.id %}selected{% endif %}>{{ p.name }}</option>
         {% endfor %}
       {% else %}
-        <option value="">(geen plannen)</option>
+        <option value="">(no plans)</option>
       {% endif %}
     </select>
 
@@ -254,7 +254,7 @@
       <label class="small text-secondary mb-0">Bekijk als</label>
 
       <select name="athlete" class="form-select form-select-sm" style="width: 240px;" onchange="this.form.submit();">
-        <option value="" {% if not selected_athlete %}selected{% endif %}>(geen — plan bewerken)</option>
+        <option value="" {% if not selected_athlete %}selected{% endif %}>(none - edit plan)</option>
         {% for a in plan_athletes %}
           <option value="{{ a.id }}" {% if selected_athlete and a.id == selected_athlete.id %}selected{% endif %}>{{ a.name }}</option>
         {% endfor %}
@@ -265,12 +265,12 @@
 
 {% if selected_athlete %}
   <div class="alert alert-info py-2">
-    <b>Atleet-modus:</b> wijzigingen worden opgeslagen als <b>fixed override</b> voor <b>{{ selected_athlete.name }}</b>.
-    <div class="small text-muted">Weektype kun je hier per atleet overschrijven (week override).</div>
+    <b>Athlete mode:</b> changes are saved as a <b>fixed override</b> for <b>{{ selected_athlete.name }}</b>.
+    <div class="small text-muted">You can override the week type per athlete here (week override).</div>
   </div>
 {% endif %}
 
-{# ✅ Belangrijk: default_if_none i.p.v. default, zodat False niet terugvalt naar True #}
+{# Important: default_if_none instead of default, so False does not fall back to True #}
 {% with highlight_current_week=request.session.highlight_current_week|default_if_none:True %}
   {% if highlight_current_week %}
     {% now "Y-m-d" as today_str %}
@@ -280,7 +280,7 @@
     <thead>
       <tr>
         <th class="weeklabel">Week</th>
-        <th class="sumcol">Totaal</th>
+        <th class="sumcol">Total</th>
         <th>Ma</th><th>Di</th><th>Wo</th><th>Do</th><th>Vr</th><th>Za</th><th>Zo</th>
       </tr>
     </thead>
@@ -348,9 +348,9 @@
                         <button type="button" class="btn btn-outline-primary"
                           hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
                           hx-swap="none"
-                          title="Kopieer deze week (base slots)"
+                          title="Copy this week (base slots)"
                         >
-                          Kopieer
+                          Copy
                         </button>
 
                         {% if has_week_clipboard %}
@@ -416,7 +416,7 @@
 {% endif %}
 
 
-                      {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                      {# ALT minutes (Z1-Z3) from w.alt_zones #}
                       {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
                         {% if a1 or a2 or a3 %}
                           <div class="sumline">
@@ -504,9 +504,9 @@
                       <button type="button" class="btn btn-outline-primary"
                         hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
                         hx-swap="none"
-                        title="Kopieer deze week (base slots)"
+                        title="Copy this week (base slots)"
                       >
-                        Kopieer
+                        Copy
                       </button>
 
                       {% if has_week_clipboard %}
@@ -572,7 +572,7 @@
 {% endif %}
 
 
-                    {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                    {# ALT minutes (Z1-Z3) from w.alt_zones #}
                     {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
                       {% if a1 or a2 or a3 %}
                         <div class="sumline">
@@ -661,9 +661,9 @@
                   <button type="button" class="btn btn-outline-primary"
                     hx-post="/week-copy/{{ w.week_start|date:'Y' }}/{{ w.week_start|date:'m' }}/{{ w.week_start|date:'d' }}/?plan={{ selected_plan.id }}"
                     hx-swap="none"
-                    title="Kopieer deze week (base slots)"
+                    title="Copy this week (base slots)"
                   >
-                    Kopieer
+                    Copy
                   </button>
 
                   {% if has_week_clipboard %}
@@ -729,7 +729,7 @@
 {% endif %}
 
 
-                {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                {# ALT minutes (Z1-Z3) from w.alt_zones #}
                 {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
                   {% if a1 or a2 or a3 %}
                     <div class="sumline">

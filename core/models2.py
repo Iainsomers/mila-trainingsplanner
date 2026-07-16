@@ -10,9 +10,9 @@ class Athlete(models.Model):
     Later we can link Athlete <-> User for athlete login.
     """
     GENDER_CHOICES = [
-        ("M", "Man"),
-        ("V", "Vrouw"),
-        ("X", "Anders"),
+        ("M", "Male"),
+        ("V", "Female"),
+        ("X", "Other"),
     ]
 
     name = models.CharField(max_length=120, unique=True)
@@ -34,17 +34,17 @@ class Group(models.Model):
 
 class TrainingSlot(models.Model):
     """
-    Eén vakje in de kalender:
+    One cell in the calendar:
     - date: de dag
     - slot_index: 1 of 2 (twee vakjes per dag)
-    - doelgroep: athletes en/of groups (voor wie geldt dit plan)
+    - target group: athletes and/or groups (who this plan applies to)
     """
     SLOT_CHOICES = [(1, "Slot 1"), (2, "Slot 2")]
 
     date = models.DateField()
     slot_index = models.PositiveSmallIntegerField(choices=SLOT_CHOICES)
 
-    # doelgroep (optioneel in coach-only; later kunnen we dit verplicht maken)
+    # target group (optional in coach-only; later we can make this required)
     athletes = models.ManyToManyField(Athlete, blank=True, related_name="training_slots")
     groups = models.ManyToManyField(Group, blank=True, related_name="training_slots")
 
@@ -65,16 +65,16 @@ class TrainingSlot(models.Model):
 
     def core_text(self) -> str:
         """
-        Tekst die in de kalender getoond wordt:
-        = tekst van het eerste CORE-segment (op order, dan id).
-        Als er geen Core-segment is: lege string.
+        Text shown in the calendar:
+        = text of the first CORE segment (by order, then id).
+        If there is no Core segment: empty string.
         """
         core = self.segments.filter(type="CORE").order_by("order", "id").first()
         return core.text.strip() if core and core.text else ""
 
     def targeted_athlete_ids(self) -> set[int]:
         """
-        Helper: alle atleten die 'bij dit slot horen' via directe selectie en via groepen.
+        Helper: all athletes that belong to this slot through direct selection and groups.
         (Handig voor logs en later permissions.)
         """
         ids = set(self.athletes.values_list("id", flat=True))
@@ -119,7 +119,7 @@ class TrainingSegment(models.Model):
     distance_m = models.PositiveIntegerField(null=True, blank=True)
     duration_s = models.PositiveIntegerField(null=True, blank=True)
 
-    # Vrij tekstveld: bij CORE komt hier bv. "6×1000m" in, en dát tonen we in de kalender.
+    # Free text field: for CORE this contains e.g. "6×1000m", and that is shown in the calendar.
     text = models.CharField(max_length=300, blank=True)
 
     class Meta:
@@ -140,13 +140,13 @@ class TrainingSegment(models.Model):
         if self.type == "CORE" and not (self.text or "").strip():
             # In de uiteindelijke popup willen we dit echt afdwingen.
             # Dit helpt alvast bij admin/manual edits.
-            raise ValidationError("CORE-segment moet een tekst hebben (bijv. '6×1000m').")
+            raise ValidationError("CORE segment must have text, for example '6×1000m'.")
 
 
 class TrainingLog(models.Model):
     """
-    Log per atleet per slot (coach-only nu; later atleten zelf invullen).
-    Atleten mogen later alleen hun eigen log zien.
+    Log per athlete per slot (coach-only now; later athletes fill this in themselves).
+    Later, athletes may only see their own log.
     """
     slot = models.ForeignKey(TrainingSlot, on_delete=models.CASCADE, related_name="logs")
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="logs")
@@ -176,8 +176,8 @@ class TrainingLog(models.Model):
         if not self.slot_id or not self.athlete_id:
             return
 
-        # Als er een doelgroep is ingesteld (athletes/groups), moet deze athlete daarin zitten.
-        # Als doelgroep leeg is, laten we het toe (coach-only fase is flexibel).
+        # If a target group is set (athletes/groups), this athlete must be part of it.
+        # If the target group is empty, allow it (coach-only phase is flexible).
         targeted = self.slot.targeted_athlete_ids()
         if targeted and self.athlete_id not in targeted:
-            raise ValidationError("Deze atleet hoort niet bij de doelgroep van dit trainingsslot.")
+            raise ValidationError("This athlete is not part of the target group for this training slot.")

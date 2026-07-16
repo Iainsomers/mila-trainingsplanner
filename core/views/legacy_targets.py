@@ -23,7 +23,7 @@ def plan_targets_view(request, plan_id: int):
         athlete_ids_int = [int(x) for x in athlete_ids if str(x).isdigit()]
 
         if not plan.start_date or not plan.end_date:
-            errors.append("Dit plan heeft nog geen start- en einddatum. Vul eerst start_date en end_date in.")
+            errors.append("This plan does not have a start and end date yet. Fill in start_date and end_date first.")
 
         selected_group_athlete_ids = set(
             Athlete.objects.filter(groups__id__in=group_ids_int).values_list("id", flat=True)
@@ -38,13 +38,13 @@ def plan_targets_view(request, plan_id: int):
                     if not op.start_date or not op.end_date:
                         a = Athlete.objects.filter(id=aid).first()
                         a_name = a.name if a else f"athlete_id={aid}"
-                        errors.append(f"Overlap/conflict: {a_name} zit al in plan '{op.name}', maar dat plan heeft geen start/einddatum.")
+                        errors.append(f"Overlap/conflict: {a_name} is already in plan '{op.name}', but that plan has no start/end date.")
                         continue
 
                     if _ranges_overlap(plan.start_date, plan.end_date, op.start_date, op.end_date):
                         a = Athlete.objects.filter(id=aid).first()
                         a_name = a.name if a else f"athlete_id={aid}"
-                        errors.append(f"Overlap/conflict: {a_name} zit al in plan '{op.name}' ({op.start_date} t/m {op.end_date}).")
+                        errors.append(f"Overlap/conflict: {a_name} is already in plan '{op.name}' ({op.start_date} to {op.end_date}).")
 
         if errors:
             groups = Group.objects.order_by("name")

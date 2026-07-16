@@ -998,7 +998,7 @@
         if (!url) {
           select.value = flexInitialWeekPhaseValue(select);
           flexApplyWeekPhaseClass(select, select.value || "");
-          alert("Geen plan gevonden voor deze atleet/week.");
+          alert("No plan found for this athlete/week.");
           return;
         }
 
@@ -1049,8 +1049,8 @@
 <div class="d-flex align-items-center justify-content-between mb-2">
   <h2 class="mb-0">Flex Planner</h2>
   <div class="d-flex gap-2">
-    <a href="/planning/" class="btn btn-sm btn-outline-secondary">Planner</a>
-    <a href="/" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+    <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
+    <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
   </div>
 </div>
 
@@ -1106,7 +1106,7 @@
         {{ athlete.name }}
       </label>
     {% empty %}
-      <div class="text-muted small">Geen atleten gevonden.</div>
+      <div class="text-muted small">No athletes found.</div>
     {% endfor %}
   </div>
 </form>
@@ -1128,7 +1128,7 @@
         <table class="flex-table">
           <thead>
             <tr>
-              <th class="flex-athlete-col">Atleet</th>
+              <th class="flex-athlete-col">Athlete</th>
               <th class="flex-total-col">Total</th>
               <th class="flex-slot-label">Slot</th>
               {% for day in week.days %}

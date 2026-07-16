@@ -69,7 +69,7 @@
     }
 
     /* =========================
-       Week phase dropdown + kleur
+       Week phase dropdown + color
        ========================= */
 
     .week-phase-wrap {
@@ -118,9 +118,9 @@
     /* Kleuren op het week-vak (1e kolom) */
     .weeklabel.phase-recovery { background: #e8ddff !important; } /* lichtpaars */
     .weeklabel.phase-aerobe   { background: #f06f5f !important; } /* exact z3 */
-    .weeklabel.phase-specific { background: #bfe7bf !important; } /* z4 kleur */
-    .weeklabel.phase-intense  { background: #b7d7ff !important; } /* z5 kleur */
-    .weeklabel.phase-taper    { background: #ff7a00 !important; } /* racekleur (oranje) */
+    .weeklabel.phase-specific { background: #bfe7bf !important; } /* z4 color */
+    .weeklabel.phase-intense  { background: #b7d7ff !important; } /* z5 color */
+    .weeklabel.phase-taper    { background: #ff7a00 !important; } /* race color (orange) */
   </style>
 
   <script>
@@ -450,7 +450,7 @@
 {% endif %}
 
 
-                      {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                      {# ALT minutes (Z1-Z3) from w.alt_zones #}
                       {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
                         {% if a1 %}
                           <div class="sumline">
@@ -644,7 +644,7 @@
 {% endif %}
 
 
-                    {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                    {# ALT minutes (Z1-Z3) from w.alt_zones #}
                     {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
                       {% if a1 or a2 or a3 %}
                         <div class="sumline">
@@ -825,7 +825,7 @@
 {% endif %}
 
 
-                {# ✅ ALT minuten (Z1–Z3) uit w.alt_zones #}
+                {# ALT minutes (Z1-Z3) from w.alt_zones #}
                 {% with a1=w.alt_zones.1.duration_s a2=w.alt_zones.2.duration_s a3=w.alt_zones.3.duration_s %}
                   {% if a1 or a2 or a3 %}
                     <div class="sumline">

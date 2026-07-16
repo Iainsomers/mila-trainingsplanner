@@ -33,7 +33,7 @@ def pace_to_mps(pace_str: str) -> float:
     """
     parts = pace_str.split(":")
     if len(parts) != 2:
-        raise ValueError("Ongeldig tempoformaat (gebruik mm:ss).")
+        raise ValueError("Invalid pace format (use mm:ss).")
 
     minutes = int(parts[0])
     seconds = int(parts[1])
@@ -87,7 +87,7 @@ def parse_manual_zones_required(
         raw = (post_data.get(f"z{z}_pace") or "").strip()
 
         if not raw:
-            errors.append(f"Z{z} is verplicht.")
+            errors.append(f"Z{z} is required.")
             continue
 
         try:

@@ -106,11 +106,9 @@
       <div class="card h-100 planning-card">
         <div class="card-body d-flex flex-column">
           <h5 class="card-title">Daily Coach Overview</h5>
-          <p class="card-text">View daily training overview for a group.</p>
+          <p class="card-text">View daily training overview.</p>
           <div class="mt-auto">
-            <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#dailyOverviewModal">
-              Open
-            </button>
+            <a href="{% url 'daily_overview' %}" class="btn btn-primary w-100">Open</a>
           </div>
         </div>
       </div>
@@ -135,39 +133,4 @@
   {% endif %}
 </div>
 
-{% if not is_athlete_user %}
-<div class="modal fade" id="dailyOverviewModal" tabindex="-1" aria-labelledby="dailyOverviewModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="get" action="{% url 'daily_overview' %}">
-        <div class="modal-header">
-          <h5 class="modal-title" id="dailyOverviewModalLabel">Daily Coach Overview</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Date</label>
-            <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Group</label>
-            <select name="group_id" class="form-control" required>
-              {% for group in groups %}
-                <option value="{{ group.id }}">{{ group.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">OK</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-{% endif %}
 {% endblock %}

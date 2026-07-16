@@ -4,15 +4,47 @@
 
 {% block extra_head %}
 <style>
+  .daily-selection-panel {
+    max-width: 760px;
+  }
+
+  .daily-athlete-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 6px 12px;
+    max-height: 300px;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+  }
+
   .daily-slotbox {
     border-radius: 6px;
     padding: 4px 6px;
     min-height: 28px;
+    background: #ffffff;
   }
 
   .daily-slotbox-empty {
     color: #777777;
   }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 6px;
+    margin: 0 2px 2px 0;
+  }
+
+  .pill-z1 { background-color: #f8f8f0; }
+  .pill-z2 { background-color: #f7c6d0; }
+  .pill-z3 { background-color: #f06f5f; }
+  .pill-z4 { background-color: #bfe7bf; }
+  .pill-z5 { background-color: #b7d7ff; }
+  .pill-z6 { background-color: #f2c200; }
+  .pill-race { background-color: #ff7a00; }
+  .pill-important-race { background-color: #cc0000; color: #ffffff; }
 </style>
 {% endblock %}
 
@@ -21,206 +53,260 @@
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
       <h2 class="mb-1">Daily Coach Overview</h2>
-      <p class="text-muted mb-0">{{ date }}{% if group %} – {{ group.name }}{% endif %}</p>
+      <p class="text-muted mb-0">{{ date }}</p>
     </div>
-    <a href="/" class="btn btn-sm btn-outline-secondary">← Dashboard</a>
+    <div class="d-flex gap-2">
+      <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
+      {% if show_results %}
+        <a href="{{ selection_url }}" class="btn btn-sm btn-outline-secondary">Selection</a>
+      {% else %}
+        <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+      {% endif %}
+    </div>
   </div>
 
-  <div class="row g-2">
-    {% for r in rows %}
-      <div class="col-12 col-md-6 col-xl-3">
-        <div class="card h-100">
-          <div class="card-body p-2" style="font-size:12px; line-height:1.25;">
-            <div class="mb-2">
-              <strong style="font-size:14px;">{{ r.athlete.name }}</strong>
-            </div>
+  {% if not show_results %}
+    <form method="get" id="dailySelectionForm" class="card daily-selection-panel mb-3">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-sm-4">
+            <label class="form-label">Day</label>
+            <input type="date" name="date" class="form-control" value="{{ date_value }}" required>
+          </div>
 
-            <div class="mb-2">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <strong>Training 1</strong>
-                {% if r.check1_badge.symbol %}
-                  <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check1_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check1_badge.symbol }}</span>
-                {% endif %}
-              </div>
+          <div class="col-sm-4">
+            <label class="form-label d-block">Part of day</label>
+            <div class="btn-group" role="group" aria-label="Part of day">
+              <input type="radio" class="btn-check" name="slots" id="dailySlotsAm" value="am" {% if slot_filter == "am" %}checked{% endif %}>
+              <label class="btn btn-outline-primary" for="dailySlotsAm">AM</label>
 
-              {% if r.slot1 %}
-                <div class="daily-slotbox">
-                  {% if r.slot1.text %}
-                    <div class="core-line" data-zone="">{{ r.slot1.text|linebreaksbr }}</div>
-                  {% else %}
-                    {% for seg in r.slot1.segments.all %}
-                      {% if seg.text %}
-                        {% if seg.type == "CORE" %}
-                          <div class="core-line" data-zone="{{ seg.zone|default:'' }}">{{ seg.text }}</div>
-                        {% else %}
-                          <div>{{ seg.text }}</div>
-                        {% endif %}
-                      {% endif %}
-                    {% endfor %}
-                  {% endif %}
-                </div>
-              {% else %}
-                <div class="daily-slotbox daily-slotbox-empty">—</div>
-              {% endif %}
-            </div>
+              <input type="radio" class="btn-check" name="slots" id="dailySlotsPm" value="pm" {% if slot_filter == "pm" %}checked{% endif %}>
+              <label class="btn btn-outline-primary" for="dailySlotsPm">PM</label>
 
-            <div class="mb-2">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <strong>Training 2</strong>
-                {% if r.check2_badge.symbol %}
-                  <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check2_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check2_badge.symbol }}</span>
-                {% endif %}
-              </div>
-
-              {% if r.slot2 %}
-                <div class="daily-slotbox">
-                  {% if r.slot2.text %}
-                    <div class="core-line" data-zone="">{{ r.slot2.text|linebreaksbr }}</div>
-                  {% else %}
-                    {% for seg in r.slot2.segments.all %}
-                      {% if seg.text %}
-                        {% if seg.type == "CORE" %}
-                          <div class="core-line" data-zone="{{ seg.zone|default:'' }}">{{ seg.text }}</div>
-                        {% else %}
-                          <div>{{ seg.text }}</div>
-                        {% endif %}
-                      {% endif %}
-                    {% endfor %}
-                  {% endif %}
-                </div>
-              {% else %}
-                <div class="daily-slotbox daily-slotbox-empty">—</div>
-              {% endif %}
-            </div>
-
-            <div>
-              <strong>Comment</strong>
-              {% if r.comment %}
-                <div style="max-height:38px; overflow:hidden;">{{ r.comment.text|linebreaksbr }}</div>
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
+              <input type="radio" class="btn-check" name="slots" id="dailySlotsBoth" value="both" {% if slot_filter == "both" %}checked{% endif %}>
+              <label class="btn btn-outline-primary" for="dailySlotsBoth">Both</label>
             </div>
           </div>
+
+          <div class="col-sm-4">
+            <label class="form-label">Selection</label>
+            <select name="selection" id="dailySelectionMode" class="form-select">
+              <option value="all" {% if selection_mode == "all" %}selected{% endif %}>All</option>
+              <option value="selection" {% if selection_mode == "selection" %}selected{% endif %}>Selection</option>
+              <option value="trains" {% if selection_mode == "trains" %}selected{% endif %}>Trains</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="dailyAthleteSelection" class="mt-3 {% if selection_mode != 'selection' %}d-none{% endif %}">
+          <label class="form-label">Athletes</label>
+          <div class="daily-athlete-list">
+            {% for athlete in all_athletes %}
+              <label class="form-check mb-0">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  name="athletes"
+                  value="{{ athlete.id }}"
+                  {% if athlete.id in selected_athlete_ids %}checked{% endif %}
+                >
+                <span class="form-check-label">{{ athlete.name }}</span>
+              </label>
+            {% empty %}
+              <span class="text-muted">No athletes found.</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <button type="submit" name="ok" value="1" class="btn btn-primary">OK</button>
         </div>
       </div>
-    {% endfor %}
-  </div>
+    </form>
+
+    <div class="card daily-selection-panel mb-3">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+          <strong>Select trains</strong>
+          <button type="button" id="dcoTrainToggle" class="btn btn-outline-primary btn-sm">Select</button>
+        </div>
+
+        <form method="post" id="dcoTrainForm" class="mt-3 d-none">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save_dco_trains">
+          <input type="hidden" name="date" id="dcoTrainDate" value="{{ date_value }}">
+          <input type="hidden" name="slots" id="dcoTrainSlots" value="{{ slot_filter }}">
+          <input type="hidden" name="selection" id="dcoTrainSelection" value="{{ selection_mode }}">
+          <div id="dcoTrainSelectedAthletes"></div>
+
+          <div class="daily-athlete-list">
+            {% for athlete in all_athletes %}
+              <label class="form-check mb-0">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  name="train_athletes"
+                  value="{{ athlete.id }}"
+                  {% if athlete.id in dco_train_athlete_ids %}checked{% endif %}
+                >
+                <span class="form-check-label">{{ athlete.name }}</span>
+              </label>
+            {% empty %}
+              <span class="text-muted">No athletes found.</span>
+            {% endfor %}
+          </div>
+
+          <div class="mt-3">
+            <button type="submit" class="btn btn-primary btn-sm">OK</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if show_results %}
+    {% if rows %}
+      <div class="row g-2">
+        {% for r in rows %}
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100">
+              <div class="card-body p-2" style="font-size:12px; line-height:1.25;">
+                <div class="mb-2">
+                  <strong style="font-size:14px;">{{ r.athlete.name }}</strong>
+                </div>
+
+                {% if show_am %}
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <strong>AM</strong>
+                      {% if r.check1_badge.symbol %}
+                        <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check1_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check1_badge.symbol }}</span>
+                      {% endif %}
+                    </div>
+
+                    {% if r.slot1 %}
+                      <div class="daily-slotbox">
+                        {% if r.slot1.text %}
+                          <span>{{ r.slot1.text|linebreaksbr }}</span>
+                        {% else %}
+                          {% for seg in r.slot1.segments.all %}
+                            {% if seg.text %}
+                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
+                                <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}">{{ seg.display_text }}</span>
+                              {% elif seg.zone %}
+                                <span class="pill pill-z{{ seg.zone }}">{{ seg.display_text }}</span>
+                              {% else %}
+                                <span>{{ seg.display_text }}</span>
+                              {% endif %}
+                            {% endif %}
+                          {% endfor %}
+                        {% endif %}
+                      </div>
+                    {% else %}
+                      <div class="daily-slotbox daily-slotbox-empty">-</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                {% if show_pm %}
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <strong>PM</strong>
+                      {% if r.check2_badge.symbol %}
+                        <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check2_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check2_badge.symbol }}</span>
+                      {% endif %}
+                    </div>
+
+                    {% if r.slot2 %}
+                      <div class="daily-slotbox">
+                        {% if r.slot2.text %}
+                          <span>{{ r.slot2.text|linebreaksbr }}</span>
+                        {% else %}
+                          {% for seg in r.slot2.segments.all %}
+                            {% if seg.text %}
+                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
+                                <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}">{{ seg.display_text }}</span>
+                              {% elif seg.zone %}
+                                <span class="pill pill-z{{ seg.zone }}">{{ seg.display_text }}</span>
+                              {% else %}
+                                <span>{{ seg.display_text }}</span>
+                              {% endif %}
+                            {% endif %}
+                          {% endfor %}
+                        {% endif %}
+                      </div>
+                    {% else %}
+                      <div class="daily-slotbox daily-slotbox-empty">-</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div>
+                  <strong>Comment</strong>
+                  {% if r.comment %}
+                    <div style="max-height:38px; overflow:hidden;">{{ r.comment.text|linebreaksbr }}</div>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info">No athletes found for this selection.</div>
+    {% endif %}
+  {% endif %}
 </div>
 
 <script>
 (function() {
-  function applyDailyColors() {
-    var zoneColors = {
-      1: "#f8f8f0",
-      2: "#f7c6d0",
-      3: "#f06f5f",
-      4: "#bfe7bf",
-      5: "#2f75b5",
-      6: "#f2c200"
-    };
-    var raceColor = "#ff7a00";
-    var raceHardColor = "#cc0000";
+  const mode = document.getElementById("dailySelectionMode");
+  const athleteSelection = document.getElementById("dailyAthleteSelection");
+  const selectionForm = document.getElementById("dailySelectionForm");
+  const trainToggle = document.getElementById("dcoTrainToggle");
+  const trainForm = document.getElementById("dcoTrainForm");
 
-    function raceKind(text) {
-      var s = (text || "").toLowerCase();
-      if (/\brace\s*!/.test(s)) return "hard";
-      if (/\brace\b/.test(s)) return "race";
-      return "";
-    }
+  function syncSelectionMode() {
+    if (!mode || !athleteSelection) return;
+    athleteSelection.classList.toggle("d-none", mode.value !== "selection");
+  }
 
-    function lineKm(text) {
-      var s = (text || "").toLowerCase().trim();
+  if (mode) {
+    mode.addEventListener("change", syncSelectionMode);
+  }
+  syncSelectionMode();
 
-      var repMatch = s.match(/(\d+(?:[.,]\d+)?)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
-      if (repMatch) {
-        var reps = parseFloat(repMatch[1].replace(",", "."));
-        var value = parseFloat(repMatch[2].replace(",", "."));
-        var unit = repMatch[3];
-        var km = (unit === "m") ? (value / 1000.0) : value;
-        return reps * km;
-      }
-
-      var distMatch = s.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/);
-      if (distMatch) {
-        var value = parseFloat(distMatch[1].replace(",", "."));
-        var unit = distMatch[2];
-        return (unit === "m") ? (value / 1000.0) : value;
-      }
-
-      return 0;
-    }
-
-    document.querySelectorAll(".daily-slotbox").forEach(function(box) {
-      if (box.classList.contains("daily-slotbox-empty")) return;
-
-      var allCoreLines = Array.from(box.querySelectorAll(".core-line[data-zone]"));
-      var raceLines = allCoreLines.filter(function(line) {
-        return raceKind(line.textContent || "") !== "";
-      });
-      var hasRaceHard = raceLines.some(function(line) {
-        return raceKind(line.textContent || "") === "hard";
-      });
-
-      var lines = allCoreLines.filter(function(line) {
-        return /^[1-6]$/.test((line.getAttribute("data-zone") || "").trim());
-      });
-
-      var mainZone = null;
-      if (lines.length) {
-        var totals = {};
-        lines.forEach(function(line) {
-          var z = parseInt(line.getAttribute("data-zone"), 10);
-          totals[z] = (totals[z] || 0) + lineKm(line.textContent || "");
-        });
-
-        var zones = Object.keys(totals).map(function(z) { return parseInt(z, 10); });
-        mainZone = zones[0];
-
-        zones.forEach(function(z) {
-          if (totals[z] > totals[mainZone]) {
-            mainZone = z;
-          }
-        });
-      }
-
-      if (raceLines.length) {
-        box.style.backgroundColor = hasRaceHard ? raceHardColor : raceColor;
-      } else if (mainZone !== null) {
-        box.style.backgroundColor = zoneColors[mainZone] || "";
-      } else {
-        return;
-      }
-
-      allCoreLines.forEach(function(line) {
-        var kind = raceKind(line.textContent || "");
-        var z = parseInt(line.getAttribute("data-zone"), 10);
-        var color = "#000000";
-
-        if (kind) {
-          color = "#000000";
-        } else if (!raceLines.length && z === mainZone) {
-          color = "#000000";
-        } else if (/^[1-6]$/.test((line.getAttribute("data-zone") || "").trim())) {
-          color = zoneColors[z] || "#000000";
-        }
-
-        line.style.setProperty("color", color, "important");
-
-        Array.from(line.querySelectorAll("*")).forEach(function(child) {
-          child.style.setProperty("color", color, "important");
-        });
-      });
+  if (trainToggle && trainForm) {
+    trainToggle.addEventListener("click", function() {
+      trainForm.classList.toggle("d-none");
     });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", applyDailyColors);
-  } else {
-    applyDailyColors();
-  }
+  if (selectionForm && trainForm) {
+    trainForm.addEventListener("submit", function() {
+      const dateInput = selectionForm.querySelector("input[name='date']");
+      const slotInput = selectionForm.querySelector("input[name='slots']:checked");
+      const selectionInput = selectionForm.querySelector("select[name='selection']");
+      const selectedBox = document.getElementById("dcoTrainSelectedAthletes");
 
-  window.addEventListener("load", applyDailyColors);
+      document.getElementById("dcoTrainDate").value = dateInput ? dateInput.value : "";
+      document.getElementById("dcoTrainSlots").value = slotInput ? slotInput.value : "both";
+      document.getElementById("dcoTrainSelection").value = selectionInput ? selectionInput.value : "all";
+
+      if (selectedBox) {
+        selectedBox.innerHTML = "";
+        selectionForm.querySelectorAll("input[name='athletes']:checked").forEach(function(input) {
+          const hidden = document.createElement("input");
+          hidden.type = "hidden";
+          hidden.name = "athletes";
+          hidden.value = input.value;
+          selectedBox.appendChild(hidden);
+        });
+      }
+    });
+  }
 })();
 </script>
 {% endblock %}
