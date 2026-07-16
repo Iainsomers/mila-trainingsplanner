@@ -1286,7 +1286,7 @@
                           title="View report"
                         >{{ cell.check.icon }}</button>
                       {% endif %}
-                      {% if cell.slot %}
+                      {% if cell.slot and not cell.has_race %}
                         <button
                           type="button"
                           class="flex-delete-btn"
@@ -1380,7 +1380,7 @@
                           title="View report"
                         >{{ cell.check.icon }}</button>
                       {% endif %}
-                      {% if cell.slot %}
+                      {% if cell.slot and not cell.has_race %}
                         <button
                           type="button"
                           class="flex-delete-btn"

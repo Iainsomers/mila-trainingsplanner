@@ -1019,10 +1019,11 @@ def flex_planner_view(request):
                     if flex_plan:
                         flex_override_slot = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
                         if flex_override_slot is not None:
-                            slot = flex_override_slot
-                            plan = flex_plan
-                            is_override = True
-                            no_plan = False
+                            if not (_slot_is_visually_empty(flex_override_slot) and _slot_has_race(slot)):
+                                slot = flex_override_slot
+                                plan = flex_plan
+                                is_override = True
+                                no_plan = False
 
                     if not slot:
                         base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, athlete.id, day, slot_index)
@@ -1043,6 +1044,7 @@ def flex_planner_view(request):
                         "plan": plan,
                         "plan_id": plan.id if plan else "",
                         "slot": None if _slot_is_visually_empty(slot) else slot,
+                        "has_race": _slot_has_race(slot),
                         "is_override": is_override,
                         "no_plan": no_plan,
                         "check": _flex_check_payload(check_lookup.get((athlete.id, day, slot_index))),
@@ -1835,6 +1837,7 @@ def athlete_year_calendar_view(request):
     slot_map = {}
     has_fix_keys = set()
     flex_plan = None
+    flex_override_map = {}
     base_blocks_by_athlete = {}
     trainer_slot_lookup = {}
 
@@ -1888,6 +1891,21 @@ def athlete_year_calendar_view(request):
             )
 
             slot_map, has_fix_keys = _build_effective_slot_maps(slot_q)
+
+        if flex_plan:
+            flex_override_qs = (
+                TrainingSlot.objects
+                .filter(
+                    plan=flex_plan,
+                    athlete=selected_athlete,
+                    date__gte=start,
+                    date__lte=end,
+                )
+                .prefetch_related("segments")
+                .select_related("plan", "athlete")
+            )
+            for flex_override in flex_override_qs:
+                flex_override_map[(flex_override.date, flex_override.slot_index)] = flex_override
 
         base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
         base_blocks = (
@@ -2010,8 +2028,30 @@ def athlete_year_calendar_view(request):
             day_plan = _athlete_plan_for_day(athlete_plans, day) if selected_athlete else None
             plan1 = slot1.plan if slot1 else day_plan
             plan2 = slot2.plan if slot2 else day_plan
+            flex_blocks_slot1 = False
+            flex_blocks_slot2 = False
 
-            if selected_athlete and not slot1:
+            flex_override1 = flex_override_map.get(k1)
+            if flex_override1 is not None:
+                plan1 = flex_plan
+                if _slot_is_visually_empty(flex_override1):
+                    if not _slot_has_race(slot1):
+                        slot1 = None
+                        flex_blocks_slot1 = True
+                else:
+                    slot1 = flex_override1
+
+            flex_override2 = flex_override_map.get(k2)
+            if flex_override2 is not None:
+                plan2 = flex_plan
+                if _slot_is_visually_empty(flex_override2):
+                    if not _slot_has_race(slot2):
+                        slot2 = None
+                        flex_blocks_slot2 = True
+                else:
+                    slot2 = flex_override2
+
+            if selected_athlete and not slot1 and not flex_blocks_slot1:
                 base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, selected_athlete.id, day, 1)
                 if base_planning_slot:
                     if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
@@ -2027,7 +2067,7 @@ def athlete_year_calendar_view(request):
                         except Exception:
                             pass
 
-            if selected_athlete and not slot2:
+            if selected_athlete and not slot2 and not flex_blocks_slot2:
                 base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, selected_athlete.id, day, 2)
                 if base_planning_slot:
                     if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
