@@ -1563,24 +1563,36 @@ def _segment_rep_distance_m(seg):
     return distances[0] if distances else 0.0
 
 
-def _segment_rep_distances_m(seg):
+def _segment_compound_rep_parts(seg):
     text = getattr(seg, "text", "") or ""
-
     compound_match = re.search(r"\b\d+\s*(?:x|\*)\s*\(\s*([^)]+?)\s*\)", text, re.IGNORECASE)
-    if compound_match:
-        distances = []
-        for part in [p.strip() for p in re.split(r"\s*-\s*", compound_match.group(1) or "") if p.strip()]:
-            distance_match = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", part, re.IGNORECASE)
-            if not distance_match:
-                distances = []
-                break
-            value = float(distance_match.group(1).replace(",", "."))
-            if distance_match.group(2).lower() in ("k", "km"):
-                value *= 1000.0
-            if value > 0:
-                distances.append(value)
-        if len(distances) > 1:
-            return distances
+    if not compound_match:
+        return []
+
+    parts = []
+    for part in [p.strip() for p in re.split(r"\s*-\s*", compound_match.group(1) or "") if p.strip()]:
+        distance_match = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", part, re.IGNORECASE)
+        if not distance_match:
+            return []
+        value = float(distance_match.group(1).replace(",", "."))
+        if distance_match.group(2).lower() in ("k", "km"):
+            value *= 1000.0
+        if value <= 0:
+            return []
+
+        zone_match = re.search(r"\bz\s*([1-6])\b", part, re.IGNORECASE)
+        parts.append({
+            "distance_m": value,
+            "zone": str(zone_match.group(1)) if zone_match else "",
+        })
+
+    return parts if len(parts) > 1 else []
+
+
+def _segment_rep_distances_m(seg):
+    compound_parts = _segment_compound_rep_parts(seg)
+    if compound_parts:
+        return [part["distance_m"] for part in compound_parts]
 
     def as_float(value):
         try:
@@ -1667,6 +1679,23 @@ def _format_rep_time_range_parts(distance_seconds_values):
     return f"{'/'.join(slow_labels)}-->{'/'.join(fast_labels)}"
 
 
+def _segment_compound_part_zone_labels(seg, distances_m):
+    compound_parts = _segment_compound_rep_parts(seg)
+    if not compound_parts or len(compound_parts) != len(distances_m):
+        return []
+
+    zones = [part.get("zone") or "" for part in compound_parts]
+    if not any(zones):
+        return []
+
+    fallback_zones = [
+        zone for zone in _segment_zone_labels(seg)
+        if zone not in zones
+    ]
+    fallback_zone = fallback_zones[0] if fallback_zones else ""
+    return [zone or fallback_zone for zone in zones]
+
+
 def _segment_rep_time_label(athlete, seg):
     if not athlete or not seg:
         return ""
@@ -1711,6 +1740,22 @@ def _segment_rep_time_label(athlete, seg):
 
     if any(distance_time_candidates):
         return _format_rep_time_range_parts(distance_time_candidates)
+
+    part_zone_labels = _segment_compound_part_zone_labels(seg, distances_m)
+    if part_zone_labels:
+        for index, zone in enumerate(part_zone_labels):
+            if not zone:
+                continue
+            speed = _zone_speed_mps(athlete, f"Z{zone}")
+            try:
+                speed = float(speed or 0)
+            except Exception:
+                speed = 0
+            if speed > 0 and index < len(distances_m):
+                distance_time_candidates[index].append(distances_m[index] / speed)
+
+        if any(distance_time_candidates):
+            return _format_rep_time_range_parts(distance_time_candidates)
 
     zone_labels = _segment_zone_labels(seg)
     if not zone_labels:

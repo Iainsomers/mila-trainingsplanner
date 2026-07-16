@@ -240,6 +240,55 @@ class SegmentRepTimeDisplayTests(TestCase):
 
         self.assertEqual(_segment_rep_time_label(athlete, segment), "1:58/1:19-->1:54/1:16")
 
+    def test_compound_reps_use_zones_inside_parentheses_per_part(self):
+        athlete = Athlete.objects.create(
+            name="Zone Runner",
+            birth_year=2000,
+            gender="X",
+            zone_speed_mps={
+                "1": 100 / 30,
+                "2": 300 / 76,
+                "3": 3.4,
+                "4": 3.8,
+                "5": 4.2,
+                "6": 4.6,
+            },
+        )
+        segment = TrainingSegment(
+            type="CORE",
+            text="24*(300m z2-100m z1)",
+            reps=24,
+            distance_m=400,
+            norm_distance_m=9600,
+        )
+
+        self.assertEqual(_segment_rep_time_label(athlete, segment), "1:16/0:30")
+
+    def test_compound_reps_keep_outer_zone_for_all_parts(self):
+        athlete = Athlete.objects.create(
+            name="Outer Zone Runner",
+            birth_year=2001,
+            gender="X",
+            zone_speed_mps={
+                "1": 100 / 30,
+                "2": 300 / 76,
+                "3": 3.4,
+                "4": 3.8,
+                "5": 4.2,
+                "6": 4.6,
+            },
+        )
+        segment = TrainingSegment(
+            type="CORE",
+            text="24*(300m-100m) z2",
+            zone="2",
+            reps=24,
+            distance_m=400,
+            norm_distance_m=9600,
+        )
+
+        self.assertEqual(_segment_rep_time_label(athlete, segment), "1:16/0:25")
+
 
 class RaceSelectDisplayTests(TestCase):
     def test_target_checkbox_makes_race_important_without_athlete_checkbox(self):
