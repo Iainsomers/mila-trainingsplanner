@@ -25,6 +25,7 @@ from core.models import (
     AthleteWeekReport,
     AthleteDailyVital,
     CoachAccess,
+    RaceEntry,
 )
 from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from core.parser import parse_segment_text
@@ -767,6 +768,41 @@ def _virtual_slot_from_base_training(text):
     return _VirtualSlot(segments) if segments else None
 
 
+def _race_entry_count(entry):
+    return int(bool(entry.coach_selected)) + int(bool(entry.athlete_selected)) + int(bool(entry.target_selected))
+
+
+def _race_distance_m_from_entry(entry):
+    distance = entry.race_distance
+    if distance.custom_distance_m:
+        return distance.custom_distance_m
+    match = re.search(r"\d+", distance.distance or "")
+    return int(match.group(0)) if match else None
+
+
+def _virtual_race_slot_from_entries(entries):
+    segments = []
+    for entry in entries:
+        count = _race_entry_count(entry)
+        if count <= 0:
+            continue
+        distance = entry.race_distance
+        race = distance.race
+        distance_m = _race_distance_m_from_entry(entry)
+        special = "IMPORTANT_RACE" if count >= 3 else "RACE"
+        label = "Race!" if count >= 3 else "Race"
+        text = f'"{race.name}" {distance.display_distance} {label}'
+        segments.append(_VirtualSegment(
+            text=text,
+            type="CORE",
+            zone="5",
+            special=special,
+            distance_m=distance_m,
+            norm_distance_m=distance_m,
+        ))
+    return _VirtualSlot(segments) if segments else None
+
+
 def _month_day_index_for_flex(day):
     return date(2024, day.month, day.day).timetuple().tm_yday
 
@@ -993,6 +1029,25 @@ def flex_planner_view(request):
         for trainer_slot in trainer_slot_qs:
             trainer_slot_lookup[(trainer_slot.plan_id, trainer_slot.date, trainer_slot.slot_index)] = trainer_slot
 
+    race_entries_by_athlete_day = {}
+    if selected_athlete_ids:
+        race_entry_qs = (
+            RaceEntry.objects
+            .filter(
+                athlete_id__in=selected_athlete_ids,
+                race_distance__race__date__gte=start,
+                race_distance__race__date__lt=end,
+            )
+            .filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True))
+            .select_related("race_distance", "race_distance__race")
+            .order_by("race_distance__race__date", "race_distance__race__name", "race_distance__id")
+        )
+        for entry in race_entry_qs:
+            race_entries_by_athlete_day.setdefault(
+                (entry.athlete_id, entry.race_distance.race.date),
+                [],
+            ).append(entry)
+
     week_rows = []
     for week_start in week_starts:
         days = [week_start + timedelta(days=i) for i in range(7)]
@@ -1008,6 +1063,7 @@ def flex_planner_view(request):
                 for slot_index, target_cells in ((1, am_cells), (2, pm_cells)):
                     slot = None
                     is_override = False
+                    flex_blocks_base = False
                     no_plan = bool(flex_plan and plan and plan.id == flex_plan.id)
 
                     if plan:
@@ -1019,13 +1075,27 @@ def flex_planner_view(request):
                     if flex_plan:
                         flex_override_slot = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
                         if flex_override_slot is not None:
-                            if not (_slot_is_visually_empty(flex_override_slot) and _slot_has_race(slot)):
+                            if _slot_is_visually_empty(flex_override_slot):
+                                if not _slot_has_race(slot):
+                                    slot = None
+                                    plan = flex_plan
+                                    flex_blocks_base = True
+                                    no_plan = False
+                            else:
                                 slot = flex_override_slot
                                 plan = flex_plan
                                 is_override = True
                                 no_plan = False
 
-                    if not slot:
+                    if slot_index == 2 and not is_override:
+                        race_slot = _virtual_race_slot_from_entries(race_entries_by_athlete_day.get((athlete.id, day), []))
+                        if race_slot:
+                            slot = race_slot
+                            if flex_plan:
+                                plan = flex_plan
+                                no_plan = False
+
+                    if not slot and not flex_blocks_base:
                         base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, athlete.id, day, slot_index)
                         if base_planning_slot:
                             if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:

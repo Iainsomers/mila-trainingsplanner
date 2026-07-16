@@ -1003,7 +1003,40 @@ def _plans_for_race_override(athlete, race):
         except Exception:
             continue
 
+    flex_plan = _race_flex_planner_plan(getattr(race, "owner", None), race_date)
+    if flex_plan and flex_plan not in plans:
+        plans.append(flex_plan)
+
     return plans
+
+
+def _race_flex_planner_plan(user, race_date):
+    if not user:
+        return None
+
+    user_id = getattr(user, "id", None) or getattr(user, "pk", None) or "unknown"
+    name = f"Flex Planner {user_id}"
+    plan = TrainingPlan.objects.filter(owner=user, name__startswith="Flex Planner").order_by("id").first()
+    if not plan:
+        plan = TrainingPlan.objects.create(
+            owner=user,
+            name=name,
+            is_private=True,
+            week_phases_enabled=True,
+            start_date=race_date,
+            end_date=race_date,
+        )
+    else:
+        changed = []
+        if not plan.start_date or plan.start_date > race_date:
+            plan.start_date = race_date
+            changed.append("start_date")
+        if not plan.end_date or plan.end_date < race_date:
+            plan.end_date = race_date
+            changed.append("end_date")
+        if changed:
+            plan.save(update_fields=changed)
+    return plan
 
 
 def _invalidate_race_training_stats_cache():
@@ -1452,60 +1485,81 @@ def race_select_view(request):
 
     if request.method == "POST":
         affected_race_athletes = set()
+        existing_entries = {
+            (entry.race_distance_id, entry.athlete_id): entry
+            for entry in RaceEntry.objects.filter(
+                race_distance__in=race_distances,
+                athlete__in=athletes,
+            )
+        }
 
-        for athlete in athletes:
-            for race in races:
-                affected_race_athletes.add((athlete.id, race.id))
-                allowed_distance_ids = {str(distance.id) for distance in distances_by_race_id.get(race.id, [])}
-                athlete_selected_ids = {
-                    value for value in request.POST.getlist(f"athlete_distances_{race.id}_{athlete.id}")
-                    if value in allowed_distance_ids
-                }
-
-                if not is_athlete_user:
-                    coach_selected_ids = {
-                        value for value in request.POST.getlist(f"coach_distances_{race.id}_{athlete.id}")
+        with transaction.atomic():
+            for athlete in athletes:
+                for race in races:
+                    distances = distances_by_race_id.get(race.id, [])
+                    allowed_distance_ids = {str(distance.id) for distance in distances}
+                    athlete_selected_ids = {
+                        value for value in request.POST.getlist(f"athlete_distances_{race.id}_{athlete.id}")
                         if value in allowed_distance_ids
                     }
-                    target_selected_ids = {
-                        value for value in request.POST.getlist(f"target_distances_{race.id}_{athlete.id}")
-                        if value in allowed_distance_ids
-                    }
-                    posted_selected_ids = list(coach_selected_ids | target_selected_ids)[:3]
-                    posted_selected_id_set = set(posted_selected_ids)
-                else:
-                    coach_selected_ids = set()
-                    target_selected_ids = set()
-                    posted_selected_ids = list(athlete_selected_ids)[:3]
-                    posted_selected_id_set = set(posted_selected_ids)
 
-                for distance in distances_by_race_id.get(race.id, []):
-                    distance_id = str(distance.id)
-                    existing_entry = RaceEntry.objects.filter(race_distance=distance, athlete=athlete).first()
-
-                    if is_athlete_user:
-                        coach_selected = bool(existing_entry and existing_entry.coach_selected)
-                        target_selected = bool(existing_entry and existing_entry.target_selected)
-                        athlete_selected = distance_id in athlete_selected_ids and distance_id in posted_selected_id_set
+                    if not is_athlete_user:
+                        coach_selected_ids = {
+                            value for value in request.POST.getlist(f"coach_distances_{race.id}_{athlete.id}")
+                            if value in allowed_distance_ids
+                        }
+                        target_selected_ids = {
+                            value for value in request.POST.getlist(f"target_distances_{race.id}_{athlete.id}")
+                            if value in allowed_distance_ids
+                        }
+                        posted_selected_id_set = set(list(coach_selected_ids | target_selected_ids)[:3])
                     else:
-                        coach_selected = distance_id in coach_selected_ids and distance_id in posted_selected_id_set
-                        target_selected = distance_id in target_selected_ids and distance_id in posted_selected_id_set
-                        athlete_selected = bool(getattr(existing_entry, "athlete_selected", False))
+                        coach_selected_ids = set()
+                        target_selected_ids = set()
+                        posted_selected_id_set = set(list(athlete_selected_ids)[:3])
 
-                    if not coach_selected and not athlete_selected and not target_selected:
+                    for distance in distances:
+                        distance_id = str(distance.id)
+                        existing_entry = existing_entries.get((distance.id, athlete.id))
+
+                        if is_athlete_user:
+                            coach_selected = bool(existing_entry and existing_entry.coach_selected)
+                            target_selected = bool(existing_entry and existing_entry.target_selected)
+                            athlete_selected = distance_id in athlete_selected_ids and distance_id in posted_selected_id_set
+                        else:
+                            coach_selected = distance_id in coach_selected_ids and distance_id in posted_selected_id_set
+                            target_selected = distance_id in target_selected_ids and distance_id in posted_selected_id_set
+                            athlete_selected = bool(getattr(existing_entry, "athlete_selected", False))
+
+                        new_state = (coach_selected, athlete_selected, target_selected)
+                        old_state = (
+                            bool(existing_entry and existing_entry.coach_selected),
+                            bool(existing_entry and existing_entry.athlete_selected),
+                            bool(existing_entry and existing_entry.target_selected),
+                        )
+                        if new_state == old_state:
+                            continue
+
+                        affected_race_athletes.add((athlete.id, race.id))
+
+                        if not coach_selected and not athlete_selected and not target_selected:
+                            if existing_entry:
+                                existing_entry.delete()
+                            continue
+
                         if existing_entry:
-                            existing_entry.delete()
-                        continue
-
-                    RaceEntry.objects.update_or_create(
-                        race_distance=distance,
-                        athlete=athlete,
-                        defaults={
-                            "coach_selected": coach_selected,
-                            "athlete_selected": athlete_selected,
-                            "target_selected": target_selected,
-                        },
-                    )
+                            existing_entry.coach_selected = coach_selected
+                            existing_entry.athlete_selected = athlete_selected
+                            existing_entry.target_selected = target_selected
+                            existing_entry.save(update_fields=["coach_selected", "athlete_selected", "target_selected", "updated_at"])
+                        else:
+                            RaceEntry.objects.create(
+                                race_distance=distance,
+                                athlete=athlete,
+                                coach_selected=coach_selected,
+                                athlete_selected=athlete_selected,
+                                target_selected=target_selected,
+                            )
 
         athlete_by_id = {athlete.id: athlete for athlete in athletes}
         race_by_id = {race.id: race for race in races}
