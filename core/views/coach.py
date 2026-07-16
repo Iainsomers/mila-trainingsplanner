@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 import calendar as py_calendar
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
@@ -34,7 +34,7 @@ from core.zones import (
 
 
 def _parse_pr_time_to_seconds(value: str):
-    s = (value or "").strip()
+    s = (value or "").strip().replace(";", ":")
     if not s:
         raise ValueError("empty")
 
@@ -129,6 +129,34 @@ def _format_pr_seconds(value):
     if hours > 0:
         return f"{hours}:{minutes:02d}:{sec_str}"
     return f"{minutes}:{sec_str}"
+
+
+def _parse_optional_target_prs(post):
+    values = {}
+    errors = []
+    fields = (
+        ("target_pr_800", "target_pr_800_s", "Doel T800"),
+        ("target_pr_1500", "target_pr_1500_s", "Doel T1500"),
+        ("target_pr_3000", "target_pr_3000_s", "Doel T3000"),
+        ("target_pr_5000", "target_pr_5000_s", "Doel T5000"),
+        ("target_pr_10000", "target_pr_10000_s", "Doel T10000"),
+        ("target_tm", "target_pr_tm_s", "Doel TM"),
+        ("target_thm", "target_pr_thm_s", "Doel THM"),
+        ("target_t4", "target_pr_400_s", "Doel T4"),
+    )
+
+    for form_key, model_field, label in fields:
+        raw = (post.get(form_key) or "").strip()
+        if not raw:
+            values[model_field] = None
+            continue
+        try:
+            values[model_field] = _parse_pr_time_to_seconds(raw)
+        except ValueError:
+            values[model_field] = None
+            errors.append(f"{label} ongeldig formaat.")
+
+    return values, errors
 
 
 
@@ -377,7 +405,20 @@ def trainer_planning_detail_view(request, plan_id: int):
     week_start = anchor_day - timedelta(days=anchor_day.weekday())
     prev_week = week_start - timedelta(days=7)
     next_week = week_start + timedelta(days=7)
-    days = [week_start + timedelta(days=i) for i in range(7)]
+    try:
+        visible_weeks = int((request.GET.get("weeks") or "4").strip())
+    except ValueError:
+        visible_weeks = 4
+    visible_weeks = max(1, min(12, visible_weeks))
+    week_end = week_start + timedelta(days=(visible_weeks * 7) - 1)
+    days = [week_start + timedelta(days=i) for i in range(visible_weeks * 7)]
+    week_starts = [week_start + timedelta(days=7 * i) for i in range(visible_weeks)]
+    week_options = [1, 2, 3, 4, 6, 8, 12]
+    today_week_start = date.today() - timedelta(days=date.today().weekday())
+    week_clipboard = request.session.get("week_clipboard") or {}
+    clipboard_plan_id = week_clipboard.get("source_plan_id") if isinstance(week_clipboard, dict) else None
+    clipboard_week_start = week_clipboard.get("source_week_start") if isinstance(week_clipboard, dict) else ""
+    has_week_clipboard = bool(week_clipboard)
 
     slots = (
         TrainingSlot.objects
@@ -386,15 +427,28 @@ def trainer_planning_detail_view(request, plan_id: int):
     )
     slot_map = {(slot.date, int(slot.slot_index)): slot for slot in slots}
 
-    rows = []
-    for slot_index, label in ((1, "AM"), (2, "PM")):
-        rows.append({
-            "slot_index": slot_index,
-            "label": label,
-            "cells": [
-                {"day": day, "slot": slot_map.get((day, slot_index))}
-                for day in days
-            ],
+    week_rows = []
+    for visible_week_start in week_starts:
+        week_days = [visible_week_start + timedelta(days=i) for i in range(7)]
+        rows = []
+        for slot_index, label in ((1, "AM"), (2, "PM")):
+            rows.append({
+                "slot_index": slot_index,
+                "label": label,
+                "cells": [
+                    {"day": day, "slot": slot_map.get((day, slot_index))}
+                    for day in week_days
+                ],
+            })
+        week_rows.append({
+            "week_start": visible_week_start,
+            "week_end": visible_week_start + timedelta(days=6),
+            "days": week_days,
+            "rows": rows,
+            "is_current_week": visible_week_start == today_week_start,
+            "has_clipboard_source": (
+                clipboard_plan_id == plan.id and clipboard_week_start == visible_week_start.isoformat()
+            ),
         })
 
     return render(
@@ -403,12 +457,15 @@ def trainer_planning_detail_view(request, plan_id: int):
         {
             "plan": plan,
             "week_start": week_start,
-            "week_end": week_start + timedelta(days=6),
+            "week_end": week_end,
             "prev_week": prev_week,
             "next_week": next_week,
+            "visible_weeks": visible_weeks,
+            "week_options": week_options,
             "date_value": anchor_day.isoformat(),
             "days": days,
-            "rows": rows,
+            "week_rows": week_rows,
+            "has_week_clipboard": has_week_clipboard,
             "selected_plan": plan,
             "selected_athlete": None,
             "display_mode": "core_only",
@@ -971,10 +1028,8 @@ def _race_selected_count(entry):
     athlete_selected = bool(getattr(entry, "athlete_selected", False))
     target_selected = bool(entry.target_selected)
 
-    if coach_selected and athlete_selected and target_selected:
+    if target_selected:
         return 3
-    if coach_selected and athlete_selected:
-        return 2
     if coach_selected or athlete_selected or target_selected:
         return 1
     return 0
@@ -1498,38 +1553,23 @@ def race_select_view(request):
                 for race in races:
                     distances = distances_by_race_id.get(race.id, [])
                     allowed_distance_ids = {str(distance.id) for distance in distances}
-                    athlete_selected_ids = {
-                        value for value in request.POST.getlist(f"athlete_distances_{race.id}_{athlete.id}")
+                    coach_selected_ids = {
+                        value for value in request.POST.getlist(f"coach_distances_{race.id}_{athlete.id}")
                         if value in allowed_distance_ids
                     }
-
-                    if not is_athlete_user:
-                        coach_selected_ids = {
-                            value for value in request.POST.getlist(f"coach_distances_{race.id}_{athlete.id}")
-                            if value in allowed_distance_ids
-                        }
-                        target_selected_ids = {
-                            value for value in request.POST.getlist(f"target_distances_{race.id}_{athlete.id}")
-                            if value in allowed_distance_ids
-                        }
-                        posted_selected_id_set = set(list(coach_selected_ids | target_selected_ids)[:3])
-                    else:
-                        coach_selected_ids = set()
-                        target_selected_ids = set()
-                        posted_selected_id_set = set(list(athlete_selected_ids)[:3])
+                    target_selected_ids = {
+                        value for value in request.POST.getlist(f"target_distances_{race.id}_{athlete.id}")
+                        if value in allowed_distance_ids
+                    }
+                    posted_selected_id_set = set(list(coach_selected_ids | target_selected_ids)[:3])
 
                     for distance in distances:
                         distance_id = str(distance.id)
                         existing_entry = existing_entries.get((distance.id, athlete.id))
 
-                        if is_athlete_user:
-                            coach_selected = bool(existing_entry and existing_entry.coach_selected)
-                            target_selected = bool(existing_entry and existing_entry.target_selected)
-                            athlete_selected = distance_id in athlete_selected_ids and distance_id in posted_selected_id_set
-                        else:
-                            coach_selected = distance_id in coach_selected_ids and distance_id in posted_selected_id_set
-                            target_selected = distance_id in target_selected_ids and distance_id in posted_selected_id_set
-                            athlete_selected = bool(getattr(existing_entry, "athlete_selected", False))
+                        coach_selected = distance_id in coach_selected_ids and distance_id in posted_selected_id_set
+                        target_selected = distance_id in target_selected_ids and distance_id in posted_selected_id_set
+                        athlete_selected = False
 
                         new_state = (coach_selected, athlete_selected, target_selected)
                         old_state = (
@@ -1594,7 +1634,7 @@ def race_select_view(request):
                 entry = entries.get((distance.id, athlete.id))
                 distance_cells.append({
                     "distance": distance,
-                    "coach_selected": bool(entry and entry.coach_selected),
+                    "coach_selected": bool(entry and (entry.coach_selected or getattr(entry, "athlete_selected", False))),
                     "athlete_selected": bool(entry and getattr(entry, "athlete_selected", False)),
                     "target_selected": bool(entry and entry.target_selected),
                 })
@@ -2007,6 +2047,14 @@ def coach_athlete_create_view(request):
         "tm": "",
         "thm": "",
         "t4": "",
+        "target_pr_800": "",
+        "target_pr_1500": "",
+        "target_pr_3000": "",
+        "target_pr_5000": "",
+        "target_pr_10000": "",
+        "target_tm": "",
+        "target_thm": "",
+        "target_t4": "",
         "is_private": False,
         "view_weeks_ahead": 2,
         "training_reports_enabled": True,
@@ -2049,6 +2097,14 @@ def coach_athlete_create_view(request):
         form["tm"] = (request.POST.get("tm") or "").strip()
         form["thm"] = (request.POST.get("thm") or "").strip()
         form["t4"] = (request.POST.get("t4") or "").strip()
+        form["target_pr_800"] = (request.POST.get("target_pr_800") or "").strip()
+        form["target_pr_1500"] = (request.POST.get("target_pr_1500") or "").strip()
+        form["target_pr_3000"] = (request.POST.get("target_pr_3000") or "").strip()
+        form["target_pr_5000"] = (request.POST.get("target_pr_5000") or "").strip()
+        form["target_pr_10000"] = (request.POST.get("target_pr_10000") or "").strip()
+        form["target_tm"] = (request.POST.get("target_tm") or "").strip()
+        form["target_thm"] = (request.POST.get("target_thm") or "").strip()
+        form["target_t4"] = (request.POST.get("target_t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
         form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
@@ -2144,6 +2200,41 @@ def coach_athlete_create_view(request):
         except ValueError:
             t4_s = None
             errors.append("T4 ongeldig formaat.")
+
+        target_pr_800_s, target_pr_1500_s, target_pr_3000_s = None, None, None
+        target_pr_5000_s, target_pr_10000_s, target_tm_s = None, None, None
+        target_thm_s, target_t4_s = None, None
+        for key, label in (
+            ("target_pr_800", "Doel T800"),
+            ("target_pr_1500", "Doel T1500"),
+            ("target_pr_3000", "Doel T3000"),
+            ("target_pr_5000", "Doel T5000"),
+            ("target_pr_10000", "Doel T10000"),
+            ("target_tm", "Doel TM"),
+            ("target_thm", "Doel THM"),
+            ("target_t4", "Doel T4"),
+        ):
+            try:
+                value = _parse_pr_time_to_seconds(form[key]) if form[key] else None
+            except ValueError:
+                value = None
+                errors.append(f"{label} ongeldig formaat.")
+            if key == "target_pr_800":
+                target_pr_800_s = value
+            elif key == "target_pr_1500":
+                target_pr_1500_s = value
+            elif key == "target_pr_3000":
+                target_pr_3000_s = value
+            elif key == "target_pr_5000":
+                target_pr_5000_s = value
+            elif key == "target_pr_10000":
+                target_pr_10000_s = value
+            elif key == "target_tm":
+                target_tm_s = value
+            elif key == "target_thm":
+                target_thm_s = value
+            elif key == "target_t4":
+                target_t4_s = value
 
         if form["zone_method"] != "manual":
             errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
@@ -2181,6 +2272,14 @@ def coach_athlete_create_view(request):
                 pr_tm_s=tm_s,
                 pr_thm_s=thm_s,
                 pr_400_s=t4_s,
+                target_pr_800_s=target_pr_800_s,
+                target_pr_1500_s=target_pr_1500_s,
+                target_pr_3000_s=target_pr_3000_s,
+                target_pr_5000_s=target_pr_5000_s,
+                target_pr_10000_s=target_pr_10000_s,
+                target_pr_tm_s=target_tm_s,
+                target_pr_thm_s=target_thm_s,
+                target_pr_400_s=target_t4_s,
                 is_private=form["is_private"],
             )
             return redirect("coach_athletes")
@@ -2203,7 +2302,10 @@ def coach_athlete_edit_view(request, athlete_id: int):
     zones_form = zones_form_from_speeds(unit, speeds)
 
     errors = []
-    saved_notice = None
+    saved_notice = "Opgeslagen." if request.GET.get("saved") == "1" else None
+    active_tab = (request.GET.get("tab") or "general").strip()
+    if active_tab not in {"general", "zones", "base-planning", "wu-settings"}:
+        active_tab = "general"
 
     form = {
         "name": athlete.name or "",
@@ -2219,6 +2321,14 @@ def coach_athlete_edit_view(request, athlete_id: int):
         "tm": _format_pr_seconds(getattr(athlete, "pr_tm_s", None)),
         "thm": _format_pr_seconds(getattr(athlete, "pr_thm_s", None)),
         "t4": _format_pr_seconds(getattr(athlete, "pr_400_s", None)),
+        "target_pr_800": _format_pr_seconds(getattr(athlete, "target_pr_800_s", None)),
+        "target_pr_1500": _format_pr_seconds(getattr(athlete, "target_pr_1500_s", None)),
+        "target_pr_3000": _format_pr_seconds(getattr(athlete, "target_pr_3000_s", None)),
+        "target_pr_5000": _format_pr_seconds(getattr(athlete, "target_pr_5000_s", None)),
+        "target_pr_10000": _format_pr_seconds(getattr(athlete, "target_pr_10000_s", None)),
+        "target_tm": _format_pr_seconds(getattr(athlete, "target_pr_tm_s", None)),
+        "target_thm": _format_pr_seconds(getattr(athlete, "target_pr_thm_s", None)),
+        "target_t4": _format_pr_seconds(getattr(athlete, "target_pr_400_s", None)),
         "is_private": getattr(athlete, "is_private", False),
         "view_weeks_ahead": getattr(athlete, "view_weeks_ahead", 2),
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
@@ -2246,6 +2356,14 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["tm"] = (request.POST.get("tm") or "").strip()
         form["thm"] = (request.POST.get("thm") or "").strip()
         form["t4"] = (request.POST.get("t4") or "").strip()
+        form["target_pr_800"] = (request.POST.get("target_pr_800") or "").strip()
+        form["target_pr_1500"] = (request.POST.get("target_pr_1500") or "").strip()
+        form["target_pr_3000"] = (request.POST.get("target_pr_3000") or "").strip()
+        form["target_pr_5000"] = (request.POST.get("target_pr_5000") or "").strip()
+        form["target_pr_10000"] = (request.POST.get("target_pr_10000") or "").strip()
+        form["target_tm"] = (request.POST.get("target_tm") or "").strip()
+        form["target_thm"] = (request.POST.get("target_thm") or "").strip()
+        form["target_t4"] = (request.POST.get("target_t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
         form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
@@ -2342,6 +2460,41 @@ def coach_athlete_edit_view(request, athlete_id: int):
             t4_s = None
             errors.append("T4 ongeldig formaat.")
 
+        target_pr_800_s, target_pr_1500_s, target_pr_3000_s = None, None, None
+        target_pr_5000_s, target_pr_10000_s, target_tm_s = None, None, None
+        target_thm_s, target_t4_s = None, None
+        for key, label in (
+            ("target_pr_800", "Doel T800"),
+            ("target_pr_1500", "Doel T1500"),
+            ("target_pr_3000", "Doel T3000"),
+            ("target_pr_5000", "Doel T5000"),
+            ("target_pr_10000", "Doel T10000"),
+            ("target_tm", "Doel TM"),
+            ("target_thm", "Doel THM"),
+            ("target_t4", "Doel T4"),
+        ):
+            try:
+                value = _parse_pr_time_to_seconds(form[key]) if form[key] else None
+            except ValueError:
+                value = None
+                errors.append(f"{label} ongeldig formaat.")
+            if key == "target_pr_800":
+                target_pr_800_s = value
+            elif key == "target_pr_1500":
+                target_pr_1500_s = value
+            elif key == "target_pr_3000":
+                target_pr_3000_s = value
+            elif key == "target_pr_5000":
+                target_pr_5000_s = value
+            elif key == "target_pr_10000":
+                target_pr_10000_s = value
+            elif key == "target_tm":
+                target_tm_s = value
+            elif key == "target_thm":
+                target_thm_s = value
+            elif key == "target_t4":
+                target_t4_s = value
+
         if form["zone_method"] != "manual":
             errors.append("Zone-methode is nog niet ondersteund. Kies voorlopig 'manual'.")
 
@@ -2376,21 +2529,42 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.pr_tm_s = tm_s
             athlete.pr_thm_s = thm_s
             athlete.pr_400_s = t4_s
+            athlete.target_pr_800_s = target_pr_800_s
+            athlete.target_pr_1500_s = target_pr_1500_s
+            athlete.target_pr_3000_s = target_pr_3000_s
+            athlete.target_pr_5000_s = target_pr_5000_s
+            athlete.target_pr_10000_s = target_pr_10000_s
+            athlete.target_pr_tm_s = target_tm_s
+            athlete.target_pr_thm_s = target_thm_s
+            athlete.target_pr_400_s = target_t4_s
             athlete.is_private = form["is_private"]
             athlete.save()
 
-            saved_notice = "Opgeslagen."
-
-            speeds = athlete.get_zone_speed_mps()
-            zones_form = zones_form_from_speeds(unit, speeds)
-            for k, v in zones_form.items():
-                form[k] = v
+            return redirect(f"{reverse('coach_athlete_edit', args=[athlete.id])}?tab=zones&saved=1")
 
     return render(
         request,
         "core/coach_athlete_form.html",
-        {"mode": "edit", "athlete": athlete, "form": form, "errors": errors, "saved_notice": saved_notice},
+        {"mode": "edit", "athlete": athlete, "form": form, "errors": errors, "saved_notice": saved_notice, "active_tab": active_tab},
     )
+
+
+@login_required
+@require_http_methods(["POST"])
+def coach_athlete_target_prs_view(request, athlete_id: int):
+    athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
+    values, errors = _parse_optional_target_prs(request.POST)
+    if errors:
+        return JsonResponse({"ok": False, "errors": errors}, status=400)
+
+    for field, value in values.items():
+        setattr(athlete, field, value)
+    athlete.save(update_fields=list(values.keys()))
+
+    return JsonResponse({
+        "ok": True,
+        "values": {field: _format_pr_seconds(value) for field, value in values.items()},
+    })
 
 
 # -----------------------------

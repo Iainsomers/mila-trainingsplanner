@@ -266,7 +266,7 @@
             <div class="col-md-2">
               <label class="form-label">Z1</label>
               <input name="z1_pace" class="form-control" value="{{ form.z1_pace }}"
-                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 12.5{% else %}e.g. 5:00{% endif %}" required>
+                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 12.5{% else %}e.g. 5:00{% endif %}">
               <div class="form-text">
                 {% if form.z1_other %}{{ form.z1_other }}{% else %}(not calculated yet){% endif %}
               </div>
@@ -274,7 +274,7 @@
             <div class="col-md-2">
               <label class="form-label">Z2</label>
               <input name="z2_pace" class="form-control" value="{{ form.z2_pace }}"
-                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 13.5{% else %}e.g. 4:40{% endif %}" required>
+                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 13.5{% else %}e.g. 4:40{% endif %}">
               <div class="form-text">
                 {% if form.z2_other %}{{ form.z2_other }}{% else %}(not calculated yet){% endif %}
               </div>
@@ -282,7 +282,7 @@
             <div class="col-md-2">
               <label class="form-label">Z3</label>
               <input name="z3_pace" class="form-control" value="{{ form.z3_pace }}"
-                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 14.5{% else %}e.g. 4:20{% endif %}" required>
+                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 14.5{% else %}e.g. 4:20{% endif %}">
               <div class="form-text">
                 {% if form.z3_other %}{{ form.z3_other }}{% else %}(not calculated yet){% endif %}
               </div>
@@ -290,7 +290,7 @@
             <div class="col-md-2">
               <label class="form-label">Z4</label>
               <input name="z4_pace" class="form-control" value="{{ form.z4_pace }}"
-                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 15.5{% else %}e.g. 4:00{% endif %}" required>
+                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 15.5{% else %}e.g. 4:00{% endif %}">
               <div class="form-text">
                 {% if form.z4_other %}{{ form.z4_other }}{% else %}(not calculated yet){% endif %}
               </div>
@@ -298,7 +298,7 @@
             <div class="col-md-2">
               <label class="form-label">Z5</label>
               <input name="z5_pace" class="form-control" value="{{ form.z5_pace }}"
-                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 16.5{% else %}e.g. 3:45{% endif %}" required>
+                     placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 16.5{% else %}e.g. 3:45{% endif %}">
               <div class="form-text">
                 {% if form.z5_other %}{{ form.z5_other }}{% else %}(not calculated yet){% endif %}
               </div>
@@ -334,47 +334,50 @@
             <div class="col-md-2">
               <label class="form-label">T4</label>
               <input name="t4" class="form-control" value="{{ form.t4 }}" placeholder="e.g. 56">
-              <input name="target_t4" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
+              <input name="target_t4" class="form-control form-control-sm mt-1" value="{{ form.target_t4 }}" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T8</label>
-              <input name="pr_800" class="form-control" value="{{ form.pr_800 }}" placeholder="e.g. 2:00" required>
-              <input name="target_pr_800" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
+              <input name="pr_800" class="form-control" value="{{ form.pr_800 }}" placeholder="e.g. 2:00">
+              <input name="target_pr_800" class="form-control form-control-sm mt-1" value="{{ form.target_pr_800 }}" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T15</label>
-              <input name="pr_1500" class="form-control" value="{{ form.pr_1500 }}" placeholder="e.g. 4:10" required>
-              <input name="target_pr_1500" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
+              <input name="pr_1500" class="form-control" value="{{ form.pr_1500 }}" placeholder="e.g. 4:10">
+              <input name="target_pr_1500" class="form-control form-control-sm mt-1" value="{{ form.target_pr_1500 }}" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T3</label>
-              <input name="pr_3000" class="form-control" value="{{ form.pr_3000 }}" placeholder="e.g. 9:20" required>
-              <input name="target_pr_3000" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
+              <input name="pr_3000" class="form-control" value="{{ form.pr_3000 }}" placeholder="e.g. 9:20">
+              <input name="target_pr_3000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_3000 }}" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T5</label>
-              <input name="pr_5000" class="form-control" value="{{ form.pr_5000 }}" placeholder="e.g. 15:40" required>
-              <input name="target_pr_5000" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
+              <input name="pr_5000" class="form-control" value="{{ form.pr_5000 }}" placeholder="e.g. 15:40">
+              <input name="target_pr_5000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_5000 }}" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">T10</label>
-              <input name="pr_10000" class="form-control" value="{{ form.pr_10000 }}" placeholder="e.g. 30:20" required>
-              <input name="target_pr_10000" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
+              <input name="pr_10000" class="form-control" value="{{ form.pr_10000 }}" placeholder="e.g. 30:20">
+              <input name="target_pr_10000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_10000 }}" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">THM</label>
               <input name="thm" class="form-control" value="{{ form.thm }}" placeholder="e.g. 1:12:30">
-              <input name="target_thm" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
+              <input name="target_thm" class="form-control form-control-sm mt-1" value="{{ form.target_thm }}" placeholder="Goal">
             </div>
             <div class="col-md-2">
               <label class="form-label">TM</label>
               <input name="tm" class="form-control" value="{{ form.tm }}" placeholder="e.g. 2:30:00">
-              <input name="target_tm" class="form-control form-control-sm mt-1" value="" placeholder="Goal">
+              <input name="target_tm" class="form-control form-control-sm mt-1" value="{{ form.target_tm }}" placeholder="Goal">
             </div>
           </div>
 
           <div class="form-text mt-2">
             Enter times as m:ss or h:mm:ss.
+            {% if mode == "edit" and athlete %}
+              <span id="targetPrSaveStatus" class="ms-2 text-muted"></span>
+            {% endif %}
           </div>
         </div>
 
@@ -427,6 +430,79 @@
           <a href="{% url 'coach_athletes' %}" class="btn btn-outline-secondary">Cancel</a>
         </div>
       </form>
+      {% if mode == "edit" and athlete %}
+        <script>
+          document.addEventListener("DOMContentLoaded", function () {
+            const form = document.getElementById("athleteForm");
+            if (!form) return;
+
+            const targetInputs = Array.from(form.querySelectorAll(
+              'input[name="target_t4"], input[name="target_pr_800"], input[name="target_pr_1500"], input[name="target_pr_3000"], input[name="target_pr_5000"], input[name="target_pr_10000"], input[name="target_thm"], input[name="target_tm"]'
+            ));
+            if (!targetInputs.length) return;
+
+            const status = document.getElementById("targetPrSaveStatus");
+            const csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+            let targetPrDirty = false;
+            let savingTargetPrs = null;
+
+            function setTargetPrStatus(text, cls) {
+              if (!status) return;
+              status.textContent = text || "";
+              status.className = "ms-2 " + (cls || "text-muted");
+            }
+
+            function targetPrFormData() {
+              const data = new FormData();
+              targetInputs.forEach(function (input) {
+                data.append(input.name, input.value || "");
+              });
+              return data;
+            }
+
+            function saveTargetPrs() {
+              targetPrDirty = false;
+              setTargetPrStatus("Saving goals...", "text-muted");
+              savingTargetPrs = fetch("{% url 'coach_athlete_target_prs' athlete.id %}", {
+                method: "POST",
+                headers: {
+                  "X-CSRFToken": csrfInput ? csrfInput.value : "",
+                  "X-Requested-With": "XMLHttpRequest"
+                },
+                body: targetPrFormData()
+              }).then(function (response) {
+                if (!response.ok) throw new Error("save failed");
+                return response.json();
+              }).then(function () {
+                setTargetPrStatus("Goals saved", "text-success");
+                window.setTimeout(function () { setTargetPrStatus("", "text-muted"); }, 1500);
+              }).catch(function () {
+                targetPrDirty = true;
+                setTargetPrStatus("Goal save failed", "text-danger");
+              });
+              return savingTargetPrs;
+            }
+
+            targetInputs.forEach(function (input) {
+              input.addEventListener("input", function () {
+                targetPrDirty = true;
+                setTargetPrStatus("Unsaved goal", "text-muted");
+              });
+              input.addEventListener("change", saveTargetPrs);
+            });
+
+            form.addEventListener("submit", function (event) {
+              const submitter = event.submitter;
+              if (submitter && submitter.name === "action" && submitter.value === "save_wucd") return;
+              if (!targetPrDirty) return;
+              event.preventDefault();
+              saveTargetPrs().finally(function () {
+                HTMLFormElement.prototype.submit.call(form);
+              });
+            });
+          });
+        </script>
+      {% endif %}
     </div>
   </div>
 

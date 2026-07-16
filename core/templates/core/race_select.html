@@ -158,18 +158,7 @@
                                      data-race-role="coach"
                                      name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                      value="{{ distance_cell.distance.id }}"
-                                      {% if is_athlete_user %}disabled{% endif %}
                                      {% if distance_cell.coach_selected %}checked{% endif %}>
-                            </label>
-                            <label class="race-check text-muted" title="Athlete selected">
-                              <input type="checkbox"
-                                     {% if is_athlete_user %}
-                                       class="race-select-counted"
-                                       name="athlete_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
-                                       value="{{ distance_cell.distance.id }}"
-                                     {% endif %}
-                                     {% if distance_cell.athlete_selected %}checked{% endif %}
-                                     {% if not is_athlete_user %}disabled{% endif %}>
                             </label>
                             <label class="race-check" title="Target race">
                               <input type="checkbox"
@@ -177,7 +166,6 @@
                                      data-race-role="target"
                                      name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                      value="{{ distance_cell.distance.id }}"
-                                      {% if is_athlete_user %}disabled{% endif %}
                                      {% if distance_cell.target_selected %}checked{% endif %}>
                             </label>
                           </div>
@@ -206,24 +194,12 @@
                                   <div class="race-distance-line">
                                     <span class="race-distance-label d-none">{{ distance_cell.distance.display_distance }}</span>
                                     <label class="race-check" title="Coach selected">
-                                      <input type="checkbox"
+                                     <input type="checkbox"
                                              class="race-select-counted"
                                              data-race-role="coach"
                                              name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                              value="{{ distance_cell.distance.id }}"
-                                      {% if is_athlete_user %}disabled{% endif %}
                                              {% if distance_cell.coach_selected %}checked{% endif %}>
-                                    </label>
-                                    <label class="race-check text-muted" title="Athlete selected">
-                                      <input type="checkbox"
-                                             {% if is_athlete_user %}
-                                               class="race-select-counted"
-                                               data-race-role="athlete"
-                                               name="athlete_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
-                                               value="{{ distance_cell.distance.id }}"
-                                             {% endif %}
-                                             {% if distance_cell.athlete_selected %}checked{% endif %}
-                                             {% if not is_athlete_user %}disabled{% endif %}>
                                     </label>
                                     <label class="race-check" title="Target race">
                                       <input type="checkbox"
@@ -231,7 +207,6 @@
                                              data-race-role="target"
                                              name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                              value="{{ distance_cell.distance.id }}"
-                                      {% if is_athlete_user %}disabled{% endif %}
                                              {% if distance_cell.target_selected %}checked{% endif %}>
                                     </label>
                                   </div>
@@ -274,19 +249,7 @@
                                    data-race-role="coach"
                                    name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                    value="{{ distance_cell.distance.id }}"
-                                      {% if is_athlete_user %}disabled{% endif %}
                                    {% if distance_cell.coach_selected %}checked{% endif %}>
-                          </label>
-                          <label class="race-check text-muted" title="Athlete selected">
-                            <input type="checkbox"
-                                   {% if is_athlete_user %}
-                                     class="race-select-counted"
-                                     data-race-role="athlete"
-                                     name="athlete_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
-                                     value="{{ distance_cell.distance.id }}"
-                                   {% endif %}
-                                   {% if distance_cell.athlete_selected %}checked{% endif %}
-                                   {% if not is_athlete_user %}disabled{% endif %}>
                           </label>
                           <label class="race-check" title="Target race">
                             <input type="checkbox"
@@ -294,7 +257,6 @@
                                    data-race-role="target"
                                    name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                    value="{{ distance_cell.distance.id }}"
-                                      {% if is_athlete_user %}disabled{% endif %}
                                    {% if distance_cell.target_selected %}checked{% endif %}>
                           </label>
                         </div>
@@ -337,19 +299,7 @@
                                        data-race-role="coach"
                                        name="coach_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                        value="{{ distance_cell.distance.id }}"
-                                      {% if is_athlete_user %}disabled{% endif %}
                                        {% if distance_cell.coach_selected %}checked{% endif %}>
-                              </label>
-                              <label class="race-check text-muted" title="Athlete selected">
-                                <input type="checkbox"
-                                       {% if is_athlete_user %}
-                                         class="race-select-counted"
-                                         data-race-role="athlete"
-                                         name="athlete_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
-                                         value="{{ distance_cell.distance.id }}"
-                                       {% endif %}
-                                       {% if distance_cell.athlete_selected %}checked{% endif %}
-                                       {% if not is_athlete_user %}disabled{% endif %}>
                               </label>
                               <label class="race-check" title="Target race">
                                 <input type="checkbox"
@@ -357,7 +307,6 @@
                                        data-race-role="target"
                                        name="target_distances_{{ row.race.id }}_{{ cell.athlete.id }}"
                                        value="{{ distance_cell.distance.id }}"
-                                      {% if is_athlete_user %}disabled{% endif %}
                                        {% if distance_cell.target_selected %}checked{% endif %}>
                               </label>
                             </div>
@@ -375,11 +324,7 @@
         {% endif %}
 
         <div class="small text-muted mb-2 mt-2">
-          {% if is_athlete_user %}
-            Checkboxes: coach(read-only), athlete, target(read-only). Target only counts as a target race when coach + athlete + target are all checked.
-          {% else %}
-            Checkboxes: coach, athlete(read-only), target. Target only counts as a target race when coach + athlete + target are all checked.
-          {% endif %}
+          Checkboxes: selected, target race. Target race becomes Race!.
         </div>
         <button type="submit" class="btn btn-primary">Save</button>
       {% endif %}
@@ -434,7 +379,7 @@
 
   .race-distance-line {
     display: grid;
-    grid-template-columns: minmax(34px, 1fr) auto auto auto;
+    grid-template-columns: minmax(34px, 1fr) auto auto;
     align-items: center;
     gap: 4px;
     margin-bottom: 2px;
@@ -530,7 +475,7 @@
   }
 
   .race-modal-distance-list .race-distance-line {
-    grid-template-columns: minmax(48px, 1fr) 28px 28px 28px;
+    grid-template-columns: minmax(48px, 1fr) 28px 28px;
   }
 
   .race-modal-distance-list .race-check {
@@ -623,7 +568,6 @@
 
   function activeCheckboxState(cell) {
     var coach = false;
-    var athlete = false;
     var target = false;
 
     cell.querySelectorAll("input[type='checkbox']").forEach(function(input) {
@@ -633,18 +577,15 @@
       if (!role) {
         var name = input.getAttribute("name") || "";
         if (name.indexOf("coach_distances_") === 0) role = "coach";
-        if (name.indexOf("athlete_distances_") === 0) role = "athlete";
         if (name.indexOf("target_distances_") === 0) role = "target";
       }
 
       if (role === "coach") coach = true;
-      if (role === "athlete") athlete = true;
       if (role === "target") target = true;
     });
 
-    if (coach && athlete && target) return 3;
-    if (coach && athlete) return 2;
-    if (coach || athlete || target) return 1;
+    if (target) return 3;
+    if (coach) return 1;
     return 0;
   }
 

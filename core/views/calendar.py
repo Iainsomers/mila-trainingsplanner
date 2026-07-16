@@ -699,6 +699,7 @@ class _VirtualSegmentList:
 class _VirtualSegment:
     def __init__(self, text, type="CORE", zone="", special="", t_type="", reps=1, distance_m=None, duration_s=None, norm_distance_m=None):
         self.text = text or ""
+        self.display_text = self.text
         self.type = type
         self.zone = str(zone or "")
         self.special = special or ""
@@ -769,7 +770,11 @@ def _virtual_slot_from_base_training(text):
 
 
 def _race_entry_count(entry):
-    return int(bool(entry.coach_selected)) + int(bool(entry.athlete_selected)) + int(bool(entry.target_selected))
+    if bool(entry.target_selected):
+        return 3
+    if bool(entry.coach_selected) or bool(getattr(entry, "athlete_selected", False)):
+        return 1
+    return 0
 
 
 def _race_distance_m_from_entry(entry):
@@ -1108,6 +1113,8 @@ def flex_planner_view(request):
                                 plan = flex_plan
                                 no_plan = False
 
+                    _annotate_slot_segment_display_times(slot, athlete)
+
                     target_cells.append({
                         "day": day,
                         "slot_index": slot_index,
@@ -1147,6 +1154,7 @@ def flex_planner_view(request):
             "week_end": week_start + timedelta(days=6),
             "days": days,
             "athlete_rows": athlete_rows,
+            "is_current_week": week_start <= today <= week_start + timedelta(days=6),
         })
 
     prev_start = start - timedelta(days=7)
@@ -1336,6 +1344,21 @@ def _athlete_t_pr_seconds(athlete, key):
     return _seconds_from_time_value(value)
 
 
+def _athlete_target_t_pr_seconds(athlete, key):
+    attr_names = {
+        "TM": ["target_pr_tm_s", "target_tm_s", "target_tm", "goal_pr_tm_s", "goal_tm_s", "goal_tm"],
+        "THM": ["target_pr_thm_s", "target_thm_s", "target_thm", "goal_pr_thm_s", "goal_thm_s", "goal_thm"],
+        "T10": ["target_pr_10000_s", "target_pr_10000", "target_10k_s", "target_10k", "goal_pr_10000_s", "goal_10k_s"],
+        "T5": ["target_pr_5000_s", "target_pr_5000", "target_5k_s", "target_5k", "goal_pr_5000_s", "goal_5k_s"],
+        "T3": ["target_pr_3000_s", "target_pr_3000", "target_3k_s", "target_3k", "goal_pr_3000_s", "goal_3k_s"],
+        "T15": ["target_pr_1500_s", "target_pr_1500", "target_t15_s", "target_t15", "goal_pr_1500_s", "goal_t15_s"],
+        "T8": ["target_pr_800_s", "target_pr_800", "target_t8_s", "target_t8", "goal_pr_800_s", "goal_t8_s"],
+        "T4": ["target_pr_400_s", "target_t4_s", "target_t4", "goal_pr_400_s", "goal_t4_s", "goal_t4"],
+    }
+    _, value = _first_athlete_attr(athlete, attr_names.get(key, []))
+    return _seconds_from_time_value(value)
+
+
 def _pace_seconds_per_km_from_value(value):
     if value in (None, ""):
         return None
@@ -1481,6 +1504,251 @@ def _build_zones_times_rows(athlete):
         })
 
     return rows
+
+
+def _t_label_from_type(t_type):
+    value = str(t_type or "").strip().upper()
+    mapping = {
+        "800": "T8",
+        "T8": "T8",
+        "1500": "T15",
+        "T15": "T15",
+        "3000": "T3",
+        "T3": "T3",
+        "5000": "T5",
+        "T5": "T5",
+        "10000": "T10",
+        "T10": "T10",
+        "T4": "T4",
+        "TM": "TM",
+        "THM": "THM",
+    }
+    return mapping.get(value, "")
+
+
+def _segment_t_labels(seg):
+    text = getattr(seg, "text", "") or ""
+    labels = []
+
+    for raw in re.findall(r"\b(?:T\s*(?:800|1500|3000|5000|10000|8|15|3|5|10|4)|TM|THM)\b", text, re.IGNORECASE):
+        label = _t_label_from_type(raw.upper().replace(" ", ""))
+        if label and label not in labels:
+            labels.append(label)
+
+    t_label = _t_label_from_type(getattr(seg, "t_type", "") or _t_type_from_text(text))
+    if t_label and t_label not in labels:
+        labels.append(t_label)
+
+    return labels
+
+
+def _segment_zone_labels(seg):
+    text = getattr(seg, "text", "") or ""
+    labels = []
+
+    for zone in re.findall(r"\bz\s*([1-6])\b", text, re.IGNORECASE):
+        zone = str(zone)
+        if zone not in labels:
+            labels.append(zone)
+
+    seg_zone = str(getattr(seg, "zone", "") or "").strip()
+    if seg_zone and seg_zone not in labels:
+        labels.append(seg_zone)
+
+    return labels
+
+
+def _segment_rep_distance_m(seg):
+    distances = _segment_rep_distances_m(seg)
+    return distances[0] if distances else 0.0
+
+
+def _segment_rep_distances_m(seg):
+    text = getattr(seg, "text", "") or ""
+
+    compound_match = re.search(r"\b\d+\s*(?:x|\*)\s*\(\s*([^)]+?)\s*\)", text, re.IGNORECASE)
+    if compound_match:
+        distances = []
+        for part in [p.strip() for p in re.split(r"\s*-\s*", compound_match.group(1) or "") if p.strip()]:
+            distance_match = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", part, re.IGNORECASE)
+            if not distance_match:
+                distances = []
+                break
+            value = float(distance_match.group(1).replace(",", "."))
+            if distance_match.group(2).lower() in ("k", "km"):
+                value *= 1000.0
+            if value > 0:
+                distances.append(value)
+        if len(distances) > 1:
+            return distances
+
+    def as_float(value):
+        try:
+            number = float(value or 0)
+        except Exception:
+            return 0.0
+        return number if number > 0 else 0.0
+
+    distance = as_float(getattr(seg, "distance_m", None))
+    norm_distance = as_float(getattr(seg, "norm_distance_m", None))
+    try:
+        reps = int(getattr(seg, "reps", None) or 1)
+    except Exception:
+        reps = 1
+
+    if distance and norm_distance and reps > 1 and abs(distance - norm_distance) < 0.1:
+        return [norm_distance / reps]
+    if distance:
+        return [distance]
+
+    match = re.search(r"\b\d+\s*[x*]\s*(\d+(?:[.,]\d+)?)\s*(km|m)\b", getattr(seg, "text", "") or "", re.IGNORECASE)
+    if match:
+        value = float(match.group(1).replace(",", "."))
+        return [value * 1000.0 if match.group(2).lower() == "km" else value]
+
+    return []
+
+
+def _format_rep_time_seconds(total_seconds):
+    label = _format_time_seconds(total_seconds)
+    if re.match(r"^0\d:\d\d$", label):
+        return label[1:]
+    return label
+
+
+def _format_rep_time_range(seconds_values):
+    values = []
+    for value in seconds_values:
+        try:
+            seconds = float(value or 0)
+        except Exception:
+            seconds = 0
+        if seconds > 0:
+            values.append(seconds)
+
+    if not values:
+        return ""
+
+    slowest = max(values)
+    fastest = min(values)
+    slow_label = _format_rep_time_seconds(slowest)
+    fast_label = _format_rep_time_seconds(fastest)
+    if not slow_label:
+        return ""
+    if not fast_label or slow_label == fast_label:
+        return slow_label
+    return f"{slow_label}-->{fast_label}"
+
+
+def _format_rep_time_range_parts(distance_seconds_values):
+    parts = []
+    for seconds_values in distance_seconds_values:
+        values = []
+        for value in seconds_values:
+            try:
+                seconds = float(value or 0)
+            except Exception:
+                seconds = 0
+            if seconds > 0:
+                values.append(seconds)
+        if not values:
+            continue
+        parts.append((max(values), min(values)))
+
+    if not parts:
+        return ""
+
+    slow_labels = [_format_rep_time_seconds(slowest) for slowest, _ in parts]
+    fast_labels = [_format_rep_time_seconds(fastest) for _, fastest in parts]
+    if not any(slow_labels):
+        return ""
+    if slow_labels == fast_labels:
+        return "/".join(slow_labels)
+    return f"{'/'.join(slow_labels)}-->{'/'.join(fast_labels)}"
+
+
+def _segment_rep_time_label(athlete, seg):
+    if not athlete or not seg:
+        return ""
+
+    seg_type = (getattr(seg, "type", "") or "").upper()
+    if seg_type not in {"CORE", "CORE2"}:
+        return ""
+
+    special = (getattr(seg, "special", "") or "").upper()
+    if special in {"RACE", "IMPORTANT_RACE"}:
+        return ""
+
+    distances_m = _segment_rep_distances_m(seg)
+    if not distances_m:
+        return ""
+
+    distance_time_candidates = [[] for _ in distances_m]
+    t_labels = _segment_t_labels(seg)
+    t_distances = {
+        "TM": 42195,
+        "THM": 21097.5,
+        "T10": 10000,
+        "T5": 5000,
+        "T3": 3000,
+        "T15": 1500,
+        "T8": 800,
+        "T4": 400,
+    }
+
+    for t_label in t_labels:
+        pr_seconds = _athlete_t_pr_seconds(athlete, t_label)
+        target_pr_seconds = _athlete_target_t_pr_seconds(athlete, t_label)
+        t_distance = t_distances.get(t_label)
+        if pr_seconds and t_distance:
+            seconds_per_km = float(pr_seconds) / (float(t_distance) / 1000.0)
+            for index, distance_m in enumerate(distances_m):
+                distance_time_candidates[index].append(seconds_per_km * (distance_m / 1000.0))
+        if target_pr_seconds and t_distance:
+            seconds_per_km = float(target_pr_seconds) / (float(t_distance) / 1000.0)
+            for index, distance_m in enumerate(distances_m):
+                distance_time_candidates[index].append(seconds_per_km * (distance_m / 1000.0))
+
+    if any(distance_time_candidates):
+        return _format_rep_time_range_parts(distance_time_candidates)
+
+    zone_labels = _segment_zone_labels(seg)
+    if not zone_labels:
+        text = getattr(seg, "text", "") or ""
+        fallback_zone = _zone_from_text(text, "")
+        if fallback_zone:
+            zone_labels.append(fallback_zone)
+
+    for zone in zone_labels:
+        speed = _zone_speed_mps(athlete, f"Z{zone}")
+        try:
+            speed = float(speed or 0)
+        except Exception:
+            speed = 0
+        if speed > 0:
+            for index, distance_m in enumerate(distances_m):
+                distance_time_candidates[index].append(distance_m / speed)
+
+    if any(distance_time_candidates):
+        return _format_rep_time_range_parts(distance_time_candidates)
+
+    return ""
+
+
+def _annotate_slot_segment_display_times(slot, athlete):
+    if not slot:
+        return slot
+
+    try:
+        segments = slot.segments.all()
+    except Exception:
+        return slot
+
+    for seg in segments:
+        text = getattr(seg, "text", "") or ""
+        label = _segment_rep_time_label(athlete, seg)
+        seg.display_text = f"{text} ({label})" if text and label else text
+    return slot
 
 
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
@@ -2160,6 +2428,9 @@ def athlete_year_calendar_view(request):
                 if not _slot_has_race(slot2):
                     slot2 = None
                     check2 = None
+
+            _annotate_slot_segment_display_times(slot1, selected_athlete)
+            _annotate_slot_segment_display_times(slot2, selected_athlete)
 
             cells1.append({
                 "day": day,

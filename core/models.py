@@ -121,6 +121,14 @@ class Athlete(models.Model):
     pr_tm_s = models.FloatField(null=True, blank=True)
     pr_thm_s = models.FloatField(null=True, blank=True)
     pr_400_s = models.FloatField(null=True, blank=True)
+    target_pr_800_s = models.FloatField(null=True, blank=True)
+    target_pr_1500_s = models.FloatField(null=True, blank=True)
+    target_pr_3000_s = models.FloatField(null=True, blank=True)
+    target_pr_5000_s = models.FloatField(null=True, blank=True)
+    target_pr_10000_s = models.FloatField(null=True, blank=True)
+    target_pr_tm_s = models.FloatField(null=True, blank=True)
+    target_pr_thm_s = models.FloatField(null=True, blank=True)
+    target_pr_400_s = models.FloatField(null=True, blank=True)
 
     def __str__(self) -> str:
         return self.name

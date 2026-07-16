@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from core.models import Athlete, Group, PlanMembership, TrainingPlan, TrainingSlot
+from core.models import Athlete, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, TrainingPlan, TrainingSegment, TrainingSlot
+from core.views.calendar import _segment_rep_time_label
+from core.views.coach import _race_line_text, _race_selected_count
 
 
 class SlotModalSaveTests(TestCase):
@@ -216,3 +218,43 @@ class SlotModalSaveTests(TestCase):
         segments = list(slot.segments.order_by("order", "id"))
         self.assertEqual([seg.type for seg in segments], ["WU", "CORE", "CD"])
         self.assertEqual(segments[1].text, "1000m z3")
+
+
+class SegmentRepTimeDisplayTests(TestCase):
+    def test_compound_reps_show_split_times_for_current_and_goal_pr(self):
+        athlete = Athlete.objects.create(
+            name="Runner",
+            birth_year=2000,
+            gender="X",
+            pr_1500_s=295,
+            target_pr_1500_s=285,
+        )
+        segment = TrainingSegment(
+            type="CORE",
+            text="2*(600m-400m) t15",
+            t_type="1500",
+            reps=2,
+            distance_m=1000,
+            norm_distance_m=2000,
+        )
+
+        self.assertEqual(_segment_rep_time_label(athlete, segment), "1:58/1:19-->1:54/1:16")
+
+
+class RaceSelectDisplayTests(TestCase):
+    def test_target_checkbox_makes_race_important_without_athlete_checkbox(self):
+        race = RaceEvent(name="Target Race", date="2026-07-16")
+        distance = RaceEventDistance(race=race, distance="1500")
+        athlete = Athlete(name="Runner", birth_year=2000, gender="X")
+        entry = RaceEntry(
+            race_distance=distance,
+            athlete=athlete,
+            coach_selected=False,
+            athlete_selected=False,
+            target_selected=True,
+        )
+
+        count = _race_selected_count(entry)
+
+        self.assertEqual(count, 3)
+        self.assertIn("Race!", _race_line_text(race, distance, count))
