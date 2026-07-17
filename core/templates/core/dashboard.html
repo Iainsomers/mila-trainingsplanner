@@ -56,6 +56,20 @@
     </div>
     {% endif %}
 
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Polar</h5>
+          <p class="card-text">
+            Temporary entry point for the Polar integration.
+          </p>
+          <div class="mt-auto">
+            <a href="{% url 'polar_integration' %}" class="btn btn-outline-primary">Open Polar</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 {% endblock %}

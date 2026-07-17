@@ -920,4 +920,38 @@ class AthleteDayCheck(models.Model):
         return self.STATUS_NONE
 
     def __str__(self):
+        return f"{self.athlete} - {self.date} ({self.effective_status or '-'})"
+
+
+class PolarConnection(models.Model):
+    STATUS_CONNECTED = "connected"
+    STATUS_ERROR = "error"
+    STATUS_CHOICES = [
+        (STATUS_CONNECTED, "Connected"),
+        (STATUS_ERROR, "Error"),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="polar_connection",
+    )
+    member_id = models.CharField(max_length=120, unique=True)
+    polar_user_id = models.CharField(max_length=64, blank=True, default="")
+    access_token = models.TextField(blank=True, default="")
+    token_type = models.CharField(max_length=30, blank=True, default="")
+    expires_in = models.PositiveIntegerField(null=True, blank=True)
+    scope = models.CharField(max_length=255, blank=True, default="")
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_CONNECTED)
+    last_error = models.TextField(blank=True, default="")
+    raw_token_response = models.JSONField(default=dict, blank=True)
+    raw_user_response = models.JSONField(default=dict, blank=True)
+    connected_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"PolarConnection({self.user_id}, {self.polar_user_id or 'pending'})"
+
+    def legacy_athlete_day_check_label(self):
+        return ""
         return f"{self.athlete} - {self.date} ({self.effective_status or '—'})"

@@ -1,6 +1,12 @@
 from datetime import date, timedelta
 import calendar as py_calendar
+import base64
+import json
+import os
+import secrets
 from urllib.parse import urlencode
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -12,8 +18,9 @@ from django.db.models.functions import Lower
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.db.models import Prefetch
+from django.utils import timezone
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -290,6 +297,173 @@ def dashboard_view(request):
         "is_athlete_user": is_athlete_user,
         "current_athlete": athlete,
     })
+
+
+POLAR_AUTHORIZATION_URL = "https://flow.polar.com/oauth2/authorization"
+POLAR_TOKEN_URL = "https://polarremote.com/v2/oauth2/token"
+POLAR_REGISTER_USER_URL = "https://www.polaraccesslink.com/v3/users"
+
+
+def _polar_config():
+    return {
+        "client_id": (os.environ.get("POLAR_CLIENT_ID") or "").strip(),
+        "client_secret": (os.environ.get("POLAR_CLIENT_SECRET") or "").strip(),
+        "redirect_uri": (os.environ.get("POLAR_REDIRECT_URI") or "").strip(),
+    }
+
+
+def _polar_missing_config(config):
+    env_names = {
+        "client_id": "POLAR_CLIENT_ID",
+        "client_secret": "POLAR_CLIENT_SECRET",
+        "redirect_uri": "POLAR_REDIRECT_URI",
+    }
+    return [env_names[key] for key, value in config.items() if not value]
+
+
+def _polar_basic_auth_header(client_id, client_secret):
+    raw = f"{client_id}:{client_secret}".encode("utf-8")
+    return "Basic " + base64.b64encode(raw).decode("ascii")
+
+
+def _polar_json_request(url, *, method="GET", data=None, headers=None):
+    body = None
+    request_headers = dict(headers or {})
+    if data is not None:
+        body = data if isinstance(data, bytes) else json.dumps(data).encode("utf-8")
+    request = Request(url, data=body, headers=request_headers, method=method)
+    try:
+        with urlopen(request, timeout=20) as response:
+            raw = response.read().decode("utf-8")
+            if not raw:
+                return response.status, {}
+            return response.status, json.loads(raw)
+    except HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            payload = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            payload = {"error": raw}
+        return exc.code, payload
+    except URLError as exc:
+        raise RuntimeError(str(exc.reason)) from exc
+
+
+@login_required
+@require_GET
+def polar_integration_view(request):
+    config = _polar_config()
+    connection = PolarConnection.objects.filter(user=request.user).first()
+    return render(request, "core/polar_integration.html", {
+        "connection": connection,
+        "missing_config": _polar_missing_config(config),
+        "polar_error": request.GET.get("error", ""),
+        "polar_connected": request.GET.get("connected") == "1",
+    })
+
+
+@login_required
+@require_GET
+def polar_connect_view(request):
+    config = _polar_config()
+    missing = _polar_missing_config(config)
+    if missing:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Missing Polar configuration: ' + ', '.join(missing)})}")
+
+    state = secrets.token_urlsafe(32)
+    request.session["polar_oauth_state"] = state
+    params = {
+        "response_type": "code",
+        "client_id": config["client_id"],
+        "redirect_uri": config["redirect_uri"],
+        "scope": "accesslink.read_all",
+        "state": state,
+    }
+    return redirect(f"{POLAR_AUTHORIZATION_URL}?{urlencode(params)}")
+
+
+@login_required
+@require_GET
+def polar_callback_view(request):
+    expected_state = request.session.pop("polar_oauth_state", "")
+    received_state = request.GET.get("state", "")
+    if not expected_state or received_state != expected_state:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Polar authorization state did not match.'})}")
+
+    code = request.GET.get("code", "")
+    if not code:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': request.GET.get('error') or 'Polar did not return an authorization code.'})}")
+
+    config = _polar_config()
+    missing = _polar_missing_config(config)
+    if missing:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Missing Polar configuration: ' + ', '.join(missing)})}")
+
+    token_body = urlencode({
+        "grant_type": "authorization_code",
+        "code": code,
+    }).encode("utf-8")
+    token_headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": _polar_basic_auth_header(config["client_id"], config["client_secret"]),
+    }
+
+    try:
+        token_status, token_payload = _polar_json_request(
+            POLAR_TOKEN_URL,
+            method="POST",
+            data=token_body,
+            headers=token_headers,
+        )
+    except RuntimeError as exc:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Polar token request failed: ' + str(exc)})}")
+
+    if token_status >= 400:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Polar token request failed.'})}")
+
+    access_token = token_payload.get("access_token", "")
+    polar_user_id = str(token_payload.get("x_user_id") or "")
+    if not access_token or not polar_user_id:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Polar token response was incomplete.'})}")
+
+    member_id = f"mila-user-{request.user.id}"
+    register_headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {access_token}",
+    }
+    register_status, register_payload = _polar_json_request(
+        POLAR_REGISTER_USER_URL,
+        method="POST",
+        data={"member-id": member_id},
+        headers=register_headers,
+    )
+
+    last_error = ""
+    if register_status not in {200, 409}:
+        last_error = f"Polar user registration failed with status {register_status}."
+
+    PolarConnection.objects.update_or_create(
+        user=request.user,
+        defaults={
+            "member_id": member_id,
+            "polar_user_id": polar_user_id,
+            "access_token": access_token,
+            "token_type": token_payload.get("token_type", ""),
+            "expires_in": token_payload.get("expires_in"),
+            "scope": token_payload.get("scope", ""),
+            "status": PolarConnection.STATUS_ERROR if last_error else PolarConnection.STATUS_CONNECTED,
+            "last_error": last_error,
+            "raw_token_response": token_payload,
+            "raw_user_response": register_payload if isinstance(register_payload, dict) else {},
+            "connected_at": timezone.now(),
+        },
+    )
+
+    if last_error:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': last_error})}")
+    return redirect(f"{reverse('polar_integration')}?connected=1")
 
 
 @login_required
