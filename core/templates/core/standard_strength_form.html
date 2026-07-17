@@ -1,0 +1,94 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if program %}Edit{% else %}Add{% endif %} Standard Strength{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">{% if program %}Edit{% else %}Add{% endif %} Standard Strength</h1>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'standard_strength_list' %}" class="btn btn-outline-secondary">Back</a>
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Planner</a>
+    </div>
+  </div>
+
+  {% if errors %}
+    <div class="alert alert-danger">
+      {% for error in errors %}
+        <div>{{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" class="card">
+    {% csrf_token %}
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" class="form-control" value="{{ name }}" required>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle" id="strengthRows">
+          <thead>
+            <tr>
+              <th>Exercise</th>
+              <th style="width: 120px;">Sets</th>
+              <th style="width: 160px;">Reps</th>
+              <th style="width: 52px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                <td><input type="text" name="exercise" class="form-control form-control-sm" value="{{ row.exercise }}"></td>
+                <td><input type="text" name="sets" class="form-control form-control-sm" value="{{ row.sets }}"></td>
+                <td><input type="text" name="reps" class="form-control form-control-sm" value="{{ row.reps }}"></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove-row>&times;</button></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary" id="addStrengthRow">Add row</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+(function() {
+  const table = document.getElementById("strengthRows");
+  const addBtn = document.getElementById("addStrengthRow");
+  if (!table || !addBtn) return;
+
+  function rowHtml() {
+    return `
+      <tr>
+        <td><input type="text" name="exercise" class="form-control form-control-sm"></td>
+        <td><input type="text" name="sets" class="form-control form-control-sm"></td>
+        <td><input type="text" name="reps" class="form-control form-control-sm"></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove-row>&times;</button></td>
+      </tr>
+    `;
+  }
+
+  addBtn.addEventListener("click", function() {
+    table.querySelector("tbody").insertAdjacentHTML("beforeend", rowHtml());
+  });
+
+  table.addEventListener("click", function(event) {
+    const btn = event.target.closest("[data-remove-row]");
+    if (!btn) return;
+    const rows = table.querySelectorAll("tbody tr");
+    if (rows.length <= 1) return;
+    btn.closest("tr").remove();
+  });
+})();
+</script>
+{% endblock %}

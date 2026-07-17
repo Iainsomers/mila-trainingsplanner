@@ -45,6 +45,7 @@
   .pill-z6 { background-color: #f2c200; }
   .pill-race { background-color: #ff7a00; }
   .pill-important-race { background-color: #cc0000; color: #ffffff; }
+  .pill-strength { background-color: #d9d9d9 !important; color: #111111; text-decoration: underline; cursor: pointer; }
 </style>
 {% endblock %}
 
@@ -191,13 +192,7 @@
                         {% else %}
                           {% for seg in r.slot1.segments.all %}
                             {% if seg.text %}
-                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
-                                <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}">{{ seg.display_text }}</span>
-                              {% elif seg.zone %}
-                                <span class="pill pill-z{{ seg.zone }}">{{ seg.display_text }}</span>
-                              {% else %}
-                                <span>{{ seg.display_text }}</span>
-                              {% endif %}
+                              {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endif %}
                           {% endfor %}
                         {% endif %}
@@ -224,13 +219,7 @@
                         {% else %}
                           {% for seg in r.slot2.segments.all %}
                             {% if seg.text %}
-                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
-                                <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}">{{ seg.display_text }}</span>
-                              {% elif seg.zone %}
-                                <span class="pill pill-z{{ seg.zone }}">{{ seg.display_text }}</span>
-                              {% else %}
-                                <span>{{ seg.display_text }}</span>
-                              {% endif %}
+                              {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endif %}
                           {% endfor %}
                         {% endif %}

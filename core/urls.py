@@ -35,6 +35,10 @@ from core.views.coach import (
     coach_saved_trainings_view,
     coach_saved_training_delete_view,
     coach_saved_training_move_view,
+    standard_strength_list_view,
+    standard_strength_form_view,
+    standard_strength_delete_view,
+    standard_strength_detail_view,
     race_calendar_view,
     race_calendar_delete_view,
     race_calendar_distance_add_view,
@@ -121,6 +125,13 @@ urlpatterns = [
     path("coach/saved-trainings/", coach_saved_trainings_view, name="coach_saved_trainings"),
     path("coach/saved-trainings/<int:template_id>/delete/", coach_saved_training_delete_view, name="coach_saved_training_delete"),
     path("coach/saved-trainings/<int:template_id>/move/<str:direction>/", coach_saved_training_move_view, name="coach_saved_training_move"),
+
+    # Coach: Standard strength programs
+    path("planning/standard-strength/", standard_strength_list_view, name="standard_strength_list"),
+    path("planning/standard-strength/new/", standard_strength_form_view, name="standard_strength_create"),
+    path("planning/standard-strength/<int:program_id>/edit/", standard_strength_form_view, name="standard_strength_edit"),
+    path("planning/standard-strength/<int:program_id>/delete/", standard_strength_delete_view, name="standard_strength_delete"),
+    path("planning/standard-strength/<int:program_id>/", standard_strength_detail_view, name="standard_strength_detail"),
 
     # Race calendar
     path("race-calendar/", race_calendar_view, name="race_calendar"),

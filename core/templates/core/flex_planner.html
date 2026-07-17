@@ -372,6 +372,7 @@
     .pill-z6 { background-color: #f2c200; }
     .pill-race { background-color: #ff7a00; }
     .pill-important-race { background-color: #cc0000; color: #ffffff; }
+    .pill-strength { background-color: #d9d9d9 !important; color: #111111; text-decoration: underline; cursor: pointer; }
 
     .flex-muted {
       font-size: 11px;
@@ -1230,13 +1231,7 @@
                         {% if cell.slot %}
                           <div class="flex-celltext">
                             {% for seg in cell.slot.segments.all %}
-                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
-                                <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% elif seg.zone %}
-                                <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% else %}
-                                <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% endif %}
+                              {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
                           </div>
                         {% else %}
@@ -1255,13 +1250,7 @@
                         {% if cell.slot %}
                           <div class="flex-celltext">
                             {% for seg in cell.slot.segments.all %}
-                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
-                                <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% elif seg.zone %}
-                                <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% else %}
-                                <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% endif %}
+                              {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
                           </div>
                         {% endif %}
@@ -1324,13 +1313,7 @@
                         {% if cell.slot %}
                           <div class="flex-celltext">
                             {% for seg in cell.slot.segments.all %}
-                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
-                                <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% elif seg.zone %}
-                                <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% else %}
-                                <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% endif %}
+                              {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
                           </div>
                         {% else %}
@@ -1349,13 +1332,7 @@
                         {% if cell.slot %}
                           <div class="flex-celltext">
                             {% for seg in cell.slot.segments.all %}
-                              {% if seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
-                                <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% elif seg.zone %}
-                                <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% else %}
-                                <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text }}</span>
-                              {% endif %}
+                              {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
                           </div>
                         {% endif %}

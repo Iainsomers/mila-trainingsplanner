@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}
+
+{% block title %}Standard Strength{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">Standard Strength</h1>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Planner</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <a href="{% url 'standard_strength_create' %}" class="btn btn-primary">Add training</a>
+  </div>
+
+  {% if programs %}
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th style="width: 120px;">Exercises</th>
+              <th style="width: 210px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for program in programs %}
+              <tr>
+                <td><strong>{{ program.name }}</strong></td>
+                <td>{{ program.exercises.count }}</td>
+                <td>
+                  <div class="d-flex gap-2">
+                    <a href="{% url 'standard_strength_detail' program.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+                    <a href="{% url 'standard_strength_edit' program.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                    <form method="post" action="{% url 'standard_strength_delete' program.id %}" onsubmit="return confirm('Delete strength program?');">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info">No standard strength programs yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

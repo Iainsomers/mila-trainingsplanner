@@ -1,0 +1,25 @@
+{% if seg.standard_strength_program %}
+  <span
+    class="pill pill-strength"
+    role="link"
+    tabindex="0"
+    data-strength-href="{% url 'standard_strength_detail' seg.standard_strength_program.id %}"
+    onclick="event.preventDefault(); event.stopPropagation(); window.open(this.dataset.strengthHref + '?next=' + encodeURIComponent(window.location.pathname + window.location.search), '_blank'); return false;"
+    onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); window.open(this.dataset.strengthHref + '?next=' + encodeURIComponent(window.location.pathname + window.location.search), '_blank'); }"
+    data-flex-segment
+    data-flex-zone="{{ seg.zone|default:'' }}"
+    data-flex-t="{{ seg.t_type|default:'' }}"
+    data-flex-special="{{ seg.special|default:'' }}"
+    data-flex-type="{{ seg.type|default:'' }}"
+    data-flex-reps="{{ seg.reps|default:'' }}"
+    data-flex-distance="{{ seg.distance_m|default:'' }}"
+    data-flex-duration="{{ seg.duration_s|default:'' }}"
+    data-flex-norm="{{ seg.norm_distance_m|default:'' }}"
+  >Strength: {{ seg.standard_strength_program.name }}</span>
+{% elif seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
+  <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text|default:seg.text }}</span>
+{% elif seg.zone %}
+  <span class="pill pill-z{{ seg.zone }}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text|default:seg.text }}</span>
+{% else %}
+  <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text|default:seg.text }}</span>
+{% endif %}

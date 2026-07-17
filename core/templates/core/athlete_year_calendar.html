@@ -168,6 +168,7 @@
   .pill-z6 { background-color: #f2c200; }
   .pill-race { background-color: #ff7a00; }
   .pill-important-race { background-color: #cc0000; color: #ffffff; }
+  .pill-strength { background-color: #d9d9d9 !important; color: #111111; text-decoration: underline; cursor: pointer; }
 
   .check-status-toggle {
     width: 18px;
@@ -1579,6 +1580,13 @@
       }
 
       el.addEventListener("click", function(e) {
+        var strengthLink = e.target.closest("[data-strength-href]");
+        if (strengthLink) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open(strengthLink.getAttribute("data-strength-href") + "?next=" + encodeURIComponent(window.location.pathname + window.location.search), "_blank");
+          return;
+        }
         if (e.target.closest(".check-status-toggle") || e.target.closest(".check-status-menu")) return;
         if (el.classList.contains("disabled")) return;
         e.preventDefault();
@@ -1678,6 +1686,15 @@
   }
 
   document.addEventListener("click", function(event) {
+    var strengthLink = event.target.closest("[data-strength-href]");
+    if (strengthLink) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      window.open(strengthLink.getAttribute("data-strength-href") + "?next=" + encodeURIComponent(window.location.pathname + window.location.search), "_blank");
+      return;
+    }
+
     if (event.target.closest(".check-status-toggle") || event.target.closest(".check-status-menu")) return;
 
     var slotBox = event.target.closest(".slotbox");

@@ -10,7 +10,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
 from django.db.models import Q
 
-from core.models import TrainingSlot, SavedTrainingTemplate, TrainingPlan, Athlete
+from core.models import TrainingSlot, SavedTrainingTemplate, StandardStrengthProgram, TrainingPlan, Athlete
 from core.parser import parse_segment_text
 from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
 
@@ -360,6 +360,18 @@ def _saved_templates_for_user(user):
     ).distinct().order_by("name", "id")
 
 
+def _standard_strength_programs_for_user(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return StandardStrengthProgram.objects.none()
+    return StandardStrengthProgram.objects.filter(owner=user).order_by("sort_order", "name", "id")
+
+
+def _standard_strength_for_user(user, program_id):
+    if not program_id or not str(program_id).isdigit():
+        return None
+    return StandardStrengthProgram.objects.filter(owner=user, id=int(program_id)).first()
+
+
 def _serialize_slot_template_text(wu_text, mob_text, sprint_text, core_text, core2_text, alt_text, cd_text) -> str:
     parts = [
         f"WU={wu_text or ''}",
@@ -587,6 +599,7 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
                 "parse_message": seg.parse_message or "",
                 "special": (getattr(seg, "special", "") or ""),
                 "t_type": (getattr(seg, "t_type", "") or ""),
+                "standard_strength_program_id": getattr(seg, "standard_strength_program_id", None),
             })
 
     request.session["training_clipboard"] = {
@@ -659,6 +672,9 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
         seg.special = item.get("special") or ""
         if hasattr(seg, "t_type"):
             seg.t_type = item.get("t_type") or ""
+        strength_id = item.get("standard_strength_program_id")
+        if strength_id:
+            seg.standard_strength_program = _standard_strength_for_user(request.user, strength_id)
         seg.parsed_at = now
         seg.save()
 
@@ -795,6 +811,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": (wu_seg.text if (wu_seg and tb_show_wu) else ""),
                 "mob_text": (mob_seg.text if (mob_seg and tb_show_mob) else ""),
+                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "selected_standard_strength_id": str(getattr(mob_seg, "standard_strength_program_id", "") or ""),
                 "sprint_text": (sprint_seg.text if (sprint_seg and tb_show_sprint) else ""),
                 "core_text": (" // ".join(seg.text for seg in core_segs if seg.text) if core_segs else ""),
                 "core2_text": (core2_seg.text if (core2_seg and tb_show_core2) else ""),
@@ -897,6 +915,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # input texts (respect toggles)
     wu_text = (request.POST.get("wu_text") or "").strip() if tb_show_wu else ""
     mob_text = (request.POST.get("mob_text") or "").strip() if tb_show_mob else ""
+    selected_standard_strength = _standard_strength_for_user(request.user, request.POST.get("standard_strength_id")) if tb_show_mob else None
+    selected_standard_strength_id = str(selected_standard_strength.id) if selected_standard_strength else ""
+    if selected_standard_strength:
+        mob_text = selected_standard_strength.name
     sprint_text = (request.POST.get("sprint_text") or "").strip() if tb_show_sprint else ""
     core_text = (request.POST.get("core_text") or "").strip()
     core2_text = (request.POST.get("core2_text") or "").strip() if tb_show_core2 else ""
@@ -924,6 +946,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                     "wu_text": wu_text,
                     "mob_text": mob_text,
+                    "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                    "selected_standard_strength_id": selected_standard_strength_id,
                     "sprint_text": sprint_text,
                     "core_text": core_text,
                     "core2_text": core2_text,
@@ -977,6 +1001,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": wu_text,
                 "mob_text": mob_text,
+                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
                 "core_text": core_text,
                 "core2_text": core2_text,
@@ -999,7 +1025,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "selected_athlete": athlete,
                 "is_override": is_override,
                 "saved_templates": _saved_templates_for_user(request.user),
-                "selected_template_id": str(tpl.id),
+                "selected_template_id": "",
                 "template_name": "",
             },
         )
@@ -1034,6 +1060,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": data.get("WU",""),
                 "mob_text": data.get("MOB",""),
+                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "selected_standard_strength_id": "",
                 "sprint_text": data.get("SPR",""),
                 "core_text": data.get("CORE",""),
                 "core2_text": data.get("CORE2",""),
@@ -1063,6 +1091,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": wu_text,
                 "mob_text": mob_text,
+                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
                 "core_text": core_text,
                 "core2_text": core2_text,
@@ -1104,13 +1134,15 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": wu_text,
                 "mob_text": mob_text,
+                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
                 "core_text": core_text,
                 "core2_text": core2_text,
                 "alt_text": alt_text,
                 "cd_text": cd_text,
 
-                "core2_error": "2nd core mag niet als enige segment in het slot staan.",
+                "core2_error": "2nd core cannot be the only segment in the slot.",
                 "saved_templates": _saved_templates_for_user(request.user),
                 "selected_template_id": (request.POST.get("template_id") or "").strip(),
                 "template_name": (request.POST.get("template_name") or "").strip(),
@@ -1178,6 +1210,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": wu_text,
                 "mob_text": mob_text,
+                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
                 "core_text": core_text,
                 "core2_text": core2_text,
@@ -1224,10 +1258,12 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if mob_seg:
             mob_seg.order = 1
             _apply_mob_only(mob_seg, mob_text)
+            mob_seg.standard_strength_program = selected_standard_strength
             mob_seg.save()
         else:
             mob_seg = slot.segments.create(type="MOB", text=mob_text, order=1)
             _apply_mob_only(mob_seg, mob_text)
+            mob_seg.standard_strength_program = selected_standard_strength
             mob_seg.save()
     else:
         if mob_seg:

@@ -539,6 +539,14 @@ class TrainingSegment(models.Model):
 
     text = models.TextField(blank=True)
 
+    standard_strength_program = models.ForeignKey(
+        "StandardStrengthProgram",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="segments",
+    )
+
     parse_ok = models.BooleanField(default=False)
     parse_message = models.CharField(max_length=300, blank=True, default="")
     parsed_at = models.DateTimeField(null=True, blank=True)
@@ -622,6 +630,44 @@ class SavedTrainingTemplate(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class StandardStrengthProgram(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="standard_strength_programs",
+    )
+    name = models.CharField(max_length=160)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "name", "id"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class StandardStrengthExercise(models.Model):
+    program = models.ForeignKey(
+        StandardStrengthProgram,
+        on_delete=models.CASCADE,
+        related_name="exercises",
+    )
+    order = models.PositiveIntegerField(default=1)
+    exercise = models.CharField(max_length=220)
+    sets = models.CharField(max_length=40, blank=True, default="")
+    reps = models.CharField(max_length=80, blank=True, default="")
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self) -> str:
+        return self.exercise
 
 
 class RaceEvent(models.Model):

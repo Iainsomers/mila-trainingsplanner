@@ -20,7 +20,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Prefetch
 from django.utils import timezone
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -1089,6 +1089,156 @@ def coach_saved_training_move_view(request, template_id: int, direction: str):
     SavedTrainingTemplate.objects.bulk_update([current, target], ["sort_order"])
 
     return redirect("coach_saved_trainings")
+
+
+def _standard_strength_programs_for_user(user):
+    return list(
+        StandardStrengthProgram.objects
+        .filter(owner=user)
+        .prefetch_related("exercises")
+        .order_by("sort_order", "name", "id")
+    )
+
+
+def _standard_strength_form_rows(program=None, request_post=None):
+    rows = []
+    if request_post is not None:
+        exercises = request_post.getlist("exercise")
+        sets_values = request_post.getlist("sets")
+        reps_values = request_post.getlist("reps")
+        total = max(len(exercises), len(sets_values), len(reps_values), 0)
+        for index in range(total):
+            rows.append({
+                "exercise": (exercises[index] if index < len(exercises) else "").strip(),
+                "sets": (sets_values[index] if index < len(sets_values) else "").strip(),
+                "reps": (reps_values[index] if index < len(reps_values) else "").strip(),
+            })
+    elif program:
+        rows = [
+            {"exercise": row.exercise, "sets": row.sets, "reps": row.reps}
+            for row in program.exercises.all()
+        ]
+
+    while len(rows) < 6:
+        rows.append({"exercise": "", "sets": "", "reps": ""})
+    return rows
+
+
+@login_required
+@require_GET
+def standard_strength_list_view(request):
+    programs = _standard_strength_programs_for_user(request.user)
+    return render(request, "core/standard_strength_list.html", {"programs": programs})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def standard_strength_form_view(request, program_id=None):
+    program = None
+    if program_id is not None:
+        program = get_object_or_404(
+            StandardStrengthProgram.objects.filter(owner=request.user).prefetch_related("exercises"),
+            id=program_id,
+        )
+
+    errors = []
+    name = program.name if program else ""
+
+    if request.method == "POST":
+        name = (request.POST.get("name") or "").strip()
+        rows = _standard_strength_form_rows(program=program, request_post=request.POST)
+        filled_rows = [row for row in rows if row["exercise"] or row["sets"] or row["reps"]]
+
+        if not name:
+            errors.append("Name is required.")
+        if not any(row["exercise"] for row in filled_rows):
+            errors.append("Add at least one exercise.")
+
+        if not errors:
+            if not program:
+                max_order = (
+                    StandardStrengthProgram.objects
+                    .filter(owner=request.user)
+                    .order_by("-sort_order")
+                    .values_list("sort_order", flat=True)
+                    .first()
+                    or 0
+                )
+                program = StandardStrengthProgram.objects.create(
+                    owner=request.user,
+                    name=name,
+                    sort_order=max_order + 1,
+                )
+            else:
+                program.name = name
+                program.save(update_fields=["name", "updated_at"])
+
+            program.exercises.all().delete()
+            exercise_objects = []
+            order = 1
+            for row in filled_rows:
+                if not row["exercise"]:
+                    continue
+                exercise_objects.append(StandardStrengthExercise(
+                    program=program,
+                    order=order,
+                    exercise=row["exercise"],
+                    sets=row["sets"],
+                    reps=row["reps"],
+                ))
+                order += 1
+            StandardStrengthExercise.objects.bulk_create(exercise_objects)
+            return redirect("standard_strength_list")
+    else:
+        rows = _standard_strength_form_rows(program=program)
+
+    return render(request, "core/standard_strength_form.html", {
+        "program": program,
+        "name": name,
+        "rows": rows,
+        "errors": errors,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def standard_strength_delete_view(request, program_id: int):
+    program = get_object_or_404(StandardStrengthProgram.objects.filter(owner=request.user), id=program_id)
+    program.delete()
+    return redirect("standard_strength_list")
+
+
+@login_required
+@require_GET
+def standard_strength_detail_view(request, program_id: int):
+    program = get_object_or_404(
+        StandardStrengthProgram.objects.prefetch_related("exercises"),
+        id=program_id,
+    )
+    if program.owner_id and program.owner_id != request.user.id and not request.user.is_staff:
+        athlete = _athlete_for_user(request.user)
+        allowed = False
+        if athlete:
+            for segment in program.segments.select_related("slot", "slot__plan", "slot__athlete").all()[:200]:
+                slot = segment.slot
+                if slot.athlete_id == athlete.id:
+                    allowed = True
+                    break
+                try:
+                    if slot.plan_id and athlete.id in slot.plan.targeted_athlete_ids():
+                        allowed = True
+                        break
+                except Exception:
+                    continue
+        if not allowed:
+            return HttpResponse("Not allowed", status=403)
+    next_url = (request.GET.get("next") or "").strip()
+    if not next_url.startswith("/"):
+        next_url = reverse("planning_overview")
+    return render(request, "core/standard_strength_detail.html", {
+        "program": program,
+        "next_url": next_url,
+    })
 
 
 def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full"):

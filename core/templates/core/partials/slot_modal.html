@@ -83,6 +83,14 @@
               {% if tb_show_mob %}
               <div class="mb-2 compact-field">
                 <label class="form-label"><b>Mob / Tech</b></label>
+                <select name="standard_strength_id" class="form-select form-select-sm mb-1">
+                  <option value="">Free text</option>
+                  {% for program in standard_strength_programs %}
+                    <option value="{{ program.id }}" {% if selected_standard_strength_id|stringformat:"s" == program.id|stringformat:"s" %}selected{% endif %}>
+                      {{ program.name }}
+                    </option>
+                  {% endfor %}
+                </select>
                 <textarea name="mob_text" class="form-control" rows="2"
                   placeholder="">{{ mob_text }}</textarea>
               </div>
@@ -182,7 +190,7 @@
                 <div class="compact-template-grid">
                   <div class="compact-template-action">
                     <div>
-                      <label class="form-label mb-1"><b>Save standaard</b></label>
+                      <label class="form-label mb-1"><b>Save standard</b></label>
                       <input
                         type="text"
                         name="template_name"
@@ -203,7 +211,7 @@
 
                   <div class="compact-template-action">
                     <div>
-                      <label class="form-label mb-1"><b>Load standaard</b></label>
+                      <label class="form-label mb-1"><b>Load standard</b></label>
                       <select name="template_id" class="form-select form-select-sm">
                         <option value=""></option>
                         {% for tpl in saved_templates %}
@@ -251,7 +259,7 @@
                   value="delete"
                 >
                   {% if selected_athlete %}
-                    Maak leeg
+                    Clear
                   {% else %}
                     Delete
                   {% endif %}
