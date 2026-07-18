@@ -65,13 +65,28 @@
     <div class="card mt-3">
       <div class="card-body">
         <h5 class="card-title">Last sync test</h5>
-        <dl class="row mb-3">
-          <dt class="col-sm-3">Status</dt>
-          <dd class="col-sm-9">{{ sync_result.status }}</dd>
-          <dt class="col-sm-3">Exercises</dt>
-          <dd class="col-sm-9">{{ sync_result.exercise_count }}</dd>
-        </dl>
-        <pre class="bg-light border rounded p-3 small mb-0" style="max-height: 420px; overflow: auto;">{{ sync_result.payload }}</pre>
+        {% if sync_result.checks %}
+          {% for check in sync_result.checks %}
+            <div class="mb-3">
+              <h6 class="mb-2">{{ check.label }}</h6>
+              <dl class="row mb-2">
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9">{{ check.status }}</dd>
+                <dt class="col-sm-3">Items</dt>
+                <dd class="col-sm-9">{{ check.item_count }}</dd>
+              </dl>
+              <pre class="bg-light border rounded p-3 small mb-0" style="max-height: 360px; overflow: auto;">{{ check.payload }}</pre>
+            </div>
+          {% endfor %}
+        {% else %}
+          <dl class="row mb-3">
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">{{ sync_result.status }}</dd>
+            <dt class="col-sm-3">Exercises</dt>
+            <dd class="col-sm-9">{{ sync_result.exercise_count }}</dd>
+          </dl>
+          <pre class="bg-light border rounded p-3 small mb-0" style="max-height: 420px; overflow: auto;">{{ sync_result.payload }}</pre>
+        {% endif %}
       </div>
     </div>
   {% endif %}

@@ -303,6 +303,8 @@ POLAR_AUTHORIZATION_URL = "https://flow.polar.com/oauth2/authorization"
 POLAR_TOKEN_URL = "https://polarremote.com/v2/oauth2/token"
 POLAR_REGISTER_USER_URL = "https://www.polaraccesslink.com/v3/users"
 POLAR_EXERCISES_URL = "https://www.polaraccesslink.com/v3/exercises"
+POLAR_PHYSICAL_INFO_URL = "https://www.polaraccesslink.com/v3/users/physical-info"
+POLAR_ACTIVITIES_URL = "https://www.polaraccesslink.com/v3/users/activities"
 
 
 def _polar_config():
@@ -483,43 +485,57 @@ def polar_sync_test_view(request):
     if not connection or not connection.access_token:
         return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'No Polar account is connected yet.'})}")
 
-    url = f"{POLAR_EXERCISES_URL}?{urlencode({'samples': 'false', 'zones': 'false', 'route': 'false'})}"
     headers = {
         "Accept": "application/json",
         "Authorization": f"Bearer {connection.access_token}",
     }
-    try:
-        status, payload = _polar_json_request(url, method="GET", headers=headers)
-    except RuntimeError as exc:
-        connection.status = PolarConnection.STATUS_ERROR
-        connection.last_error = f"Polar exercise request failed: {exc}"
-        connection.save(update_fields=["status", "last_error", "updated_at"])
-        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': connection.last_error})}")
 
-    if isinstance(payload, list):
-        exercise_count = len(payload)
-    elif isinstance(payload, dict) and isinstance(payload.get("exercises"), list):
-        exercise_count = len(payload["exercises"])
-    else:
-        exercise_count = 0
+    checks = [
+        ("Exercises", f"{POLAR_EXERCISES_URL}?{urlencode({'samples': 'false', 'zones': 'false', 'route': 'false'})}"),
+        ("Physical info", POLAR_PHYSICAL_INFO_URL),
+        ("Daily activity", f"{POLAR_ACTIVITIES_URL}?{urlencode({'steps': 'false', 'activity_zones': 'false', 'inactivity_stamps': 'false'})}"),
+    ]
+    results = []
+    error_message = ""
+    for label, url in checks:
+        try:
+            status, payload = _polar_json_request(url, method="GET", headers=headers)
+        except RuntimeError as exc:
+            status = 0
+            payload = {"error": str(exc)}
 
-    pretty_payload = json.dumps(payload, indent=2, ensure_ascii=False)
-    if len(pretty_payload) > 12000:
-        pretty_payload = pretty_payload[:12000] + "\n... truncated ..."
+        if isinstance(payload, list):
+            item_count = len(payload)
+        elif isinstance(payload, dict) and isinstance(payload.get("exercises"), list):
+            item_count = len(payload["exercises"])
+        elif isinstance(payload, dict) and payload:
+            item_count = 1
+        else:
+            item_count = 0
 
-    request.session["polar_sync_result"] = {
-        "status": status,
-        "exercise_count": exercise_count,
-        "payload": pretty_payload,
-    }
+        pretty_payload = json.dumps(payload, indent=2, ensure_ascii=False)
+        if len(pretty_payload) > 12000:
+            pretty_payload = pretty_payload[:12000] + "\n... truncated ..."
 
-    if status >= 400:
-        polar_message = ""
-        if isinstance(payload, dict):
-            polar_message = payload.get("error_description") or payload.get("error") or ""
-        error_message = f"Polar exercise request failed with status {status}."
-        if polar_message:
-            error_message = f"{error_message} {polar_message}"
+        results.append({
+            "label": label,
+            "status": status,
+            "item_count": item_count,
+            "payload": pretty_payload,
+        })
+
+        if status >= 400 or status == 0:
+            polar_message = ""
+            if isinstance(payload, dict):
+                polar_message = payload.get("error_description") or payload.get("error") or ""
+            error_message = f"Polar {label.lower()} request failed with status {status}."
+            if polar_message:
+                error_message = f"{error_message} {polar_message}"
+            break
+
+    request.session["polar_sync_result"] = {"checks": results}
+
+    if error_message:
         connection.status = PolarConnection.STATUS_ERROR
         connection.last_error = error_message
         connection.save(update_fields=["status", "last_error", "updated_at"])
