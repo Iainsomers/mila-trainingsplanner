@@ -56,10 +56,52 @@
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-primary">Sync test</button>
           </form>
+          <form method="post" action="{% url 'polar_steps' %}" class="d-inline ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-primary">Get Steps</button>
+          </form>
         {% endif %}
       {% endif %}
     </div>
   </div>
+
+  {% if steps_result %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Steps last 21 days</h5>
+        <dl class="row mb-3">
+          <dt class="col-sm-3">Average</dt>
+          <dd class="col-sm-9">{{ steps_result.average_steps }}</dd>
+          <dt class="col-sm-3">Max</dt>
+          <dd class="col-sm-9">{{ steps_result.max_steps }}</dd>
+          <dt class="col-sm-3">Min</dt>
+          <dd class="col-sm-9">{{ steps_result.min_steps }}</dd>
+        </dl>
+        {% if steps_result.rows %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="text-end">Steps</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in steps_result.rows %}
+                  <tr>
+                    <td>{{ row.date }}</td>
+                    <td class="text-end">{{ row.steps }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">No step data found.</p>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
 
   {% if sync_result %}
     <div class="card mt-3">

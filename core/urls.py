@@ -9,6 +9,7 @@ from core.views.coach import (
     polar_connect_view,
     polar_callback_view,
     polar_sync_test_view,
+    polar_steps_view,
     settings_view,
     coach_console_view,
     planning_overview_view,
@@ -88,6 +89,7 @@ urlpatterns = [
     path("integrations/polar/connect/", polar_connect_view, name="polar_connect"),
     path("integrations/polar/callback/", polar_callback_view, name="polar_callback"),
     path("integrations/polar/sync-test/", polar_sync_test_view, name="polar_sync_test"),
+    path("integrations/polar/steps/", polar_steps_view, name="polar_steps"),
     path("settings/", settings_view, name="settings"),
 
     # Coach console

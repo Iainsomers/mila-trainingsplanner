@@ -358,12 +358,14 @@ def polar_integration_view(request):
     config = _polar_config()
     connection = PolarConnection.objects.filter(user=request.user).first()
     sync_result = request.session.pop("polar_sync_result", None)
+    steps_result = request.session.pop("polar_steps_result", None)
     return render(request, "core/polar_integration.html", {
         "connection": connection,
         "missing_config": _polar_missing_config(config),
         "polar_error": request.GET.get("error", ""),
         "polar_connected": request.GET.get("connected") == "1",
         "sync_result": sync_result,
+        "steps_result": steps_result,
     })
 
 
@@ -540,6 +542,77 @@ def polar_sync_test_view(request):
         connection.last_error = error_message
         connection.save(update_fields=["status", "last_error", "updated_at"])
         return redirect(f"{reverse('polar_integration')}?{urlencode({'error': error_message})}")
+
+    connection.status = PolarConnection.STATUS_CONNECTED
+    connection.last_error = ""
+    connection.save(update_fields=["status", "last_error", "updated_at"])
+    return redirect("polar_integration")
+
+
+@login_required
+@require_http_methods(["POST"])
+def polar_steps_view(request):
+    connection = PolarConnection.objects.filter(user=request.user).first()
+    if not connection or not connection.access_token:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'No Polar account is connected yet.'})}")
+
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {connection.access_token}",
+    }
+    url = f"{POLAR_ACTIVITIES_URL}?{urlencode({'steps': 'false', 'activity_zones': 'false', 'inactivity_stamps': 'false'})}"
+    try:
+        status, payload = _polar_json_request(url, method="GET", headers=headers)
+    except RuntimeError as exc:
+        error_message = f"Polar steps request failed: {exc}"
+        connection.status = PolarConnection.STATUS_ERROR
+        connection.last_error = error_message
+        connection.save(update_fields=["status", "last_error", "updated_at"])
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': error_message})}")
+
+    if status >= 400:
+        polar_message = ""
+        if isinstance(payload, dict):
+            polar_message = payload.get("error_description") or payload.get("error") or ""
+        error_message = f"Polar steps request failed with status {status}."
+        if polar_message:
+            error_message = f"{error_message} {polar_message}"
+        connection.status = PolarConnection.STATUS_ERROR
+        connection.last_error = error_message
+        connection.save(update_fields=["status", "last_error", "updated_at"])
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': error_message})}")
+
+    rows = []
+    if isinstance(payload, list):
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            start_time = item.get("start_time") or ""
+            steps = item.get("steps")
+            if steps is None:
+                continue
+            rows.append({
+                "date": start_time[:10] if start_time else "",
+                "steps": int(steps),
+            })
+
+    rows = sorted(rows, key=lambda row: row["date"], reverse=True)[:21]
+    values = [row["steps"] for row in rows]
+    if values:
+        average_steps = round(sum(values) / len(values))
+        max_steps = max(values)
+        min_steps = min(values)
+    else:
+        average_steps = max_steps = min_steps = 0
+
+    request.session["polar_steps_result"] = {
+        "status": status,
+        "days": len(rows),
+        "average_steps": average_steps,
+        "max_steps": max_steps,
+        "min_steps": min_steps,
+        "rows": rows,
+    }
 
     connection.status = PolarConnection.STATUS_CONNECTED
     connection.last_error = ""
