@@ -51,8 +51,29 @@
         {% endif %}
 
         <a href="{% url 'polar_connect' %}" class="btn btn-primary">Connect Polar</a>
+        {% if connection and connection.access_token %}
+          <form method="post" action="{% url 'polar_sync_test' %}" class="d-inline ms-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-primary">Sync test</button>
+          </form>
+        {% endif %}
       {% endif %}
     </div>
   </div>
+
+  {% if sync_result %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Last sync test</h5>
+        <dl class="row mb-3">
+          <dt class="col-sm-3">Status</dt>
+          <dd class="col-sm-9">{{ sync_result.status }}</dd>
+          <dt class="col-sm-3">Exercises</dt>
+          <dd class="col-sm-9">{{ sync_result.exercise_count }}</dd>
+        </dl>
+        <pre class="bg-light border rounded p-3 small mb-0" style="max-height: 420px; overflow: auto;">{{ sync_result.payload }}</pre>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
