@@ -936,6 +936,7 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
     )
     resp = HttpResponse(cell_html)
     resp["HX-Trigger"] = "closeModal"
+    resp["HX-Refresh"] = "true"
     return resp
 
 
