@@ -10,7 +10,16 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
 from django.db.models import Q
 
-from core.models import TrainingSlot, SavedTrainingTemplate, StandardStrengthProgram, TrainingPlan, Athlete
+from core.models import (
+    TrainingSlot,
+    SavedTrainingTemplate,
+    StandardStrengthProgram,
+    TrainingPlan,
+    Athlete,
+    AthleteBasePlanningBlock,
+    AthleteBasePlanningSlot,
+    RaceEntry,
+)
 from core.parser import parse_segment_text
 from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
 
@@ -64,6 +73,188 @@ def _get_flex_athlete_from_request(request, selected_plan):
     if not request.user.is_superuser:
         qs = qs.filter(owner=request.user)
     return qs.first()
+
+
+class _VirtualSegmentList:
+    def __init__(self, segments):
+        self._segments = segments
+
+    def all(self):
+        return self._segments
+
+    def exists(self):
+        return bool(self._segments)
+
+
+class _VirtualSegment:
+    def __init__(self, text, type="CORE", zone="", special="", t_type="", reps=1, distance_m=None, duration_s=None, norm_distance_m=None):
+        self.text = text or ""
+        self.display_text = self.text
+        self.type = type
+        self.zone = str(zone or "")
+        self.special = special or ""
+        self.t_type = t_type or ""
+        self.reps = reps or 1
+        self.distance_m = distance_m
+        self.duration_s = duration_s
+        self.norm_distance_m = norm_distance_m
+
+
+class _VirtualSlot:
+    def __init__(self, segments):
+        self.segments = _VirtualSegmentList(segments)
+
+    @property
+    def core_text(self):
+        return " // ".join(seg.text for seg in self.segments.all() if seg.type == "CORE" and seg.text)
+
+
+def _month_day_index_for_slot_reset(day):
+    return date_cls(2024, day.month, day.day).timetuple().tm_yday
+
+
+def _base_block_covers_day_for_slot_reset(block, day):
+    start_idx = date_cls(2024, block.start_month, block.start_day).timetuple().tm_yday
+    end_idx = date_cls(2024, block.end_month, block.end_day).timetuple().tm_yday
+    day_idx = _month_day_index_for_slot_reset(day)
+    if start_idx <= end_idx:
+        return start_idx <= day_idx <= end_idx
+    return day_idx >= start_idx or day_idx <= end_idx
+
+
+def _base_planning_slot_for_slot_reset(athlete, day, slot_index):
+    blocks = (
+        AthleteBasePlanningBlock.objects
+        .filter(athlete=athlete)
+        .prefetch_related("slots")
+        .order_by("sort_order", "start_month", "start_day", "id")
+    )
+    for block in blocks:
+        if not _base_block_covers_day_for_slot_reset(block, day):
+            continue
+        for base_slot in block.slots.all():
+            if base_slot.weekday == day.weekday() and base_slot.slot_index == slot_index:
+                return base_slot
+    return None
+
+
+def _virtual_segment_from_base_text(seg_type, text):
+    parsed = _parse_core_segment_text(text) if seg_type in {"CORE", "CORE2"} else parse_segment_text(text, zone_required=False)
+    if parsed and getattr(parsed, "ok", False):
+        return _VirtualSegment(
+            text=text,
+            type=seg_type,
+            zone=str(parsed.zone or ""),
+            special=getattr(parsed, "special", "") or "",
+            t_type=getattr(parsed, "t_type", "") or "",
+            reps=getattr(parsed, "reps", 1) or 1,
+            distance_m=getattr(parsed, "rep_distance_m", None) or getattr(parsed, "distance_m", None),
+            duration_s=getattr(parsed, "duration_s", None),
+            norm_distance_m=getattr(parsed, "distance_m", None),
+        )
+    return _VirtualSegment(text=text, type=seg_type)
+
+
+def _virtual_slot_from_base_training_for_slot_reset(text):
+    values = {"WU": "", "MOB": "", "SPR": "", "CORE": "", "CORE2": "", "ALT": "", "CD": ""}
+    raw = (text or "").strip()
+    if not raw:
+        return None
+
+    saw_key = False
+    for line in raw.splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip().upper()
+        if key in values:
+            values[key] = value.strip()
+            saw_key = True
+
+    if not saw_key:
+        values["CORE"] = raw
+
+    segments = [
+        _virtual_segment_from_base_text(seg_type, values[seg_type])
+        for seg_type in ("WU", "MOB", "SPR", "CORE", "CORE2", "ALT", "CD")
+        if values.get(seg_type)
+    ]
+    return _VirtualSlot(segments) if segments else None
+
+
+def _race_entry_count_for_slot_reset(entry):
+    if bool(entry.target_selected):
+        return 3
+    if bool(entry.coach_selected) or bool(getattr(entry, "athlete_selected", False)):
+        return 1
+    return 0
+
+
+def _race_distance_m_for_slot_reset(entry):
+    distance = entry.race_distance
+    if distance.custom_distance_m:
+        return distance.custom_distance_m
+    match = re.search(r"\d+", distance.distance or "")
+    return int(match.group(0)) if match else None
+
+
+def _virtual_race_slot_for_slot_reset(athlete, day):
+    entries = (
+        RaceEntry.objects
+        .filter(athlete=athlete, race_distance__race__date=day)
+        .filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True))
+        .select_related("race_distance", "race_distance__race")
+        .order_by("race_distance__id")
+    )
+    segments = []
+    for entry in entries:
+        count = _race_entry_count_for_slot_reset(entry)
+        if count <= 0:
+            continue
+        distance = entry.race_distance
+        race = distance.race
+        distance_m = _race_distance_m_for_slot_reset(entry)
+        special = "IMPORTANT_RACE" if count >= 3 else "RACE"
+        label = "Race!" if count >= 3 else "Race"
+        text = f'"{race.name}" {distance.display_distance} {label}'
+        segments.append(_VirtualSegment(
+            text=text,
+            type="CORE",
+            zone="5",
+            special=special,
+            distance_m=distance_m,
+            norm_distance_m=distance_m,
+        ))
+    return _VirtualSlot(segments) if segments else None
+
+
+def _fallback_slot_after_flex_reset(athlete, day, slot_index):
+    if slot_index == 2:
+        race_slot = _virtual_race_slot_for_slot_reset(athlete, day)
+        if race_slot:
+            return race_slot
+
+    base_planning_slot = _base_planning_slot_for_slot_reset(athlete, day, slot_index)
+    if not base_planning_slot:
+        return None
+
+    if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
+        trainer_slot = (
+            TrainingSlot.objects
+            .filter(plan_id=base_planning_slot.trainer_plan_id, athlete__isnull=True, date=day, slot_index=slot_index)
+            .prefetch_related("segments")
+            .first()
+        )
+        if trainer_slot and trainer_slot.segments.exists():
+            return trainer_slot
+        if base_planning_slot.trainer_plan:
+            return _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
+        return None
+
+    if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+        return _virtual_slot_from_base_training_for_slot_reset(base_planning_slot.training_text)
+
+    return None
 
 
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
@@ -721,13 +912,15 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
     TrainingSlot.objects.filter(plan=selected_plan, athlete=athlete, date=d, slot_index=slot_index).delete()
     _bump_stats_version()
 
-    base_slot = TrainingSlot.objects.filter(
-        plan=selected_plan, athlete__isnull=True, date=d, slot_index=slot_index
-    ).prefetch_related("segments").first()
+    fallback_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index) if _is_flex_planner_plan(selected_plan) else (
+        TrainingSlot.objects.filter(
+            plan=selected_plan, athlete__isnull=True, date=d, slot_index=slot_index
+        ).prefetch_related("segments").first()
+    )
 
     cell_html = render_to_string(
         "core/partials/calendar_cell.html",
-        {"day": d, "slot": base_slot, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan, "selected_athlete": athlete, "is_override": False},
+        {"day": d, "slot": fallback_slot, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan, "selected_athlete": athlete, "is_override": False},
         request=request,
     )
     resp = HttpResponse(cell_html)
