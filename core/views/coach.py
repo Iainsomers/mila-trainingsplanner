@@ -402,6 +402,7 @@ def polar_callback_view(request):
     token_body = urlencode({
         "grant_type": "authorization_code",
         "code": code,
+        "redirect_uri": config["redirect_uri"],
     }).encode("utf-8")
     token_headers = {
         "Accept": "application/json",
@@ -420,7 +421,13 @@ def polar_callback_view(request):
         return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Polar token request failed: ' + str(exc)})}")
 
     if token_status >= 400:
-        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Polar token request failed.'})}")
+        polar_message = ""
+        if isinstance(token_payload, dict):
+            polar_message = token_payload.get("error_description") or token_payload.get("error") or ""
+        error_message = f"Polar token request failed with status {token_status}."
+        if polar_message:
+            error_message = f"{error_message} {polar_message}"
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': error_message})}")
 
     access_token = token_payload.get("access_token", "")
     polar_user_id = str(token_payload.get("x_user_id") or "")
