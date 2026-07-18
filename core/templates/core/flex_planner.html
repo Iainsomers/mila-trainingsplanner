@@ -401,9 +401,14 @@
 
     document.addEventListener("closeModal", () => {
       const el = document.getElementById("slotModal");
-      if (!el) return;
-      const instance = bootstrap.Modal.getInstance(el);
-      if (instance) instance.hide();
+      if (el) {
+        const instance = bootstrap.Modal.getInstance(el);
+        if (instance) instance.hide();
+      }
+      document.querySelectorAll(".modal-backdrop").forEach((backdrop) => backdrop.remove());
+      document.body.classList.remove("modal-open");
+      document.body.style.removeProperty("overflow");
+      document.body.style.removeProperty("padding-right");
     });
 
     function limitAthleteSelection(maxCount) {

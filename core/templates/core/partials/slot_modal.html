@@ -245,7 +245,8 @@
                     type="button"
                     class="btn btn-sm btn-outline-dark"
                     hx-post="/slot-reset-override/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}&athlete={{ selected_athlete.id }}{% if request.GET.source %}&source={{ request.GET.source }}{% elif request.POST.source %}&source={{ request.POST.source }}{% endif %}"
-                    hx-swap="none"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
                   >
                     Reset to plan
                   </button>
