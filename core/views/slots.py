@@ -900,6 +900,8 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
 
     athlete = _get_selected_athlete_from_request(request)
     if not athlete:
+        athlete = _get_flex_athlete_from_request(request, selected_plan)
+    if not athlete:
         return HttpResponse("No athlete", status=400)
 
     forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
@@ -920,7 +922,16 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
 
     cell_html = render_to_string(
         "core/partials/calendar_cell.html",
-        {"day": d, "slot": fallback_slot, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan, "selected_athlete": athlete, "is_override": False},
+        {
+            "day": d,
+            "slot": fallback_slot,
+            "slot_index": slot_index,
+            "oob": True,
+            "selected_plan": selected_plan,
+            "selected_athlete": athlete,
+            "is_override": False,
+            "cell_source": "flex" if _is_flex_planner_plan(selected_plan) else "",
+        },
         request=request,
     )
     resp = HttpResponse(cell_html)

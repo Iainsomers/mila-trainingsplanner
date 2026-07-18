@@ -54,7 +54,7 @@
         <a class="celllink"
            href="#"
            title="{% for seg in slot.segments.all %}{% if seg.text %}{{ seg.type }}: {{ seg.text|escape }}&#10;{% endif %}{% endfor %}"
-           hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan or selected_athlete %}?{% endif %}{% if selected_plan %}plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}{% if selected_plan %}&{% endif %}athlete={{ selected_athlete.id }}{% endif %}"
+           hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan or selected_athlete or cell_source %}?{% endif %}{% if selected_plan %}plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}{% if selected_plan %}&{% endif %}athlete={{ selected_athlete.id }}{% endif %}{% if cell_source %}{% if selected_plan or selected_athlete %}&{% endif %}source={{ cell_source }}{% endif %}"
            hx-target="#modal-container"
            hx-swap="innerHTML"
            {% if "race!" in ctl %}
@@ -121,7 +121,7 @@
   {% else %}
     <a class="celllink"
        href="#"
-       hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan or selected_athlete %}?{% endif %}{% if selected_plan %}plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}{% if selected_plan %}&{% endif %}athlete={{ selected_athlete.id }}{% endif %}"
+       hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan or selected_athlete or cell_source %}?{% endif %}{% if selected_plan %}plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}{% if selected_plan %}&{% endif %}athlete={{ selected_athlete.id }}{% endif %}{% if cell_source %}{% if selected_plan or selected_athlete %}&{% endif %}source={{ cell_source }}{% endif %}"
        hx-target="#modal-container"
        hx-swap="innerHTML">
       <span class="celltext"></span>
