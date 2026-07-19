@@ -14,6 +14,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
 from django.db.models.functions import Lower
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
@@ -287,6 +288,95 @@ def _athlete_for_user(user):
     return None
 
 
+def _user_for_athlete(athlete):
+    if not athlete:
+        return None
+
+    athlete_fields = {field.name for field in Athlete._meta.get_fields()}
+    if "user" in athlete_fields and getattr(athlete, "user_id", None):
+        return athlete.user
+
+    athlete_name = _identity_value(getattr(athlete, "name", ""))
+    if not athlete_name:
+        return None
+
+    UserModel = get_user_model()
+    for user in UserModel.objects.order_by("id"):
+        candidates = []
+        for value in (
+            getattr(user, "username", ""),
+            getattr(user, "email", ""),
+            getattr(user, "first_name", ""),
+            getattr(user, "last_name", ""),
+            f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}",
+        ):
+            normalized = _identity_value(value)
+            if normalized:
+                candidates.append(normalized)
+        if athlete_name in candidates:
+            return user
+    return None
+
+
+def _polar_targets_for_user(user):
+    if user.is_staff or user.is_superuser:
+        athletes = list(_filter_owned(Athlete.objects.order_by("name"), user))
+        targets = []
+        seen_user_ids = set()
+        for athlete in athletes:
+            athlete_user = _user_for_athlete(athlete)
+            connection = PolarConnection.objects.filter(user=athlete_user).first() if athlete_user else None
+            if athlete_user:
+                seen_user_ids.add(athlete_user.id)
+            targets.append({
+                "key": f"athlete:{athlete.id}",
+                "label": athlete.name,
+                "athlete": athlete,
+                "user": athlete_user,
+                "connection": connection,
+                "connected": bool(connection and connection.access_token),
+            })
+        for connection in PolarConnection.objects.select_related("user").exclude(user_id__in=seen_user_ids).order_by("user__username", "id"):
+            if not connection.access_token:
+                continue
+            label = connection.user.get_full_name() or connection.user.username
+            targets.append({
+                "key": f"user:{connection.user_id}",
+                "label": f"{label} (Polar user)",
+                "athlete": None,
+                "user": connection.user,
+                "connection": connection,
+                "connected": True,
+            })
+        return targets
+
+    athlete = _athlete_for_user(user)
+    label = athlete.name if athlete else (user.get_full_name() or user.username)
+    return [{
+        "key": "self",
+        "label": label,
+        "athlete": athlete,
+        "user": user,
+        "connection": PolarConnection.objects.filter(user=user).first(),
+        "connected": bool(PolarConnection.objects.filter(user=user, access_token__gt="").exists()),
+    }]
+
+
+def _selected_polar_target(request):
+    targets = _polar_targets_for_user(request.user)
+    requested_key = (request.GET.get("polar_target") or request.POST.get("polar_target") or request.session.get("polar_target") or "").strip()
+    keys = {target["key"] for target in targets}
+    if requested_key not in keys:
+        requested_key = "self" if "self" in keys else (targets[0]["key"] if targets else "")
+    if requested_key:
+        request.session["polar_target"] = requested_key
+        request.session.modified = True
+    for target in targets:
+        if target["key"] == requested_key:
+            return target, targets
+    return None, targets
+
+
 @login_required
 @require_GET
 def dashboard_view(request):
@@ -356,11 +446,16 @@ def _polar_json_request(url, *, method="GET", data=None, headers=None):
 @require_GET
 def polar_integration_view(request):
     config = _polar_config()
-    connection = PolarConnection.objects.filter(user=request.user).first()
+    selected_target, polar_targets = _selected_polar_target(request)
+    is_coach_polar_view = bool(request.user.is_staff or request.user.is_superuser)
+    connection = selected_target["connection"] if selected_target else PolarConnection.objects.filter(user=request.user).first()
     sync_result = request.session.pop("polar_sync_result", None)
     steps_result = request.session.pop("polar_steps_result", None)
     return render(request, "core/polar_integration.html", {
         "connection": connection,
+        "selected_target": selected_target,
+        "polar_targets": polar_targets,
+        "is_coach_polar_view": is_coach_polar_view,
         "missing_config": _polar_missing_config(config),
         "polar_error": request.GET.get("error", ""),
         "polar_connected": request.GET.get("connected") == "1",
@@ -483,7 +578,8 @@ def polar_callback_view(request):
 @login_required
 @require_http_methods(["POST"])
 def polar_sync_test_view(request):
-    connection = PolarConnection.objects.filter(user=request.user).first()
+    selected_target, _targets = _selected_polar_target(request)
+    connection = selected_target["connection"] if selected_target else None
     if not connection or not connection.access_token:
         return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'No Polar account is connected yet.'})}")
 
@@ -552,7 +648,8 @@ def polar_sync_test_view(request):
 @login_required
 @require_http_methods(["POST"])
 def polar_steps_view(request):
-    connection = PolarConnection.objects.filter(user=request.user).first()
+    selected_target, _targets = _selected_polar_target(request)
+    connection = selected_target["connection"] if selected_target else None
     if not connection or not connection.access_token:
         return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'No Polar account is connected yet.'})}")
 
