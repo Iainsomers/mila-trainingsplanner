@@ -15,7 +15,7 @@
     data-flex-distance="{{ seg.distance_m|default:'' }}"
     data-flex-duration="{{ seg.duration_s|default:'' }}"
     data-flex-norm="{{ seg.norm_distance_m|default:'' }}"
-  >Strength: {{ seg.standard_strength_program.name }}</span>
+  >Strength: {{ seg.standard_strength_program.name }}</span>{% if seg.text %} <span>{{ seg.text }}</span>{% endif %}
 {% elif seg.special == "RACE" or seg.special == "IMPORTANT_RACE" %}
   <span class="pill {% if seg.special == 'IMPORTANT_RACE' %}pill-important-race{% else %}pill-race{% endif %}" data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}">{{ seg.display_text|default:seg.text }}</span>
 {% elif seg.zone %}

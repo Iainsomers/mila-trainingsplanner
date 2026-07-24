@@ -27,6 +27,7 @@ from core.views.coach import (
     coach_athletes_view,
     coach_athlete_create_view,
     coach_athlete_edit_view,
+    athlete_settings_view,
     coach_athlete_target_prs_view,
     coach_groups_view,
     coach_group_create_view,
@@ -114,6 +115,7 @@ urlpatterns = [
     path("coach/athletes/", coach_athletes_view, name="coach_athletes"),
     path("coach/athletes/new/", coach_athlete_create_view, name="coach_athlete_create"),
     path("coach/athletes/<int:athlete_id>/edit/", coach_athlete_edit_view, name="coach_athlete_edit"),
+    path("athlete/settings/", athlete_settings_view, name="athlete_settings"),
     path("coach/athletes/<int:athlete_id>/target-prs/", coach_athlete_target_prs_view, name="coach_athlete_target_prs"),
     path("coach/athletes/<int:athlete_id>/delete/", coach_athlete_delete_view, name="coach_athlete_delete"),
 

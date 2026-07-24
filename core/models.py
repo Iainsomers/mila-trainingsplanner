@@ -337,12 +337,20 @@ class PlanMembership(models.Model):
 
 
 class AthleteBasePlanningBlock(models.Model):
+    KIND_BASE = "base"
+    KIND_IDEAL = "ideal"
+    KIND_CHOICES = [
+        (KIND_BASE, "Base planning"),
+        (KIND_IDEAL, "Ideal week"),
+    ]
+
     athlete = models.ForeignKey(
         Athlete,
         on_delete=models.CASCADE,
         related_name="base_planning_blocks",
     )
 
+    planning_kind = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_BASE, db_index=True)
     label = models.CharField(max_length=120, blank=True, default="")
     start_month = models.PositiveSmallIntegerField()
     start_day = models.PositiveSmallIntegerField()

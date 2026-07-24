@@ -9,7 +9,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h1 class="mb-1">
-        {% if mode == "create" %}New athlete{% else %}Athlete input{% endif %}
+        {% if mode == "create" %}New athlete{% elif self_view %}Athlete settings{% else %}Athlete input{% endif %}
       </h1>
       <p class="text-muted mb-0">
         {% if mode == "create" %}
@@ -20,7 +20,7 @@
       </p>
     </div>
     <div class="d-flex gap-2">
-      <a href="{% url 'coach_athletes' %}" class="btn btn-outline-secondary">Back</a>
+      <a href="{% if self_view %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>
 
@@ -121,7 +121,7 @@
             };
 
             const relations = [
-              { target: "t4", source: "t8", factor: 0.422 },
+              { target: "t4", source: "t8", factor: 0.44 },
               { target: "t8", source: "t15", factor: 0.492 },
               { target: "t15", source: "t3", factor: 0.467 },
               { target: "t3", source: "t5", factor: 0.576 },
@@ -129,7 +129,7 @@
               { target: "t10", source: "thm", factor: 0.453 },
               { target: "thm", source: "tm", factor: 0.478 },
               { target: "tm", source: "thm", factor: 2.091 },
-              { target: "t8", source: "t4", factor: 1 / 0.422 },
+              { target: "t8", source: "t4", factor: 1 / 0.44 },
               { target: "t15", source: "t8", factor: 1 / 0.492 },
               { target: "t3", source: "t15", factor: 1 / 0.467 },
               { target: "t5", source: "t3", factor: 1 / 0.576 },
@@ -173,8 +173,13 @@
             <button class="nav-link {% if active_tab == 'zones' %}active{% endif %}" id="zones-tab" data-bs-toggle="tab" data-bs-target="#zones-pane" type="button" role="tab">Zone/PR's</button>
           </li>
           {% if mode == "edit" and athlete %}
+            {% if not self_view %}
             <li class="nav-item" role="presentation">
               <button class="nav-link {% if active_tab == 'base-planning' %}active{% endif %}" id="base-planning-tab" data-bs-toggle="tab" data-bs-target="#base-planning-pane" type="button" role="tab">Base planning</button>
+            </li>
+            {% endif %}
+            <li class="nav-item" role="presentation">
+              <button class="nav-link {% if active_tab == 'ideal-week' %}active{% endif %}" id="ideal-week-tab" data-bs-toggle="tab" data-bs-target="#ideal-week-pane" type="button" role="tab">Ideal week</button>
             </li>
           {% endif %}
           <li class="nav-item" role="presentation">
@@ -191,20 +196,21 @@
         </div>
 
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-6">
             <label class="form-label">Year</label>
             <input name="birth_year" class="form-control" value="{{ form.birth_year }}" placeholder="e.g. 2008">
           </div>
-          <div class="col-md-4">
+          <div class="col-md-6">
             <label class="form-label">Sex</label>
-            <input name="gender" class="form-control" value="{{ form.gender }}" placeholder="M/V/X">
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">VDOT</label>
-            <input name="vdot" class="form-control" value="{{ form.vdot }}" placeholder="e.g. 52.5">
+            <select name="gender" class="form-select">
+              <option value="M" {% if form.gender == "M" %}selected{% endif %}>M</option>
+              <option value="V" {% if form.gender == "V" %}selected{% endif %}>V</option>
+              <option value="X" {% if form.gender == "X" %}selected{% endif %}>X</option>
+            </select>
           </div>
         </div>
 
+        {% if not self_view %}
         <div class="mb-3">
           <label class="form-label d-block">Weeks visible ahead</label>
           <input name="view_weeks_ahead" type="number" min="0" class="form-control form-control-sm d-inline-block" value="{{ form.view_weeks_ahead|default_if_none:2 }}" style="width:5rem;">
@@ -255,6 +261,7 @@
 
           <div class="form-text">Training reports controls the existing 3rd row in the Athlete Year Calendar. Existing report data is preserved when hidden.</div>
         </div>
+        {% endif %}
 
           </div>
           <div class="tab-pane fade {% if active_tab == 'zones' %}show active{% endif %}" id="zones-pane" role="tabpanel" aria-labelledby="zones-tab">
@@ -383,14 +390,20 @@
 
           </div>
           {% if mode == "edit" and athlete %}
+            {% if not self_view %}
             <div class="tab-pane fade {% if active_tab == 'base-planning' %}show active{% endif %}" id="base-planning-pane" role="tabpanel" aria-labelledby="base-planning-tab">
-              <div class="mb-2">
-                <a class="btn btn-sm btn-outline-secondary" href="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}" target="_blank">Open full page</a>
-              </div>
               <iframe
-                src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1"
+                src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=base"
                 style="width:100%; min-height:780px; border:1px solid #ddd; border-radius:6px;"
                 title="Athlete base planning"
+              ></iframe>
+            </div>
+            {% endif %}
+            <div class="tab-pane fade {% if active_tab == 'ideal-week' %}show active{% endif %}" id="ideal-week-pane" role="tabpanel" aria-labelledby="ideal-week-tab">
+              <iframe
+                src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=ideal"
+                style="width:100%; min-height:780px; border:1px solid #ddd; border-radius:6px;"
+                title="Ideal week"
               ></iframe>
             </div>
           {% endif %}
@@ -427,7 +440,7 @@
 
         <div class="mt-4 d-flex gap-2">
           <button type="submit" class="btn btn-primary">Save</button>
-          <a href="{% url 'coach_athletes' %}" class="btn btn-outline-secondary">Cancel</a>
+          <a href="{% if self_view %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
         </div>
       </form>
       {% if mode == "edit" and athlete %}

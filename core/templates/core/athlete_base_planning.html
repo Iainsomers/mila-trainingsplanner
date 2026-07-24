@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}Athlete base planning{% endblock %}
+{% block title %}{% if is_ideal_week %}Ideal week{% else %}Athlete base planning{% endif %}{% endblock %}
 
 {% block extra_head %}
   <style>
@@ -47,6 +47,11 @@
 
     .base-slot-button:hover {
       filter: brightness(0.96);
+    }
+
+    .base-slot-button.base-drop-target {
+      outline: 2px solid #0d6efd;
+      outline-offset: -2px;
     }
 
     .base-slot-time {
@@ -113,8 +118,8 @@
   {% if not embedded %}
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div>
-        <h1 class="mb-1">Athlete base planning</h1>
-        <p class="text-muted mb-0">Date-range week patterns per athlete.</p>
+        <h1 class="mb-1">{% if is_ideal_week %}Ideal week{% else %}Athlete base planning{% endif %}</h1>
+        <p class="text-muted mb-0">{% if is_ideal_week %}Display-only example week per athlete.{% else %}Date-range week patterns per athlete.{% endif %}</p>
       </div>
       <div>
         <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
@@ -156,6 +161,7 @@
             {% csrf_token %}
             <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
             <input type="hidden" name="action" value="copy_from">
+            <input type="hidden" name="kind" value="{{ planning_kind }}">
             {% if embedded %}<input type="hidden" name="embedded" value="1">{% endif %}
             <select name="copy_from_athlete_id" class="form-select form-select-sm" onchange="if (this.value) this.form.submit();">
               <option value="">Copy van...</option>
@@ -167,8 +173,8 @@
             </select>
           </form>
 
-          <button type="submit" name="action" value="save" form="basePlanningForm" class="btn btn-primary btn-sm">Save</button>
           <button type="submit" name="action" value="add_block" form="basePlanningForm" class="btn btn-outline-primary btn-sm">Add block</button>
+          <span id="baseAutosaveStatus" class="small text-muted"></span>
         {% endif %}
       </div>
     </div>
@@ -178,6 +184,7 @@
     <form method="post" id="basePlanningForm">
       {% csrf_token %}
       <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+      <input type="hidden" name="kind" value="{{ planning_kind }}">
       {% if embedded %}<input type="hidden" name="embedded" value="1">{% endif %}
 
       {% if blocks %}
@@ -252,13 +259,15 @@
       <div class="modal-body">
         <input type="hidden" id="baseSlotActiveId">
 
-        <div class="mb-3">
-          <select id="baseSlotMode" class="form-select form-select-sm">
-            <option value="rest">Rest</option>
-            <option value="training">Individuele training</option>
-            <option value="trainer">Group</option>
-          </select>
-        </div>
+        {% if not is_ideal_week %}
+          <div class="mb-3">
+            <select id="baseSlotMode" class="form-select form-select-sm">
+              <option value="rest">Rest</option>
+              <option value="training">Individuele training</option>
+              <option value="trainer">Group</option>
+            </select>
+          </div>
+        {% endif %}
 
         <div class="base-training-fields">
           <div class="row g-2">
@@ -317,6 +326,9 @@
 
     const modalContent = document.getElementById("baseSlotModalContent");
     const activeIdInput = document.getElementById("baseSlotActiveId");
+    const planningForm = document.getElementById("basePlanningForm");
+    const autosaveStatus = document.getElementById("baseAutosaveStatus");
+    const isIdealWeek = {{ is_ideal_week|yesno:"true,false" }};
     const modeSelect = document.getElementById("baseSlotMode");
     const groupSelect = document.getElementById("baseSlotTrainerPlan");
     const applyButton = document.getElementById("baseSlotApply");
@@ -339,6 +351,8 @@
     };
 
     let modal = null;
+    let draggedSlotId = "";
+    let autosaveTimer = null;
 
     function getModal() {
       if (!modal && window.bootstrap) {
@@ -444,6 +458,122 @@
       }).join(" ");
     }
 
+    function setAutosaveStatus(text, isError) {
+      if (!autosaveStatus) return;
+      autosaveStatus.textContent = text || "";
+      autosaveStatus.classList.toggle("text-danger", Boolean(isError));
+      autosaveStatus.classList.toggle("text-muted", !isError);
+    }
+
+    function autosaveNow() {
+      if (!planningForm) return;
+      const data = new FormData(planningForm);
+      data.set("action", "save");
+      data.set("autosave", "1");
+      setAutosaveStatus("Saving...", false);
+      postAutosave(data)
+        .then((payload) => {
+          if (!payload.ok) throw new Error("save failed");
+          setAutosaveStatus("Saved", false);
+        })
+        .catch((error) => {
+          console.error("Base planning autosave failed", error);
+          setAutosaveStatus("Save failed", true);
+        });
+    }
+
+    function csrfToken() {
+      const input = planningForm ? planningForm.querySelector('input[name="csrfmiddlewaretoken"]') : null;
+      return input ? input.value : "";
+    }
+
+    function postAutosave(data) {
+      const token = csrfToken();
+      const headers = { "X-Requested-With": "XMLHttpRequest" };
+      if (token) {
+        headers["X-CSRFToken"] = token;
+      }
+
+      return fetch(planningForm.action || window.location.href, {
+        method: "POST",
+        body: data,
+        credentials: "same-origin",
+        headers: headers
+      }).then((response) => {
+        return response.text().then((text) => {
+          let payload = null;
+          try {
+            payload = text ? JSON.parse(text) : null;
+          } catch (error) {
+            throw new Error("HTTP " + response.status + ": " + text.slice(0, 300));
+          }
+          if (!response.ok) {
+            throw new Error("HTTP " + response.status + ": " + text.slice(0, 300));
+          }
+          return payload || {};
+        });
+      });
+    }
+
+    function autosaveSlot(slotId) {
+      if (!planningForm || !slotId) return;
+      const modeInput = document.getElementById("slot_" + slotId + "_mode");
+      const trainingInput = document.getElementById("slot_" + slotId + "_training_text");
+      const trainerInput = document.getElementById("slot_" + slotId + "_trainer_plan");
+      if (!modeInput || !trainingInput || !trainerInput) return;
+
+      setAutosaveStatus("Saving...", false);
+      submitSlotAutosave(slotId, modeInput.value || "rest", trainingInput.value || "", trainerInput.value || "");
+    }
+
+    function upsertHidden(name, value) {
+      if (!planningForm) return;
+      let input = planningForm.querySelector('input[name="' + name + '"][data-slot-autosave="1"]');
+      if (!input) {
+        input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.setAttribute("data-slot-autosave", "1");
+        planningForm.appendChild(input);
+      }
+      input.value = value;
+    }
+
+    function submitSlotAutosave(slotId, mode, trainingText, trainerPlan) {
+      if (!planningForm) return;
+      upsertHidden("action", "autosave_slot");
+      upsertHidden("autosave", "1");
+      upsertHidden("slot_id", slotId);
+      upsertHidden("mode", mode);
+      upsertHidden("training_text", trainingText);
+      upsertHidden("trainer_plan", trainerPlan);
+      planningForm.submit();
+    }
+
+    function scheduleAutosave() {
+      if (autosaveTimer) {
+        window.clearTimeout(autosaveTimer);
+      }
+      autosaveTimer = window.setTimeout(autosaveNow, 250);
+    }
+
+    function copySlot(sourceId, targetId) {
+      if (!sourceId || !targetId || sourceId === targetId) return;
+      const sourceMode = document.getElementById("slot_" + sourceId + "_mode");
+      const sourceTraining = document.getElementById("slot_" + sourceId + "_training_text");
+      const sourceTrainer = document.getElementById("slot_" + sourceId + "_trainer_plan");
+      const targetMode = document.getElementById("slot_" + targetId + "_mode");
+      const targetTraining = document.getElementById("slot_" + targetId + "_training_text");
+      const targetTrainer = document.getElementById("slot_" + targetId + "_trainer_plan");
+      if (!sourceMode || !sourceTraining || !sourceTrainer || !targetMode || !targetTraining || !targetTrainer) return;
+
+      targetMode.value = sourceMode.value || "rest";
+      targetTraining.value = sourceTraining.value || "";
+      targetTrainer.value = sourceTrainer.value || "";
+      updateButton(targetId);
+      autosaveSlot(targetId);
+    }
+
     function escapeHtml(value) {
       return String(value || "")
         .replace(/&/g, "&amp;")
@@ -462,7 +592,9 @@
         if (!modeInput || !trainingInput || !trainerInput) return;
 
         activeIdInput.value = slotId;
-        modeSelect.value = modeInput.value || "rest";
+        if (modeSelect) {
+          modeSelect.value = modeInput.value || "rest";
+        }
         groupSelect.value = trainerInput.value || "";
 
         const training = parseTraining(trainingInput.value);
@@ -470,15 +602,17 @@
           fields[key].value = training[key] || "";
         });
 
-        setModalMode(modeSelect.value);
+        setModalMode(isIdealWeek ? "training" : (modeSelect ? modeSelect.value : "rest"));
         const instance = getModal();
         if (instance) instance.show();
       });
     });
 
-    modeSelect.addEventListener("change", () => {
-      setModalMode(modeSelect.value || "rest");
-    });
+    if (modeSelect) {
+      modeSelect.addEventListener("change", () => {
+        setModalMode(modeSelect.value || "rest");
+      });
+    }
 
     applyButton.addEventListener("click", () => {
       const slotId = activeIdInput.value;
@@ -487,7 +621,7 @@
       const trainerInput = document.getElementById("slot_" + slotId + "_trainer_plan");
       if (!modeInput || !trainingInput || !trainerInput) return;
 
-      const mode = modeSelect.value || "rest";
+      const mode = isIdealWeek ? "training" : ((modeSelect && modeSelect.value) || "rest");
       modeInput.value = mode;
 
       if (mode === "training") {
@@ -502,13 +636,45 @@
       }
 
       updateButton(slotId);
+      autosaveSlot(slotId);
       const instance = getModal();
       if (instance) instance.hide();
     });
 
     document.querySelectorAll("[data-base-slot-id]").forEach((button) => {
       updateButton(button.dataset.baseSlotId);
+      button.setAttribute("draggable", "true");
+
+      button.addEventListener("dragstart", (event) => {
+        draggedSlotId = button.dataset.baseSlotId || "";
+        event.dataTransfer.effectAllowed = "copy";
+        event.dataTransfer.setData("text/plain", draggedSlotId);
+      });
+
+      button.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        button.classList.add("base-drop-target");
+      });
+
+      button.addEventListener("dragleave", () => {
+        button.classList.remove("base-drop-target");
+      });
+
+      button.addEventListener("drop", (event) => {
+        event.preventDefault();
+        button.classList.remove("base-drop-target");
+        const sourceId = event.dataTransfer.getData("text/plain") || draggedSlotId;
+        copySlot(sourceId, button.dataset.baseSlotId || "");
+      });
     });
+
+    if (planningForm) {
+      planningForm.querySelectorAll('input[name$="_label"], input[name$="_start"], input[name$="_end"], input[name="delete_block"]').forEach((input) => {
+        input.addEventListener("change", scheduleAutosave);
+        input.addEventListener("blur", scheduleAutosave);
+      });
+    }
   })();
 </script>
 {% endblock %}

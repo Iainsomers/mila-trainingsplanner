@@ -878,6 +878,9 @@
       if (event.key === "Escape") clearFlexClickPasteMode();
     });
 
+    window.addEventListener("pagehide", clearFlexClickPasteMode);
+    window.addEventListener("beforeunload", clearFlexClickPasteMode);
+
     document.addEventListener("dragstart", (event) => {
       const cell = event.target.closest("[data-flex-copy-url]");
       if (!cell) return;

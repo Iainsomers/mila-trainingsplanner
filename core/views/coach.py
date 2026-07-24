@@ -1163,17 +1163,32 @@ def _base_planning_rows(block):
     return rows
 
 
+def _base_planning_athlete_qs_for_user(user):
+    if user.is_staff or user.is_superuser:
+        return _filter_owned(Athlete.objects.order_by("name"), user)
+
+    athlete = _athlete_for_user(user)
+    if not athlete:
+        return Athlete.objects.none()
+    return Athlete.objects.filter(id=athlete.id)
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 @xframe_options_sameorigin
 def athlete_base_planning_view(request):
     embedded = (request.GET.get("embedded") == "1") or (request.POST.get("embedded") == "1")
     redirect_suffix = "&embedded=1" if embedded else ""
-    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    planning_kind = (request.POST.get("kind") or request.GET.get("kind") or AthleteBasePlanningBlock.KIND_BASE).strip()
+    if planning_kind not in {AthleteBasePlanningBlock.KIND_BASE, AthleteBasePlanningBlock.KIND_IDEAL}:
+        planning_kind = AthleteBasePlanningBlock.KIND_BASE
+    redirect_suffix += f"&kind={planning_kind}"
+    is_ideal_week = planning_kind == AthleteBasePlanningBlock.KIND_IDEAL
+    athletes = list(_base_planning_athlete_qs_for_user(request.user))
     selected_athlete = None
     selected_id = (request.POST.get("athlete_id") or request.GET.get("athlete") or "").strip()
     if selected_id.isdigit():
-        selected_athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(selected_id)).first()
+        selected_athlete = _base_planning_athlete_qs_for_user(request.user).filter(id=int(selected_id)).first()
     if not selected_athlete and athletes:
         selected_athlete = athletes[0]
 
@@ -1184,9 +1199,10 @@ def athlete_base_planning_view(request):
         action = (request.POST.get("action") or "").strip()
 
         if action == "add_block":
-            sort_order = selected_athlete.base_planning_blocks.count() + 1
+            sort_order = selected_athlete.base_planning_blocks.filter(planning_kind=planning_kind).count() + 1
             block = AthleteBasePlanningBlock.objects.create(
                 athlete=selected_athlete,
+                planning_kind=planning_kind,
                 label=f"Block {sort_order}",
                 start_month=1,
                 start_day=1,
@@ -1201,7 +1217,7 @@ def athlete_base_planning_view(request):
             source_id = (request.POST.get("copy_from_athlete_id") or "").strip()
             source_athlete = None
             if source_id.isdigit():
-                source_athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(source_id)).first()
+                source_athlete = _base_planning_athlete_qs_for_user(request.user).filter(id=int(source_id)).first()
 
             if not source_athlete:
                 errors.append("Choose a valid athlete to copy from.")
@@ -1210,15 +1226,16 @@ def athlete_base_planning_view(request):
             else:
                 source_blocks = (
                     AthleteBasePlanningBlock.objects
-                    .filter(athlete=source_athlete)
+                    .filter(athlete=source_athlete, planning_kind=planning_kind)
                     .prefetch_related("slots")
                     .order_by("sort_order", "start_month", "start_day", "id")
                 )
                 with transaction.atomic():
-                    AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete).delete()
+                    AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, planning_kind=planning_kind).delete()
                     for source_block in source_blocks:
                         target_block = AthleteBasePlanningBlock.objects.create(
                             athlete=selected_athlete,
+                            planning_kind=planning_kind,
                             label=source_block.label,
                             start_month=source_block.start_month,
                             start_day=source_block.start_day,
@@ -1237,6 +1254,41 @@ def athlete_base_planning_view(request):
                             )
                 return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
 
+        if action == "autosave_slot":
+            slot_id = (request.POST.get("slot_id") or "").strip()
+            if not slot_id.isdigit():
+                return JsonResponse({"ok": False, "errors": ["Invalid slot."]}, status=400)
+
+            slot = (
+                AthleteBasePlanningSlot.objects
+                .select_related("block")
+                .filter(id=int(slot_id), block__athlete=selected_athlete, block__planning_kind=planning_kind)
+                .first()
+            )
+            if not slot:
+                return JsonResponse({"ok": False, "errors": ["Slot not found."]}, status=404)
+
+            mode = (request.POST.get("mode") or AthleteBasePlanningSlot.MODE_REST).strip()
+            if mode not in {
+                AthleteBasePlanningSlot.MODE_REST,
+                AthleteBasePlanningSlot.MODE_TRAINING,
+                AthleteBasePlanningSlot.MODE_TRAINER,
+            }:
+                mode = AthleteBasePlanningSlot.MODE_REST
+
+            trainer_plan = None
+            trainer_plan_id = (request.POST.get("trainer_plan") or "").strip()
+            if mode == AthleteBasePlanningSlot.MODE_TRAINER and trainer_plan_id.isdigit():
+                trainer_plan = _trainer_planning_qs(request.user).filter(id=int(trainer_plan_id)).first()
+
+            slot.mode = mode
+            slot.training_text = (request.POST.get("training_text") or "").strip() if mode == AthleteBasePlanningSlot.MODE_TRAINING else ""
+            slot.trainer_plan = trainer_plan
+            slot.save(update_fields=["mode", "training_text", "trainer_plan"])
+            if request.headers.get("X-Requested-With") != "XMLHttpRequest":
+                return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
+            return JsonResponse({"ok": True})
+
         if action == "save":
             block_ids = [
                 int(value)
@@ -1245,7 +1297,7 @@ def athlete_base_planning_view(request):
             ]
             blocks = {
                 block.id: block
-                for block in AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, id__in=block_ids)
+                for block in AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, planning_kind=planning_kind, id__in=block_ids)
             }
 
             block_values = []
@@ -1291,7 +1343,7 @@ def athlete_base_planning_view(request):
                     for plan in _trainer_planning_qs(request.user)
                 }
                 with transaction.atomic():
-                    AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, id__in=delete_ids).delete()
+                    AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, planning_kind=planning_kind, id__in=delete_ids).delete()
                     for value in block_values:
                         block = blocks[value["id"]]
                         block.label = value["label"]
@@ -1323,12 +1375,16 @@ def athlete_base_planning_view(request):
                                 slot.trainer_plan = None
                             slot.save()
                 saved = True
+                if request.POST.get("autosave") == "1":
+                    return JsonResponse({"ok": True})
+            elif request.POST.get("autosave") == "1":
+                return JsonResponse({"ok": False, "errors": errors}, status=400)
 
     blocks = []
     if selected_athlete:
         block_qs = (
             AthleteBasePlanningBlock.objects
-            .filter(athlete=selected_athlete)
+            .filter(athlete=selected_athlete, planning_kind=planning_kind)
             .prefetch_related("slots", "slots__trainer_plan")
             .order_by("sort_order", "start_month", "start_day", "id")
         )
@@ -1336,7 +1392,7 @@ def athlete_base_planning_view(request):
             _ensure_base_block_slots(block)
         block_qs = (
             AthleteBasePlanningBlock.objects
-            .filter(athlete=selected_athlete)
+            .filter(athlete=selected_athlete, planning_kind=planning_kind)
             .prefetch_related("slots", "slots__trainer_plan")
             .order_by("sort_order", "start_month", "start_day", "id")
         )
@@ -1354,6 +1410,8 @@ def athlete_base_planning_view(request):
             "saved": saved,
             "mode_choices": AthleteBasePlanningSlot.MODE_CHOICES,
             "embedded": embedded,
+            "planning_kind": planning_kind,
+            "is_ideal_week": is_ideal_week,
         },
     )
 
@@ -2984,8 +3042,15 @@ def coach_athlete_create_view(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-def coach_athlete_edit_view(request, athlete_id: int):
-    athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
+def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
+    if self_view:
+        athlete = _athlete_for_user(request.user)
+        if not athlete:
+            return HttpResponse("No athlete profile is linked to this account.", status=404)
+        if athlete.id != athlete_id:
+            return HttpResponse("Forbidden", status=403)
+    else:
+        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
     unit = request.session.get("zone_input_unit", "pace")
     unit_label = zone_unit_label(unit)
 
@@ -2995,7 +3060,8 @@ def coach_athlete_edit_view(request, athlete_id: int):
     errors = []
     saved_notice = "Opgeslagen." if request.GET.get("saved") == "1" else None
     active_tab = (request.GET.get("tab") or "general").strip()
-    if active_tab not in {"general", "zones", "base-planning", "wu-settings"}:
+    allowed_tabs = {"general", "zones", "ideal-week", "wu-settings"} if self_view else {"general", "zones", "base-planning", "ideal-week", "wu-settings"}
+    if active_tab not in allowed_tabs:
         active_tab = "general"
 
     form = {
@@ -3056,10 +3122,16 @@ def coach_athlete_edit_view(request, athlete_id: int):
         form["target_thm"] = (request.POST.get("target_thm") or "").strip()
         form["target_t4"] = (request.POST.get("target_t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
-        form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
-        form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
-        form["week_report_enabled"] = (request.POST.get("week_report_enabled") == "on")
-        form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
+        if self_view:
+            form["view_weeks_ahead"] = str(getattr(athlete, "view_weeks_ahead", 2))
+            form["training_reports_enabled"] = getattr(athlete, "training_reports_enabled", True)
+            form["week_report_enabled"] = getattr(athlete, "week_report_enabled", False)
+            form["daily_vitals_enabled"] = getattr(athlete, "daily_vitals_enabled", False)
+        else:
+            form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
+            form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
+            form["week_report_enabled"] = (request.POST.get("week_report_enabled") == "on")
+            form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
@@ -3231,19 +3303,42 @@ def coach_athlete_edit_view(request, athlete_id: int):
             athlete.is_private = form["is_private"]
             athlete.save()
 
-            return redirect(f"{reverse('coach_athlete_edit', args=[athlete.id])}?tab=zones&saved=1")
+            target_url = reverse("athlete_settings") if self_view else reverse("coach_athlete_edit", args=[athlete.id])
+            return redirect(f"{target_url}?tab=zones&saved=1")
 
     return render(
         request,
         "core/coach_athlete_form.html",
-        {"mode": "edit", "athlete": athlete, "form": form, "errors": errors, "saved_notice": saved_notice, "active_tab": active_tab},
+        {
+            "mode": "edit",
+            "athlete": athlete,
+            "form": form,
+            "errors": errors,
+            "saved_notice": saved_notice,
+            "active_tab": active_tab,
+            "self_view": self_view,
+        },
     )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def athlete_settings_view(request):
+    athlete = _athlete_for_user(request.user)
+    if not athlete:
+        return HttpResponse("No athlete profile is linked to this account.", status=404)
+    return coach_athlete_edit_view(request, athlete.id, self_view=True)
 
 
 @login_required
 @require_http_methods(["POST"])
 def coach_athlete_target_prs_view(request, athlete_id: int):
-    athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
+    if request.user.is_staff or request.user.is_superuser:
+        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
+    else:
+        athlete = _athlete_for_user(request.user)
+        if not athlete or athlete.id != athlete_id:
+            return HttpResponse("Forbidden", status=403)
     values, errors = _parse_optional_target_prs(request.POST)
     if errors:
         return JsonResponse({"ok": False, "errors": errors}, status=400)
@@ -3613,7 +3708,7 @@ def daily_overview_view(request):
         base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
         base_blocks = (
             AthleteBasePlanningBlock.objects
-            .filter(athlete_id__in=athlete_ids)
+            .filter(athlete_id__in=athlete_ids, planning_kind=AthleteBasePlanningBlock.KIND_BASE)
             .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
             .order_by("athlete_id", "sort_order", "start_month", "start_day", "id")
         )

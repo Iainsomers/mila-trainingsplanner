@@ -698,7 +698,7 @@ class _VirtualSegmentList:
 
 
 class _VirtualSegment:
-    def __init__(self, text, type="CORE", zone="", special="", t_type="", reps=1, distance_m=None, duration_s=None, norm_distance_m=None):
+    def __init__(self, text, type="CORE", zone="", special="", t_type="", reps=1, distance_m=None, duration_s=None, norm_distance_m=None, standard_strength_program=None):
         self.text = text or ""
         self.display_text = self.text
         self.type = type
@@ -709,6 +709,7 @@ class _VirtualSegment:
         self.distance_m = distance_m
         self.duration_s = duration_s
         self.norm_distance_m = norm_distance_m
+        self.standard_strength_program = standard_strength_program
 
 
 class _VirtualSlot:
@@ -718,6 +719,35 @@ class _VirtualSlot:
 
     def core_text(self):
         return " // ".join(seg.text for seg in self.segments.all() if seg.type == "CORE" and seg.text)
+
+
+def _clone_slot_for_display(slot):
+    if not slot:
+        return None
+
+    try:
+        source_segments = list(slot.segments.all())
+    except Exception:
+        return slot
+
+    segments = []
+    for seg in source_segments:
+        clone = _VirtualSegment(
+            text=getattr(seg, "text", "") or "",
+            type=getattr(seg, "type", "") or "",
+            zone=getattr(seg, "zone", "") or "",
+            special=getattr(seg, "special", "") or "",
+            t_type=getattr(seg, "t_type", "") or "",
+            reps=getattr(seg, "reps", 1) or 1,
+            distance_m=getattr(seg, "distance_m", None),
+            duration_s=getattr(seg, "duration_s", None),
+            norm_distance_m=getattr(seg, "norm_distance_m", None),
+            standard_strength_program=getattr(seg, "standard_strength_program", None),
+        )
+        clone.display_text = getattr(seg, "display_text", clone.text) or clone.text
+        segments.append(clone)
+
+    return _VirtualSlot(segments, plan_id=getattr(slot, "plan_id", None))
 
 
 def _parse_base_training_text(text):
@@ -1023,7 +1053,7 @@ def flex_planner_view(request):
         base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
         base_blocks = (
             AthleteBasePlanningBlock.objects
-            .filter(athlete_id__in=selected_athlete_ids)
+            .filter(athlete_id__in=selected_athlete_ids, planning_kind=AthleteBasePlanningBlock.KIND_BASE)
             .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
             .order_by("athlete_id", "sort_order", "start_month", "start_day", "id")
         )
@@ -1128,6 +1158,7 @@ def flex_planner_view(request):
                                 plan = flex_plan
                                 no_plan = False
 
+                    slot = _clone_slot_for_display(slot)
                     _annotate_slot_segment_display_times(slot, athlete)
 
                     target_cells.append({
@@ -2337,7 +2368,7 @@ def athlete_year_calendar_view(request):
         base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
         base_blocks = (
             AthleteBasePlanningBlock.objects
-            .filter(athlete=selected_athlete)
+            .filter(athlete=selected_athlete, planning_kind=AthleteBasePlanningBlock.KIND_BASE)
             .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
             .order_by("sort_order", "start_month", "start_day", "id")
         )

@@ -85,9 +85,23 @@ class _VirtualSegmentList:
     def exists(self):
         return bool(self._segments)
 
+    def filter(self, **kwargs):
+        items = self._segments
+        for key, value in kwargs.items():
+            if "__" in key:
+                continue
+            items = [seg for seg in items if getattr(seg, key, None) == value]
+        return _VirtualSegmentList(items)
+
+    def order_by(self, *args):
+        return self
+
+    def first(self):
+        return self._segments[0] if self._segments else None
+
 
 class _VirtualSegment:
-    def __init__(self, text, type="CORE", zone="", special="", t_type="", reps=1, distance_m=None, duration_s=None, norm_distance_m=None):
+    def __init__(self, text, type="CORE", zone="", special="", t_type="", reps=1, distance_m=None, duration_s=None, norm_distance_m=None, standard_strength_program=None):
         self.text = text or ""
         self.display_text = self.text
         self.type = type
@@ -98,6 +112,8 @@ class _VirtualSegment:
         self.distance_m = distance_m
         self.duration_s = duration_s
         self.norm_distance_m = norm_distance_m
+        self.standard_strength_program = standard_strength_program
+        self.standard_strength_program_id = getattr(standard_strength_program, "id", None) if standard_strength_program else None
 
 
 class _VirtualSlot:
@@ -125,7 +141,7 @@ def _base_block_covers_day_for_slot_reset(block, day):
 def _base_planning_slot_for_slot_reset(athlete, day, slot_index):
     blocks = (
         AthleteBasePlanningBlock.objects
-        .filter(athlete=athlete)
+        .filter(athlete=athlete, planning_kind=AthleteBasePlanningBlock.KIND_BASE)
         .prefetch_related("slots")
         .order_by("sort_order", "start_month", "start_day", "id")
     )
@@ -773,6 +789,9 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
     eff = _get_effective_slot(selected_plan, athlete, d, slot_index, prefetch_segments=True)
     visible_slot = eff["visible_slot"]
     has_fix = eff["has_fix"]
+    if _is_flex_source(request) and _is_flex_planner_plan(selected_plan) and not visible_slot:
+        visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
+        has_fix = False
 
     segments_payload = []
     if visible_slot:
@@ -991,6 +1010,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     eff = _get_effective_slot(selected_plan, athlete, d, slot_index, prefetch_segments=True)
     visible_slot = eff["visible_slot"]
     has_fix = eff["has_fix"]
+    if _is_flex_source(request) and _is_flex_planner_plan(selected_plan) and not visible_slot:
+        visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
+        has_fix = False
 
     if request.method == "GET":
         wu_seg = visible_slot.segments.filter(type="WU").order_by("order", "id").first() if visible_slot else None
@@ -1122,8 +1144,6 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     mob_text = (request.POST.get("mob_text") or "").strip() if tb_show_mob else ""
     selected_standard_strength = _standard_strength_for_user(request.user, request.POST.get("standard_strength_id")) if tb_show_mob else None
     selected_standard_strength_id = str(selected_standard_strength.id) if selected_standard_strength else ""
-    if selected_standard_strength:
-        mob_text = selected_standard_strength.name
     sprint_text = (request.POST.get("sprint_text") or "").strip() if tb_show_sprint else ""
     core_text = (request.POST.get("core_text") or "").strip()
     core2_text = (request.POST.get("core2_text") or "").strip() if tb_show_core2 else ""
@@ -1280,7 +1300,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         )
 
     # validatie: Core, Mob/Tech of Alt moet gevuld zijn
-    if not core_text and not mob_text and not alt_text:
+    has_mob_content = bool(mob_text or selected_standard_strength)
+
+    if not core_text and not has_mob_content and not alt_text:
         return render(
             request,
             "core/partials/slot_modal.html",
@@ -1459,7 +1481,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             wu_seg.delete()
 
     # Save MOB
-    if mob_text:
+    if has_mob_content:
         if mob_seg:
             mob_seg.order = 1
             _apply_mob_only(mob_seg, mob_text)

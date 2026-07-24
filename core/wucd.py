@@ -56,7 +56,7 @@ def core_text_needs_auto_wucd(core_text):
             return True
         if parsed and parsed.zone:
             try:
-                if int(parsed.zone) >= 3:
+                if int(parsed.zone) >= 2:
                     return True
             except (TypeError, ValueError):
                 pass
