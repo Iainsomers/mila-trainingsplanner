@@ -2382,7 +2382,7 @@ def athlete_year_calendar_view(request):
             athlete=selected_athlete,
             date__gte=start,
             date__lte=end,
-        )
+        ).defer("watch_activity_payload")
         for c in checks:
             check_map[(c.date, c.slot_index)] = c
 

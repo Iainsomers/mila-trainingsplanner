@@ -1352,6 +1352,7 @@
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
       <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Suggest Input</button>
+      <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger">Delete input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary" disabled>OK</button>
     </div>
   </div>
@@ -1458,6 +1459,15 @@
     setVal("aypWatchActivityId", id);
     setVal("aypWatchActivitySummary", summary);
   }
+  function deleteWatchInput() {
+    resetWatchResults();
+    ["reportT1", "reportT2"].forEach(function(prefix) {
+      if (val(prefix + "Status") === "done_as_planned" && !val(prefix + "Rpe") && !val(prefix + "Comment")) {
+        setVal(prefix + "Status", "");
+      }
+    });
+    validate();
+  }
   function suggestWatchInput() {
     var suggestions = document.getElementById("aypWatchSuggestions");
     var btn = document.getElementById("suggestInputBtn");
@@ -1539,9 +1549,11 @@
   });
   document.querySelectorAll(".report-field").forEach(function(el){ el.addEventListener("input", validate); el.addEventListener("change", validate); });
   document.getElementById("suggestInputBtn").addEventListener("click", suggestWatchInput);
+  document.getElementById("deleteWatchInputBtn").addEventListener("click", deleteWatchInput);
   document.getElementById("commentCancelBtn").addEventListener("click", function(){ document.getElementById("commentModal").style.display = "none"; });
   document.getElementById("commentOkBtn").addEventListener("click", function(){
     if (this.disabled) return;
+    document.getElementById("commentModal").style.display = "none";
     var requests = [];
     if (enabled("reportT1")) {
       requests.push(post(1, val("reportT1Status"), val("reportT1Rpe"), val("reportT1Comment")));
