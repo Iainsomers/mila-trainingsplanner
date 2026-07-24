@@ -2240,13 +2240,26 @@ def athlete_year_calendar_view(request):
             current_week_start = today - timedelta(days=today.weekday())
             visible_until_date = current_week_start + timedelta(days=(7 * weeks_ahead) - 1)
 
+    hide_mode = request.GET.get("hide", "t1")
+
+    today = date.today()
+    current_week_start = today - timedelta(days=today.weekday())
+
+    if hide_mode == "t1":
+        cutoff = current_week_start - timedelta(days=7)
+    elif hide_mode == "t4":
+        cutoff = current_week_start - timedelta(days=28)
+    else:
+        cutoff = None
+
     jan1 = date(year, 1, 1)
-    start = jan1 - timedelta(days=jan1.weekday())
+    full_start = jan1 - timedelta(days=jan1.weekday())
 
     dec31 = date(year, 12, 31)
     end = dec31 + timedelta(days=(6 - dec31.weekday()))
 
-    weeks = ((end - start).days // 7) + 1
+    start = max(full_start, cutoff) if cutoff else full_start
+    weeks = max(0, ((end - start).days // 7) + 1)
 
     slot_map = {}
     has_fix_keys = set()
@@ -2261,7 +2274,7 @@ def athlete_year_calendar_view(request):
         else:
             owned_plans = list(TrainingPlan.objects.order_by("name"))
 
-        flex_plan = _get_athlete_year_flex_plan(request.user, selected_athlete, start, end)
+        flex_plan = _get_athlete_year_flex_plan(request.user, selected_athlete, full_start, end)
         if flex_plan and flex_plan not in owned_plans:
             owned_plans.append(flex_plan)
 
@@ -2715,22 +2728,6 @@ def athlete_year_calendar_view(request):
         })
 
         d += timedelta(days=7)
-
-    # --- hiding logic ---
-    hide_mode = request.GET.get("hide", "t1")
-
-    today = date.today()
-    current_week_start = today - timedelta(days=today.weekday())
-
-    if hide_mode == "t1":
-        cutoff = current_week_start - timedelta(days=7)
-    elif hide_mode == "t4":
-        cutoff = current_week_start - timedelta(days=28)
-    else:
-        cutoff = None
-
-    if cutoff:
-        week_rows = [w for w in week_rows if w["week_end"] >= cutoff]
 
     if athlete_self_view and visible_until_date:
         week_rows = [
