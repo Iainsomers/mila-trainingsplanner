@@ -14,11 +14,6 @@
       margin-bottom: 14px;
     }
 
-    .flex-group-help {
-      font-size: 11px;
-      color: #777;
-    }
-
     .flex-athlete-picker {
       max-height: 170px;
       overflow: auto;
@@ -1084,7 +1079,6 @@
           <option value="{{ group.id }}" {% if selected_group and group.id == selected_group.id %}selected{% endif %}>{{ group.name }}</option>
         {% endfor %}
       </select>
-      <div class="flex-group-help">From trainer planning references</div>
     </div>
 
 
