@@ -1337,8 +1337,14 @@
       </div>
     </div>
     <div id="reportValidationMsg" class="text-danger small mb-2 mt-2"></div>
+    <div class="mt-2 border rounded p-2">
+      <div class="fw-bold mb-1">Watch results</div>
+      <div id="aypWatchResults" class="text-muted small">No watch result selected.</div>
+      <div id="aypWatchSuggestions" class="mt-2"></div>
+    </div>
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
+      <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Suggest Input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary" disabled>OK</button>
     </div>
   </div>
@@ -1347,6 +1353,7 @@
 <script>
 (function() {
   var activeDate = "";
+  var activeAthlete = "{{ selected_athlete_id }}";
   function getCookie(name) {
     var v = null;
     if (document.cookie) document.cookie.split(";").forEach(function(c){ c=c.trim(); if(c.substring(0,name.length+1)===(name+"=")) v=decodeURIComponent(c.substring(name.length+1)); });
@@ -1383,6 +1390,72 @@
     grid.classList.toggle("single", count === 1);
   }
   function setVal(id, value){ document.getElementById(id).value = value || ""; }
+  function formatWatchActivity(activity) {
+    var pieces = [];
+    if (activity.sport) pieces.push(activity.sport);
+    if (activity.distance_km !== null && activity.distance_km !== undefined) pieces.push(activity.distance_km + " km");
+    if (activity.duration_label) pieces.push(activity.duration_label);
+    if (activity.avg_hr) pieces.push("avg HR " + activity.avg_hr);
+    if (activity.max_hr) pieces.push("max HR " + activity.max_hr);
+    return pieces.join(" | ");
+  }
+  function renderWatchChoice(activity) {
+    var row = document.createElement("div");
+    row.className = "d-flex align-items-center justify-content-between gap-2 border rounded px-2 py-1 mb-1";
+    var label = document.createElement("div");
+    label.className = "small";
+    label.textContent = (activity.start_time || "").replace("T", " ") + " | " + formatWatchActivity(activity);
+    var choose = document.createElement("button");
+    choose.type = "button";
+    choose.className = "btn btn-sm btn-outline-primary";
+    choose.textContent = "choose";
+    choose.addEventListener("click", function() {
+      var results = document.getElementById("aypWatchResults");
+      if (results) {
+        results.textContent = label.textContent;
+        results.setAttribute("data-watch-activity-id", activity.id || "");
+      }
+    });
+    row.appendChild(label);
+    row.appendChild(choose);
+    return row;
+  }
+  function resetWatchResults() {
+    var results = document.getElementById("aypWatchResults");
+    var suggestions = document.getElementById("aypWatchSuggestions");
+    if (results) {
+      results.textContent = "No watch result selected.";
+      results.removeAttribute("data-watch-activity-id");
+    }
+    if (suggestions) suggestions.innerHTML = "";
+  }
+  function suggestWatchInput() {
+    var suggestions = document.getElementById("aypWatchSuggestions");
+    var btn = document.getElementById("suggestInputBtn");
+    if (!suggestions || !activeAthlete || !activeDate) return;
+    suggestions.textContent = "Syncing watch...";
+    if (btn) btn.disabled = true;
+    fetch("/integrations/polar/activity-suggestions/?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate), {
+      headers: {"Accept": "application/json"}
+    })
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        suggestions.innerHTML = "";
+        if (!data.ok || !data.activities || !data.activities.length) {
+          suggestions.textContent = data.message || "No watch activities found for this day.";
+          return;
+        }
+        data.activities.forEach(function(activity) {
+          suggestions.appendChild(renderWatchChoice(activity));
+        });
+      })
+      .catch(function() {
+        suggestions.textContent = "Watch sync failed.";
+      })
+      .finally(function() {
+        if (btn) btn.disabled = false;
+      });
+  }
   function filled(prefix){ return !!(val(prefix+"Status") || val(prefix+"Rpe") || val(prefix+"Comment")); }
   function complete(prefix){
     if (!enabled(prefix)) return true;
@@ -1422,11 +1495,13 @@
       setVal("reportT2Status", el.getAttribute("data-t2-status"));
       setVal("reportT2Rpe", el.getAttribute("data-t2-rpe"));
       setVal("reportT2Comment", el.getAttribute("data-t2-comment"));
+      resetWatchResults();
       document.getElementById("commentModal").style.display = "flex";
       validate();
     }, true);
   });
   document.querySelectorAll(".report-field").forEach(function(el){ el.addEventListener("input", validate); el.addEventListener("change", validate); });
+  document.getElementById("suggestInputBtn").addEventListener("click", suggestWatchInput);
   document.getElementById("commentCancelBtn").addEventListener("click", function(){ document.getElementById("commentModal").style.display = "none"; });
   document.getElementById("commentOkBtn").addEventListener("click", function(){
     if (this.disabled) return;

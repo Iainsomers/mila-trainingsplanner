@@ -3,6 +3,7 @@ import calendar as py_calendar
 import base64
 import json
 import os
+import re
 import secrets
 from urllib.parse import urlencode
 from urllib.error import HTTPError, URLError
@@ -377,6 +378,48 @@ def _selected_polar_target(request):
     return None, targets
 
 
+def _polar_connection_for_athlete_request(request, athlete_id):
+    athlete = None
+    athlete_id_str = str(athlete_id or "").strip()
+    if athlete_id_str.isdigit():
+        if request.user.is_staff or request.user.is_superuser:
+            athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(athlete_id_str)).first()
+        else:
+            own_athlete = _athlete_for_user(request.user)
+            if own_athlete and own_athlete.id == int(athlete_id_str):
+                athlete = own_athlete
+    if not athlete:
+        return None, None
+
+    athlete_user = _user_for_athlete(athlete)
+    if not athlete_user:
+        return athlete, None
+    return athlete, PolarConnection.objects.filter(user=athlete_user).first()
+
+
+def _polar_duration_seconds(value):
+    text = str(value or "").strip().upper()
+    match = re.fullmatch(r"PT(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?", text)
+    if not match:
+        return None
+    hours = float(match.group(1) or 0)
+    minutes = float(match.group(2) or 0)
+    seconds = float(match.group(3) or 0)
+    return int(round((hours * 3600) + (minutes * 60) + seconds))
+
+
+def _format_seconds_hms(seconds):
+    if seconds is None:
+        return ""
+    seconds = int(seconds)
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
+
+
 @login_required
 @require_GET
 def dashboard_view(request):
@@ -715,6 +758,77 @@ def polar_steps_view(request):
     connection.last_error = ""
     connection.save(update_fields=["status", "last_error", "updated_at"])
     return redirect("polar_integration")
+
+
+@login_required
+@require_GET
+def polar_activity_suggestions_view(request):
+    athlete_id = (request.GET.get("athlete") or "").strip()
+    day = (request.GET.get("date") or "").strip()
+    try:
+        target_date = date.fromisoformat(day)
+    except Exception:
+        return JsonResponse({"ok": False, "message": "Invalid date.", "activities": []}, status=400)
+
+    athlete, connection = _polar_connection_for_athlete_request(request, athlete_id)
+    if not athlete:
+        return JsonResponse({"ok": False, "message": "Athlete not found.", "activities": []}, status=404)
+    if not connection or not connection.access_token:
+        return JsonResponse({"ok": False, "message": "No watch is connected for this athlete.", "activities": []})
+
+    url = f"{POLAR_EXERCISES_URL}?{urlencode({'samples': 'false', 'zones': 'false', 'route': 'false'})}"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {connection.access_token}",
+    }
+    try:
+        status, payload = _polar_json_request(url, method="GET", headers=headers)
+    except RuntimeError as exc:
+        return JsonResponse({"ok": False, "message": f"Watch sync failed: {exc}", "activities": []})
+
+    if status >= 400:
+        polar_message = ""
+        if isinstance(payload, dict):
+            polar_message = payload.get("error_description") or payload.get("error") or ""
+        message = f"Watch sync failed with status {status}."
+        if polar_message:
+            message = f"{message} {polar_message}"
+        return JsonResponse({"ok": False, "message": message, "activities": []})
+
+    activities = []
+    if isinstance(payload, list):
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            start_time = str(item.get("start_time") or "")
+            if start_time[:10] != target_date.isoformat():
+                continue
+            duration_s = _polar_duration_seconds(item.get("duration") or "")
+            distance_m = item.get("distance")
+            try:
+                distance_m = float(distance_m) if distance_m is not None else None
+            except (TypeError, ValueError):
+                distance_m = None
+            heart_rate = item.get("heart_rate") if isinstance(item.get("heart_rate"), dict) else {}
+            activities.append({
+                "id": item.get("id") or "",
+                "start_time": start_time,
+                "sport": item.get("sport") or item.get("detailed_sport_info") or "",
+                "duration": item.get("duration") or "",
+                "duration_seconds": duration_s,
+                "duration_label": _format_seconds_hms(duration_s),
+                "distance_m": distance_m,
+                "distance_km": round(distance_m / 1000.0, 2) if distance_m is not None else None,
+                "avg_hr": heart_rate.get("average"),
+                "max_hr": heart_rate.get("maximum"),
+                "calories": item.get("calories"),
+                "running_index": item.get("running_index"),
+            })
+
+    activities.sort(key=lambda item: item.get("start_time") or "")
+    if not activities:
+        return JsonResponse({"ok": True, "message": "No watch activities found for this day.", "activities": []})
+    return JsonResponse({"ok": True, "message": "", "activities": activities})
 
 
 @login_required
