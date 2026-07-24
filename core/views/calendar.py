@@ -856,7 +856,12 @@ def flex_planner_view(request):
     - opens the existing slot modal with plan + athlete
     """
     accessible_athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request.user))
-    accessible_groups = list(_filter_accessible(Group.objects.prefetch_related("athletes").order_by("name"), request.user))
+    accessible_trainer_plans = list(
+        _filter_accessible(
+            TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER).order_by("name"),
+            request.user,
+        )
+    )
     accessible_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name__startswith="Flex Planner"))
 
     today = date.today()
@@ -881,11 +886,20 @@ def flex_planner_view(request):
     selected_group_athlete_ids = []
     if selected_group_value and selected_group_value != "all":
         try:
-            selected_group = next((g for g in accessible_groups if g.id == int(selected_group_value)), None)
+            selected_group = next((p for p in accessible_trainer_plans if p.id == int(selected_group_value)), None)
         except Exception:
             selected_group = None
     if selected_group:
-        selected_group_athlete_ids = list(selected_group.athletes.values_list("id", flat=True))
+        selected_group_athlete_ids = list(
+            AthleteBasePlanningSlot.objects
+            .filter(
+                mode=AthleteBasePlanningSlot.MODE_TRAINER,
+                trainer_plan=selected_group,
+                block__athlete__in=accessible_athletes,
+            )
+            .values_list("block__athlete_id", flat=True)
+            .distinct()
+        )
 
     if selected_group:
         visible_athlete_ids = set(selected_group_athlete_ids)
@@ -1174,7 +1188,7 @@ def flex_planner_view(request):
         "core/flex_planner.html",
         {
             "athletes": visible_athletes,
-            "groups": accessible_groups,
+            "groups": accessible_trainer_plans,
             "selected_group": selected_group,
             "selected_group_value": selected_group_value,
             "selected_athletes": selected_athletes,

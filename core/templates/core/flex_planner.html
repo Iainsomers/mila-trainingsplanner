@@ -35,8 +35,8 @@
       margin-bottom: 24px;
     }
 
-    .flex-week-current .flex-table th,
-    .flex-week-current .flex-table td,
+    .flex-week-current .flex-table th:not(.flex-athlete-col),
+    .flex-week-current .flex-table td:not(.flex-athlete-col),
     .flex-week-current .flex-cell,
     .flex-week-current .flex-cell-empty {
       background-color: #fff8cc;
@@ -127,11 +127,11 @@
       z-index: 2;
     }
 
-    .flex-athlete-col.phase-recovery { background: #e8ddff; }
-    .flex-athlete-col.phase-aerobe { background: #f06f5f; }
-    .flex-athlete-col.phase-specific { background: #bfe7bf; }
-    .flex-athlete-col.phase-intense { background: #b7d7ff; }
-    .flex-athlete-col.phase-taper { background: #ff7a00; }
+    .flex-athlete-col.phase-recovery { background-color: #e8ddff; }
+    .flex-athlete-col.phase-aerobe { background-color: #f06f5f; }
+    .flex-athlete-col.phase-specific { background-color: #bfe7bf; }
+    .flex-athlete-col.phase-intense { background-color: #b7d7ff; }
+    .flex-athlete-col.phase-taper { background-color: #ff7a00; }
 
     .flex-athlete-phase-wrap {
       margin-top: 5px;
@@ -1084,6 +1084,7 @@
           <option value="{{ group.id }}" {% if selected_group and group.id == selected_group.id %}selected{% endif %}>{{ group.name }}</option>
         {% endfor %}
       </select>
+      <div class="flex-group-help">From trainer planning references</div>
     </div>
 
 
