@@ -2269,36 +2269,40 @@ def athlete_year_calendar_view(request):
     trainer_slot_lookup = {}
 
     if selected_athlete:
-        flex_plan = _get_athlete_year_flex_plan(request.user, selected_athlete, full_start, end)
+        if request.user.is_staff:
+            owned_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request.user))
+        else:
+            owned_plans = list(TrainingPlan.objects.order_by("name"))
 
+        flex_plan = _get_athlete_year_flex_plan(request.user, selected_athlete, full_start, end)
+        if flex_plan and flex_plan not in owned_plans:
+            owned_plans.append(flex_plan)
+
+        athlete_plans = []
         override_plan_ids = set(
             TrainingSlot.objects
             .filter(athlete=selected_athlete, date__gte=start, date__lte=end)
             .values_list("plan_id", flat=True)
         )
 
-        plan_filter = (
-            Q(athletes=selected_athlete)
-            | Q(groups__athletes=selected_athlete)
-            | Q(id__in=override_plan_ids)
-        )
-        if flex_plan:
-            plan_filter |= Q(id=flex_plan.id)
+        for plan in owned_plans:
+            try:
+                plan_targets_athlete = selected_athlete.id in plan.targeted_athlete_ids()
+            except Exception:
+                plan_targets_athlete = False
+            if _is_flex_planner_plan(plan):
+                plan_targets_athlete = True
 
-        plan_qs = TrainingPlan.objects.filter(plan_filter)
-        if request.user.is_staff:
-            plan_qs = _filter_accessible(plan_qs, request.user)
+            if not plan_targets_athlete and plan.id not in override_plan_ids:
+                continue
 
-        athlete_plans = list(
-            plan_qs
-            .filter(Q(start_date__isnull=True) | Q(start_date__lte=end))
-            .filter(Q(end_date__isnull=True) | Q(end_date__gte=start))
-            .distinct()
-            .order_by("name")
-        )
+            if plan.start_date and plan.start_date > end:
+                continue
 
-        if flex_plan and flex_plan.id not in {plan.id for plan in athlete_plans}:
-            athlete_plans.append(flex_plan)
+            if plan.end_date and plan.end_date < start:
+                continue
+
+            athlete_plans.append(plan)
 
         if athlete_plans:
             slot_q = (
