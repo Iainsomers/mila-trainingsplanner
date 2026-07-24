@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import json
 import re
 
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -2121,6 +2122,17 @@ def athlete_year_calendar_view(request):
                     }
 
                     status = (check_status or "").strip()
+                    watch_activity_id = (request.POST.get("watch_activity_id") or "").strip()
+                    watch_activity_summary = (request.POST.get("watch_activity_summary") or "").strip()
+                    watch_activity_payload_raw = (request.POST.get("watch_activity_payload") or "").strip()
+                    watch_activity_payload = {}
+                    if watch_activity_payload_raw:
+                        try:
+                            loaded_payload = json.loads(watch_activity_payload_raw)
+                            if isinstance(loaded_payload, dict):
+                                watch_activity_payload = loaded_payload
+                        except Exception:
+                            watch_activity_payload = {}
 
                     if toggle_check is not None and check_status is None:
                         existing = AthleteDayCheck.objects.filter(
@@ -2137,6 +2149,8 @@ def athlete_year_calendar_view(request):
 
                     if status not in allowed_statuses:
                         status = AthleteDayCheck.STATUS_NONE
+                    if report_submit is not None and watch_activity_id and not status:
+                        status = AthleteDayCheck.STATUS_DONE_AS_PLANNED
 
                     obj, _ = AthleteDayCheck.objects.get_or_create(
                         date=d,
@@ -2152,6 +2166,9 @@ def athlete_year_calendar_view(request):
                         comment_raw = (request.POST.get("report_comment") or "").strip()
                         obj.rpe = int(rpe_raw) if rpe_raw.isdigit() and 0 <= int(rpe_raw) <= 10 else None
                         obj.comment = comment_raw
+                        obj.watch_activity_id = watch_activity_id
+                        obj.watch_activity_summary = watch_activity_summary
+                        obj.watch_activity_payload = watch_activity_payload
 
                     obj.updated_by = request.user
                     obj.save()

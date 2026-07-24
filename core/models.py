@@ -933,6 +933,9 @@ class AthleteDayCheck(models.Model):
     checked = models.BooleanField(default=False)
     rpe = models.PositiveSmallIntegerField(null=True, blank=True)
     comment = models.TextField(blank=True, default="")
+    watch_activity_id = models.CharField(max_length=120, blank=True, default="")
+    watch_activity_summary = models.TextField(blank=True, default="")
+    watch_activity_payload = models.JSONField(default=dict, blank=True)
 
     status = models.CharField(
         max_length=30,

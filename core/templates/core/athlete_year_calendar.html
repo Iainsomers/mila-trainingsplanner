@@ -883,10 +883,14 @@
                    data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
                    data-t1-rpe="{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% endif %}"
                    data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
+                   data-t1-watch-id="{% if d.check1.watch_activity_id %}{{ d.check1.watch_activity_id|escape }}{% endif %}"
+                   data-t1-watch-summary="{% if d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary|escape }}{% endif %}"
                    data-t2-enabled="{% if d.has_slot2 %}1{% else %}0{% endif %}"
                    data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
                    data-t2-rpe="{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% endif %}"
                    data-t2-comment="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% endif %}"
+                   data-t2-watch-id="{% if d.check2.watch_activity_id %}{{ d.check2.watch_activity_id|escape }}{% endif %}"
+                   data-t2-watch-summary="{% if d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary|escape }}{% endif %}"
                    data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}">
                 {% if d.has_slot1 or d.has_slot2 %}
                   <div class="report-preview-grid{% if d.has_slot1 and not d.has_slot2 or d.has_slot2 and not d.has_slot1 %} single{% endif %}">
@@ -900,7 +904,7 @@
                           {% endwith %}
                           <span class="report-preview-rpe">{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
                         </div>
-                        <div class="report-preview-text">{% if d.check1.comment %}{{ d.check1.comment }}{% endif %}</div>
+                        <div class="report-preview-text">{% if d.check1.comment %}{{ d.check1.comment }}{% elif d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary }}{% endif %}</div>
                       </div>
                     {% endif %}
                     {% if d.has_slot2 %}
@@ -913,7 +917,7 @@
                           {% endwith %}
                           <span class="report-preview-rpe">{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
                         </div>
-                        <div class="report-preview-text">{% if d.check2.comment %}{{ d.check2.comment }}{% endif %}</div>
+                        <div class="report-preview-text">{% if d.check2.comment %}{{ d.check2.comment }}{% elif d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary }}{% endif %}</div>
                       </div>
                     {% endif %}
                   </div>
@@ -1341,6 +1345,9 @@
       <div class="fw-bold mb-1">Watch results</div>
       <div id="aypWatchResults" class="text-muted small">No watch result selected.</div>
       <div id="aypWatchSuggestions" class="mt-2"></div>
+      <input type="hidden" id="aypWatchActivityId">
+      <input type="hidden" id="aypWatchActivitySummary">
+      <input type="hidden" id="aypWatchActivityPayload">
     </div>
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
@@ -1390,6 +1397,7 @@
     grid.classList.toggle("single", count === 1);
   }
   function setVal(id, value){ document.getElementById(id).value = value || ""; }
+  function watchVal(id){ var el = document.getElementById(id); return el ? (el.value || "").trim() : ""; }
   function formatWatchActivity(activity) {
     var pieces = [];
     if (activity.sport) pieces.push(activity.sport);
@@ -1411,10 +1419,17 @@
     choose.textContent = "choose";
     choose.addEventListener("click", function() {
       var results = document.getElementById("aypWatchResults");
+      var summary = label.textContent;
       if (results) {
-        results.textContent = label.textContent;
+        results.textContent = summary;
         results.setAttribute("data-watch-activity-id", activity.id || "");
       }
+      setVal("aypWatchActivityId", activity.id || "");
+      setVal("aypWatchActivitySummary", summary);
+      setVal("aypWatchActivityPayload", JSON.stringify(activity || {}));
+      if (!val("reportT1Status")) setVal("reportT1Status", "done_as_planned");
+      if (!val("reportT2Status")) setVal("reportT2Status", "done_as_planned");
+      validate();
     });
     row.appendChild(label);
     row.appendChild(choose);
@@ -1427,7 +1442,21 @@
       results.textContent = "No watch result selected.";
       results.removeAttribute("data-watch-activity-id");
     }
+    setVal("aypWatchActivityId", "");
+    setVal("aypWatchActivitySummary", "");
+    setVal("aypWatchActivityPayload", "");
     if (suggestions) suggestions.innerHTML = "";
+  }
+  function setSavedWatchResult(id, summary) {
+    resetWatchResults();
+    if (!id || !summary) return;
+    var results = document.getElementById("aypWatchResults");
+    if (results) {
+      results.textContent = summary;
+      results.setAttribute("data-watch-activity-id", id);
+    }
+    setVal("aypWatchActivityId", id);
+    setVal("aypWatchActivitySummary", summary);
   }
   function suggestWatchInput() {
     var suggestions = document.getElementById("aypWatchSuggestions");
@@ -1459,6 +1488,7 @@
   function filled(prefix){ return !!(val(prefix+"Status") || val(prefix+"Rpe") || val(prefix+"Comment")); }
   function complete(prefix){
     if (!enabled(prefix)) return true;
+    if (watchVal("aypWatchActivityId")) return true;
     if (!filled(prefix)) return true;
     var rpe = val(prefix+"Rpe"), comment = val(prefix+"Comment");
     return !!val(prefix+"Status") && rpe !== "" && !isNaN(parseInt(rpe,10)) && parseInt(rpe,10) >= 0 && parseInt(rpe,10) <= 10 && comment.length >= 4;
@@ -1471,12 +1501,17 @@
   }
   function post(slotIndex, status, rpe, comment){
     var fd = new FormData();
+    var watchId = watchVal("aypWatchActivityId");
+    if (watchId && !status) status = "done_as_planned";
     fd.append("date", activeDate);
     fd.append("slot_index", slotIndex);
     fd.append("report_submit", "1");
     fd.append("check_status", status || "");
     fd.append("rpe", rpe || "");
     fd.append("report_comment", comment || "");
+    fd.append("watch_activity_id", watchId);
+    fd.append("watch_activity_summary", watchVal("aypWatchActivitySummary"));
+    fd.append("watch_activity_payload", watchVal("aypWatchActivityPayload"));
     return fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {method:"POST", body:fd, headers:{"X-CSRFToken":getCookie("csrftoken")}, credentials:"same-origin"});
   }
   document.querySelectorAll(".comment-display").forEach(function(el){
@@ -1495,7 +1530,9 @@
       setVal("reportT2Status", el.getAttribute("data-t2-status"));
       setVal("reportT2Rpe", el.getAttribute("data-t2-rpe"));
       setVal("reportT2Comment", el.getAttribute("data-t2-comment"));
-      resetWatchResults();
+      var savedWatchId = el.getAttribute("data-t1-watch-id") || el.getAttribute("data-t2-watch-id") || "";
+      var savedWatchSummary = el.getAttribute("data-t1-watch-summary") || el.getAttribute("data-t2-watch-summary") || "";
+      setSavedWatchResult(savedWatchId, savedWatchSummary);
       document.getElementById("commentModal").style.display = "flex";
       validate();
     }, true);
