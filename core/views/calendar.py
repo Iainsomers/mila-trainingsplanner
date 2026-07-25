@@ -184,6 +184,26 @@ def _visible_year_slot(slot_map, has_fix_keys, key):
     return slot
 
 
+def _slot_watch_plan_text(slot) -> str:
+    if not slot:
+        return ""
+    try:
+        segments = list(slot.segments.all())
+    except Exception:
+        segments = list(getattr(slot, "segments", []) or [])
+    core_parts = []
+    all_parts = []
+    for seg in segments:
+        text = str(getattr(seg, "text", "") or "").strip()
+        if not text:
+            continue
+        all_parts.append(text)
+        seg_type = str(getattr(seg, "type", "") or "").upper()
+        if seg_type in {"CORE", "CORE2"}:
+            core_parts.append(text)
+    return " // ".join(core_parts or all_parts)
+
+
 def _slot_has_race(slot) -> bool:
     if not slot:
         return False
@@ -2579,6 +2599,8 @@ def athlete_year_calendar_view(request):
                 "check2": check2,
                 "has_slot1": bool(slot1),
                 "has_slot2": bool(slot2),
+                "plan_text1": _slot_watch_plan_text(slot1),
+                "plan_text2": _slot_watch_plan_text(slot2),
             })
             cells4.append({
                 "day": day,

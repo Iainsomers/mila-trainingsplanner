@@ -507,7 +507,7 @@ def _polar_sample_map(exercise):
     return sample_map
 
 
-def _splits_from_cumulative_distance(values, rate_seconds):
+def _splits_from_cumulative_distance(values, rate_seconds, split_m=1000.0, max_count=None):
     points = []
     for index, distance_m in enumerate(values):
         if distance_m is None:
@@ -518,10 +518,10 @@ def _splits_from_cumulative_distance(values, rate_seconds):
             continue
         if distance_m >= 0:
             points.append((index * rate_seconds, distance_m))
-    return _splits_from_time_distance_points(points)
+    return _splits_from_time_distance_points(points, split_m=split_m, max_count=max_count)
 
 
-def _splits_from_speed(values, rate_seconds):
+def _splits_from_speed(values, rate_seconds, split_m=1000.0, max_count=None):
     points = [(0.0, 0.0)]
     elapsed = 0.0
     distance_m = 0.0
@@ -533,7 +533,7 @@ def _splits_from_speed(values, rate_seconds):
                 pass
         elapsed += rate_seconds
         points.append((elapsed, distance_m))
-    return _splits_from_time_distance_points(points)
+    return _splits_from_time_distance_points(points, split_m=split_m, max_count=max_count)
 
 
 def _polar_route_time_seconds(point, fallback_index):
@@ -553,7 +553,7 @@ def _haversine_m(lat1, lon1, lat2, lon2):
     return radius_m * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def _splits_from_route(route):
+def _splits_from_route(route, split_m=1000.0, max_count=None):
     points = []
     previous = None
     distance_m = 0.0
@@ -570,20 +570,25 @@ def _splits_from_route(route):
             distance_m += _haversine_m(previous["lat"], previous["lon"], lat, lon)
         points.append((elapsed, distance_m))
         previous = {"lat": lat, "lon": lon}
-    return _splits_from_time_distance_points(points)
+    return _splits_from_time_distance_points(points, split_m=split_m, max_count=max_count)
 
 
-def _splits_from_time_distance_points(points):
+def _splits_from_time_distance_points(points, split_m=1000.0, max_count=None):
     if len(points) < 2:
         return []
+    split_m = float(split_m or 1000.0)
+    if split_m <= 0:
+        split_m = 1000.0
     points = sorted(points, key=lambda item: item[0])
     max_distance = max(distance for _time, distance in points)
     splits = []
     previous_threshold_m = 0.0
     previous_threshold_t = 0.0
-    threshold_m = 1000.0
+    threshold_m = split_m
     point_index = 1
     while threshold_m <= max_distance:
+        if max_count and len(splits) >= max_count:
+            break
         while point_index < len(points) and points[point_index][1] < threshold_m:
             point_index += 1
         if point_index >= len(points):
@@ -595,20 +600,21 @@ def _splits_from_time_distance_points(points):
         else:
             threshold_t = t1 + ((threshold_m - d1) / (d2 - d1)) * (t2 - t1)
         duration = threshold_t - previous_threshold_t
+        label = f"{int(threshold_m / 1000)} km" if split_m == 1000.0 else f"{len(splits) + 1} x {int(round(split_m))}m"
         splits.append({
-            "label": f"{int(threshold_m / 1000)} km",
-            "distance_m": 1000,
+            "label": label,
+            "distance_m": round(split_m),
             "duration": _format_seconds_hms(round(duration)),
-            "pace": _format_pace(duration),
+            "pace": _format_pace(duration, split_m),
         })
         previous_threshold_m = threshold_m
         previous_threshold_t = threshold_t
-        threshold_m += 1000.0
+        threshold_m += split_m
 
     final_t, final_d = points[-1]
     partial_m = final_d - previous_threshold_m
     partial_t = final_t - previous_threshold_t
-    if partial_m >= 50 and partial_t > 0:
+    if not max_count and partial_m >= 50 and partial_t > 0:
         splits.append({
             "label": f"{final_d / 1000:.2f} km",
             "distance_m": round(partial_m),
@@ -650,6 +656,114 @@ def _polar_exercise_splits(exercise):
         "sample_types": ", ".join(sorted(samples.keys(), key=lambda item: int(item) if item.isdigit() else 99)),
         "source": source,
         "splits": splits,
+    }
+
+
+def _polar_splits_for_distance(exercise, split_m, max_count=None):
+    samples = _polar_sample_map(exercise)
+    if "10" in samples:
+        sample = samples["10"]
+        return "distance samples", _splits_from_cumulative_distance(
+            _polar_sample_values(sample),
+            _polar_sample_rate(sample),
+            split_m=split_m,
+            max_count=max_count,
+        )
+    if "1" in samples:
+        sample = samples["1"]
+        return "speed samples", _splits_from_speed(
+            _polar_sample_values(sample),
+            _polar_sample_rate(sample),
+            split_m=split_m,
+            max_count=max_count,
+        )
+    if isinstance(exercise.get("route"), list):
+        return "route", _splits_from_route(exercise.get("route"), split_m=split_m, max_count=max_count)
+    return "", []
+
+
+def _planned_rep_spec(plan_text):
+    text = str(plan_text or "").lower().replace(",", ".")
+    match = re.search(r"(\d+)\s*\*\s*(?:\(\s*)?(\d+(?:\.\d+)?)\s*m", text)
+    if not match:
+        return None
+    reps = int(match.group(1))
+    distance_m = float(match.group(2))
+    if reps <= 0 or distance_m <= 0:
+        return None
+    return {"reps": reps, "distance_m": distance_m}
+
+
+def _seconds_label_to_seconds(label):
+    parts = [int(part) for part in str(label or "").split(":") if part.isdigit()]
+    if len(parts) == 3:
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]
+    if len(parts) == 2:
+        return parts[0] * 60 + parts[1]
+    return parts[0] if parts else None
+
+
+def _rep_times_text(splits):
+    times = [split.get("duration") for split in splits if split.get("duration")]
+    return ", ".join(times[:12])
+
+
+def _build_plan_watch_suggestion(plan_text, activities):
+    spec = _planned_rep_spec(plan_text)
+    if not spec:
+        return None
+    rep_distance = spec["distance_m"]
+    reps = spec["reps"]
+    loose_rep_activities = []
+    for activity in activities:
+        distance_m = activity.get("distance_m")
+        duration_s = activity.get("duration_seconds")
+        if distance_m is None or duration_s is None:
+            continue
+        if rep_distance * 0.75 <= distance_m <= rep_distance * 1.25:
+            loose_rep_activities.append(activity)
+
+    if len(loose_rep_activities) >= max(2, min(reps, 3)):
+        loose_rep_activities = sorted(loose_rep_activities, key=lambda item: item.get("start_time") or "")[:reps]
+        splits = []
+        for index, activity in enumerate(loose_rep_activities, start=1):
+            duration_s = activity.get("duration_seconds")
+            distance_m = activity.get("distance_m") or rep_distance
+            splits.append({
+                "label": f"Rep {index}",
+                "distance_m": round(distance_m),
+                "duration": _format_seconds_hms(duration_s),
+                "pace": _format_pace(duration_s, distance_m),
+            })
+        return {
+            "mode": "rep_only",
+            "title": f"Detected {len(splits)} separate reps around {int(round(rep_distance))}m",
+            "summary": f"Planned: {plan_text} | Detected: {len(splits)} reps around {int(round(rep_distance))}m | Rep times: {_rep_times_text(splits)}",
+            "splits": splits,
+        }
+
+    best = None
+    for activity in activities:
+        source, splits = _polar_splits_for_distance(activity.get("raw") or {}, rep_distance, max_count=reps)
+        if not splits:
+            continue
+        score = min(len(splits), reps)
+        if best is None or score > best["score"]:
+            best = {"activity": activity, "source": source, "splits": splits, "score": score}
+    if best:
+        splits = best["splits"]
+        return {
+            "mode": "continuous",
+            "activity_id": best["activity"].get("id") or "",
+            "title": f"Detected {len(splits)} reps of {int(round(rep_distance))}m from {best['source']}",
+            "summary": f"Planned: {plan_text} | Detected: {len(splits)} reps of {int(round(rep_distance))}m | Rep times: {_rep_times_text(splits)}",
+            "splits": splits,
+        }
+    return {
+        "mode": "unclear",
+        "title": f"Planned {reps} x {int(round(rep_distance))}m, but no matching split source found",
+        "summary": f"Planned: {plan_text} | Watch data found, but no distance/speed/route samples for {int(round(rep_distance))}m reps.",
+        "splits": [],
     }
 
 
@@ -1028,6 +1142,7 @@ def polar_splits_view(request):
 def polar_activity_suggestions_view(request):
     athlete_id = (request.GET.get("athlete") or "").strip()
     day = (request.GET.get("date") or "").strip()
+    planned_text = (request.GET.get("planned") or "").strip()
     try:
         target_date = date.fromisoformat(day)
     except Exception:
@@ -1086,12 +1201,24 @@ def polar_activity_suggestions_view(request):
                 "max_hr": heart_rate.get("maximum"),
                 "calories": item.get("calories"),
                 "running_index": item.get("running_index"),
+                "raw": item,
             })
 
     activities.sort(key=lambda item: item.get("start_time") or "")
     if not activities:
         return JsonResponse({"ok": True, "message": "No watch activities found for this day.", "activities": []})
-    return JsonResponse({"ok": True, "message": "", "activities": activities})
+    plan_suggestion = _build_plan_watch_suggestion(planned_text, activities) if planned_text else None
+    response_activities = []
+    for activity in activities:
+        cleaned = dict(activity)
+        cleaned.pop("raw", None)
+        response_activities.append(cleaned)
+    return JsonResponse({
+        "ok": True,
+        "message": "",
+        "activities": response_activities,
+        "plan_suggestion": plan_suggestion,
+    })
 
 
 @login_required
