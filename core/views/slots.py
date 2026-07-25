@@ -1010,7 +1010,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     eff = _get_effective_slot(selected_plan, athlete, d, slot_index, prefetch_segments=True)
     visible_slot = eff["visible_slot"]
     has_fix = eff["has_fix"]
-    if _is_flex_source(request) and _is_flex_planner_plan(selected_plan) and not visible_slot:
+    if (_is_flex_source(request) or is_athlete_year_calendar) and _is_flex_planner_plan(selected_plan) and not visible_slot:
         visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
         has_fix = False
 
