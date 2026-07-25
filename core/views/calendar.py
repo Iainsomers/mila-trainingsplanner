@@ -204,6 +204,44 @@ def _slot_watch_plan_text(slot) -> str:
     return " // ".join(core_parts or all_parts)
 
 
+def _slot_modal_prefill_texts(slot):
+    fields = {
+        "wu_text": "",
+        "mob_text": "",
+        "sprint_text": "",
+        "core_text": "",
+        "core2_text": "",
+        "alt_text": "",
+        "cd_text": "",
+    }
+    if not slot:
+        return fields
+    try:
+        segments = list(slot.segments.all())
+    except Exception:
+        segments = list(getattr(slot, "segments", []) or [])
+
+    type_to_field = {
+        "WU": "wu_text",
+        "MOB": "mob_text",
+        "SPR": "sprint_text",
+        "CORE": "core_text",
+        "CORE2": "core2_text",
+        "ALT": "alt_text",
+        "CD": "cd_text",
+    }
+    collected = {key: [] for key in fields}
+    for seg in segments:
+        seg_type = str(getattr(seg, "type", "") or "").upper()
+        field = type_to_field.get(seg_type)
+        text = str(getattr(seg, "text", "") or "").strip()
+        if field and text:
+            collected[field].append(text)
+    for field, parts in collected.items():
+        fields[field] = " // ".join(parts)
+    return fields
+
+
 def _slot_has_race(slot) -> bool:
     if not slot:
         return False
@@ -2579,6 +2617,7 @@ def athlete_year_calendar_view(request):
                 "check": check1,
                 "slot_index": 1,
                 "plan_id": slot1.plan_id if slot1 and getattr(slot1, "plan_id", None) else (plan1.id if plan1 else ""),
+                "modal_prefill": _slot_modal_prefill_texts(slot1),
             })
             cells2.append({
                 "day": day,
@@ -2587,6 +2626,7 @@ def athlete_year_calendar_view(request):
                 "check": check2,
                 "slot_index": 2,
                 "plan_id": slot2.plan_id if slot2 and getattr(slot2, "plan_id", None) else (plan2.id if plan2 else ""),
+                "modal_prefill": _slot_modal_prefill_texts(slot2),
             })
             comment = None
             if selected_athlete:

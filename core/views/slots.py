@@ -79,6 +79,9 @@ class _VirtualSegmentList:
     def __init__(self, segments):
         self._segments = segments
 
+    def __iter__(self):
+        return iter(self._segments)
+
     def all(self):
         return self._segments
 
@@ -195,6 +198,24 @@ def _virtual_slot_from_base_training_for_slot_reset(text):
         for seg_type in ("WU", "MOB", "SPR", "CORE", "CORE2", "ALT", "CD")
         if values.get(seg_type)
     ]
+    return _VirtualSlot(segments) if segments else None
+
+
+def _virtual_slot_from_modal_prefill(request):
+    fields = [
+        ("WU", "prefill_wu"),
+        ("MOB", "prefill_mob"),
+        ("SPR", "prefill_sprint"),
+        ("CORE", "prefill_core"),
+        ("CORE2", "prefill_core2"),
+        ("ALT", "prefill_alt"),
+        ("CD", "prefill_cd"),
+    ]
+    segments = []
+    for seg_type, param in fields:
+        text = (request.GET.get(param) or request.POST.get(param) or "").strip()
+        if text:
+            segments.append(_virtual_segment_from_base_text(seg_type, text))
     return _VirtualSlot(segments) if segments else None
 
 
@@ -1011,6 +1032,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if (_is_flex_source(request) or is_athlete_year_calendar) and _is_flex_planner_plan(selected_plan) and not visible_slot:
         visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
         has_fix = False
+    if is_athlete_year_calendar and not has_fix:
+        prefill_slot = _virtual_slot_from_modal_prefill(request)
+        if prefill_slot:
+            visible_slot = prefill_slot
 
     if request.method == "GET":
         wu_seg = visible_slot.segments.filter(type="WU").order_by("order", "id").first() if visible_slot else None

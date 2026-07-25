@@ -693,7 +693,7 @@
               {% for cell in w.cells1 %}
                 {% if cell.day == today %}
                   {% if cell.slot %}
-                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                       {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                     </div>
                   {% else %}
@@ -715,7 +715,7 @@
               {% for cell in w.cells2 %}
                 {% if cell.day == today %}
                   {% if cell.slot %}
-                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                       {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                     </div>
                   {% else %}
@@ -844,11 +844,11 @@
             <td>
               <div class="daycell">
                 {% if cell.slot %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                     {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                   </div>
                 {% elif cell.plan_id %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                   </div>
                 {% endif %}
               </div>
@@ -1738,6 +1738,10 @@
 
     var parts = date.split("-");
     var url = `/slot-modal/${parts[0]}/${parts[1]}/${parts[2]}/${slotIndex}/?athlete=${athlete}&plan=${plan}&source=athlete_year`;
+    ["wu", "mob", "sprint", "core", "core2", "alt", "cd"].forEach(function(name) {
+      var value = el.getAttribute("data-prefill-" + name) || "";
+      if (value) url += "&prefill_" + name + "=" + encodeURIComponent(value);
+    });
 
     fetch(url, { credentials: "same-origin" })
       .then(r => r.text())
@@ -1849,6 +1853,10 @@
 
     var parts = date.split("-");
     var url = `/slot-modal/${parts[0]}/${parts[1]}/${parts[2]}/${slotIndex}/?athlete=${athlete}&plan=${plan}&source=athlete_year`;
+    ["wu", "mob", "sprint", "core", "core2", "alt", "cd"].forEach(function(name) {
+      var value = el.getAttribute("data-prefill-" + name) || "";
+      if (value) url += "&prefill_" + name + "=" + encodeURIComponent(value);
+    });
 
     fetch(url, { credentials: "same-origin" })
       .then(function(response) { return response.text(); })
