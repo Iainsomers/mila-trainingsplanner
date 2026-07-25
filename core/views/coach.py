@@ -703,9 +703,11 @@ def _seconds_label_to_seconds(label):
     return parts[0] if parts else None
 
 
-def _rep_times_text(splits):
+def _rep_times_text(splits, limit=40):
     times = [split.get("duration") for split in splits if split.get("duration")]
-    return ", ".join(times[:12])
+    if len(times) <= limit:
+        return ", ".join(times)
+    return ", ".join(times[:limit]) + f", +{len(times) - limit} more"
 
 
 def _build_plan_watch_suggestion(plan_text, activities):
