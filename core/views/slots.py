@@ -1032,7 +1032,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if (_is_flex_source(request) or is_athlete_year_calendar) and _is_flex_planner_plan(selected_plan) and not visible_slot:
         visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
         has_fix = False
-    if is_athlete_year_calendar and not has_fix:
+    if is_athlete_year_calendar and (not visible_slot or not visible_slot.segments.exists()):
         prefill_slot = _virtual_slot_from_modal_prefill(request)
         if prefill_slot:
             visible_slot = prefill_slot
