@@ -440,6 +440,15 @@ POLAR_PHYSICAL_INFO_URL = "https://www.polaraccesslink.com/v3/users/physical-inf
 POLAR_ACTIVITIES_URL = "https://www.polaraccesslink.com/v3/users/activities"
 
 
+def _polar_exercises_url(include_detail=True):
+    params = {
+        "samples": "true" if include_detail else "false",
+        "zones": "true" if include_detail else "false",
+        "route": "true" if include_detail else "false",
+    }
+    return f"{POLAR_EXERCISES_URL}?{urlencode(params)}"
+
+
 def _polar_config():
     return {
         "client_id": (os.environ.get("POLAR_CLIENT_ID") or "").strip(),
@@ -632,7 +641,7 @@ def polar_sync_test_view(request):
     }
 
     checks = [
-        ("Exercises", f"{POLAR_EXERCISES_URL}?{urlencode({'samples': 'false', 'zones': 'false', 'route': 'false'})}"),
+        ("Exercises", _polar_exercises_url(include_detail=True)),
         ("Physical info", POLAR_PHYSICAL_INFO_URL),
         ("Daily activity", f"{POLAR_ACTIVITIES_URL}?{urlencode({'steps': 'false', 'activity_zones': 'false', 'inactivity_stamps': 'false'})}"),
     ]
@@ -776,7 +785,7 @@ def polar_activity_suggestions_view(request):
     if not connection or not connection.access_token:
         return JsonResponse({"ok": False, "message": "No watch is connected for this athlete.", "activities": []})
 
-    url = f"{POLAR_EXERCISES_URL}?{urlencode({'samples': 'false', 'zones': 'false', 'route': 'false'})}"
+    url = _polar_exercises_url(include_detail=True)
     headers = {
         "Accept": "application/json",
         "Authorization": f"Bearer {connection.access_token}",
