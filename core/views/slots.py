@@ -26,6 +26,7 @@ from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
 from .common import (
     _get_selected_plan,
     _get_selected_athlete_from_request,
+    _filter_owned,
     _forbid_if_athlete_not_in_plan,
     _week_start,
     _week_days,
@@ -987,11 +988,24 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
 def slot_modal(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
     is_athlete_year_calendar = (request.GET.get("source") == "athlete_year") or (request.POST.get("source") == "athlete_year")
+    requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
+    if requested_plan_id.isdigit() and (_is_flex_source(request) or is_athlete_year_calendar):
+        requested_plan = _filter_owned(TrainingPlan.objects.all(), request.user).filter(id=int(requested_plan_id)).first()
+        if requested_plan:
+            selected_plan = requested_plan
+
     forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
     if forbid_owner:
         return forbid_owner
 
-    athlete = _get_selected_athlete_from_request(request)
+    athlete = None
+    if _is_flex_source(request) or is_athlete_year_calendar:
+        athlete_id = (request.GET.get("athlete") or request.POST.get("athlete") or "").strip()
+        if athlete_id.isdigit():
+            athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(athlete_id)).first()
+
+    if not athlete:
+        athlete = _get_selected_athlete_from_request(request)
     if not athlete and not request.user.is_staff:
         username = (request.user.username or "").strip()
         inferred_name = username.replace("_", " ")
@@ -1000,9 +1014,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if not athlete:
         athlete = _get_flex_athlete_from_request(request, selected_plan)
 
-    requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
-    if athlete and requested_plan_id.isdigit() and (not selected_plan or _is_flex_source(request) or is_athlete_year_calendar):
-        requested_plan = TrainingPlan.objects.filter(id=int(requested_plan_id)).first()
+    if athlete and requested_plan_id.isdigit() and not selected_plan:
+        requested_plan = _filter_owned(TrainingPlan.objects.all(), request.user).filter(id=int(requested_plan_id)).first()
         if requested_plan and (athlete.id in requested_plan.targeted_athlete_ids() or _is_flex_planner_plan(requested_plan)):
             selected_plan = requested_plan
 
