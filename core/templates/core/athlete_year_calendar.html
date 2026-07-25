@@ -1728,69 +1728,6 @@
 
 <script>
 (function() {
-  function openSlotModal(el) {
-    var date = el.closest("[data-date]") ? el.closest("[data-date]").getAttribute("data-date") : el.getAttribute("data-date");
-    var slotIndex = el.getAttribute("data-slot-index");
-    var plan = el.getAttribute("data-plan-id") || "";
-    var athlete = "{{ selected_athlete_id }}";
-
-    if (!date || !slotIndex) return;
-
-    var parts = date.split("-");
-    var url = `/slot-modal/${parts[0]}/${parts[1]}/${parts[2]}/${slotIndex}/?athlete=${athlete}&plan=${plan}&source=athlete_year`;
-    ["wu", "mob", "sprint", "core", "core2", "alt", "cd"].forEach(function(name) {
-      var value = el.getAttribute("data-prefill-" + name) || "";
-      if (value) url += "&prefill_" + name + "=" + encodeURIComponent(value);
-    });
-
-    fetch(url, { credentials: "same-origin" })
-      .then(r => r.text())
-      .then(html => {
-        document.getElementById("modal-container").innerHTML = html;
-        var modalEl = document.getElementById("slotModal");
-        if (!modalEl) return;
-        var modal = new bootstrap.Modal(modalEl);
-        modal.show();
-      });
-  }
-
-  function setupSlotClicks() {
-    document.querySelectorAll(".slotbox").forEach(function(el) {
-      var statusToggle = el.closest("td") ? el.closest("td").querySelector(".check-status-toggle") : null;
-      if (statusToggle) {
-        el.setAttribute("data-date", statusToggle.getAttribute("data-date") || el.getAttribute("data-date") || "");
-        el.setAttribute("data-slot-index", statusToggle.getAttribute("data-slot-index") || el.getAttribute("data-slot-index") || "1");
-      }
-
-      el.addEventListener("click", function(e) {
-        var strengthLink = e.target.closest("[data-strength-href]");
-        if (strengthLink) {
-          e.preventDefault();
-          e.stopPropagation();
-          window.open(strengthLink.getAttribute("data-strength-href") + "?next=" + encodeURIComponent(window.location.pathname + window.location.search), "_blank");
-          return;
-        }
-        if (e.target.closest(".check-status-toggle") || e.target.closest(".check-status-menu")) return;
-        if (el.classList.contains("disabled")) return;
-        e.preventDefault();
-        e.stopPropagation();
-        openSlotModal(el);
-      });
-    });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", setupSlotClicks);
-  } else {
-    setupSlotClicks();
-  }
-})();
-</script>
-
-<div id="modal-container"></div>
-
-<script>
-(function() {
   if (window.__athleteYearSlotModalBound) return;
   window.__athleteYearSlotModalBound = true;
 
@@ -1839,6 +1776,28 @@
     });
   }
 
+  function applyVisibleTrainingPrefill(container, slotBox) {
+    var form = container.querySelector("form");
+    if (!form || !slotBox) return;
+
+    var map = {
+      "wu_text": "wu",
+      "mob_text": "mob",
+      "sprint_text": "sprint",
+      "core_text": "core",
+      "core2_text": "core2",
+      "alt_text": "alt",
+      "cd_text": "cd"
+    };
+
+    Object.keys(map).forEach(function(fieldName) {
+      var field = form.querySelector('[name="' + fieldName + '"]');
+      if (!field || (field.value || "").trim()) return;
+      var value = slotBox.getAttribute("data-prefill-" + map[fieldName]) || "";
+      if (value) field.value = value;
+    });
+  }
+
   function openSlotModal(el) {
     var date = el.getAttribute("data-date");
     var slotIndex = el.getAttribute("data-slot-index");
@@ -1864,6 +1823,7 @@
         var container = document.getElementById("modal-container");
         container.innerHTML = html;
         prepareSlotForm(container, activeSlotDate, activeSlotIndex);
+        applyVisibleTrainingPrefill(container, el);
 
         var modalEl = document.getElementById("slotModal");
         if (!modalEl) return;
