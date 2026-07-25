@@ -83,10 +83,80 @@
             {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
             <button type="submit" class="btn btn-outline-primary">Get Steps</button>
           </form>
+          <form method="post" action="{% url 'polar_splits' %}" class="d-inline ms-2">
+            {% csrf_token %}
+            {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
+            <button type="submit" class="btn btn-outline-primary">Get Splits</button>
+          </form>
         {% endif %}
       {% endif %}
     </div>
   </div>
+
+  {% if splits_result %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Exercise splits</h5>
+        <dl class="row mb-3">
+          <dt class="col-sm-3">Status</dt>
+          <dd class="col-sm-9">{{ splits_result.status }}</dd>
+          <dt class="col-sm-3">Exercises</dt>
+          <dd class="col-sm-9">{{ splits_result.exercise_count }}</dd>
+        </dl>
+        {% if splits_result.rows %}
+          {% for exercise in splits_result.rows %}
+            <div class="border rounded p-3 mb-3">
+              <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+                <div>
+                  <strong>{{ exercise.start_time }}</strong>
+                  <span class="text-muted">{{ exercise.sport }}</span>
+                </div>
+                <div class="text-muted small">ID {{ exercise.id }}</div>
+              </div>
+              <dl class="row mb-2 small">
+                <dt class="col-sm-3">Distance</dt>
+                <dd class="col-sm-9">{% if exercise.distance_km %}{{ exercise.distance_km }} km{% else %}-{% endif %}</dd>
+                <dt class="col-sm-3">Duration</dt>
+                <dd class="col-sm-9">{{ exercise.duration|default:"-" }}</dd>
+                <dt class="col-sm-3">Average pace</dt>
+                <dd class="col-sm-9">{{ exercise.average_pace|default:"-" }}</dd>
+                <dt class="col-sm-3">Split source</dt>
+                <dd class="col-sm-9">{{ exercise.source|default:"No distance, speed or route samples found" }}</dd>
+                <dt class="col-sm-3">Sample types</dt>
+                <dd class="col-sm-9">{{ exercise.sample_types|default:"-" }}</dd>
+              </dl>
+              {% if exercise.splits %}
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Split</th>
+                        <th class="text-end">Duration</th>
+                        <th class="text-end">Pace</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for split in exercise.splits %}
+                        <tr>
+                          <td>{{ split.label }}</td>
+                          <td class="text-end">{{ split.duration }}</td>
+                          <td class="text-end">{{ split.pace }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <p class="text-muted mb-0">No kilometer splits could be calculated for this exercise.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted mb-0">No exercises found.</p>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
 
   {% if steps_result %}
     <div class="card mt-3">

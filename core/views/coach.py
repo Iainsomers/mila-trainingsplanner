@@ -2,6 +2,7 @@ from datetime import date, timedelta
 import calendar as py_calendar
 import base64
 import json
+import math
 import os
 import re
 import secrets
@@ -420,6 +421,18 @@ def _format_seconds_hms(seconds):
     return f"{minutes}:{secs:02d}"
 
 
+def _format_pace(seconds, distance_m=1000.0):
+    if not seconds or not distance_m:
+        return ""
+    pace_seconds = float(seconds) * (1000.0 / float(distance_m))
+    minutes = int(pace_seconds // 60)
+    secs = int(round(pace_seconds % 60))
+    if secs == 60:
+        minutes += 1
+        secs = 0
+    return f"{minutes}:{secs:02d}/km"
+
+
 @login_required
 @require_GET
 def dashboard_view(request):
@@ -447,6 +460,197 @@ def _polar_exercises_url(include_detail=True):
         "route": "true" if include_detail else "false",
     }
     return f"{POLAR_EXERCISES_URL}?{urlencode(params)}"
+
+
+def _polar_value(data, *names, default=None):
+    for name in names:
+        if isinstance(data, dict) and name in data:
+            return data.get(name)
+    return default
+
+
+def _polar_sample_type(sample):
+    value = _polar_value(sample, "sample_type", "sample-type")
+    return str(value) if value is not None else ""
+
+
+def _polar_sample_values(sample):
+    raw = _polar_value(sample, "data", default="")
+    values = []
+    for part in str(raw or "").split(","):
+        part = part.strip()
+        if not part or part.upper() == "NULL":
+            values.append(None)
+            continue
+        try:
+            values.append(float(part))
+        except ValueError:
+            values.append(None)
+    return values
+
+
+def _polar_sample_rate(sample):
+    value = _polar_value(sample, "recording_rate", "recording-rate", default=1)
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        value = 1.0
+    return value if value > 0 else 1.0
+
+
+def _polar_sample_map(exercise):
+    sample_map = {}
+    for sample in exercise.get("samples") or []:
+        if not isinstance(sample, dict):
+            continue
+        sample_map[_polar_sample_type(sample)] = sample
+    return sample_map
+
+
+def _splits_from_cumulative_distance(values, rate_seconds):
+    points = []
+    for index, distance_m in enumerate(values):
+        if distance_m is None:
+            continue
+        try:
+            distance_m = float(distance_m)
+        except (TypeError, ValueError):
+            continue
+        if distance_m >= 0:
+            points.append((index * rate_seconds, distance_m))
+    return _splits_from_time_distance_points(points)
+
+
+def _splits_from_speed(values, rate_seconds):
+    points = [(0.0, 0.0)]
+    elapsed = 0.0
+    distance_m = 0.0
+    for speed_kmh in values:
+        if speed_kmh is not None:
+            try:
+                distance_m += (float(speed_kmh) * 1000.0 / 3600.0) * rate_seconds
+            except (TypeError, ValueError):
+                pass
+        elapsed += rate_seconds
+        points.append((elapsed, distance_m))
+    return _splits_from_time_distance_points(points)
+
+
+def _polar_route_time_seconds(point, fallback_index):
+    seconds = _polar_duration_seconds(point.get("time") or "")
+    if seconds is not None:
+        return float(seconds)
+    return float(fallback_index)
+
+
+def _haversine_m(lat1, lon1, lat2, lon2):
+    radius_m = 6371000.0
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lon2 - lon1)
+    a = (math.sin(d_phi / 2) ** 2) + math.cos(phi1) * math.cos(phi2) * (math.sin(d_lambda / 2) ** 2)
+    return radius_m * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _splits_from_route(route):
+    points = []
+    previous = None
+    distance_m = 0.0
+    for index, point in enumerate(route or []):
+        if not isinstance(point, dict):
+            continue
+        try:
+            lat = float(point.get("latitude"))
+            lon = float(point.get("longitude"))
+        except (TypeError, ValueError):
+            continue
+        elapsed = _polar_route_time_seconds(point, index)
+        if previous:
+            distance_m += _haversine_m(previous["lat"], previous["lon"], lat, lon)
+        points.append((elapsed, distance_m))
+        previous = {"lat": lat, "lon": lon}
+    return _splits_from_time_distance_points(points)
+
+
+def _splits_from_time_distance_points(points):
+    if len(points) < 2:
+        return []
+    points = sorted(points, key=lambda item: item[0])
+    max_distance = max(distance for _time, distance in points)
+    splits = []
+    previous_threshold_m = 0.0
+    previous_threshold_t = 0.0
+    threshold_m = 1000.0
+    point_index = 1
+    while threshold_m <= max_distance:
+        while point_index < len(points) and points[point_index][1] < threshold_m:
+            point_index += 1
+        if point_index >= len(points):
+            break
+        t1, d1 = points[point_index - 1]
+        t2, d2 = points[point_index]
+        if d2 <= d1:
+            threshold_t = t2
+        else:
+            threshold_t = t1 + ((threshold_m - d1) / (d2 - d1)) * (t2 - t1)
+        duration = threshold_t - previous_threshold_t
+        splits.append({
+            "label": f"{int(threshold_m / 1000)} km",
+            "distance_m": 1000,
+            "duration": _format_seconds_hms(round(duration)),
+            "pace": _format_pace(duration),
+        })
+        previous_threshold_m = threshold_m
+        previous_threshold_t = threshold_t
+        threshold_m += 1000.0
+
+    final_t, final_d = points[-1]
+    partial_m = final_d - previous_threshold_m
+    partial_t = final_t - previous_threshold_t
+    if partial_m >= 50 and partial_t > 0:
+        splits.append({
+            "label": f"{final_d / 1000:.2f} km",
+            "distance_m": round(partial_m),
+            "duration": _format_seconds_hms(round(partial_t)),
+            "pace": _format_pace(partial_t, partial_m),
+        })
+    return splits
+
+
+def _polar_exercise_splits(exercise):
+    samples = _polar_sample_map(exercise)
+    source = ""
+    splits = []
+    if "10" in samples:
+        source = "distance samples"
+        sample = samples["10"]
+        splits = _splits_from_cumulative_distance(_polar_sample_values(sample), _polar_sample_rate(sample))
+    if not splits and "1" in samples:
+        source = "speed samples"
+        sample = samples["1"]
+        splits = _splits_from_speed(_polar_sample_values(sample), _polar_sample_rate(sample))
+    if not splits and isinstance(exercise.get("route"), list):
+        source = "route"
+        splits = _splits_from_route(exercise.get("route"))
+
+    distance_m = None
+    try:
+        distance_m = float(exercise.get("distance")) if exercise.get("distance") is not None else None
+    except (TypeError, ValueError):
+        distance_m = None
+    duration_s = _polar_duration_seconds(exercise.get("duration") or "")
+    return {
+        "id": exercise.get("id") or "",
+        "start_time": exercise.get("start_time") or "",
+        "sport": exercise.get("sport") or exercise.get("detailed_sport_info") or "",
+        "duration": _format_seconds_hms(duration_s),
+        "distance_km": round(distance_m / 1000.0, 2) if distance_m is not None else None,
+        "average_pace": _format_pace(duration_s, distance_m) if duration_s and distance_m else "",
+        "sample_types": ", ".join(sorted(samples.keys(), key=lambda item: int(item) if item.isdigit() else 99)),
+        "source": source,
+        "splits": splits,
+    }
 
 
 def _polar_config():
@@ -503,6 +707,7 @@ def polar_integration_view(request):
     connection = selected_target["connection"] if selected_target else PolarConnection.objects.filter(user=request.user).first()
     sync_result = request.session.pop("polar_sync_result", None)
     steps_result = request.session.pop("polar_steps_result", None)
+    splits_result = request.session.pop("polar_splits_result", None)
     return render(request, "core/polar_integration.html", {
         "connection": connection,
         "selected_target": selected_target,
@@ -513,6 +718,7 @@ def polar_integration_view(request):
         "polar_connected": request.GET.get("connected") == "1",
         "sync_result": sync_result,
         "steps_result": steps_result,
+        "splits_result": splits_result,
     })
 
 
@@ -763,6 +969,54 @@ def polar_steps_view(request):
         "rows": rows,
     }
 
+    connection.status = PolarConnection.STATUS_CONNECTED
+    connection.last_error = ""
+    connection.save(update_fields=["status", "last_error", "updated_at"])
+    return redirect("polar_integration")
+
+
+@login_required
+@require_http_methods(["POST"])
+def polar_splits_view(request):
+    selected_target, _targets = _selected_polar_target(request)
+    connection = selected_target["connection"] if selected_target else None
+    if not connection or not connection.access_token:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'No Polar account is connected yet.'})}")
+
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {connection.access_token}",
+    }
+    try:
+        status, payload = _polar_json_request(_polar_exercises_url(include_detail=True), method="GET", headers=headers)
+    except RuntimeError as exc:
+        error_message = f"Polar splits request failed: {exc}"
+        connection.status = PolarConnection.STATUS_ERROR
+        connection.last_error = error_message
+        connection.save(update_fields=["status", "last_error", "updated_at"])
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': error_message})}")
+
+    if status >= 400:
+        polar_message = ""
+        if isinstance(payload, dict):
+            polar_message = payload.get("error_description") or payload.get("error") or ""
+        error_message = f"Polar splits request failed with status {status}."
+        if polar_message:
+            error_message = f"{error_message} {polar_message}"
+        connection.status = PolarConnection.STATUS_ERROR
+        connection.last_error = error_message
+        connection.save(update_fields=["status", "last_error", "updated_at"])
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': error_message})}")
+
+    rows = []
+    if isinstance(payload, list):
+        rows = [_polar_exercise_splits(item) for item in payload if isinstance(item, dict)]
+
+    request.session["polar_splits_result"] = {
+        "status": status,
+        "exercise_count": len(rows),
+        "rows": rows,
+    }
     connection.status = PolarConnection.STATUS_CONNECTED
     connection.last_error = ""
     connection.save(update_fields=["status", "last_error", "updated_at"])
