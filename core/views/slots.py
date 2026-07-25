@@ -965,6 +965,7 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
 @require_http_methods(["GET", "POST"])
 def slot_modal(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
+    is_athlete_year_calendar = (request.GET.get("source") == "athlete_year") or (request.POST.get("source") == "athlete_year")
     forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
     if forbid_owner:
         return forbid_owner
@@ -978,20 +979,17 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if not athlete:
         athlete = _get_flex_athlete_from_request(request, selected_plan)
 
-    if not selected_plan and athlete:
-        requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
-        if requested_plan_id.isdigit():
-            requested_plan = TrainingPlan.objects.filter(id=int(requested_plan_id)).first()
-            if requested_plan and (athlete.id in requested_plan.targeted_athlete_ids() or _is_flex_planner_plan(requested_plan)):
-                selected_plan = requested_plan
+    requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
+    if athlete and requested_plan_id.isdigit() and (not selected_plan or _is_flex_source(request) or is_athlete_year_calendar):
+        requested_plan = TrainingPlan.objects.filter(id=int(requested_plan_id)).first()
+        if requested_plan and (athlete.id in requested_plan.targeted_athlete_ids() or _is_flex_planner_plan(requested_plan)):
+            selected_plan = requested_plan
 
     if not selected_plan and athlete:
         for plan in TrainingPlan.objects.order_by("name"):
             if athlete.id in plan.targeted_athlete_ids():
                 selected_plan = plan
                 break
-
-    is_athlete_year_calendar = (request.GET.get("source") == "athlete_year")
 
     forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
