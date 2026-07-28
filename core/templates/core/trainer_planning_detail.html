@@ -50,6 +50,16 @@
       filter: brightness(0.92);
     }
 
+    .trainer-cell-dragging {
+      opacity: 0.55;
+    }
+
+    .trainer-cell-drop-target {
+      outline: 2px solid #0d6efd;
+      outline-offset: -2px;
+      filter: brightness(0.95);
+    }
+
     .trainer-cell-empty {
       background: #fff;
     }
@@ -225,6 +235,78 @@
 
     document.addEventListener("DOMContentLoaded", function() {
       applyFlexProgressivePillColors();
+      let trainerDragCopyUrl = "";
+
+      function trainerPost(url) {
+        return fetch(url, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken") || ""
+          },
+          credentials: "same-origin"
+        }).then(function(response) {
+          if (!response.ok) throw new Error("Request failed");
+          return response;
+        });
+      }
+
+      document.querySelectorAll("[data-trainer-copy-url]").forEach(function(cell) {
+        cell.setAttribute("draggable", "true");
+      });
+
+      document.addEventListener("dragstart", function(event) {
+        const cell = event.target.closest("[data-trainer-copy-url]");
+        if (!cell) return;
+
+        trainerDragCopyUrl = cell.getAttribute("data-trainer-copy-url") || "";
+        cell.classList.add("trainer-cell-dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = "copy";
+          event.dataTransfer.setData("text/plain", trainerDragCopyUrl);
+        }
+      });
+
+      document.addEventListener("dragend", function(event) {
+        const cell = event.target.closest("[data-trainer-copy-url]");
+        if (cell) cell.classList.remove("trainer-cell-dragging");
+        document.querySelectorAll(".trainer-cell-drop-target").forEach(function(el) {
+          el.classList.remove("trainer-cell-drop-target");
+        });
+        trainerDragCopyUrl = "";
+      });
+
+      document.addEventListener("dragover", function(event) {
+        const target = event.target.closest("[data-trainer-paste-url]");
+        if (!target || !trainerDragCopyUrl) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+        target.classList.add("trainer-cell-drop-target");
+      });
+
+      document.addEventListener("dragleave", function(event) {
+        const target = event.target.closest("[data-trainer-paste-url]");
+        if (target) target.classList.remove("trainer-cell-drop-target");
+      });
+
+      document.addEventListener("drop", function(event) {
+        const target = event.target.closest("[data-trainer-paste-url]");
+        if (!target || !trainerDragCopyUrl) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        target.classList.remove("trainer-cell-drop-target");
+
+        const copyUrl = trainerDragCopyUrl;
+        const pasteUrl = target.getAttribute("data-trainer-paste-url") || "";
+        if (!copyUrl || !pasteUrl) return;
+
+        trainerPost(copyUrl)
+          .then(function() { return trainerPost(pasteUrl); })
+          .then(function() { window.location.reload(); })
+          .catch(function() {
+            alert("Copy failed.");
+          });
+      });
 
       function clearWeekClipboard() {
         {% if has_week_clipboard %}

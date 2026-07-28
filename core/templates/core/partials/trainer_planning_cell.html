@@ -4,6 +4,8 @@
   <a
     class="trainer-cell {% if slot %}{% else %}trainer-cell-empty{% endif %}"
     href="#"
+    {% if slot %}data-trainer-copy-url="/slot-copy/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}"{% endif %}
+    data-trainer-paste-url="/slot-paste/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}"
     hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}"
     hx-target="#modal-container"
     hx-swap="innerHTML"
