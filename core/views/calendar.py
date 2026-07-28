@@ -1901,6 +1901,190 @@ def _annotate_slot_segment_display_times(slot, athlete):
     return slot
 
 
+def _ayc_normalize_t_key(value):
+    s = re.sub(r"\s+", "", (value or "").upper())
+    mapping = {
+        "T10": "10000",
+        "T10000": "10000",
+        "10000": "10000",
+        "T5": "5000",
+        "T5000": "5000",
+        "5000": "5000",
+        "T3": "3000",
+        "T3000": "3000",
+        "3000": "3000",
+        "T15": "1500",
+        "T1500": "1500",
+        "1500": "1500",
+        "T8": "800",
+        "T800": "800",
+        "800": "800",
+        "TM": "TM",
+        "THM": "THM",
+        "T4": "T4",
+    }
+    return mapping.get(s, "")
+
+
+def _ayc_t_key(text):
+    s = re.sub(r"\s+", "", (text or "").upper())
+    m = re.search(r"(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))", s)
+    return _ayc_normalize_t_key(m.group(1)) if m else ""
+
+
+def _ayc_progressive_t_keys(text):
+    s = re.sub(r"\s+", "", (text or "").upper())
+    m = re.search(
+        r"(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)"
+        r"(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))",
+        s,
+    )
+    if not m:
+        return None
+    a = _ayc_normalize_t_key(m.group(1))
+    b = _ayc_normalize_t_key(m.group(2))
+    return [a, b] if a and b and a != b else None
+
+
+def _ayc_meters_from_value(value, unit):
+    try:
+        n = float(str(value or "0").replace(",", "."))
+    except (TypeError, ValueError):
+        n = 0.0
+    return n * 1000 if str(unit or "m").lower() in ("km", "k") else n
+
+
+def _ayc_text_duration_s(text):
+    s = text or ""
+    m = re.search(r"(\d+)\s*(?:x|\*)\s*(\d+(?:[.,]\d+)?)\s*(?:'|min\b)", s, re.I)
+    if m:
+        return float(m.group(1)) * float(m.group(2).replace(",", ".")) * 60
+    m = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(?:'|min\b)", s, re.I)
+    return float(m.group(1).replace(",", ".")) * 60 if m else 0.0
+
+
+def _ayc_base_distance_m(text):
+    s = text or ""
+    m = re.search(r"(\d+)\s*(?:x|\*)\s*\(?\s*(\d+)\s*(?:x|\*)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\s*\)?", s, re.I)
+    if m:
+        return float(m.group(1)) * float(m.group(2)) * _ayc_meters_from_value(m.group(3), m.group(4))
+    m = re.search(r"(\d+)\s*(?:x|\*)\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", s, re.I)
+    if m:
+        return float(m.group(1)) * _ayc_meters_from_value(m.group(2), m.group(3))
+    m = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", s, re.I)
+    return _ayc_meters_from_value(m.group(1), m.group(2)) if m else 0.0
+
+
+def _ayc_compound_loads(text, fallback_zone):
+    s = text or ""
+    match = re.search(r"\b(\d+)\s*(?:x|\*)\s*\(([^)]+)\)", s, re.I)
+    if not match:
+        return None
+    reps = float(match.group(1))
+    parts = [part for part in re.split(r"\s*-\s*", match.group(2) or "") if part]
+    if len(parts) < 2:
+        return None
+
+    loads = []
+    for part in parts:
+        dm = re.search(r"(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", part, re.I)
+        if not dm:
+            return None
+        zm = re.search(r"\bz\s*([1-6])\b", part, re.I)
+        loads.append({
+            "zone": zm.group(1) if zm else fallback_zone,
+            "meters": reps * _ayc_meters_from_value(dm.group(1), dm.group(2)),
+            "t_key": _ayc_t_key(part) or _ayc_t_key(s),
+            "race": bool(re.search(r"race", s, re.I)),
+        })
+    return loads
+
+
+def _ayc_slot_loads_for_totals(slot, athlete=None):
+    if not slot:
+        return []
+
+    try:
+        segments = slot.segments.all()
+    except Exception:
+        return []
+
+    loads = []
+    for seg in segments:
+        seg_type = (getattr(seg, "type", "") or "").upper()
+        if seg_type in ("MOB", "TECH"):
+            continue
+
+        text = getattr(seg, "text", "") or ""
+        special = (getattr(seg, "special", "") or "").upper()
+        is_race = special in ("RACE", "IMPORTANT_RACE") or bool(re.search(r"race", text, re.I))
+        fallback_zone = (str(getattr(seg, "zone", "") or "").strip() or ("4" if is_race else "1"))
+
+        if seg_type == "ALT":
+            duration_s = float(getattr(seg, "duration_s", None) or 0)
+            if duration_s <= 0:
+                duration_s = _ayc_text_duration_s(text)
+            if duration_s > 0:
+                loads.append({"kind": "alt", "zone": fallback_zone, "seconds": duration_s})
+            continue
+
+        compound = _ayc_compound_loads(text, fallback_zone)
+        if compound:
+            for load in compound:
+                load["race"] = bool(is_race or load.get("race"))
+                loads.append(load)
+            continue
+
+        reps = float(getattr(seg, "reps", None) or 1)
+        distance_m = float(getattr(seg, "distance_m", None) or 0)
+        duration_s = float(getattr(seg, "duration_s", None) or 0)
+        norm_m = float(getattr(seg, "norm_distance_m", None) or 0)
+
+        meters = norm_m
+        if not meters and distance_m:
+            meters = reps * distance_m
+        if not meters:
+            meters = _ayc_base_distance_m(text)
+        if not meters and duration_s:
+            speed = float(_zone_speed_mps(athlete, f"Z{fallback_zone}") or 0)
+            meters = duration_s * speed if speed > 0 else 0
+        if not meters:
+            parsed_duration = _ayc_text_duration_s(text)
+            speed = float(_zone_speed_mps(athlete, f"Z{fallback_zone}") or 0)
+            meters = parsed_duration * speed if speed > 0 else 0
+        if not meters:
+            continue
+
+        progressive = re.search(r"\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b", text, re.I)
+        t_range = _ayc_progressive_t_keys(text)
+        data_t_key = _ayc_normalize_t_key(getattr(seg, "t_type", "") or "")
+        t_key = data_t_key or _ayc_t_key(text)
+
+        if progressive and progressive.group(1) != progressive.group(2):
+            loads.append({
+                "zone": progressive.group(1),
+                "meters": meters / 2,
+                "t_key": t_range[0] if t_range else t_key,
+                "race": is_race,
+            })
+            loads.append({
+                "zone": progressive.group(2),
+                "meters": meters / 2,
+                "t_key": t_range[1] if t_range else t_key,
+                "race": is_race,
+            })
+            continue
+
+        if t_range:
+            loads.append({"zone": fallback_zone, "meters": meters / 2, "t_key": t_range[0], "race": is_race})
+            loads.append({"zone": fallback_zone, "meters": meters / 2, "t_key": t_range[1], "race": is_race})
+            continue
+
+        loads.append({"zone": fallback_zone, "meters": meters, "t_key": t_key, "race": is_race})
+
+    return loads
+
+
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if request.user.is_staff:
         owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
@@ -2703,35 +2887,39 @@ def athlete_year_calendar_view(request):
         alt_z2_min = 0
         alt_z3_min = 0
 
-        if selected_athlete and athlete_plans:
-            for plan in athlete_plans:
-                if plan.start_date and plan.start_date > week_end:
-                    continue
-                if plan.end_date and plan.end_date < week_start:
-                    continue
+        if selected_athlete:
+            for cell in cells1 + cells2:
+                slot = cell.get("slot")
+                for load in _ayc_slot_loads_for_totals(slot, selected_athlete):
+                    if load.get("kind") == "alt":
+                        zone = str(load.get("zone") or "")
+                        minutes = int(round(float(load.get("seconds") or 0) / 60.0))
+                        if zone == "1":
+                            alt_z1_min += minutes
+                        elif zone == "2":
+                            alt_z2_min += minutes
+                        elif zone == "3":
+                            alt_z3_min += minutes
+                        continue
 
-                st = athlete_week_stats(plan, selected_athlete, week_start)
+                    zone = str(load.get("zone") or "")
+                    meters = float(load.get("meters") or 0)
+                    if meters <= 0:
+                        continue
 
-                zones = st.get("zones") or {}
-                race = st.get("race") or {"distance_m": 0, "duration_s": 0}
-                t_totals = st.get("t_totals") or {}
-                alt = st.get("alt_zones") or {}
+                    speed = float(_zone_speed_mps(selected_athlete, f"Z{zone}") or 0)
+                    seconds = (meters / speed) if speed > 0 else 0.0
 
-                alt_z1_min += int(round(float(alt.get("1", {}).get("duration_s", 0) or 0) / 60.0))
-                alt_z2_min += int(round(float(alt.get("2", {}).get("duration_s", 0) or 0) / 60.0))
-                alt_z3_min += int(round(float(alt.get("3", {}).get("duration_s", 0) or 0) / 60.0))
+                    if load.get("race"):
+                        race_m += meters
+                        race_time_s += seconds
+                    elif zone in z_m:
+                        z_m[zone] += meters
+                        z_time_s[zone] += seconds
 
-                for z in ("1", "2", "3", "4", "5", "6"):
-                    vals = zones.get(z) or {"distance_m": 0, "duration_s": 0}
-                    z_m[z] += float(vals.get("distance_m") or 0)
-                    z_time_s[z] += float(vals.get("duration_s") or 0)
-
-                race_m += float(race.get("distance_m") or 0)
-                race_time_s += float(race.get("duration_s") or 0)
-
-                for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4"):
-                    vals = t_totals.get(t) or {"distance_m": 0, "duration_s": 0}
-                    t_m[t] += float(vals.get("distance_m") or 0)
+                    t_key = str(load.get("t_key") or "")
+                    if t_key in t_m:
+                        t_m[t_key] += meters
 
         tot_m = sum(z_m.values()) + race_m
         total_time_s = sum(z_time_s.values()) + race_time_s
