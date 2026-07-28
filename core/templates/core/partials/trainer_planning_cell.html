@@ -1,6 +1,30 @@
 <td id="cell-{{ day|date:'Ymd' }}-{{ slot_index }}"
     {% if oob %}hx-swap-oob="outerHTML"{% endif %}
     class="trainer-day-cell">
+  {% if slot %}
+    <button
+      type="button"
+      class="trainer-action-btn trainer-copy-btn"
+      data-trainer-copy-btn
+      hx-post="/slot-copy/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}"
+      hx-swap="none"
+      onclick="event.preventDefault(); event.stopPropagation();"
+      title="Copy training"
+    >c</button>
+  {% endif %}
+
+  {% if request.session.training_clipboard %}
+    <button
+      type="button"
+      class="trainer-action-btn trainer-paste-btn"
+      data-trainer-paste-btn
+      hx-post="/slot-paste/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}"
+      hx-swap="none"
+      onclick="event.preventDefault(); event.stopPropagation();"
+      title="Paste training"
+    >p</button>
+  {% endif %}
+
   <a
     class="trainer-cell {% if slot %}{% else %}trainer-cell-empty{% endif %}"
     href="#"
