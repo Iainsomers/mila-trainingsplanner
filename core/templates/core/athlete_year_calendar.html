@@ -1909,6 +1909,10 @@
         formData.append(name, field.value || "");
       }
     });
+    var strengthField = form.querySelector('[name="standard_strength_id"]');
+    if (strengthField) {
+      formData.append("standard_strength_id", strengthField.value || "");
+    }
 
     fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
       method: "POST",

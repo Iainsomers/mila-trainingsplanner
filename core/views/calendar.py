@@ -27,6 +27,7 @@ from core.models import (
     AthleteDailyVital,
     CoachAccess,
     RaceEntry,
+    StandardStrengthProgram,
 )
 from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from core.parser import parse_segment_text
@@ -1974,8 +1975,17 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         ("ALT", request.POST.get("alt_text", ""), "1"),
         ("CD", request.POST.get("cd_text", ""), "1"),
     ]
+    selected_standard_strength = None
+    standard_strength_id = (request.POST.get("standard_strength_id") or "").strip()
+    if standard_strength_id.isdigit():
+        selected_standard_strength = (
+            StandardStrengthProgram.objects
+            .filter(Q(owner=request.user) | Q(owner__shared_with_others__grantee=request.user))
+            .filter(id=int(standard_strength_id))
+            .first()
+        )
 
-    has_field_text = any((value or "").strip() for _, value, _ in fields)
+    has_field_text = any((value or "").strip() for _, value, _ in fields) or bool(selected_standard_strength)
 
     if not has_field_text and (slot_text or "").strip():
         fields = [("CORE", slot_text, "1")]
@@ -2000,7 +2010,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
     for segment_type, value, default_zone in fields:
         raw_text = (value or "").strip()
-        if not raw_text:
+        if not raw_text and not (segment_type == "MOB" and selected_standard_strength):
             continue
 
         if segment_type == "CORE":
@@ -2071,6 +2081,8 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             type=segment_type,
             text=raw_text,
         )
+        if segment_type == "MOB" and selected_standard_strength:
+            seg.standard_strength_program = selected_standard_strength
 
         if parsed and parsed.ok:
             _apply_parse_to_segment(seg, parsed)
