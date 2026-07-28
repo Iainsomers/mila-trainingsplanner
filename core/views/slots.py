@@ -592,13 +592,23 @@ def _saved_templates_for_user(user):
 def _standard_strength_programs_for_user(user):
     if not user or not getattr(user, "is_authenticated", False):
         return StandardStrengthProgram.objects.none()
-    return StandardStrengthProgram.objects.filter(owner=user).order_by("sort_order", "name", "id")
+    return (
+        StandardStrengthProgram.objects
+        .filter(Q(owner=user) | Q(owner__shared_with_others__grantee=user))
+        .distinct()
+        .order_by("sort_order", "name", "id")
+    )
 
 
 def _standard_strength_for_user(user, program_id):
     if not program_id or not str(program_id).isdigit():
         return None
-    return StandardStrengthProgram.objects.filter(owner=user, id=int(program_id)).first()
+    return (
+        StandardStrengthProgram.objects
+        .filter(Q(owner=user) | Q(owner__shared_with_others__grantee=user))
+        .filter(id=int(program_id))
+        .first()
+    )
 
 
 def _serialize_slot_template_text(wu_text, mob_text, sprint_text, core_text, core2_text, alt_text, cd_text) -> str:
