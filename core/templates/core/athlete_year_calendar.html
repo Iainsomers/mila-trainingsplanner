@@ -545,6 +545,11 @@
     white-space: pre-wrap;
   }
 
+  #aypWatchResults {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
   @media (max-width: 1200px) {
     .year-table-wrap {
       display: block;
@@ -1440,13 +1445,33 @@
     return row;
   }
   function renderPlanSuggestion(suggestion) {
+    function splitLine(split) {
+      return (split.label || "Rep") + " " + (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
+    }
+    function splitLinesForSave() {
+      var grouped = {};
+      var lines = [];
+      (suggestion.splits || []).forEach(function(split) {
+        var label = split.label || "";
+        var match = label.match(/^Set\s+(\d+)/i);
+        if (match) {
+          var key = match[1];
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(splitLine(split).replace(/^Set\s+\d+,\s*/i, ""));
+        } else {
+          lines.push(splitLine(split));
+        }
+      });
+      Object.keys(grouped).sort(function(a, b) { return Number(a) - Number(b); }).forEach(function(setNumber) {
+        lines.push("Set " + setNumber + ": " + grouped[setNumber].join(" | "));
+      });
+      return lines;
+    }
     function suggestionTextForSave() {
       var parts = [];
       if (suggestion.summary) parts.push(suggestion.summary);
       if (suggestion.splits && suggestion.splits.length) {
-        parts.push(suggestion.splits.map(function(split) {
-          return (split.label || "Rep") + " " + (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
-        }).join(" | "));
+        parts = parts.concat(splitLinesForSave());
       }
       return parts.join("\n");
     }
@@ -1470,9 +1495,8 @@
     if (suggestion.splits && suggestion.splits.length) {
       var list = document.createElement("div");
       list.className = "small text-muted mb-2";
-      list.textContent = suggestion.splits.map(function(split) {
-        return (split.label || "Rep") + " " + (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
-      }).join(" | ");
+      list.textContent = splitLinesForSave().join("\n");
+      list.style.whiteSpace = "pre-wrap";
       box.appendChild(list);
     }
     if (suggestion.mode === "structured_unmatched") {
@@ -1494,8 +1518,6 @@
       setVal("aypWatchActivityPayload", JSON.stringify(suggestion || {}));
       if (!val("reportT1Status")) setVal("reportT1Status", "done_as_planned");
       if (!val("reportT2Status")) setVal("reportT2Status", "done_as_planned");
-      if (enabled("reportT1") && !val("reportT1Comment")) setVal("reportT1Comment", summaryText);
-      if (enabled("reportT2") && !val("reportT2Comment")) setVal("reportT2Comment", summaryText);
       validate();
     });
     box.appendChild(use);
