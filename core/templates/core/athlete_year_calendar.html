@@ -1536,6 +1536,12 @@
           suggestions.textContent = data.message || "No watch activities found for this day.";
           return;
         }
+        if (data.ai_status && (!data.plan_suggestion || !data.plan_suggestion.ai)) {
+          var aiStatus = document.createElement("div");
+          aiStatus.className = "small text-muted mb-2";
+          aiStatus.textContent = data.ai_status;
+          suggestions.appendChild(aiStatus);
+        }
         if (data.plan_suggestion) {
           suggestions.appendChild(renderPlanSuggestion(data.plan_suggestion));
         }

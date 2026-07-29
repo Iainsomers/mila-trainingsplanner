@@ -800,7 +800,11 @@ def _normalise_ai_watch_suggestion(data, fallback_activity_id=""):
 def _build_ai_watch_suggestion(plan_text, activities):
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key or not plan_text or not activities:
-        return None
+        if not api_key:
+            return None, "AI unavailable: OPENAI_API_KEY is not set."
+        if not plan_text:
+            return None, "AI unavailable: no planned training text."
+        return None, "AI unavailable: no watch activities."
 
     model = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
     activity_payloads = [_watch_activity_ai_payload(activity) for activity in activities[:3]]
@@ -846,16 +850,34 @@ def _build_ai_watch_suggestion(plan_text, activities):
     try:
         with urlopen(request, timeout=12) as response:
             payload = json.loads(response.read().decode("utf-8"))
-    except (HTTPError, URLError, TimeoutError, ValueError, OSError):
-        return None
+    except HTTPError as exc:
+        message = f"AI unavailable: OpenAI returned HTTP {exc.code}."
+        try:
+            raw = exc.read().decode("utf-8")
+            payload = json.loads(raw)
+            detail = payload.get("error", {}).get("message") if isinstance(payload, dict) else ""
+            if detail:
+                message = f"{message} {detail}"
+        except Exception:
+            pass
+        return None, message[:500]
+    except URLError as exc:
+        return None, f"AI unavailable: network error ({exc.reason})."
+    except TimeoutError:
+        return None, "AI unavailable: OpenAI request timed out."
+    except (ValueError, OSError) as exc:
+        return None, f"AI unavailable: OpenAI request failed ({exc})."
 
     try:
         content = payload["choices"][0]["message"]["content"]
         data = json.loads(content)
     except (KeyError, IndexError, TypeError, ValueError):
-        return None
+        return None, "AI unavailable: OpenAI response could not be parsed."
 
-    return _normalise_ai_watch_suggestion(data, fallback_activity_id=fallback_activity_id)
+    suggestion = _normalise_ai_watch_suggestion(data, fallback_activity_id=fallback_activity_id)
+    if not suggestion:
+        return None, "AI unavailable: OpenAI response did not contain a usable suggestion."
+    return suggestion, "AI suggestion created."
 
 
 def _build_plan_watch_suggestion(plan_text, activities):
@@ -1358,8 +1380,9 @@ def polar_activity_suggestions_view(request):
     if not activities:
         return JsonResponse({"ok": True, "message": "No watch activities found for this day.", "activities": []})
     plan_suggestion = None
+    ai_status = ""
     if planned_text:
-        plan_suggestion = _build_ai_watch_suggestion(planned_text, activities)
+        plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, activities)
         if not plan_suggestion:
             plan_suggestion = _build_plan_watch_suggestion(planned_text, activities)
     response_activities = []
@@ -1372,6 +1395,7 @@ def polar_activity_suggestions_view(request):
         "message": "",
         "activities": response_activities,
         "plan_suggestion": plan_suggestion,
+        "ai_status": ai_status,
     })
 
 
