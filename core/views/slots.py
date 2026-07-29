@@ -1551,7 +1551,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             sprint_seg = slot.segments.create(type="SPR", text=sprint_text, order=2)
         _apply_parse_to_segment(sprint_seg, sprint_parse)
         sprint_seg.zone = "6"
-        sprint_seg.norm_distance_m = _compute_norm_distance_m(sprint_seg)
+        sprint_seg.norm_distance_m = None if sprint_seg.duration_s is not None else _compute_norm_distance_m(sprint_seg)
         sprint_seg.parsed_at = now
         sprint_seg.save()
     else:
@@ -1590,7 +1590,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 seg.reps = int(source_parse.reps or 1)
                 seg.distance_m = source_parse.rep_distance_m if source_parse.rep_distance_m is not None else source_parse.distance_m
                 seg.duration_s = source_parse.duration_s
-                seg.norm_distance_m = _compute_norm_distance_m(seg)
+                seg.norm_distance_m = None if source_parse.duration_s is not None else _compute_norm_distance_m(seg)
                 seg.parsed_at = now
                 seg.save()
 

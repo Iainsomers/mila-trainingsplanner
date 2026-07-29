@@ -429,6 +429,17 @@
       "6": 8.5
     };
 
+    function flexZoneSpeedsForRow(row) {
+      const raw = row ? row.getAttribute("data-flex-zone-speeds") : "";
+      if (!raw) return FLEX_ZONE_SPEEDS_MPS;
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? {...FLEX_ZONE_SPEEDS_MPS, ...parsed} : FLEX_ZONE_SPEEDS_MPS;
+      } catch (error) {
+        return FLEX_ZONE_SPEEDS_MPS;
+      }
+    }
+
     function flexKm(meters) {
       const m = Number(meters || 0);
       if (m > 0 && m < 50) return "<0.1";
@@ -612,7 +623,8 @@
       return loads;
     }
 
-    function flexLoadsForSegment(el) {
+    function flexLoadsForSegment(el, zoneSpeeds) {
+      const speeds = zoneSpeeds || FLEX_ZONE_SPEEDS_MPS;
       const segType = (el.getAttribute("data-flex-type") || "").toUpperCase();
       if (["MOB", "TECH"].includes(segType)) {
         return [];
@@ -635,15 +647,16 @@
       const durationS = flexNumberAttr(el, "data-flex-duration");
       const normM = flexNumberAttr(el, "data-flex-norm");
 
-      let meters = normM;
+      let meters = 0;
+      if (durationS) {
+        meters = durationS * Number(speeds[fallbackZone] || 0);
+      }
+      if (!meters) meters = normM;
       if (!meters && distanceM) meters = reps * distanceM;
       if (!meters) meters = flexBaseDistanceMeters(text);
-      if (!meters && durationS) {
-        meters = durationS * Number(FLEX_ZONE_SPEEDS_MPS[fallbackZone] || 0);
-      }
       if (!meters) {
         const parsedDuration = flexDurationSeconds(text);
-        if (parsedDuration) meters = parsedDuration * Number(FLEX_ZONE_SPEEDS_MPS[fallbackZone] || 0);
+        if (parsedDuration) meters = parsedDuration * Number(speeds[fallbackZone] || 0);
       }
 
       if (!meters) return [];
@@ -681,6 +694,7 @@
           ...firstRow.querySelectorAll("[data-flex-segment]"),
           ...(secondRow ? secondRow.querySelectorAll("[data-flex-segment]") : [])
         ];
+        const rowZoneSpeeds = flexZoneSpeedsForRow(firstRow);
 
         const zMeters = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         const zSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
@@ -689,9 +703,9 @@
         let raceSeconds = 0;
 
         segmentEls.forEach((el) => {
-          flexLoadsForSegment(el).forEach((load) => {
+          flexLoadsForSegment(el, rowZoneSpeeds).forEach((load) => {
             const z = load.zone || "1";
-            const speed = Number(FLEX_ZONE_SPEEDS_MPS[z] || 0);
+            const speed = Number(rowZoneSpeeds[z] || 0);
             const meters = Number(load.meters || 0);
             const seconds = speed > 0 ? meters / speed : 0;
 
@@ -1174,7 +1188,7 @@
 
           <tbody>
             {% for row in week.athlete_rows %}
-              <tr class="flex-athlete-row-start">
+              <tr class="flex-athlete-row-start" data-flex-zone-speeds="{{ row.zone_speeds_json|escape }}">
                 <td class="flex-athlete-col {% if row.week_phase %}phase-{{ row.week_phase }}{% endif %}" rowspan="2">
                   <div>{{ row.athlete.name }}</div>
                   <div class="flex-athlete-phase-wrap">

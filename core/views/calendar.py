@@ -1248,6 +1248,7 @@ def flex_planner_view(request):
 
             athlete_rows.append({
                 "athlete": athlete,
+                "zone_speeds_json": json.dumps(athlete.get_zone_speed_mps() or {}),
                 "am_cells": am_cells,
                 "pm_cells": pm_cells,
                 "week_phase": week_phase,
@@ -2075,14 +2076,16 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
         duration_s = float(getattr(seg, "duration_s", None) or 0)
         norm_m = float(getattr(seg, "norm_distance_m", None) or 0)
 
-        meters = norm_m
+        meters = 0.0
+        if duration_s:
+            speed = float(_zone_speed_mps(athlete, f"Z{fallback_zone}") or 0)
+            meters = duration_s * speed if speed > 0 else 0
+        if not meters:
+            meters = norm_m
         if not meters and distance_m:
             meters = reps * distance_m
         if not meters:
             meters = _ayc_base_distance_m(text)
-        if not meters and duration_s:
-            speed = float(_zone_speed_mps(athlete, f"Z{fallback_zone}") or 0)
-            meters = duration_s * speed if speed > 0 else 0
         if not meters:
             parsed_duration = _ayc_text_duration_s(text)
             speed = float(_zone_speed_mps(athlete, f"Z{fallback_zone}") or 0)
@@ -2258,7 +2261,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
                     seg.reps = int(source_parse.reps or 1)
                     seg.distance_m = source_parse.rep_distance_m if source_parse.rep_distance_m is not None else source_parse.distance_m
                     seg.duration_s = source_parse.duration_s
-                    seg.norm_distance_m = _compute_norm_distance_m(seg)
+                    seg.norm_distance_m = None if source_parse.duration_s is not None else _compute_norm_distance_m(seg)
                     seg.parsed_at = now
                     seg.save()
                     order += 1
@@ -2307,7 +2310,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             _apply_parse_to_segment(seg, parsed)
             if segment_type == "SPR":
                 seg.zone = "6"
-                seg.norm_distance_m = _compute_norm_distance_m(seg)
+                seg.norm_distance_m = None if seg.duration_s is not None else _compute_norm_distance_m(seg)
             seg.parsed_at = now
             seg.save()
         else:

@@ -405,7 +405,9 @@ def _apply_parse_to_segment(seg, parse_res):
         seg.duration_s = int(parse_res.duration_s)
         seg.reps = 1
         seg.distance_m = None
-        seg.norm_distance_m = _compute_norm_distance_m(seg)
+        # Duration-based training distance depends on the athlete's zone pace.
+        # Leave it unset so Flex/AYC/stats calculate with the selected athlete.
+        seg.norm_distance_m = None
         return
 
     if parse_res.distance_m is not None:
