@@ -872,7 +872,7 @@ def _block_from_duration_splits(splits, start_index, duration_target_s):
     }
 
 
-def _candidate_sequences_from_structure(splits, structure, max_sequences=12):
+def _candidate_sequences_from_structure(splits, structure, max_sequences=6):
     if not splits or not structure:
         return []
 
@@ -1092,7 +1092,7 @@ def _build_ai_watch_suggestion(plan_text, activities):
         method="POST",
     )
     try:
-        with urlopen(request, timeout=12) as response:
+        with urlopen(request, timeout=30) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         message = f"AI unavailable: OpenAI returned HTTP {exc.code}."
