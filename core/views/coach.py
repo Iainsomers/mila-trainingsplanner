@@ -1129,6 +1129,39 @@ def _normalise_ai_watch_suggestion(data, fallback_activity_id=""):
     }
 
 
+def _candidate_blocks_as_splits(activity_payloads, expected_reps=0):
+    best = None
+    for activity in activity_payloads or []:
+        for candidate in activity.get("candidate_sequences") or []:
+            blocks = candidate.get("blocks") or []
+            if expected_reps and len(blocks) != expected_reps:
+                continue
+            if not blocks:
+                continue
+            score = _seconds_label_to_seconds(candidate.get("total_duration") or "") or 999999
+            if best is None or score < best["score"]:
+                best = {"score": score, "activity_id": activity.get("id") or "", "blocks": blocks}
+
+    if not best:
+        return "", []
+
+    splits = []
+    for block in best["blocks"]:
+        set_number = block.get("set")
+        rep_number = block.get("rep")
+        planned_duration = block.get("planned_duration") or ""
+        label = f"Set {set_number}, Rep {rep_number}" if set_number and rep_number else "Rep"
+        if planned_duration:
+            label = f"{label} ({planned_duration})"
+        splits.append({
+            "label": label,
+            "distance_m": block.get("distance_m") or "",
+            "duration": block.get("duration") or "",
+            "pace": block.get("pace") or "",
+        })
+    return best["activity_id"], splits
+
+
 def _build_ai_watch_suggestion(plan_text, activities):
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key or not plan_text or not activities:
@@ -1221,6 +1254,18 @@ def _build_ai_watch_suggestion(plan_text, activities):
     suggestion = _normalise_ai_watch_suggestion(data, fallback_activity_id=fallback_activity_id)
     if not suggestion:
         return None, "AI unavailable: OpenAI response did not contain a usable suggestion."
+
+    expected_reps = int((planned_structure or {}).get("reps_total") or 0)
+    if expected_reps:
+        candidate_activity_id, candidate_splits = _candidate_blocks_as_splits(activity_payloads, expected_reps=expected_reps)
+        if candidate_splits:
+            suggestion["splits"] = candidate_splits
+            suggestion["activity_id"] = candidate_activity_id or suggestion.get("activity_id") or fallback_activity_id
+            if len(candidate_splits) != len(data.get("splits") or []):
+                suggestion["summary"] = (
+                    f"{suggestion.get('summary') or ''} "
+                    f"Mila kept the structured work-rep list at {len(candidate_splits)} reps from the planned pattern."
+                ).strip()
     return suggestion, "AI suggestion created."
 
 
