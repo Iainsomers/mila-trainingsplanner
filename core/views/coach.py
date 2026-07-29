@@ -573,6 +573,61 @@ def _splits_from_route(route, split_m=1000.0, max_count=None):
     return _splits_from_time_distance_points(points, split_m=split_m, max_count=max_count)
 
 
+def _time_distance_points_from_exercise(exercise):
+    samples = _polar_sample_map(exercise)
+    if "10" in samples:
+        sample = samples["10"]
+        rate_seconds = _polar_sample_rate(sample)
+        points = []
+        for index, distance_m in enumerate(_polar_sample_values(sample)):
+            if distance_m is None:
+                continue
+            try:
+                distance_m = float(distance_m)
+            except (TypeError, ValueError):
+                continue
+            if distance_m >= 0:
+                points.append((index * rate_seconds, distance_m))
+        return "distance samples", points
+
+    if "1" in samples:
+        sample = samples["1"]
+        rate_seconds = _polar_sample_rate(sample)
+        points = [(0.0, 0.0)]
+        elapsed = 0.0
+        distance_m = 0.0
+        for speed_kmh in _polar_sample_values(sample):
+            if speed_kmh is not None:
+                try:
+                    distance_m += (float(speed_kmh) * 1000.0 / 3600.0) * rate_seconds
+                except (TypeError, ValueError):
+                    pass
+            elapsed += rate_seconds
+            points.append((elapsed, distance_m))
+        return "speed samples", points
+
+    if isinstance(exercise.get("route"), list):
+        points = []
+        previous = None
+        distance_m = 0.0
+        for index, point in enumerate(exercise.get("route") or []):
+            if not isinstance(point, dict):
+                continue
+            try:
+                lat = float(point.get("latitude"))
+                lon = float(point.get("longitude"))
+            except (TypeError, ValueError):
+                continue
+            elapsed = _polar_route_time_seconds(point, index)
+            if previous:
+                distance_m += _haversine_m(previous["lat"], previous["lon"], lat, lon)
+            points.append((elapsed, distance_m))
+            previous = {"lat": lat, "lon": lon}
+        return "route", points
+
+    return "", []
+
+
 def _splits_from_time_distance_points(points, split_m=1000.0, max_count=None):
     if len(points) < 2:
         return []
@@ -937,6 +992,133 @@ def _skip_duration_splits(splits, start_index, duration_target_s, label):
     }
 
 
+def _distance_at_elapsed(points, target_s):
+    if not points:
+        return None
+    target_s = float(target_s or 0)
+    points = sorted(points, key=lambda item: item[0])
+    if target_s <= points[0][0]:
+        return float(points[0][1])
+    for index in range(1, len(points)):
+        t1, d1 = points[index - 1]
+        t2, d2 = points[index]
+        if t2 < target_s:
+            continue
+        if t2 <= t1:
+            return float(d2)
+        return float(d1) + ((target_s - t1) / (t2 - t1)) * (float(d2) - float(d1))
+    return float(points[-1][1])
+
+
+def _duration_block_from_points(points, start_s, duration_s):
+    end_s = float(start_s or 0) + float(duration_s or 0)
+    start_m = _distance_at_elapsed(points, start_s)
+    end_m = _distance_at_elapsed(points, end_s)
+    if start_m is None or end_m is None:
+        return None
+    used_m = max(0.0, end_m - start_m)
+    return {
+        "distance_m": round(used_m),
+        "duration": _format_seconds_hms(round(duration_s)),
+        "pace": _format_pace(duration_s, used_m),
+        "start_m": round(start_m),
+        "end_m": round(end_m),
+        "duration_s": float(duration_s or 0),
+    }
+
+
+def _candidate_sequences_from_duration_points(points, structure, activity_duration_s=None, max_sequences=3):
+    if not points or not structure or structure.get("pattern_type") != "duration":
+        return []
+    pattern = structure.get("pattern_s") or []
+    sets = int(structure.get("sets") or 0)
+    if not pattern or sets <= 0:
+        return []
+
+    pause_s = int(structure.get("pause_s") or 0)
+    set_pause_s = int(structure.get("set_pause_s") or 0)
+    lead_in_s = int(structure.get("lead_in_s") or 0)
+    lead_out_s = int(structure.get("lead_out_s") or 0)
+    core_s = sets * sum(int(item or 0) for item in pattern)
+    recovery_s = (sets * max(0, len(pattern) - 1) * pause_s) + (max(0, sets - 1) * set_pause_s)
+    planned_total_s = lead_in_s + core_s + recovery_s + lead_out_s
+    if planned_total_s <= 0:
+        return []
+
+    points = sorted(points, key=lambda item: item[0])
+    final_time_s = float(activity_duration_s or points[-1][0] or 0)
+    latest_start_s = max(0, min(180, int(final_time_s - planned_total_s + 60)))
+    step_s = 5 if latest_start_s <= 60 else 10
+    candidates = []
+
+    for offset_s in range(0, latest_start_s + 1, step_s):
+        cursor_s = float(offset_s)
+        sequence = []
+        recovery_blocks = []
+        if lead_in_s:
+            lead_block = _duration_block_from_points(points, cursor_s, lead_in_s)
+            if lead_block:
+                lead_block.update({"type": "recovery", "label": "lead-in/easy"})
+                recovery_blocks.append(lead_block)
+            cursor_s += lead_in_s
+
+        total_work_s = 0.0
+        total_work_m = 0.0
+        ok = True
+        for set_number in range(1, sets + 1):
+            for rep_number, duration_s in enumerate(pattern, start=1):
+                block = _duration_block_from_points(points, cursor_s, duration_s)
+                if not block:
+                    ok = False
+                    break
+                block.update({
+                    "set": set_number,
+                    "rep": rep_number,
+                    "planned_duration": _format_seconds_hms(int(duration_s)),
+                })
+                sequence.append(block)
+                total_work_s += float(duration_s or 0)
+                total_work_m += float(block.get("distance_m") or 0)
+                cursor_s += float(duration_s or 0)
+
+                if rep_number < len(pattern) and pause_s:
+                    recovery = _duration_block_from_points(points, cursor_s, pause_s)
+                    if recovery:
+                        recovery.update({"type": "recovery", "label": f"Set {set_number} recovery after rep {rep_number}"})
+                        recovery_blocks.append(recovery)
+                    cursor_s += pause_s
+            if not ok:
+                break
+            if set_number < sets and set_pause_s:
+                recovery = _duration_block_from_points(points, cursor_s, set_pause_s)
+                if recovery:
+                    recovery.update({"type": "recovery", "label": f"Recovery between set {set_number} and {set_number + 1}"})
+                    recovery_blocks.append(recovery)
+                cursor_s += set_pause_s
+        if not ok or not sequence:
+            continue
+        if lead_out_s:
+            lead_out = _duration_block_from_points(points, cursor_s, lead_out_s)
+            if lead_out:
+                lead_out.update({"type": "recovery", "label": "lead-out/easy"})
+                recovery_blocks.append(lead_out)
+            cursor_s += lead_out_s
+        if cursor_s > final_time_s + 30:
+            continue
+        candidates.append({
+            "start_s": offset_s,
+            "end_s": round(cursor_s),
+            "start_m": sequence[0]["start_m"],
+            "end_m": sequence[-1]["end_m"],
+            "average_pace": _format_pace(total_work_s, total_work_m),
+            "total_duration": _format_seconds_hms(round(total_work_s)),
+            "recovery_blocks": recovery_blocks[:20],
+            "blocks": sequence,
+        })
+
+    return sorted(candidates, key=lambda item: abs(float(item.get("start_s") or 0)))[:max_sequences]
+
+
 def _candidate_sequences_from_structure(splits, structure, max_sequences=6):
     if not splits or not structure:
         return []
@@ -1060,6 +1242,14 @@ def _watch_activity_ai_payload(activity, planned_structure=None, max_splits=160)
         splits = split_info.get("splits") or []
 
     split_payload = [_watch_split_brief(split) for split in splits[:max_splits]]
+    candidate_sequences = []
+    if planned_structure and planned_structure.get("pattern_type") == "duration":
+        _point_source, points = _time_distance_points_from_exercise(raw)
+        candidate_sequences = _candidate_sequences_from_duration_points(
+            points,
+            planned_structure,
+            activity_duration_s=activity.get("duration_seconds"),
+        )
     payload = {
         "id": activity.get("id") or "",
         "start_time": activity.get("start_time") or "",
@@ -1075,7 +1265,7 @@ def _watch_activity_ai_payload(activity, planned_structure=None, max_splits=160)
         "splits_truncated": len(splits) > max_splits,
     }
     if planned_structure:
-        payload["candidate_sequences"] = _candidate_sequences_from_structure(split_payload, planned_structure)
+        payload["candidate_sequences"] = candidate_sequences or _candidate_sequences_from_structure(split_payload, planned_structure)
     return payload
 
 
