@@ -710,6 +710,154 @@ def _rep_times_text(splits, limit=40):
     return ", ".join(times[:limit]) + f", +{len(times) - limit} more"
 
 
+def _watch_split_brief(split):
+    return {
+        "label": split.get("label") or "",
+        "distance_m": split.get("distance_m"),
+        "duration": split.get("duration") or "",
+        "pace": split.get("pace") or "",
+    }
+
+
+def _watch_activity_ai_payload(activity, max_splits=160):
+    raw = activity.get("raw") or {}
+    source, splits = _polar_splits_for_distance(raw, 100.0, max_count=max_splits)
+    if not splits:
+        source, splits = _polar_splits_for_distance(raw, 200.0, max_count=max_splits)
+    if not splits:
+        split_info = _polar_exercise_splits(raw)
+        source = split_info.get("source") or ""
+        splits = split_info.get("splits") or []
+
+    return {
+        "id": activity.get("id") or "",
+        "start_time": activity.get("start_time") or "",
+        "sport": activity.get("sport") or "",
+        "duration": activity.get("duration_label") or activity.get("duration") or "",
+        "duration_seconds": activity.get("duration_seconds"),
+        "distance_m": round(activity.get("distance_m") or 0),
+        "distance_km": activity.get("distance_km"),
+        "avg_hr": activity.get("avg_hr"),
+        "max_hr": activity.get("max_hr"),
+        "split_source": source,
+        "splits": [_watch_split_brief(split) for split in splits[:max_splits]],
+        "splits_truncated": len(splits) > max_splits,
+    }
+
+
+def _clean_ai_suggestion_text(value, max_len=1800):
+    text = str(value or "").strip()
+    if len(text) > max_len:
+        return text[:max_len].rstrip() + "..."
+    return text
+
+
+def _normalise_ai_watch_suggestion(data, fallback_activity_id=""):
+    if not isinstance(data, dict):
+        return None
+
+    title = _clean_ai_suggestion_text(data.get("title") or "AI watch suggestion", max_len=180)
+    summary = _clean_ai_suggestion_text(data.get("summary") or "", max_len=1800)
+    if not summary:
+        return None
+
+    splits = []
+    for index, item in enumerate(data.get("splits") or [], start=1):
+        if not isinstance(item, dict):
+            continue
+        label = _clean_ai_suggestion_text(item.get("label") or f"Rep {index}", max_len=80)
+        duration = _clean_ai_suggestion_text(item.get("duration") or item.get("time") or "", max_len=40)
+        pace = _clean_ai_suggestion_text(item.get("pace") or "", max_len=40)
+        try:
+            distance_m = round(float(item.get("distance_m") or item.get("planned_m") or 0))
+        except (TypeError, ValueError):
+            distance_m = 0
+        splits.append({
+            "label": label,
+            "distance_m": distance_m or "",
+            "duration": duration,
+            "pace": pace,
+        })
+        if len(splits) >= 80:
+            break
+
+    try:
+        confidence = float(data.get("confidence"))
+    except (TypeError, ValueError):
+        confidence = None
+
+    return {
+        "mode": "ai",
+        "activity_id": data.get("activity_id") or fallback_activity_id or "ai-watch-suggestion",
+        "title": title,
+        "summary": summary,
+        "splits": splits,
+        "confidence": confidence,
+        "ai": True,
+    }
+
+
+def _build_ai_watch_suggestion(plan_text, activities):
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key or not plan_text or not activities:
+        return None
+
+    model = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
+    activity_payloads = [_watch_activity_ai_payload(activity) for activity in activities[:3]]
+    fallback_activity_id = activity_payloads[0].get("id") if activity_payloads else ""
+
+    system_prompt = (
+        "You interpret running watch data for a coaching planner. "
+        "Match the planned workout text against watch splits. "
+        "The input may include warmup, cooldown and recovery jogging. "
+        "Return only compact JSON. Do not invent exact precision when confidence is low."
+    )
+    user_payload = {
+        "planned_workout": plan_text,
+        "activities": activity_payloads,
+        "task": (
+            "Detect whether the watch activity matches the planned workout. "
+            "Handle flexible coach notation such as 3*(330m-330m-330m-1050m) z4 p30 sp2. "
+            "Prefer set/rep summaries over listing every 100m split. "
+            "If there is extra distance, label it as warmup/cooldown/recovery/dribble when likely. "
+            "Return JSON with keys: title, summary, confidence, activity_id, splits. "
+            "splits is an optional compact list of relevant reps with label, distance_m, duration, pace."
+        ),
+    }
+    body = json.dumps({
+        "model": model,
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
+        ],
+    }).encode("utf-8")
+
+    request = Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=12) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, ValueError, OSError):
+        return None
+
+    try:
+        content = payload["choices"][0]["message"]["content"]
+        data = json.loads(content)
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
+
+    return _normalise_ai_watch_suggestion(data, fallback_activity_id=fallback_activity_id)
+
+
 def _build_plan_watch_suggestion(plan_text, activities):
     spec = _planned_rep_spec(plan_text)
     if not spec:
@@ -1209,7 +1357,11 @@ def polar_activity_suggestions_view(request):
     activities.sort(key=lambda item: item.get("start_time") or "")
     if not activities:
         return JsonResponse({"ok": True, "message": "No watch activities found for this day.", "activities": []})
-    plan_suggestion = _build_plan_watch_suggestion(planned_text, activities) if planned_text else None
+    plan_suggestion = None
+    if planned_text:
+        plan_suggestion = _build_ai_watch_suggestion(planned_text, activities)
+        if not plan_suggestion:
+            plan_suggestion = _build_plan_watch_suggestion(planned_text, activities)
     response_activities = []
     for activity in activities:
         cleaned = dict(activity)

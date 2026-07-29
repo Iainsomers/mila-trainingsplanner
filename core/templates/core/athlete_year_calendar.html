@@ -1446,6 +1446,13 @@
     title.className = "fw-bold small mb-1";
     title.textContent = suggestion.title || "Watch suggestion";
     box.appendChild(title);
+    if (suggestion.ai) {
+      var meta = document.createElement("div");
+      meta.className = "small text-muted mb-1";
+      var confidence = typeof suggestion.confidence === "number" ? " · confidence " + Math.round(suggestion.confidence * 100) + "%" : "";
+      meta.textContent = "AI interpretation" + confidence;
+      box.appendChild(meta);
+    }
     var summary = document.createElement("div");
     summary.className = "small mb-2";
     summary.textContent = suggestion.summary || "";
