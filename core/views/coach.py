@@ -707,25 +707,42 @@ def _planned_interval_structure(plan_text):
     if sets <= 0:
         return None
 
+    inner = match.group(2) or ""
+    parts = [part.strip() for part in re.split(r"\s*-\s*", inner) if part.strip()]
     distances = []
-    for value, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(km|k|m)\b", match.group(2), re.I):
+    for value, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(km|k|m)\b", inner, re.I):
         meters = _ayc_like_meters(value, unit)
         if meters > 0:
             distances.append(round(meters))
 
+    durations = []
     if not distances:
+        for part in parts:
+            seconds = _coach_duration_token_seconds(part)
+            if seconds is None:
+                durations = []
+                break
+            durations.append(seconds)
+
+    if not distances and not durations:
         return None
 
     pause_match = re.search(r"\bp\s*(\d+(?:\.\d+)?)", text)
     set_pause_match = re.search(r"\bsp\s*(\d+(?:\.\d+)?)", text)
-    return {
+    out = {
         "sets": sets,
-        "pattern_m": distances,
-        "reps_total": sets * len(distances),
-        "core_distance_m": sets * sum(distances),
+        "pattern_type": "distance" if distances else "duration",
+        "reps_total": sets * len(distances or durations),
         "pause": f"{pause_match.group(1)}s" if pause_match else "",
         "set_pause": f"{set_pause_match.group(1)}min" if set_pause_match else "",
     }
+    if distances:
+        out["pattern_m"] = distances
+        out["core_distance_m"] = sets * sum(distances)
+    else:
+        out["pattern_s"] = durations
+        out["core_duration_s"] = sets * sum(durations)
+    return out
 
 
 def _ayc_like_meters(value, unit):
@@ -734,6 +751,24 @@ def _ayc_like_meters(value, unit):
     except (TypeError, ValueError):
         return 0.0
     return n * 1000.0 if str(unit or "m").lower() in ("km", "k") else n
+
+
+def _coach_duration_token_seconds(token):
+    s = re.sub(r"\bz\s*[1-6]\b", "", token or "", flags=re.I).strip()
+    s = re.sub(r"\b(?:tm|thm|t4|t\s*(?:10|5|3|15|8|800|1500|3000|5000|10000))\b", "", s, flags=re.I).strip()
+    m = re.fullmatch(r"(\d{1,2}):(\d{2})(?::(\d{2}))?", s)
+    if m:
+        a = int(m.group(1))
+        b = int(m.group(2))
+        c = m.group(3)
+        return (a * 3600) + (b * 60) + int(c) if c is not None else (a * 60) + b
+    m = re.fullmatch(r"(\d+)\s*(?:\"|sec|s)", s, re.I)
+    if m:
+        return int(m.group(1))
+    m = re.fullmatch(r"(\d+)\s*(?:'|min)", s, re.I)
+    if m:
+        return int(m.group(1)) * 60
+    return None
 
 
 def _seconds_label_to_seconds(label):
@@ -799,14 +834,53 @@ def _block_from_equal_splits(splits, start_index, distance_m):
     }
 
 
+def _block_from_duration_splits(splits, start_index, duration_target_s):
+    if not splits:
+        return None
+    try:
+        split_m = float(splits[0].get("distance_m") or 0)
+    except (TypeError, ValueError):
+        split_m = 0.0
+    if split_m <= 0:
+        return None
+
+    remaining = float(duration_target_s or 0)
+    cursor = int(start_index)
+    used_s = 0.0
+    used_m = 0.0
+    while remaining > 0 and cursor < len(splits):
+        split = splits[cursor]
+        split_duration_s = _seconds_label_to_seconds(split.get("duration") or "")
+        if not split_duration_s:
+            return None
+        take_s = min(float(split_duration_s), remaining)
+        used_s += take_s
+        used_m += split_m * (take_s / float(split_duration_s))
+        remaining -= take_s
+        cursor += 1
+
+    if remaining > 1:
+        return None
+    return {
+        "distance_m": round(used_m),
+        "duration": _format_seconds_hms(round(used_s)),
+        "pace": _format_pace(used_s, used_m),
+        "start_m": round(start_index * split_m),
+        "end_m": round(start_index * split_m + used_m),
+        "next_index": cursor,
+        "duration_s": used_s,
+    }
+
+
 def _candidate_sequences_from_structure(splits, structure, max_sequences=12):
     if not splits or not structure:
         return []
 
-    pattern = structure.get("pattern_m") or []
+    pattern = structure.get("pattern_m") or structure.get("pattern_s") or []
     sets = int(structure.get("sets") or 0)
     if not pattern or sets <= 0:
         return []
+    pattern_type = structure.get("pattern_type") or ("duration" if structure.get("pattern_s") else "distance")
 
     try:
         split_m = float(splits[0].get("distance_m") or 0)
@@ -815,8 +889,18 @@ def _candidate_sequences_from_structure(splits, structure, max_sequences=12):
     if split_m <= 0:
         return []
 
-    total_core_m = float(structure.get("core_distance_m") or (sets * sum(pattern)))
-    max_start_index = max(0, int((len(splits) * split_m - total_core_m) // split_m))
+    total_core_m = float(structure.get("core_distance_m") or 0)
+    total_core_s = float(structure.get("core_duration_s") or 0)
+    if total_core_m <= 0 and pattern_type == "distance":
+        total_core_m = float(sets * sum(pattern))
+    if total_core_s <= 0 and pattern_type == "duration":
+        total_core_s = float(sets * sum(pattern))
+    distance_for_window_m = total_core_m if total_core_m > 0 else (len(splits) * split_m * 0.75)
+    max_start_index = (
+        max(0, len(splits) - 1)
+        if pattern_type == "duration"
+        else max(0, int((len(splits) * split_m - distance_for_window_m) // split_m))
+    )
     candidates = []
 
     for start_index in range(0, max_start_index + 1):
@@ -826,13 +910,18 @@ def _candidate_sequences_from_structure(splits, structure, max_sequences=12):
         ok = True
         for set_number in range(1, sets + 1):
             for rep_number, distance_m in enumerate(pattern, start=1):
-                block = _block_from_equal_splits(splits, cursor, distance_m)
+                block = (
+                    _block_from_duration_splits(splits, cursor, distance_m)
+                    if pattern_type == "duration"
+                    else _block_from_equal_splits(splits, cursor, distance_m)
+                )
                 if not block:
                     ok = False
                     break
                 sequence.append({
                     "set": set_number,
                     "rep": rep_number,
+                    "planned_duration": _format_seconds_hms(int(distance_m)) if pattern_type == "duration" else "",
                     "distance_m": block["distance_m"],
                     "duration": block["duration"],
                     "pace": block["pace"],
@@ -848,7 +937,7 @@ def _candidate_sequences_from_structure(splits, structure, max_sequences=12):
         candidates.append({
             "start_m": round(start_index * split_m),
             "end_m": sequence[-1]["end_m"],
-            "average_pace": _format_pace(total_duration_s, total_core_m),
+            "average_pace": _format_pace(total_duration_s, total_core_m or (sequence[-1]["end_m"] - sequence[0]["start_m"])),
             "total_duration": _format_seconds_hms(round(total_duration_s)),
             "blocks": sequence,
         })
@@ -974,6 +1063,7 @@ def _build_ai_watch_suggestion(plan_text, activities):
             "Handle flexible coach notation such as 3*(330m-330m-330m-1050m) z4 p30 sp2. "
             "If parsed_planned_structure is present, use it as the required structure. "
             "For example sets=3 and pattern_m=[330,330,330,1050] means 12 reps total, not 4 reps total. "
+            "If pattern_s is present, the planned reps are time-based; report the detected distance, duration and pace per planned time block. "
             "Prefer candidate_sequences when available; choose the most plausible sequence or explain low confidence. "
             "Prefer set/rep summaries over listing every 100m split. "
             "If there is extra distance, label it as warmup/cooldown/recovery/dribble when likely. "

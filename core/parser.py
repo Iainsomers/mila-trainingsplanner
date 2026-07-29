@@ -31,10 +31,21 @@ _ZONE_RE = re.compile(r"Z\s*([1-6])\b", re.IGNORECASE)
 
 _DURATION_APOS_RE = re.compile(r"(\d+)\s*['’‘´`′]", re.IGNORECASE)
 _DURATION_MINWORD_RE = re.compile(r"(\d+)\s*min\b", re.IGNORECASE)
+_DURATION_SECONDS_RE = re.compile(r"(\d+)\s*(?:\"|sec\b|s\b)", re.IGNORECASE)
 _DURATION_M_RE = re.compile(r"(\d+)\s*m\b", re.IGNORECASE)
 _DURATION_HMS_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b")
 
 _DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
+
+_DUR_REP_SECONDS_RE = re.compile(
+    r"\b(\d+)\s*(?:x|\*|×)\s*(\d+)\s*(?:\"|sec\b|s\b)",
+    re.IGNORECASE,
+)
+
+_NESTED_DUR_REP_SECONDS_RE = re.compile(
+    r"\b(\d+)\s*(?:x|\*|×)\s*\(?\s*(\d+)\s*(?:x|\*|×)\s*(\d+)\s*(?:\"|sec\b|s\b)\s*\)?(?=\s|$)",
+    re.IGNORECASE,
+)
 
 _REP_RE = re.compile(
     r"\b(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(m|km|k)\b",
@@ -64,6 +75,8 @@ _SET_RE = re.compile(
 _SET_DISTANCE_TOKEN_RE = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)\s*$", re.IGNORECASE)
 _SET_MINUTES_TOKEN_RE = re.compile(r"^\s*(\d+)\s*['’‘´`′]\s*$", re.IGNORECASE)
 _SET_MINWORD_TOKEN_RE = re.compile(r"^\s*(\d+)\s*min\s*$", re.IGNORECASE)
+_SET_SECONDS_TOKEN_RE = re.compile(r"^\s*(\d+)\s*(?:\"|sec|s)\s*$", re.IGNORECASE)
+_SET_HMS_TOKEN_RE = re.compile(r"^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$")
 
 
 def _normalize_t_type(raw_t: Optional[str]) -> Optional[str]:
@@ -154,6 +167,32 @@ def _clean_set_token(token: str) -> str:
     cleaned = _ZONE_RE.sub("", token or "")
     cleaned = _T_RE.sub("", cleaned)
     return cleaned.strip()
+
+
+def _duration_token_seconds(token: str) -> Optional[int]:
+    s = (token or "").strip()
+    if not s:
+        return None
+
+    tm = _SET_HMS_TOKEN_RE.match(s)
+    if tm:
+        a = int(tm.group(1))
+        b = int(tm.group(2))
+        c = tm.group(3)
+        return (a * 3600) + (b * 60) + int(c) if c is not None else (a * 60) + b
+
+    sm = _SET_SECONDS_TOKEN_RE.match(s)
+    if sm:
+        return int(sm.group(1))
+
+    mm = _SET_MINUTES_TOKEN_RE.match(s) or _SET_MINWORD_TOKEN_RE.match(s)
+    if mm:
+        minutes = int(mm.group(1))
+        if minutes > 300:
+            return None
+        return minutes * 60
+
+    return None
 
 
 def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
@@ -304,6 +343,27 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             raw=raw,
         )
 
+    ndr_seconds = _NESTED_DUR_REP_SECONDS_RE.search(s)
+    if ndr_seconds:
+        outer = int(ndr_seconds.group(1))
+        inner = int(ndr_seconds.group(2))
+        seconds = int(ndr_seconds.group(3))
+        total_reps = outer * inner
+        total_s = total_reps * seconds
+
+        return ParseResult(
+            ok=True,
+            zone=zone,
+            distance_m=None,
+            duration_s=total_s,
+            reps=total_reps,
+            rep_distance_m=None,
+            special=None,
+            t_type=t_type,
+            message=f"Recognized: {outer}×({inner}×{seconds}s) in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_s}s",
+            raw=raw,
+        )
+
     ndr = _NESTED_DUR_REP_RE.search(s)
     if ndr:
         outer = int(ndr.group(1))
@@ -381,32 +441,19 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 raw=raw,
             )
 
-        minutes_list = []
-        all_min = True
+        duration_seconds_list = []
+        all_duration = True
         for p in parts:
             p_clean = _clean_set_token(p)
-            tm1 = _SET_MINUTES_TOKEN_RE.match(p_clean)
-            tm2 = _SET_MINWORD_TOKEN_RE.match(p_clean)
-            if tm1:
-                minutes_list.append(int(tm1.group(1)))
-            elif tm2:
-                minutes_list.append(int(tm2.group(1)))
-            else:
-                all_min = False
+            seconds = _duration_token_seconds(p_clean)
+            if seconds is None:
+                all_duration = False
                 break
+            duration_seconds_list.append(seconds)
 
-        if all_min:
-            if any(m > 300 for m in minutes_list):
-                return ParseResult(
-                    ok=False,
-                    zone=zone,
-                    t_type=t_type,
-                    message="Minute value too large in set notation. For distance, use e.g. 5000m or 5km.",
-                    raw=raw,
-                )
-
-            rep_minutes = sum(minutes_list)
-            total_s = reps * rep_minutes * 60
+        if all_duration:
+            rep_s = sum(duration_seconds_list)
+            total_s = reps * rep_s
             return ParseResult(
                 ok=True,
                 zone=zone,
@@ -456,6 +503,24 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     # -------------------------------------------------
     # 3) Reps-duur
     # -------------------------------------------------
+    drm_seconds = _DUR_REP_SECONDS_RE.search(s)
+    if drm_seconds:
+        reps = int(drm_seconds.group(1))
+        seconds = int(drm_seconds.group(2))
+        total_s = reps * seconds
+        return ParseResult(
+            ok=True,
+            zone=zone,
+            duration_s=total_s,
+            distance_m=None,
+            reps=reps,
+            rep_distance_m=None,
+            special=None,
+            t_type=t_type,
+            message=f"Recognized: {reps}×{seconds}s in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {total_s}s",
+            raw=raw,
+        )
+
     drm = _DUR_REP_RE.search(s)
     if drm:
         reps = int(drm.group(1))
@@ -500,6 +565,22 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     # -------------------------------------------------
     # 5) Duration in minutes
     # -------------------------------------------------
+    ds = _DURATION_SECONDS_RE.search(s)
+    if ds:
+        seconds = int(ds.group(1))
+        return ParseResult(
+            ok=True,
+            zone=zone,
+            duration_s=seconds,
+            distance_m=None,
+            reps=None,
+            rep_distance_m=None,
+            special=None,
+            t_type=t_type,
+            message=f"Recognized: {seconds}s in {('T' + _display_t_type(t_type) + ' / ') if t_type else ''}Z{zone} → {seconds}s",
+            raw=raw,
+        )
+
     dm = _DURATION_APOS_RE.search(s) or _DURATION_MINWORD_RE.search(s) or _DURATION_M_RE.search(s)
     if dm:
         minutes = int(dm.group(1))

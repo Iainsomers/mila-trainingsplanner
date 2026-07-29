@@ -540,10 +540,38 @@
 
     function flexDurationSeconds(text) {
       const s = text || "";
+      let setMatch = s.match(/\b(\d+)\s*(?:x|\*|×)\s*\(([^)]+)\)/i);
+      if (setMatch) {
+        const reps = Number(setMatch[1]);
+        const parts = (setMatch[2] || "").split(/\s*-\s*/).filter(Boolean);
+        let total = 0;
+        let allDuration = parts.length > 0;
+        parts.forEach((part) => {
+          let seconds = 0;
+          let m = part.match(/^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$/);
+          if (m) {
+            seconds = m[3] ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : Number(m[1]) * 60 + Number(m[2]);
+          } else {
+            m = part.match(/^\s*(\d+)\s*(?:"|sec\b|s\b)\s*$/i);
+            if (m) seconds = Number(m[1]);
+          }
+          if (!seconds) {
+            m = part.match(/^\s*(\d+)\s*(?:['’‘´`′]|min\b)\s*$/i);
+            if (m) seconds = Number(m[1]) * 60;
+          }
+          if (!seconds) allDuration = false;
+          total += seconds;
+        });
+        if (allDuration && total > 0) return reps * total;
+      }
       let m = s.match(/(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(?:['’‘´`′]|min\b)/i);
       if (m) return Number(m[1]) * Number(String(m[2]).replace(",", ".")) * 60;
+      m = s.match(/(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?)\s*(?:"|sec\b|s\b)/i);
+      if (m) return Number(m[1]) * Number(String(m[2]).replace(",", "."));
       m = s.match(/\b(\d+(?:[.,]\d+)?)\s*(?:['’‘´`′]|min\b)/i);
       if (m) return Number(String(m[1]).replace(",", ".")) * 60;
+      m = s.match(/\b(\d+(?:[.,]\d+)?)\s*(?:"|sec\b|s\b)/i);
+      if (m) return Number(String(m[1]).replace(",", "."));
       return 0;
     }
 

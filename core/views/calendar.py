@@ -1956,11 +1956,46 @@ def _ayc_meters_from_value(value, unit):
 
 def _ayc_text_duration_s(text):
     s = text or ""
+    set_match = re.search(r"\b(\d+)\s*(?:x|\*)\s*\(([^)]+)\)", s, re.I)
+    if set_match:
+        reps = float(set_match.group(1))
+        total = 0.0
+        parts = [part.strip() for part in re.split(r"\s*-\s*", set_match.group(2) or "") if part.strip()]
+        all_duration = bool(parts)
+        for part in parts:
+            seconds = 0.0
+            tm = re.match(r"^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$", part)
+            if tm:
+                a = int(tm.group(1))
+                b = int(tm.group(2))
+                c = tm.group(3)
+                seconds = (a * 3600) + (b * 60) + int(c) if c is not None else (a * 60) + b
+            else:
+                sm = re.match(r"^\s*(\d+)\s*(?:\"|sec\b|s\b)\s*$", part, re.I)
+                if sm:
+                    seconds = float(sm.group(1))
+            if not seconds:
+                mm = re.match(r"^\s*(\d+)\s*(?:'|min\b)\s*$", part, re.I)
+                if mm:
+                    seconds = float(mm.group(1)) * 60
+            if not seconds:
+                all_duration = False
+                break
+            total += seconds
+        if all_duration and total > 0:
+            return reps * total
+
     m = re.search(r"(\d+)\s*(?:x|\*)\s*(\d+(?:[.,]\d+)?)\s*(?:'|min\b)", s, re.I)
     if m:
         return float(m.group(1)) * float(m.group(2).replace(",", ".")) * 60
+    m = re.search(r"(\d+)\s*(?:x|\*)\s*(\d+(?:[.,]\d+)?)\s*(?:\"|sec\b|s\b)", s, re.I)
+    if m:
+        return float(m.group(1)) * float(m.group(2).replace(",", "."))
     m = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(?:'|min\b)", s, re.I)
-    return float(m.group(1).replace(",", ".")) * 60 if m else 0.0
+    if m:
+        return float(m.group(1).replace(",", ".")) * 60
+    m = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(?:\"|sec\b|s\b)", s, re.I)
+    return float(m.group(1).replace(",", ".")) if m else 0.0
 
 
 def _ayc_base_distance_m(text):

@@ -339,6 +339,24 @@ _SIMPLE_TIME_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b")
 
 
 def _text_duration_s(text: str) -> int:
+    set_match = re.search(r"\b(\d+)\s*(?:x|\*|Ã—)\s*\(([^)]+)\)", text or "", re.IGNORECASE)
+    if set_match:
+        try:
+            reps = int(set_match.group(1))
+        except Exception:
+            reps = 0
+        total_s = 0
+        parts = [part.strip() for part in re.split(r"\s*-\s*", set_match.group(2) or "") if part.strip()]
+        all_duration = bool(parts)
+        for part in parts:
+            seconds = _text_duration_s(part)
+            if seconds <= 0:
+                all_duration = False
+                break
+            total_s += seconds
+        if reps > 0 and all_duration and total_s > 0:
+            return reps * total_s
+
     tm = _SIMPLE_TIME_RE.search(text or "")
     if tm:
         a = int(tm.group(1))
@@ -347,6 +365,13 @@ def _text_duration_s(text: str) -> int:
         if c is not None:
             return (a * 3600) + (b * 60) + int(c)
         return (a * 60) + b
+
+    ss = re.search(r"\b(\d+(?:[.,]\d+)?)\s*(?:\"|sec\b|s\b)", text or "", re.IGNORECASE)
+    if ss:
+        try:
+            return int(round(float(ss.group(1).replace(",", "."))))
+        except Exception:
+            return 0
 
     mm = _SIMPLE_MIN_RE.search(text or "")
     if mm:
