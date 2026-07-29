@@ -1465,6 +1465,9 @@
       }).join(" | ");
       box.appendChild(list);
     }
+    if (suggestion.mode === "structured_unmatched") {
+      return box;
+    }
     var use = document.createElement("button");
     use.type = "button";
     use.className = "btn btn-sm btn-outline-success";

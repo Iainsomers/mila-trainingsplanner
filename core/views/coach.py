@@ -759,7 +759,8 @@ def _ayc_like_meters(value, unit):
 
 
 def _coach_duration_token_seconds(token):
-    s = re.sub(r"\bz\s*[1-6]\b", "", token or "", flags=re.I).strip()
+    s = str(token or "").replace("”", '"').replace("“", '"').replace("″", '"').replace("’", "'").replace("‘", "'").replace("′", "'")
+    s = re.sub(r"\bz\s*[1-6]\b", "", s, flags=re.I).strip()
     s = re.sub(r"\b(?:tm|thm|t4|t\s*(?:10|5|3|15|8|800|1500|3000|5000|10000))\b", "", s, flags=re.I).strip()
     m = re.fullmatch(r"(\d{1,2}):(\d{2})(?::(\d{2}))?", s)
     if m:
@@ -767,18 +768,19 @@ def _coach_duration_token_seconds(token):
         b = int(m.group(2))
         c = m.group(3)
         return (a * 3600) + (b * 60) + int(c) if c is not None else (a * 60) + b
-    m = re.fullmatch(r"(\d+)\s*(?:\"|sec|s)", s, re.I)
+    m = re.fullmatch(r"(\d+)\s*(?:\"|sec|secs|second|seconds|s)", s, re.I)
     if m:
         return int(m.group(1))
-    m = re.fullmatch(r"(\d+)\s*(?:'|min)", s, re.I)
+    m = re.fullmatch(r"(\d+)\s*(?:'|min|mins|minute|minutes)", s, re.I)
     if m:
         return int(m.group(1)) * 60
     return None
 
 
 def _coach_suffix_duration_seconds(text, label, default_unit="s"):
-    pattern = rf"\b{re.escape(label)}\s*(\d+(?:[.,]\d+)?)(?:\s*(\"|sec|s|min|'))?"
-    matches = list(re.finditer(pattern, text or "", re.I))
+    normalised = str(text or "").replace("”", '"').replace("“", '"').replace("″", '"').replace("’", "'").replace("‘", "'").replace("′", "'")
+    pattern = rf"\b{re.escape(label)}\s*(\d+(?:[.,]\d+)?)(?:\s*(\"|sec|secs|second|seconds|s|min|mins|minute|minutes|'))?"
+    matches = list(re.finditer(pattern, normalised, re.I))
     if not matches:
         return 0
     match = matches[-1]
@@ -787,7 +789,7 @@ def _coach_suffix_duration_seconds(text, label, default_unit="s"):
     except (TypeError, ValueError):
         return 0
     unit = (match.group(2) or default_unit or "s").lower()
-    if unit in ("min", "'"):
+    if unit in ("min", "mins", "minute", "minutes", "'"):
         return int(round(value * 60))
     return int(round(value))
 
@@ -1196,15 +1198,11 @@ def _build_structured_watch_suggestion(plan_text, planned_structure, activity_pa
 
 
 def _build_ai_watch_suggestion(plan_text, activities):
-    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
-    if not api_key or not plan_text or not activities:
-        if not api_key:
-            return None, "AI unavailable: OPENAI_API_KEY is not set."
-        if not plan_text:
-            return None, "AI unavailable: no planned training text."
+    if not plan_text:
+        return None, "AI unavailable: no planned training text."
+    if not activities:
         return None, "AI unavailable: no watch activities."
 
-    model = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
     planned_structure = _planned_interval_structure(plan_text)
     activity_payloads = [
         _watch_activity_ai_payload(activity, planned_structure=planned_structure)
@@ -1215,7 +1213,26 @@ def _build_ai_watch_suggestion(plan_text, activities):
     structured_suggestion = _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads)
     if structured_suggestion:
         return structured_suggestion, "Structured watch suggestion created."
+    if planned_structure and planned_structure.get("pattern_type") == "duration":
+        expected_reps = int(planned_structure.get("reps_total") or 0)
+        return {
+            "mode": "structured_unmatched",
+            "activity_id": fallback_activity_id or "structured-watch-unmatched",
+            "title": "Structured workout match",
+            "summary": (
+                f"Planned: {plan_text} | Mila recognised {expected_reps} planned work reps, "
+                "but could not match them reliably from the watch samples yet."
+            ),
+            "splits": [],
+            "confidence": 0.2,
+            "ai": False,
+        }, "Structured watch match was inconclusive."
 
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        return None, "AI unavailable: OPENAI_API_KEY is not set."
+
+    model = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
     system_prompt = (
         "You interpret running watch data for a coaching planner. "
         "Match the planned workout text against watch splits. "
