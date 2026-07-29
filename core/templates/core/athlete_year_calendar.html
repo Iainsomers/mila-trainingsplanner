@@ -1440,6 +1440,16 @@
     return row;
   }
   function renderPlanSuggestion(suggestion) {
+    function suggestionTextForSave() {
+      var parts = [];
+      if (suggestion.summary) parts.push(suggestion.summary);
+      if (suggestion.splits && suggestion.splits.length) {
+        parts.push(suggestion.splits.map(function(split) {
+          return (split.label || "Rep") + " " + (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
+        }).join(" | "));
+      }
+      return parts.join("\n");
+    }
     var box = document.createElement("div");
     box.className = "border rounded p-2 mb-2";
     var title = document.createElement("div");
@@ -1474,7 +1484,7 @@
     use.textContent = "Use suggestion";
     use.addEventListener("click", function() {
       var results = document.getElementById("aypWatchResults");
-      var summaryText = suggestion.summary || suggestion.title || "Watch suggestion";
+      var summaryText = suggestionTextForSave() || suggestion.title || "Watch suggestion";
       if (results) {
         results.textContent = summaryText;
         results.setAttribute("data-watch-activity-id", suggestion.activity_id || "plan-watch-suggestion");
