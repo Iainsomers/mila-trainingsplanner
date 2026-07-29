@@ -694,6 +694,48 @@ def _planned_rep_spec(plan_text):
     return {"reps": reps, "distance_m": distance_m}
 
 
+def _planned_interval_structure(plan_text):
+    text = str(plan_text or "").lower().replace(",", ".")
+    match = re.search(r"(\d+)\s*\*\s*\(([^)]+)\)", text)
+    if not match:
+        return None
+
+    try:
+        sets = int(match.group(1))
+    except (TypeError, ValueError):
+        return None
+    if sets <= 0:
+        return None
+
+    distances = []
+    for value, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(km|k|m)\b", match.group(2), re.I):
+        meters = _ayc_like_meters(value, unit)
+        if meters > 0:
+            distances.append(round(meters))
+
+    if not distances:
+        return None
+
+    pause_match = re.search(r"\bp\s*(\d+(?:\.\d+)?)", text)
+    set_pause_match = re.search(r"\bsp\s*(\d+(?:\.\d+)?)", text)
+    return {
+        "sets": sets,
+        "pattern_m": distances,
+        "reps_total": sets * len(distances),
+        "core_distance_m": sets * sum(distances),
+        "pause": f"{pause_match.group(1)}s" if pause_match else "",
+        "set_pause": f"{set_pause_match.group(1)}min" if set_pause_match else "",
+    }
+
+
+def _ayc_like_meters(value, unit):
+    try:
+        n = float(str(value or "0").replace(",", "."))
+    except (TypeError, ValueError):
+        return 0.0
+    return n * 1000.0 if str(unit or "m").lower() in ("km", "k") else n
+
+
 def _seconds_label_to_seconds(label):
     parts = [int(part) for part in str(label or "").split(":") if part.isdigit()]
     if len(parts) == 3:
@@ -719,7 +761,106 @@ def _watch_split_brief(split):
     }
 
 
-def _watch_activity_ai_payload(activity, max_splits=160):
+def _block_from_equal_splits(splits, start_index, distance_m):
+    if not splits:
+        return None
+    try:
+        split_m = float(splits[0].get("distance_m") or 0)
+    except (TypeError, ValueError):
+        split_m = 0.0
+    if split_m <= 0:
+        return None
+
+    remaining = float(distance_m or 0)
+    cursor = int(start_index)
+    duration_s = 0.0
+    used_m = 0.0
+    while remaining > 0 and cursor < len(splits):
+        split = splits[cursor]
+        split_duration_s = _seconds_label_to_seconds(split.get("duration") or "")
+        if split_duration_s is None:
+            return None
+        take_m = min(split_m, remaining)
+        duration_s += float(split_duration_s) * (take_m / split_m)
+        used_m += take_m
+        remaining -= take_m
+        cursor += 1
+
+    if remaining > 1:
+        return None
+    return {
+        "distance_m": round(used_m),
+        "duration": _format_seconds_hms(round(duration_s)),
+        "pace": _format_pace(duration_s, used_m),
+        "start_m": round(start_index * split_m),
+        "end_m": round(start_index * split_m + used_m),
+        "next_index": cursor,
+        "duration_s": duration_s,
+    }
+
+
+def _candidate_sequences_from_structure(splits, structure, max_sequences=12):
+    if not splits or not structure:
+        return []
+
+    pattern = structure.get("pattern_m") or []
+    sets = int(structure.get("sets") or 0)
+    if not pattern or sets <= 0:
+        return []
+
+    try:
+        split_m = float(splits[0].get("distance_m") or 0)
+    except (TypeError, ValueError):
+        split_m = 0.0
+    if split_m <= 0:
+        return []
+
+    total_core_m = float(structure.get("core_distance_m") or (sets * sum(pattern)))
+    max_start_index = max(0, int((len(splits) * split_m - total_core_m) // split_m))
+    candidates = []
+
+    for start_index in range(0, max_start_index + 1):
+        cursor = start_index
+        sequence = []
+        total_duration_s = 0.0
+        ok = True
+        for set_number in range(1, sets + 1):
+            for rep_number, distance_m in enumerate(pattern, start=1):
+                block = _block_from_equal_splits(splits, cursor, distance_m)
+                if not block:
+                    ok = False
+                    break
+                sequence.append({
+                    "set": set_number,
+                    "rep": rep_number,
+                    "distance_m": block["distance_m"],
+                    "duration": block["duration"],
+                    "pace": block["pace"],
+                    "start_m": block["start_m"],
+                    "end_m": block["end_m"],
+                })
+                total_duration_s += float(block.get("duration_s") or 0)
+                cursor = int(block["next_index"])
+            if not ok:
+                break
+        if not ok or not sequence:
+            continue
+        candidates.append({
+            "start_m": round(start_index * split_m),
+            "end_m": sequence[-1]["end_m"],
+            "average_pace": _format_pace(total_duration_s, total_core_m),
+            "total_duration": _format_seconds_hms(round(total_duration_s)),
+            "blocks": sequence,
+        })
+
+    def _candidate_score(candidate):
+        seconds = _seconds_label_to_seconds(candidate.get("total_duration") or "") or 999999
+        return (seconds, abs(float(candidate.get("start_m") or 0) - 2000.0))
+
+    return sorted(candidates, key=_candidate_score)[:max_sequences]
+
+
+def _watch_activity_ai_payload(activity, planned_structure=None, max_splits=160):
     raw = activity.get("raw") or {}
     source, splits = _polar_splits_for_distance(raw, 100.0, max_count=max_splits)
     if not splits:
@@ -729,7 +870,8 @@ def _watch_activity_ai_payload(activity, max_splits=160):
         source = split_info.get("source") or ""
         splits = split_info.get("splits") or []
 
-    return {
+    split_payload = [_watch_split_brief(split) for split in splits[:max_splits]]
+    payload = {
         "id": activity.get("id") or "",
         "start_time": activity.get("start_time") or "",
         "sport": activity.get("sport") or "",
@@ -740,9 +882,12 @@ def _watch_activity_ai_payload(activity, max_splits=160):
         "avg_hr": activity.get("avg_hr"),
         "max_hr": activity.get("max_hr"),
         "split_source": source,
-        "splits": [_watch_split_brief(split) for split in splits[:max_splits]],
+        "splits": split_payload,
         "splits_truncated": len(splits) > max_splits,
     }
+    if planned_structure:
+        payload["candidate_sequences"] = _candidate_sequences_from_structure(split_payload, planned_structure)
+    return payload
 
 
 def _clean_ai_suggestion_text(value, max_len=1800):
@@ -807,7 +952,11 @@ def _build_ai_watch_suggestion(plan_text, activities):
         return None, "AI unavailable: no watch activities."
 
     model = (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
-    activity_payloads = [_watch_activity_ai_payload(activity) for activity in activities[:3]]
+    planned_structure = _planned_interval_structure(plan_text)
+    activity_payloads = [
+        _watch_activity_ai_payload(activity, planned_structure=planned_structure)
+        for activity in activities[:3]
+    ]
     fallback_activity_id = activity_payloads[0].get("id") if activity_payloads else ""
 
     system_prompt = (
@@ -818,14 +967,19 @@ def _build_ai_watch_suggestion(plan_text, activities):
     )
     user_payload = {
         "planned_workout": plan_text,
+        "parsed_planned_structure": planned_structure,
         "activities": activity_payloads,
         "task": (
             "Detect whether the watch activity matches the planned workout. "
             "Handle flexible coach notation such as 3*(330m-330m-330m-1050m) z4 p30 sp2. "
+            "If parsed_planned_structure is present, use it as the required structure. "
+            "For example sets=3 and pattern_m=[330,330,330,1050] means 12 reps total, not 4 reps total. "
+            "Prefer candidate_sequences when available; choose the most plausible sequence or explain low confidence. "
             "Prefer set/rep summaries over listing every 100m split. "
             "If there is extra distance, label it as warmup/cooldown/recovery/dribble when likely. "
             "Return JSON with keys: title, summary, confidence, activity_id, splits. "
-            "splits is an optional compact list of relevant reps with label, distance_m, duration, pace."
+            "splits should list the relevant planned reps compactly, with label, distance_m, duration, pace. "
+            "Do not collapse repeated sets into a single set."
         ),
     }
     body = json.dumps({
