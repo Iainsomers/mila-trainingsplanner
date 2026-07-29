@@ -1162,6 +1162,39 @@ def _candidate_blocks_as_splits(activity_payloads, expected_reps=0):
     return best["activity_id"], splits
 
 
+def _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads):
+    expected_reps = int((planned_structure or {}).get("reps_total") or 0)
+    if not expected_reps:
+        return None
+
+    activity_id, splits = _candidate_blocks_as_splits(activity_payloads, expected_reps=expected_reps)
+    if not splits:
+        return None
+
+    bits = [
+        f"Planned: {plan_text}",
+        f"Matched {len(splits)} work reps from the planned pattern",
+    ]
+    if planned_structure.get("lead_in_s"):
+        bits.append(f"lead-in {_format_seconds_hms(int(planned_structure['lead_in_s']))}")
+    if planned_structure.get("pause_s"):
+        bits.append(f"recovery {_format_seconds_hms(int(planned_structure['pause_s']))} between reps")
+    if planned_structure.get("set_pause_s"):
+        bits.append(f"set recovery {_format_seconds_hms(int(planned_structure['set_pause_s']))}")
+    if planned_structure.get("lead_out_s"):
+        bits.append(f"lead-out {_format_seconds_hms(int(planned_structure['lead_out_s']))}")
+
+    return {
+        "mode": "structured",
+        "activity_id": activity_id or "structured-watch-suggestion",
+        "title": "Structured workout match",
+        "summary": " | ".join(bits),
+        "splits": splits,
+        "confidence": 0.75,
+        "ai": False,
+    }
+
+
 def _build_ai_watch_suggestion(plan_text, activities):
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key or not plan_text or not activities:
@@ -1178,6 +1211,10 @@ def _build_ai_watch_suggestion(plan_text, activities):
         for activity in activities[:3]
     ]
     fallback_activity_id = activity_payloads[0].get("id") if activity_payloads else ""
+
+    structured_suggestion = _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads)
+    if structured_suggestion:
+        return structured_suggestion, "Structured watch suggestion created."
 
     system_prompt = (
         "You interpret running watch data for a coaching planner. "
