@@ -477,8 +477,15 @@ def _polar_sample_type(sample):
 def _polar_sample_values(sample):
     raw = _polar_value(sample, "data", default="")
     values = []
-    for part in str(raw or "").split(","):
-        part = part.strip()
+    parts = raw if isinstance(raw, list) else str(raw or "").split(",")
+    for part in parts:
+        if part is None:
+            values.append(None)
+            continue
+        if isinstance(part, (int, float)):
+            values.append(float(part))
+            continue
+        part = str(part).strip().strip("[]'\"")
         if not part or part.upper() == "NULL":
             values.append(None)
             continue
@@ -1243,8 +1250,11 @@ def _watch_activity_ai_payload(activity, planned_structure=None, max_splits=160)
 
     split_payload = [_watch_split_brief(split) for split in splits[:max_splits]]
     candidate_sequences = []
+    point_source = ""
+    point_count = 0
     if planned_structure and planned_structure.get("pattern_type") == "duration":
-        _point_source, points = _time_distance_points_from_exercise(raw)
+        point_source, points = _time_distance_points_from_exercise(raw)
+        point_count = len(points or [])
         candidate_sequences = _candidate_sequences_from_duration_points(
             points,
             planned_structure,
@@ -1263,6 +1273,8 @@ def _watch_activity_ai_payload(activity, planned_structure=None, max_splits=160)
         "split_source": source,
         "splits": split_payload,
         "splits_truncated": len(splits) > max_splits,
+        "point_source": point_source,
+        "point_count": point_count,
     }
     if planned_structure:
         payload["candidate_sequences"] = candidate_sequences or _candidate_sequences_from_structure(split_payload, planned_structure)
@@ -1405,13 +1417,20 @@ def _build_ai_watch_suggestion(plan_text, activities):
         return structured_suggestion, "Structured watch suggestion created."
     if planned_structure and planned_structure.get("pattern_type") == "duration":
         expected_reps = int(planned_structure.get("reps_total") or 0)
+        diagnostics = []
+        for activity in activity_payloads[:1]:
+            split_count = len(activity.get("splits") or [])
+            point_count = int(activity.get("point_count") or 0)
+            point_source = activity.get("point_source") or activity.get("split_source") or "no sample source"
+            diagnostics.append(f"sample source: {point_source}, points: {point_count}, 100m splits: {split_count}")
+        diagnostic_text = f" | {'; '.join(diagnostics)}" if diagnostics else ""
         return {
             "mode": "structured_unmatched",
             "activity_id": fallback_activity_id or "structured-watch-unmatched",
             "title": "Structured workout match",
             "summary": (
                 f"Planned: {plan_text} | Mila recognised {expected_reps} planned work reps, "
-                "but could not match them reliably from the watch samples yet."
+                f"but could not match them reliably from the watch samples yet.{diagnostic_text}"
             ),
             "splits": [],
             "confidence": 0.2,
