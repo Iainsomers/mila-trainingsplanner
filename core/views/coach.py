@@ -1341,6 +1341,7 @@ def _candidate_sequences_from_structure(splits, structure, max_sequences=6):
                     "planned_duration": _format_seconds_hms(int(distance_m)) if pattern_type == "duration" else "",
                     "distance_m": block["distance_m"],
                     "duration": block["duration"],
+                    "duration_s": block.get("duration_s") or "",
                     "pace": block["pace"],
                     "start_m": block["start_m"],
                     "end_m": block["end_m"],
@@ -1482,6 +1483,77 @@ def _normalise_ai_watch_suggestion(data, fallback_activity_id=""):
         "confidence": confidence,
         "ai": True,
     }
+
+
+def _pace_label_seconds_per_km(label):
+    match = re.search(r"(\d{1,2}):(\d{2})(?=\s*/\s*km\b)", str(label or ""), flags=re.I)
+    if not match:
+        return None
+    return (int(match.group(1)) * 60) + int(match.group(2))
+
+
+def _split_with_inferred_watch_values(split):
+    item = dict(split or {})
+    duration_s = item.get("duration_s")
+    if duration_s in (None, ""):
+        duration_s = _seconds_label_to_seconds(item.get("duration") or "")
+    try:
+        duration_s = float(duration_s or 0)
+    except (TypeError, ValueError):
+        duration_s = 0.0
+
+    try:
+        distance_m = float(item.get("distance_m") or 0)
+    except (TypeError, ValueError):
+        distance_m = 0.0
+
+    pace_s = _pace_label_seconds_per_km(item.get("pace") or "")
+    if distance_m <= 0 and duration_s > 0 and pace_s and pace_s > 0:
+        distance_m = duration_s * 1000.0 / float(pace_s)
+
+    if duration_s <= 0 and distance_m > 0 and pace_s and pace_s > 0:
+        duration_s = distance_m * float(pace_s) / 1000.0
+
+    if distance_m > 0:
+        item["distance_m"] = distance_m
+    if duration_s > 0:
+        item["duration_s"] = duration_s
+    return item
+
+
+def _ai_suggestion_total_splits(suggestion, activity_payloads):
+    splits = [_split_with_inferred_watch_values(split) for split in (suggestion or {}).get("splits") or []]
+    usable_splits = [
+        split for split in splits
+        if float(split.get("distance_m") or 0) > 0 and float(split.get("duration_s") or 0) > 0
+    ]
+    if not usable_splits:
+        return []
+
+    activity_id = (suggestion or {}).get("activity_id") or ""
+    activity = None
+    for candidate in activity_payloads or []:
+        if activity_id and candidate.get("id") == activity_id:
+            activity = candidate
+            break
+    if activity is None and activity_payloads:
+        activity = activity_payloads[0]
+
+    total = list(usable_splits)
+    if activity:
+        used_m = sum(float(split.get("distance_m") or 0) for split in usable_splits)
+        used_s = sum(float(split.get("duration_s") or 0) for split in usable_splits)
+        remaining_m = float(activity.get("distance_m") or 0) - used_m
+        remaining_s = float(activity.get("duration_seconds") or 0) - used_s
+        if remaining_m > 50 and remaining_s > 0:
+            total.append({
+                "label": "Unmatched easy/recovery",
+                "distance_m": remaining_m,
+                "duration": _format_seconds_hms(round(remaining_s)),
+                "duration_s": remaining_s,
+                "pace": _format_pace(remaining_s, remaining_m),
+            })
+    return total
 
 
 def _candidate_blocks_as_splits(activity_payloads, expected_reps=0):
@@ -1695,6 +1767,10 @@ def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
                     f"{suggestion.get('summary') or ''} "
                     f"Mila kept the structured work-rep list at {len(candidate_splits)} reps from the planned pattern."
                 ).strip()
+    if athlete and not has_candidate_totals:
+        ai_total_splits = _ai_suggestion_total_splits(suggestion, activity_payloads)
+        if ai_total_splits:
+            suggestion["zone_totals"] = _watch_zone_totals_summary(athlete, ai_total_splits)
     if athlete and not has_candidate_totals and not suggestion.get("zone_totals"):
         sample_activity_id, fallback_zone_totals = _watch_activity_zone_totals_from_samples(athlete, activities)
         if fallback_zone_totals:
