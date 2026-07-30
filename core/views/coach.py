@@ -1525,14 +1525,26 @@ def _split_with_inferred_watch_values(split):
         distance_m = 0.0
 
     pace_s = _pace_label_seconds_per_km(item.get("pace") or "")
-    if distance_m <= 0 and duration_s > 0 and pace_s and pace_s > 0:
-        distance_m = duration_s * 1000.0 / float(pace_s)
+    inferred_m = 0.0
+    if duration_s > 0 and pace_s and pace_s > 0:
+        inferred_m = duration_s * 1000.0 / float(pace_s)
+    if distance_m <= 0 and inferred_m > 0:
+        distance_m = inferred_m
+    elif distance_m > 0 and inferred_m > 0:
+        conflict_ratio = abs(distance_m - inferred_m) / max(distance_m, inferred_m)
+        if conflict_ratio > 0.35:
+            distance_m = inferred_m
 
     if duration_s <= 0 and distance_m > 0 and pace_s and pace_s > 0:
         duration_s = distance_m * float(pace_s) / 1000.0
 
     if distance_m > 0:
         item["distance_m"] = distance_m
+        rounded_m = int(round(distance_m))
+        label = str(item.get("label") or "")
+        if label and re.search(r"\d+(?:\.\d+)?\s*(?:km|k|m)\b", label, flags=re.I):
+            replacement = f"{rounded_m}m"
+            item["label"] = re.sub(r"\d+(?:\.\d+)?\s*(?:km|k|m)\b", replacement, label, count=1, flags=re.I)
     if duration_s > 0:
         item["duration_s"] = duration_s
     return item
@@ -1783,6 +1795,7 @@ def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
     suggestion = _normalise_ai_watch_suggestion(data, fallback_activity_id=fallback_activity_id)
     if not suggestion:
         return None, "AI unavailable: OpenAI response did not contain a usable suggestion."
+    suggestion["splits"] = [_split_with_inferred_watch_values(split) for split in suggestion.get("splits") or []]
 
     expected_reps = int((planned_structure or {}).get("reps_total") or 0)
     has_candidate_totals = False
