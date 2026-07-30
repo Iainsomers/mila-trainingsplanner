@@ -758,6 +758,21 @@ def _planned_rep_spec(plan_text):
     return {"reps": reps, "distance_m": distance_m}
 
 
+def _planned_single_distance_spec(plan_text):
+    text = str(plan_text or "").lower().replace(",", ".")
+    if "*" in text:
+        return None
+    distances = []
+    for value, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(km|k|m)\b", text, re.I):
+        meters = _ayc_like_meters(value, unit)
+        if meters > 0:
+            distances.append(meters)
+    if not distances:
+        return None
+    distance_m = sum(distances)
+    return {"distance_m": distance_m} if distance_m > 0 else None
+
+
 def _planned_interval_structure(plan_text):
     text = str(plan_text or "").lower().replace(",", ".")
     match = re.search(r"(\d+)\s*\*\s*\(([^)]+)\)", text)
@@ -1880,7 +1895,45 @@ def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
 def _build_plan_watch_suggestion(plan_text, activities, athlete=None):
     spec = _planned_rep_spec(plan_text)
     if not spec:
-        return None
+        distance_spec = _planned_single_distance_spec(plan_text)
+        if not distance_spec:
+            return None
+        planned_m = float(distance_spec.get("distance_m") or 0)
+        best_activity = None
+        best_ratio = None
+        for activity in activities or []:
+            distance_m = float(activity.get("distance_m") or 0)
+            duration_s = activity.get("duration_seconds")
+            if distance_m <= 0 or not duration_s:
+                continue
+            ratio = abs(distance_m - planned_m) / max(distance_m, planned_m)
+            if ratio <= 0.15 and (best_ratio is None or ratio < best_ratio):
+                best_activity = activity
+                best_ratio = ratio
+        if not best_activity:
+            return None
+        distance_m = float(best_activity.get("distance_m") or planned_m)
+        duration_s = best_activity.get("duration_seconds")
+        splits = [{
+            "label": "Total",
+            "distance_m": round(distance_m),
+            "duration": _format_seconds_hms(duration_s),
+            "duration_s": duration_s,
+            "pace": _format_pace(duration_s, distance_m),
+        }]
+        return {
+            "mode": "direct_distance_activity",
+            "activity_id": best_activity.get("id") or "",
+            "title": "Mila distance activity match",
+            "summary": (
+                f"Planned: {plan_text} | Watch activity matched as one continuous run: "
+                f"{distance_m / 1000.0:.2f} km in {_format_seconds_hms(duration_s)}."
+            ),
+            "splits": splits,
+            "zone_totals": _watch_zone_totals_summary(athlete, splits) if athlete else "",
+            "confidence": 0.95,
+            "ai": False,
+        }
     rep_distance = spec["distance_m"]
     reps = spec["reps"]
     loose_rep_activities = []
@@ -1948,6 +2001,17 @@ def _build_plan_watch_suggestion(plan_text, activities, athlete=None):
 
 def _should_use_direct_distance_splits(plan_text, activities):
     spec = _planned_rep_spec(plan_text)
+    if not spec:
+        distance_spec = _planned_single_distance_spec(plan_text)
+        if not distance_spec or not activities:
+            return False
+        planned_m = float(distance_spec.get("distance_m") or 0)
+        if planned_m <= 0:
+            return False
+        activity_m = max(float(activity.get("distance_m") or 0) for activity in activities or [])
+        if activity_m <= 0:
+            return False
+        return abs(activity_m - planned_m) / max(activity_m, planned_m) <= 0.15
     if not spec or not activities:
         return False
     reps = int(spec.get("reps") or 0)
