@@ -189,10 +189,10 @@ def _slot_watch_plan_text(slot) -> str:
     if not slot:
         return ""
     try:
-        segments = list(slot.segments.all())
+        segments = list(slot.segments.all().order_by("order", "id"))
     except Exception:
         segments = list(getattr(slot, "segments", []) or [])
-    core_parts = []
+    watch_parts = []
     all_parts = []
     for seg in segments:
         text = str(getattr(seg, "text", "") or "").strip()
@@ -200,9 +200,9 @@ def _slot_watch_plan_text(slot) -> str:
             continue
         all_parts.append(text)
         seg_type = str(getattr(seg, "type", "") or "").upper()
-        if seg_type in {"CORE", "CORE2"}:
-            core_parts.append(text)
-    return " // ".join(core_parts or all_parts)
+        if seg_type in {"WU", "CORE", "CORE2", "CD"}:
+            watch_parts.append(text)
+    return " // ".join(watch_parts or all_parts)
 
 
 def _slot_modal_prefill_texts(slot):
