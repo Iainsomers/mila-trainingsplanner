@@ -869,7 +869,10 @@ def _coach_suffix_duration_seconds(text, label, default_unit="s"):
         value = float(match.group(1).replace(",", "."))
     except (TypeError, ValueError):
         return 0
-    unit = (match.group(2) or default_unit or "s").lower()
+    explicit_unit = match.group(2)
+    unit = (explicit_unit or default_unit or "s").lower()
+    if not explicit_unit and str(label or "").lower() in ("p", "sp"):
+        unit = "s" if value >= 15 else "min"
     if unit in ("min", "mins", "minute", "minutes", "'"):
         return int(round(value * 60))
     return int(round(value))
