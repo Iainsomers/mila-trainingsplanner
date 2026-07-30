@@ -46,6 +46,33 @@
   .pill-race { background-color: #ff7a00; }
   .pill-important-race { background-color: #cc0000; color: #ffffff; }
   .pill-strength { background-color: #d9d9d9 !important; color: #111111; text-decoration: underline; cursor: pointer; }
+  .daily-check-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .daily-rpe-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 22px;
+    border-radius: 4px;
+    background: #f1f3f5;
+    color: #333333;
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .daily-eval-comment {
+    margin-top: 4px;
+    padding: 4px 6px;
+    border-left: 3px solid #d0d7de;
+    background: #f8f9fa;
+    color: #333333;
+    max-height: 54px;
+    overflow: hidden;
+    white-space: pre-wrap;
+  }
 </style>
 {% endblock %}
 
@@ -184,9 +211,12 @@
                   <div class="mb-2">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                       <strong>AM</strong>
-                      {% if r.check1_badge.symbol %}
-                        <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check1_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check1_badge.symbol }}</span>
-                      {% endif %}
+                      <span class="daily-check-meta">
+                        {% if r.check1 and r.check1.rpe is not None %}<span class="daily-rpe-pill">RPE {{ r.check1.rpe }}</span>{% endif %}
+                        {% if r.check1_badge.symbol %}
+                          <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check1_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check1_badge.symbol }}</span>
+                        {% endif %}
+                      </span>
                     </div>
 
                     {% if r.slot1 %}
@@ -204,6 +234,11 @@
                     {% else %}
                       <div class="daily-slotbox daily-slotbox-empty">-</div>
                     {% endif %}
+                    {% if r.check1.comment %}
+                      <div class="daily-eval-comment">{{ r.check1.comment|linebreaksbr }}</div>
+                    {% elif r.check1.watch_activity_summary %}
+                      <div class="daily-eval-comment">{{ r.check1.watch_activity_summary|linebreaksbr }}</div>
+                    {% endif %}
                   </div>
                 {% endif %}
 
@@ -211,9 +246,12 @@
                   <div class="mb-2">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                       <strong>PM</strong>
-                      {% if r.check2_badge.symbol %}
-                        <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check2_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check2_badge.symbol }}</span>
-                      {% endif %}
+                      <span class="daily-check-meta">
+                        {% if r.check2 and r.check2.rpe is not None %}<span class="daily-rpe-pill">RPE {{ r.check2.rpe }}</span>{% endif %}
+                        {% if r.check2_badge.symbol %}
+                          <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check2_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check2_badge.symbol }}</span>
+                        {% endif %}
+                      </span>
                     </div>
 
                     {% if r.slot2 %}
@@ -230,6 +268,11 @@
                       </div>
                     {% else %}
                       <div class="daily-slotbox daily-slotbox-empty">-</div>
+                    {% endif %}
+                    {% if r.check2.comment %}
+                      <div class="daily-eval-comment">{{ r.check2.comment|linebreaksbr }}</div>
+                    {% elif r.check2.watch_activity_summary %}
+                      <div class="daily-eval-comment">{{ r.check2.watch_activity_summary|linebreaksbr }}</div>
                     {% endif %}
                   </div>
                 {% endif %}

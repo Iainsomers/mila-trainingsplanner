@@ -5037,7 +5037,7 @@ def daily_overview_view(request):
 
     check_map = {}
     for check in AthleteDayCheck.objects.filter(date=d, athlete_id__in=athlete_ids):
-        check_map[(check.athlete_id, int(check.slot_index or 1))] = check.effective_status
+        check_map[(check.athlete_id, int(check.slot_index or 1))] = check
 
     comment_map = {}
     for comment in AthleteDayComment.objects.filter(date=d, athlete_id__in=athlete_ids):
@@ -5180,8 +5180,10 @@ def daily_overview_view(request):
 
     for athlete in athletes:
 
-        status1 = check_map.get((athlete.id, 1), "")
-        status2 = check_map.get((athlete.id, 2), "")
+        check1 = check_map.get((athlete.id, 1))
+        check2 = check_map.get((athlete.id, 2))
+        status1 = check1.effective_status if check1 else ""
+        status2 = check2.effective_status if check2 else ""
         slot1 = effective_daily_slot(athlete, 1)
         slot2 = effective_daily_slot(athlete, 2)
 
@@ -5189,6 +5191,8 @@ def daily_overview_view(request):
             "athlete": athlete,
             "slot1": slot1,
             "slot2": slot2,
+            "check1": check1,
+            "check2": check2,
             "check1_badge": _daily_status_badge(status1),
             "check2_badge": _daily_status_badge(status2),
             "comment": comment_map.get(athlete.id),
