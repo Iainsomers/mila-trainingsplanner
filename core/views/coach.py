@@ -1024,8 +1024,8 @@ def _closest_watch_label(speed_mps, references):
 
 def _km_label(value_m):
     km = float(value_m or 0) / 1000.0
-    text = f"{km:.2f}".rstrip("0").rstrip(".")
-    return f"{text}km"
+    text = f"{km:.1f}".rstrip("0").rstrip(".")
+    return text
 
 
 def _watch_zone_totals_summary(athlete, splits):
@@ -1052,10 +1052,10 @@ def _watch_zone_totals_summary(athlete, splits):
     lines = []
     if z_totals:
         zone_order = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"]
-        lines.append("Z totals: " + ", ".join(f"{label} {_km_label(z_totals[label])}" for label in zone_order if z_totals.get(label)))
+        lines.append(", ".join(f"{label} {_km_label(z_totals[label])}" for label in zone_order if z_totals.get(label)))
     if t_totals:
         t_order = ["TM", "THM", "T10", "T5", "T3", "T15", "T8", "T4"]
-        lines.append("T totals: " + ", ".join(f"{label} {_km_label(t_totals[label])}" for label in t_order if t_totals.get(label)))
+        lines.append(", ".join(f"{label} {_km_label(t_totals[label])}" for label in t_order if t_totals.get(label)))
     return "\n".join(lines)
 
 
