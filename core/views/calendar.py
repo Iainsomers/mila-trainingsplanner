@@ -189,9 +189,18 @@ def _slot_watch_plan_text(slot) -> str:
     if not slot:
         return ""
     try:
-        segments = list(slot.segments.all().order_by("order", "id"))
+        segment_source = slot.segments.all()
+        if hasattr(segment_source, "order_by"):
+            segment_source = segment_source.order_by("order", "id")
+        segments = list(segment_source)
     except Exception:
-        segments = list(getattr(slot, "segments", []) or [])
+        segment_source = getattr(slot, "segments", []) or []
+        try:
+            if hasattr(segment_source, "all"):
+                segment_source = segment_source.all()
+            segments = list(segment_source)
+        except Exception:
+            segments = []
     watch_parts = []
     all_parts = []
     for seg in segments:
