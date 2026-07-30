@@ -1447,6 +1447,46 @@
     row.appendChild(choose);
     return row;
   }
+  function renderWatchTotals(text) {
+    var wrapper = document.createElement("div");
+    wrapper.className = "mb-2";
+    String(text || "").split(/\n+/).forEach(function(line) {
+      var row = document.createElement("div");
+      row.className = "mb-1";
+      var found = false;
+      line.split(/\s*,\s*/).forEach(function(part) {
+        var match = part.trim().match(/^([A-Z]+\d*|T\d+)\s+(\d+(?:\.\d+)?)$/i);
+        if (!match) return;
+        found = true;
+        var label = match[1].toUpperCase();
+        var value = Number(match[2]);
+        var pill = document.createElement("span");
+        pill.className = "total-pill " + (/^Z[1-6]$/.test(label) ? "total-z" + label.substring(1) : "total-race");
+        pill.textContent = label + " " + value.toFixed(1);
+        row.appendChild(pill);
+      });
+      if (!found && line.trim()) {
+        row.textContent = line;
+        row.className = "small text-muted mb-1";
+      }
+      wrapper.appendChild(row);
+    });
+    return wrapper;
+  }
+  function splitWatchTotalsFromSummary(summary) {
+    var lines = String(summary || "").split(/\n/);
+    var body = [];
+    var totals = [];
+    lines.forEach(function(line) {
+      var trimmed = line.trim();
+      if (/^(?:Z[1-6]\s+\d+(?:\.\d+)?(?:,\s*)?)+$/i.test(trimmed) || /^(?:(?:TM|THM|T\d+)\s+\d+(?:\.\d+)?(?:,\s*)?)+$/i.test(trimmed)) {
+        totals.push(trimmed);
+      } else {
+        body.push(line);
+      }
+    });
+    return { body: body.join("\n").trim(), totals: totals.join("\n") };
+  }
   function renderPlanSuggestion(suggestion) {
     function splitLine(split) {
       return (split.label || "Rep") + " " + (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
@@ -1509,11 +1549,7 @@
       box.appendChild(list);
     }
     if (suggestion.zone_totals) {
-      var totals = document.createElement("div");
-      totals.className = "small text-muted mb-2";
-      totals.textContent = suggestion.zone_totals;
-      totals.style.whiteSpace = "pre-wrap";
-      box.appendChild(totals);
+      box.appendChild(renderWatchTotals(suggestion.zone_totals));
     }
     if (suggestion.mode === "structured_unmatched" && !suggestion.zone_totals) {
       return box;
@@ -1527,7 +1563,10 @@
       var suggestions = document.getElementById("aypWatchSuggestions");
       var summaryText = suggestionTextForSave() || suggestion.title || "Watch suggestion";
       if (results) {
-        results.textContent = summaryText;
+        var displayParts = splitWatchTotalsFromSummary(summaryText);
+        results.innerHTML = "";
+        if (displayParts.body) results.appendChild(document.createTextNode(displayParts.body));
+        if (displayParts.totals) results.appendChild(renderWatchTotals(displayParts.totals));
         results.setAttribute("data-watch-activity-id", suggestion.activity_id || "plan-watch-suggestion");
       }
       if (suggestions) suggestions.innerHTML = "";
@@ -1558,7 +1597,10 @@
     if (!id || !summary) return;
     var results = document.getElementById("aypWatchResults");
     if (results) {
-      results.textContent = summary;
+      var displayParts = splitWatchTotalsFromSummary(summary);
+      results.innerHTML = "";
+      if (displayParts.body) results.appendChild(document.createTextNode(displayParts.body));
+      if (displayParts.totals) results.appendChild(renderWatchTotals(displayParts.totals));
       results.setAttribute("data-watch-activity-id", id);
     }
     setVal("aypWatchActivityId", id);

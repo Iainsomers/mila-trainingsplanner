@@ -1024,8 +1024,7 @@ def _closest_watch_label(speed_mps, references):
 
 def _km_label(value_m):
     km = float(value_m or 0) / 1000.0
-    text = f"{km:.1f}".rstrip("0").rstrip(".")
-    return text
+    return f"{km:.1f}"
 
 
 def _watch_zone_totals_summary(athlete, splits):
