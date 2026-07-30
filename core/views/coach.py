@@ -830,12 +830,12 @@ def _coach_duration_token_seconds(token):
         b = int(m.group(2))
         c = m.group(3)
         return (a * 3600) + (b * 60) + int(c) if c is not None else (a * 60) + b
-    m = re.fullmatch(r"(\d+)\s*(?:\"|sec|secs|second|seconds|s)", s, re.I)
+    m = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*(?:\"|sec|secs|second|seconds|s)", s, re.I)
     if m:
-        return int(m.group(1))
-    m = re.fullmatch(r"(\d+)\s*(?:'|min|mins|minute|minutes)", s, re.I)
+        return int(round(float(m.group(1).replace(",", "."))))
+    m = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*(?:'|min|mins|minute|minutes)", s, re.I)
     if m:
-        return int(m.group(1)) * 60
+        return int(round(float(m.group(1).replace(",", ".")) * 60))
     return None
 
 

@@ -78,6 +78,19 @@ _SET_MINWORD_TOKEN_RE = re.compile(r"^\s*(\d+)\s*min\s*$", re.IGNORECASE)
 _SET_SECONDS_TOKEN_RE = re.compile(r"^\s*(\d+)\s*(?:\"|sec|s)\s*$", re.IGNORECASE)
 _SET_HMS_TOKEN_RE = re.compile(r"^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$")
 
+# Decimal durations such as 1.5 min are supported in all planner inputs.
+_DECIMAL_NUMBER = r"\d+(?:[.,]\d+)?"
+_DURATION_APOS_RE = re.compile(rf"({_DECIMAL_NUMBER})\s*['’‘´`′]", re.IGNORECASE)
+_DURATION_MINWORD_RE = re.compile(rf"({_DECIMAL_NUMBER})\s*min\b", re.IGNORECASE)
+_DURATION_SECONDS_RE = re.compile(rf"({_DECIMAL_NUMBER})\s*(?:\"|sec\b|s\b)", re.IGNORECASE)
+_DUR_REP_SECONDS_RE = re.compile(rf"\b(\d+)\s*(?:x|\*|×|Ã—)\s*({_DECIMAL_NUMBER})\s*(?:\"|sec\b|s\b)", re.IGNORECASE)
+_NESTED_DUR_REP_SECONDS_RE = re.compile(rf"\b(\d+)\s*(?:x|\*|×|Ã—)\s*\(?\s*(\d+)\s*(?:x|\*|×|Ã—)\s*({_DECIMAL_NUMBER})\s*(?:\"|sec\b|s\b)\s*\)?(?=\s|$)", re.IGNORECASE)
+_DUR_REP_RE = re.compile(rf"\b(\d+)\s*(?:x|\*|×|Ã—)\s*({_DECIMAL_NUMBER})\s*(?:['’‘´`′]|min\b|m\b)", re.IGNORECASE)
+_NESTED_DUR_REP_RE = re.compile(rf"\b(\d+)\s*(?:x|\*|×|Ã—)\s*\(?\s*(\d+)\s*(?:x|\*|×|Ã—)\s*({_DECIMAL_NUMBER})\s*(?:['’‘´`′]|min\b|m\b)\s*\)?(?=\s|$)", re.IGNORECASE)
+_SET_MINUTES_TOKEN_RE = re.compile(rf"^\s*({_DECIMAL_NUMBER})\s*['’‘´`′]\s*$", re.IGNORECASE)
+_SET_MINWORD_TOKEN_RE = re.compile(rf"^\s*({_DECIMAL_NUMBER})\s*min\s*$", re.IGNORECASE)
+_SET_SECONDS_TOKEN_RE = re.compile(rf"^\s*({_DECIMAL_NUMBER})\s*(?:\"|sec|s)\s*$", re.IGNORECASE)
+
 
 def _normalize_t_type(raw_t: Optional[str]) -> Optional[str]:
     mapping = {
@@ -183,14 +196,14 @@ def _duration_token_seconds(token: str) -> Optional[int]:
 
     sm = _SET_SECONDS_TOKEN_RE.match(s)
     if sm:
-        return int(sm.group(1))
+        return int(round(float(sm.group(1).replace(",", "."))))
 
     mm = _SET_MINUTES_TOKEN_RE.match(s) or _SET_MINWORD_TOKEN_RE.match(s)
     if mm:
-        minutes = int(mm.group(1))
+        minutes = float(mm.group(1).replace(",", "."))
         if minutes > 300:
             return None
-        return minutes * 60
+        return int(round(minutes * 60))
 
     return None
 
@@ -347,9 +360,9 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     if ndr_seconds:
         outer = int(ndr_seconds.group(1))
         inner = int(ndr_seconds.group(2))
-        seconds = int(ndr_seconds.group(3))
+        seconds = float(ndr_seconds.group(3).replace(",", "."))
         total_reps = outer * inner
-        total_s = total_reps * seconds
+        total_s = int(round(total_reps * seconds))
 
         return ParseResult(
             ok=True,
@@ -368,7 +381,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     if ndr:
         outer = int(ndr.group(1))
         inner = int(ndr.group(2))
-        minutes = int(ndr.group(3))
+        minutes = float(ndr.group(3).replace(",", "."))
 
         if minutes > 300:
             return ParseResult(
@@ -381,7 +394,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
             )
 
         total_reps = outer * inner
-        total_s = total_reps * minutes * 60
+        total_s = int(round(total_reps * minutes * 60))
 
         return ParseResult(
             ok=True,
@@ -506,8 +519,8 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     drm_seconds = _DUR_REP_SECONDS_RE.search(s)
     if drm_seconds:
         reps = int(drm_seconds.group(1))
-        seconds = int(drm_seconds.group(2))
-        total_s = reps * seconds
+        seconds = float(drm_seconds.group(2).replace(",", "."))
+        total_s = int(round(reps * seconds))
         return ParseResult(
             ok=True,
             zone=zone,
@@ -524,10 +537,10 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     drm = _DUR_REP_RE.search(s)
     if drm:
         reps = int(drm.group(1))
-        minutes = int(drm.group(2))
+        minutes = float(drm.group(2).replace(",", "."))
 
         if minutes <= 300:
-            total_s = reps * minutes * 60
+            total_s = int(round(reps * minutes * 60))
             return ParseResult(
                 ok=True,
                 zone=zone,
@@ -567,7 +580,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     # -------------------------------------------------
     ds = _DURATION_SECONDS_RE.search(s)
     if ds:
-        seconds = int(ds.group(1))
+        seconds = int(round(float(ds.group(1).replace(",", "."))))
         return ParseResult(
             ok=True,
             zone=zone,
@@ -583,7 +596,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
 
     dm = _DURATION_APOS_RE.search(s) or _DURATION_MINWORD_RE.search(s) or _DURATION_M_RE.search(s)
     if dm:
-        minutes = int(dm.group(1))
+        minutes = float(dm.group(1).replace(",", "."))
 
         if minutes > 300:
             return ParseResult(
@@ -595,7 +608,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 raw=raw,
             )
 
-        total_s = minutes * 60
+        total_s = int(round(minutes * 60))
         return ParseResult(
             ok=True,
             zone=zone,

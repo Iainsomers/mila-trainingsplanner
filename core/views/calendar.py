@@ -1972,13 +1972,13 @@ def _ayc_text_duration_s(text):
                 c = tm.group(3)
                 seconds = (a * 3600) + (b * 60) + int(c) if c is not None else (a * 60) + b
             else:
-                sm = re.match(r"^\s*(\d+)\s*(?:\"|sec\b|s\b)\s*$", part, re.I)
+                sm = re.match(r"^\s*(\d+(?:[.,]\d+)?)\s*(?:\"|sec\b|s\b)\s*$", part, re.I)
                 if sm:
-                    seconds = float(sm.group(1))
+                    seconds = float(sm.group(1).replace(",", "."))
             if not seconds:
-                mm = re.match(r"^\s*(\d+)\s*(?:'|min\b)\s*$", part, re.I)
+                mm = re.match(r"^\s*(\d+(?:[.,]\d+)?)\s*(?:'|min\b)\s*$", part, re.I)
                 if mm:
-                    seconds = float(mm.group(1)) * 60
+                    seconds = float(mm.group(1).replace(",", ".")) * 60
             if not seconds:
                 all_duration = False
                 break
