@@ -1177,6 +1177,11 @@ def _candidate_sequences_from_duration_points(points, structure, activity_durati
         cursor_s = float(offset_s)
         sequence = []
         recovery_blocks = []
+        if offset_s > 0:
+            pre_block = _duration_block_from_points(points, 0, offset_s)
+            if pre_block and float(pre_block.get("distance_m") or 0) > 0:
+                pre_block.update({"type": "recovery", "label": "extra before planned structure"})
+                recovery_blocks.append(pre_block)
         if lead_in_s:
             lead_block = _duration_block_from_points(points, cursor_s, lead_in_s)
             if lead_block:
@@ -1227,6 +1232,12 @@ def _candidate_sequences_from_duration_points(points, structure, activity_durati
             cursor_s += lead_out_s
         if cursor_s > final_time_s + 30:
             continue
+        trailing_s = final_time_s - cursor_s
+        if trailing_s > 10:
+            trailing = _duration_block_from_points(points, cursor_s, trailing_s)
+            if trailing and float(trailing.get("distance_m") or 0) > 0:
+                trailing.update({"type": "recovery", "label": "extra after planned structure"})
+                recovery_blocks.append(trailing)
         candidates.append({
             "start_s": offset_s,
             "end_s": round(cursor_s),
