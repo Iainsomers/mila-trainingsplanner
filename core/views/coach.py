@@ -667,6 +667,7 @@ def _splits_from_time_distance_points(points, split_m=1000.0, max_count=None):
             "label": label,
             "distance_m": round(split_m),
             "duration": _format_seconds_hms(round(duration)),
+            "duration_s": duration,
             "pace": _format_pace(duration, split_m),
         })
         previous_threshold_m = threshold_m
@@ -681,6 +682,7 @@ def _splits_from_time_distance_points(points, split_m=1000.0, max_count=None):
             "label": f"{final_d / 1000:.2f} km",
             "distance_m": round(partial_m),
             "duration": _format_seconds_hms(round(partial_t)),
+            "duration_s": partial_t,
             "pace": _format_pace(partial_t, partial_m),
         })
     return splits
