@@ -761,17 +761,34 @@ def _planned_rep_spec(plan_text):
 def _planned_interval_structure(plan_text):
     text = str(plan_text or "").lower().replace(",", ".")
     match = re.search(r"(\d+)\s*\*\s*\(([^)]+)\)", text)
+    simple_match = None
     if not match:
-        return None
+        simple_match = re.search(r"(\d+)\s*\*\s*(\d+(?:\.\d+)?)\s*(km|k|m)\b", text, re.I)
+        if not simple_match:
+            return None
 
     try:
-        sets = int(match.group(1))
+        sets = int(match.group(1) if match else 1)
     except (TypeError, ValueError):
         return None
     if sets <= 0:
         return None
 
-    inner = match.group(2) or ""
+    if simple_match:
+        try:
+            simple_reps = int(simple_match.group(1))
+        except (TypeError, ValueError):
+            return None
+        meters = _ayc_like_meters(simple_match.group(2), simple_match.group(3))
+        if simple_reps <= 0 or meters <= 0:
+            return None
+        inner = "-".join([f"{int(round(meters))}m"] * simple_reps)
+        match_start = simple_match.start()
+        match_end = simple_match.end()
+    else:
+        inner = match.group(2) or ""
+        match_start = match.start()
+        match_end = match.end()
     parts = [part.strip() for part in re.split(r"\s*-\s*", inner) if part.strip()]
     distances = []
     for value, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(km|k|m)\b", inner, re.I):
@@ -793,7 +810,7 @@ def _planned_interval_structure(plan_text):
 
     pause_s = _coach_suffix_duration_seconds(text, "p")
     set_pause_s = _coach_suffix_duration_seconds(text, "sp", default_unit="min")
-    lead_in_s, lead_out_s = _planned_easy_bookends_s(text, match.start(), match.end())
+    lead_in_s, lead_out_s = _planned_easy_bookends_s(text, match_start, match_end)
     out = {
         "sets": sets,
         "pattern_type": "distance" if distances else "duration",
@@ -1570,6 +1587,7 @@ def _candidate_blocks_as_splits(activity_payloads, expected_reps=0):
                 best = {
                     "score": score,
                     "activity_id": activity.get("id") or "",
+                    "activity": activity,
                     "blocks": blocks,
                     "recovery_blocks": candidate.get("recovery_blocks") or [],
                 }
@@ -1594,6 +1612,19 @@ def _candidate_blocks_as_splits(activity_payloads, expected_reps=0):
 
     splits = [_split_from_block(block) for block in best["blocks"]]
     total_splits = splits + [_split_from_block(block, default_label="Recovery") for block in best["recovery_blocks"]]
+    used_m = sum(float(split.get("distance_m") or 0) for split in total_splits)
+    used_s = sum(float(split.get("duration_s") or 0) for split in total_splits)
+    activity = best.get("activity") or {}
+    remaining_m = float(activity.get("distance_m") or 0) - used_m
+    remaining_s = float(activity.get("duration_seconds") or 0) - used_s
+    if remaining_m > 50 and remaining_s > 0:
+        total_splits.append({
+            "label": "Unmatched easy/recovery",
+            "distance_m": remaining_m,
+            "duration": _format_seconds_hms(round(remaining_s)),
+            "duration_s": remaining_s,
+            "pace": _format_pace(remaining_s, remaining_m),
+        })
     return best["activity_id"], splits, total_splits
 
 
