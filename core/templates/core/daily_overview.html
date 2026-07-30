@@ -57,6 +57,10 @@
       <p class="text-muted mb-0">{{ date }}</p>
     </div>
     <div class="d-flex gap-2">
+      {% if show_results %}
+        <a href="{{ previous_day_url }}" class="btn btn-sm btn-outline-primary">Previous day</a>
+        <a href="{{ next_day_url }}" class="btn btn-sm btn-outline-primary">Next day</a>
+      {% endif %}
       <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
       {% if show_results %}
         <a href="{{ selection_url }}" class="btn btn-sm btn-outline-secondary">Selection</a>

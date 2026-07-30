@@ -5202,6 +5202,13 @@ def daily_overview_view(request):
     if selection_mode == "selection":
         selection_query["athletes"] = [str(athlete_id) for athlete_id in sorted(selected_athlete_ids)]
     selection_url = f"{reverse('daily_overview')}?{urlencode(selection_query, doseq=True)}"
+    day_nav_query = dict(selection_query)
+    if show_results:
+        day_nav_query["ok"] = "1"
+    previous_day_query = dict(day_nav_query)
+    previous_day_query["date"] = (d - timedelta(days=1)).isoformat()
+    next_day_query = dict(day_nav_query)
+    next_day_query["date"] = (d + timedelta(days=1)).isoformat()
 
     return render(request, "core/daily_overview.html", {
         "rows": rows,
@@ -5216,4 +5223,6 @@ def daily_overview_view(request):
         "show_am": slot_filter in {"am", "both"},
         "show_pm": slot_filter in {"pm", "both"},
         "selection_url": selection_url,
+        "previous_day_url": f"{reverse('daily_overview')}?{urlencode(previous_day_query, doseq=True)}",
+        "next_day_url": f"{reverse('daily_overview')}?{urlencode(next_day_query, doseq=True)}",
     })
