@@ -54,6 +54,8 @@ class CoachSettings(models.Model):
 
     # Daily Coach Overview: saved quick-selection of athletes.
     dco_train_athlete_ids = models.JSONField(default=list, blank=True)
+    dco_saved_selections = models.JSONField(default=list, blank=True)
+    dco_standard_selection_id = models.CharField(max_length=40, blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

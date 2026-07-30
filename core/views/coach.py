@@ -4975,10 +4975,6 @@ def daily_overview_view(request):
     if slot_filter not in {"am", "pm", "both"}:
         slot_filter = "both"
 
-    selection_mode = (request.GET.get("selection") or "all").strip().lower()
-    if selection_mode not in {"all", "selection", "trains"}:
-        selection_mode = "all"
-
     try:
         d = date.fromisoformat(date_value)
     except Exception:
@@ -4993,6 +4989,34 @@ def daily_overview_view(request):
         for value in (coach_settings.dco_train_athlete_ids or [])
         if str(value).isdigit() and int(value) in all_athlete_ids
     }
+    dco_saved_selections = []
+    for item in coach_settings.dco_saved_selections or []:
+        if not isinstance(item, dict):
+            continue
+        selection_id = str(item.get("id") or "").strip()
+        name = str(item.get("name") or "").strip()
+        athlete_ids_for_selection = [
+            int(value)
+            for value in (item.get("athlete_ids") or [])
+            if str(value).isdigit() and int(value) in all_athlete_ids
+        ]
+        if selection_id and name:
+            dco_saved_selections.append({
+                "id": selection_id,
+                "name": name,
+                "athlete_ids": athlete_ids_for_selection,
+                "athlete_ids_csv": ",".join(str(value) for value in athlete_ids_for_selection),
+                "is_standard": selection_id == (coach_settings.dco_standard_selection_id or ""),
+            })
+    standard_selection = next((item for item in dco_saved_selections if item["is_standard"]), None)
+
+    requested_selection_mode = (request.GET.get("selection") or "").strip().lower()
+    selection_mode = requested_selection_mode or ("selection" if standard_selection else "all")
+    if selection_mode not in {"all", "selection", "trains", "planned_training"}:
+        selection_mode = "all"
+    selected_saved_selection_id = (request.GET.get("saved_selection") or "").strip()
+    if not selected_saved_selection_id and not requested_selection_mode and standard_selection:
+        selected_saved_selection_id = standard_selection["id"]
 
     if request.method == "POST" and request.POST.get("action") == "save_dco_trains":
         new_train_ids = [
@@ -5017,17 +5041,75 @@ def daily_overview_view(request):
             redirect_query["athletes"] = posted_selected
         return redirect(f"{reverse('daily_overview')}?{urlencode(redirect_query, doseq=True)}")
 
-    selected_athlete_ids = {
-        int(value)
-        for value in request.GET.getlist("athletes")
-        if str(value).isdigit()
-    }
+    if request.method == "POST" and request.POST.get("action") == "save_dco_selection":
+        selected_ids = [
+            int(value)
+            for value in request.POST.getlist("athletes")
+            if str(value).isdigit() and int(value) in all_athlete_ids
+        ]
+        selected_ids = sorted(set(selected_ids))
+        selection_id = (request.POST.get("saved_selection") or "").strip()
+        selection_name = (request.POST.get("selection_name") or "").strip()
+        make_standard = request.POST.get("standard_selection") == "on"
+
+        updated = False
+        saved_rows = []
+        for item in dco_saved_selections:
+            row = {
+                "id": item["id"],
+                "name": item["name"],
+                "athlete_ids": item["athlete_ids"],
+            }
+            if selection_id and item["id"] == selection_id:
+                row["name"] = selection_name or item["name"]
+                row["athlete_ids"] = selected_ids
+                updated = True
+            saved_rows.append(row)
+        if not updated and selection_name:
+            selection_id = secrets.token_hex(8)
+            saved_rows.append({
+                "id": selection_id,
+                "name": selection_name,
+                "athlete_ids": selected_ids,
+            })
+
+        if make_standard and selection_id:
+            coach_settings.dco_standard_selection_id = selection_id
+        elif selection_id and selection_id == coach_settings.dco_standard_selection_id:
+            coach_settings.dco_standard_selection_id = ""
+        elif coach_settings.dco_standard_selection_id and not any(row["id"] == coach_settings.dco_standard_selection_id for row in saved_rows):
+            coach_settings.dco_standard_selection_id = ""
+        coach_settings.dco_saved_selections = saved_rows
+        coach_settings.save(update_fields=["dco_saved_selections", "dco_standard_selection_id", "updated_at"])
+
+        redirect_query = {
+            "date": request.POST.get("date") or date_value,
+            "slots": request.POST.get("slots") or slot_filter,
+            "selection": "selection",
+            "saved_selection": selection_id,
+            "athletes": [str(value) for value in selected_ids],
+        }
+        return redirect(f"{reverse('daily_overview')}?{urlencode(redirect_query, doseq=True)}")
+
+    selected_athlete_ids = set()
+    selected_saved_selection = next((item for item in dco_saved_selections if item["id"] == selected_saved_selection_id), None)
+    if selection_mode == "selection" and selected_saved_selection:
+        selected_athlete_ids = set(selected_saved_selection["athlete_ids"])
+    else:
+        selected_athlete_ids = {
+            int(value)
+            for value in request.GET.getlist("athletes")
+            if str(value).isdigit()
+        }
 
     if selection_mode == "selection":
         athletes = [athlete for athlete in all_athletes if athlete.id in selected_athlete_ids]
     elif selection_mode == "trains":
         athletes = [athlete for athlete in all_athletes if athlete.id in dco_train_athlete_ids]
         selected_athlete_ids = set(dco_train_athlete_ids)
+    elif selection_mode == "planned_training":
+        athletes = all_athletes
+        selected_athlete_ids = {athlete.id for athlete in athletes}
     else:
         athletes = all_athletes
         selected_athlete_ids = {athlete.id for athlete in athletes}
@@ -5198,12 +5280,20 @@ def daily_overview_view(request):
             "comment": comment_map.get(athlete.id),
         })
 
+    if selection_mode == "planned_training":
+        rows = [
+            row for row in rows
+            if ((slot_filter in {"am", "both"} and row["slot1"]) or (slot_filter in {"pm", "both"} and row["slot2"]))
+        ]
+
     selection_query = {
         "date": date_value,
         "slots": slot_filter,
         "selection": selection_mode,
     }
     if selection_mode == "selection":
+        if selected_saved_selection_id:
+            selection_query["saved_selection"] = selected_saved_selection_id
         selection_query["athletes"] = [str(athlete_id) for athlete_id in sorted(selected_athlete_ids)]
     selection_url = f"{reverse('daily_overview')}?{urlencode(selection_query, doseq=True)}"
     day_nav_query = dict(selection_query)
@@ -5223,6 +5313,8 @@ def daily_overview_view(request):
         "all_athletes": all_athletes,
         "selected_athlete_ids": selected_athlete_ids,
         "dco_train_athlete_ids": dco_train_athlete_ids,
+        "dco_saved_selections": dco_saved_selections,
+        "selected_saved_selection_id": selected_saved_selection_id,
         "show_results": show_results,
         "show_am": slot_filter in {"am", "both"},
         "show_pm": slot_filter in {"pm", "both"},

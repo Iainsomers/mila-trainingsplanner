@@ -126,11 +126,42 @@
               <option value="all" {% if selection_mode == "all" %}selected{% endif %}>All</option>
               <option value="selection" {% if selection_mode == "selection" %}selected{% endif %}>Selection</option>
               <option value="trains" {% if selection_mode == "trains" %}selected{% endif %}>Trains</option>
+              <option value="planned_training" {% if selection_mode == "planned_training" %}selected{% endif %}>Planned training</option>
             </select>
           </div>
         </div>
 
         <div id="dailyAthleteSelection" class="mt-3 {% if selection_mode != 'selection' %}d-none{% endif %}">
+          <div class="row g-2 align-items-end mb-2">
+            <div class="col-sm-4">
+              <label class="form-label">Load selection</label>
+              <select name="saved_selection" id="dailySavedSelection" class="form-select">
+                <option value="">Manual selection</option>
+                {% for saved in dco_saved_selections %}
+                  <option
+                    value="{{ saved.id }}"
+                    data-name="{{ saved.name|escape }}"
+                    data-athletes="{{ saved.athlete_ids_csv }}"
+                    data-standard="{% if saved.is_standard %}1{% else %}0{% endif %}"
+                    {% if saved.id == selected_saved_selection_id %}selected{% endif %}
+                  >{{ saved.name }}{% if saved.is_standard %} *{% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Save as</label>
+              <input type="text" id="dcoSelectionNameInput" class="form-control" value="">
+            </div>
+            <div class="col-sm-2">
+              <label class="form-check mb-2">
+                <input type="checkbox" id="dcoStandardSelectionInput" class="form-check-input">
+                <span class="form-check-label">Standard selection</span>
+              </label>
+            </div>
+            <div class="col-sm-2">
+              <button type="button" id="dcoSaveSelectionBtn" class="btn btn-outline-primary btn-sm w-100">Save</button>
+            </div>
+          </div>
           <label class="form-label">Athletes</label>
           <div class="daily-athlete-list">
             {% for athlete in all_athletes %}
@@ -154,6 +185,17 @@
           <button type="submit" name="ok" value="1" class="btn btn-primary">OK</button>
         </div>
       </div>
+    </form>
+
+    <form method="post" id="dcoSelectionSaveForm" class="d-none">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_dco_selection">
+      <input type="hidden" name="date" id="dcoSelectionSaveDate" value="{{ date_value }}">
+      <input type="hidden" name="slots" id="dcoSelectionSaveSlots" value="{{ slot_filter }}">
+      <input type="hidden" name="saved_selection" id="dcoSelectionSaveId" value="{{ selected_saved_selection_id }}">
+      <input type="hidden" name="selection_name" id="dcoSelectionSaveName" value="">
+      <input type="hidden" name="standard_selection" id="dcoSelectionSaveStandard" value="">
+      <div id="dcoSelectionSaveAthletes"></div>
     </form>
 
     <div class="card daily-selection-panel mb-3">
@@ -277,14 +319,11 @@
                   </div>
                 {% endif %}
 
-                <div>
-                  <strong>Comment</strong>
-                  {% if r.comment %}
+                {% if r.comment %}
+                  <div>
                     <div style="max-height:38px; overflow:hidden;">{{ r.comment.text|linebreaksbr }}</div>
-                  {% else %}
-                    <span class="text-muted">-</span>
-                  {% endif %}
-                </div>
+                  </div>
+                {% endif %}
               </div>
             </div>
           </div>
@@ -303,16 +342,64 @@
   const selectionForm = document.getElementById("dailySelectionForm");
   const trainToggle = document.getElementById("dcoTrainToggle");
   const trainForm = document.getElementById("dcoTrainForm");
+  const savedSelection = document.getElementById("dailySavedSelection");
+  const selectionNameInput = document.getElementById("dcoSelectionNameInput");
+  const standardSelectionInput = document.getElementById("dcoStandardSelectionInput");
+  const saveSelectionBtn = document.getElementById("dcoSaveSelectionBtn");
+  const selectionSaveForm = document.getElementById("dcoSelectionSaveForm");
 
   function syncSelectionMode() {
     if (!mode || !athleteSelection) return;
     athleteSelection.classList.toggle("d-none", mode.value !== "selection");
   }
 
+  function syncSavedSelectionFields() {
+    if (!savedSelection) return;
+    const option = savedSelection.options[savedSelection.selectedIndex];
+    if (selectionNameInput && option) selectionNameInput.value = option.getAttribute("data-name") || "";
+    if (standardSelectionInput && option) standardSelectionInput.checked = option.getAttribute("data-standard") === "1";
+    if (selectionForm && option && savedSelection.value) {
+      const selectedIds = new Set((option.getAttribute("data-athletes") || "").split(",").filter(Boolean));
+      selectionForm.querySelectorAll("input[name='athletes']").forEach(function(input) {
+        input.checked = selectedIds.has(input.value);
+      });
+    }
+  }
+
   if (mode) {
     mode.addEventListener("change", syncSelectionMode);
   }
   syncSelectionMode();
+  if (savedSelection) {
+    savedSelection.addEventListener("change", syncSavedSelectionFields);
+    syncSavedSelectionFields();
+  }
+
+  if (saveSelectionBtn && selectionForm && selectionSaveForm) {
+    saveSelectionBtn.addEventListener("click", function() {
+      const dateInput = selectionForm.querySelector("input[name='date']");
+      const slotInput = selectionForm.querySelector("input[name='slots']:checked");
+      const selectedBox = document.getElementById("dcoSelectionSaveAthletes");
+
+      document.getElementById("dcoSelectionSaveDate").value = dateInput ? dateInput.value : "";
+      document.getElementById("dcoSelectionSaveSlots").value = slotInput ? slotInput.value : "both";
+      document.getElementById("dcoSelectionSaveId").value = savedSelection ? savedSelection.value : "";
+      document.getElementById("dcoSelectionSaveName").value = selectionNameInput ? selectionNameInput.value : "";
+      document.getElementById("dcoSelectionSaveStandard").value = standardSelectionInput && standardSelectionInput.checked ? "on" : "";
+
+      if (selectedBox) {
+        selectedBox.innerHTML = "";
+        selectionForm.querySelectorAll("input[name='athletes']:checked").forEach(function(input) {
+          const hidden = document.createElement("input");
+          hidden.type = "hidden";
+          hidden.name = "athletes";
+          hidden.value = input.value;
+          selectedBox.appendChild(hidden);
+        });
+      }
+      selectionSaveForm.submit();
+    });
+  }
 
   if (trainToggle && trainForm) {
     trainToggle.addEventListener("click", function() {
