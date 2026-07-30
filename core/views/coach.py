@@ -1002,6 +1002,29 @@ def _watch_zone_totals_summary(athlete, splits):
     return "\n".join(lines)
 
 
+def _watch_activity_zone_totals_from_samples(athlete, activities, split_m=50.0):
+    if not athlete:
+        return "", ""
+    best = None
+    for activity in activities or []:
+        source, splits = _polar_splits_for_distance(activity.get("raw") or {}, split_m, max_count=None)
+        if not splits:
+            continue
+        distance_m = float(activity.get("distance_m") or 0)
+        if distance_m <= 0:
+            distance_m = sum(float(split.get("distance_m") or 0) for split in splits)
+        if best is None or distance_m > best["distance_m"]:
+            best = {
+                "activity_id": activity.get("id") or "",
+                "distance_m": distance_m,
+                "source": source,
+                "splits": splits,
+            }
+    if not best:
+        return "", ""
+    return best["activity_id"], _watch_zone_totals_summary(athlete, best["splits"])
+
+
 def _rep_times_text(splits, limit=40):
     times = [split.get("duration") for split in splits if split.get("duration")]
     if len(times) <= limit:
@@ -1553,6 +1576,7 @@ def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
         return structured_suggestion, "Structured watch suggestion created."
     if planned_structure and planned_structure.get("pattern_type") == "duration":
         expected_reps = int(planned_structure.get("reps_total") or 0)
+        sample_activity_id, fallback_zone_totals = _watch_activity_zone_totals_from_samples(athlete, activities)
         diagnostics = []
         for activity in activity_payloads[:1]:
             split_count = len(activity.get("splits") or [])
@@ -1562,14 +1586,14 @@ def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
         diagnostic_text = f" | {'; '.join(diagnostics)}" if diagnostics else ""
         return {
             "mode": "structured_unmatched",
-            "activity_id": fallback_activity_id or "structured-watch-unmatched",
+            "activity_id": sample_activity_id or fallback_activity_id or "structured-watch-unmatched",
             "title": "Structured workout match",
             "summary": (
                 f"Planned: {plan_text} | Mila recognised {expected_reps} planned work reps, "
                 f"but could not match them reliably from the watch samples yet.{diagnostic_text}"
             ),
             "splits": [],
-            "zone_totals": "",
+            "zone_totals": fallback_zone_totals,
             "confidence": 0.2,
             "ai": False,
         }, "Structured watch match was inconclusive."
@@ -1656,21 +1680,28 @@ def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
         return None, "AI unavailable: OpenAI response did not contain a usable suggestion."
 
     expected_reps = int((planned_structure or {}).get("reps_total") or 0)
+    has_candidate_totals = False
     if expected_reps:
         candidate_activity_id, candidate_splits, candidate_total_splits = _candidate_blocks_as_splits(activity_payloads, expected_reps=expected_reps)
         if candidate_splits:
             suggestion["splits"] = candidate_splits
             suggestion["zone_totals"] = _watch_zone_totals_summary(athlete, candidate_total_splits) if athlete else ""
+            has_candidate_totals = True
             suggestion["activity_id"] = candidate_activity_id or suggestion.get("activity_id") or fallback_activity_id
             if len(candidate_splits) != len(data.get("splits") or []):
                 suggestion["summary"] = (
                     f"{suggestion.get('summary') or ''} "
                     f"Mila kept the structured work-rep list at {len(candidate_splits)} reps from the planned pattern."
                 ).strip()
+    if athlete and not has_candidate_totals and not suggestion.get("zone_totals"):
+        sample_activity_id, fallback_zone_totals = _watch_activity_zone_totals_from_samples(athlete, activities)
+        if fallback_zone_totals:
+            suggestion["zone_totals"] = fallback_zone_totals
+            suggestion["activity_id"] = suggestion.get("activity_id") or sample_activity_id or fallback_activity_id
     return suggestion, "AI suggestion created."
 
 
-def _build_plan_watch_suggestion(plan_text, activities):
+def _build_plan_watch_suggestion(plan_text, activities, athlete=None):
     spec = _planned_rep_spec(plan_text)
     if not spec:
         return None
@@ -1702,6 +1733,7 @@ def _build_plan_watch_suggestion(plan_text, activities):
             "title": f"Detected {len(splits)} separate reps around {int(round(rep_distance))}m",
             "summary": f"Planned: {plan_text} | Detected: {len(splits)} reps around {int(round(rep_distance))}m | Rep times: {_rep_times_text(splits)}",
             "splits": splits,
+            "zone_totals": _watch_zone_totals_summary(athlete, splits) if athlete else "",
         }
 
     best = None
@@ -1720,12 +1752,16 @@ def _build_plan_watch_suggestion(plan_text, activities):
             "title": f"Detected {len(splits)} reps of {int(round(rep_distance))}m from {best['source']}",
             "summary": f"Planned: {plan_text} | Detected: {len(splits)} reps of {int(round(rep_distance))}m | Rep times: {_rep_times_text(splits)}",
             "splits": splits,
+            "zone_totals": _watch_zone_totals_summary(athlete, splits) if athlete else "",
         }
+    sample_activity_id, fallback_zone_totals = _watch_activity_zone_totals_from_samples(athlete, activities)
     return {
         "mode": "unclear",
+        "activity_id": sample_activity_id or "",
         "title": f"Planned {reps} x {int(round(rep_distance))}m, but no matching split source found",
         "summary": f"Planned: {plan_text} | Watch data found, but no distance/speed/route samples for {int(round(rep_distance))}m reps.",
         "splits": [],
+        "zone_totals": fallback_zone_totals,
     }
 
 
@@ -2174,7 +2210,7 @@ def polar_activity_suggestions_view(request):
     if planned_text:
         plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, activities, athlete=athlete)
         if not plan_suggestion:
-            plan_suggestion = _build_plan_watch_suggestion(planned_text, activities)
+            plan_suggestion = _build_plan_watch_suggestion(planned_text, activities, athlete=athlete)
     response_activities = []
     for activity in activities:
         cleaned = dict(activity)

@@ -1512,7 +1512,7 @@
       totals.style.whiteSpace = "pre-wrap";
       box.appendChild(totals);
     }
-    if (suggestion.mode === "structured_unmatched") {
+    if (suggestion.mode === "structured_unmatched" && !suggestion.zone_totals) {
       return box;
     }
     var use = document.createElement("button");
