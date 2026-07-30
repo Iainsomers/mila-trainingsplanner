@@ -1479,13 +1479,27 @@
     var totals = [];
     lines.forEach(function(line) {
       var trimmed = line.trim();
-      if (/^(?:Z[1-6]\s+\d+(?:\.\d+)?(?:,\s*)?)+$/i.test(trimmed) || /^(?:(?:TM|THM|T\d+)\s+\d+(?:\.\d+)?(?:,\s*)?)+$/i.test(trimmed)) {
+      var looksLikeTotals = trimmed && trimmed.split(/\s*,\s*/).every(function(part) {
+        return /^(?:Z[1-6]|TM|THM|T\d+)\s+\d+(?:\.\d+)?$/i.test(part.trim());
+      });
+      if (looksLikeTotals) {
         totals.push(trimmed);
       } else {
         body.push(line);
       }
     });
     return { body: body.join("\n").trim(), totals: totals.join("\n") };
+  }
+  function renderWatchSummaryWithPills(container, summary, totalsText) {
+    if (!container) return;
+    var combined = String(summary || "");
+    if (totalsText && combined.indexOf(totalsText) < 0) {
+      combined = combined ? combined + "\n" + totalsText : String(totalsText || "");
+    }
+    var displayParts = splitWatchTotalsFromSummary(combined);
+    container.innerHTML = "";
+    if (displayParts.body) container.appendChild(document.createTextNode(displayParts.body));
+    if (displayParts.totals) container.appendChild(renderWatchTotals(displayParts.totals));
   }
   function renderPlanSuggestion(suggestion) {
     function splitLine(split) {
@@ -1539,7 +1553,7 @@
     }
     var summary = document.createElement("div");
     summary.className = "small mb-2";
-    summary.textContent = suggestion.summary || "";
+    renderWatchSummaryWithPills(summary, suggestion.summary || "", "");
     box.appendChild(summary);
     if (suggestion.splits && suggestion.splits.length) {
       var list = document.createElement("div");
@@ -1563,10 +1577,7 @@
       var suggestions = document.getElementById("aypWatchSuggestions");
       var summaryText = suggestionTextForSave() || suggestion.title || "Watch suggestion";
       if (results) {
-        var displayParts = splitWatchTotalsFromSummary(summaryText);
-        results.innerHTML = "";
-        if (displayParts.body) results.appendChild(document.createTextNode(displayParts.body));
-        if (displayParts.totals) results.appendChild(renderWatchTotals(displayParts.totals));
+        renderWatchSummaryWithPills(results, summaryText, suggestion.zone_totals || "");
         results.setAttribute("data-watch-activity-id", suggestion.activity_id || "plan-watch-suggestion");
       }
       if (suggestions) suggestions.innerHTML = "";
@@ -1597,10 +1608,7 @@
     if (!id || !summary) return;
     var results = document.getElementById("aypWatchResults");
     if (results) {
-      var displayParts = splitWatchTotalsFromSummary(summary);
-      results.innerHTML = "";
-      if (displayParts.body) results.appendChild(document.createTextNode(displayParts.body));
-      if (displayParts.totals) results.appendChild(renderWatchTotals(displayParts.totals));
+      renderWatchSummaryWithPills(results, summary, "");
       results.setAttribute("data-watch-activity-id", id);
     }
     setVal("aypWatchActivityId", id);
