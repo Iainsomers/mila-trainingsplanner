@@ -1478,6 +1478,7 @@
       if (suggestion.splits && suggestion.splits.length) {
         parts = parts.concat(splitLinesForSave());
       }
+      if (suggestion.zone_totals) parts.push(suggestion.zone_totals);
       return parts.join("\n");
     }
     var box = document.createElement("div");
@@ -1503,6 +1504,13 @@
       list.textContent = splitLinesForSave().join("\n");
       list.style.whiteSpace = "pre-wrap";
       box.appendChild(list);
+    }
+    if (suggestion.zone_totals) {
+      var totals = document.createElement("div");
+      totals.className = "small text-muted mb-2";
+      totals.textContent = suggestion.zone_totals;
+      totals.style.whiteSpace = "pre-wrap";
+      box.appendChild(totals);
     }
     if (suggestion.mode === "structured_unmatched") {
       return box;

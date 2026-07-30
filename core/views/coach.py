@@ -887,6 +887,121 @@ def _seconds_label_to_seconds(label):
     return parts[0] if parts else None
 
 
+def _first_athlete_attr_value(athlete, names):
+    for name in names:
+        if hasattr(athlete, name):
+            value = getattr(athlete, name, None)
+            if value not in (None, ""):
+                return name, value
+    return None, None
+
+
+def _watch_pr_seconds_from_attrs(athlete, names):
+    name, value = _first_athlete_attr_value(athlete, names)
+    if value in (None, ""):
+        return None
+    if str(name or "").endswith("_s"):
+        try:
+            seconds = float(value)
+        except (TypeError, ValueError):
+            seconds = None
+        return seconds if seconds and seconds > 0 else None
+    try:
+        return _parse_pr_time_to_seconds(str(value))
+    except ValueError:
+        return None
+
+
+def _watch_t_reference_speeds(athlete):
+    distances = {
+        "TM": 42195.0,
+        "THM": 21097.5,
+        "T10": 10000.0,
+        "T5": 5000.0,
+        "T3": 3000.0,
+        "T15": 1500.0,
+        "T8": 800.0,
+        "T4": 400.0,
+    }
+    attr_names = {
+        "TM": ["pr_tm_s", "pr_tm", "pr_marathon_s", "pr_marathon", "pr_m_s", "pr_m"],
+        "THM": ["pr_thm_s", "pr_thm", "pr_half_marathon_s", "pr_half_marathon", "pr_hm_s", "pr_hm"],
+        "T10": ["pr_10000_s", "pr_10000", "pr_10k_s", "pr_10k", "pr_t10_s", "pr_t10"],
+        "T5": ["pr_5000_s", "pr_5000", "pr_5k_s", "pr_5k", "pr_t5_s", "pr_t5"],
+        "T3": ["pr_3000_s", "pr_3000", "pr_3k_s", "pr_3k", "pr_t3_s", "pr_t3"],
+        "T15": ["pr_1500_s", "pr_1500", "pr_t15_s", "pr_t15"],
+        "T8": ["pr_800_s", "pr_800", "pr_t8_s", "pr_t8"],
+        "T4": ["pr_t4_s", "pr_t4", "pr_400_s", "pr_400"],
+    }
+    speeds = {}
+    for label, names in attr_names.items():
+        seconds = _watch_pr_seconds_from_attrs(athlete, names)
+        distance_m = distances.get(label)
+        if seconds and distance_m:
+            speeds[label] = distance_m / float(seconds)
+    return speeds
+
+
+def _watch_z_reference_speeds(athlete):
+    try:
+        raw = athlete.get_zone_speed_mps()
+    except Exception:
+        raw = getattr(athlete, "zone_speed_mps", {}) or {}
+    speeds = {}
+    if isinstance(raw, dict):
+        for zone in ["1", "2", "3", "4", "5", "6"]:
+            try:
+                speed = float(raw.get(zone) or raw.get(str(zone)) or 0)
+            except (TypeError, ValueError):
+                speed = 0
+            if speed > 0:
+                speeds[f"Z{zone}"] = speed
+    return speeds
+
+
+def _closest_watch_label(speed_mps, references):
+    if not speed_mps or not references:
+        return ""
+    return min(references.items(), key=lambda item: abs(float(item[1]) - float(speed_mps)))[0]
+
+
+def _km_label(value_m):
+    km = float(value_m or 0) / 1000.0
+    text = f"{km:.2f}".rstrip("0").rstrip(".")
+    return f"{text}km"
+
+
+def _watch_zone_totals_summary(athlete, splits):
+    z_refs = _watch_z_reference_speeds(athlete)
+    t_refs = _watch_t_reference_speeds(athlete)
+    if not z_refs and not t_refs:
+        return ""
+
+    z_totals = {}
+    t_totals = {}
+    for split in splits or []:
+        duration_s = float(split.get("duration_s") or _seconds_label_to_seconds(split.get("duration") or "") or 0)
+        distance_m = float(split.get("distance_m") or 0)
+        if duration_s <= 0 or distance_m <= 0:
+            continue
+        speed = distance_m / duration_s
+        z_label = _closest_watch_label(speed, z_refs)
+        t_label = _closest_watch_label(speed, t_refs)
+        if z_label:
+            z_totals[z_label] = z_totals.get(z_label, 0.0) + distance_m
+        if t_label:
+            t_totals[t_label] = t_totals.get(t_label, 0.0) + distance_m
+
+    lines = []
+    if z_totals:
+        zone_order = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"]
+        lines.append("Z totals: " + ", ".join(f"{label} {_km_label(z_totals[label])}" for label in zone_order if z_totals.get(label)))
+    if t_totals:
+        t_order = ["TM", "THM", "T10", "T5", "T3", "T15", "T8", "T4"]
+        lines.append("T totals: " + ", ".join(f"{label} {_km_label(t_totals[label])}" for label in t_order if t_totals.get(label)))
+    return "\n".join(lines)
+
+
 def _rep_times_text(splits, limit=40):
     times = [split.get("duration") for split in splits if split.get("duration")]
     if len(times) <= limit:
@@ -1361,12 +1476,13 @@ def _candidate_blocks_as_splits(activity_payloads, expected_reps=0):
             "label": label,
             "distance_m": block.get("distance_m") or "",
             "duration": block.get("duration") or "",
+            "duration_s": block.get("duration_s") or "",
             "pace": block.get("pace") or "",
         })
     return best["activity_id"], splits
 
 
-def _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads):
+def _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads, athlete=None):
     expected_reps = int((planned_structure or {}).get("reps_total") or 0)
     if not expected_reps:
         return None
@@ -1388,18 +1504,20 @@ def _build_structured_watch_suggestion(plan_text, planned_structure, activity_pa
     if planned_structure.get("lead_out_s"):
         bits.append(f"lead-out {_format_seconds_hms(int(planned_structure['lead_out_s']))}")
 
+    zone_totals = _watch_zone_totals_summary(athlete, splits) if athlete else ""
     return {
         "mode": "structured",
         "activity_id": activity_id or "structured-watch-suggestion",
         "title": "Structured workout match",
         "summary": " | ".join(bits),
         "splits": splits,
+        "zone_totals": zone_totals,
         "confidence": 0.75,
         "ai": False,
     }
 
 
-def _build_ai_watch_suggestion(plan_text, activities):
+def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
     if not plan_text:
         return None, "AI unavailable: no planned training text."
     if not activities:
@@ -1412,7 +1530,7 @@ def _build_ai_watch_suggestion(plan_text, activities):
     ]
     fallback_activity_id = activity_payloads[0].get("id") if activity_payloads else ""
 
-    structured_suggestion = _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads)
+    structured_suggestion = _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads, athlete=athlete)
     if structured_suggestion:
         return structured_suggestion, "Structured watch suggestion created."
     if planned_structure and planned_structure.get("pattern_type") == "duration":
@@ -1433,6 +1551,7 @@ def _build_ai_watch_suggestion(plan_text, activities):
                 f"but could not match them reliably from the watch samples yet.{diagnostic_text}"
             ),
             "splits": [],
+            "zone_totals": "",
             "confidence": 0.2,
             "ai": False,
         }, "Structured watch match was inconclusive."
@@ -1523,6 +1642,7 @@ def _build_ai_watch_suggestion(plan_text, activities):
         candidate_activity_id, candidate_splits = _candidate_blocks_as_splits(activity_payloads, expected_reps=expected_reps)
         if candidate_splits:
             suggestion["splits"] = candidate_splits
+            suggestion["zone_totals"] = _watch_zone_totals_summary(athlete, candidate_splits) if athlete else ""
             suggestion["activity_id"] = candidate_activity_id or suggestion.get("activity_id") or fallback_activity_id
             if len(candidate_splits) != len(data.get("splits") or []):
                 suggestion["summary"] = (
@@ -2034,7 +2154,7 @@ def polar_activity_suggestions_view(request):
     plan_suggestion = None
     ai_status = ""
     if planned_text:
-        plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, activities)
+        plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, activities, athlete=athlete)
         if not plan_suggestion:
             plan_suggestion = _build_plan_watch_suggestion(planned_text, activities)
     response_activities = []
