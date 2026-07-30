@@ -548,6 +548,9 @@
   #aypWatchResults {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    max-height: 120px;
+    overflow-y: auto;
+    padding-right: 4px;
   }
 
   @media (max-width: 1200px) {
@@ -1521,11 +1524,13 @@
     use.textContent = "Use suggestion";
     use.addEventListener("click", function() {
       var results = document.getElementById("aypWatchResults");
+      var suggestions = document.getElementById("aypWatchSuggestions");
       var summaryText = suggestionTextForSave() || suggestion.title || "Watch suggestion";
       if (results) {
         results.textContent = summaryText;
         results.setAttribute("data-watch-activity-id", suggestion.activity_id || "plan-watch-suggestion");
       }
+      if (suggestions) suggestions.innerHTML = "";
       setVal("aypWatchActivityId", suggestion.activity_id || "plan-watch-suggestion");
       setVal("aypWatchActivitySummary", summaryText);
       setVal("aypWatchActivityPayload", JSON.stringify(suggestion || {}));
