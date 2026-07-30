@@ -1869,12 +1869,17 @@ def _build_plan_watch_suggestion(plan_text, activities, athlete=None):
     if best:
         splits = best["splits"]
         return {
-            "mode": "continuous",
+            "mode": "direct_distance_splits",
             "activity_id": best["activity"].get("id") or "",
-            "title": f"Detected {len(splits)} reps of {int(round(rep_distance))}m from {best['source']}",
-            "summary": f"Planned: {plan_text} | Detected: {len(splits)} reps of {int(round(rep_distance))}m | Rep times: {_rep_times_text(splits)}",
+            "title": f"Mila distance split analysis ({int(round(rep_distance))}m)",
+            "summary": (
+                f"Planned: {plan_text} | Mila split the watch activity into "
+                f"{len(splits)} blocks of {int(round(rep_distance))}m from {best['source']}."
+            ),
             "splits": splits,
             "zone_totals": _watch_zone_totals_summary(athlete, splits) if athlete else "",
+            "confidence": 0.9,
+            "ai": False,
         }
     sample_activity_id, fallback_zone_totals = _watch_activity_zone_totals_from_samples(athlete, activities)
     return {
@@ -1885,6 +1890,22 @@ def _build_plan_watch_suggestion(plan_text, activities, athlete=None):
         "splits": [],
         "zone_totals": fallback_zone_totals,
     }
+
+
+def _should_use_direct_distance_splits(plan_text, activities):
+    spec = _planned_rep_spec(plan_text)
+    if not spec or not activities:
+        return False
+    reps = int(spec.get("reps") or 0)
+    rep_distance = float(spec.get("distance_m") or 0)
+    planned_m = reps * rep_distance
+    if reps <= 0 or rep_distance <= 0 or planned_m <= 0:
+        return False
+    activity_m = max(float(activity.get("distance_m") or 0) for activity in activities or [])
+    if activity_m <= 0:
+        return False
+    distance_ratio = abs(activity_m - planned_m) / max(activity_m, planned_m)
+    return distance_ratio <= 0.15 or reps >= 20
 
 
 def _polar_config():
@@ -2330,7 +2351,11 @@ def polar_activity_suggestions_view(request):
     plan_suggestion = None
     ai_status = ""
     if planned_text:
-        plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, activities, athlete=athlete)
+        if _should_use_direct_distance_splits(planned_text, activities):
+            plan_suggestion = _build_plan_watch_suggestion(planned_text, activities, athlete=athlete)
+            ai_status = "Mila direct distance split analysis created."
+        if not plan_suggestion:
+            plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, activities, athlete=athlete)
         if not plan_suggestion:
             plan_suggestion = _build_plan_watch_suggestion(planned_text, activities, athlete=athlete)
     response_activities = []
