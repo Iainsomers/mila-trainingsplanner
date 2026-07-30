@@ -1746,7 +1746,7 @@ def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
     structured_suggestion = _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads, athlete=athlete)
     if structured_suggestion:
         return structured_suggestion, "Structured watch suggestion created."
-    if planned_structure and planned_structure.get("pattern_type") == "duration":
+    if planned_structure:
         expected_reps = int(planned_structure.get("reps_total") or 0)
         sample_activity_id, fallback_zone_totals = _watch_activity_zone_totals_from_samples(athlete, activities)
         diagnostics = []
