@@ -1459,27 +1459,34 @@ def _candidate_blocks_as_splits(activity_payloads, expected_reps=0):
                 continue
             score = _seconds_label_to_seconds(candidate.get("total_duration") or "") or 999999
             if best is None or score < best["score"]:
-                best = {"score": score, "activity_id": activity.get("id") or "", "blocks": blocks}
+                best = {
+                    "score": score,
+                    "activity_id": activity.get("id") or "",
+                    "blocks": blocks,
+                    "recovery_blocks": candidate.get("recovery_blocks") or [],
+                }
 
     if not best:
-        return "", []
+        return "", [], []
 
-    splits = []
-    for block in best["blocks"]:
+    def _split_from_block(block, default_label="Rep"):
         set_number = block.get("set")
         rep_number = block.get("rep")
         planned_duration = block.get("planned_duration") or ""
-        label = f"Set {set_number}, Rep {rep_number}" if set_number and rep_number else "Rep"
+        label = f"Set {set_number}, Rep {rep_number}" if set_number and rep_number else (block.get("label") or default_label)
         if planned_duration:
             label = f"{label} ({planned_duration})"
-        splits.append({
+        return {
             "label": label,
             "distance_m": block.get("distance_m") or "",
             "duration": block.get("duration") or "",
             "duration_s": block.get("duration_s") or "",
             "pace": block.get("pace") or "",
-        })
-    return best["activity_id"], splits
+        }
+
+    splits = [_split_from_block(block) for block in best["blocks"]]
+    total_splits = splits + [_split_from_block(block, default_label="Recovery") for block in best["recovery_blocks"]]
+    return best["activity_id"], splits, total_splits
 
 
 def _build_structured_watch_suggestion(plan_text, planned_structure, activity_payloads, athlete=None):
@@ -1487,7 +1494,7 @@ def _build_structured_watch_suggestion(plan_text, planned_structure, activity_pa
     if not expected_reps:
         return None
 
-    activity_id, splits = _candidate_blocks_as_splits(activity_payloads, expected_reps=expected_reps)
+    activity_id, splits, total_splits = _candidate_blocks_as_splits(activity_payloads, expected_reps=expected_reps)
     if not splits:
         return None
 
@@ -1504,7 +1511,7 @@ def _build_structured_watch_suggestion(plan_text, planned_structure, activity_pa
     if planned_structure.get("lead_out_s"):
         bits.append(f"lead-out {_format_seconds_hms(int(planned_structure['lead_out_s']))}")
 
-    zone_totals = _watch_zone_totals_summary(athlete, splits) if athlete else ""
+    zone_totals = _watch_zone_totals_summary(athlete, total_splits) if athlete else ""
     return {
         "mode": "structured",
         "activity_id": activity_id or "structured-watch-suggestion",
@@ -1639,10 +1646,10 @@ def _build_ai_watch_suggestion(plan_text, activities, athlete=None):
 
     expected_reps = int((planned_structure or {}).get("reps_total") or 0)
     if expected_reps:
-        candidate_activity_id, candidate_splits = _candidate_blocks_as_splits(activity_payloads, expected_reps=expected_reps)
+        candidate_activity_id, candidate_splits, candidate_total_splits = _candidate_blocks_as_splits(activity_payloads, expected_reps=expected_reps)
         if candidate_splits:
             suggestion["splits"] = candidate_splits
-            suggestion["zone_totals"] = _watch_zone_totals_summary(athlete, candidate_splits) if athlete else ""
+            suggestion["zone_totals"] = _watch_zone_totals_summary(athlete, candidate_total_splits) if athlete else ""
             suggestion["activity_id"] = candidate_activity_id or suggestion.get("activity_id") or fallback_activity_id
             if len(candidate_splits) != len(data.get("splits") or []):
                 suggestion["summary"] = (
