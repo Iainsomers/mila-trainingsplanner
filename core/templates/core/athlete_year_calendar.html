@@ -1448,6 +1448,9 @@
     function splitLine(split) {
       return (split.label || "Rep") + " " + (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
     }
+    function compactSplitResult(split) {
+      return (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
+    }
     function splitLinesForSave() {
       var grouped = {};
       var lines = [];
@@ -1457,14 +1460,16 @@
         if (match) {
           var key = match[1];
           if (!grouped[key]) grouped[key] = [];
-          grouped[key].push(splitLine(split).replace(/^Set\s+\d+,\s*/i, ""));
+          grouped[key].push(compactSplitResult(split));
         } else {
           lines.push(splitLine(split));
         }
       });
+      var setLines = [];
       Object.keys(grouped).sort(function(a, b) { return Number(a) - Number(b); }).forEach(function(setNumber) {
-        lines.push("Set " + setNumber + ": " + grouped[setNumber].join(" | "));
+        setLines.push("S" + setNumber + ": " + grouped[setNumber].join("-"));
       });
+      if (setLines.length) lines.push(setLines.join(", "));
       return lines;
     }
     function suggestionTextForSave() {
