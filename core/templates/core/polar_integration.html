@@ -161,6 +161,31 @@
           <h6 class="mb-2">Session debug</h6>
           <pre class="bg-light border rounded p-3 small mb-3" style="max-height: 320px; overflow: auto;">{{ v4_result.session_debug }}</pre>
         {% endif %}
+        {% if v4_result.lap_preview %}
+          <h6 class="mb-2">Manual lap preview</h6>
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Lap</th>
+                  <th class="text-end">Duration</th>
+                  <th class="text-end">Distance</th>
+                  <th class="text-end">Pace</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lap in v4_result.lap_preview %}
+                  <tr>
+                    <td>{{ lap.index }}</td>
+                    <td class="text-end">{{ lap.duration }}</td>
+                    <td class="text-end">{{ lap.distance }}</td>
+                    <td class="text-end">{{ lap.pace }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
         <pre class="bg-light border rounded p-3 small mb-0" style="max-height: 420px; overflow: auto;">{{ v4_result.payload }}</pre>
       </div>
     </div>

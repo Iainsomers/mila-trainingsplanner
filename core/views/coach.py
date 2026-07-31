@@ -2821,14 +2821,15 @@ def polar_v4_laps_test_view(request):
 
             manual_laps = 0
             auto_laps = 0
+            lap_preview = []
             for session in sessions:
                 if not isinstance(session, dict):
                     continue
-                laps_obj = session.get("laps") if isinstance(session.get("laps"), dict) else session
-                laps = laps_obj.get("laps") if isinstance(laps_obj, dict) else []
-                auto = laps_obj.get("autoLaps") if isinstance(laps_obj, dict) else []
+                laps, auto = _polar_v4_laps_from_session(session)
                 manual_laps += len(laps or []) if isinstance(laps, list) else 0
                 auto_laps += len(auto or []) if isinstance(auto, list) else 0
+                if len(lap_preview) < 30:
+                    lap_preview.extend(_polar_v4_lap_preview_rows(laps, limit=30 - len(lap_preview)))
 
             polar_message = ""
             if isinstance(payload, dict):
@@ -2869,6 +2870,7 @@ def polar_v4_laps_test_view(request):
                     "session_count": len(sessions),
                     "manual_laps": manual_laps,
                     "auto_laps": auto_laps,
+                    "lap_preview": lap_preview,
                     "session_debug": "\n\n".join(_polar_v4_session_debug(session) for session in sessions[:3]),
                     "payload": pretty_payload,
                 }
@@ -2919,6 +2921,70 @@ def polar_v4_laps_test_view(request):
     connection.last_error = ""
     connection.save(update_fields=["status", "last_error", "updated_at"])
     return redirect("polar_integration")
+
+
+def _polar_v4_laps_from_session(session):
+    if not isinstance(session, dict):
+        return [], []
+    manual = []
+    auto = []
+
+    def collect_from_laps_obj(value):
+        if not isinstance(value, dict):
+            return
+        laps = value.get("laps") or value.get("manualLaps") or value.get("manual-laps") or []
+        auto_laps = value.get("autoLaps") or value.get("auto-laps") or []
+        if isinstance(laps, list):
+            manual.extend(laps)
+        if isinstance(auto_laps, list):
+            auto.extend(auto_laps)
+
+    collect_from_laps_obj(session.get("laps"))
+    exercises = session.get("exercises") if isinstance(session.get("exercises"), list) else []
+    for exercise in exercises:
+        if isinstance(exercise, dict):
+            collect_from_laps_obj(exercise.get("laps"))
+    return manual, auto
+
+
+def _polar_v4_duration_label_from_millis(value):
+    try:
+        millis = float(value)
+    except (TypeError, ValueError):
+        return ""
+    return _format_seconds_hms(round(millis / 1000.0))
+
+
+def _polar_v4_pace_label(duration_millis, distance_m):
+    try:
+        seconds = float(duration_millis) / 1000.0
+        distance_m = float(distance_m)
+    except (TypeError, ValueError):
+        return ""
+    return _format_pace(seconds, distance_m) if seconds > 0 and distance_m > 0 else ""
+
+
+def _polar_v4_lap_preview_rows(laps, limit=30):
+    rows = []
+    for index, lap in enumerate(laps or [], start=1):
+        if not isinstance(lap, dict):
+            continue
+        duration = (
+            _polar_v4_duration_label_from_millis(lap.get("durationMillis"))
+            or _polar_v4_duration_label_from_millis(lap.get("duration"))
+            or str(lap.get("duration") or "")
+        )
+        distance = lap.get("distanceMeters", lap.get("distance"))
+        pace = _polar_v4_pace_label(lap.get("durationMillis") or lap.get("duration"), distance)
+        rows.append({
+            "index": index,
+            "duration": duration or "-",
+            "distance": f"{float(distance) / 1000.0:.2f} km" if distance not in (None, "") else "-",
+            "pace": pace or "-",
+        })
+        if len(rows) >= limit:
+            break
+    return rows
 
 
 def _polar_v4_session_debug(session):
