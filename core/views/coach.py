@@ -1227,6 +1227,24 @@ def _distance_at_elapsed(points, target_s):
     return float(points[-1][1])
 
 
+def _elapsed_at_distance(points, target_m):
+    if not points:
+        return None
+    target_m = float(target_m or 0)
+    points = sorted(points, key=lambda item: item[0])
+    if target_m <= points[0][1]:
+        return float(points[0][0])
+    for index in range(1, len(points)):
+        t1, d1 = points[index - 1]
+        t2, d2 = points[index]
+        if d2 < target_m:
+            continue
+        if d2 <= d1:
+            return float(t2)
+        return float(t1) + ((target_m - d1) / (d2 - d1)) * (float(t2) - float(t1))
+    return None
+
+
 def _duration_block_from_points(points, start_s, duration_s):
     end_s = float(start_s or 0) + float(duration_s or 0)
     start_m = _distance_at_elapsed(points, start_s)
@@ -1241,6 +1259,31 @@ def _duration_block_from_points(points, start_s, duration_s):
         "start_m": round(start_m),
         "end_m": round(end_m),
         "duration_s": float(duration_s or 0),
+    }
+
+
+def _distance_block_from_points(points, start_s, distance_m):
+    start_s = float(start_s or 0)
+    distance_m = float(distance_m or 0)
+    if distance_m <= 0:
+        return None
+    start_m = _distance_at_elapsed(points, start_s)
+    if start_m is None:
+        return None
+    end_m = start_m + distance_m
+    end_s = _elapsed_at_distance(points, end_m)
+    if end_s is None or end_s <= start_s:
+        return None
+    duration_s = end_s - start_s
+    return {
+        "distance_m": round(distance_m),
+        "duration": _format_seconds_hms(round(duration_s)),
+        "pace": _format_pace(duration_s, distance_m),
+        "start_m": round(start_m),
+        "end_m": round(end_m),
+        "start_s": round(start_s),
+        "end_s": round(end_s),
+        "duration_s": duration_s,
     }
 
 
@@ -1345,6 +1388,101 @@ def _candidate_sequences_from_duration_points(points, structure, activity_durati
         })
 
     return sorted(candidates, key=lambda item: abs(float(item.get("start_s") or 0)))[:max_sequences]
+
+
+def _candidate_sequences_from_distance_points(points, structure, activity_duration_s=None, max_sequences=3):
+    if not points or not structure or structure.get("pattern_type") != "distance":
+        return []
+    pattern = structure.get("pattern_m") or []
+    sets = int(structure.get("sets") or 0)
+    if not pattern or sets <= 0:
+        return []
+
+    pause_s = int(structure.get("pause_s") or 0)
+    set_pause_s = int(structure.get("set_pause_s") or 0)
+    lead_in_m = float(structure.get("lead_in_m") or 0)
+    lead_out_m = float(structure.get("lead_out_m") or 0)
+    if not pause_s and not set_pause_s:
+        return []
+
+    points = sorted(points, key=lambda item: item[0])
+    final_time_s = float(activity_duration_s or points[-1][0] or 0)
+    total_distance_m = float(points[-1][1] or 0)
+
+    start_s = _elapsed_at_distance(points, lead_in_m) if lead_in_m > 0 else 0.0
+    if start_s is None:
+        return []
+
+    sequence = []
+    recovery_blocks = []
+    if lead_in_m > 0:
+        lead_in = _duration_block_from_points(points, 0, start_s)
+        if lead_in:
+            lead_in.update({"type": "recovery", "label": "lead-in/easy"})
+            recovery_blocks.append(lead_in)
+
+    cursor_s = float(start_s)
+    total_work_s = 0.0
+    total_work_m = 0.0
+    ok = True
+    for set_number in range(1, sets + 1):
+        for rep_number, distance_m in enumerate(pattern, start=1):
+            block = _distance_block_from_points(points, cursor_s, distance_m)
+            if not block:
+                ok = False
+                break
+            block.update({"set": set_number, "rep": rep_number})
+            sequence.append(block)
+            total_work_s += float(block.get("duration_s") or 0)
+            total_work_m += float(block.get("distance_m") or 0)
+            cursor_s = float(block.get("end_s") or cursor_s)
+
+            if rep_number < len(pattern) and pause_s:
+                recovery = _duration_block_from_points(points, cursor_s, pause_s)
+                if recovery:
+                    recovery.update({"type": "recovery", "label": f"Set {set_number} recovery after rep {rep_number}"})
+                    recovery_blocks.append(recovery)
+                cursor_s += pause_s
+        if not ok:
+            break
+        if set_number < sets and set_pause_s:
+            recovery = _duration_block_from_points(points, cursor_s, set_pause_s)
+            if recovery:
+                recovery.update({"type": "recovery", "label": f"Recovery between set {set_number} and {set_number + 1}"})
+                recovery_blocks.append(recovery)
+            cursor_s += set_pause_s
+    if not ok or not sequence or cursor_s > final_time_s + 30:
+        return []
+
+    if lead_out_m > 0:
+        remaining_after_m = total_distance_m - float(sequence[-1].get("end_m") or 0)
+        if remaining_after_m < (lead_out_m * 0.65):
+            return []
+        lead_out_end_s = _elapsed_at_distance(points, min(total_distance_m, float(sequence[-1].get("end_m") or 0) + lead_out_m))
+        if lead_out_end_s and lead_out_end_s > cursor_s:
+            lead_out = _duration_block_from_points(points, cursor_s, lead_out_end_s - cursor_s)
+            if lead_out:
+                lead_out.update({"type": "recovery", "label": "lead-out/easy"})
+                recovery_blocks.append(lead_out)
+            cursor_s = lead_out_end_s
+
+    trailing_s = final_time_s - cursor_s
+    if trailing_s > 10:
+        trailing = _duration_block_from_points(points, cursor_s, trailing_s)
+        if trailing and float(trailing.get("distance_m") or 0) > 0:
+            trailing.update({"type": "recovery", "label": "extra after planned structure"})
+            recovery_blocks.append(trailing)
+
+    return [{
+        "start_s": round(start_s),
+        "end_s": round(cursor_s),
+        "start_m": sequence[0]["start_m"],
+        "end_m": sequence[-1]["end_m"],
+        "average_pace": _format_pace(total_work_s, total_work_m),
+        "total_duration": _format_seconds_hms(round(total_work_s)),
+        "recovery_blocks": recovery_blocks[:20],
+        "blocks": sequence,
+    }][:max_sequences]
 
 
 def _candidate_sequences_from_structure(splits, structure, max_sequences=6, activity_distance_m=None):
@@ -1540,14 +1678,21 @@ def _watch_activity_ai_payload(activity, planned_structure=None, max_splits=160)
     candidate_sequences = []
     point_source = ""
     point_count = 0
-    if planned_structure and planned_structure.get("pattern_type") == "duration":
+    if planned_structure and planned_structure.get("pattern_type") in ("duration", "distance"):
         point_source, points = _time_distance_points_from_exercise(raw)
         point_count = len(points or [])
-        candidate_sequences = _candidate_sequences_from_duration_points(
-            points,
-            planned_structure,
-            activity_duration_s=activity.get("duration_seconds"),
-        )
+        if planned_structure.get("pattern_type") == "duration":
+            candidate_sequences = _candidate_sequences_from_duration_points(
+                points,
+                planned_structure,
+                activity_duration_s=activity.get("duration_seconds"),
+            )
+        else:
+            candidate_sequences = _candidate_sequences_from_distance_points(
+                points,
+                planned_structure,
+                activity_duration_s=activity.get("duration_seconds"),
+            )
     payload = {
         "id": activity.get("id") or "",
         "start_time": activity.get("start_time") or "",
