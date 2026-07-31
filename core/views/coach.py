@@ -1061,27 +1061,6 @@ def _threshold_watch_label(speed_mps, references):
     return selected
 
 
-def _zone_ceiling_watch_label(speed_mps, references):
-    if not speed_mps or not references:
-        return ""
-    thresholds = []
-    for label, reference_speed in references.items():
-        try:
-            zone_number = int(str(label).replace("Z", ""))
-            reference_speed = float(reference_speed)
-        except (TypeError, ValueError):
-            continue
-        if reference_speed > 0:
-            thresholds.append((reference_speed, zone_number, label))
-    thresholds.sort()
-    for reference_speed, _zone_number, label in thresholds:
-        if float(speed_mps) <= reference_speed + 1e-9:
-            return label
-    if thresholds:
-        return thresholds[-1][2]
-    return ""
-
-
 def _km_label(value_m):
     km = float(value_m or 0) / 1000.0
     return f"{km:.1f}"
@@ -1101,7 +1080,7 @@ def _watch_zone_totals_summary(athlete, splits):
         if duration_s <= 0 or distance_m <= 0:
             continue
         speed = distance_m / duration_s
-        z_label = _zone_ceiling_watch_label(speed, z_refs)
+        z_label = _closest_watch_label(speed, z_refs)
         t_label = _threshold_watch_label(speed, t_refs)
         if z_label:
             z_totals[z_label] = z_totals.get(z_label, 0.0) + distance_m
