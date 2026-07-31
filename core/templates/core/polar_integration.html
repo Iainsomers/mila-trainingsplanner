@@ -128,6 +128,7 @@
               <thead>
                 <tr>
                   <th>Date checked</th>
+                  <th>Format</th>
                   <th class="text-end">Status</th>
                   <th class="text-end">Sessions</th>
                   <th class="text-end">Manual laps</th>
@@ -138,11 +139,17 @@
                 {% for check in v4_result.checks %}
                   <tr>
                     <td>{{ check.date }}</td>
+                    <td>{{ check.format|default:"-" }}</td>
                     <td class="text-end">{{ check.status }}</td>
                     <td class="text-end">{{ check.sessions }}</td>
                     <td class="text-end">{{ check.manual_laps }}</td>
                     <td class="text-end">{{ check.auto_laps }}</td>
                   </tr>
+                  {% if check.query %}
+                    <tr>
+                      <td colspan="6"><code class="small">{{ check.query }}</code></td>
+                    </tr>
+                  {% endif %}
                 {% endfor %}
               </tbody>
             </table>

@@ -2721,77 +2721,105 @@ def polar_v4_laps_test_view(request):
     found_sessions = []
     error_message = ""
     last_query = ""
+    date_formats = [
+        ("date-time", "{day}T00:00:00"),
+        ("date-time-ms", "{day}T00:00:00.000"),
+        ("date-time-z", "{day}T00:00:00Z"),
+        ("date-time-ms-z", "{day}T00:00:00.000Z"),
+        ("date-time-offset", "{day}T00:00:00+00:00"),
+        ("date-time-ms-offset", "{day}T00:00:00.000+00:00"),
+        ("date-time-compact-offset", "{day}T00:00:00+0000"),
+        ("date-only", "{day}"),
+    ]
 
     for offset in range(0, 21):
         day = today - timedelta(days=offset)
         next_day = day + timedelta(days=1)
-        params = [
-            ("from", f"{day.isoformat()}T00:00:00.000"),
-            ("to", f"{next_day.isoformat()}T00:00:00.000"),
-        ]
-        params.extend(("features", feature) for feature in features)
-        url = f"{POLAR_V4_TRAINING_SESSIONS_URL}?{urlencode(params)}"
-        last_query = url
+        for format_label, format_value in date_formats:
+            from_value = format_value.format(day=day.isoformat())
+            to_value = format_value.format(day=next_day.isoformat())
+            params = [("from", from_value), ("to", to_value)]
+            params.extend(("features", feature) for feature in features)
+            url = f"{POLAR_V4_TRAINING_SESSIONS_URL}?{urlencode(params)}"
+            last_query = url
 
-        try:
-            status, payload = _polar_json_request(url, method="GET", headers=headers)
-        except RuntimeError as exc:
-            status = 0
-            payload = {"error": str(exc)}
+            try:
+                status, payload = _polar_json_request(url, method="GET", headers=headers)
+            except RuntimeError as exc:
+                status = 0
+                payload = {"error": str(exc)}
 
-        sessions = []
-        if isinstance(payload, dict):
-            sessions = payload.get("trainingSessions") or payload.get("training-sessions") or payload.get("sessions") or []
-        elif isinstance(payload, list):
-            sessions = payload
-        if not isinstance(sessions, list):
             sessions = []
+            if isinstance(payload, dict):
+                sessions = payload.get("trainingSessions") or payload.get("training-sessions") or payload.get("sessions") or []
+            elif isinstance(payload, list):
+                sessions = payload
+            if not isinstance(sessions, list):
+                sessions = []
 
-        manual_laps = 0
-        auto_laps = 0
-        for session in sessions:
-            if not isinstance(session, dict):
-                continue
-            laps_obj = session.get("laps") if isinstance(session.get("laps"), dict) else session
-            laps = laps_obj.get("laps") if isinstance(laps_obj, dict) else []
-            auto = laps_obj.get("autoLaps") if isinstance(laps_obj, dict) else []
-            manual_laps += len(laps or []) if isinstance(laps, list) else 0
-            auto_laps += len(auto or []) if isinstance(auto, list) else 0
+            manual_laps = 0
+            auto_laps = 0
+            for session in sessions:
+                if not isinstance(session, dict):
+                    continue
+                laps_obj = session.get("laps") if isinstance(session.get("laps"), dict) else session
+                laps = laps_obj.get("laps") if isinstance(laps_obj, dict) else []
+                auto = laps_obj.get("autoLaps") if isinstance(laps_obj, dict) else []
+                manual_laps += len(laps or []) if isinstance(laps, list) else 0
+                auto_laps += len(auto or []) if isinstance(auto, list) else 0
 
-        checks.append({
-            "date": day.isoformat(),
-            "status": status,
-            "sessions": len(sessions),
-            "manual_laps": manual_laps,
-            "auto_laps": auto_laps,
-        })
-
-        if status >= 400 or status == 0:
             polar_message = ""
             if isinstance(payload, dict):
                 polar_message = payload.get("error_description") or payload.get("message") or payload.get("error") or ""
-            error_message = f"Polar v4 request failed with status {status}."
-            if polar_message:
-                error_message = f"{error_message} {polar_message}"
-            break
 
-        if sessions:
-            found_sessions = sessions
-            pretty_payload = json.dumps(payload, indent=2, ensure_ascii=False)
-            if len(pretty_payload) > 20000:
-                pretty_payload = pretty_payload[:20000] + "\n... truncated ..."
-            request.session["polar_v4_result"] = {
-                "status": status,
+            checks.append({
                 "date": day.isoformat(),
-                "features": ", ".join(features),
-                "query": last_query,
-                "checks": checks,
-                "session_count": len(sessions),
+                "format": format_label,
+                "status": status,
+                "sessions": len(sessions),
                 "manual_laps": manual_laps,
                 "auto_laps": auto_laps,
-                "payload": pretty_payload,
-            }
+                "query": url,
+            })
+
+            date_parse_error = status == 400 and "from" in str(polar_message).lower() and "datetime" in str(polar_message).lower()
+            if date_parse_error:
+                continue
+
+            if status >= 400 or status == 0:
+                error_message = f"Polar v4 request failed with status {status}."
+                if polar_message:
+                    error_message = f"{error_message} {polar_message}"
+                break
+
+            if sessions:
+                found_sessions = sessions
+                pretty_payload = json.dumps(payload, indent=2, ensure_ascii=False)
+                if len(pretty_payload) > 20000:
+                    pretty_payload = pretty_payload[:20000] + "\n... truncated ..."
+                request.session["polar_v4_result"] = {
+                    "status": status,
+                    "date": day.isoformat(),
+                    "features": ", ".join(features),
+                    "query": last_query,
+                    "checks": checks,
+                    "session_count": len(sessions),
+                    "manual_laps": manual_laps,
+                    "auto_laps": auto_laps,
+                    "payload": pretty_payload,
+                }
+                break
             break
+        if found_sessions or error_message:
+            break
+
+    if not found_sessions and not error_message and checks:
+        all_date_parse_errors = all(
+            int(check.get("status") or 0) == 400
+            for check in checks
+        )
+        if all_date_parse_errors:
+            error_message = "Polar v4 request failed: none of the tested datetime formats were accepted."
 
     if not found_sessions and not error_message:
         request.session["polar_v4_result"] = {
