@@ -1037,6 +1037,27 @@ def _closest_watch_label(speed_mps, references):
     return min(references.items(), key=lambda item: abs(float(item[1]) - float(speed_mps)))[0]
 
 
+def _threshold_watch_label(speed_mps, references):
+    if not speed_mps or not references:
+        return ""
+    thresholds = []
+    for label, reference_speed in references.items():
+        try:
+            reference_speed = float(reference_speed)
+        except (TypeError, ValueError):
+            continue
+        if reference_speed > 0:
+            thresholds.append((reference_speed, label))
+    thresholds.sort()
+    selected = ""
+    for reference_speed, label in thresholds:
+        if float(speed_mps) + 1e-9 >= reference_speed:
+            selected = label
+        else:
+            break
+    return selected
+
+
 def _km_label(value_m):
     km = float(value_m or 0) / 1000.0
     return f"{km:.1f}"
@@ -1057,7 +1078,7 @@ def _watch_zone_totals_summary(athlete, splits):
             continue
         speed = distance_m / duration_s
         z_label = _closest_watch_label(speed, z_refs)
-        t_label = _closest_watch_label(speed, t_refs)
+        t_label = _threshold_watch_label(speed, t_refs)
         if z_label:
             z_totals[z_label] = z_totals.get(z_label, 0.0) + distance_m
         if t_label:
