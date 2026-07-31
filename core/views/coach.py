@@ -1461,13 +1461,67 @@ def _candidate_sequences_from_structure(splits, structure, max_sequences=6, acti
         })
 
     def _candidate_score(candidate):
-        seconds = _seconds_label_to_seconds(candidate.get("total_duration") or "") or 999999
+        blocks = candidate.get("blocks") or []
+        work_seconds = []
+        for block in blocks:
+            try:
+                duration = float(block.get("duration_s") or _seconds_label_to_seconds(block.get("duration") or "") or 0)
+            except (TypeError, ValueError):
+                duration = 0.0
+            if duration > 0:
+                work_seconds.append(duration)
+        seconds = sum(work_seconds) if work_seconds else (_seconds_label_to_seconds(candidate.get("total_duration") or "") or 999999)
+        if work_seconds:
+            sorted_work = sorted(work_seconds)
+            median_work = sorted_work[len(sorted_work) // 2]
+            variability = sum(abs(duration - median_work) for duration in work_seconds) / float(len(work_seconds))
+            first_outlier = max(0.0, work_seconds[0] - median_work) if len(work_seconds) > 2 else 0.0
+        else:
+            median_work = 0.0
+            variability = 999999.0
+            first_outlier = 999999.0
+
+        recovery_seconds = []
+        recovery_m = 0.0
+        for block in candidate.get("recovery_blocks") or []:
+            label = str(block.get("label") or "").lower()
+            if "recovery after rep" not in label:
+                continue
+            try:
+                duration = float(block.get("duration_s") or _seconds_label_to_seconds(block.get("duration") or "") or 0)
+            except (TypeError, ValueError):
+                duration = 0.0
+            if duration > 0:
+                recovery_seconds.append(duration)
+                try:
+                    recovery_m += float(block.get("distance_m") or 0)
+                except (TypeError, ValueError):
+                    pass
+        avg_recovery_s = sum(recovery_seconds) / float(len(recovery_seconds)) if recovery_seconds else 0.0
+        recovery_penalty = abs(avg_recovery_s - float(pause_s)) if pause_s and avg_recovery_s else 0.0
+        try:
+            work_m = sum(float(block.get("distance_m") or 0) for block in blocks)
+        except (TypeError, ValueError):
+            work_m = 0.0
+        work_speed = work_m / seconds if work_m > 0 and seconds > 0 else 0.0
+        recovery_speed = recovery_m / sum(recovery_seconds) if recovery_m > 0 and recovery_seconds else 0.0
+        contrast_penalty = 0.0
+        if work_speed and recovery_speed:
+            contrast_penalty = max(0.0, recovery_speed - (work_speed * 0.92)) * 100.0
         expected_start_m = lead_in_m if lead_in_m else (0.0 if lead_in_s else 2000.0)
         if lead_in_s:
             lead_blocks = candidate.get("recovery_blocks") or []
             if lead_blocks:
                 expected_start_m = float(lead_blocks[0].get("start_m") or 0)
-        return (seconds, abs(float(candidate.get("start_m") or 0) - expected_start_m))
+        start_penalty = abs(float(candidate.get("start_m") or 0) - expected_start_m) / max(split_m, 1.0)
+        return (
+            round(first_outlier, 3),
+            round(variability, 3),
+            round(contrast_penalty, 3),
+            round(recovery_penalty, 3),
+            round(start_penalty, 3),
+            seconds,
+        )
 
     return sorted(candidates, key=_candidate_score)[:max_sequences]
 
