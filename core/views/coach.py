@@ -1066,6 +1066,13 @@ def _km_label(value_m):
     return f"{km:.1f}"
 
 
+def _watch_split_display_speed(split, duration_s, distance_m):
+    pace_s = _pace_label_seconds_per_km((split or {}).get("pace") or "")
+    if pace_s and pace_s > 0:
+        return 1000.0 / float(pace_s)
+    return distance_m / duration_s if duration_s > 0 and distance_m > 0 else 0.0
+
+
 def _watch_zone_totals_summary(athlete, splits):
     z_refs = _watch_z_reference_speeds(athlete)
     t_refs = _watch_t_reference_speeds(athlete)
@@ -1079,7 +1086,7 @@ def _watch_zone_totals_summary(athlete, splits):
         distance_m = float(split.get("distance_m") or 0)
         if duration_s <= 0 or distance_m <= 0:
             continue
-        speed = distance_m / duration_s
+        speed = _watch_split_display_speed(split, duration_s, distance_m)
         z_label = _closest_watch_label(speed, z_refs)
         t_label = _threshold_watch_label(speed, t_refs)
         if z_label:
