@@ -133,6 +133,7 @@
                   <th class="text-end">Sessions</th>
                   <th class="text-end">Manual laps</th>
                   <th class="text-end">Auto laps</th>
+                  <th class="text-end">Refresh</th>
                 </tr>
               </thead>
               <tbody>
@@ -144,10 +145,11 @@
                     <td class="text-end">{{ check.sessions }}</td>
                     <td class="text-end">{{ check.manual_laps }}</td>
                     <td class="text-end">{{ check.auto_laps }}</td>
+                    <td class="text-end">{% if check.refreshed %}yes{% else %}-{% endif %}</td>
                   </tr>
                   {% if check.query %}
                     <tr>
-                      <td colspan="6"><code class="small">{{ check.query }}</code></td>
+                      <td colspan="7"><code class="small">{{ check.query }}</code></td>
                     </tr>
                   {% endif %}
                 {% endfor %}

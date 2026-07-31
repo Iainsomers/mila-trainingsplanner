@@ -2400,8 +2400,15 @@ def _polar_v4_callback(request, code, config):
         user=request.user,
         defaults={"member_id": f"mila-user-{request.user.id}"},
     )
-    connection.v4_access_token = access_token
-    connection.v4_refresh_token = token_payload.get("refresh_token", "")
+    _save_polar_v4_token(connection, token_payload)
+    return redirect(f"{reverse('polar_integration')}?connected=1")
+
+
+def _save_polar_v4_token(connection, token_payload):
+    connection.v4_access_token = token_payload.get("access_token", "")
+    refresh_token = token_payload.get("refresh_token", "")
+    if refresh_token:
+        connection.v4_refresh_token = refresh_token
     connection.v4_token_type = token_payload.get("token_type", "")
     connection.v4_expires_in = token_payload.get("expires_in")
     connection.v4_scope = token_payload.get("scope", "")
@@ -2414,7 +2421,47 @@ def _polar_v4_callback(request, code, config):
         "v4_scope", "raw_v4_token_response", "v4_connected_at",
         "status", "last_error", "updated_at",
     ])
-    return redirect(f"{reverse('polar_integration')}?connected=1")
+
+
+def _refresh_polar_v4_token(connection):
+    if not connection or not connection.v4_refresh_token:
+        return False, "No Polar v4 refresh token is available."
+    config = _polar_config()
+    missing = _polar_missing_config(config)
+    if missing:
+        return False, "Missing Polar configuration: " + ", ".join(missing)
+
+    token_body = urlencode({
+        "grant_type": "refresh_token",
+        "refresh_token": connection.v4_refresh_token,
+    }).encode("utf-8")
+    token_headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": _polar_basic_auth_header(config["client_id"], config["client_secret"]),
+    }
+    try:
+        token_status, token_payload = _polar_json_request(
+            POLAR_V4_TOKEN_URL,
+            method="POST",
+            data=token_body,
+            headers=token_headers,
+        )
+    except RuntimeError as exc:
+        return False, str(exc)
+
+    if token_status >= 400:
+        polar_message = ""
+        if isinstance(token_payload, dict):
+            polar_message = token_payload.get("error_description") or token_payload.get("error") or token_payload.get("message") or ""
+        message = f"Polar v4 refresh failed with status {token_status}."
+        if polar_message:
+            message = f"{message} {polar_message}"
+        return False, message
+    if not isinstance(token_payload, dict) or not token_payload.get("access_token"):
+        return False, "Polar v4 refresh response did not contain an access token."
+    _save_polar_v4_token(connection, token_payload)
+    return True, ""
 
 
 @login_required
@@ -2721,6 +2768,7 @@ def polar_v4_laps_test_view(request):
     found_sessions = []
     error_message = ""
     last_query = ""
+    refreshed_v4_token = False
     date_formats = [
         ("date-time", "{day}T00:00:00"),
         ("date-time-ms", "{day}T00:00:00.000"),
@@ -2748,6 +2796,20 @@ def polar_v4_laps_test_view(request):
             except RuntimeError as exc:
                 status = 0
                 payload = {"error": str(exc)}
+            refreshed_this_request = False
+            if status == 401 and not refreshed_v4_token:
+                refreshed_v4_token = True
+                refresh_ok, refresh_error = _refresh_polar_v4_token(connection)
+                if refresh_ok:
+                    refreshed_this_request = True
+                    headers["Authorization"] = f"Bearer {connection.v4_access_token}"
+                    try:
+                        status, payload = _polar_json_request(url, method="GET", headers=headers)
+                    except RuntimeError as exc:
+                        status = 0
+                        payload = {"error": str(exc)}
+                else:
+                    payload = {"error": refresh_error or "Polar v4 token refresh failed."}
 
             sessions = []
             if isinstance(payload, dict):
@@ -2779,6 +2841,7 @@ def polar_v4_laps_test_view(request):
                 "sessions": len(sessions),
                 "manual_laps": manual_laps,
                 "auto_laps": auto_laps,
+                "refreshed": refreshed_this_request,
                 "query": url,
             })
 
