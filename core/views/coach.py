@@ -2987,6 +2987,144 @@ def _polar_v4_lap_preview_rows(laps, limit=30):
     return rows
 
 
+def _polar_v4_split_from_lap(lap, index):
+    if not isinstance(lap, dict):
+        return None
+    duration_millis = lap.get("durationMillis", lap.get("duration"))
+    distance_m = lap.get("distanceMeters", lap.get("distance"))
+    try:
+        duration_s = float(duration_millis) / 1000.0
+        distance_m = float(distance_m)
+    except (TypeError, ValueError):
+        return None
+    if duration_s <= 0 or distance_m <= 0:
+        return None
+    return {
+        "label": f"Lap {index}",
+        "distance_m": round(distance_m),
+        "duration": _format_seconds_hms(round(duration_s)),
+        "duration_s": duration_s,
+        "pace": _format_pace(duration_s, distance_m),
+    }
+
+
+def _polar_v4_activity_label(session):
+    if not isinstance(session, dict):
+        return "Polar v4 activity"
+    start_time = session.get("startTime") or session.get("start_time") or ""
+    sport = session.get("sport") or ""
+    distance_m = session.get("distanceMeters") or session.get("distance")
+    duration_ms = session.get("durationMillis") or session.get("duration")
+    try:
+        distance_label = f"{float(distance_m) / 1000.0:.2f} km"
+    except (TypeError, ValueError):
+        distance_label = ""
+    duration_label = _polar_v4_duration_label_from_millis(duration_ms)
+    bits = [str(item) for item in [start_time, sport, distance_label, duration_label] if item]
+    return " | ".join(bits) or "Polar v4 activity"
+
+
+def _build_polar_v4_lap_suggestion(plan_text, sessions, athlete=None):
+    best = None
+    for session in sessions or []:
+        if not isinstance(session, dict):
+            continue
+        manual_laps, auto_laps = _polar_v4_laps_from_session(session)
+        if not manual_laps:
+            continue
+        splits = []
+        for index, lap in enumerate(manual_laps, start=1):
+            split = _polar_v4_split_from_lap(lap, index)
+            if split:
+                splits.append(split)
+        if not splits:
+            continue
+        score = len(splits)
+        if best is None or score > best["score"]:
+            best = {
+                "score": score,
+                "session": session,
+                "splits": splits,
+                "manual_count": len(manual_laps),
+                "auto_count": len(auto_laps or []),
+            }
+    if not best:
+        return None
+
+    session = best["session"]
+    identifier = session.get("identifier") if isinstance(session.get("identifier"), dict) else {}
+    activity_id = identifier.get("id") or session.get("id") or "polar-v4-lap-suggestion"
+    total_distance_m = sum(float(split.get("distance_m") or 0) for split in best["splits"])
+    total_duration_s = sum(float(split.get("duration_s") or 0) for split in best["splits"])
+    summary_bits = []
+    if plan_text:
+        summary_bits.append(f"Planned: {plan_text}")
+    summary_bits.append(
+        f"V4 manual laps: {best['manual_count']} laps"
+        + (f", {best['auto_count']} auto laps available" if best["auto_count"] else "")
+    )
+    if total_distance_m > 0 and total_duration_s > 0:
+        summary_bits.append(
+            f"Total from laps: {total_distance_m / 1000.0:.2f} km in {_format_seconds_hms(round(total_duration_s))}"
+        )
+    summary_bits.append(_polar_v4_activity_label(session))
+    return {
+        "mode": "polar_v4_laps",
+        "activity_id": f"polar-v4:{activity_id}",
+        "title": "V4 lap suggestion",
+        "summary": " | ".join(summary_bits),
+        "splits": best["splits"],
+        "zone_totals": _watch_zone_totals_summary(athlete, best["splits"]) if athlete else "",
+        "confidence": 0.98,
+        "ai": False,
+    }
+
+
+def _polar_v4_sessions_for_day(connection, target_date):
+    if not connection or not connection.v4_access_token:
+        return [], "No Polar v4 account is connected."
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {connection.v4_access_token}",
+    }
+    next_day = target_date + timedelta(days=1)
+    params = [
+        ("from", f"{target_date.isoformat()}T00:00:00"),
+        ("to", f"{next_day.isoformat()}T00:00:00"),
+    ]
+    for feature in ["laps", "pause-times", "statistics", "zones"]:
+        params.append(("features", feature))
+    url = f"{POLAR_V4_TRAINING_SESSIONS_URL}?{urlencode(params)}"
+    try:
+        status, payload = _polar_json_request(url, method="GET", headers=headers)
+    except RuntimeError as exc:
+        return [], f"Polar v4 sync failed: {exc}"
+    if status == 401:
+        refresh_ok, refresh_error = _refresh_polar_v4_token(connection)
+        if refresh_ok:
+            headers["Authorization"] = f"Bearer {connection.v4_access_token}"
+            try:
+                status, payload = _polar_json_request(url, method="GET", headers=headers)
+            except RuntimeError as exc:
+                return [], f"Polar v4 sync failed after refresh: {exc}"
+        else:
+            return [], refresh_error or "Polar v4 token refresh failed."
+    if status >= 400:
+        polar_message = ""
+        if isinstance(payload, dict):
+            polar_message = payload.get("error_description") or payload.get("message") or payload.get("error") or ""
+        message = f"Polar v4 sync failed with status {status}."
+        if polar_message:
+            message = f"{message} {polar_message}"
+        return [], message
+    sessions = []
+    if isinstance(payload, dict):
+        sessions = payload.get("trainingSessions") or payload.get("training-sessions") or payload.get("sessions") or []
+    elif isinstance(payload, list):
+        sessions = payload
+    return sessions if isinstance(sessions, list) else [], ""
+
+
 def _polar_v4_session_debug(session):
     if not isinstance(session, dict):
         return "Session debug: session is not an object."
@@ -3133,8 +3271,14 @@ def polar_activity_suggestions_view(request):
             })
 
     activities.sort(key=lambda item: item.get("start_time") or "")
-    if not activities:
-        return JsonResponse({"ok": True, "message": "No watch activities found for this day.", "activities": []})
+    v4_sessions, v4_status = _polar_v4_sessions_for_day(connection, target_date)
+    v4_plan_suggestion = _build_polar_v4_lap_suggestion(planned_text, v4_sessions, athlete=athlete)
+    if not activities and not v4_plan_suggestion:
+        return JsonResponse({
+            "ok": True,
+            "message": v4_status or "No watch activities found for this day.",
+            "activities": [],
+        })
     plan_suggestion = None
     ai_status = ""
     if planned_text:
@@ -3151,10 +3295,13 @@ def polar_activity_suggestions_view(request):
         cleaned.pop("raw", None)
         response_activities.append(cleaned)
     watch_debug = [_polar_activity_debug_summary(activity.get("raw") or {}) for activity in activities[:3]]
+    if v4_status and activities:
+        watch_debug.append(f"Polar v4: {v4_status}")
     return JsonResponse({
         "ok": True,
         "message": "",
         "activities": response_activities,
+        "v4_plan_suggestion": v4_plan_suggestion,
         "plan_suggestion": plan_suggestion,
         "ai_status": ai_status,
         "watch_debug": watch_debug,

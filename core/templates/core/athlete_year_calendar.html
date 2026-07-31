@@ -1635,7 +1635,7 @@
       .then(function(response) { return response.json(); })
       .then(function(data) {
         suggestions.innerHTML = "";
-        if (!data.ok || !data.activities || !data.activities.length) {
+        if (!data.ok || ((!data.activities || !data.activities.length) && !data.v4_plan_suggestion)) {
           suggestions.textContent = data.message || "No watch activities found for this day.";
           return;
         }
@@ -1644,6 +1644,9 @@
           aiStatus.className = "small text-muted mb-2";
           aiStatus.textContent = data.ai_status;
           suggestions.appendChild(aiStatus);
+        }
+        if (data.v4_plan_suggestion) {
+          suggestions.appendChild(renderPlanSuggestion(data.v4_plan_suggestion));
         }
         if (data.plan_suggestion) {
           suggestions.appendChild(renderPlanSuggestion(data.plan_suggestion));
