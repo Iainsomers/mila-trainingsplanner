@@ -71,6 +71,7 @@
 
         {% if not is_coach_polar_view %}
           <a href="{% url 'polar_connect' %}" class="btn btn-primary">Connect Polar</a>
+          <a href="{% url 'polar_v4_connect' %}" class="btn btn-outline-primary ms-2">Connect Polar v4</a>
         {% endif %}
         {% if connection and connection.access_token %}
           <form method="post" action="{% url 'polar_sync_test' %}" class="d-inline ms-2">
@@ -91,8 +92,11 @@
           <form method="post" action="{% url 'polar_v4_laps_test' %}" class="d-inline ms-2">
             {% csrf_token %}
             {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
-            <button type="submit" class="btn btn-outline-primary">V4 laps test</button>
+            <button type="submit" class="btn btn-outline-primary" {% if not connection.v4_access_token %}disabled{% endif %}>V4 laps test</button>
           </form>
+          {% if not connection.v4_access_token %}
+            <span class="text-muted small ms-2">Connect Polar v4 first.</span>
+          {% endif %}
         {% endif %}
       {% endif %}
     </div>

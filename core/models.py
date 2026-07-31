@@ -1005,6 +1005,13 @@ class PolarConnection(models.Model):
     last_error = models.TextField(blank=True, default="")
     raw_token_response = models.JSONField(default=dict, blank=True)
     raw_user_response = models.JSONField(default=dict, blank=True)
+    v4_access_token = models.TextField(blank=True, default="")
+    v4_refresh_token = models.TextField(blank=True, default="")
+    v4_token_type = models.CharField(max_length=30, blank=True, default="")
+    v4_expires_in = models.PositiveIntegerField(null=True, blank=True)
+    v4_scope = models.CharField(max_length=255, blank=True, default="")
+    raw_v4_token_response = models.JSONField(default=dict, blank=True)
+    v4_connected_at = models.DateTimeField(null=True, blank=True)
     connected_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
