@@ -2720,16 +2720,18 @@ def polar_v4_laps_test_view(request):
     checks = []
     found_sessions = []
     error_message = ""
+    last_query = ""
 
     for offset in range(0, 21):
         day = today - timedelta(days=offset)
         next_day = day + timedelta(days=1)
         params = [
-            ("from", f"{day.isoformat()}T00:00:00Z"),
-            ("to", f"{next_day.isoformat()}T00:00:00Z"),
+            ("from", f"{day.isoformat()}T00:00:00.000"),
+            ("to", f"{next_day.isoformat()}T00:00:00.000"),
         ]
         params.extend(("features", feature) for feature in features)
         url = f"{POLAR_V4_TRAINING_SESSIONS_URL}?{urlencode(params)}"
+        last_query = url
 
         try:
             status, payload = _polar_json_request(url, method="GET", headers=headers)
@@ -2782,6 +2784,7 @@ def polar_v4_laps_test_view(request):
                 "status": status,
                 "date": day.isoformat(),
                 "features": ", ".join(features),
+                "query": last_query,
                 "checks": checks,
                 "session_count": len(sessions),
                 "manual_laps": manual_laps,
@@ -2795,6 +2798,7 @@ def polar_v4_laps_test_view(request):
             "status": checks[-1]["status"] if checks else "",
             "date": "",
             "features": ", ".join(features),
+            "query": last_query,
             "checks": checks,
             "session_count": 0,
             "manual_laps": 0,
@@ -2807,6 +2811,7 @@ def polar_v4_laps_test_view(request):
             "status": checks[-1]["status"] if checks else 0,
             "date": checks[-1]["date"] if checks else "",
             "features": ", ".join(features),
+            "query": last_query,
             "checks": checks,
             "session_count": 0,
             "manual_laps": 0,
