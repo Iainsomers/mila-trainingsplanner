@@ -2724,7 +2724,10 @@ def polar_v4_laps_test_view(request):
     for offset in range(0, 21):
         day = today - timedelta(days=offset)
         next_day = day + timedelta(days=1)
-        params = [("from", day.isoformat()), ("to", next_day.isoformat())]
+        params = [
+            ("from", f"{day.isoformat()}T00:00:00Z"),
+            ("to", f"{next_day.isoformat()}T00:00:00Z"),
+        ]
         params.extend(("features", feature) for feature in features)
         url = f"{POLAR_V4_TRAINING_SESSIONS_URL}?{urlencode(params)}"
 
