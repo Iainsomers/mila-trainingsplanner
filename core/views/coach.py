@@ -2396,6 +2396,48 @@ def polar_splits_view(request):
     return redirect("polar_integration")
 
 
+def _polar_activity_debug_summary(raw):
+    if not isinstance(raw, dict):
+        return "Watch debug: raw activity is not an object."
+    top_keys = sorted(str(key) for key in raw.keys())
+    samples = raw.get("samples") if isinstance(raw.get("samples"), list) else []
+    sample_bits = []
+    for sample in samples:
+        if not isinstance(sample, dict):
+            continue
+        sample_type = _polar_sample_type(sample) or "?"
+        values = _polar_sample_values(sample)
+        sample_bits.append(f"{sample_type}({len(values)})")
+
+    interesting = []
+    for key in [
+        "laps", "manual_laps", "manual-laps", "automatic_laps", "automatic-laps",
+        "phases", "segments", "split_times", "split-times", "zones", "heart_rate_zones",
+        "route", "samples",
+    ]:
+        if key not in raw:
+            continue
+        value = raw.get(key)
+        if isinstance(value, list):
+            interesting.append(f"{key}: list({len(value)})")
+        elif isinstance(value, dict):
+            interesting.append(f"{key}: dict({len(value)})")
+        elif value is None:
+            interesting.append(f"{key}: null")
+        else:
+            interesting.append(f"{key}: {type(value).__name__}")
+
+    compact_keys = ", ".join(top_keys[:40])
+    if len(top_keys) > 40:
+        compact_keys += f", +{len(top_keys) - 40} more"
+    return (
+        "Watch debug:\n"
+        f"top keys: {compact_keys or '-'}\n"
+        f"samples: {', '.join(sample_bits) if sample_bits else 'not found'}\n"
+        f"lap/phase candidates: {', '.join(interesting) if interesting else 'not found'}"
+    )
+
+
 @login_required
 @require_GET
 def polar_activity_suggestions_view(request):
@@ -2481,12 +2523,14 @@ def polar_activity_suggestions_view(request):
         cleaned = dict(activity)
         cleaned.pop("raw", None)
         response_activities.append(cleaned)
+    watch_debug = [_polar_activity_debug_summary(activity.get("raw") or {}) for activity in activities[:3]]
     return JsonResponse({
         "ok": True,
         "message": "",
         "activities": response_activities,
         "plan_suggestion": plan_suggestion,
         "ai_status": ai_status,
+        "watch_debug": watch_debug,
     })
 
 
