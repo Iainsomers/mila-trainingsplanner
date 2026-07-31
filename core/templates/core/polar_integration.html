@@ -155,6 +155,10 @@
             </table>
           </div>
         {% endif %}
+        {% if v4_result.session_debug %}
+          <h6 class="mb-2">Session debug</h6>
+          <pre class="bg-light border rounded p-3 small mb-3" style="max-height: 320px; overflow: auto;">{{ v4_result.session_debug }}</pre>
+        {% endif %}
         <pre class="bg-light border rounded p-3 small mb-0" style="max-height: 420px; overflow: auto;">{{ v4_result.payload }}</pre>
       </div>
     </div>

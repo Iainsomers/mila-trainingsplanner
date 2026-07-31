@@ -2806,6 +2806,7 @@ def polar_v4_laps_test_view(request):
                     "session_count": len(sessions),
                     "manual_laps": manual_laps,
                     "auto_laps": auto_laps,
+                    "session_debug": "\n\n".join(_polar_v4_session_debug(session) for session in sessions[:3]),
                     "payload": pretty_payload,
                 }
                 break
@@ -2855,6 +2856,42 @@ def polar_v4_laps_test_view(request):
     connection.last_error = ""
     connection.save(update_fields=["status", "last_error", "updated_at"])
     return redirect("polar_integration")
+
+
+def _polar_v4_session_debug(session):
+    if not isinstance(session, dict):
+        return "Session debug: session is not an object."
+
+    def describe(value):
+        if isinstance(value, list):
+            return f"list({len(value)})"
+        if isinstance(value, dict):
+            return f"dict({len(value)})"
+        if value is None:
+            return "null"
+        return type(value).__name__
+
+    wanted = ("lap", "phase", "split", "segment", "pause", "zone", "route", "sample")
+    matches = []
+
+    def walk(value, path="", depth=0):
+        if depth > 4:
+            return
+        if isinstance(value, dict):
+            for key, child in value.items():
+                child_path = f"{path}.{key}" if path else str(key)
+                if any(term in str(key).lower() for term in wanted):
+                    matches.append(f"{child_path}: {describe(child)}")
+                walk(child, child_path, depth + 1)
+        elif isinstance(value, list):
+            if value and depth < 4:
+                walk(value[0], f"{path}[0]", depth + 1)
+
+    walk(session)
+    top_keys = ", ".join(sorted(str(key) for key in session.keys()))
+    if not matches:
+        matches.append("No lap/phase/split/segment/pause/zone/route/sample keys found.")
+    return f"Top keys: {top_keys or '-'}\nCandidates:\n" + "\n".join(matches[:80])
 
 
 def _polar_activity_debug_summary(raw):
