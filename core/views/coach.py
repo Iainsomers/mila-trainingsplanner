@@ -451,6 +451,7 @@ POLAR_REGISTER_USER_URL = "https://www.polaraccesslink.com/v3/users"
 POLAR_EXERCISES_URL = "https://www.polaraccesslink.com/v3/exercises"
 POLAR_PHYSICAL_INFO_URL = "https://www.polaraccesslink.com/v3/users/physical-info"
 POLAR_ACTIVITIES_URL = "https://www.polaraccesslink.com/v3/users/activities"
+POLAR_V4_TRAINING_SESSIONS_URL = "https://www.polaraccesslink.com/v4/data/training-sessions/list"
 
 
 def _polar_exercises_url(include_detail=True):
@@ -2301,6 +2302,7 @@ def polar_integration_view(request):
     sync_result = request.session.pop("polar_sync_result", None)
     steps_result = request.session.pop("polar_steps_result", None)
     splits_result = request.session.pop("polar_splits_result", None)
+    v4_result = request.session.pop("polar_v4_result", None)
     return render(request, "core/polar_integration.html", {
         "connection": connection,
         "selected_target": selected_target,
@@ -2312,6 +2314,7 @@ def polar_integration_view(request):
         "sync_result": sync_result,
         "steps_result": steps_result,
         "splits_result": splits_result,
+        "v4_result": v4_result,
     })
 
 
@@ -2610,6 +2613,124 @@ def polar_splits_view(request):
         "exercise_count": len(rows),
         "rows": rows,
     }
+    connection.status = PolarConnection.STATUS_CONNECTED
+    connection.last_error = ""
+    connection.save(update_fields=["status", "last_error", "updated_at"])
+    return redirect("polar_integration")
+
+
+@login_required
+@require_http_methods(["POST"])
+def polar_v4_laps_test_view(request):
+    selected_target, _targets = _selected_polar_target(request)
+    connection = selected_target["connection"] if selected_target else None
+    if not connection or not connection.access_token:
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'No Polar account is connected yet.'})}")
+
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {connection.access_token}",
+    }
+    features = ["laps", "pause-times", "statistics", "zones"]
+    today = date.today()
+    checks = []
+    found_sessions = []
+    error_message = ""
+
+    for offset in range(0, 21):
+        day = today - timedelta(days=offset)
+        next_day = day + timedelta(days=1)
+        params = [("from", day.isoformat()), ("to", next_day.isoformat())]
+        params.extend(("features", feature) for feature in features)
+        url = f"{POLAR_V4_TRAINING_SESSIONS_URL}?{urlencode(params)}"
+
+        try:
+            status, payload = _polar_json_request(url, method="GET", headers=headers)
+        except RuntimeError as exc:
+            status = 0
+            payload = {"error": str(exc)}
+
+        sessions = []
+        if isinstance(payload, dict):
+            sessions = payload.get("trainingSessions") or payload.get("training-sessions") or payload.get("sessions") or []
+        elif isinstance(payload, list):
+            sessions = payload
+        if not isinstance(sessions, list):
+            sessions = []
+
+        manual_laps = 0
+        auto_laps = 0
+        for session in sessions:
+            if not isinstance(session, dict):
+                continue
+            laps_obj = session.get("laps") if isinstance(session.get("laps"), dict) else session
+            laps = laps_obj.get("laps") if isinstance(laps_obj, dict) else []
+            auto = laps_obj.get("autoLaps") if isinstance(laps_obj, dict) else []
+            manual_laps += len(laps or []) if isinstance(laps, list) else 0
+            auto_laps += len(auto or []) if isinstance(auto, list) else 0
+
+        checks.append({
+            "date": day.isoformat(),
+            "status": status,
+            "sessions": len(sessions),
+            "manual_laps": manual_laps,
+            "auto_laps": auto_laps,
+        })
+
+        if status >= 400 or status == 0:
+            polar_message = ""
+            if isinstance(payload, dict):
+                polar_message = payload.get("error_description") or payload.get("message") or payload.get("error") or ""
+            error_message = f"Polar v4 request failed with status {status}."
+            if polar_message:
+                error_message = f"{error_message} {polar_message}"
+            break
+
+        if sessions:
+            found_sessions = sessions
+            pretty_payload = json.dumps(payload, indent=2, ensure_ascii=False)
+            if len(pretty_payload) > 20000:
+                pretty_payload = pretty_payload[:20000] + "\n... truncated ..."
+            request.session["polar_v4_result"] = {
+                "status": status,
+                "date": day.isoformat(),
+                "features": ", ".join(features),
+                "checks": checks,
+                "session_count": len(sessions),
+                "manual_laps": manual_laps,
+                "auto_laps": auto_laps,
+                "payload": pretty_payload,
+            }
+            break
+
+    if not found_sessions and not error_message:
+        request.session["polar_v4_result"] = {
+            "status": checks[-1]["status"] if checks else "",
+            "date": "",
+            "features": ", ".join(features),
+            "checks": checks,
+            "session_count": 0,
+            "manual_laps": 0,
+            "auto_laps": 0,
+            "payload": "No v4 training sessions found in the last 21 days.",
+        }
+
+    if error_message:
+        request.session["polar_v4_result"] = {
+            "status": checks[-1]["status"] if checks else 0,
+            "date": checks[-1]["date"] if checks else "",
+            "features": ", ".join(features),
+            "checks": checks,
+            "session_count": 0,
+            "manual_laps": 0,
+            "auto_laps": 0,
+            "payload": json.dumps(payload, indent=2, ensure_ascii=False) if "payload" in locals() else "",
+        }
+        connection.status = PolarConnection.STATUS_ERROR
+        connection.last_error = error_message
+        connection.save(update_fields=["status", "last_error", "updated_at"])
+        return redirect(f"{reverse('polar_integration')}?{urlencode({'error': error_message})}")
+
     connection.status = PolarConnection.STATUS_CONNECTED
     connection.last_error = ""
     connection.save(update_fields=["status", "last_error", "updated_at"])

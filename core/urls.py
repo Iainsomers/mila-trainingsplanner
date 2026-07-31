@@ -11,6 +11,7 @@ from core.views.coach import (
     polar_sync_test_view,
     polar_steps_view,
     polar_splits_view,
+    polar_v4_laps_test_view,
     polar_activity_suggestions_view,
     settings_view,
     coach_console_view,
@@ -94,6 +95,7 @@ urlpatterns = [
     path("integrations/polar/sync-test/", polar_sync_test_view, name="polar_sync_test"),
     path("integrations/polar/steps/", polar_steps_view, name="polar_steps"),
     path("integrations/polar/splits/", polar_splits_view, name="polar_splits"),
+    path("integrations/polar/v4-laps-test/", polar_v4_laps_test_view, name="polar_v4_laps_test"),
     path("integrations/polar/activity-suggestions/", polar_activity_suggestions_view, name="polar_activity_suggestions"),
     path("settings/", settings_view, name="settings"),
 

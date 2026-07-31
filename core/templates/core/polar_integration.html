@@ -88,10 +88,64 @@
             {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
             <button type="submit" class="btn btn-outline-primary">Get Splits</button>
           </form>
+          <form method="post" action="{% url 'polar_v4_laps_test' %}" class="d-inline ms-2">
+            {% csrf_token %}
+            {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
+            <button type="submit" class="btn btn-outline-primary">V4 laps test</button>
+          </form>
         {% endif %}
       {% endif %}
     </div>
   </div>
+
+  {% if v4_result %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Polar v4 laps test</h5>
+        <dl class="row mb-3">
+          <dt class="col-sm-3">Status</dt>
+          <dd class="col-sm-9">{{ v4_result.status }}</dd>
+          <dt class="col-sm-3">Date</dt>
+          <dd class="col-sm-9">{{ v4_result.date|default:"-" }}</dd>
+          <dt class="col-sm-3">Features</dt>
+          <dd class="col-sm-9">{{ v4_result.features }}</dd>
+          <dt class="col-sm-3">Sessions</dt>
+          <dd class="col-sm-9">{{ v4_result.session_count }}</dd>
+          <dt class="col-sm-3">Manual laps</dt>
+          <dd class="col-sm-9">{{ v4_result.manual_laps }}</dd>
+          <dt class="col-sm-3">Auto laps</dt>
+          <dd class="col-sm-9">{{ v4_result.auto_laps }}</dd>
+        </dl>
+        {% if v4_result.checks %}
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Date checked</th>
+                  <th class="text-end">Status</th>
+                  <th class="text-end">Sessions</th>
+                  <th class="text-end">Manual laps</th>
+                  <th class="text-end">Auto laps</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for check in v4_result.checks %}
+                  <tr>
+                    <td>{{ check.date }}</td>
+                    <td class="text-end">{{ check.status }}</td>
+                    <td class="text-end">{{ check.sessions }}</td>
+                    <td class="text-end">{{ check.manual_laps }}</td>
+                    <td class="text-end">{{ check.auto_laps }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+        <pre class="bg-light border rounded p-3 small mb-0" style="max-height: 420px; overflow: auto;">{{ v4_result.payload }}</pre>
+      </div>
+    </div>
+  {% endif %}
 
   {% if splits_result %}
     <div class="card mt-3">
