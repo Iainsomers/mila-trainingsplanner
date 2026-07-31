@@ -1475,9 +1475,11 @@ def _candidate_sequences_from_structure(splits, structure, max_sequences=6, acti
             sorted_work = sorted(work_seconds)
             median_work = sorted_work[len(sorted_work) // 2]
             variability = sum(abs(duration - median_work) for duration in work_seconds) / float(len(work_seconds))
+            first_outlier = max(0.0, work_seconds[0] - median_work) if len(work_seconds) > 2 else 0.0
         else:
             median_work = 0.0
             variability = 999999.0
+            first_outlier = 999999.0
 
         recovery_seconds = []
         recovery_m = 0.0
@@ -1503,31 +1505,6 @@ def _candidate_sequences_from_structure(splits, structure, max_sequences=6, acti
             work_m = 0.0
         work_speed = work_m / seconds if work_m > 0 and seconds > 0 else 0.0
         recovery_speed = recovery_m / sum(recovery_seconds) if recovery_m > 0 and recovery_seconds else 0.0
-        median_work_speed = 0.0
-        if median_work > 0 and blocks:
-            try:
-                median_work_m = float(blocks[0].get("distance_m") or 0)
-            except (TypeError, ValueError):
-                median_work_m = 0.0
-            if median_work_m > 0:
-                median_work_speed = median_work_m / median_work
-        recovery_like_penalty = 0.0
-        if median_work_speed and recovery_speed and recovery_speed < median_work_speed:
-            for block in blocks:
-                try:
-                    duration = float(block.get("duration_s") or _seconds_label_to_seconds(block.get("duration") or "") or 0)
-                    distance_m = float(block.get("distance_m") or 0)
-                except (TypeError, ValueError):
-                    continue
-                if duration <= 0 or distance_m <= 0:
-                    continue
-                speed = distance_m / duration
-                if speed >= median_work_speed:
-                    continue
-                distance_to_work = abs(speed - median_work_speed)
-                distance_to_recovery = abs(speed - recovery_speed)
-                if distance_to_recovery < distance_to_work:
-                    recovery_like_penalty += 1.0 + (distance_to_work - distance_to_recovery)
         contrast_penalty = 0.0
         if work_speed and recovery_speed:
             contrast_penalty = max(0.0, recovery_speed - (work_speed * 0.92)) * 100.0
@@ -1538,7 +1515,7 @@ def _candidate_sequences_from_structure(splits, structure, max_sequences=6, acti
                 expected_start_m = float(lead_blocks[0].get("start_m") or 0)
         start_penalty = abs(float(candidate.get("start_m") or 0) - expected_start_m) / max(split_m, 1.0)
         return (
-            round(recovery_like_penalty, 3),
+            round(first_outlier, 3),
             round(variability, 3),
             round(contrast_penalty, 3),
             round(recovery_penalty, 3),
