@@ -6030,6 +6030,7 @@ from core.views.calendar import (
     _VirtualSlot,
     _annotate_slot_segment_display_times,
     _base_planning_slot_for_day,
+    _clone_slot_for_display,
     _get_athlete_year_flex_plan,
     _is_flex_planner_plan,
     _slot_has_race,
@@ -6345,6 +6346,7 @@ def daily_overview_view(request):
                     if _slot_is_visually_empty(slot) and base_planning_slot.trainer_plan:
                         slot = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
 
+        slot = _clone_slot_for_display(slot)
         _annotate_slot_segment_display_times(slot, athlete)
         return None if _slot_is_visually_empty(slot) else slot
 
