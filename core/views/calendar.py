@@ -1942,6 +1942,20 @@ def _ayc_t_key(text):
     return _ayc_normalize_t_key(m.group(1)) if m else ""
 
 
+def _ayc_zone_for_t_key(t_key):
+    mapping = {
+        "TM": "2",
+        "THM": "3",
+        "10000": "4",
+        "5000": "4",
+        "3000": "4",
+        "1500": "5",
+        "800": "5",
+        "T4": "5",
+    }
+    return mapping.get(str(t_key or ""), "")
+
+
 def _ayc_progressive_t_keys(text):
     s = re.sub(r"\s+", "", (text or "").upper())
     m = re.search(
@@ -2036,10 +2050,12 @@ def _ayc_compound_loads(text, fallback_zone):
         if not dm:
             return None
         zm = re.search(r"\bz\s*([1-6])\b", part, re.I)
+        part_t_key = _ayc_t_key(part)
+        t_key = part_t_key or ("" if zm else _ayc_t_key(s))
         loads.append({
-            "zone": zm.group(1) if zm else fallback_zone,
+            "zone": zm.group(1) if zm else (_ayc_zone_for_t_key(t_key) or fallback_zone),
             "meters": reps * _ayc_meters_from_value(dm.group(1), dm.group(2)),
-            "t_key": _ayc_t_key(part) or _ayc_t_key(s),
+            "t_key": t_key,
             "race": bool(re.search(r"race", s, re.I)),
         })
     return loads

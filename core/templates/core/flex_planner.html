@@ -481,6 +481,20 @@
       return m ? flexNormalizeTKey(m[1]) : "";
     }
 
+    function flexZoneForTKey(tKey) {
+      const mapping = {
+        "TM": "2",
+        "THM": "3",
+        "10000": "4",
+        "5000": "4",
+        "3000": "4",
+        "1500": "5",
+        "800": "5",
+        "T4": "5"
+      };
+      return mapping[String(tKey || "")] || "";
+    }
+
     function flexProgressiveTKeys(text) {
       const s = (text || "").toUpperCase().replace(/\s+/g, "");
       const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
@@ -612,11 +626,13 @@
         const dm = part.match(/(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/i);
         if (!dm) return null;
         const zm = part.match(/\bz\s*([1-6])\b/i);
-        const zone = zm ? zm[1] : fallbackZone;
+        const partTKey = flexTKey(part);
+        const tKey = partTKey || (zm ? "" : flexTKey(s));
+        const zone = zm ? zm[1] : (flexZoneForTKey(tKey) || fallbackZone);
         loads.push({
           zone: zone,
           meters: reps * flexMetersFromValue(dm[1], dm[2]),
-          tKey: flexTKey(part) || flexTKey(s),
+          tKey: tKey,
           race: /race/i.test(s)
         });
       }
