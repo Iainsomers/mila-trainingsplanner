@@ -289,6 +289,40 @@ class SegmentRepTimeDisplayTests(TestCase):
 
         self.assertEqual(_segment_rep_time_label(athlete, segment), "1:16/0:25")
 
+    def test_duration_reps_show_current_and_goal_t_pace(self):
+        athlete = Athlete.objects.create(
+            name="Time Runner",
+            birth_year=2000,
+            gender="X",
+            pr_1500_s=300,
+            target_pr_1500_s=285,
+        )
+        segment = TrainingSegment(
+            type="CORE",
+            text="10*1' t15",
+            t_type="1500",
+            reps=10,
+            duration_s=600,
+        )
+
+        self.assertEqual(_segment_rep_time_label(athlete, segment), "3:20-->3:10 min/km")
+
+    def test_duration_segment_shows_zone_pace(self):
+        athlete = Athlete.objects.create(
+            name="Zone Time Runner",
+            birth_year=2000,
+            gender="X",
+            zone_speed_mps={"3": 1000 / 240},
+        )
+        segment = TrainingSegment(
+            type="CORE",
+            text='90" z3',
+            zone="3",
+            duration_s=90,
+        )
+
+        self.assertEqual(_segment_rep_time_label(athlete, segment), "4:00 min/km")
+
 
 class RaceSelectDisplayTests(TestCase):
     def test_target_checkbox_makes_race_important_without_athlete_checkbox(self):

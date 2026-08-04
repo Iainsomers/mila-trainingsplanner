@@ -1794,6 +1794,79 @@ def _format_rep_time_range_parts(distance_seconds_values):
     return f"{'/'.join(slow_labels)}-->{'/'.join(fast_labels)}"
 
 
+def _format_min_km_range(seconds_per_km_values):
+    values = []
+    for value in seconds_per_km_values:
+        try:
+            seconds = float(value or 0)
+        except Exception:
+            seconds = 0
+        if seconds > 0:
+            values.append(seconds)
+
+    if not values:
+        return ""
+
+    slow_label = _format_rep_time_seconds(max(values))
+    fast_label = _format_rep_time_seconds(min(values))
+    if not slow_label:
+        return ""
+    if not fast_label or slow_label == fast_label:
+        return f"{slow_label} min/km"
+    return f"{slow_label}-->{fast_label} min/km"
+
+
+def _segment_duration_pace_label(athlete, seg):
+    try:
+        duration_s = float(getattr(seg, "duration_s", None) or 0)
+    except Exception:
+        duration_s = 0
+    if duration_s <= 0:
+        return ""
+
+    pace_candidates = []
+    t_distances = {
+        "TM": 42195,
+        "THM": 21097.5,
+        "T10": 10000,
+        "T5": 5000,
+        "T3": 3000,
+        "T15": 1500,
+        "T8": 800,
+        "T4": 400,
+    }
+    for t_label in _segment_t_labels(seg):
+        t_distance = t_distances.get(t_label)
+        if not t_distance:
+            continue
+        for pr_seconds in (
+            _athlete_t_pr_seconds(athlete, t_label),
+            _athlete_target_t_pr_seconds(athlete, t_label),
+        ):
+            if pr_seconds:
+                pace_candidates.append(float(pr_seconds) / (float(t_distance) / 1000.0))
+
+    if pace_candidates:
+        return _format_min_km_range(pace_candidates)
+
+    zone_labels = _segment_zone_labels(seg)
+    if not zone_labels:
+        fallback_zone = _zone_from_text(getattr(seg, "text", "") or "", "")
+        if fallback_zone:
+            zone_labels.append(fallback_zone)
+
+    for zone in zone_labels:
+        speed = _zone_speed_mps(athlete, f"Z{zone}")
+        try:
+            speed = float(speed or 0)
+        except Exception:
+            speed = 0
+        if speed > 0:
+            pace_candidates.append(1000.0 / speed)
+
+    return _format_min_km_range(pace_candidates)
+
+
 def _segment_compound_part_zone_labels(seg, distances_m):
     compound_parts = _segment_compound_rep_parts(seg)
     if not compound_parts or len(compound_parts) != len(distances_m):
@@ -1825,7 +1898,7 @@ def _segment_rep_time_label(athlete, seg):
 
     distances_m = _segment_rep_distances_m(seg)
     if not distances_m:
-        return ""
+        return _segment_duration_pace_label(athlete, seg)
 
     distance_time_candidates = [[] for _ in distances_m]
     t_labels = _segment_t_labels(seg)
