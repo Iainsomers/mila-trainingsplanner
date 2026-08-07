@@ -5,6 +5,25 @@
 {% endblock %}
 
 {% block content %}
+<style>
+  .fixed-time-input {
+    display: flex;
+    align-items: center;
+    gap: .2rem;
+  }
+  .fixed-time-input .time-part {
+    min-width: 0;
+    padding-left: .4rem;
+    padding-right: .4rem;
+    text-align: center;
+  }
+  .fixed-time-input .time-part-minutes { width: 4.4rem; }
+  .fixed-time-input .time-part-two { width: 3.4rem; }
+  .fixed-time-input .time-separator {
+    flex: 0 0 auto;
+    font-weight: 700;
+  }
+</style>
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
@@ -109,6 +128,111 @@
               return String(minutes) + ":" + String(seconds).padStart(2, "0");
             }
 
+            function installFixedTimeInput(input) {
+              const format = input.dataset.timeFormat;
+              if (!format) return;
+
+              const wrapper = document.createElement("div");
+              wrapper.className = "fixed-time-input" + (input.classList.contains("mt-1") ? " mt-1" : "");
+              const definitions = format === "seconds-hundredths"
+                ? [{ key: "seconds", max: 2 }, { separator: "." }, { key: "hundredths", max: 2 }]
+                : format === "minutes-seconds-hundredths"
+                  ? [{ key: "minutes", max: 2 }, { separator: ":" }, { key: "seconds", max: 2 }, { separator: "." }, { key: "hundredths", max: 2 }]
+                  : [{ key: "minutes", max: 3 }, { separator: ":" }, { key: "seconds", max: 2 }];
+              const parts = {};
+
+              definitions.forEach(function (definition) {
+                if (definition.separator) {
+                  const separator = document.createElement("span");
+                  separator.className = "time-separator";
+                  separator.textContent = definition.separator;
+                  wrapper.appendChild(separator);
+                  return;
+                }
+                const part = document.createElement("input");
+                part.type = "text";
+                part.inputMode = "numeric";
+                part.autocomplete = "off";
+                part.maxLength = definition.max;
+                part.className = "form-control time-part "
+                  + (input.classList.contains("form-control-sm") ? "form-control-sm " : "")
+                  + (definition.key === "minutes" ? "time-part-minutes" : "time-part-two");
+                part.placeholder = definition.key === "minutes" ? "mm" : (definition.key === "seconds" ? "ss" : "00");
+                part.setAttribute("aria-label", definition.key);
+                parts[definition.key] = part;
+                wrapper.appendChild(part);
+              });
+
+              function setPartsFromSeconds(totalSeconds) {
+                if (totalSeconds == null || !Number.isFinite(totalSeconds) || totalSeconds <= 0) return;
+                if (format === "seconds-hundredths") {
+                  const hundredthsTotal = Math.round(totalSeconds * 100);
+                  parts.seconds.value = String(Math.floor(hundredthsTotal / 100)).padStart(2, "0");
+                  parts.hundredths.value = String(hundredthsTotal % 100).padStart(2, "0");
+                } else if (format === "minutes-seconds-hundredths") {
+                  const hundredthsTotal = Math.round(totalSeconds * 100);
+                  const totalWholeSeconds = Math.floor(hundredthsTotal / 100);
+                  parts.minutes.value = String(Math.floor(totalWholeSeconds / 60)).padStart(2, "0");
+                  parts.seconds.value = String(totalWholeSeconds % 60).padStart(2, "0");
+                  parts.hundredths.value = String(hundredthsTotal % 100).padStart(2, "0");
+                } else {
+                  const roundedSeconds = Math.round(totalSeconds);
+                  parts.minutes.value = String(Math.floor(roundedSeconds / 60));
+                  parts.seconds.value = String(roundedSeconds % 60).padStart(2, "0");
+                }
+              }
+
+              function syncOriginal(dispatchChange) {
+                const minutes = parts.minutes ? parts.minutes.value : "";
+                const seconds = parts.seconds ? parts.seconds.value : "";
+                const hundredths = parts.hundredths ? parts.hundredths.value : "";
+                if (format === "seconds-hundredths") {
+                  input.value = seconds && hundredths ? seconds + "." + hundredths : "";
+                } else if (format === "minutes-seconds-hundredths") {
+                  input.value = minutes && seconds && hundredths ? minutes + ":" + seconds + "." + hundredths : "";
+                } else {
+                  input.value = minutes && seconds ? minutes + ":" + seconds : "";
+                }
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+                if (dispatchChange) input.dispatchEvent(new Event("change", { bubbles: true }));
+              }
+
+              Object.values(parts).forEach(function (part, index, allParts) {
+                part.addEventListener("input", function () {
+                  part.value = part.value.replace(/\D/g, "").slice(0, part.maxLength);
+                  if (part === parts.seconds && Number(part.value) > 59) part.value = "59";
+                  syncOriginal(false);
+                  if (part.value.length === part.maxLength && index < allParts.length - 1) allParts[index + 1].focus();
+                });
+                part.addEventListener("keydown", function (event) {
+                  if (event.key === "Backspace" && !part.value && index > 0) allParts[index - 1].focus();
+                  if ((event.key === ":" || event.key === ".") && index < allParts.length - 1) {
+                    event.preventDefault();
+                    allParts[index + 1].focus();
+                  }
+                });
+                part.addEventListener("blur", function () {
+                  if (!part.value) return;
+                  if (part === parts.seconds || part === parts.hundredths || (part === parts.minutes && format === "minutes-seconds-hundredths")) {
+                    part.value = part.value.padStart(2, "0");
+                  }
+                  syncOriginal(true);
+                });
+              });
+
+              const initialSeconds = parsePrToSeconds(input.value);
+              input.type = "hidden";
+              input.insertAdjacentElement("afterend", wrapper);
+              setPartsFromSeconds(initialSeconds);
+              syncOriginal(false);
+              input._setFixedTimeSeconds = function (totalSeconds) {
+                setPartsFromSeconds(totalSeconds);
+                syncOriginal(false);
+              };
+            }
+
+            form.querySelectorAll("input[data-time-format]").forEach(installFixedTimeInput);
+
             const fields = {
               t4: form.querySelector('input[name="t4"]'),
               t8: form.querySelector('input[name="pr_800"]'),
@@ -155,7 +279,9 @@
                     const sourceSeconds = parsePrToSeconds(source.value);
 
                     if (!targetValue && sourceSeconds && sourceSeconds > 0) {
-                      target.value = formatSeconds(sourceSeconds * rel.factor);
+                      const calculatedSeconds = sourceSeconds * rel.factor;
+                      target.value = formatSeconds(calculatedSeconds);
+                      if (target._setFixedTimeSeconds) target._setFixedTimeSeconds(calculatedSeconds);
                       changed = true;
                     }
                   });
@@ -272,7 +398,7 @@
           <div class="row g-3">
             <div class="col-md-2">
               <label class="form-label">Z1</label>
-              <input name="z1_pace" class="form-control" value="{{ form.z1_pace }}"
+              <input name="z1_pace" class="form-control" value="{{ form.z1_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 12.5{% else %}e.g. 5:00{% endif %}">
               <div class="form-text">
                 {% if form.z1_other %}{{ form.z1_other }}{% else %}(not calculated yet){% endif %}
@@ -280,7 +406,7 @@
             </div>
             <div class="col-md-2">
               <label class="form-label">Z2</label>
-              <input name="z2_pace" class="form-control" value="{{ form.z2_pace }}"
+              <input name="z2_pace" class="form-control" value="{{ form.z2_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 13.5{% else %}e.g. 4:40{% endif %}">
               <div class="form-text">
                 {% if form.z2_other %}{{ form.z2_other }}{% else %}(not calculated yet){% endif %}
@@ -288,7 +414,7 @@
             </div>
             <div class="col-md-2">
               <label class="form-label">Z3</label>
-              <input name="z3_pace" class="form-control" value="{{ form.z3_pace }}"
+              <input name="z3_pace" class="form-control" value="{{ form.z3_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 14.5{% else %}e.g. 4:20{% endif %}">
               <div class="form-text">
                 {% if form.z3_other %}{{ form.z3_other }}{% else %}(not calculated yet){% endif %}
@@ -296,7 +422,7 @@
             </div>
             <div class="col-md-2">
               <label class="form-label">Z4</label>
-              <input name="z4_pace" class="form-control" value="{{ form.z4_pace }}"
+              <input name="z4_pace" class="form-control" value="{{ form.z4_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 15.5{% else %}e.g. 4:00{% endif %}">
               <div class="form-text">
                 {% if form.z4_other %}{{ form.z4_other }}{% else %}(not calculated yet){% endif %}
@@ -304,7 +430,7 @@
             </div>
             <div class="col-md-2">
               <label class="form-label">Z5</label>
-              <input name="z5_pace" class="form-control" value="{{ form.z5_pace }}"
+              <input name="z5_pace" class="form-control" value="{{ form.z5_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 16.5{% else %}e.g. 3:45{% endif %}">
               <div class="form-text">
                 {% if form.z5_other %}{{ form.z5_other }}{% else %}(not calculated yet){% endif %}
@@ -340,48 +466,48 @@
           <div class="row g-3">
             <div class="col-md-2">
               <label class="form-label">T4</label>
-              <input name="t4" class="form-control" value="{{ form.t4 }}" placeholder="e.g. 56">
-              <input name="target_t4" class="form-control form-control-sm mt-1" value="{{ form.target_t4 }}" placeholder="Goal">
+              <input name="t4" class="form-control" value="{{ form.t4 }}" data-time-format="seconds-hundredths">
+              <input name="target_t4" class="form-control form-control-sm mt-1" value="{{ form.target_t4 }}" data-time-format="seconds-hundredths">
             </div>
             <div class="col-md-2">
               <label class="form-label">T8</label>
-              <input name="pr_800" class="form-control" value="{{ form.pr_800 }}" placeholder="e.g. 2:00">
-              <input name="target_pr_800" class="form-control form-control-sm mt-1" value="{{ form.target_pr_800 }}" placeholder="Goal">
+              <input name="pr_800" class="form-control" value="{{ form.pr_800 }}" data-time-format="minutes-seconds-hundredths">
+              <input name="target_pr_800" class="form-control form-control-sm mt-1" value="{{ form.target_pr_800 }}" data-time-format="minutes-seconds-hundredths">
             </div>
             <div class="col-md-2">
               <label class="form-label">T15</label>
-              <input name="pr_1500" class="form-control" value="{{ form.pr_1500 }}" placeholder="e.g. 4:10">
-              <input name="target_pr_1500" class="form-control form-control-sm mt-1" value="{{ form.target_pr_1500 }}" placeholder="Goal">
+              <input name="pr_1500" class="form-control" value="{{ form.pr_1500 }}" data-time-format="minutes-seconds-hundredths">
+              <input name="target_pr_1500" class="form-control form-control-sm mt-1" value="{{ form.target_pr_1500 }}" data-time-format="minutes-seconds-hundredths">
             </div>
             <div class="col-md-2">
               <label class="form-label">T3</label>
-              <input name="pr_3000" class="form-control" value="{{ form.pr_3000 }}" placeholder="e.g. 9:20">
-              <input name="target_pr_3000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_3000 }}" placeholder="Goal">
+              <input name="pr_3000" class="form-control" value="{{ form.pr_3000 }}" data-time-format="minutes-seconds">
+              <input name="target_pr_3000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_3000 }}" data-time-format="minutes-seconds">
             </div>
             <div class="col-md-2">
               <label class="form-label">T5</label>
-              <input name="pr_5000" class="form-control" value="{{ form.pr_5000 }}" placeholder="e.g. 15:40">
-              <input name="target_pr_5000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_5000 }}" placeholder="Goal">
+              <input name="pr_5000" class="form-control" value="{{ form.pr_5000 }}" data-time-format="minutes-seconds">
+              <input name="target_pr_5000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_5000 }}" data-time-format="minutes-seconds">
             </div>
             <div class="col-md-2">
               <label class="form-label">T10</label>
-              <input name="pr_10000" class="form-control" value="{{ form.pr_10000 }}" placeholder="e.g. 30:20">
-              <input name="target_pr_10000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_10000 }}" placeholder="Goal">
+              <input name="pr_10000" class="form-control" value="{{ form.pr_10000 }}" data-time-format="minutes-seconds">
+              <input name="target_pr_10000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_10000 }}" data-time-format="minutes-seconds">
             </div>
             <div class="col-md-2">
               <label class="form-label">THM</label>
-              <input name="thm" class="form-control" value="{{ form.thm }}" placeholder="e.g. 1:12:30">
-              <input name="target_thm" class="form-control form-control-sm mt-1" value="{{ form.target_thm }}" placeholder="Goal">
+              <input name="thm" class="form-control" value="{{ form.thm }}" data-time-format="minutes-seconds">
+              <input name="target_thm" class="form-control form-control-sm mt-1" value="{{ form.target_thm }}" data-time-format="minutes-seconds">
             </div>
             <div class="col-md-2">
               <label class="form-label">TM</label>
-              <input name="tm" class="form-control" value="{{ form.tm }}" placeholder="e.g. 2:30:00">
-              <input name="target_tm" class="form-control form-control-sm mt-1" value="{{ form.target_tm }}" placeholder="Goal">
+              <input name="tm" class="form-control" value="{{ form.tm }}" data-time-format="minutes-seconds">
+              <input name="target_tm" class="form-control form-control-sm mt-1" value="{{ form.target_tm }}" data-time-format="minutes-seconds">
             </div>
           </div>
 
           <div class="form-text mt-2">
-            Enter times as m:ss or h:mm:ss.
+            Fixed format: T4 ss.ss; T8/T15 mm:ss.ss; longer distances mm:ss.
             {% if mode == "edit" and athlete %}
               <span id="targetPrSaveStatus" class="ms-2 text-muted"></span>
             {% endif %}

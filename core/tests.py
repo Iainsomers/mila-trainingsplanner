@@ -464,3 +464,36 @@ class StandardStrengthAccessTests(TestCase):
         response = self.client.get(f"/planning/standard-strength/{program.id}/")
 
         self.assertEqual(response.status_code, 403)
+
+
+class AthleteTimeInputFormatTests(TestCase):
+    def test_athlete_form_marks_each_time_field_with_its_fixed_format(self):
+        user = get_user_model().objects.create_user(
+            username="timeformatcoach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Time Format Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(f"/coach/athletes/{athlete.id}/edit/?tab=zones")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        for name in ("t4", "target_t4"):
+            self.assertIn(f'name="{name}"', html)
+            self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="seconds-hundredths"')
+        for name in ("pr_800", "target_pr_800", "pr_1500", "target_pr_1500"):
+            self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="minutes-seconds-hundredths"')
+        for name in (
+            "pr_3000", "target_pr_3000", "pr_5000", "target_pr_5000",
+            "pr_10000", "target_pr_10000", "thm", "target_thm", "tm", "target_tm",
+        ):
+            self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="minutes-seconds"')
+        for zone in range(1, 6):
+            self.assertRegex(html, rf'name="z{zone}_pace"[^>]+data-time-format="minutes-seconds"')
