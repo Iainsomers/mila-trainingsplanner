@@ -492,8 +492,10 @@ class AthleteTimeInputFormatTests(TestCase):
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="minutes-seconds-hundredths"')
         for name in (
             "pr_3000", "target_pr_3000", "pr_5000", "target_pr_5000",
-            "pr_10000", "target_pr_10000", "thm", "target_thm", "tm", "target_tm",
+            "pr_10000", "target_pr_10000",
         ):
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="minutes-seconds"')
+        for name in ("thm", "target_thm", "tm", "target_tm"):
+            self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="hours-minutes-seconds"')
         for zone in range(1, 6):
             self.assertRegex(html, rf'name="z{zone}_pace"[^>]+data-time-format="minutes-seconds"')
