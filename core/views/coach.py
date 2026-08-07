@@ -20,7 +20,7 @@ from django.contrib.auth import get_user_model
 from django.db.models.functions import Lower
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
@@ -4124,19 +4124,16 @@ def standard_strength_detail_view(request, program_id: int):
     )
     if program.owner_id and program.owner_id != request.user.id and not request.user.is_staff:
         athlete = _athlete_for_user(request.user)
-        allowed = False
-        if athlete:
-            for segment in program.segments.select_related("slot", "slot__plan", "slot__athlete").all()[:200]:
-                slot = segment.slot
-                if slot.athlete_id == athlete.id:
-                    allowed = True
-                    break
-                try:
-                    if slot.plan_id and athlete.id in slot.plan.targeted_athlete_ids():
-                        allowed = True
-                        break
-                except Exception:
-                    continue
+        allowed = bool(
+            athlete
+            and program.segments.filter(
+                Q(slot__athlete=athlete)
+                | Q(slot__athletes=athlete)
+                | Q(slot__groups__athletes=athlete)
+                | Q(slot__plan__athletes=athlete)
+                | Q(slot__plan__groups__athletes=athlete)
+            ).exists()
+        )
         if not allowed:
             return HttpResponse("Not allowed", status=403)
     next_url = (request.GET.get("next") or "").strip()

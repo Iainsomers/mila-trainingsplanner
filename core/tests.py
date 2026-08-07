@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
+from datetime import date, timedelta
+
 from django.test import TestCase
 
-from core.models import Athlete, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, TrainingPlan, TrainingSegment, TrainingSlot
+from core.models import Athlete, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
 from core.views.coach import _race_line_text, _race_selected_count
 
@@ -341,3 +343,74 @@ class RaceSelectDisplayTests(TestCase):
 
         self.assertEqual(count, 3)
         self.assertIn("Race!", _race_line_text(race, distance, count))
+
+
+class StandardStrengthAccessTests(TestCase):
+    def test_athlete_can_open_program_used_after_more_than_200_other_segments(self):
+        User = get_user_model()
+        coach = User.objects.create_user(username="strengthcoach", password="secret", is_staff=True)
+        athlete_user = User.objects.create_user(username="strengthathlete", password="secret")
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="strengthathlete",
+            birth_year=2000,
+            gender="X",
+        )
+        plan = TrainingPlan.objects.create(owner=coach, name="Strength access plan")
+        program = StandardStrengthProgram.objects.create(owner=coach, name="Standard circuit")
+
+        slots = [
+            TrainingSlot(
+                plan=plan,
+                date=date(2026, 1, 1) + timedelta(days=index),
+                slot_index=1,
+            )
+            for index in range(201)
+        ]
+        TrainingSlot.objects.bulk_create(slots)
+        TrainingSegment.objects.bulk_create([
+            TrainingSegment(
+                slot=slot,
+                order=1,
+                type="MOB",
+                text=program.name,
+                standard_strength_program=program,
+            )
+            for slot in slots
+        ])
+
+        athlete_slot = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=athlete,
+            date=date(2026, 12, 31),
+            slot_index=1,
+        )
+        TrainingSegment.objects.create(
+            slot=athlete_slot,
+            order=1,
+            type="MOB",
+            text=program.name,
+            standard_strength_program=program,
+        )
+
+        self.client.force_login(athlete_user)
+        response = self.client.get(f"/planning/standard-strength/{program.id}/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_unrelated_athlete_cannot_open_program(self):
+        User = get_user_model()
+        coach = User.objects.create_user(username="othercoach", password="secret", is_staff=True)
+        athlete_user = User.objects.create_user(username="unrelatedathlete", password="secret")
+        Athlete.objects.create(
+            owner=coach,
+            name="unrelatedathlete",
+            birth_year=2000,
+            gender="X",
+        )
+        program = StandardStrengthProgram.objects.create(owner=coach, name="Private circuit")
+
+        self.client.force_login(athlete_user)
+        response = self.client.get(f"/planning/standard-strength/{program.id}/")
+
+        self.assertEqual(response.status_code, 403)
