@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from django.test import TestCase
 
-from core.models import Athlete, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
 from core.views.coach import _race_line_text, _race_selected_count
 
@@ -346,6 +346,56 @@ class RaceSelectDisplayTests(TestCase):
 
 
 class StandardStrengthAccessTests(TestCase):
+    def test_athlete_can_open_program_from_trainer_plan_selected_in_base_planning(self):
+        User = get_user_model()
+        coach = User.objects.create_user(username="basecoach", password="secret", is_staff=True)
+        athlete_user = User.objects.create_user(username="baseathlete", password="secret")
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="baseathlete",
+            birth_year=2000,
+            gender="X",
+        )
+        trainer_plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Base linked trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Full year",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=trainer_plan,
+        )
+        program = StandardStrengthProgram.objects.create(owner=coach, name="Base circuit")
+        trainer_slot = TrainingSlot.objects.create(
+            plan=trainer_plan,
+            date=date(2026, 8, 10),
+            slot_index=1,
+        )
+        TrainingSegment.objects.create(
+            slot=trainer_slot,
+            order=1,
+            type="MOB",
+            text=program.name,
+            standard_strength_program=program,
+        )
+
+        self.client.force_login(athlete_user)
+        response = self.client.get(f"/planning/standard-strength/{program.id}/")
+
+        self.assertEqual(response.status_code, 200)
+
     def test_athlete_can_open_program_used_after_more_than_200_other_segments(self):
         User = get_user_model()
         coach = User.objects.create_user(username="strengthcoach", password="secret", is_staff=True)
