@@ -25,6 +25,7 @@
   }
   .fixed-time-input .time-part-minutes { width: 4.4rem; }
   .fixed-time-input .time-part-two { width: 3.4rem; }
+  .fixed-time-input .time-part-seconds-wide { width: 4.2rem; }
   .fixed-time-input .time-separator {
     flex: 0 0 auto;
     font-weight: 700;
@@ -185,7 +186,7 @@
                 wrapper.appendChild(entryLabel);
               }
               const definitions = format === "seconds-hundredths"
-                ? [{ key: "seconds", max: 2 }, { separator: "." }, { key: "hundredths", max: 2 }]
+                ? [{ key: "seconds", max: 3 }, { separator: "." }, { key: "hundredths", max: 2 }]
                 : format === "minutes-seconds-hundredths"
                   ? [{ key: "minutes", max: 2 }, { separator: ":" }, { key: "seconds", max: 2 }, { separator: "." }, { key: "hundredths", max: 2 }]
                   : format === "hours-minutes-seconds"
@@ -208,8 +209,8 @@
                 part.maxLength = definition.max;
                 part.className = "form-control time-part "
                   + (input.classList.contains("form-control-sm") ? "form-control-sm " : "")
-                  + (definition.key === "minutes" ? "time-part-minutes" : "time-part-two");
-                part.placeholder = definition.key === "hours" ? "hh" : (definition.key === "minutes" ? "mm" : (definition.key === "seconds" ? "ss" : "00"));
+                  + (definition.key === "minutes" ? "time-part-minutes" : (format === "seconds-hundredths" && definition.key === "seconds" ? "time-part-seconds-wide" : "time-part-two"));
+                part.placeholder = definition.key === "hours" ? "hh" : (definition.key === "minutes" ? "mm" : (definition.key === "seconds" ? (format === "seconds-hundredths" ? "sec" : "ss") : "00"));
                 part.setAttribute("aria-label", definition.key);
                 parts[definition.key] = part;
                 wrapper.appendChild(part);
@@ -260,7 +261,7 @@
               Object.values(parts).forEach(function (part, index, allParts) {
                 part.addEventListener("input", function () {
                   part.value = part.value.replace(/\D/g, "").slice(0, part.maxLength);
-                  if (part === parts.seconds && Number(part.value) > 59) part.value = "59";
+                  if (format !== "seconds-hundredths" && part === parts.seconds && Number(part.value) > 59) part.value = "59";
                   if (format === "hours-minutes-seconds" && part === parts.minutes && Number(part.value) > 59) part.value = "59";
                   syncOriginal(false);
                   if (part.value.length === part.maxLength && index < allParts.length - 1) allParts[index + 1].focus();

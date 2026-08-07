@@ -5,7 +5,7 @@ from django.test import TestCase
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
-from core.views.coach import _race_line_text, _race_selected_count
+from core.views.coach import _parse_pr_time_to_seconds, _race_line_text, _race_selected_count
 
 
 class SlotModalSaveTests(TestCase):
@@ -467,6 +467,9 @@ class StandardStrengthAccessTests(TestCase):
 
 
 class AthleteTimeInputFormatTests(TestCase):
+    def test_400m_format_accepts_more_than_60_seconds(self):
+        self.assertEqual(_parse_pr_time_to_seconds("72.35"), 72.35)
+
     def test_athlete_form_marks_each_time_field_with_its_fixed_format(self):
         user = get_user_model().objects.create_user(
             username="timeformatcoach",
