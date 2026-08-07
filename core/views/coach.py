@@ -3573,8 +3573,8 @@ def _base_training_display_parts(text: str):
         "WU": "WU",
         "MOB": "Mob",
         "SPR": "Sprint",
-        "CORE": "Core",
-        "CORE2": "2nd",
+        "CORE": "Main",
+        "CORE2": "Main 2",
         "ALT": "Alt",
         "CD": "CD",
     }

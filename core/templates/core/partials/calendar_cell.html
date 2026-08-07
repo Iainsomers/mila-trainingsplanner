@@ -110,7 +110,7 @@
               {% endfor %}
               {% for seg in slot.segments.all %}
                 {% if seg.type == "CORE2" and seg.text or seg.type == "CORE2" and seg.standard_strength_program %}
-                  <div>2nd: {% include "core/partials/segment_display.html" with seg=seg %}</div>
+                  <div>Main 2: {% include "core/partials/segment_display.html" with seg=seg %}</div>
                 {% endif %}
               {% endfor %}
             {% endif %}

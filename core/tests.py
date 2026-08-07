@@ -504,3 +504,9 @@ class AthleteTimeInputFormatTests(TestCase):
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="hours-minutes-seconds"')
         for zone in range(1, 6):
             self.assertRegex(html, rf'name="z{zone}_pace"[^>]+data-time-format="minutes-seconds"')
+
+
+class TrainingSegmentLabelTests(TestCase):
+    def test_main_labels_replace_core_labels(self):
+        self.assertEqual(TrainingSegment(type="CORE").get_type_display(), "Main")
+        self.assertEqual(TrainingSegment(type="CORE2").get_type_display(), "Main 2")

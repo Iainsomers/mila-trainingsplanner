@@ -490,8 +490,8 @@ class TrainingSlot(models.Model):
 class TrainingSegment(models.Model):
     TYPE_CHOICES = [
         ("WU", "WU"),
-        ("CORE", "Core"),
-        ("CORE2", "2nd Core"),
+        ("CORE", "Main"),
+        ("CORE2", "Main 2"),
         ("ALT", "Alternative"),
         ("MOB", "Mob/Tech"),
         ("SPR", "Sprint"),

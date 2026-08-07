@@ -778,7 +778,7 @@ def slot_detail(request, slot_id):
     return HttpResponse(
         "<h3>Training detail</h3>"
         f"<p>{slot.date} – slot {slot.slot_index}</p>"
-        f"<p><b>Core:</b> {escape(slot.core_text())}</p>"
+        f"<p><b>Main:</b> {escape(slot.core_text())}</p>"
         "<hr>"
         + "<br>".join(escape(f"{s.get_type_display()}: {s.text}") for s in segments)
     )
@@ -1372,7 +1372,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "alt_text": alt_text,
                 "cd_text": cd_text,
 
-                "core_error": "Fill in Core, Mob/Tech, or Alternative.",
+                "core_error": "Fill in Main, Mob/Tech, or Alternative.",
                 "saved_templates": _saved_templates_for_user(request.user),
                 "selected_template_id": (request.POST.get("template_id") or "").strip(),
                 "template_name": (request.POST.get("template_name") or "").strip(),
@@ -1415,7 +1415,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "alt_text": alt_text,
                 "cd_text": cd_text,
 
-                "core2_error": "2nd core cannot be the only segment in the slot.",
+                "core2_error": "Main 2 cannot be the only segment in the slot.",
                 "saved_templates": _saved_templates_for_user(request.user),
                 "selected_template_id": (request.POST.get("template_id") or "").strip(),
                 "template_name": (request.POST.get("template_name") or "").strip(),
