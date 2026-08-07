@@ -11,6 +11,12 @@
     align-items: center;
     gap: .2rem;
   }
+  .fixed-time-input .time-entry-label {
+    flex: 0 0 2.6rem;
+    color: #6c757d;
+    font-size: .78rem;
+    font-weight: 600;
+  }
   .fixed-time-input .time-part {
     min-width: 0;
     padding-left: .4rem;
@@ -22,6 +28,44 @@
   .fixed-time-input .time-separator {
     flex: 0 0 auto;
     font-weight: 700;
+  }
+  .zone-time-grid,
+  .pr-time-grid {
+    display: grid;
+    gap: 1rem;
+  }
+  .zone-time-grid {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+  .pr-time-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .zone-time-grid > [class*="col-"],
+  .pr-time-grid > [class*="col-"] {
+    width: auto;
+    max-width: none;
+    padding: 0;
+  }
+  .pr-time-card {
+    min-width: 0;
+    padding: .75rem;
+    border: 1px solid #e2e6ea;
+    border-radius: .45rem;
+    background: #fafbfc;
+  }
+  .pr-time-card > .form-label {
+    display: block;
+    margin-bottom: .5rem;
+    font-weight: 600;
+  }
+  .pr-time-card .fixed-time-input + .fixed-time-input {
+    margin-top: .45rem !important;
+  }
+  @media (max-width: 1199.98px) {
+    .pr-time-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 575.98px) {
+    .pr-time-grid { grid-template-columns: 1fr; }
   }
 </style>
 <div class="container py-4">
@@ -134,6 +178,12 @@
 
               const wrapper = document.createElement("div");
               wrapper.className = "fixed-time-input" + (input.classList.contains("mt-1") ? " mt-1" : "");
+              if (input.dataset.timeLabel) {
+                const entryLabel = document.createElement("span");
+                entryLabel.className = "time-entry-label";
+                entryLabel.textContent = input.dataset.timeLabel;
+                wrapper.appendChild(entryLabel);
+              }
               const definitions = format === "seconds-hundredths"
                 ? [{ key: "seconds", max: 2 }, { separator: "." }, { key: "hundredths", max: 2 }]
                 : format === "minutes-seconds-hundredths"
@@ -406,7 +456,7 @@
         <div class="mt-4">
           <h6 class="mb-2">Zones ({{ form.zone_input_unit_label }})</h6>
 
-          <div class="row g-3">
+          <div class="zone-time-grid">
             <div class="col-md-2">
               <label class="form-label">Z1</label>
               <input name="z1_pace" class="form-control" value="{{ form.z1_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
@@ -474,46 +524,46 @@
         </div>
 
 
-          <div class="row g-3">
-            <div class="col-md-2">
+          <div class="pr-time-grid">
+            <div class="col-md-2 pr-time-card">
               <label class="form-label">T4</label>
-              <input name="t4" class="form-control" value="{{ form.t4 }}" data-time-format="seconds-hundredths">
-              <input name="target_t4" class="form-control form-control-sm mt-1" value="{{ form.target_t4 }}" data-time-format="seconds-hundredths">
+              <input name="t4" class="form-control" value="{{ form.t4 }}" data-time-format="seconds-hundredths" data-time-label="PR">
+              <input name="target_t4" class="form-control form-control-sm mt-1" value="{{ form.target_t4 }}" data-time-format="seconds-hundredths" data-time-label="Doel">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 pr-time-card">
               <label class="form-label">T8</label>
-              <input name="pr_800" class="form-control" value="{{ form.pr_800 }}" data-time-format="minutes-seconds-hundredths">
-              <input name="target_pr_800" class="form-control form-control-sm mt-1" value="{{ form.target_pr_800 }}" data-time-format="minutes-seconds-hundredths">
+              <input name="pr_800" class="form-control" value="{{ form.pr_800 }}" data-time-format="minutes-seconds-hundredths" data-time-label="PR">
+              <input name="target_pr_800" class="form-control form-control-sm mt-1" value="{{ form.target_pr_800 }}" data-time-format="minutes-seconds-hundredths" data-time-label="Doel">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 pr-time-card">
               <label class="form-label">T15</label>
-              <input name="pr_1500" class="form-control" value="{{ form.pr_1500 }}" data-time-format="minutes-seconds-hundredths">
-              <input name="target_pr_1500" class="form-control form-control-sm mt-1" value="{{ form.target_pr_1500 }}" data-time-format="minutes-seconds-hundredths">
+              <input name="pr_1500" class="form-control" value="{{ form.pr_1500 }}" data-time-format="minutes-seconds-hundredths" data-time-label="PR">
+              <input name="target_pr_1500" class="form-control form-control-sm mt-1" value="{{ form.target_pr_1500 }}" data-time-format="minutes-seconds-hundredths" data-time-label="Doel">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 pr-time-card">
               <label class="form-label">T3</label>
-              <input name="pr_3000" class="form-control" value="{{ form.pr_3000 }}" data-time-format="minutes-seconds">
-              <input name="target_pr_3000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_3000 }}" data-time-format="minutes-seconds">
+              <input name="pr_3000" class="form-control" value="{{ form.pr_3000 }}" data-time-format="minutes-seconds" data-time-label="PR">
+              <input name="target_pr_3000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_3000 }}" data-time-format="minutes-seconds" data-time-label="Doel">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 pr-time-card">
               <label class="form-label">T5</label>
-              <input name="pr_5000" class="form-control" value="{{ form.pr_5000 }}" data-time-format="minutes-seconds">
-              <input name="target_pr_5000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_5000 }}" data-time-format="minutes-seconds">
+              <input name="pr_5000" class="form-control" value="{{ form.pr_5000 }}" data-time-format="minutes-seconds" data-time-label="PR">
+              <input name="target_pr_5000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_5000 }}" data-time-format="minutes-seconds" data-time-label="Doel">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 pr-time-card">
               <label class="form-label">T10</label>
-              <input name="pr_10000" class="form-control" value="{{ form.pr_10000 }}" data-time-format="minutes-seconds">
-              <input name="target_pr_10000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_10000 }}" data-time-format="minutes-seconds">
+              <input name="pr_10000" class="form-control" value="{{ form.pr_10000 }}" data-time-format="minutes-seconds" data-time-label="PR">
+              <input name="target_pr_10000" class="form-control form-control-sm mt-1" value="{{ form.target_pr_10000 }}" data-time-format="minutes-seconds" data-time-label="Doel">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 pr-time-card">
               <label class="form-label">THM</label>
-              <input name="thm" class="form-control" value="{{ form.thm }}" data-time-format="hours-minutes-seconds">
-              <input name="target_thm" class="form-control form-control-sm mt-1" value="{{ form.target_thm }}" data-time-format="hours-minutes-seconds">
+              <input name="thm" class="form-control" value="{{ form.thm }}" data-time-format="hours-minutes-seconds" data-time-label="PR">
+              <input name="target_thm" class="form-control form-control-sm mt-1" value="{{ form.target_thm }}" data-time-format="hours-minutes-seconds" data-time-label="Doel">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 pr-time-card">
               <label class="form-label">TM</label>
-              <input name="tm" class="form-control" value="{{ form.tm }}" data-time-format="hours-minutes-seconds">
-              <input name="target_tm" class="form-control form-control-sm mt-1" value="{{ form.target_tm }}" data-time-format="hours-minutes-seconds">
+              <input name="tm" class="form-control" value="{{ form.tm }}" data-time-format="hours-minutes-seconds" data-time-label="PR">
+              <input name="target_tm" class="form-control form-control-sm mt-1" value="{{ form.target_tm }}" data-time-format="hours-minutes-seconds" data-time-label="Doel">
             </div>
           </div>
 

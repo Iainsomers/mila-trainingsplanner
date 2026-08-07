@@ -485,6 +485,11 @@ class AthleteTimeInputFormatTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
+        self.assertIn('class="zone-time-grid"', html)
+        self.assertIn('class="pr-time-grid"', html)
+        self.assertEqual(html.count('class="col-md-2 pr-time-card"'), 8)
+        self.assertEqual(html.count('data-time-label="PR"'), 8)
+        self.assertEqual(html.count('data-time-label="Doel"'), 8)
         for name in ("t4", "target_t4"):
             self.assertIn(f'name="{name}"', html)
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="seconds-hundredths"')
