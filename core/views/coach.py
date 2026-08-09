@@ -441,6 +441,7 @@ def dashboard_view(request):
 
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
+        "is_trainer_user": bool(request.user.is_staff or request.user.is_superuser),
         "current_athlete": athlete,
     })
 
@@ -6075,6 +6076,8 @@ from core.models import AthleteDayCheck, AthleteDayComment
 from core.views.calendar import (
     _VirtualSegment,
     _VirtualSlot,
+    _athlete_plan_for_day,
+    _ayc_slot_loads_for_totals,
     _annotate_slot_segment_display_times,
     _base_planning_slot_for_day,
     _clone_slot_for_display,
@@ -6085,6 +6088,134 @@ from core.views.calendar import (
     _virtual_race_slot_from_entries,
     _virtual_slot_from_base_training,
 )
+
+
+def _effective_week_distance_m(athlete, plans, week_start):
+    end = week_start + timedelta(days=14)
+    days = [week_start + timedelta(days=offset) for offset in range(14)]
+    non_trainer_plans = [
+        plan for plan in plans
+        if plan.plan_kind != TrainingPlan.PLAN_KIND_TRAINER and not _is_flex_planner_plan(plan)
+    ]
+    flex_plan = next((
+        plan for plan in plans
+        if _is_flex_planner_plan(plan) and plan.owner_id == athlete.owner_id
+    ), None)
+
+    athlete_plans = []
+    for plan in non_trainer_plans:
+        try:
+            targeted = athlete.id in plan.targeted_athlete_ids()
+        except Exception:
+            targeted = False
+        has_override = TrainingSlot.objects.filter(
+            plan=plan,
+            athlete=athlete,
+            date__gte=week_start,
+            date__lt=end,
+        ).exists()
+        if targeted or has_override:
+            athlete_plans.append(plan)
+
+    direct_plan_ids = [plan.id for plan in athlete_plans]
+    if flex_plan:
+        direct_plan_ids.append(flex_plan.id)
+    direct_slots = (
+        TrainingSlot.objects
+        .filter(plan_id__in=direct_plan_ids, date__gte=week_start, date__lt=end)
+        .filter(Q(athlete__isnull=True) | Q(athlete=athlete))
+        .prefetch_related("segments")
+    )
+    slot_lookup = {
+        (slot.plan_id, slot.athlete_id, slot.date, slot.slot_index): slot
+        for slot in direct_slots
+    }
+
+    base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
+    blocks = list(
+        AthleteBasePlanningBlock.objects
+        .filter(athlete=athlete, planning_kind=AthleteBasePlanningBlock.KIND_BASE)
+        .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
+        .order_by("sort_order", "start_month", "start_day", "id")
+    )
+    base_blocks_by_athlete = {athlete.id: blocks}
+    trainer_plan_ids = {
+        base_slot.trainer_plan_id
+        for block in blocks
+        for base_slot in getattr(block, "_prefetched_base_slots", [])
+        if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_slot.trainer_plan_id
+    }
+    trainer_slot_lookup = {
+        (slot.plan_id, slot.date, slot.slot_index): slot
+        for slot in TrainingSlot.objects.filter(
+            plan_id__in=trainer_plan_ids,
+            athlete__isnull=True,
+            date__gte=week_start,
+            date__lt=end,
+        ).prefetch_related("segments")
+    }
+
+    totals = {week_start: 0.0, week_start + timedelta(days=7): 0.0}
+    for day in days:
+        matching_plan = _athlete_plan_for_day(athlete_plans, day)
+        for slot_index in (1, 2):
+            slot = None
+            if matching_plan:
+                slot = (
+                    slot_lookup.get((matching_plan.id, athlete.id, day, slot_index))
+                    or slot_lookup.get((matching_plan.id, None, day, slot_index))
+                )
+
+            if flex_plan:
+                flex_override = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
+                flex_blocks_fallback = False
+                if flex_override is not None:
+                    flex_blocks_fallback = _slot_is_visually_empty(flex_override)
+                    slot = None if flex_blocks_fallback else flex_override
+            else:
+                flex_blocks_fallback = False
+
+            if not slot and not flex_blocks_fallback:
+                base_planning_slot = _base_planning_slot_for_day(
+                    base_blocks_by_athlete, athlete.id, day, slot_index
+                )
+                if base_planning_slot:
+                    if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                        slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                    elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
+                        slot = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, slot_index))
+
+            target_week = week_start if day < week_start + timedelta(days=7) else week_start + timedelta(days=7)
+            for load in _ayc_slot_loads_for_totals(slot, athlete):
+                if load.get("kind") != "alt":
+                    totals[target_week] += float(load.get("meters") or 0)
+    return totals
+
+
+@login_required
+@require_GET
+def trainer_stats_view(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Not allowed", status=403)
+
+    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+    this_week_start = date.today() - timedelta(days=date.today().weekday())
+    previous_week_start = this_week_start - timedelta(days=7)
+    rows = []
+    for athlete in athletes:
+        totals = _effective_week_distance_m(athlete, plans, previous_week_start)
+        rows.append({
+            "athlete": athlete,
+            "previous_week_km": f"{totals[previous_week_start] / 1000.0:.1f}",
+            "this_week_km": f"{totals[this_week_start] / 1000.0:.1f}",
+        })
+
+    return render(request, "core/trainer_stats.html", {
+        "rows": rows,
+        "previous_week_start": previous_week_start,
+        "this_week_start": this_week_start,
+    })
 
 
 def _daily_status_badge(status):

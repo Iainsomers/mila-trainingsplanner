@@ -513,3 +513,128 @@ class TrainingSegmentLabelTests(TestCase):
     def test_main_labels_replace_core_labels(self):
         self.assertEqual(TrainingSegment(type="CORE").get_type_display(), "Main")
         self.assertEqual(TrainingSegment(type="CORE2").get_type_display(), "Main 2")
+
+
+class TrainerStatsTests(TestCase):
+    def test_tile_and_page_are_trainer_only(self):
+        User = get_user_model()
+        trainer = User.objects.create_user(username="statstrainer", password="secret", is_staff=True)
+        athlete_user = User.objects.create_user(username="statsathlete", password="secret")
+        Athlete.objects.create(
+            owner=trainer,
+            name="statsathlete",
+            birth_year=2000,
+            gender="X",
+        )
+
+        self.client.force_login(trainer)
+        trainer_overview = self.client.get("/")
+        self.assertContains(trainer_overview, "Stats (under development)")
+        self.assertEqual(self.client.get("/planning/stats/").status_code, 200)
+
+        self.client.force_login(athlete_user)
+        athlete_overview = self.client.get("/")
+        self.assertNotContains(athlete_overview, "Stats (under development)")
+        self.assertEqual(self.client.get("/planning/stats/").status_code, 403)
+
+    def test_page_shows_previous_and_current_week_distance(self):
+        trainer = get_user_model().objects.create_user(
+            username="distancecoach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=trainer,
+            name="Distance Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        this_week_start = date.today() - timedelta(days=date.today().weekday())
+        previous_week_start = this_week_start - timedelta(days=7)
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Stats distance plan",
+            start_date=previous_week_start,
+            end_date=this_week_start + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        previous_slot = TrainingSlot.objects.create(plan=plan, date=previous_week_start, slot_index=1)
+        TrainingSegment.objects.create(
+            slot=previous_slot,
+            type="CORE",
+            text="5km z2",
+            zone="2",
+            distance_m=5000,
+            norm_distance_m=5000,
+        )
+        current_slot = TrainingSlot.objects.create(plan=plan, date=this_week_start, slot_index=1)
+        TrainingSegment.objects.create(
+            slot=current_slot,
+            type="CORE",
+            text="10km z2",
+            zone="2",
+            distance_m=10000,
+            norm_distance_m=10000,
+        )
+
+        self.client.force_login(trainer)
+        response = self.client.get("/planning/stats/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Distance Athlete")
+        self.assertContains(response, "5.0 km")
+        self.assertContains(response, "10.0 km")
+
+    def test_page_includes_trainer_plan_selected_via_base_planning(self):
+        trainer = get_user_model().objects.create_user(
+            username="basestatscoach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=trainer,
+            name="Base Stats Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        trainer_plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Stats trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Full year stats",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        this_week_start = date.today() - timedelta(days=date.today().weekday())
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=this_week_start.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=trainer_plan,
+        )
+        slot = TrainingSlot.objects.create(
+            plan=trainer_plan,
+            date=this_week_start,
+            slot_index=1,
+        )
+        TrainingSegment.objects.create(
+            slot=slot,
+            type="CORE",
+            text="7km z2",
+            zone="2",
+            distance_m=7000,
+            norm_distance_m=7000,
+        )
+
+        self.client.force_login(trainer)
+        response = self.client.get("/planning/stats/")
+
+        self.assertContains(response, "Base Stats Athlete")
+        self.assertContains(response, "7.0 km")

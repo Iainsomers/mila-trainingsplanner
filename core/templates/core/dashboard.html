@@ -56,6 +56,20 @@
     </div>
     {% endif %}
 
+    {% if is_trainer_user %}
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Stats (under development)</h5>
+          <p class="card-text">Weekly distance totals for all athletes.</p>
+          <div class="mt-auto">
+            <a href="{% url 'trainer_stats' %}" class="btn btn-primary">Open stats</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body d-flex flex-column">

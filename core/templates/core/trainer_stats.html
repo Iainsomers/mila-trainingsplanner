@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}
+
+{% block title %}Stats (under development){% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Stats <small class="text-muted fs-6">under development</small></h1>
+    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Athlete</th>
+            <th class="text-end">Previous week<br><small class="text-muted">from {{ previous_week_start|date:"d M" }}</small></th>
+            <th class="text-end">This week<br><small class="text-muted">from {{ this_week_start|date:"d M" }}</small></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>{{ row.athlete.name }}</td>
+            <td class="text-end fw-semibold">{{ row.previous_week_km }} km</td>
+            <td class="text-end fw-semibold">{{ row.this_week_km }} km</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-center text-muted py-4">No athletes found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
