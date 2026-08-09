@@ -561,14 +561,8 @@ def _bump_stats_version():
 
 
 def _tb_flag(request, key: str, default: bool = True) -> bool:
-    """
-    Trainingsbuilder toggle uit session.
-    Default True als key niet bestaat.
-    """
-    v = request.session.get(key, None)
-    if v is None:
-        return bool(default)
-    return bool(v)
+    """All training-builder fields are always available."""
+    return True
 
 
 

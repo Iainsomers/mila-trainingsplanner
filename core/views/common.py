@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q
 
-from core.models import TrainingPlan, Athlete, TrainingSlot, CoachAccess, CoachSettings
+from core.models import TrainingPlan, Athlete, TrainingSlot, CoachAccess
 
 
 # Backwards-compatible constant (sommige views importeren dit nog)
@@ -13,19 +13,8 @@ CALENDAR_DISPLAY_MODE = "core_only"
 
 
 def _calendar_display_mode(request) -> str:
-    """
-    Calendar display mode:
-    - core_only: show only core/alt in the cell (hover stays complete)
-    - all: show all segments in the cell
-    Default follows CoachSettings when the session does not have a value yet.
-    """
-    if "calendar_show_only_core" in request.session:
-        show_only_core = request.session.get("calendar_show_only_core")
-    else:
-        settings = CoachSettings.objects.filter(user=request.user).first()
-        show_only_core = getattr(settings, "calendar_show_only_core", True)
-
-    return "core_only" if bool(show_only_core) else "all"
+    """Always show every training segment in calendar cells."""
+    return "all"
 
 
 DEFAULT_ZONE_SPEED_MPS = {

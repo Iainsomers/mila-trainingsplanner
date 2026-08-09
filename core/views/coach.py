@@ -5308,7 +5308,7 @@ def coach_athletes_view(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_athlete_create_view(request):
-    unit = request.session.get("zone_input_unit", "pace")
+    unit = "pace"
     unit_label = zone_unit_label(unit)
 
     errors = []
@@ -5583,7 +5583,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             return HttpResponse("Forbidden", status=403)
     else:
         athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
-    unit = request.session.get("zone_input_unit", "pace")
+    unit = "pace"
     unit_label = zone_unit_label(unit)
 
     speeds = athlete.get_zone_speed_mps()
