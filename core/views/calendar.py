@@ -2969,6 +2969,11 @@ def athlete_year_calendar_view(request):
                 "check2": check2,
                 "has_slot1": bool(slot1),
                 "has_slot2": bool(slot2),
+                "evaluation_done": bool(
+                    (slot1 or slot2)
+                    and (not slot1 or (check1 and check1.effective_status))
+                    and (not slot2 or (check2 and check2.effective_status))
+                ),
                 "plan_text1": _slot_watch_plan_text(slot1),
                 "plan_text2": _slot_watch_plan_text(slot2),
             })

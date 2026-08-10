@@ -620,6 +620,18 @@
     }
     .ayc-mobile-evaluation-title { font-size: .82rem; font-weight: 700; }
     .ayc-mobile-evaluation-hint { color: #6c757d; font-size: .75rem; }
+    .ayc-mobile-evaluation-done {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #198754;
+      color: #fff;
+      font-size: .9rem;
+      font-weight: 800;
+    }
   }
 
   @media (max-width: 1200px) {
@@ -811,7 +823,10 @@
               <div class="ayc-mobile-evaluation-title">Evaluation</div>
               <div class="ayc-mobile-evaluation-hint">{% if mobile_day.day <= today %}Status, RPE and comment{% else %}Available after training{% endif %}</div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary" {% if mobile_day.day > today %}disabled{% endif %}>Open</button>
+            <div class="d-flex align-items-center gap-2">
+              {% if d.evaluation_done %}<span class="ayc-mobile-evaluation-done" title="Evaluation completed" aria-label="Evaluation completed">&#10003;</span>{% endif %}
+              <button type="button" class="btn btn-sm btn-outline-secondary" {% if mobile_day.day > today %}disabled{% endif %}>Open</button>
+            </div>
           </div>
           {% endwith %}
           {% endif %}
