@@ -2451,7 +2451,7 @@ def athlete_year_calendar_view(request):
                 slot_text = request.POST.get("slot_text")
 
                 if slot_text is not None:
-                    if d > today:
+                    if d > today and not (request.user.is_staff or request.user.is_superuser):
                         return HttpResponse("", status=204)
 
                     try:
@@ -3106,8 +3106,8 @@ def athlete_year_calendar_view(request):
         }
 
         mobile_days = [
-            {"day": slot1["day"], "slot1": slot1, "slot2": slot2}
-            for slot1, slot2 in zip(cells1, cells2)
+            {"day": slot1["day"], "slot1": slot1, "slot2": slot2, "report": report}
+            for slot1, slot2, report in zip(cells1, cells2, cells3)
         ]
 
         week_rows.append({

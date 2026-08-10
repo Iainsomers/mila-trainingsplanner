@@ -591,6 +591,19 @@
     .ayc-mobile-slot-label { color: #6c757d; font-size: .72rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
     .ayc-mobile .slotbox { min-height: 42px; padding: 8px 24px 8px 8px; font-size: .88rem; }
     .ayc-mobile-empty { color: #999; font-size: .85rem; }
+    .ayc-mobile-rest { padding: 4px 0; color: #868e96; font-size: .9rem; font-style: italic; }
+    .ayc-mobile-evaluation {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 9px;
+      border-top: 1px solid #eee;
+      cursor: pointer;
+    }
+    .ayc-mobile-evaluation-title { font-size: .82rem; font-weight: 700; }
+    .ayc-mobile-evaluation-hint { color: #6c757d; font-size: .75rem; }
   }
 
   @media (max-width: 1200px) {
@@ -740,22 +753,53 @@
           <span>{{ mobile_day.day|date:'l' }}</span><span>{{ mobile_day.day|date:'d-m' }}</span>
         </div>
         <div class="ayc-mobile-slots">
+          {% if mobile_day.slot1.slot or mobile_day.slot2.slot %}
           {% with cell=mobile_day.slot1 %}
+          {% if cell.slot %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">AM</div>
-            {% if cell.slot %}
-              <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}</div>
-            {% else %}<div class="ayc-mobile-empty">No training</div>{% endif %}
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}</div>
           </div>
+          {% endif %}
           {% endwith %}
           {% with cell=mobile_day.slot2 %}
+          {% if cell.slot %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">PM</div>
-            {% if cell.slot %}
-              <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}</div>
-            {% else %}<div class="ayc-mobile-empty">No training</div>{% endif %}
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}</div>
+          </div>
+          {% endif %}
+          {% endwith %}
+          {% else %}
+            <div class="ayc-mobile-rest">Rest day</div>
+          {% endif %}
+
+          {% if show_training_reports and mobile_day.day <= today and mobile_day.report.has_slot1 or show_training_reports and mobile_day.day <= today and mobile_day.report.has_slot2 %}
+          {% with d=mobile_day.report %}
+          <div class="comment-display ayc-mobile-evaluation"
+               data-date="{{ d.day|date:'Y-m-d' }}"
+               data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
+               data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
+               data-t1-rpe="{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% endif %}"
+               data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
+               data-t1-watch-id="{% if d.check1.watch_activity_id %}{{ d.check1.watch_activity_id|escape }}{% endif %}"
+               data-t1-watch-summary="{% if d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary|escape }}{% endif %}"
+               data-t1-plan-text="{{ d.plan_text1|default:''|escape }}"
+               data-t2-enabled="{% if d.has_slot2 %}1{% else %}0{% endif %}"
+               data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
+               data-t2-rpe="{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% endif %}"
+               data-t2-comment="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% endif %}"
+               data-t2-watch-id="{% if d.check2.watch_activity_id %}{{ d.check2.watch_activity_id|escape }}{% endif %}"
+               data-t2-watch-summary="{% if d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary|escape }}{% endif %}"
+               data-t2-plan-text="{{ d.plan_text2|default:''|escape }}">
+            <div>
+              <div class="ayc-mobile-evaluation-title">Evaluation</div>
+              <div class="ayc-mobile-evaluation-hint">Status, RPE and comment</div>
+            </div>
+            <span class="btn btn-sm btn-outline-secondary">Open</span>
           </div>
           {% endwith %}
+          {% endif %}
         </div>
       </article>
       {% endfor %}
