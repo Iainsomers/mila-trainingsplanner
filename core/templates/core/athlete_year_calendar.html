@@ -559,18 +559,25 @@
     .ayc-mobile-athlete { width: 100%; margin-bottom: 8px; }
     .ayc-mobile-nav { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
     .ayc-mobile-week-title { text-align: center; font-size: .9rem; font-weight: 700; }
-    .ayc-mobile-today { display: block; width: 100%; margin-top: 8px; }
     .ayc-mobile-week { display: none; }
     .ayc-mobile-week.is-active { display: block; }
     .ayc-mobile-summary {
-      border: 1px solid #d5d5d5;
-      border-radius: 10px;
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      background: #fafafa;
+      border: 2px solid #b8c2cc;
+      border-radius: 12px;
+      padding: 13px 14px;
+      margin-bottom: 14px;
+      background: #f8f9fa;
+      box-shadow: 0 2px 7px rgba(0,0,0,.08);
     }
-    .ayc-mobile-total { font-size: 1.05rem; font-weight: 700; }
+    .ayc-mobile-total-label { color: #6c757d; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .ayc-mobile-total { font-size: 1.35rem; font-weight: 800; line-height: 1.15; }
     .ayc-mobile-zones { margin-top: 6px; }
+    .ayc-mobile-phase { color: #111; border: 1px solid rgba(0,0,0,.12); }
+    .ayc-mobile-phase.phase-recovery { background: #e8ddff; }
+    .ayc-mobile-phase.phase-aerobe { background: #f06f5f; }
+    .ayc-mobile-phase.phase-specific { background: #bfe7bf; }
+    .ayc-mobile-phase.phase-intense { background: #b7d7ff; }
+    .ayc-mobile-phase.phase-taper { background: #ff7a00; }
     .ayc-mobile-day {
       border: 1px solid #d8d8d8;
       border-radius: 12px;
@@ -578,7 +585,10 @@
       overflow: hidden;
       background: #fff;
     }
-    .ayc-mobile-day.is-today { border: 2px solid #e0b900; background: #fffdf0; }
+    .ayc-mobile-week.is-current-week .ayc-mobile-day { background: #fff9c4; border-color: #e5cf57; }
+    .ayc-mobile-week.is-current-week .ayc-mobile-day-head { background: #fff1a3; }
+    .ayc-mobile-week.is-current-week .ayc-mobile-day.is-today { border: 2px solid #d4a900; background: #ffe873; }
+    .ayc-mobile-week.is-current-week .ayc-mobile-day.is-today .ayc-mobile-day-head { background: #f5cf45; }
     .ayc-mobile-day-head {
       display: flex;
       justify-content: space-between;
@@ -592,9 +602,9 @@
     .ayc-mobile .slotbox { min-height: 42px; padding: 8px 24px 8px 8px; font-size: .88rem; }
     .ayc-mobile-open-training {
       display: block;
-      width: 100%;
+      width: fit-content;
+      margin-left: auto;
       margin-top: 8px;
-      min-height: 42px;
     }
     .ayc-mobile-empty { color: #999; font-size: .85rem; }
     .ayc-mobile-rest { padding: 4px 0; color: #868e96; font-size: .9rem; font-style: italic; }
@@ -729,18 +739,17 @@
         <div class="ayc-mobile-week-title" id="aycMobileWeekTitle"></div>
         <button type="button" class="btn btn-sm btn-outline-secondary" id="aycMobileNext" aria-label="Next week">&rsaquo;</button>
       </div>
-      <button type="button" class="btn btn-sm btn-outline-primary ayc-mobile-today" id="aycMobileToday">Today</button>
     </div>
 
     {% for w in week_rows %}
-    <section class="ayc-mobile-week"
+    <section class="ayc-mobile-week{% if today >= w.week_start and today <= w.week_end %} is-current-week{% endif %}"
              data-week-start="{{ w.week_start|date:'Y-m-d' }}"
              data-week-end="{{ w.week_end|date:'Y-m-d' }}"
              data-week-label="{{ w.week_start|date:'d M' }} – {{ w.week_end|date:'d M Y' }}">
       <div class="ayc-mobile-summary{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}">
         <div class="d-flex justify-content-between align-items-center gap-2">
-          <span class="ayc-mobile-total">{{ w.sum_tot_km }} km</span>
-          {% if w.week_phase_label %}<span class="week-phase-label">{{ w.week_phase_label }}</span>{% endif %}
+          <div><div class="ayc-mobile-total-label">Total</div><div class="ayc-mobile-total">{{ w.sum_tot_km }} km</div></div>
+          {% if w.week_phase_label %}<span class="week-phase-label ayc-mobile-phase phase-{{ w.week_phase }}">{{ w.week_phase_label }}</span>{% endif %}
         </div>
         <div class="ayc-mobile-zones">
           {% if w.has_z1 %}<span class="total-pill total-z1">Z1 {{ w.sum_z1_km }}</span>{% endif %}
@@ -764,7 +773,7 @@
           {% if cell.slot %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">AM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}<button type="button" class="btn btn-primary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open training</button></div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button></div>
           </div>
           {% endif %}
           {% endwith %}
@@ -772,7 +781,7 @@
           {% if cell.slot %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">PM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}<button type="button" class="btn btn-primary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open training</button></div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button></div>
           </div>
           {% endif %}
           {% endwith %}
@@ -841,14 +850,6 @@
 
       if (previous) previous.addEventListener("click", function () { showWeek(currentIndex - 1, true); });
       if (next) next.addEventListener("click", function () { showWeek(currentIndex + 1, true); });
-      var todayButton = document.getElementById("aycMobileToday");
-      if (todayButton) todayButton.addEventListener("click", function () {
-        var todayIndex = weeks.findIndex(function (week) {
-          return week.dataset.weekStart <= today && today <= week.dataset.weekEnd;
-        });
-        if (todayIndex >= 0) showWeek(todayIndex, true);
-      });
-
       showWeek(currentIndex, false);
     });
   </script>
