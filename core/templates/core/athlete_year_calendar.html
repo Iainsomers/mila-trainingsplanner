@@ -539,12 +539,14 @@
     padding-right: 4px;
   }
 
-  .ayc-mobile { display: none; }
+  .ayc-mobile,
+  .ayc-mobile-header-links { display: none; }
 
   @media (max-width: 767.98px) {
     .ayc-desktop-controls,
     .year-table-wrap { display: none !important; }
     .ayc-mobile { display: block; }
+    .ayc-mobile-header-links { display: flex; }
     .ayc-page-title { font-size: 1.3rem; }
     .ayc-header-links { display: none !important; }
     .ayc-mobile-toolbar {
@@ -711,6 +713,10 @@
   <div class="d-flex align-items-center justify-content-between mb-2">
     <h2 class="mb-0 ayc-page-title">Athlete Year Calendar</h2>
     <div class="d-flex gap-2 ayc-header-links">
+      <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+    </div>
+    <div class="gap-1 ayc-mobile-header-links">
       <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
       <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
     </div>
