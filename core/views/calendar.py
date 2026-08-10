@@ -3105,6 +3105,11 @@ def athlete_year_calendar_view(request):
             "hrv": _vitals_week_avg("hrv"),
         }
 
+        mobile_days = [
+            {"day": slot1["day"], "slot1": slot1, "slot2": slot2}
+            for slot1, slot2 in zip(cells1, cells2)
+        ]
+
         week_rows.append({
             "week_start": week_start,
             "week_end": week_end,
@@ -3113,6 +3118,7 @@ def athlete_year_calendar_view(request):
             "cells2": cells2,
             "cells3": cells3,
             "cells4": cells4,
+            "mobile_days": mobile_days,
             "daily_vitals_avg": daily_vitals_avg,
             "week_phase": week_phase,
             "week_phase_label": phase_label.get(week_phase, ""),

@@ -7,21 +7,7 @@
 {% endblock %}
 
 {% block extra_head %}
-<meta name="viewport" content="width=1200, initial-scale=0.35, minimum-scale=0.25, maximum-scale=5, user-scalable=yes">
-<script>
-  (function() {
-    var content = "width=1200, initial-scale=0.35, minimum-scale=0.25, maximum-scale=5, user-scalable=yes";
-    var metas = document.querySelectorAll('meta[name="viewport"]');
-    if (metas.length) {
-      metas.forEach(function(meta) { meta.setAttribute("content", content); });
-    } else {
-      var meta = document.createElement("meta");
-      meta.setAttribute("name", "viewport");
-      meta.setAttribute("content", content);
-      document.head.appendChild(meta);
-    }
-  })();
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   table.year-table {
     width: 100%;
@@ -553,6 +539,60 @@
     padding-right: 4px;
   }
 
+  .ayc-mobile { display: none; }
+
+  @media (max-width: 767.98px) {
+    .ayc-desktop-controls,
+    .year-table-wrap { display: none !important; }
+    .ayc-mobile { display: block; }
+    .ayc-page-title { font-size: 1.3rem; }
+    .ayc-header-links { display: none !important; }
+    .ayc-mobile-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      margin: 0 -12px 12px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.97);
+      border-bottom: 1px solid #ddd;
+    }
+    .ayc-mobile-athlete { width: 100%; margin-bottom: 8px; }
+    .ayc-mobile-nav { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+    .ayc-mobile-week-title { text-align: center; font-size: .9rem; font-weight: 700; }
+    .ayc-mobile-today { display: block; width: 100%; margin-top: 8px; }
+    .ayc-mobile-week { display: none; }
+    .ayc-mobile-week.is-active { display: block; }
+    .ayc-mobile-summary {
+      border: 1px solid #d5d5d5;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      background: #fafafa;
+    }
+    .ayc-mobile-total { font-size: 1.05rem; font-weight: 700; }
+    .ayc-mobile-zones { margin-top: 6px; }
+    .ayc-mobile-day {
+      border: 1px solid #d8d8d8;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .ayc-mobile-day.is-today { border: 2px solid #e0b900; background: #fffdf0; }
+    .ayc-mobile-day-head {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: #f5f5f5;
+      font-weight: 700;
+    }
+    .ayc-mobile-slots { padding: 9px 10px; }
+    .ayc-mobile-slot + .ayc-mobile-slot { border-top: 1px solid #eee; margin-top: 9px; padding-top: 9px; }
+    .ayc-mobile-slot-label { color: #6c757d; font-size: .72rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+    .ayc-mobile .slotbox { min-height: 42px; padding: 8px 24px 8px 8px; font-size: .88rem; }
+    .ayc-mobile-empty { color: #999; font-size: .85rem; }
+  }
+
   @media (max-width: 1200px) {
     .year-table-wrap {
       display: block;
@@ -628,14 +668,14 @@
 <div class="container-fluid py-4">
 
   <div class="d-flex align-items-center justify-content-between mb-2">
-    <h2 class="mb-0">Athlete Year Calendar</h2>
-    <div class="d-flex gap-2">
+    <h2 class="mb-0 ayc-page-title">Athlete Year Calendar</h2>
+    <div class="d-flex gap-2 ayc-header-links">
       <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
       <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
     </div>
   </div>
 
-  <form method="get" class="mb-3">
+  <form method="get" class="mb-3 ayc-desktop-controls">
     <input name="year" value="{{ year }}" class="form-control form-control-sm" style="width:120px; display:inline-block;">
     <select name="athlete" class="form-control form-control-sm" style="width:220px; display:inline-block;" onchange="this.form.submit()">
       <option value="" {% if not selected_athlete_id %}selected{% endif %}>(all athletes)</option>
@@ -651,6 +691,117 @@
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">zones/times</button>
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#todayTrainingModal">today</button>
   </form>
+
+  <div class="ayc-mobile">
+    <div class="ayc-mobile-toolbar">
+      {% if is_coach_user %}
+      <form method="get">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="hide" value="{{ hide_mode }}">
+        <select name="athlete" class="form-select form-select-sm ayc-mobile-athlete" onchange="this.form.submit()">
+          {% for athlete in athletes %}
+            <option value="{{ athlete.id }}" {% if selected_athlete_id == athlete.id|stringformat:"s" %}selected{% endif %}>{{ athlete.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+      <div class="ayc-mobile-nav">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="aycMobilePrev" aria-label="Previous week">&lsaquo;</button>
+        <div class="ayc-mobile-week-title" id="aycMobileWeekTitle"></div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="aycMobileNext" aria-label="Next week">&rsaquo;</button>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-primary ayc-mobile-today" id="aycMobileToday">Today</button>
+    </div>
+
+    {% for w in week_rows %}
+    <section class="ayc-mobile-week"
+             data-week-start="{{ w.week_start|date:'Y-m-d' }}"
+             data-week-end="{{ w.week_end|date:'Y-m-d' }}"
+             data-week-label="{{ w.week_start|date:'d M' }} – {{ w.week_end|date:'d M Y' }}">
+      <div class="ayc-mobile-summary{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}">
+        <div class="d-flex justify-content-between align-items-center gap-2">
+          <span class="ayc-mobile-total">{{ w.sum_tot_km }} km</span>
+          {% if w.week_phase_label %}<span class="week-phase-label">{{ w.week_phase_label }}</span>{% endif %}
+        </div>
+        <div class="ayc-mobile-zones">
+          {% if w.has_z1 %}<span class="total-pill total-z1">Z1 {{ w.sum_z1_km }}</span>{% endif %}
+          {% if w.has_z2 %}<span class="total-pill total-z2">Z2 {{ w.sum_z2_km }}</span>{% endif %}
+          {% if w.has_z3 %}<span class="total-pill total-z3">Z3 {{ w.sum_z3_km }}</span>{% endif %}
+          {% if w.has_z4 %}<span class="total-pill total-z4">Z4 {{ w.sum_z4_km }}</span>{% endif %}
+          {% if w.has_z5 %}<span class="total-pill total-z5">Z5 {{ w.sum_z5_km }}</span>{% endif %}
+          {% if w.has_z6 %}<span class="total-pill total-z6">Z6 {{ w.sum_z6_km }}</span>{% endif %}
+          {% if w.has_race %}<span class="total-pill total-race">Race {{ w.sum_race_km }}</span>{% endif %}
+        </div>
+      </div>
+
+      {% for mobile_day in w.mobile_days %}
+      <article class="ayc-mobile-day{% if mobile_day.day == today %} is-today{% endif %}" data-day="{{ mobile_day.day|date:'Y-m-d' }}">
+        <div class="ayc-mobile-day-head">
+          <span>{{ mobile_day.day|date:'l' }}</span><span>{{ mobile_day.day|date:'d-m' }}</span>
+        </div>
+        <div class="ayc-mobile-slots">
+          {% with cell=mobile_day.slot1 %}
+          <div class="ayc-mobile-slot">
+            <div class="ayc-mobile-slot-label">AM</div>
+            {% if cell.slot %}
+              <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}</div>
+            {% else %}<div class="ayc-mobile-empty">No training</div>{% endif %}
+          </div>
+          {% endwith %}
+          {% with cell=mobile_day.slot2 %}
+          <div class="ayc-mobile-slot">
+            <div class="ayc-mobile-slot-label">PM</div>
+            {% if cell.slot %}
+              <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}</div>
+            {% else %}<div class="ayc-mobile-empty">No training</div>{% endif %}
+          </div>
+          {% endwith %}
+        </div>
+      </article>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var weeks = Array.from(document.querySelectorAll(".ayc-mobile-week"));
+      if (!weeks.length) return;
+
+      var today = "{{ today|date:'Y-m-d' }}";
+      var currentIndex = weeks.findIndex(function (week) {
+        return week.dataset.weekStart <= today && today <= week.dataset.weekEnd;
+      });
+      if (currentIndex < 0) currentIndex = 0;
+
+      var title = document.getElementById("aycMobileWeekTitle");
+      var previous = document.getElementById("aycMobilePrev");
+      var next = document.getElementById("aycMobileNext");
+
+      function showWeek(index, scrollToTop) {
+        currentIndex = Math.max(0, Math.min(index, weeks.length - 1));
+        weeks.forEach(function (week, i) {
+          week.classList.toggle("is-active", i === currentIndex);
+        });
+        if (title) title.textContent = weeks[currentIndex].dataset.weekLabel || "";
+        if (previous) previous.disabled = currentIndex === 0;
+        if (next) next.disabled = currentIndex === weeks.length - 1;
+        if (scrollToTop) window.scrollTo({top: 0, behavior: "smooth"});
+      }
+
+      if (previous) previous.addEventListener("click", function () { showWeek(currentIndex - 1, true); });
+      if (next) next.addEventListener("click", function () { showWeek(currentIndex + 1, true); });
+      var todayButton = document.getElementById("aycMobileToday");
+      if (todayButton) todayButton.addEventListener("click", function () {
+        var todayIndex = weeks.findIndex(function (week) {
+          return week.dataset.weekStart <= today && today <= week.dataset.weekEnd;
+        });
+        if (todayIndex >= 0) showWeek(todayIndex, true);
+      });
+
+      showWeek(currentIndex, false);
+    });
+  </script>
 
   <div class="modal fade" id="zonesTimesModal" tabindex="-1" aria-labelledby="zonesTimesModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
