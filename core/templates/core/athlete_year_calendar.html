@@ -590,6 +590,12 @@
     .ayc-mobile-slot + .ayc-mobile-slot { border-top: 1px solid #eee; margin-top: 9px; padding-top: 9px; }
     .ayc-mobile-slot-label { color: #6c757d; font-size: .72rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
     .ayc-mobile .slotbox { min-height: 42px; padding: 8px 24px 8px 8px; font-size: .88rem; }
+    .ayc-mobile-open-training {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      min-height: 42px;
+    }
     .ayc-mobile-empty { color: #999; font-size: .85rem; }
     .ayc-mobile-rest { padding: 4px 0; color: #868e96; font-size: .9rem; font-style: italic; }
     .ayc-mobile-evaluation {
@@ -758,7 +764,7 @@
           {% if cell.slot %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">AM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}</div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}<button type="button" class="btn btn-primary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open training</button></div>
           </div>
           {% endif %}
           {% endwith %}
@@ -766,7 +772,7 @@
           {% if cell.slot %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">PM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}</div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}<button type="button" class="btn btn-primary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open training</button></div>
           </div>
           {% endif %}
           {% endwith %}
@@ -774,9 +780,9 @@
             <div class="ayc-mobile-rest">Rest day</div>
           {% endif %}
 
-          {% if show_training_reports and mobile_day.day <= today and mobile_day.report.has_slot1 or show_training_reports and mobile_day.day <= today and mobile_day.report.has_slot2 %}
+          {% if mobile_day.report.has_slot1 or mobile_day.report.has_slot2 %}
           {% with d=mobile_day.report %}
-          <div class="comment-display ayc-mobile-evaluation"
+          <div class="{% if mobile_day.day <= today %}comment-display {% endif %}ayc-mobile-evaluation"
                data-date="{{ d.day|date:'Y-m-d' }}"
                data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
                data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
@@ -794,9 +800,9 @@
                data-t2-plan-text="{{ d.plan_text2|default:''|escape }}">
             <div>
               <div class="ayc-mobile-evaluation-title">Evaluation</div>
-              <div class="ayc-mobile-evaluation-hint">Status, RPE and comment</div>
+              <div class="ayc-mobile-evaluation-hint">{% if mobile_day.day <= today %}Status, RPE and comment{% else %}Available after training{% endif %}</div>
             </div>
-            <span class="btn btn-sm btn-outline-secondary">Open</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" {% if mobile_day.day > today %}disabled{% endif %}>Open</button>
           </div>
           {% endwith %}
           {% endif %}
@@ -2139,7 +2145,10 @@
     });
 
     fetch(url, { credentials: "same-origin" })
-      .then(function(response) { return response.text(); })
+      .then(function(response) {
+        if (!response.ok) throw new Error("Training could not be opened.");
+        return response.text();
+      })
       .then(function(html) {
         var container = document.getElementById("modal-container");
         container.innerHTML = html;
@@ -2150,8 +2159,13 @@
         if (!modalEl) return;
 
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      })
+      .catch(function() {
+        window.alert("Training could not be opened. Refresh the page and try again.");
       });
   }
+
+  window.openAycSlotModal = openSlotModal;
 
   document.addEventListener("click", function(event) {
     var strengthLink = event.target.closest("[data-strength-href]");
