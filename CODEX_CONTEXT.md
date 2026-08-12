@@ -1,4 +1,8 @@
-# Mila Codex Context
+# Mila Codex Context — historisch
+
+> Dit bestand is vervangen door `AGENTS.md` en de thematische documenten in
+> `docs/project/`. Het blijft alleen als historische naslag beschikbaar en bevat
+> verouderde lokale paden en statusinformatie.
 
 This file is a handover note for continuing Mila development from another Codex task or another machine.
 
