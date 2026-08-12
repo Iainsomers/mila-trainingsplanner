@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from datetime import date, timedelta
+from pathlib import Path
 
 from django.test import TestCase
+from django.template.loader import get_template
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
@@ -220,6 +222,16 @@ class SlotModalSaveTests(TestCase):
         segments = list(slot.segments.order_by("order", "id"))
         self.assertEqual([seg.type for seg in segments], ["WU", "CORE", "CD"])
         self.assertEqual(segments[1].text, "1000m z3")
+
+    def test_mobile_pm_training_contains_modal_prefill_values(self):
+        template_path = get_template("core/athlete_year_calendar.html").origin.name
+        template_source = Path(template_path).read_text(encoding="utf-8")
+        pm_mobile_block = template_source.split(
+            '<div class="ayc-mobile-slot-label">PM</div>', 1
+        )[1].split('</div>\n          </div>', 1)[0]
+
+        for field in ("wu", "mob", "sprint", "core", "core2", "alt", "cd"):
+            self.assertIn(f'data-prefill-{field}=', pm_mobile_block)
 
 
 class SegmentRepTimeDisplayTests(TestCase):

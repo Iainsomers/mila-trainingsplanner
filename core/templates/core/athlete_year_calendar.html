@@ -799,7 +799,7 @@
           {% if cell.slot %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">PM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button></div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% include "core/partials/ayc_slot_segments.html" with cell=cell %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button></div>
           </div>
           {% endif %}
           {% endwith %}
