@@ -233,6 +233,17 @@ class SlotModalSaveTests(TestCase):
         for field in ("wu", "mob", "sprint", "core", "core2", "alt", "cd"):
             self.assertIn(f'data-prefill-{field}=', pm_mobile_block)
 
+    def test_authenticated_pages_offer_post_logout_to_login(self):
+        self._user_plan_and_athlete()
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'method="post" action="/logout/"', html=False)
+
+        logout_response = self.client.post("/logout/")
+        self.assertRedirects(logout_response, "/login/", fetch_redirect_response=False)
+
 
 class SegmentRepTimeDisplayTests(TestCase):
     def test_compound_reps_show_split_times_for_current_and_goal_pr(self):
