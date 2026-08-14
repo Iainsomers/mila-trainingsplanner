@@ -1,6 +1,6 @@
 # Functionele onderdelen
 
-Laatst inhoudelijk gecontroleerd: 12 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 ## Dashboard en Planning
 
@@ -38,6 +38,9 @@ Atleten gebruiken Planning voor drie onderdelen: Athlete Year Planning, Athlete 
 - Bestaande AM- én PM-trainingen worden vooraf ingevuld in de popup.
 - Een groen vinkje toont dat alle evaluaties van die dag zijn voltooid.
 - Planner, Dashboard en Logout blijven bereikbaar.
+- Bij ingeschakelde Week reports staan onder iedere mobiele week vier gekleurde rapportvakken, gelijk aan desktop.
+- Bij ingeschakelde Daily vitals staat naast iedere datum een hartknop die een mobiele invoerpopup opent.
+- Weekgemiddelden voor slaapuren, slaapkwaliteit, ochtendhartslag en HRV staan compact in het weekoverzicht zodra voldoende waarden beschikbaar zijn.
 
 ## Trainingen
 
@@ -61,7 +64,7 @@ Optioneel per atleet:
 - Week report met atleetcommentaar, trainerreactie, wedstrijdverslag en blessures;
 - Daily vitals: slaapuren, slaapkwaliteit, ochtendhartslag en HRV.
 
-Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden.
+Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobiel compact onder het weektotaal.
 
 ## Wedstrijden
 
@@ -72,7 +75,7 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden.
 
 ## Athlete settings
 
-Tabs voor atleten: General, Zone/PR's, Ideal week en WU settings. Base Planning is trainer-only. `Fill missing PB's` kan ontbrekende prestaties afleiden uit beschikbare PR's.
+Tabs voor atleten: General, Zone/PR's, Base Planning, Ideal week en WU settings. Base Planning is voor atleten alleen-lezen. `Fill missing PB's` kan ontbrekende prestaties afleiden uit beschikbare PR's.
 
 ## Daily Coach Overview
 

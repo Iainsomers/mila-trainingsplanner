@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-Laatst inhoudelijk gecontroleerd: 12 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 ## Stijl
 
@@ -36,6 +36,9 @@ Laatst inhoudelijk gecontroleerd: 12 augustus 2026.
 - Training- en evaluatiepopups zijn maximaal schermvullend en intern scrollbaar.
 - Bestaande waarden moeten direct bij openen zichtbaar zijn.
 - Planner, Dashboard en Logout moeten bereikbaar blijven zonder Admin.
+- Toon Week reports onderaan de week als een 2×2-grid met dezelfde vier kleuren als desktop.
+- Toon bij Daily vitals een compacte hartknop naast de datum; invoer gebeurt in een schermpassende popup.
+- Toon de vier weekgemiddelden compact in het weeksamenvattingsblok en gebruik `NA` totdat minimaal drie waarden beschikbaar zijn.
 
 ## Desktop AYC
 

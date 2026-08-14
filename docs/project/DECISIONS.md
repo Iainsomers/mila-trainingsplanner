@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-08-15 — Base Planning en mobiele rapportage voor atleten
+
+Atleten zien Base Planning als alleen-lezen tab. In de mobiele AYC verschijnen ingeschakelde Week reports als vier gekleurde vakken onder de week. Daily vitals worden per dag via een hartknop en popup ingevoerd. De vier weekgemiddelden blijven zichtbaar in compacte vorm en verschijnen pas bij minimaal drie bruikbare waarden.
+
 ## 2026-08-12 — Projectkennis opsplitsen
 
 Mila4 en de lange overdrachtsnotitie worden vervangen door thematische documenten in `docs/project/`. De actuele code blijft leidend. Documentatie wordt bij relevante gedragswijzigingen in dezelfde commit bijgewerkt, niet mechanisch na iedere kleine wijziging.

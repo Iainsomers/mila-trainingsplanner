@@ -244,6 +244,54 @@ class SlotModalSaveTests(TestCase):
         logout_response = self.client.post("/logout/")
         self.assertRedirects(logout_response, "/login/", fetch_redirect_response=False)
 
+    def test_athlete_sees_base_planning_tab_as_read_only(self):
+        coach = get_user_model().objects.create_user(
+            username="baseplanningcoach", password="secret", is_staff=True
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="baseplanningathlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="baseplanningathlete",
+            birth_year=2000,
+            gender="X",
+        )
+        self.client.force_login(athlete_user)
+
+        settings_response = self.client.get("/athlete/settings/?tab=base-planning")
+        self.assertEqual(settings_response.status_code, 200)
+        self.assertContains(settings_response, "Base planning")
+        self.assertContains(settings_response, "readonly=1", html=False)
+
+        base_response = self.client.get(
+            f"/planning/base/?athlete={athlete.id}&embedded=1&kind=base"
+        )
+        self.assertEqual(base_response.status_code, 200)
+        self.assertContains(base_response, "View only")
+        blocked_post = self.client.post(
+            "/planning/base/",
+            {"athlete_id": str(athlete.id), "kind": "base", "action": "add_block"},
+        )
+        self.assertEqual(blocked_post.status_code, 403)
+
+    def test_mobile_ayc_template_contains_week_reports_and_vitals_popup(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        athlete.week_report_enabled = True
+        athlete.daily_vitals_enabled = True
+        athlete.save(update_fields=["week_report_enabled", "daily_vitals_enabled"])
+
+        response = self.client.get(f"/athlete/year/?year=2026&athlete={athlete.id}")
+        self.assertEqual(response.status_code, 200)
+        template_source = response.content.decode()
+
+        self.assertIn('class="ayc-mobile-week-report"', template_source)
+        for field in ("comm_athlete", "comm_trainer", "match_report", "injuries"):
+            self.assertIn(f'data-field="{field}"', template_source)
+        self.assertIn('class="btn btn-sm btn-outline-danger ayc-mobile-vitals-button"', template_source)
+        self.assertIn('id="mobileVitalsModal"', template_source)
+        self.assertIn('class="ayc-mobile-vitals-avg"', template_source)
+
 
 class SegmentRepTimeDisplayTests(TestCase):
     def test_compound_reps_show_split_times_for_current_and_goal_pr(self):

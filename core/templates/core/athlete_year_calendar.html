@@ -574,6 +574,22 @@
     .ayc-mobile-total-label { color: #6c757d; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
     .ayc-mobile-total { font-size: 1.35rem; font-weight: 800; line-height: 1.15; }
     .ayc-mobile-zones { margin-top: 6px; }
+    .ayc-mobile-vitals-avg {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+      margin-top: 9px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(0,0,0,.12);
+    }
+    .ayc-mobile-vitals-avg span {
+      display: block;
+      min-width: 0;
+      text-align: center;
+      font-size: .7rem;
+      line-height: 1.2;
+    }
+    .ayc-mobile-vitals-avg strong { display: block; font-size: .76rem; }
     .ayc-mobile-phase { color: #111; border: 1px solid rgba(0,0,0,.12); }
     .ayc-mobile-phase.phase-recovery { background: #e8ddff; }
     .ayc-mobile-phase.phase-aerobe { background: #f06f5f; }
@@ -597,6 +613,18 @@
       padding: 8px 10px;
       background: #f5f5f5;
       font-weight: 700;
+    }
+    .ayc-mobile-day-date { display: inline-flex; align-items: center; gap: 7px; }
+    .ayc-mobile-vitals-button {
+      width: 29px;
+      height: 29px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      padding: 0;
+      color: #c62828;
+      background: rgba(255,255,255,.72);
     }
     .ayc-mobile-slots { padding: 9px 10px; }
     .ayc-mobile-slot + .ayc-mobile-slot { border-top: 1px solid #eee; margin-top: 9px; padding-top: 9px; }
@@ -634,6 +662,16 @@
       font-size: .9rem;
       font-weight: 800;
     }
+    .ayc-mobile-week-report {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin: 14px 0 4px;
+    }
+    .ayc-mobile-week-report .week-report-box { min-height: 112px; padding: 7px; }
+    .ayc-mobile-week-report .week-report-field { min-height: 78px; font-size: .78rem; }
+    #mobileVitalsModal .modal-dialog { margin: 0; max-width: none; height: 100%; }
+    #mobileVitalsModal .modal-content { min-height: 100%; border: 0; border-radius: 0; }
   }
 
   @media (max-width: 1200px) {
@@ -778,12 +816,38 @@
           {% if w.has_z6 %}<span class="total-pill total-z6">Z6 {{ w.sum_z6_km }}</span>{% endif %}
           {% if w.has_race %}<span class="total-pill total-race">Race {{ w.sum_race_km }}</span>{% endif %}
         </div>
+        {% if show_daily_vitals %}
+        <div class="ayc-mobile-vitals-avg" aria-label="Weekly vitals averages">
+          <span>Sleep<strong>{{ w.daily_vitals_avg.sleep_hours }}</strong></span>
+          <span>Quality<strong>{{ w.daily_vitals_avg.sleep_quality }}</strong></span>
+          <span>HR<strong>{{ w.daily_vitals_avg.morning_hr }}</strong></span>
+          <span>HRV<strong>{{ w.daily_vitals_avg.hrv }}</strong></span>
+        </div>
+        {% endif %}
       </div>
 
       {% for mobile_day in w.mobile_days %}
       <article class="ayc-mobile-day{% if mobile_day.day == today %} is-today{% endif %}" data-day="{{ mobile_day.day|date:'Y-m-d' }}">
         <div class="ayc-mobile-day-head">
-          <span>{{ mobile_day.day|date:'l' }}</span><span>{{ mobile_day.day|date:'d-m' }}</span>
+          <span>{{ mobile_day.day|date:'l' }}</span>
+          <span class="ayc-mobile-day-date">
+            {{ mobile_day.day|date:'d-m' }}
+            {% if show_daily_vitals %}
+            {% with vital=mobile_day.slot1.vitals %}
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger ayc-mobile-vitals-button"
+                    aria-label="Daily vitals for {{ mobile_day.day|date:'d-m' }}"
+                    title="Daily vitals"
+                    data-vitals-date="{{ mobile_day.day|date:'Y-m-d' }}"
+                    data-vitals-label="{{ mobile_day.day|date:'l d-m' }}"
+                    data-vitals-sleep-hours="{% if vital and vital.sleep_hours != None %}{{ vital.sleep_hours }}{% endif %}"
+                    data-vitals-sleep-quality="{% if vital and vital.sleep_quality != None %}{{ vital.sleep_quality }}{% endif %}"
+                    data-vitals-morning-hr="{% if vital and vital.morning_hr != None %}{{ vital.morning_hr }}{% endif %}"
+                    data-vitals-hrv="{% if vital and vital.hrv != None %}{{ vital.hrv }}{% endif %}"
+                    {% if mobile_day.day > today %}disabled{% endif %}>&hearts;</button>
+            {% endwith %}
+            {% endif %}
+          </span>
         </div>
         <div class="ayc-mobile-slots">
           {% if mobile_day.slot1.slot or mobile_day.slot2.slot %}
@@ -839,9 +903,76 @@
         </div>
       </article>
       {% endfor %}
+
+      {% if show_week_reports %}
+      <div class="ayc-mobile-week-report" aria-label="Week report">
+        <div class="week-report-box week-report-athlete">
+          <div class="week-report-title">Comm Ath</div>
+          <textarea class="week-report-field"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="comm_athlete"
+                    {% if is_coach_user %}readonly{% endif %}>{% if w.week_report %}{{ w.week_report.comm_athlete }}{% endif %}</textarea>
+        </div>
+        <div class="week-report-box week-report-trainer">
+          <div class="week-report-title">Comm Trainer</div>
+          <textarea class="week-report-field"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="comm_trainer"
+                    {% if not is_coach_user %}readonly{% endif %}>{% if w.week_report %}{{ w.week_report.comm_trainer }}{% endif %}</textarea>
+        </div>
+        <div class="week-report-box week-report-match">
+          <div class="week-report-title">Matchreport</div>
+          <textarea class="week-report-field"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="match_report">{% if w.week_report %}{{ w.week_report.match_report }}{% endif %}</textarea>
+        </div>
+        <div class="week-report-box week-report-injuries">
+          <div class="week-report-title">Injuries</div>
+          <textarea class="week-report-field"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="injuries">{% if w.week_report %}{{ w.week_report.injuries }}{% endif %}</textarea>
+        </div>
+      </div>
+      {% endif %}
     </section>
     {% endfor %}
   </div>
+
+  {% if show_daily_vitals %}
+  <div class="modal fade" id="mobileVitalsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0">Daily vitals</h5>
+            <div class="small text-muted" id="mobileVitalsDateLabel"></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="mobileVitalsDate">
+          <div class="mb-3">
+            <label class="form-label" for="mobileVitalsSleepHours">Sleep hours</label>
+            <input type="number" min="0" max="24" step="0.25" class="form-control" id="mobileVitalsSleepHours">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="mobileVitalsSleepQuality">Sleep quality (1–10)</label>
+            <input type="number" min="1" max="10" step="1" class="form-control" id="mobileVitalsSleepQuality">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="mobileVitalsMorningHr">Morning heart rate</label>
+            <input type="number" min="1" step="1" class="form-control" id="mobileVitalsMorningHr">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="mobileVitalsHrv">HRV</label>
+            <input type="number" min="0" step="1" class="form-control" id="mobileVitalsHrv">
+          </div>
+          <div class="text-danger small" id="mobileVitalsError"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="mobileVitalsSave">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -1979,7 +2110,7 @@
   }
 
   function postWeekReport(el) {
-    if (!el || el.disabled) return;
+    if (!el || el.disabled || el.readOnly) return;
     var weekStart = el.getAttribute("data-week-start") || "";
     var field = el.getAttribute("data-field") || "";
     if (!weekStart || !field) return;
@@ -2072,6 +2203,85 @@
   });
 })();
 </script>
+
+{% if show_daily_vitals %}
+<script>
+(function() {
+  var modalEl = document.getElementById("mobileVitalsModal");
+  var saveButton = document.getElementById("mobileVitalsSave");
+  if (!modalEl || !saveButton) return;
+
+  var dateInput = document.getElementById("mobileVitalsDate");
+  var dateLabel = document.getElementById("mobileVitalsDateLabel");
+  var errorEl = document.getElementById("mobileVitalsError");
+  var fields = {
+    sleep_hours: document.getElementById("mobileVitalsSleepHours"),
+    sleep_quality: document.getElementById("mobileVitalsSleepQuality"),
+    morning_hr: document.getElementById("mobileVitalsMorningHr"),
+    hrv: document.getElementById("mobileVitalsHrv")
+  };
+
+  function getCookie(name) {
+    var value = null;
+    if (document.cookie) document.cookie.split(";").forEach(function(cookie) {
+      cookie = cookie.trim();
+      if (cookie.substring(0, name.length + 1) === name + "=") {
+        value = decodeURIComponent(cookie.substring(name.length + 1));
+      }
+    });
+    return value;
+  }
+
+  document.querySelectorAll(".ayc-mobile-vitals-button").forEach(function(button) {
+    button.addEventListener("click", function() {
+      dateInput.value = button.dataset.vitalsDate || "";
+      dateLabel.textContent = button.dataset.vitalsLabel || "";
+      fields.sleep_hours.value = button.dataset.vitalsSleepHours || "";
+      fields.sleep_quality.value = button.dataset.vitalsSleepQuality || "";
+      fields.morning_hr.value = button.dataset.vitalsMorningHr || "";
+      fields.hrv.value = button.dataset.vitalsHrv || "";
+      errorEl.textContent = "";
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+  });
+
+  saveButton.addEventListener("click", function() {
+    var day = dateInput.value || "";
+    var quality = parseInt(fields.sleep_quality.value || "", 10);
+    if (fields.sleep_quality.value && (!Number.isFinite(quality) || quality < 1 || quality > 10)) {
+      errorEl.textContent = "Sleep quality must be between 1 and 10.";
+      return;
+    }
+    if (!day) return;
+
+    saveButton.disabled = true;
+    errorEl.textContent = "";
+    var requests = Object.keys(fields).map(function(fieldName) {
+      var fd = new FormData();
+      fd.append("date", day);
+      fd.append("daily_vitals_submit", "1");
+      fd.append("field", fieldName);
+      fd.append("value", (fields[fieldName].value || "").trim().replace(",", "."));
+      return fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+        method: "POST",
+        body: fd,
+        headers: {"X-CSRFToken": getCookie("csrftoken")},
+        credentials: "same-origin"
+      }).then(function(response) {
+        if (!response.ok) throw new Error("save");
+      });
+    });
+
+    Promise.all(requests).then(function() {
+      window.location.reload();
+    }).catch(function() {
+      saveButton.disabled = false;
+      errorEl.textContent = "Daily vitals could not be saved. Try again.";
+    });
+  });
+})();
+</script>
+{% endif %}
 
 <div id="modal-container"></div>
 

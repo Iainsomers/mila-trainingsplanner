@@ -1,6 +1,6 @@
 # Data-, invoer- en rekenregels
 
-Laatst inhoudelijk gecontroleerd: 12 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 ## Zones
 
@@ -73,3 +73,4 @@ Compound onderdelen moeten afstand, zone en T-label per deel correct optellen.
 - Slaapkwaliteit gebruikt schaal 1–10.
 - Ochtendhartslag en HRV zijn numeriek.
 - Weekgemiddelde pas tonen bij minimaal drie bruikbare waarden.
+- Mobiel worden dezelfde vier gemiddelden gebruikt als desktop; er bestaat geen aparte mobiele berekening.

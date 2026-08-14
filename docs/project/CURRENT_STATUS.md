@@ -1,6 +1,6 @@
 # Actuele status
 
-Bijgewerkt: 12 augustus 2026.
+Bijgewerkt: 15 augustus 2026.
 
 ## Productiestatus
 
@@ -17,6 +17,8 @@ Bijgewerkt: 12 augustus 2026.
 - Tijdgebaseerde trainingsonderdelen tonen tempo in min/km.
 - Trainerstats toont huidige en vorige weekkilometers.
 - Standard Strength is vanuit Mob/Tech beschikbaar.
+- Atleten kunnen hun Base Planning alleen-lezen bekijken.
+- Mobiele AYC ondersteunt gekleurde Week reports, Daily vitals via een hartpopup en compacte weekgemiddelden.
 
 ## Bekende aandachtspunten
 

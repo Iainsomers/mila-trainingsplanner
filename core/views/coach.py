@@ -3663,12 +3663,20 @@ def _base_planning_athlete_qs_for_user(user):
 @xframe_options_sameorigin
 def athlete_base_planning_view(request):
     embedded = (request.GET.get("embedded") == "1") or (request.POST.get("embedded") == "1")
+    read_only = (request.GET.get("readonly") == "1") or (request.POST.get("readonly") == "1")
     redirect_suffix = "&embedded=1" if embedded else ""
     planning_kind = (request.POST.get("kind") or request.GET.get("kind") or AthleteBasePlanningBlock.KIND_BASE).strip()
     if planning_kind not in {AthleteBasePlanningBlock.KIND_BASE, AthleteBasePlanningBlock.KIND_IDEAL}:
         planning_kind = AthleteBasePlanningBlock.KIND_BASE
     redirect_suffix += f"&kind={planning_kind}"
     is_ideal_week = planning_kind == AthleteBasePlanningBlock.KIND_IDEAL
+    read_only = bool(
+        read_only
+        or (
+            not (request.user.is_staff or request.user.is_superuser)
+            and planning_kind == AthleteBasePlanningBlock.KIND_BASE
+        )
+    )
     athletes = list(_base_planning_athlete_qs_for_user(request.user))
     selected_athlete = None
     selected_id = (request.POST.get("athlete_id") or request.GET.get("athlete") or "").strip()
@@ -3679,6 +3687,9 @@ def athlete_base_planning_view(request):
 
     errors = []
     saved = False
+
+    if request.method == "POST" and read_only:
+        return HttpResponse("Forbidden", status=403)
 
     if request.method == "POST" and selected_athlete:
         action = (request.POST.get("action") or "").strip()
@@ -3897,6 +3908,7 @@ def athlete_base_planning_view(request):
             "embedded": embedded,
             "planning_kind": planning_kind,
             "is_ideal_week": is_ideal_week,
+            "read_only": read_only,
         },
     )
 
@@ -5592,7 +5604,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
     errors = []
     saved_notice = "Opgeslagen." if request.GET.get("saved") == "1" else None
     active_tab = (request.GET.get("tab") or "general").strip()
-    allowed_tabs = {"general", "zones", "ideal-week", "wu-settings"} if self_view else {"general", "zones", "base-planning", "ideal-week", "wu-settings"}
+    allowed_tabs = {"general", "zones", "base-planning", "ideal-week", "wu-settings"}
     if active_tab not in allowed_tabs:
         active_tab = "general"
 

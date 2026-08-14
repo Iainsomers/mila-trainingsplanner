@@ -6,6 +6,7 @@
   type="button"
   class="base-slot-button"
   data-base-slot-id="{{ slot.id }}"
+  {% if read_only %}disabled aria-disabled="true"{% endif %}
 >
   <span class="base-slot-time">{{ slot_label }}</span>
   <span class="base-slot-value">

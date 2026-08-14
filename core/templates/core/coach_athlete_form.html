@@ -361,11 +361,9 @@
             <button class="nav-link {% if active_tab == 'zones' %}active{% endif %}" id="zones-tab" data-bs-toggle="tab" data-bs-target="#zones-pane" type="button" role="tab">Zone/PR's</button>
           </li>
           {% if mode == "edit" and athlete %}
-            {% if not self_view %}
             <li class="nav-item" role="presentation">
               <button class="nav-link {% if active_tab == 'base-planning' %}active{% endif %}" id="base-planning-tab" data-bs-toggle="tab" data-bs-target="#base-planning-pane" type="button" role="tab">Base planning</button>
             </li>
-            {% endif %}
             <li class="nav-item" role="presentation">
               <button class="nav-link {% if active_tab == 'ideal-week' %}active{% endif %}" id="ideal-week-tab" data-bs-toggle="tab" data-bs-target="#ideal-week-pane" type="button" role="tab">Ideal week</button>
             </li>
@@ -578,15 +576,13 @@
 
           </div>
           {% if mode == "edit" and athlete %}
-            {% if not self_view %}
             <div class="tab-pane fade {% if active_tab == 'base-planning' %}show active{% endif %}" id="base-planning-pane" role="tabpanel" aria-labelledby="base-planning-tab">
               <iframe
-                src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=base"
+                src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=base{% if self_view %}&readonly=1{% endif %}"
                 style="width:100%; min-height:780px; border:1px solid #ddd; border-radius:6px;"
                 title="Athlete base planning"
               ></iframe>
             </div>
-            {% endif %}
             <div class="tab-pane fade {% if active_tab == 'ideal-week' %}show active{% endif %}" id="ideal-week-pane" role="tabpanel" aria-labelledby="ideal-week-tab">
               <iframe
                 src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=ideal"

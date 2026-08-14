@@ -1,6 +1,6 @@
 # Gebruikersrollen en toegang
 
-Laatst inhoudelijk gecontroleerd: 12 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 ## Trainer
 
@@ -37,9 +37,8 @@ Een atleet mag niet:
 
 ## Atleteninstellingen
 
-Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-instellingen zien en waar toegestaan wijzigen. De volgende trainerinstellingen blijven verborgen:
+Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-instellingen zien en waar toegestaan wijzigen. Base Planning is zichtbaar als alleen-lezen overzicht en kan uitsluitend door de trainer worden aangepast. De volgende trainerinstellingen blijven verborgen:
 
-- Base Planning;
 - hoeveel toekomstige weken zichtbaar zijn;
 - rapportage- en zichtbaarheidsschakelaars;
 - trainer- en groepstoewijzingen.
