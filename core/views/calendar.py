@@ -2520,7 +2520,9 @@ def athlete_year_calendar_view(request):
                         vital.hrv = _parse_vital_value("hrv", request.POST.get("hrv"))
                         vital.updated_by = request.user
                         vital.save()
-                        return HttpResponse("", status=204)
+                        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                            return HttpResponse("", status=204)
+                        return redirect(request.get_full_path())
 
                     field = (request.POST.get("field") or "").strip()
                     raw_value = (request.POST.get("value") or "").strip()

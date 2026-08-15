@@ -937,7 +937,10 @@
   {% if show_daily_vitals %}
   <div class="modal fade" id="mobileVitalsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
-      <div class="modal-content">
+      <form method="post" class="modal-content" id="mobileVitalsForm">
+        {% csrf_token %}
+        <input type="hidden" name="daily_vitals_submit" value="1">
+        <input type="hidden" name="daily_vitals_batch" value="1">
         <div class="modal-header">
           <div>
             <h5 class="modal-title mb-0">Daily vitals</h5>
@@ -946,30 +949,29 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <input type="hidden" id="mobileVitalsDate">
+          <input type="hidden" name="date" id="mobileVitalsDate">
           <div class="mb-3">
             <label class="form-label" for="mobileVitalsSleepHours">Sleep hours</label>
-            <input type="number" min="0" max="24" step="0.25" class="form-control" id="mobileVitalsSleepHours">
+            <input type="number" min="0" max="24" step="0.25" class="form-control" id="mobileVitalsSleepHours" name="sleep_hours">
           </div>
           <div class="mb-3">
             <label class="form-label" for="mobileVitalsSleepQuality">Sleep quality (1–10)</label>
-            <input type="number" min="1" max="10" step="1" class="form-control" id="mobileVitalsSleepQuality">
+            <input type="number" min="1" max="10" step="1" class="form-control" id="mobileVitalsSleepQuality" name="sleep_quality">
           </div>
           <div class="mb-3">
             <label class="form-label" for="mobileVitalsMorningHr">Morning heart rate</label>
-            <input type="number" min="1" step="1" class="form-control" id="mobileVitalsMorningHr">
+            <input type="number" min="1" step="1" class="form-control" id="mobileVitalsMorningHr" name="morning_hr">
           </div>
           <div class="mb-3">
             <label class="form-label" for="mobileVitalsHrv">HRV</label>
-            <input type="number" min="0" step="1" class="form-control" id="mobileVitalsHrv">
+            <input type="number" min="0" step="1" class="form-control" id="mobileVitalsHrv" name="hrv">
           </div>
-          <div class="text-danger small" id="mobileVitalsError"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" id="mobileVitalsSave">Save</button>
+          <button type="submit" class="btn btn-primary" id="mobileVitalsSave">Save</button>
         </div>
-      </div>
+      </form>
     </div>
   </div>
   {% endif %}
@@ -2208,29 +2210,16 @@
 <script>
 (function() {
   var modalEl = document.getElementById("mobileVitalsModal");
-  var saveButton = document.getElementById("mobileVitalsSave");
-  if (!modalEl || !saveButton) return;
+  if (!modalEl) return;
 
   var dateInput = document.getElementById("mobileVitalsDate");
   var dateLabel = document.getElementById("mobileVitalsDateLabel");
-  var errorEl = document.getElementById("mobileVitalsError");
   var fields = {
     sleep_hours: document.getElementById("mobileVitalsSleepHours"),
     sleep_quality: document.getElementById("mobileVitalsSleepQuality"),
     morning_hr: document.getElementById("mobileVitalsMorningHr"),
     hrv: document.getElementById("mobileVitalsHrv")
   };
-
-  function getCookie(name) {
-    var value = null;
-    if (document.cookie) document.cookie.split(";").forEach(function(cookie) {
-      cookie = cookie.trim();
-      if (cookie.substring(0, name.length + 1) === name + "=") {
-        value = decodeURIComponent(cookie.substring(name.length + 1));
-      }
-    });
-    return value;
-  }
 
   document.querySelectorAll(".ayc-mobile-vitals-button").forEach(function(button) {
     button.addEventListener("click", function() {
@@ -2240,41 +2229,7 @@
       fields.sleep_quality.value = button.dataset.vitalsSleepQuality || "";
       fields.morning_hr.value = button.dataset.vitalsMorningHr || "";
       fields.hrv.value = button.dataset.vitalsHrv || "";
-      errorEl.textContent = "";
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    });
-  });
-
-  saveButton.addEventListener("click", function() {
-    var day = dateInput.value || "";
-    var quality = parseInt(fields.sleep_quality.value || "", 10);
-    if (fields.sleep_quality.value && (!Number.isFinite(quality) || quality < 1 || quality > 10)) {
-      errorEl.textContent = "Sleep quality must be between 1 and 10.";
-      return;
-    }
-    if (!day) return;
-
-    saveButton.disabled = true;
-    errorEl.textContent = "";
-    var fd = new FormData();
-    fd.append("date", day);
-    fd.append("daily_vitals_submit", "1");
-    fd.append("daily_vitals_batch", "1");
-    Object.keys(fields).forEach(function(fieldName) {
-      fd.append(fieldName, (fields[fieldName].value || "").trim().replace(",", "."));
-    });
-
-    fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
-      method: "POST",
-      body: fd,
-      headers: {"X-CSRFToken": getCookie("csrftoken")},
-      credentials: "same-origin"
-    }).then(function(response) {
-      if (!response.ok) throw new Error("save");
-      window.location.reload();
-    }).catch(function() {
-      saveButton.disabled = false;
-      errorEl.textContent = "Daily vitals could not be saved. Try again.";
     });
   });
 })();

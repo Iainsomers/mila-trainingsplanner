@@ -311,12 +311,17 @@ class SlotModalSaveTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 204)
+        self.assertRedirects(response, f"/athlete/year/?year={date.today().year}&athlete={athlete.id}")
         vital = AthleteDailyVital.objects.get(athlete=athlete, date=day)
         self.assertEqual(vital.sleep_hours, 7.75)
         self.assertEqual(vital.sleep_quality, 8)
         self.assertEqual(vital.morning_hr, 48)
         self.assertEqual(vital.hrv, 72)
+
+        page = self.client.get(f"/athlete/year/?year={date.today().year}&athlete={athlete.id}")
+        self.assertContains(page, 'id="mobileVitalsForm"')
+        for field_name in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
+            self.assertContains(page, f'name="{field_name}"', html=False)
 
 
 class SegmentRepTimeDisplayTests(TestCase):
