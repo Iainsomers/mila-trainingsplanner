@@ -13,6 +13,7 @@ Een trainer is doorgaans staff- of superuser en kan:
 - wedstrijden en wedstrijdafstanden beheren;
 - standaard krachtprogramma's beheren;
 - rapportages en zichtbaarheid per atleet instellen;
+- voor een geselecteerde atleet vitals en training reports vastleggen, ook wanneer een trainer vooruit werkt;
 - in de AYC tussen toegankelijke atleten schakelen;
 - stats, Polar en Django Admin openen waar beschikbaar.
 

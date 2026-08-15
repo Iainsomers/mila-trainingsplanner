@@ -2488,7 +2488,7 @@ def athlete_year_calendar_view(request):
                         report.save()
 
                 elif daily_vitals_submit is not None:
-                    if d > today:
+                    if d > today and not (request.user.is_staff or request.user.is_superuser):
                         return HttpResponse("", status=204)
 
                     def _parse_vital_value(field_name, raw_value):
@@ -2542,7 +2542,7 @@ def athlete_year_calendar_view(request):
                         vital.save()
 
                 elif check_status is not None or toggle_check is not None or report_submit is not None:
-                    if d > today:
+                    if d > today and not (request.user.is_staff or request.user.is_superuser):
                         return HttpResponse("", status=204)
                     try:
                         slot_index = int(slot_index_raw)

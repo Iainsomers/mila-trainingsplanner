@@ -5,7 +5,7 @@ from pathlib import Path
 from django.test import TestCase
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
 from core.views.coach import _parse_pr_time_to_seconds, _race_line_text, _race_selected_count
 
@@ -352,6 +352,48 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(refreshed_page, 'data-vitals-sleep-quality="9"', html=False)
         self.assertContains(refreshed_page, 'data-vitals-morning-hr="46"', html=False)
         self.assertContains(refreshed_page, 'data-vitals-hrv="77"', html=False)
+
+    def test_coach_can_save_future_vitals_and_training_report_for_selected_athlete(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        athlete.daily_vitals_enabled = True
+        athlete.save(update_fields=["daily_vitals_enabled"])
+        future_day = date.today() + timedelta(days=2)
+
+        vital_response = self.client.post(
+            f"/athlete/year/?year={future_day.year}&athlete={athlete.id}",
+            {
+                "date": future_day.isoformat(),
+                "daily_vitals_submit": "1",
+                "daily_vitals_batch": "1",
+                "sleep_hours": "7.5",
+                "sleep_quality": "8",
+                "morning_hr": "49",
+                "hrv": "70",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(vital_response.status_code, 204)
+        self.assertTrue(
+            AthleteDailyVital.objects.filter(athlete=athlete, date=future_day).exists()
+        )
+
+        report_response = self.client.post(
+            f"/athlete/year/?year={future_day.year}&athlete={athlete.id}",
+            {
+                "date": future_day.isoformat(),
+                "slot_index": "1",
+                "report_submit": "1",
+                "check_status": "done_as_planned",
+                "rpe": "6",
+                "report_comment": "Coach test report",
+            },
+        )
+        self.assertEqual(report_response.status_code, 200)
+        saved_report = AthleteDayCheck.objects.get(
+            athlete=athlete, date=future_day, slot_index=1
+        )
+        self.assertEqual(saved_report.rpe, 6)
+        self.assertEqual(saved_report.comment, "Coach test report")
 
 
 class SegmentRepTimeDisplayTests(TestCase):
