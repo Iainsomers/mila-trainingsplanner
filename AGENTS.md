@@ -21,7 +21,7 @@ Lees vóór een wijziging de relevante documenten in `docs/project/`:
 - Behoud de compacte MiLa-stijl en test wijzigingen ook voor mobiel.
 - Voer bij codewijzigingen minstens gerichte tests en `manage.py check` uit.
 - Commit geen lokale database, tijdelijke Office-bestanden of geheime gegevens.
-- `Naar Render` betekent: relevante bestanden committen en `main` pushen. Een gewone wijzigingsvraag geeft geen toestemming om te pushen.
+- Voltooide wijzigingen worden standaard met de relevante bestanden gecommit en naar `main` gepusht, zodat Render ze kan uitrollen. Niet pushen wanneer de gebruiker expliciet zegt dat iets lokaal moet blijven.
 - Werk na een functionele wijziging de relevante projectdocumentatie bij volgens `docs/project/DEVELOPMENT.md`.
 
 `CODEX_CONTEXT.md` is een historische overdracht en niet meer de primaire bron.

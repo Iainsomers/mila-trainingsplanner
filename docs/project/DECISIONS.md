@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-08-15 — Standaard naar Render
+
+Voltooide wijzigingen worden standaard gecommit en naar `main` gepusht zodat Render ze kan uitrollen. Alleen bij een expliciet verzoek om iets lokaal te houden wordt niet gepusht.
+
 ## 2026-08-15 — Base Planning en mobiele rapportage voor atleten
 
 Atleten zien Base Planning als alleen-lezen tab. In de mobiele AYC verschijnen ingeschakelde Week reports als vier gekleurde vakken onder de week. Daily vitals worden per dag via een hartknop en popup ingevoerd. De vier weekgemiddelden blijven zichtbaar in compacte vorm en verschijnen pas bij minimaal drie bruikbare waarden.

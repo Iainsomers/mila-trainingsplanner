@@ -39,7 +39,7 @@ Bij modelwijzigingen:
 - Branch `main` is de productiebranch.
 - Render kan na een push automatisch deployen.
 - Stage alleen taakrelevante bestanden; de werkmap kan ongerelateerde gebruikersbestanden bevatten.
-- Push uitsluitend wanneer de gebruiker dat expliciet vraagt, bijvoorbeeld `push` of `naar Render`.
+- Commit en push voltooide wijzigingen standaard naar `main`, zodat Render ze kan uitrollen. Sla de push over wanneer de gebruiker expliciet zegt dat de wijziging lokaal moet blijven.
 - Gebruik korte, beschrijvende commits.
 
 Nooit committen zonder expliciet verzoek:
