@@ -377,6 +377,20 @@ class SlotModalSaveTests(TestCase):
             AthleteDailyVital.objects.filter(athlete=athlete, date=future_day).exists()
         )
 
+        desktop_vital_response = self.client.post(
+            f"/athlete/year/?year={future_day.year}&athlete={athlete.id}",
+            {
+                "date": future_day.isoformat(),
+                "daily_vitals_submit": "1",
+                "field": "morning_hr",
+                "value": "47",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(desktop_vital_response.status_code, 204)
+        saved_vital = AthleteDailyVital.objects.get(athlete=athlete, date=future_day)
+        self.assertEqual(saved_vital.morning_hr, 47)
+
         report_response = self.client.post(
             f"/athlete/year/?year={future_day.year}&athlete={athlete.id}",
             {
@@ -394,6 +408,15 @@ class SlotModalSaveTests(TestCase):
         )
         self.assertEqual(saved_report.rpe, 6)
         self.assertEqual(saved_report.comment, "Coach test report")
+
+        desktop_page = self.client.get(
+            f"/athlete/year/?year={future_day.year}&athlete={athlete.id}"
+        )
+        desktop_vitals_script = desktop_page.content.decode().split(
+            "function postDailyVital(el)", 1
+        )[1].split("</script>", 1)[0]
+        self.assertNotIn("window.location.reload();", desktop_vitals_script)
+        self.assertIn('"X-Requested-With": "XMLHttpRequest"', desktop_vitals_script)
 
 
 class SegmentRepTimeDisplayTests(TestCase):

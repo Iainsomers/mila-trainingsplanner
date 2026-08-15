@@ -2540,6 +2540,8 @@ def athlete_year_calendar_view(request):
                         setattr(vital, field, value)
                         vital.updated_by = request.user
                         vital.save()
+                        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                            return HttpResponse("", status=204)
 
                 elif check_status is not None or toggle_check is not None or report_submit is not None:
                     if d > today and not (request.user.is_staff or request.user.is_superuser):

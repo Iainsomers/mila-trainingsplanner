@@ -2175,7 +2175,12 @@
       el.value = "";
       return;
     }
+    var lastSaved = el.getAttribute("data-last-saved-value") || "";
+    if (lastSaved === value) return;
+    if (el.getAttribute("data-saving-value") === value) return;
     el.value = value;
+    el.setAttribute("data-saving-value", value);
+    el.classList.remove("is-invalid");
 
     var fd = new FormData();
     fd.append("date", day);
@@ -2183,26 +2188,29 @@
     fd.append("field", field);
     fd.append("value", value);
 
-    var lastSaved = el.getAttribute("data-last-saved-value") || "";
-    if (lastSaved === value) return;
-    el.setAttribute("data-last-saved-value", value);
-
     fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
       method: "POST",
       body: fd,
-      headers: {"X-CSRFToken": getCookie("csrftoken")},
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+        "X-Requested-With": "XMLHttpRequest"
+      },
       credentials: "same-origin"
     }).then(function(response) {
-      if (response.ok) {
-        window.location.reload();
-      }
-    }).catch(function() {});
+      if (!response.ok) throw new Error("save");
+      el.setAttribute("data-last-saved-value", value);
+      el.removeAttribute("data-saving-value");
+    }).catch(function() {
+      el.removeAttribute("data-saving-value");
+      el.value = lastSaved;
+      el.classList.add("is-invalid");
+      el.title = "Daily vital could not be saved.";
+    });
   }
 
   document.querySelectorAll(".daily-vital-input").forEach(function(el) {
     el.setAttribute("data-last-saved-value", normalizeValue(el));
     el.addEventListener("change", function() { postDailyVital(el); });
-    el.addEventListener("blur", function() { postDailyVital(el); });
   });
 })();
 </script>
