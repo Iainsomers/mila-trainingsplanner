@@ -2491,6 +2491,37 @@ def athlete_year_calendar_view(request):
                     if d > today:
                         return HttpResponse("", status=204)
 
+                    def _parse_vital_value(field_name, raw_value):
+                        raw_value = (raw_value or "").strip()
+                        if raw_value == "":
+                            return None
+                        if field_name == "sleep_hours":
+                            try:
+                                return round(float(raw_value.replace(",", ".")), 2)
+                            except Exception:
+                                return None
+                        try:
+                            value = int(raw_value)
+                        except Exception:
+                            return None
+                        if field_name == "sleep_quality" and not 1 <= value <= 10:
+                            return None
+                        return value
+
+                    if request.POST.get("daily_vitals_batch") == "1":
+                        vital, _ = AthleteDailyVital.objects.get_or_create(
+                            athlete=athlete,
+                            date=d,
+                            defaults={"updated_by": request.user},
+                        )
+                        vital.sleep_hours = _parse_vital_value("sleep_hours", request.POST.get("sleep_hours"))
+                        vital.sleep_quality = _parse_vital_value("sleep_quality", request.POST.get("sleep_quality"))
+                        vital.morning_hr = _parse_vital_value("morning_hr", request.POST.get("morning_hr"))
+                        vital.hrv = _parse_vital_value("hrv", request.POST.get("hrv"))
+                        vital.updated_by = request.user
+                        vital.save()
+                        return HttpResponse("", status=204)
+
                     field = (request.POST.get("field") or "").strip()
                     raw_value = (request.POST.get("value") or "").strip()
                     allowed_fields = {"sleep_hours", "sleep_quality", "morning_hr", "hrv"}
@@ -2502,22 +2533,7 @@ def athlete_year_calendar_view(request):
                             defaults={"updated_by": request.user},
                         )
 
-                        if raw_value == "":
-                            value = None
-                        elif field == "sleep_hours":
-                            try:
-                                value = round(float(raw_value.replace(",", ".")), 2)
-                            except Exception:
-                                value = None
-                        else:
-                            try:
-                                value = int(raw_value)
-                            except Exception:
-                                value = None
-
-                        if field == "sleep_quality" and value is not None:
-                            if value < 1 or value > 10:
-                                value = None
+                        value = _parse_vital_value(field, raw_value)
 
                         setattr(vital, field, value)
                         vital.updated_by = request.user

@@ -5,7 +5,7 @@ from pathlib import Path
 from django.test import TestCase
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
 from core.views.coach import _parse_pr_time_to_seconds, _race_line_text, _race_selected_count
 
@@ -291,6 +291,32 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('class="btn btn-sm btn-outline-danger ayc-mobile-vitals-button"', template_source)
         self.assertIn('id="mobileVitalsModal"', template_source)
         self.assertIn('class="ayc-mobile-vitals-avg"', template_source)
+
+    def test_mobile_vitals_batch_saves_all_four_values(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        athlete.daily_vitals_enabled = True
+        athlete.save(update_fields=["daily_vitals_enabled"])
+        day = date.today().isoformat()
+
+        response = self.client.post(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}",
+            {
+                "date": day,
+                "daily_vitals_submit": "1",
+                "daily_vitals_batch": "1",
+                "sleep_hours": "7.75",
+                "sleep_quality": "8",
+                "morning_hr": "48",
+                "hrv": "72",
+            },
+        )
+
+        self.assertEqual(response.status_code, 204)
+        vital = AthleteDailyVital.objects.get(athlete=athlete, date=day)
+        self.assertEqual(vital.sleep_hours, 7.75)
+        self.assertEqual(vital.sleep_quality, 8)
+        self.assertEqual(vital.morning_hr, 48)
+        self.assertEqual(vital.hrv, 72)
 
 
 class SegmentRepTimeDisplayTests(TestCase):

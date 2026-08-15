@@ -2256,23 +2256,21 @@
 
     saveButton.disabled = true;
     errorEl.textContent = "";
-    var requests = Object.keys(fields).map(function(fieldName) {
-      var fd = new FormData();
-      fd.append("date", day);
-      fd.append("daily_vitals_submit", "1");
-      fd.append("field", fieldName);
-      fd.append("value", (fields[fieldName].value || "").trim().replace(",", "."));
-      return fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
-        method: "POST",
-        body: fd,
-        headers: {"X-CSRFToken": getCookie("csrftoken")},
-        credentials: "same-origin"
-      }).then(function(response) {
-        if (!response.ok) throw new Error("save");
-      });
+    var fd = new FormData();
+    fd.append("date", day);
+    fd.append("daily_vitals_submit", "1");
+    fd.append("daily_vitals_batch", "1");
+    Object.keys(fields).forEach(function(fieldName) {
+      fd.append(fieldName, (fields[fieldName].value || "").trim().replace(",", "."));
     });
 
-    Promise.all(requests).then(function() {
+    fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+      method: "POST",
+      body: fd,
+      headers: {"X-CSRFToken": getCookie("csrftoken")},
+      credentials: "same-origin"
+    }).then(function(response) {
+      if (!response.ok) throw new Error("save");
       window.location.reload();
     }).catch(function() {
       saveButton.disabled = false;
