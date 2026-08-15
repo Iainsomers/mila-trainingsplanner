@@ -5,7 +5,7 @@ from pathlib import Path
 from django.test import TestCase
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
 from core.views.coach import _parse_pr_time_to_seconds, _race_line_text, _race_selected_count
 
@@ -417,6 +417,64 @@ class SlotModalSaveTests(TestCase):
         )[1].split("</script>", 1)[0]
         self.assertNotIn("window.location.reload();", desktop_vitals_script)
         self.assertIn('"X-Requested-With": "XMLHttpRequest"', desktop_vitals_script)
+
+    def test_shared_coach_can_save_vitals_for_accessible_athlete(self):
+        owner = get_user_model().objects.create_user(
+            username="athleteowner", password="secret", is_staff=True
+        )
+        shared_coach = get_user_model().objects.create_user(
+            username="sharedcoach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="Shared athlete",
+            birth_year=2000,
+            gender="X",
+            daily_vitals_enabled=True,
+            is_private=False,
+        )
+        CoachAccess.objects.create(owner=owner, grantee=shared_coach)
+        self.client.force_login(shared_coach)
+
+        page = self.client.get(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}"
+        )
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Shared athlete")
+
+        response = self.client.post(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}",
+            {
+                "date": date.today().isoformat(),
+                "daily_vitals_submit": "1",
+                "field": "hrv",
+                "value": "81",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(
+            AthleteDailyVital.objects.get(athlete=athlete, date=date.today()).hrv,
+            81,
+        )
+
+        report_response = self.client.post(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}",
+            {
+                "date": date.today().isoformat(),
+                "slot_index": "1",
+                "report_submit": "1",
+                "check_status": "adjusted_ok",
+                "rpe": "5",
+                "report_comment": "Shared coach report",
+            },
+        )
+        self.assertEqual(report_response.status_code, 200)
+        shared_report = AthleteDayCheck.objects.get(
+            athlete=athlete, date=date.today(), slot_index=1
+        )
+        self.assertEqual(shared_report.status, "adjusted_ok")
+        self.assertEqual(shared_report.comment, "Shared coach report")
 
 
 class SegmentRepTimeDisplayTests(TestCase):

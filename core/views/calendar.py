@@ -2437,11 +2437,14 @@ def athlete_year_calendar_view(request):
             athlete_id = request.POST.get("athlete") or request.GET.get("athlete")
             if athlete_id:
                 try:
-                    athlete = _filter_owned(Athlete.objects.all(), request.user).get(id=int(athlete_id))
+                    athlete = _filter_accessible(Athlete.objects.all(), request.user).get(id=int(athlete_id))
                 except Exception:
                     athlete = None
         else:
             athlete = _athlete_for_user(request.user)
+
+        if athlete is None:
+            return HttpResponse("", status=403)
 
         if athlete and date_str:
             try:

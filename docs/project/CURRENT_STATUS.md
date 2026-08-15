@@ -22,6 +22,7 @@ Bijgewerkt: 15 augustus 2026.
 - De mobiele vitals-popup bewaart de vier dagwaarden in één gezamenlijke database-update, sluit na succes expliciet en vult opgeslagen waarden bij opnieuw openen weer correct in.
 - Trainers kunnen vitals en training reports voor de geselecteerde atleet ook op toekomstige planningsdagen opslaan; voor atleten zelf blijft toekomstige invoer geblokkeerd.
 - Desktop-vitals worden per gewijzigd veld opgeslagen zonder volledige paginaherlading, zodat het kalenderbeeld niet verspringt en de invoer niet terugvalt.
+- Een trainer met gedeelde toegang gebruikt bij AYC-opslag dezelfde toegangsregel als bij het bekijken van de atleet; vitals en reports worden daardoor niet meer stil genegeerd voor niet-eigen atleten.
 
 ## Bekende aandachtspunten
 
