@@ -133,78 +133,26 @@
         <h5 class="card-title">Races</h5>
 
         {% if race_rows %}
-          <div class="table-responsive">
-            <table class="table table-sm align-middle">
-              <thead>
-                <tr>
-                  <th style="width: 140px;">Date</th>
-                  <th style="width: 220px;">Name</th>
-                  <th>Distances</th>
-                  <th style="width: 120px;"></th>
-                </tr>
-              </thead>
-              <tbody>
-  {% for row in race_rows %}
-                  {% with race=row.race distances=row.distances %}
-                  <tr>
-                    <td>{{ race.date|date:"d-m-Y" }}</td>
-                    <td>{{ race.name }}</td>
-                    <td>
-                      <div class="mb-2">
-                        {% for distance in distances %}
-                          <span class="badge text-bg-light border me-1 mb-1">
-                            {{ distance.display_distance }}
-                            <form method="post" action="{% url 'race_calendar_distance_delete' race.id distance.id %}" class="d-inline">
-                              {% csrf_token %}
-                              <input type="hidden" name="view" value="{{ view_mode }}">
-                              <input type="hidden" name="period" value="{{ period_mode }}">
-                              <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1" style="font-size: 11px; text-decoration: none;">×</button>
-                            </form>
-                          </span>
-                        {% empty %}
-                          <span class="text-muted small">No distances yet.</span>
-                        {% endfor %}
-                      </div>
-
-                      <form method="post" action="{% url 'race_calendar_distance_add' race.id %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="view" value="{{ view_mode }}">
-                        <input type="hidden" name="period" value="{{ period_mode }}">
-                        <div class="row g-2 align-items-start">
-                          <div class="col-12 col-lg-8">
-                            <div class="d-flex flex-wrap gap-2">
-                              {% for value, label in distance_choices %}
-                                {% if value != "custom" %}
-                                  <label class="form-check form-check-inline small mb-0">
-                                    <input class="form-check-input" type="checkbox" name="distances" value="{{ value }}">
-                                    <span class="form-check-label">{{ label }}</span>
-                                  </label>
-                                {% endif %}
-                              {% endfor %}
-                            </div>
-                          </div>
-                          <div class="col-12 col-md-4 col-lg-2">
-                            <input type="number" name="custom_distance_m" min="1" class="form-control form-control-sm" placeholder="x meter">
-                          </div>
-                          <div class="col-12 col-md-4 col-lg-2">
-                            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Save distances</button>
-                          </div>
-                        </div>
-                      </form>
-                    </td>
-                    <td class="text-end">
-                      <form method="post" action="{% url 'race_calendar_delete' race.id %}" onsubmit="return confirm('Delete this race?');">
-                        {% csrf_token %}
-                        <input type="hidden" name="view" value="{{ view_mode }}">
-                        <input type="hidden" name="period" value="{{ period_mode }}">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                      </form>
-                    </td>
-                  </tr>
-                  {% endwith %}
-                {% endfor %}
-              </tbody>
-            </table>
+          <div class="race-list">
+            {% for row in race_rows %}
+              {% with race=row.race distances=row.distances %}
+                <button type="button" class="race-list-item"
+                        data-bs-toggle="modal" data-bs-target="#raceModal{{ race.id }}">
+                  <span class="race-list-date">{{ race.date|date:"d-m-Y" }}</span>
+                  <span class="race-list-main">
+                    <strong class="race-list-name">{{ race.name }}</strong>
+                    <span class="race-list-distances">
+                      {% for distance in distances %}
+                        <span class="badge text-bg-light border">{{ distance.display_distance }}</span>
+                      {% empty %}
+                        <span class="text-muted small">No distances yet.</span>
+                      {% endfor %}
+                    </span>
+                  </span>
+                  <span class="race-list-open" aria-hidden="true">›</span>
+                </button>
+              {% endwith %}
+            {% endfor %}
           </div>
         {% else %}
           <div class="text-muted">No races for this period yet.</div>
@@ -425,6 +373,34 @@
     background: #ffe0b2;
   }
 
+  .race-list {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .race-list-item {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    width: 100%;
+    padding: 12px 14px;
+    border: 0;
+    border-bottom: 1px solid #e9ecef;
+    background: #ffffff;
+    color: inherit;
+    text-align: left;
+  }
+
+  .race-list-item:last-child { border-bottom: 0; }
+  .race-list-item:hover { background: #fff8ec; }
+  .race-list-date { color: #6c757d; font-size: .86rem; }
+  .race-list-main { min-width: 0; }
+  .race-list-name { display: block; margin-bottom: 5px; }
+  .race-list-distances { display: flex; flex-wrap: wrap; gap: 4px; }
+  .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
+
   @media (max-width: 992px) {
     .year-calendar-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -435,6 +411,15 @@
     .year-calendar-grid {
       grid-template-columns: 1fr;
     }
+
+    .race-list-item {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 10px;
+    }
+
+    .race-list-date { grid-column: 1; }
+    .race-list-main { grid-column: 1; }
+    .race-list-open { grid-column: 2; grid-row: 1 / span 2; }
   }
 </style>
 {% endblock %}

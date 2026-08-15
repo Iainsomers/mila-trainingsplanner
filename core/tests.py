@@ -582,6 +582,29 @@ class SegmentRepTimeDisplayTests(TestCase):
 
 
 class RaceSelectDisplayTests(TestCase):
+    def test_race_calendar_list_hides_distance_choices_until_race_is_opened(self):
+        coach = get_user_model().objects.create_user(
+            username="racecalendarcoach", password="secret", is_staff=True
+        )
+        race = RaceEvent.objects.create(
+            owner=coach, name="Track meeting", date="2026-07-16"
+        )
+        RaceEventDistance.objects.create(race=race, distance="1500")
+        self.client.force_login(coach)
+
+        response = self.client.get("/race-calendar/?year=2026&view=list&period=full")
+
+        self.assertEqual(response.status_code, 200)
+        source = response.content.decode()
+        list_section = source.split('<div class="race-list">', 1)[1].split(
+            '<div class="modal fade"', 1
+        )[0]
+        self.assertIn('class="race-list-item"', list_section)
+        self.assertIn(f'data-bs-target="#raceModal{race.id}"', list_section)
+        self.assertIn("1500m", list_section)
+        self.assertNotIn('name="distances"', list_section)
+        self.assertNotIn("Save distances", list_section)
+
     def test_target_checkbox_makes_race_important_without_athlete_checkbox(self):
         race = RaceEvent(name="Target Race", date="2026-07-16")
         distance = RaceEventDistance(race=race, distance="1500")

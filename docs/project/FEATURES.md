@@ -69,6 +69,7 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 ## Wedstrijden
 
 - Trainer beheert wedstrijden en afstanden.
+- De lijstweergave van de Race Calendar toont per wedstrijd datum, naam en reeds gekozen afstanden; afstandsbeheer verschijnt pas na het openen van de wedstrijd.
 - Atleet kiest maximaal drie afstanden per wedstrijd.
 - Een wedstrijd kan als doelwedstrijd worden gemarkeerd.
 - `Race` is een gewone wedstrijd; `Race!` is een belangrijke doelwedstrijd.

@@ -46,6 +46,11 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 - Trainerselectie blijft beschikbaar voor trainers.
 - Toon alle trainingsonderdelen, zones en tijden.
 
+## Race Calendar
+
+- Houd de lijstweergave compact: datum, wedstrijdnaam en bestaande afstanden zijn direct zichtbaar.
+- Toon afstandskeuzes en beheeracties pas nadat de gebruiker een wedstrijd opent.
+
 ## Formulieren
 
 - Zet vaste scheidingstekens voor tijdformaten visueel vast waar mogelijk.
