@@ -3129,8 +3129,14 @@ def athlete_year_calendar_view(request):
         }
 
         mobile_days = [
-            {"day": slot1["day"], "slot1": slot1, "slot2": slot2, "report": report}
-            for slot1, slot2, report in zip(cells1, cells2, cells3)
+            {
+                "day": slot1["day"],
+                "slot1": slot1,
+                "slot2": slot2,
+                "report": report,
+                "vitals": vitals.get("vitals"),
+            }
+            for slot1, slot2, report, vitals in zip(cells1, cells2, cells3, cells4)
         ]
 
         week_rows.append({

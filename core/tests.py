@@ -345,6 +345,14 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(vital.morning_hr, 46)
         self.assertEqual(vital.hrv, 77)
 
+        refreshed_page = self.client.get(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}"
+        )
+        self.assertContains(refreshed_page, 'data-vitals-sleep-hours="8.25"', html=False)
+        self.assertContains(refreshed_page, 'data-vitals-sleep-quality="9"', html=False)
+        self.assertContains(refreshed_page, 'data-vitals-morning-hr="46"', html=False)
+        self.assertContains(refreshed_page, 'data-vitals-hrv="77"', html=False)
+
 
 class SegmentRepTimeDisplayTests(TestCase):
     def test_compound_reps_show_split_times_for_current_and_goal_pr(self):

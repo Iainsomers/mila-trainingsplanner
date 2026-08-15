@@ -833,8 +833,8 @@
           <span class="ayc-mobile-day-date">
             {{ mobile_day.day|date:'d-m' }}
             {% if show_daily_vitals %}
-            {% with vital=mobile_day.slot1.vitals %}
-            <button type="button"
+            {% with vital=mobile_day.vitals %}
+              <button type="button"
                     class="btn btn-sm btn-outline-danger ayc-mobile-vitals-button"
                     aria-label="Daily vitals for {{ mobile_day.day|date:'d-m' }}"
                     title="Daily vitals"

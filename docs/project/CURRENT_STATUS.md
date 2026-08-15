@@ -19,7 +19,7 @@ Bijgewerkt: 15 augustus 2026.
 - Standard Strength is vanuit Mob/Tech beschikbaar.
 - Atleten kunnen hun Base Planning alleen-lezen bekijken.
 - Mobiele AYC ondersteunt gekleurde Week reports, Daily vitals via een hartpopup en compacte weekgemiddelden.
-- De mobiele vitals-popup bewaart de vier dagwaarden in één gezamenlijke database-update, sluit na succes expliciet en herlaadt daarna de AYC zonder achterblijvende witte modallaag.
+- De mobiele vitals-popup bewaart de vier dagwaarden in één gezamenlijke database-update, sluit na succes expliciet en vult opgeslagen waarden bij opnieuw openen weer correct in.
 
 ## Bekende aandachtspunten
 
