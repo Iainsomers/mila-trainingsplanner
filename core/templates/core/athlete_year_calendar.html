@@ -966,6 +966,7 @@
             <label class="form-label" for="mobileVitalsHrv">HRV</label>
             <input type="number" min="0" step="1" class="form-control" id="mobileVitalsHrv" name="hrv">
           </div>
+          <div class="text-danger small" id="mobileVitalsError" role="alert"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -2210,7 +2211,10 @@
 <script>
 (function() {
   var modalEl = document.getElementById("mobileVitalsModal");
-  if (!modalEl) return;
+  var formEl = document.getElementById("mobileVitalsForm");
+  var saveButton = document.getElementById("mobileVitalsSave");
+  var errorEl = document.getElementById("mobileVitalsError");
+  if (!modalEl || !formEl || !saveButton) return;
 
   var dateInput = document.getElementById("mobileVitalsDate");
   var dateLabel = document.getElementById("mobileVitalsDateLabel");
@@ -2229,7 +2233,28 @@
       fields.sleep_quality.value = button.dataset.vitalsSleepQuality || "";
       fields.morning_hr.value = button.dataset.vitalsMorningHr || "";
       fields.hrv.value = button.dataset.vitalsHrv || "";
+      errorEl.textContent = "";
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+  });
+
+  formEl.addEventListener("submit", function(event) {
+    event.preventDefault();
+    saveButton.disabled = true;
+    errorEl.textContent = "";
+
+    fetch(window.location.href, {
+      method: "POST",
+      body: new FormData(formEl),
+      headers: {"X-Requested-With": "XMLHttpRequest"},
+      credentials: "same-origin"
+    }).then(function(response) {
+      if (!response.ok) throw new Error("save");
+      bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+      window.setTimeout(function() { window.location.reload(); }, 120);
+    }).catch(function() {
+      saveButton.disabled = false;
+      errorEl.textContent = "Daily vitals could not be saved. Try again.";
     });
   });
 })();

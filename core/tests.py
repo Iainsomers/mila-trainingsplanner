@@ -320,8 +320,30 @@ class SlotModalSaveTests(TestCase):
 
         page = self.client.get(f"/athlete/year/?year={date.today().year}&athlete={athlete.id}")
         self.assertContains(page, 'id="mobileVitalsForm"')
+        self.assertContains(page, 'X-Requested-With', html=False)
+        self.assertContains(page, 'bootstrap.Modal.getOrCreateInstance(modalEl).hide()', html=False)
         for field_name in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
             self.assertContains(page, f'name="{field_name}"', html=False)
+
+        ajax_response = self.client.post(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}",
+            {
+                "date": day,
+                "daily_vitals_submit": "1",
+                "daily_vitals_batch": "1",
+                "sleep_hours": "8.25",
+                "sleep_quality": "9",
+                "morning_hr": "46",
+                "hrv": "77",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(ajax_response.status_code, 204)
+        vital.refresh_from_db()
+        self.assertEqual(vital.sleep_hours, 8.25)
+        self.assertEqual(vital.sleep_quality, 9)
+        self.assertEqual(vital.morning_hr, 46)
+        self.assertEqual(vital.hrv, 77)
 
 
 class SegmentRepTimeDisplayTests(TestCase):
