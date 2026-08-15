@@ -48,7 +48,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 ## Race Calendar
 
-- Houd de lijstweergave compact: datum, wedstrijdnaam en bestaande afstanden zijn direct zichtbaar.
+- Houd de lijstweergave compact op één regel: datum, een uitgelijnde naamkolom en bestaande afstanden zijn direct zichtbaar.
 - Toon afstandskeuzes en beheeracties pas nadat de gebruiker een wedstrijd opent.
 
 ## Formulieren

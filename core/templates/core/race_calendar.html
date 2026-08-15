@@ -382,10 +382,11 @@
   .race-list-item {
     display: grid;
     grid-template-columns: 112px minmax(0, 1fr) auto;
-    gap: 14px;
+    gap: 12px;
     align-items: center;
     width: 100%;
-    padding: 12px 14px;
+    min-height: 42px;
+    padding: 6px 12px;
     border: 0;
     border-bottom: 1px solid #e9ecef;
     background: #ffffff;
@@ -396,9 +397,16 @@
   .race-list-item:last-child { border-bottom: 0; }
   .race-list-item:hover { background: #fff8ec; }
   .race-list-date { color: #6c757d; font-size: .86rem; }
-  .race-list-main { min-width: 0; }
-  .race-list-name { display: block; margin-bottom: 5px; }
-  .race-list-distances { display: flex; flex-wrap: wrap; gap: 4px; }
+  .race-list-main {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
+  }
+  .race-list-name { min-width: 0; }
+  .race-list-distances { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
 
   @media (max-width: 992px) {
@@ -413,13 +421,15 @@
     }
 
     .race-list-item {
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 6px 10px;
+      grid-template-columns: 86px minmax(0, 1fr) auto;
+      gap: 6px;
+      padding: 6px 8px;
     }
 
-    .race-list-date { grid-column: 1; }
-    .race-list-main { grid-column: 1; }
-    .race-list-open { grid-column: 2; grid-row: 1 / span 2; }
+    .race-list-main {
+      grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr);
+      gap: 6px;
+    }
   }
 </style>
 {% endblock %}

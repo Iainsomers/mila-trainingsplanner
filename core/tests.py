@@ -604,6 +604,7 @@ class RaceSelectDisplayTests(TestCase):
         self.assertIn("1500m", list_section)
         self.assertNotIn('name="distances"', list_section)
         self.assertNotIn("Save distances", list_section)
+        self.assertContains(response, "grid-template-columns: 220px minmax(0, 1fr)", html=False)
 
     def test_target_checkbox_makes_race_important_without_athlete_checkbox(self):
         race = RaceEvent(name="Target Race", date="2026-07-16")
