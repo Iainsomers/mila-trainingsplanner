@@ -277,13 +277,24 @@
                     <div class="small text-muted">Maximum three distances per athlete.</div>
                   </div>
                   {% if not is_athlete_user %}
-                  <div>
+                  <div class="d-flex align-items-end gap-3 flex-wrap">
+                    <div>
                     <label class="form-label small mb-1">Show athletes</label>
-                    <select class="form-select form-select-sm race-athlete-filter">
-                      <option value="all">All</option>
-                      {% for plan in trainer_plans %}<option value="plan:{{ plan.id }}">{{ plan.name }}</option>{% endfor %}
+                    <select class="form-select form-select-sm race-athlete-filter" data-initial-filter="{{ popup_initial_filter }}">
+                      <option value="all" {% if popup_initial_filter == 'all' %}selected{% endif %}>All</option>
+                      <optgroup label="Groups">
+                        {% for option in race_group_options %}<option value="{{ option.value }}" {% if popup_initial_filter == option.value %}selected{% endif %}>{{ option.label }}</option>{% endfor %}
+                      </optgroup>
+                      <optgroup label="Athletes">
+                        {% for option in popup_athlete_options %}<option value="{{ option.value }}" {% if popup_initial_filter == option.value %}selected{% endif %}>{{ option.label }}</option>{% endfor %}
+                      </optgroup>
                       <option value="participating">Participating athletes</option>
                     </select>
+                    </div>
+                    <div class="form-check form-switch mb-1">
+                      <input class="form-check-input race-expand-toggle" type="checkbox" role="switch" id="raceExpand{{ race.id }}">
+                      <label class="form-check-label small" for="raceExpand{{ race.id }}">Expand all</label>
+                    </div>
                   </div>
                   {% endif %}
                 </div>
@@ -411,6 +422,7 @@
     function applyFilter() {
       var form = select.closest(".race-entry-form");
       var value = select.value || "all";
+      var expandToggle = form.querySelector(".race-expand-toggle");
       form.querySelectorAll(".race-entry-athlete").forEach(function(row) {
         var visible = value === "all";
         if (value === "participating") visible = row.dataset.participating === "1";
@@ -418,13 +430,30 @@
           var planId = value.split(":")[1];
           visible = (row.dataset.planIds || "").split(",").indexOf(planId) !== -1;
         }
+        if (value.indexOf("athlete:") === 0) {
+          var athleteId = value.split(":")[1];
+          var athleteInput = row.querySelector(".race-athlete-submit-id");
+          visible = !!athleteInput && athleteInput.value === athleteId;
+        }
         row.hidden = !visible;
+        if (visible && expandToggle && expandToggle.checked) row.open = true;
         row.querySelectorAll("input").forEach(function(input) {
           input.disabled = !visible || input.dataset.roleLocked === "1";
         });
       });
     }
     select.addEventListener("change", applyFilter);
+    applyFilter();
+  });
+
+  document.querySelectorAll(".race-expand-toggle").forEach(function(toggle) {
+    toggle.addEventListener("change", function() {
+      var form = toggle.closest(".race-entry-form");
+      if (!form) return;
+      form.querySelectorAll(".race-entry-athlete:not([hidden])").forEach(function(row) {
+        row.open = toggle.checked;
+      });
+    });
   });
 
   function refreshRaceSummary(athleteRow) {

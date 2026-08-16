@@ -4759,6 +4759,16 @@ def race_calendar_view(request):
         {"value": f"athlete:{athlete.id}", "label": athlete.name}
         for athlete in race_athletes if athlete.id in group_athlete_ids
     ]
+    popup_athlete_options = [
+        {"value": f"athlete:{athlete.id}", "label": athlete.name}
+        for athlete in race_athletes
+    ]
+    if race_athlete != "all":
+        popup_initial_filter = race_athlete
+    elif race_group != "all":
+        popup_initial_filter = race_group
+    else:
+        popup_initial_filter = "all"
 
     race_rows_by_id = {row["race"].id: row for row in race_rows}
     races_by_date = {}
@@ -4813,8 +4823,10 @@ def race_calendar_view(request):
         "race_athletes": race_athletes,
         "race_group_options": race_group_options,
         "race_athlete_options": race_athlete_options,
+        "popup_athlete_options": popup_athlete_options,
         "race_group": race_group,
         "race_athlete": race_athlete,
+        "popup_initial_filter": popup_initial_filter,
         "show_all_races": show_all_races,
         "is_athlete_user": is_athlete_user,
         "current_athlete": current_athlete,

@@ -784,7 +784,8 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, "Save selections")
         self.assertNotContains(response, "Open selected", html=False)
         self.assertContains(response, "refreshRaceSummary", html=False)
-        self.assertContains(response, f'<option value="plan:{trainer_plan.id}">Race group</option>', html=False)
+        self.assertContains(response, f'value="plan:{trainer_plan.id}"', html=False)
+        self.assertContains(response, "Race group")
         self.assertContains(response, f'data-plan-ids="{trainer_plan.id}"', html=False)
         self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
         self.assertNotContains(response, 'race-participant-badge', html=False)
@@ -830,7 +831,17 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotContains(response, 'class="race-distance-count">2</span>', html=False)
         self.assertContains(response, f'value="plan:{trainer_plan.id}" selected', html=False)
         self.assertContains(response, f'value="athlete:{athlete_one.id}" selected', html=False)
-        self.assertNotContains(response, f'value="athlete:{athlete_two.id}"', html=False)
+        top_filter_section = response.content.decode().split('<div class="card race-filter-card">', 1)[1].split('</div>\n  </div>\n  </div>', 1)[0]
+        self.assertIn(f'value="athlete:{athlete_one.id}" selected', top_filter_section)
+        self.assertNotIn(f'value="athlete:{athlete_two.id}"', top_filter_section)
+        self.assertContains(response, f'data-initial-filter="athlete:{athlete_one.id}"', html=False)
+        self.assertContains(response, 'class="form-check-input race-expand-toggle"', html=False)
+        self.assertContains(response, 'row.open = toggle.checked', html=False)
+
+        group_response = self.client.get(
+            f"/race-calendar/?year=2026&view=list&period=full&race_group=plan:{trainer_plan.id}&race_athlete=all&show_all=1"
+        )
+        self.assertContains(group_response, f'data-initial-filter="plan:{trainer_plan.id}"', html=False)
 
     def test_races_overview_redirects_directly_to_calendar(self):
         coach = get_user_model().objects.create_user(
