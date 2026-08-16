@@ -690,6 +690,7 @@ class RaceSelectDisplayTests(TestCase):
         )
         self.assertContains(athlete_pending_calendar, "race-choice-pending", html=False)
         self.assertContains(athlete_pending_calendar, "1500m")
+        self.assertContains(athlete_pending_calendar, "refreshAthleteRacePill", html=False)
 
         athlete_response = self.client.post(
             f"/race-calendar/{race.id}/entries/save/",
@@ -776,6 +777,7 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
         self.assertNotContains(response, 'race-participant-badge', html=False)
         self.assertContains(response, 'class="card race-filter-card"', html=False)
+        self.assertContains(response, "grid-template-columns: repeat(2, minmax(0, 1fr))", html=False)
         self.assertContains(response, f'value="athlete:{athlete.id}"', html=False)
 
     def test_race_calendar_scope_filters_races_and_distance_counts(self):

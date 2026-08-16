@@ -172,18 +172,17 @@
             {% for row in race_rows %}
               {% with race=row.race distances=row.distances %}
                 <button type="button" class="race-list-item"
+                        data-race-id="{{ race.id }}"
                         data-bs-toggle="modal" data-bs-target="#raceModal{{ race.id }}">
                   <span class="race-list-date">{{ race.date|date:"d-m-Y" }}</span>
                   <span class="race-list-main">
                     <strong class="race-list-name">{{ race.name }}</strong>
                     <span class="race-list-distances">
                       {% for distance_row in row.distance_rows %}
-                        {% if not is_athlete_user or distance_row.selection_class %}
-                        <span class="race-list-distance-wrap">
+                        <span class="race-list-distance-wrap{% if is_athlete_user and not distance_row.selection_class %} d-none{% endif %}" data-distance-id="{{ distance_row.distance.id }}">
                           <span class="badge {% if is_athlete_user %}race-choice-pill {{ distance_row.selection_class }}{% else %}text-bg-light border{% endif %}">{{ distance_row.distance.display_distance }}</span>
                           {% if not is_athlete_user and distance_row.participant_count %}<span class="race-distance-count">{{ distance_row.participant_count }}</span>{% endif %}
                         </span>
-                        {% endif %}
                       {% empty %}
                         <span class="text-muted small">No distances yet.</span>
                       {% endfor %}
@@ -203,7 +202,7 @@
 
   {% for row in race_rows %}
     {% with race=row.race distances=row.distances %}
-      <div class="modal fade" id="raceModal{{ race.id }}" tabindex="-1" aria-labelledby="raceModal{{ race.id }}Label" aria-hidden="true">
+      <div class="modal fade" id="raceModal{{ race.id }}" data-race-id="{{ race.id }}" tabindex="-1" aria-labelledby="raceModal{{ race.id }}Label" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
           <div class="modal-content">
             <div class="modal-header">
@@ -301,7 +300,7 @@
                       <input type="hidden" name="athletes" value="{{ athlete_row.athlete.id }}" class="race-athlete-submit-id">
                       {% for distance_entry in athlete_row.distance_entries %}
                         {% with distance=distance_entry.distance entry=distance_entry.entry %}
-                        <div class="race-entry-distance" data-distance-label="{{ distance.display_distance }}">
+                        <div class="race-entry-distance" data-distance-id="{{ distance.id }}" data-distance-label="{{ distance.display_distance }}">
                           <span>{{ distance.display_distance }}</span>
                           <label><input type="checkbox" data-race-role="coach" name="coach_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.coach_selected %}checked{% endif %} {% if is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
                           <label><input type="checkbox" data-race-role="athlete" name="athlete_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.athlete_selected %}checked{% endif %} {% if not is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
@@ -437,9 +436,33 @@
     athleteRow.dataset.participating = participating ? "1" : "0";
   }
 
+  function refreshAthleteRacePill(distanceRow) {
+    var modal = distanceRow.closest(".modal[data-race-id]");
+    if (!modal) return;
+    var raceId = modal.dataset.raceId;
+    var distanceId = distanceRow.dataset.distanceId;
+    var wrapper = document.querySelector('.race-list-item[data-race-id="' + raceId + '"] .race-list-distance-wrap[data-distance-id="' + distanceId + '"]');
+    if (!wrapper) return;
+    var pill = wrapper.querySelector(".race-choice-pill");
+    if (!pill) return;
+    var coach = distanceRow.querySelector('[data-race-role="coach"]');
+    var athlete = distanceRow.querySelector('[data-race-role="athlete"]');
+    var target = distanceRow.querySelector('[data-race-role="target"]');
+    var coachSelected = !!(coach && coach.checked);
+    var athleteSelected = !!(athlete && athlete.checked);
+    var targetSelected = !!(target && target.checked);
+    wrapper.classList.toggle("d-none", !coachSelected && !athleteSelected && !targetSelected);
+    if (!coachSelected && !athleteSelected && !targetSelected) return;
+    pill.className = "badge race-choice-pill " + (targetSelected
+      ? (coachSelected && athleteSelected ? "race-choice-target-confirmed" : "race-choice-target-pending")
+      : (coachSelected && athleteSelected ? "race-choice-confirmed" : "race-choice-pending"));
+  }
+
   document.querySelectorAll('.race-entry-distance input[type="checkbox"]').forEach(function(input) {
     input.addEventListener("change", function() {
-      refreshRaceSummary(input.closest(".race-entry-athlete"));
+      var athleteRow = input.closest(".race-entry-athlete");
+      refreshRaceSummary(athleteRow);
+      refreshAthleteRacePill(input.closest(".race-entry-distance"));
     });
   });
 })();
@@ -561,7 +584,7 @@
   .race-list-distances { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
-  .race-toolbar { display: grid; grid-template-columns: minmax(0, 680px) minmax(260px, 360px); gap: 14px; align-items: stretch; }
+  .race-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: stretch; max-width: 1040px; }
   .race-add-card,
   .race-filter-card { width: 100%; }
   .race-list-distance-wrap { position: relative; display: inline-flex; padding-top: 3px; padding-right: 3px; }
