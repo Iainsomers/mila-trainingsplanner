@@ -73,7 +73,7 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 - De lijst toont tijdelijk zowel het totale aantal deelnemende atleten per wedstrijd als een groene teller per afstand, zodat na beoordeling één variant gekozen kan worden.
 - Atleet kiest maximaal drie afstanden per wedstrijd.
 - Een wedstrijd kan als doelwedstrijd worden gemarkeerd.
-- De popup kan voor trainers alle atleten, een Trainer Planning-groep of alleen reeds deelnemende atleten tonen; een atleet ziet alleen zichzelf.
+- De popup kan voor trainers alle atleten, een Trainer Planning-groep of alleen reeds deelnemende atleten tonen; een atleet ziet alleen zichzelf. Achter ingeklapte atleetnamen staan geen afstandspillen.
 - Trainer-, atleet- en doelwedstrijdvinkjes hebben afzonderlijke rechten. Bestaande selecties worden als wederzijds bevestigd gemigreerd.
 - Een nog niet wederzijds bevestigde wedstrijd is wit met oranje rand, of met rode rand als Target aanstaat. Na trainer- én atleetakkoord wordt de pil gevuld oranje of rood.
 

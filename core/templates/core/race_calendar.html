@@ -259,15 +259,6 @@
                     <details class="race-entry-athlete" data-plan-ids="{{ athlete_row.plan_ids }}" data-participating="{% if athlete_row.participating %}1{% else %}0{% endif %}">
                       <summary class="race-entry-athlete-summary">
                         <strong class="race-entry-athlete-name">{{ athlete_row.athlete.name }}</strong>
-                        <span class="race-entry-summary-pills">
-                          {% for distance_entry in athlete_row.distance_entries %}
-                            {% with distance=distance_entry.distance entry=distance_entry.entry %}
-                              {% if entry.coach_selected or entry.athlete_selected or entry.target_selected %}
-                                <span class="race-summary-pill {% if entry.target_selected %}{% if entry.coach_selected and entry.athlete_selected %}race-summary-target-confirmed{% else %}race-summary-target-pending{% endif %}{% else %}{% if entry.coach_selected and entry.athlete_selected %}race-summary-confirmed{% else %}race-summary-pending{% endif %}{% endif %}">{{ distance.display_distance }}</span>
-                              {% endif %}
-                            {% endwith %}
-                          {% endfor %}
-                        </span>
                       </summary>
                       <input type="hidden" name="athletes" value="{{ athlete_row.athlete.id }}" class="race-athlete-submit-id">
                       {% for distance_entry in athlete_row.distance_entries %}
@@ -390,25 +381,16 @@
   });
 
   function refreshRaceSummary(athleteRow) {
-    var pills = athleteRow.querySelector(".race-entry-summary-pills");
-    if (!pills) return;
-    pills.innerHTML = "";
+    var participating = false;
     athleteRow.querySelectorAll(".race-entry-distance").forEach(function(distanceRow) {
       var coach = distanceRow.querySelector('[data-race-role="coach"]');
       var athlete = distanceRow.querySelector('[data-race-role="athlete"]');
       var target = distanceRow.querySelector('[data-race-role="target"]');
-      var coachSelected = !!(coach && coach.checked);
-      var athleteSelected = !!(athlete && athlete.checked);
-      var targetSelected = !!(target && target.checked);
-      if (!coachSelected && !athleteSelected && !targetSelected) return;
-      var pill = document.createElement("span");
-      pill.className = "race-summary-pill " + (targetSelected
-        ? (coachSelected && athleteSelected ? "race-summary-target-confirmed" : "race-summary-target-pending")
-        : (coachSelected && athleteSelected ? "race-summary-confirmed" : "race-summary-pending"));
-      pill.textContent = distanceRow.dataset.distanceLabel || "";
-      pills.appendChild(pill);
+      if ((coach && coach.checked) || (athlete && athlete.checked) || (target && target.checked)) {
+        participating = true;
+      }
     });
-    athleteRow.dataset.participating = pills.children.length ? "1" : "0";
+    athleteRow.dataset.participating = participating ? "1" : "0";
   }
 
   document.querySelectorAll('.race-entry-distance input[type="checkbox"]').forEach(function(input) {
@@ -591,12 +573,6 @@
   }
   .race-entry-athlete-summary::marker { color: #6c757d; }
   .race-entry-athlete-name { min-width: 150px; }
-  .race-entry-summary-pills { display: flex; flex-wrap: wrap; gap: 4px; }
-  .race-summary-pill { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: .72rem; font-weight: 700; line-height: 1.25; }
-  .race-summary-pending { background: #fff; border: 2px solid #ff7a00; color: #8a4300; }
-  .race-summary-target-pending { background: #fff; border: 2px solid #cc0000; color: #990000; }
-  .race-summary-confirmed { background: #ff7a00; border: 2px solid #ff7a00; color: #111; }
-  .race-summary-target-confirmed { background: #cc0000; border: 2px solid #cc0000; color: #fff; }
   .race-entry-distance { min-height: 30px; font-size: .84rem; }
   .race-entry-distance label { text-align: center; }
   .race-distance-management { border: 1px solid #dee2e6; border-radius: 7px; padding: 0 10px 10px; }

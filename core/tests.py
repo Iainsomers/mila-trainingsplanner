@@ -675,7 +675,7 @@ class RaceSelectDisplayTests(TestCase):
         pending_calendar = self.client.get(
             "/race-calendar/?year=2026&view=list&period=full"
         )
-        self.assertContains(pending_calendar, "race-summary-pending", html=False)
+        self.assertNotContains(pending_calendar, "race-summary-pill", html=False)
 
         self.client.force_login(athlete_user)
         athlete_response = self.client.post(
