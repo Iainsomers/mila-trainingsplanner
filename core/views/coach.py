@@ -4974,6 +4974,9 @@ def race_calendar_entries_save_view(request, race_id: int):
     for athlete in changed_athletes:
         _sync_race_training_override(athlete, race)
 
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"ok": True})
+
     view_mode = (request.POST.get("view") or "list").strip()
     period_mode = (request.POST.get("period") or "full").strip()
     race_group = (request.POST.get("race_group") or "all").strip().lower()

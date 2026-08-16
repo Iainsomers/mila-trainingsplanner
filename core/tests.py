@@ -632,6 +632,17 @@ class RaceSelectDisplayTests(TestCase):
             f'name="athlete_{athlete.id}_{distance.id}" value="1"',
             html=False,
         )
+        self.assertNotContains(response, "Save selections")
+        self.assertContains(response, 'data-auto-save="1"', html=False)
+
+        auto_save_response = self.client.post(
+            f"/race-calendar/{race.id}/entries/save/",
+            {f"athlete_{athlete.id}_{distance.id}": "1"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(auto_save_response.status_code, 200)
+        self.assertEqual(auto_save_response.json(), {"ok": True})
+        self.assertTrue(RaceEntry.objects.get(race_distance=distance, athlete=athlete).athlete_selected)
 
         planning_response = self.client.get("/planning/")
         self.assertContains(planning_response, 'href="/race-calendar/"', html=False)
@@ -770,6 +781,7 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, "grid-template-columns: 220px minmax(0, 1fr)", html=False)
         self.assertContains(response, 'class="race-distance-management"', html=False)
         self.assertContains(response, 'class="race-entry-athlete"', html=False)
+        self.assertContains(response, "Save selections")
         self.assertNotContains(response, "Open selected", html=False)
         self.assertContains(response, "refreshRaceSummary", html=False)
         self.assertContains(response, f'<option value="plan:{trainer_plan.id}">Race group</option>', html=False)
