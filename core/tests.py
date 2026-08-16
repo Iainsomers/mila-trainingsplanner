@@ -619,7 +619,7 @@ class RaceSelectDisplayTests(TestCase):
         self.assertEqual(response.context["view_mode"], "list")
         self.assertContains(response, "Shared race")
         self.assertContains(response, "calendarathlete")
-        self.assertNotContains(response, "Add race")
+        self.assertContains(response, "Add race")
         self.assertContains(response, 'class="race-entry-athlete"', html=False)
         self.assertContains(response, "open>", html=False)
         self.assertContains(
@@ -647,6 +647,58 @@ class RaceSelectDisplayTests(TestCase):
         self.assertEqual(auto_save_response.status_code, 200)
         self.assertEqual(auto_save_response.json(), {"ok": True})
         self.assertTrue(RaceEntry.objects.get(race_distance=distance, athlete=athlete).athlete_selected)
+
+        add_from_list = self.client.post(
+            "/race-calendar/",
+            {
+                "name": "Athlete list race",
+                "date": "2026-09-01",
+                "view": "list",
+                "period": "full",
+            },
+        )
+        self.assertEqual(add_from_list.status_code, 302)
+        self.assertTrue(
+            RaceEvent.objects.filter(owner=coach, name="Athlete list race").exists()
+        )
+        athlete_distance_response = self.client.post(
+            f"/race-calendar/{race.id}/distances/add/",
+            {
+                "distances": "800",
+                "remove_distances": str(distance.id),
+                "view": "list",
+                "period": "full",
+            },
+        )
+        self.assertEqual(athlete_distance_response.status_code, 302)
+        self.assertTrue(RaceEventDistance.objects.filter(id=distance.id).exists())
+        self.assertTrue(
+            RaceEventDistance.objects.filter(race=race, distance="800").exists()
+        )
+        athlete_distance_page = self.client.get(
+            "/race-calendar/?year=2026&view=list&period=full"
+        )
+        self.assertContains(athlete_distance_page, "Save distances")
+        self.assertNotContains(athlete_distance_page, 'name="remove_distances"', html=False)
+
+        athlete_calendar_add = self.client.get(
+            "/race-calendar/?year=2026&view=calendar&period=full"
+        )
+        self.assertContains(athlete_calendar_add, 'id="addRaceDateModal"', html=False)
+        self.assertContains(athlete_calendar_add, 'data-bs-target="#addRaceDateModal"', html=False)
+        add_from_calendar = self.client.post(
+            "/race-calendar/",
+            {
+                "name": "Athlete calendar race",
+                "date": "2026-09-02",
+                "view": "calendar",
+                "period": "full",
+            },
+        )
+        self.assertEqual(add_from_calendar.status_code, 302)
+        self.assertTrue(
+            RaceEvent.objects.filter(owner=coach, name="Athlete calendar race").exists()
+        )
 
         participating_calendar = self.client.get(
             "/race-calendar/?year=2026&view=calendar&period=full"
@@ -862,9 +914,9 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotContains(response, 'class="race-distance-count">2</span>', html=False)
         self.assertContains(response, f'value="plan:{trainer_plan.id}" selected', html=False)
         self.assertContains(response, f'value="athlete:{athlete_one.id}" selected', html=False)
-        top_filter_section = response.content.decode().split('<div class="card race-filter-card">', 1)[1].split('</div>\n  </div>\n  </div>', 1)[0]
-        self.assertIn(f'value="athlete:{athlete_one.id}" selected', top_filter_section)
-        self.assertNotIn(f'value="athlete:{athlete_two.id}"', top_filter_section)
+        top_athlete_selector = response.content.decode().split('id="raceAthlete"', 1)[1].split('</select>', 1)[0]
+        self.assertIn(f'value="athlete:{athlete_one.id}" selected', top_athlete_selector)
+        self.assertNotIn(f'value="athlete:{athlete_two.id}"', top_athlete_selector)
         self.assertContains(response, f'data-initial-filter="athlete:{athlete_one.id}"', html=False)
         self.assertContains(response, 'class="form-check-input race-expand-toggle"', html=False)
         self.assertContains(response, 'row.open = toggle.checked', html=False)

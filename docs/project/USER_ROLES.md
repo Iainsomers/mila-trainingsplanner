@@ -26,7 +26,7 @@ Een atleetaccount is aan één `Athlete` gekoppeld. Een atleet kan uitsluitend z
 - de eigen AYC;
 - de eigen Athlete settings;
 - de eigen wedstrijdselectie;
-- de Race Calendar, waarin uitsluitend de eigen wedstrijdvinkjes en het gedeelde doelwedstrijdvinkje aanpasbaar zijn;
+- de Race Calendar, waarin de atleet wedstrijden en nieuwe afstanden voor de kalender van de eigen trainer kan toevoegen en uitsluitend de eigen wedstrijdvinkjes en het gedeelde doelwedstrijdvinkje kan aanpassen; bestaande afstanden verwijderen blijft trainer-only;
 - het eigen dashboard en Planning-overzicht als toegangspunten;
 - een logoutknop die naar de loginpagina terugkeert.
 

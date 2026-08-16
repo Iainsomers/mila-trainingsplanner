@@ -4595,9 +4595,6 @@ def race_calendar_view(request):
 
     errors = []
 
-    if request.method == "POST" and is_athlete_user:
-        return HttpResponse("Not allowed", status=403)
-
     if request.method == "POST":
         name = (request.POST.get("name") or "").strip()
         date_raw = (request.POST.get("date") or "").strip()
@@ -4612,8 +4609,11 @@ def race_calendar_view(request):
             errors.append("Date is invalid.")
 
         if not errors and race_date:
+            race_owner = current_athlete.owner if is_athlete_user else request.user
+            if race_owner is None:
+                return HttpResponse("Not allowed", status=403)
             RaceEvent.objects.create(
-                owner=request.user,
+                owner=race_owner,
                 name=name,
                 date=race_date,
             )
@@ -4866,13 +4866,20 @@ def race_calendar_delete_view(request, race_id: int):
 @login_required
 @require_http_methods(["POST"])
 def race_calendar_distance_add_view(request, race_id: int):
-    race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
+    current_athlete = _athlete_for_user(request.user)
+    is_athlete_user = bool(current_athlete and not request.user.is_staff and not request.user.is_superuser)
+    if is_athlete_user:
+        race = get_object_or_404(
+            RaceEvent.objects.filter(owner_id=current_athlete.owner_id), id=race_id
+        )
+    else:
+        race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
     selected_distances = request.POST.getlist("distances")
     remove_distance_ids = request.POST.getlist("remove_distances")
     custom_raw = (request.POST.get("custom_distance_m") or "").strip()
     allowed = {value for value, _ in RaceEventDistance.DISTANCE_CHOICES}
 
-    if remove_distance_ids:
+    if remove_distance_ids and not is_athlete_user:
         RaceEventDistance.objects.filter(race=race, id__in=remove_distance_ids).delete()
 
     for distance in selected_distances:

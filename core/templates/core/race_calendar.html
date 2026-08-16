@@ -42,8 +42,7 @@
     </div>
   </div>
 
-  {% if not is_athlete_user %}
-  <div class="race-toolbar mb-4">
+  <div class="race-toolbar{% if is_athlete_user %} race-toolbar-single{% endif %} mb-4">
   <div class="card race-add-card">
     <div class="card-body">
       <h5 class="card-title">Add race</h5>
@@ -77,6 +76,7 @@
       </form>
     </div>
   </div>
+  {% if not is_athlete_user %}
   <div class="card race-filter-card">
     <div class="card-body">
       <h5 class="card-title">Race filter</h5>
@@ -112,8 +112,8 @@
       </form>
     </div>
   </div>
-  </div>
   {% endif %}
+  </div>
 
   {% if view_mode == "calendar" %}
     <div class="year-calendar-grid">
@@ -139,10 +139,10 @@
                     {% for cell in week %}
                       <td class="race-day-cell{% if not cell.in_month %} outside-month{% endif %}"
                           data-date="{{ cell.day|date:'Y-m-d' }}"
-                          {% if cell.in_month and not is_athlete_user %}data-bs-toggle="modal" data-bs-target="#addRaceDateModal"{% endif %}>
+                          {% if cell.in_month %}data-bs-toggle="modal" data-bs-target="#addRaceDateModal"{% endif %}>
                         <div class="race-day-number">
                           <span>{{ cell.day|date:"j" }}</span>
-                          {% if cell.in_month and not is_athlete_user %}<span class="race-day-add">+</span>{% endif %}
+                          {% if cell.in_month %}<span class="race-day-add">+</span>{% endif %}
                         </div>
                         {% for row in cell.races %}
                           <button type="button"
@@ -214,7 +214,6 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              {% if not is_athlete_user %}
               <details class="race-distance-management">
                 <summary>Manage distances <span class="text-muted">({{ distances|length }})</span></summary>
               <form method="post" action="{% url 'race_calendar_distance_add' race.id %}">
@@ -229,8 +228,10 @@
                   {% for distance in distances %}
                     <span class="badge text-bg-light border me-1 mb-1 race-distance-badge">
                       {{ distance.display_distance }}
+                      {% if not is_athlete_user %}
                       <input type="checkbox" name="remove_distances" value="{{ distance.id }}" class="race-remove-distance-input d-none">
                       <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 race-remove-distance-btn" style="font-size: 11px; text-decoration: none;">×</button>
+                      {% endif %}
                     </span>
                   {% empty %}
                     <span class="text-muted small">No distances yet.</span>
@@ -259,11 +260,6 @@
               </form>
               </details>
               <hr class="my-4">
-              {% else %}
-              <div class="mb-3">
-                {% for distance in distances %}<span class="badge text-bg-light border me-1">{{ distance.display_distance }}</span>{% endfor %}
-              </div>
-              {% endif %}
 
               <form method="post" action="{% url 'race_calendar_entries_save' race.id %}" class="race-entry-form" data-auto-save="1">
                 {% csrf_token %}
@@ -348,7 +344,6 @@
     {% endwith %}
   {% endfor %}
 
-  {% if not is_athlete_user %}
   <div class="modal fade" id="addRaceDateModal" tabindex="-1" aria-labelledby="addRaceDateModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -381,7 +376,6 @@
       </div>
     </div>
   </div>
-  {% endif %}
 
 </div>
 
@@ -664,6 +658,7 @@
   .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
   .race-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: stretch; max-width: 1040px; }
+  .race-toolbar-single { grid-template-columns: minmax(0, 520px); }
   .race-add-card,
   .race-filter-card { width: 100%; }
   .race-list-distance-wrap { position: relative; display: inline-flex; padding-top: 3px; padding-right: 3px; }
