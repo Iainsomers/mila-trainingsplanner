@@ -19,14 +19,14 @@
   <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
     <div class="d-flex align-items-center gap-2">
       {% if period_mode != "current_next" %}
-        <a href="?year={{ previous_year }}&view={{ view_mode }}&period={{ period_mode }}" class="btn btn-sm btn-outline-secondary">← {{ previous_year }}</a>
-        <a href="?year={{ next_year }}&view={{ view_mode }}&period={{ period_mode }}" class="btn btn-sm btn-outline-secondary">{{ next_year }} →</a>
+        <a href="?year={{ previous_year }}&view={{ view_mode }}&period={{ period_mode }}&race_scope={{ race_scope|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">← {{ previous_year }}</a>
+        <a href="?year={{ next_year }}&view={{ view_mode }}&period={{ period_mode }}&race_scope={{ race_scope|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">{{ next_year }} →</a>
       {% endif %}
     </div>
 
     <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
-      <a href="?year={{ year }}&view=list&period={{ period_mode }}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
-      <a href="?year={{ year }}&view=calendar&period={{ period_mode }}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
+      <a href="?year={{ year }}&view=list&period={{ period_mode }}&race_scope={{ race_scope|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
+      <a href="?year={{ year }}&view=calendar&period={{ period_mode }}&race_scope={{ race_scope|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
     </div>
   </div>
 
@@ -34,7 +34,7 @@
     <span class="small text-muted">Period:</span>
     <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Period">
       {% for option in period_options %}
-        <a href="?year={{ option.year }}&view={{ view_mode }}&period={{ option.key }}"
+        <a href="?year={{ option.year }}&view={{ view_mode }}&period={{ option.key }}&race_scope={{ race_scope|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}"
            class="btn {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
           {{ option.label }}
         </a>
@@ -43,7 +43,8 @@
   </div>
 
   {% if not is_athlete_user %}
-  <div class="card mb-4 race-add-card">
+  <div class="race-toolbar mb-4">
+  <div class="card race-add-card">
     <div class="card-body">
       <h5 class="card-title">Add race</h5>
 
@@ -59,13 +60,8 @@
         {% csrf_token %}
         <input type="hidden" name="view" value="{{ view_mode }}">
         <input type="hidden" name="period" value="{{ period_mode }}">
-          <input type="hidden" name="period" value="{{ period_mode }}">
-                  <input type="hidden" name="period" value="{{ period_mode }}">
-                <input type="hidden" name="period" value="{{ period_mode }}">
-                        <input type="hidden" name="period" value="{{ period_mode }}">
-                          <input type="hidden" name="period" value="{{ period_mode }}">
-                              <input type="hidden" name="period" value="{{ period_mode }}">
-        <input type="hidden" name="period" value="{{ period_mode }}">
+        <input type="hidden" name="race_scope" value="{{ race_scope }}">
+        <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
         <div class="col-12 col-md-6">
           <label class="form-label">Name</label>
           <input type="text" name="name" class="form-control" required>
@@ -79,6 +75,44 @@
         </div>
       </form>
     </div>
+  </div>
+  <div class="card race-filter-card">
+    <div class="card-body">
+      <h5 class="card-title">Athlete filter</h5>
+      <form method="get" class="row g-2 align-items-end">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="view" value="{{ view_mode }}">
+        <input type="hidden" name="period" value="{{ period_mode }}">
+        <div class="col-12">
+          <label class="form-label small mb-1" for="raceScope">Athlete or group</label>
+          <select class="form-select form-select-sm" id="raceScope" name="race_scope" onchange="this.form.submit()">
+            <option value="all" {% if race_scope == 'all' %}selected{% endif %}>All athletes</option>
+            <optgroup label="Athletes">
+              {% for option in race_scope_options %}{% if option.kind == 'athlete' %}
+                <option value="{{ option.value }}" {% if race_scope == option.value %}selected{% endif %}>{{ option.label }}</option>
+              {% endif %}
+              {% endfor %}
+            </optgroup>
+            {% if trainer_plans %}
+            <optgroup label="Trainer Planning groups">
+              {% for option in race_scope_options %}{% if option.kind == 'plan' %}
+                <option value="{{ option.value }}" {% if race_scope == option.value %}selected{% endif %}>{{ option.label }}</option>
+              {% endif %}
+              {% endfor %}
+            </optgroup>
+            {% endif %}
+          </select>
+        </div>
+        <div class="col-12 d-flex align-items-center justify-content-between gap-2">
+          <label class="form-check mb-0">
+            <input class="form-check-input" type="checkbox" name="show_all" value="1" {% if show_all_races %}checked{% endif %} onchange="this.form.submit()">
+            <span class="form-check-label small">Show all races</span>
+          </label>
+          <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+        </div>
+      </form>
+    </div>
+  </div>
   </div>
   {% endif %}
 
@@ -145,10 +179,12 @@
                     <strong class="race-list-name">{{ race.name }}</strong>
                     <span class="race-list-distances">
                       {% for distance_row in row.distance_rows %}
+                        {% if not is_athlete_user or distance_row.selection_class %}
                         <span class="race-list-distance-wrap">
-                          <span class="badge text-bg-light border">{{ distance_row.distance.display_distance }}</span>
-                          {% if distance_row.participant_count %}<span class="race-distance-count">{{ distance_row.participant_count }}</span>{% endif %}
+                          <span class="badge {% if is_athlete_user %}race-choice-pill {{ distance_row.selection_class }}{% else %}text-bg-light border{% endif %}">{{ distance_row.distance.display_distance }}</span>
+                          {% if not is_athlete_user and distance_row.participant_count %}<span class="race-distance-count">{{ distance_row.participant_count }}</span>{% endif %}
                         </span>
+                        {% endif %}
                       {% empty %}
                         <span class="text-muted small">No distances yet.</span>
                       {% endfor %}
@@ -186,6 +222,8 @@
                 {% csrf_token %}
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
+                <input type="hidden" name="race_scope" value="{{ race_scope }}">
+                <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
 
                 <div class="mb-3 race-existing-distances">
                   {% for distance in distances %}
@@ -231,6 +269,8 @@
                 {% csrf_token %}
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
+                <input type="hidden" name="race_scope" value="{{ race_scope }}">
+                <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
                 <div class="d-flex justify-content-between align-items-end gap-3 mb-2 flex-wrap">
                   <div>
                     <h6 class="mb-1">Athletes and selections</h6>
@@ -282,6 +322,8 @@
                 {% csrf_token %}
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
+                <input type="hidden" name="race_scope" value="{{ race_scope }}">
+                <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
                 <button type="submit" class="btn btn-sm btn-outline-danger">Delete race</button>
               </form>
               {% endif %}
@@ -299,8 +341,10 @@
       <div class="modal-content">
         <form method="post">
           {% csrf_token %}
-          <input type="hidden" name="view" value="{{ view_mode }}">
-          <input type="hidden" name="period" value="{{ period_mode }}">
+                <input type="hidden" name="view" value="{{ view_mode }}">
+                <input type="hidden" name="period" value="{{ period_mode }}">
+                <input type="hidden" name="race_scope" value="{{ race_scope }}">
+                <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
           <div class="modal-header">
             <h5 class="modal-title" id="addRaceDateModalLabel">Add race</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -514,8 +558,15 @@
   .race-list-distances { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
-  .race-add-card { width: min(680px, 100%); }
+  .race-toolbar { display: grid; grid-template-columns: minmax(0, 680px) minmax(260px, 360px); gap: 14px; align-items: stretch; }
+  .race-add-card,
+  .race-filter-card { width: 100%; }
   .race-list-distance-wrap { position: relative; display: inline-flex; padding-top: 3px; padding-right: 3px; }
+  .race-choice-pill { border: 2px solid transparent; }
+  .race-choice-pending { background: #fff; border-color: #ff7a00; color: #8a4300; }
+  .race-choice-target-pending { background: #fff; border-color: #cc0000; color: #990000; }
+  .race-choice-confirmed { background: #ff7a00; border-color: #ff7a00; color: #111; }
+  .race-choice-target-confirmed { background: #cc0000; border-color: #cc0000; color: #fff; }
   .race-distance-count {
     position: absolute;
     top: -4px;
@@ -562,6 +613,7 @@
   .race-distance-management:not([open]) { padding-bottom: 0; }
 
   @media (max-width: 992px) {
+    .race-toolbar { grid-template-columns: 1fr; }
     .year-calendar-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }

@@ -631,6 +631,10 @@ class RaceSelectDisplayTests(TestCase):
             html=False,
         )
 
+        planning_response = self.client.get("/planning/")
+        self.assertContains(planning_response, 'href="/race-calendar/"', html=False)
+        self.assertNotContains(planning_response, "/race-select/?scope=athlete", html=False)
+
     def test_race_agreement_changes_pending_pill_to_filled_target_pill(self):
         coach = get_user_model().objects.create_user(
             username="agreementcoach", password="secret", is_staff=True
@@ -679,6 +683,12 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotContains(pending_calendar, "race-summary-pill", html=False)
 
         self.client.force_login(athlete_user)
+        athlete_pending_calendar = self.client.get(
+            "/race-calendar/?year=2026&period=full"
+        )
+        self.assertContains(athlete_pending_calendar, "race-choice-pending", html=False)
+        self.assertContains(athlete_pending_calendar, "1500m")
+
         athlete_response = self.client.post(
             f"/race-calendar/{race.id}/entries/save/",
             {
@@ -763,6 +773,41 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, f'data-plan-ids="{trainer_plan.id}"', html=False)
         self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
         self.assertNotContains(response, 'race-participant-badge', html=False)
+        self.assertContains(response, 'class="card race-filter-card"', html=False)
+        self.assertContains(response, f'value="athlete:{athlete.id}"', html=False)
+
+    def test_race_calendar_scope_filters_races_and_distance_counts(self):
+        coach = get_user_model().objects.create_user(
+            username="racefiltercoach", password="secret", is_staff=True
+        )
+        athlete_one = Athlete.objects.create(
+            owner=coach, name="Filtered athlete", birth_year=2000, gender="X"
+        )
+        athlete_two = Athlete.objects.create(
+            owner=coach, name="Other athlete", birth_year=2001, gender="X"
+        )
+        shared_race = RaceEvent.objects.create(
+            owner=coach, name="Shared filtered race", date="2026-07-16"
+        )
+        shared_distance = RaceEventDistance.objects.create(race=shared_race, distance="1500")
+        RaceEntry.objects.create(race_distance=shared_distance, athlete=athlete_one, coach_selected=True)
+        RaceEntry.objects.create(race_distance=shared_distance, athlete=athlete_two, coach_selected=True)
+        other_race = RaceEvent.objects.create(
+            owner=coach, name="Other athlete race", date="2026-07-17"
+        )
+        other_distance = RaceEventDistance.objects.create(race=other_race, distance="800")
+        RaceEntry.objects.create(race_distance=other_distance, athlete=athlete_two, coach_selected=True)
+        self.client.force_login(coach)
+
+        response = self.client.get(
+            f"/race-calendar/?year=2026&view=list&period=full&race_scope=athlete:{athlete_one.id}&show_all=0"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Shared filtered race")
+        self.assertNotContains(response, "Other athlete race")
+        self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
+        self.assertNotContains(response, 'class="race-distance-count">2</span>', html=False)
 
     def test_races_overview_redirects_directly_to_calendar(self):
         coach = get_user_model().objects.create_user(

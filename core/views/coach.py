@@ -4208,11 +4208,18 @@ def standard_strength_detail_view(request, program_id: int):
     })
 
 
-def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full"):
+def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full", race_scope="all", show_all_races=True):
     view_mode = "calendar" if view_mode == "calendar" else "list"
     allowed_periods = {"full", "outdoor", "indoor", "current_next"}
     period_mode = period_mode if period_mode in allowed_periods else "full"
-    return redirect(f"/race-calendar/?year={year}&view={view_mode}&period={period_mode}")
+    query = urlencode({
+        "year": year,
+        "view": view_mode,
+        "period": period_mode,
+        "race_scope": race_scope or "all",
+        "show_all": "1" if show_all_races else "0",
+    })
+    return redirect(f"/race-calendar/?{query}")
 
 
 def _race_distance_raw_value(distance):
@@ -4571,6 +4578,10 @@ def race_calendar_view(request):
     if period_mode not in allowed_periods:
         period_mode = "full"
 
+    race_scope = (request.GET.get("race_scope") or request.POST.get("race_scope") or "all").strip().lower()
+    show_all_raw = request.GET.get("show_all") if request.method == "GET" else request.POST.get("show_all")
+    show_all_races = True if "race_scope" not in request.GET and "race_scope" not in request.POST else show_all_raw == "1"
+
     period = _race_calendar_period_bounds(year, period_mode, today)
     start_date = period["start_date"]
     end_date = period["end_date"]
@@ -4599,7 +4610,7 @@ def race_calendar_view(request):
                 name=name,
                 date=race_date,
             )
-            return _race_calendar_redirect_for_year(year, view_mode, period_mode)
+            return _race_calendar_redirect_for_year(year, view_mode, period_mode, race_scope, show_all_races)
 
     if is_athlete_user:
         race_owner_ids = {current_athlete.owner_id} if current_athlete.owner_id else set()
@@ -4654,6 +4665,27 @@ def race_calendar_view(request):
             if athlete_id in plan_ids_by_athlete:
                 plan_ids_by_athlete[athlete_id].append(str(plan.id))
 
+    scoped_athlete_ids = {athlete.id for athlete in race_athletes}
+    if not is_athlete_user and race_scope.startswith("athlete:"):
+        athlete_id_raw = race_scope.split(":", 1)[1]
+        selected_athlete_id = int(athlete_id_raw) if athlete_id_raw.isdigit() else None
+        if selected_athlete_id in scoped_athlete_ids:
+            scoped_athlete_ids = {selected_athlete_id}
+        else:
+            race_scope = "all"
+    elif not is_athlete_user and race_scope.startswith("plan:"):
+        plan_id_raw = race_scope.split(":", 1)[1]
+        selected_plan = next((plan for plan in trainer_plans if str(plan.id) == plan_id_raw), None)
+        if selected_plan:
+            scoped_athlete_ids = {
+                athlete_id for athlete_id, plan_ids in plan_ids_by_athlete.items()
+                if str(selected_plan.id) in plan_ids
+            }
+        else:
+            race_scope = "all"
+    elif race_scope != "all":
+        race_scope = "all"
+
     race_rows = []
     for race in races:
         distances = _sorted_race_distances(race)
@@ -4667,7 +4699,7 @@ def race_calendar_view(request):
                 participating = participating or bool(
                     entry and (entry.coach_selected or entry.athlete_selected or entry.target_selected)
                 )
-                if entry and (entry.coach_selected or entry.athlete_selected or entry.target_selected):
+                if athlete.id in scoped_athlete_ids and entry and (entry.coach_selected or entry.athlete_selected or entry.target_selected):
                     distance_participant_counts[distance.id] += 1
                 distance_entries.append({"distance": distance, "entry": entry})
             athlete_rows.append({
@@ -4676,16 +4708,46 @@ def race_calendar_view(request):
                 "participating": participating,
                 "plan_ids": ",".join(plan_ids_by_athlete.get(athlete.id, [])),
             })
+        scoped_participant_count = sum(
+            1 for athlete_row in athlete_rows
+            if athlete_row["athlete"].id in scoped_athlete_ids and athlete_row["participating"]
+        )
+        distance_rows = []
+        for distance in distances:
+            scoped_entry = None
+            if is_athlete_user:
+                scoped_entry = entry_map.get((distance.id, current_athlete.id))
+            selection_class = ""
+            if scoped_entry and (scoped_entry.coach_selected or scoped_entry.athlete_selected or scoped_entry.target_selected):
+                if scoped_entry.target_selected:
+                    selection_class = "race-choice-target-confirmed" if scoped_entry.coach_selected and scoped_entry.athlete_selected else "race-choice-target-pending"
+                else:
+                    selection_class = "race-choice-confirmed" if scoped_entry.coach_selected and scoped_entry.athlete_selected else "race-choice-pending"
+            distance_rows.append({
+                "distance": distance,
+                "participant_count": distance_participant_counts[distance.id],
+                "selection_class": selection_class,
+            })
         race_rows.append({
             "race": race,
             "distances": distances,
-            "distance_rows": [
-                {"distance": distance, "participant_count": distance_participant_counts[distance.id]}
-                for distance in distances
-            ],
-            "participant_count": sum(1 for athlete_row in athlete_rows if athlete_row["participating"]),
+            "distance_rows": distance_rows,
+            "participant_count": scoped_participant_count,
             "athlete_rows": athlete_rows,
         })
+
+    if not show_all_races:
+        race_rows = [row for row in race_rows if row["participant_count"] > 0]
+
+    race_scope_options = [{"value": "all", "label": "All athletes", "kind": "all"}]
+    race_scope_options.extend(
+        {"value": f"athlete:{athlete.id}", "label": athlete.name, "kind": "athlete"}
+        for athlete in race_athletes
+    )
+    race_scope_options.extend(
+        {"value": f"plan:{plan.id}", "label": plan.name, "kind": "plan"}
+        for plan in trainer_plans
+    )
 
     race_rows_by_id = {row["race"].id: row for row in race_rows}
     races_by_date = {}
@@ -4737,6 +4799,10 @@ def race_calendar_view(request):
         "month_rows": month_rows,
         "distance_choices": RaceEventDistance.DISTANCE_CHOICES,
         "trainer_plans": trainer_plans,
+        "race_athletes": race_athletes,
+        "race_scope_options": race_scope_options,
+        "race_scope": race_scope,
+        "show_all_races": show_all_races,
         "is_athlete_user": is_athlete_user,
         "current_athlete": current_athlete,
         "errors": errors,
@@ -4752,8 +4818,10 @@ def race_calendar_delete_view(request, race_id: int):
     year = race.date.year
     view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
     period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
+    race_scope = (request.POST.get("race_scope") or "all").strip().lower()
+    show_all_races = request.POST.get("show_all") == "1"
     race.delete()
-    return _race_calendar_redirect_for_year(year, view_mode, period_mode)
+    return _race_calendar_redirect_for_year(year, view_mode, period_mode, race_scope, show_all_races)
 
 
 @login_required
@@ -4794,7 +4862,9 @@ def race_calendar_distance_add_view(request, race_id: int):
 
     view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
     period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode)
+    race_scope = (request.POST.get("race_scope") or "all").strip().lower()
+    show_all_races = request.POST.get("show_all") == "1"
+    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, race_scope, show_all_races)
 
 
 @login_required
@@ -4804,8 +4874,10 @@ def race_calendar_distance_delete_view(request, race_id: int, distance_id: int):
     distance = get_object_or_404(RaceEventDistance.objects.filter(race=race), id=distance_id)
     view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
     period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
+    race_scope = (request.POST.get("race_scope") or "all").strip().lower()
+    show_all_races = request.POST.get("show_all") == "1"
     distance.delete()
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode)
+    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, race_scope, show_all_races)
 
 
 @login_required
@@ -4888,7 +4960,9 @@ def race_calendar_entries_save_view(request, race_id: int):
 
     view_mode = (request.POST.get("view") or "list").strip()
     period_mode = (request.POST.get("period") or "full").strip()
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode)
+    race_scope = (request.POST.get("race_scope") or "all").strip().lower()
+    show_all_races = request.POST.get("show_all") == "1"
+    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, race_scope, show_all_races)
 
 
 @login_required
