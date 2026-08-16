@@ -620,6 +620,8 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, "Shared race")
         self.assertContains(response, "calendarathlete")
         self.assertNotContains(response, "Add race")
+        self.assertContains(response, 'class="race-entry-athlete"', html=False)
+        self.assertContains(response, "open>", html=False)
         self.assertContains(
             response,
             f'name="coach_{athlete.id}_{distance.id}" value="1"  disabled',
@@ -786,6 +788,10 @@ class RaceSelectDisplayTests(TestCase):
         athlete_two = Athlete.objects.create(
             owner=coach, name="Other athlete", birth_year=2001, gender="X"
         )
+        trainer_plan = TrainingPlan.objects.create(
+            owner=coach, name="Filtered group", plan_kind=TrainingPlan.PLAN_KIND_TRAINER
+        )
+        PlanMembership.objects.create(plan=trainer_plan, athlete=athlete_one)
         shared_race = RaceEvent.objects.create(
             owner=coach, name="Shared filtered race", date="2026-07-16"
         )
@@ -800,7 +806,7 @@ class RaceSelectDisplayTests(TestCase):
         self.client.force_login(coach)
 
         response = self.client.get(
-            f"/race-calendar/?year=2026&view=list&period=full&race_scope=athlete:{athlete_one.id}&show_all=0"
+            f"/race-calendar/?year=2026&view=list&period=full&race_group=plan:{trainer_plan.id}&race_athlete=athlete:{athlete_one.id}&show_all=0"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -808,6 +814,9 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotContains(response, "Other athlete race")
         self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
         self.assertNotContains(response, 'class="race-distance-count">2</span>', html=False)
+        self.assertContains(response, f'value="plan:{trainer_plan.id}" selected', html=False)
+        self.assertContains(response, f'value="athlete:{athlete_one.id}" selected', html=False)
+        self.assertNotContains(response, f'value="athlete:{athlete_two.id}"', html=False)
 
     def test_races_overview_redirects_directly_to_calendar(self):
         coach = get_user_model().objects.create_user(

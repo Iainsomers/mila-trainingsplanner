@@ -50,7 +50,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 - Houd de lijstweergave compact op één regel: datum, een uitgelijnde naamkolom en bestaande afstanden zijn direct zichtbaar.
 - Beperk Add race tot een compacte kaartbreedte en open Race Calendar direct vanuit Races zonder tussenpagina.
-- Plaats voor trainers naast Add race een compacte atleet-/groepsfilter; laat zowel wedstrijdzichtbaarheid als afstandstellers deze selectie volgen.
+- Plaats voor trainers naast Add race eerst een groepsfilter (`All` telt als groep) en daarna een daarvan afhankelijke atleetfilter; laat zowel wedstrijdzichtbaarheid als afstandstellers deze combinatie volgen.
 - Toon afstandskeuzes en beheeracties pas nadat de gebruiker een wedstrijd opent.
 - Plaats in dezelfde popup een compacte atletenfilter en per afstand de kolommen Trainer, Athlete en Target.
 - Gebruik voor onbevestigde wedstrijden een witte pil met oranje of rode omlijning; vul de pil pas wanneer trainer en atleet beiden akkoord zijn.
