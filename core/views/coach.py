@@ -4561,7 +4561,8 @@ def race_calendar_view(request):
     if year < 2000 or year > 2100:
         year = today.year
 
-    view_mode = (request.GET.get("view") or request.POST.get("view") or "calendar").strip().lower()
+    default_view_mode = "list" if is_athlete_user else "calendar"
+    view_mode = (request.GET.get("view") or request.POST.get("view") or default_view_mode).strip().lower()
     if view_mode not in ("list", "calendar"):
         view_mode = "list"
 

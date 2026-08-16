@@ -613,9 +613,10 @@ class RaceSelectDisplayTests(TestCase):
         distance = RaceEventDistance.objects.create(race=race, distance="1500")
         self.client.force_login(athlete_user)
 
-        response = self.client.get("/race-calendar/?year=2026&view=list&period=full")
+        response = self.client.get("/race-calendar/?year=2026&period=full")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["view_mode"], "list")
         self.assertContains(response, "Shared race")
         self.assertContains(response, "calendarathlete")
         self.assertNotContains(response, "Add race")
@@ -760,8 +761,8 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, "refreshRaceSummary", html=False)
         self.assertContains(response, f'<option value="plan:{trainer_plan.id}">Race group</option>', html=False)
         self.assertContains(response, f'data-plan-ids="{trainer_plan.id}"', html=False)
-        self.assertContains(response, 'class="race-participant-badge has-participants">1</span>', html=False)
         self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
+        self.assertNotContains(response, 'race-participant-badge', html=False)
 
     def test_races_overview_redirects_directly_to_calendar(self):
         coach = get_user_model().objects.create_user(

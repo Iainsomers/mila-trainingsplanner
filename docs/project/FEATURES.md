@@ -70,10 +70,11 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 
 - Trainer beheert wedstrijden en afstanden; trainer en atleet beheren hun selecties vanuit dezelfde Race Calendar-popup.
 - De lijstweergave van de Race Calendar toont per wedstrijd datum, naam en reeds gekozen afstanden; afstandsbeheer verschijnt pas na het openen van de wedstrijd.
-- De lijst toont tijdelijk zowel het totale aantal deelnemende atleten per wedstrijd als een groene teller per afstand, zodat na beoordeling één variant gekozen kan worden.
+- De lijst toont boven iedere gekozen afstand een groene teller met het aantal deelnemende atleten; bij nul deelnemers wordt geen teller getoond.
 - Atleet kiest maximaal drie afstanden per wedstrijd.
 - Een wedstrijd kan als doelwedstrijd worden gemarkeerd.
 - De popup kan voor trainers alle atleten, een Trainer Planning-groep of alleen reeds deelnemende atleten tonen; een atleet ziet alleen zichzelf. Achter ingeklapte atleetnamen staan geen afstandspillen.
+- Atleten openen de Race Calendar standaard in de compacte lijstweergave, met de afstanden als pillen achter de wedstrijdnaam.
 - Trainer-, atleet- en doelwedstrijdvinkjes hebben afzonderlijke rechten. Bestaande selecties worden als wederzijds bevestigd gemigreerd.
 - Een nog niet wederzijds bevestigde wedstrijd is wit met oranje rand, of met rode rand als Target aanstaat. Na trainer- én atleetakkoord wordt de pil gevuld oranje of rood.
 

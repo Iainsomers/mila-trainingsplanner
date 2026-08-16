@@ -142,10 +142,7 @@
                         data-bs-toggle="modal" data-bs-target="#raceModal{{ race.id }}">
                   <span class="race-list-date">{{ race.date|date:"d-m-Y" }}</span>
                   <span class="race-list-main">
-                    <strong class="race-list-name">
-                      {{ race.name }}
-                      <span class="race-participant-badge{% if row.participant_count %} has-participants{% endif %}">{{ row.participant_count }}</span>
-                    </strong>
+                    <strong class="race-list-name">{{ race.name }}</strong>
                     <span class="race-list-distances">
                       {% for distance_row in row.distance_rows %}
                         <span class="race-list-distance-wrap">
@@ -518,21 +515,6 @@
   .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
   .race-add-card { width: min(680px, 100%); }
-  .race-participant-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    margin-left: 5px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: #e9ecef;
-    color: #6c757d;
-    font-size: .68rem;
-    vertical-align: middle;
-  }
-  .race-participant-badge.has-participants { background: #198754; color: #fff; }
   .race-list-distance-wrap { position: relative; display: inline-flex; padding-top: 3px; padding-right: 3px; }
   .race-distance-count {
     position: absolute;
