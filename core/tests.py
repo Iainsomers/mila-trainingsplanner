@@ -635,6 +635,10 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotContains(response, "Save selections")
         self.assertContains(response, 'data-auto-save="1"', html=False)
 
+        athlete_calendar = self.client.get("/race-calendar/?year=2026&view=calendar&period=full")
+        self.assertContains(athlete_calendar, 'class="race-calendar-event race-calendar-none"', html=False)
+        self.assertNotContains(athlete_calendar, '<span class="race-calendar-count">', html=False)
+
         auto_save_response = self.client.post(
             f"/race-calendar/{race.id}/entries/save/",
             {f"athlete_{athlete.id}_{distance.id}": "1"},
@@ -812,7 +816,12 @@ class RaceSelectDisplayTests(TestCase):
         )
         shared_distance = RaceEventDistance.objects.create(race=shared_race, distance="1500")
         RaceEntry.objects.create(race_distance=shared_distance, athlete=athlete_one, coach_selected=True)
-        RaceEntry.objects.create(race_distance=shared_distance, athlete=athlete_two, coach_selected=True)
+        athlete_two_entry = RaceEntry.objects.create(
+            race_distance=shared_distance,
+            athlete=athlete_two,
+            coach_selected=True,
+            target_selected=True,
+        )
         other_race = RaceEvent.objects.create(
             owner=coach, name="Other athlete race", date="2026-07-17"
         )
@@ -842,6 +851,26 @@ class RaceSelectDisplayTests(TestCase):
             f"/race-calendar/?year=2026&view=list&period=full&race_group=plan:{trainer_plan.id}&race_athlete=all&show_all=1"
         )
         self.assertContains(group_response, f'data-initial-filter="plan:{trainer_plan.id}"', html=False)
+
+        scoped_calendar = self.client.get(
+            f"/race-calendar/?year=2026&view=calendar&period=full&race_group=plan:{trainer_plan.id}&race_athlete=all&show_all=1"
+        )
+        self.assertContains(scoped_calendar, 'class="race-calendar-event race-calendar-pending"', html=False)
+        self.assertContains(scoped_calendar, 'class="race-calendar-count">1</span>', html=False)
+        self.assertNotContains(scoped_calendar, 'class="race-calendar-event race-calendar-target-pending"', html=False)
+
+        all_calendar = self.client.get(
+            "/race-calendar/?year=2026&view=calendar&period=full&race_group=all&race_athlete=all&show_all=1"
+        )
+        self.assertContains(all_calendar, 'class="race-calendar-event race-calendar-target-pending"', html=False)
+        self.assertContains(all_calendar, 'class="race-calendar-count">2</span>', html=False)
+
+        athlete_two_entry.athlete_selected = True
+        athlete_two_entry.save(update_fields=["athlete_selected"])
+        confirmed_calendar = self.client.get(
+            "/race-calendar/?year=2026&view=calendar&period=full&race_group=all&race_athlete=all&show_all=1"
+        )
+        self.assertContains(confirmed_calendar, 'class="race-calendar-event race-calendar-target-confirmed"', html=False)
 
     def test_races_overview_redirects_directly_to_calendar(self):
         coach = get_user_model().objects.create_user(

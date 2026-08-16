@@ -146,10 +146,11 @@
                         </div>
                         {% for row in cell.races %}
                           <button type="button"
-                                  class="race-calendar-event"
+                                  class="race-calendar-event {{ row.calendar_status_class }}"
                                   data-bs-toggle="modal"
                                   data-bs-target="#raceModal{{ row.race.id }}">
-                            {{ row.race.name }}
+                            <span class="race-calendar-event-name">{{ row.race.name }}</span>
+                            {% if row.participant_count %}<span class="race-calendar-count">{{ row.participant_count }}</span>{% endif %}
                           </button>
                         {% endfor %}
                       </td>
@@ -592,12 +593,15 @@
   }
 
   .race-calendar-event {
-    display: block;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3px;
     width: 100%;
-    border: 1px solid #ffbf80;
+    border: 2px solid transparent;
     border-radius: 4px;
-    background: #fff3e0;
-    padding: 1px 3px;
+    padding: 2px 3px;
     margin-bottom: 2px;
     text-align: left;
     font-size: 10px;
@@ -606,9 +610,27 @@
     cursor: pointer;
   }
 
-  .race-calendar-event:hover {
-    background: #ffe0b2;
+  .race-calendar-event-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .race-calendar-none { background: #f5f5f5; border-color: #e3e3e3; color: #888; }
+  .race-calendar-pending { background: #fff; border-color: #ff7a00; color: #8a4300; }
+  .race-calendar-target-pending { background: #fff; border-color: #cc0000; color: #990000; }
+  .race-calendar-confirmed { background: #ff7a00; border-color: #ff7a00; color: #111; }
+  .race-calendar-target-confirmed { background: #cc0000; border-color: #cc0000; color: #fff; }
+  .race-calendar-count {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #198754;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
   }
+  .race-calendar-event:hover { filter: brightness(.96); }
 
   .race-list {
     border: 1px solid #dee2e6;

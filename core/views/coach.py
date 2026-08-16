@@ -4702,6 +4702,7 @@ def race_calendar_view(request):
     for race in races:
         distances = _sorted_race_distances(race)
         distance_participant_counts = {distance.id: 0 for distance in distances}
+        calendar_status_rank = 0
         athlete_rows = []
         for athlete in race_athletes:
             distance_entries = []
@@ -4713,6 +4714,11 @@ def race_calendar_view(request):
                 )
                 if athlete.id in scoped_athlete_ids and entry and (entry.coach_selected or entry.athlete_selected or entry.target_selected):
                     distance_participant_counts[distance.id] += 1
+                    if entry.target_selected:
+                        entry_rank = 4 if entry.coach_selected and entry.athlete_selected else 2
+                    else:
+                        entry_rank = 3 if entry.coach_selected and entry.athlete_selected else 1
+                    calendar_status_rank = max(calendar_status_rank, entry_rank)
                 distance_entries.append({"distance": distance, "entry": entry})
             athlete_rows.append({
                 "athlete": athlete,
@@ -4745,6 +4751,13 @@ def race_calendar_view(request):
             "distances": distances,
             "distance_rows": distance_rows,
             "participant_count": scoped_participant_count,
+            "calendar_status_class": {
+                0: "race-calendar-none",
+                1: "race-calendar-pending",
+                2: "race-calendar-target-pending",
+                3: "race-calendar-confirmed",
+                4: "race-calendar-target-confirmed",
+            }[calendar_status_rank],
             "athlete_rows": athlete_rows,
         })
 
