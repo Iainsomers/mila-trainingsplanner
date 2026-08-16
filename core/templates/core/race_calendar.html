@@ -265,7 +265,7 @@
               </div>
               {% endif %}
 
-              <form method="post" action="{% url 'race_calendar_entries_save' race.id %}" class="race-entry-form"{% if is_athlete_user %} data-auto-save="1"{% endif %}>
+              <form method="post" action="{% url 'race_calendar_entries_save' race.id %}" class="race-entry-form" data-auto-save="1">
                 {% csrf_token %}
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
@@ -325,11 +325,7 @@
                     </details>
                   {% endfor %}
                 </div>
-                {% if is_athlete_user %}
-                  <div class="small text-muted mt-2 race-auto-save-status" aria-live="polite"></div>
-                {% else %}
-                  <button type="submit" class="btn btn-primary btn-sm mt-3">Save selections</button>
-                {% endif %}
+                <div class="small text-muted mt-2 race-auto-save-status" aria-live="polite"></div>
               </form>
             </div>
             <div class="modal-footer">

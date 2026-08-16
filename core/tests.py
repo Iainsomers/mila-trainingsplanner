@@ -791,7 +791,8 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, "grid-template-columns: 220px minmax(0, 1fr)", html=False)
         self.assertContains(response, 'class="race-distance-management"', html=False)
         self.assertContains(response, 'class="race-entry-athlete"', html=False)
-        self.assertContains(response, "Save selections")
+        self.assertNotContains(response, "Save selections")
+        self.assertContains(response, 'data-auto-save="1"', html=False)
         self.assertNotContains(response, "Open selected", html=False)
         self.assertContains(response, "refreshRaceSummary", html=False)
         self.assertContains(response, f'value="plan:{trainer_plan.id}"', html=False)
@@ -802,6 +803,21 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, 'class="card race-filter-card"', html=False)
         self.assertContains(response, "grid-template-columns: repeat(2, minmax(0, 1fr))", html=False)
         self.assertContains(response, f'value="athlete:{athlete.id}"', html=False)
+
+        trainer_auto_save = self.client.post(
+            f"/race-calendar/{race.id}/entries/save/",
+            {
+                "athletes": str(athlete.id),
+                f"coach_{athlete.id}_{distance.id}": "1",
+                f"target_{athlete.id}_{distance.id}": "1",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(trainer_auto_save.status_code, 200)
+        self.assertEqual(trainer_auto_save.json(), {"ok": True})
+        saved_entry = RaceEntry.objects.get(race_distance=distance, athlete=athlete)
+        self.assertTrue(saved_entry.coach_selected)
+        self.assertTrue(saved_entry.target_selected)
 
     def test_race_calendar_scope_filters_races_and_distance_counts(self):
         coach = get_user_model().objects.create_user(
