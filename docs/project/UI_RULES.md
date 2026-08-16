@@ -52,7 +52,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 - Toon afstandskeuzes en beheeracties pas nadat de gebruiker een wedstrijd opent.
 - Plaats in dezelfde popup een compacte atletenfilter en per afstand de kolommen Trainer, Athlete en Target.
 - Gebruik voor onbevestigde wedstrijden een witte pil met oranje of rode omlijning; vul de pil pas wanneer trainer en atleet beiden akkoord zijn.
-- Start afstandsbeheer en alle atleten ingeklapt. Toon gekozen afstanden als statuspillen achter de atleetnaam en bied één actie om alle zichtbare deelnemende atleten tegelijk te openen of sluiten.
+- Start afstandsbeheer en alle atleten ingeklapt. Toon gekozen afstanden als statuspillen achter de atleetnaam en werk die pillen direct bij wanneer een vinkje verandert.
 
 ## Formulieren
 

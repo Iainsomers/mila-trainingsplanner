@@ -705,8 +705,29 @@ class RaceSelectDisplayTests(TestCase):
         coach = get_user_model().objects.create_user(
             username="racecalendarcoach", password="secret", is_staff=True
         )
-        Athlete.objects.create(
+        athlete = Athlete.objects.create(
             owner=coach, name="Race list athlete", birth_year=2000, gender="X"
+        )
+        trainer_plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Race group",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        base_block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Race block",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=base_block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=trainer_plan,
         )
         race = RaceEvent.objects.create(
             owner=coach, name="Track meeting", date="2026-07-16"
@@ -729,7 +750,10 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, "grid-template-columns: 220px minmax(0, 1fr)", html=False)
         self.assertContains(response, 'class="race-distance-management"', html=False)
         self.assertContains(response, 'class="race-entry-athlete"', html=False)
-        self.assertContains(response, "Open selected", html=False)
+        self.assertNotContains(response, "Open selected", html=False)
+        self.assertContains(response, "refreshRaceSummary", html=False)
+        self.assertContains(response, f'<option value="plan:{trainer_plan.id}">Race group</option>', html=False)
+        self.assertContains(response, f'data-plan-ids="{trainer_plan.id}"', html=False)
 
     def test_target_checkbox_makes_race_important_without_athlete_checkbox(self):
         race = RaceEvent(name="Target Race", date="2026-07-16")

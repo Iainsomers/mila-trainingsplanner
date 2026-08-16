@@ -4643,7 +4643,13 @@ def race_calendar_view(request):
     }
     plan_ids_by_athlete = {athlete.id: [] for athlete in race_athletes}
     for plan in trainer_plans:
-        for athlete_id in plan.targeted_athlete_ids():
+        plan_athlete_ids = set(plan.targeted_athlete_ids())
+        plan_athlete_ids.update(
+            Athlete.objects.filter(
+                base_planning_blocks__slots__trainer_plan=plan
+            ).values_list("id", flat=True)
+        )
+        for athlete_id in plan_athlete_ids:
             if athlete_id in plan_ids_by_athlete:
                 plan_ids_by_athlete[athlete_id].append(str(plan.id))
 

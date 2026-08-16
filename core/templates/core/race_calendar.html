@@ -234,16 +234,13 @@
                     <div class="small text-muted">Maximum three distances per athlete.</div>
                   </div>
                   {% if not is_athlete_user %}
-                  <div class="d-flex align-items-end gap-2 flex-wrap">
-                    <button type="button" class="btn btn-sm btn-outline-secondary race-toggle-selected">Open selected</button>
-                    <div>
+                  <div>
                     <label class="form-label small mb-1">Show athletes</label>
                     <select class="form-select form-select-sm race-athlete-filter">
                       <option value="all">All</option>
                       {% for plan in trainer_plans %}<option value="plan:{{ plan.id }}">{{ plan.name }}</option>{% endfor %}
                       <option value="participating">Participating athletes</option>
                     </select>
-                    </div>
                   </div>
                   {% endif %}
                 </div>
@@ -269,11 +266,11 @@
                       <input type="hidden" name="athletes" value="{{ athlete_row.athlete.id }}" class="race-athlete-submit-id">
                       {% for distance_entry in athlete_row.distance_entries %}
                         {% with distance=distance_entry.distance entry=distance_entry.entry %}
-                        <div class="race-entry-distance">
+                        <div class="race-entry-distance" data-distance-label="{{ distance.display_distance }}">
                           <span>{{ distance.display_distance }}</span>
-                          <label><input type="checkbox" name="coach_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.coach_selected %}checked{% endif %} {% if is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
-                          <label><input type="checkbox" name="athlete_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.athlete_selected %}checked{% endif %} {% if not is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
-                          <label><input type="checkbox" name="target_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.target_selected %}checked{% endif %}></label>
+                          <label><input type="checkbox" data-race-role="coach" name="coach_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.coach_selected %}checked{% endif %} {% if is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
+                          <label><input type="checkbox" data-race-role="athlete" name="athlete_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.athlete_selected %}checked{% endif %} {% if not is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
+                          <label><input type="checkbox" data-race-role="target" name="target_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.target_selected %}checked{% endif %}></label>
                         </div>
                         {% endwith %}
                       {% empty %}
@@ -386,15 +383,31 @@
     select.addEventListener("change", applyFilter);
   });
 
-  document.querySelectorAll(".race-toggle-selected").forEach(function(button) {
-    button.addEventListener("click", function() {
-      var form = button.closest(".race-entry-form");
-      var selectedRows = Array.from(form.querySelectorAll(".race-entry-athlete")).filter(function(row) {
-        return !row.hidden && row.querySelector('input[type="checkbox"]:checked');
-      });
-      var shouldOpen = selectedRows.some(function(row) { return !row.open; });
-      selectedRows.forEach(function(row) { row.open = shouldOpen; });
-      button.textContent = shouldOpen ? "Close selected" : "Open selected";
+  function refreshRaceSummary(athleteRow) {
+    var pills = athleteRow.querySelector(".race-entry-summary-pills");
+    if (!pills) return;
+    pills.innerHTML = "";
+    athleteRow.querySelectorAll(".race-entry-distance").forEach(function(distanceRow) {
+      var coach = distanceRow.querySelector('[data-race-role="coach"]');
+      var athlete = distanceRow.querySelector('[data-race-role="athlete"]');
+      var target = distanceRow.querySelector('[data-race-role="target"]');
+      var coachSelected = !!(coach && coach.checked);
+      var athleteSelected = !!(athlete && athlete.checked);
+      var targetSelected = !!(target && target.checked);
+      if (!coachSelected && !athleteSelected && !targetSelected) return;
+      var pill = document.createElement("span");
+      pill.className = "race-summary-pill " + (targetSelected
+        ? (coachSelected && athleteSelected ? "race-summary-target-confirmed" : "race-summary-target-pending")
+        : (coachSelected && athleteSelected ? "race-summary-confirmed" : "race-summary-pending"));
+      pill.textContent = distanceRow.dataset.distanceLabel || "";
+      pills.appendChild(pill);
+    });
+    athleteRow.dataset.participating = pills.children.length ? "1" : "0";
+  }
+
+  document.querySelectorAll('.race-entry-distance input[type="checkbox"]').forEach(function(input) {
+    input.addEventListener("change", function() {
+      refreshRaceSummary(input.closest(".race-entry-athlete"));
     });
   });
 })();
