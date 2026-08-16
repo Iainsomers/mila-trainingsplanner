@@ -3943,7 +3943,7 @@ def coach_wucd_settings_view(request):
 @login_required
 @require_GET
 def races_overview_view(request):
-    return render(request, "core/races.html")
+    return redirect("race_calendar")
 
 
 def _normalize_saved_training_order(user):
@@ -4656,6 +4656,7 @@ def race_calendar_view(request):
     race_rows = []
     for race in races:
         distances = _sorted_race_distances(race)
+        distance_participant_counts = {distance.id: 0 for distance in distances}
         athlete_rows = []
         for athlete in race_athletes:
             distance_entries = []
@@ -4665,6 +4666,8 @@ def race_calendar_view(request):
                 participating = participating or bool(
                     entry and (entry.coach_selected or entry.athlete_selected or entry.target_selected)
                 )
+                if entry and (entry.coach_selected or entry.athlete_selected or entry.target_selected):
+                    distance_participant_counts[distance.id] += 1
                 distance_entries.append({"distance": distance, "entry": entry})
             athlete_rows.append({
                 "athlete": athlete,
@@ -4672,7 +4675,16 @@ def race_calendar_view(request):
                 "participating": participating,
                 "plan_ids": ",".join(plan_ids_by_athlete.get(athlete.id, [])),
             })
-        race_rows.append({"race": race, "distances": distances, "athlete_rows": athlete_rows})
+        race_rows.append({
+            "race": race,
+            "distances": distances,
+            "distance_rows": [
+                {"distance": distance, "participant_count": distance_participant_counts[distance.id]}
+                for distance in distances
+            ],
+            "participant_count": sum(1 for athlete_row in athlete_rows if athlete_row["participating"]),
+            "athlete_rows": athlete_rows,
+        })
 
     race_rows_by_id = {row["race"].id: row for row in race_rows}
     races_by_date = {}

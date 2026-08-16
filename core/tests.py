@@ -732,7 +732,13 @@ class RaceSelectDisplayTests(TestCase):
         race = RaceEvent.objects.create(
             owner=coach, name="Track meeting", date="2026-07-16"
         )
-        RaceEventDistance.objects.create(race=race, distance="1500")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+        RaceEntry.objects.create(
+            race_distance=distance,
+            athlete=athlete,
+            coach_selected=True,
+            athlete_selected=True,
+        )
         self.client.force_login(coach)
 
         response = self.client.get("/race-calendar/?year=2026&view=list&period=full")
@@ -754,6 +760,18 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, "refreshRaceSummary", html=False)
         self.assertContains(response, f'<option value="plan:{trainer_plan.id}">Race group</option>', html=False)
         self.assertContains(response, f'data-plan-ids="{trainer_plan.id}"', html=False)
+        self.assertContains(response, 'class="race-participant-badge has-participants">1</span>', html=False)
+        self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
+
+    def test_races_overview_redirects_directly_to_calendar(self):
+        coach = get_user_model().objects.create_user(
+            username="racesredirectcoach", password="secret", is_staff=True
+        )
+        self.client.force_login(coach)
+
+        response = self.client.get("/races/")
+
+        self.assertRedirects(response, "/race-calendar/", fetch_redirect_response=False)
 
     def test_target_checkbox_makes_race_important_without_athlete_checkbox(self):
         race = RaceEvent(name="Target Race", date="2026-07-16")

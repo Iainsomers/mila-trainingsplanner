@@ -43,7 +43,7 @@
   </div>
 
   {% if not is_athlete_user %}
-  <div class="card mb-4">
+  <div class="card mb-4 race-add-card">
     <div class="card-body">
       <h5 class="card-title">Add race</h5>
 
@@ -142,10 +142,16 @@
                         data-bs-toggle="modal" data-bs-target="#raceModal{{ race.id }}">
                   <span class="race-list-date">{{ race.date|date:"d-m-Y" }}</span>
                   <span class="race-list-main">
-                    <strong class="race-list-name">{{ race.name }}</strong>
+                    <strong class="race-list-name">
+                      {{ race.name }}
+                      <span class="race-participant-badge{% if row.participant_count %} has-participants{% endif %}">{{ row.participant_count }}</span>
+                    </strong>
                     <span class="race-list-distances">
-                      {% for distance in distances %}
-                        <span class="badge text-bg-light border">{{ distance.display_distance }}</span>
+                      {% for distance_row in row.distance_rows %}
+                        <span class="race-list-distance-wrap">
+                          <span class="badge text-bg-light border">{{ distance_row.distance.display_distance }}</span>
+                          {% if distance_row.participant_count %}<span class="race-distance-count">{{ distance_row.participant_count }}</span>{% endif %}
+                        </span>
                       {% empty %}
                         <span class="text-muted small">No distances yet.</span>
                       {% endfor %}
@@ -529,6 +535,40 @@
   .race-list-distances { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
+  .race-add-card { width: min(680px, 100%); }
+  .race-participant-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    margin-left: 5px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #e9ecef;
+    color: #6c757d;
+    font-size: .68rem;
+    vertical-align: middle;
+  }
+  .race-participant-badge.has-participants { background: #198754; color: #fff; }
+  .race-list-distance-wrap { position: relative; display: inline-flex; padding-top: 3px; padding-right: 3px; }
+  .race-distance-count {
+    position: absolute;
+    top: -4px;
+    right: -2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #198754;
+    color: #fff;
+    font-size: .58rem;
+    font-weight: 700;
+    line-height: 1;
+  }
 
   .race-entry-list { border: 1px solid #dee2e6; border-radius: 7px; overflow: hidden; }
   .race-entry-head,
