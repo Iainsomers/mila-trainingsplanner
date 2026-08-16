@@ -93,7 +93,7 @@ class SlotModalSaveTests(TestCase):
         segments = list(slot.segments.order_by("order", "id"))
         self.assertEqual([seg.type for seg in segments], ["MOB"])
 
-    def test_auto_wucd_is_not_applied_for_z1_z2_only_core(self):
+    def test_auto_wucd_is_not_applied_when_any_main_contains_z1(self):
         _, plan, athlete = self._user_plan_and_athlete()
 
         response = self.client.post(
@@ -109,6 +109,23 @@ class SlotModalSaveTests(TestCase):
         slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date="2026-01-09", slot_index=1)
         segments = list(slot.segments.order_by("order", "id"))
         self.assertEqual([seg.type for seg in segments], ["CORE", "CORE"])
+
+    def test_auto_wucd_is_applied_for_z2_only_main(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+
+        response = self.client.post(
+            f"/slot-modal/2026/01/11/1/?plan={plan.id}&athlete={athlete.id}",
+            {
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "core_text": "40min z2",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date="2026-01-11", slot_index=1)
+        segments = list(slot.segments.order_by("order", "id"))
+        self.assertEqual([seg.type for seg in segments], ["WU", "CORE", "CD"])
 
     def test_group_auto_wucd_is_applied_for_base_plan_training(self):
         user = get_user_model().objects.create_user(

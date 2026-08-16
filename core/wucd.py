@@ -1,3 +1,5 @@
+import re
+
 from core.parser import parse_segment_text
 
 
@@ -49,19 +51,9 @@ def core_text_needs_auto_wucd(core_text):
     text = (core_text or "").strip()
     if not text:
         return False
-
-    for part in [p.strip() for p in text.split("//") if p.strip()]:
-        parsed = parse_segment_text(part, zone_required=False)
-        if parsed and (parsed.t_type or parsed.special):
-            return True
-        if parsed and parsed.zone:
-            try:
-                if int(parsed.zone) >= 2:
-                    return True
-            except (TypeError, ValueError):
-                pass
-
-    return False
+    if re.search(r"\bz\s*1\b", text, re.IGNORECASE):
+        return False
+    return True
 
 
 def apply_auto_wucd_texts(athlete, plan, core_text, wu_text, cd_text):

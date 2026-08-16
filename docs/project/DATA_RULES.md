@@ -46,7 +46,8 @@ Compound onderdelen moeten afstand, zone en T-label per deel correct optellen.
 
 - Atleetinstelling gaat vóór groep-/trainerinstelling.
 - Alleen toepassen als een relevant Main-onderdeel aanwezig is.
-- De precieze grens voor rustige Z1/Z2-trainingen moet door tests worden bewaakt; wijzig deze regel niet impliciet.
+- Als automatische WU/CD bij de atleet of het trainerplan aanstaat, wordt deze bij iedere Main-training toegepast, behalve wanneer ergens in Main Z1 voorkomt.
+- Een Main die uitsluitend Z2 of sneller bevat krijgt dus wel automatische WU/CD; een combinatie waarin ook Z1 staat niet.
 
 ## Weektotalen
 

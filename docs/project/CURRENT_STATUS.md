@@ -27,7 +27,6 @@ Bijgewerkt: 15 augustus 2026.
 
 ## Bekende aandachtspunten
 
-- De volledige `core`-testset had op 12 augustus 2026 één bestaande fout: de test voor automatische WU/CD bij een uitsluitend Z1/Z2 Main verwacht geen WU/CD, terwijl de actuele code die wel toevoegt. Beslis eerst welke productregel gewenst is en breng code, test en `DATA_RULES.md` daarna samen in lijn.
 - Settings (under development) is bewust niet functioneel.
 - Stats is bewust eenvoudig en nog in ontwikkeling.
 - Polar/watch suggestions blijven een ontwikkelgebied; matching en compacte lapinterpretatie kunnen verder worden verbeterd.
