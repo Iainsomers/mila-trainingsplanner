@@ -150,7 +150,7 @@
                                   data-bs-toggle="modal"
                                   data-bs-target="#raceModal{{ row.race.id }}">
                             <span class="race-calendar-event-name">{{ row.race.name }}</span>
-                            {% if row.participant_count %}<span class="race-calendar-count">{{ row.participant_count }}</span>{% endif %}
+                            {% if not is_athlete_user and row.participant_count %}<span class="race-calendar-count">{{ row.participant_count }}</span>{% endif %}
                           </button>
                         {% endfor %}
                       </td>

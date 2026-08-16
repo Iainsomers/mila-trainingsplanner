@@ -648,6 +648,12 @@ class RaceSelectDisplayTests(TestCase):
         self.assertEqual(auto_save_response.json(), {"ok": True})
         self.assertTrue(RaceEntry.objects.get(race_distance=distance, athlete=athlete).athlete_selected)
 
+        participating_calendar = self.client.get(
+            "/race-calendar/?year=2026&view=calendar&period=full"
+        )
+        self.assertContains(participating_calendar, 'class="race-calendar-event race-calendar-pending"', html=False)
+        self.assertNotContains(participating_calendar, '<span class="race-calendar-count">', html=False)
+
         planning_response = self.client.get("/planning/")
         self.assertContains(planning_response, 'href="/race-calendar/"', html=False)
         self.assertNotContains(planning_response, "/race-select/?scope=athlete", html=False)
