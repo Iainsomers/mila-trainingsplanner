@@ -50,6 +50,7 @@ from core.views.coach import (
     race_calendar_delete_view,
     race_calendar_distance_add_view,
     race_calendar_distance_delete_view,
+    race_calendar_entries_save_view,
     race_select_view,
 )
 
@@ -152,6 +153,7 @@ urlpatterns = [
     path("race-calendar/<int:race_id>/delete/", race_calendar_delete_view, name="race_calendar_delete"),
     path("race-calendar/<int:race_id>/distances/add/", race_calendar_distance_add_view, name="race_calendar_distance_add"),
     path("race-calendar/<int:race_id>/distances/<int:distance_id>/delete/", race_calendar_distance_delete_view, name="race_calendar_distance_delete"),
+    path("race-calendar/<int:race_id>/entries/save/", race_calendar_entries_save_view, name="race_calendar_entries_save"),
     path("race-select/", race_select_view, name="race_select"),
 
     # Calendar

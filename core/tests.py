@@ -582,6 +582,104 @@ class SegmentRepTimeDisplayTests(TestCase):
 
 
 class RaceSelectDisplayTests(TestCase):
+    def test_athlete_uses_race_calendar_with_own_selection_controls(self):
+        coach = get_user_model().objects.create_user(
+            username="calendarowner", password="secret", is_staff=True
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="calendarathlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="calendarathlete", birth_year=2000, gender="X"
+        )
+        race = RaceEvent.objects.create(owner=coach, name="Shared race", date="2026-07-16")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+        self.client.force_login(athlete_user)
+
+        response = self.client.get("/race-calendar/?year=2026&view=list&period=full")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Shared race")
+        self.assertContains(response, "calendarathlete")
+        self.assertNotContains(response, "Add race")
+        self.assertContains(
+            response,
+            f'name="coach_{athlete.id}_{distance.id}" value="1"  disabled',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            f'name="athlete_{athlete.id}_{distance.id}" value="1"',
+            html=False,
+        )
+
+    def test_race_agreement_changes_pending_pill_to_filled_target_pill(self):
+        coach = get_user_model().objects.create_user(
+            username="agreementcoach", password="secret", is_staff=True
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="agreementathlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="agreementathlete", birth_year=2000, gender="X"
+        )
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Agreement plan",
+            start_date="2026-01-01",
+            end_date="2026-12-31",
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        race = RaceEvent.objects.create(owner=coach, name="Agreement race", date="2026-07-16")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+
+        self.client.force_login(coach)
+        coach_response = self.client.post(
+            f"/race-calendar/{race.id}/entries/save/",
+            {
+                "athletes": str(athlete.id),
+                f"coach_{athlete.id}_{distance.id}": "1",
+                "view": "list",
+                "period": "full",
+            },
+        )
+        self.assertEqual(coach_response.status_code, 302)
+        entry = RaceEntry.objects.get(race_distance=distance, athlete=athlete)
+        self.assertTrue(entry.coach_selected)
+        self.assertFalse(entry.athlete_selected)
+        pending_segment = TrainingSegment.objects.filter(
+            slot__athlete=athlete, text__contains="Agreement race", special="RACE_PENDING"
+        ).first()
+        self.assertIsNotNone(pending_segment)
+        pending_html = get_template("core/partials/segment_display.html").render(
+            {"seg": pending_segment}
+        )
+        self.assertIn("pill-race-pending", pending_html)
+
+        self.client.force_login(athlete_user)
+        athlete_response = self.client.post(
+            f"/race-calendar/{race.id}/entries/save/",
+            {
+                f"athlete_{athlete.id}_{distance.id}": "1",
+                f"target_{athlete.id}_{distance.id}": "1",
+                "view": "list",
+                "period": "full",
+            },
+        )
+        self.assertEqual(athlete_response.status_code, 302)
+        entry.refresh_from_db()
+        self.assertTrue(entry.coach_selected)
+        self.assertTrue(entry.athlete_selected)
+        self.assertTrue(entry.target_selected)
+        confirmed_segment = TrainingSegment.objects.filter(
+            slot__athlete=athlete, text__contains="Agreement race", special="IMPORTANT_RACE"
+        ).first()
+        self.assertIsNotNone(confirmed_segment)
+        confirmed_html = get_template("core/partials/segment_display.html").render(
+            {"seg": confirmed_segment}
+        )
+        self.assertIn("pill-important-race", confirmed_html)
+
     def test_race_calendar_list_hides_distance_choices_until_race_is_opened(self):
         coach = get_user_model().objects.create_user(
             username="racecalendarcoach", password="secret", is_staff=True

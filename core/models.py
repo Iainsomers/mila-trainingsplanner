@@ -512,6 +512,8 @@ class TrainingSegment(models.Model):
         ("STRENGTH", "Strength"),
         ("RACE", "Race"),
         ("IMPORTANT_RACE", "Important Race"),
+        ("RACE_PENDING", "Race awaiting agreement"),
+        ("RACE_TARGET_PENDING", "Target race awaiting agreement"),
     ]
 
     T_TYPE_CHOICES = [

@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-08-16 — Race Calendar als gezamenlijke basis
+
+Trainer en atleet beheren wedstrijddeelname vanuit dezelfde Race Calendar-popup. Trainer- en atleetakkoord blijven gescheiden; een wedstrijdpil wordt pas gevuld als beiden akkoord zijn. Target bepaalt of de status oranje of rood is.
+
 ## 2026-08-15 — Standaard naar Render
 
 Voltooide wijzigingen worden standaard gecommit en naar `main` gepusht zodat Render ze kan uitrollen. Alleen bij een expliciet verzoek om iets lokaal te houden wordt niet gepusht.

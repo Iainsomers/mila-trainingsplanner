@@ -42,6 +42,7 @@
     </div>
   </div>
 
+  {% if not is_athlete_user %}
   <div class="card mb-4">
     <div class="card-body">
       <h5 class="card-title">Add race</h5>
@@ -79,6 +80,7 @@
       </form>
     </div>
   </div>
+  {% endif %}
 
   {% if view_mode == "calendar" %}
     <div class="year-calendar-grid">
@@ -104,10 +106,10 @@
                     {% for cell in week %}
                       <td class="race-day-cell{% if not cell.in_month %} outside-month{% endif %}"
                           data-date="{{ cell.day|date:'Y-m-d' }}"
-                          {% if cell.in_month %}data-bs-toggle="modal" data-bs-target="#addRaceDateModal"{% endif %}>
+                          {% if cell.in_month and not is_athlete_user %}data-bs-toggle="modal" data-bs-target="#addRaceDateModal"{% endif %}>
                         <div class="race-day-number">
                           <span>{{ cell.day|date:"j" }}</span>
-                          {% if cell.in_month %}<span class="race-day-add">+</span>{% endif %}
+                          {% if cell.in_month and not is_athlete_user %}<span class="race-day-add">+</span>{% endif %}
                         </div>
                         {% for row in cell.races %}
                           <button type="button"
@@ -174,6 +176,7 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+              {% if not is_athlete_user %}
               <h6>Distances</h6>
               <form method="post" action="{% url 'race_calendar_distance_add' race.id %}">
                 {% csrf_token %}
@@ -212,14 +215,69 @@
                   </div>
                 </div>
               </form>
+              <hr class="my-4">
+              {% else %}
+              <div class="mb-3">
+                {% for distance in distances %}<span class="badge text-bg-light border me-1">{{ distance.display_distance }}</span>{% endfor %}
+              </div>
+              {% endif %}
+
+              <form method="post" action="{% url 'race_calendar_entries_save' race.id %}" class="race-entry-form">
+                {% csrf_token %}
+                <input type="hidden" name="view" value="{{ view_mode }}">
+                <input type="hidden" name="period" value="{{ period_mode }}">
+                <div class="d-flex justify-content-between align-items-end gap-3 mb-2 flex-wrap">
+                  <div>
+                    <h6 class="mb-1">Athletes and selections</h6>
+                    <div class="small text-muted">Maximum three distances per athlete.</div>
+                  </div>
+                  {% if not is_athlete_user %}
+                  <div>
+                    <label class="form-label small mb-1">Show athletes</label>
+                    <select class="form-select form-select-sm race-athlete-filter">
+                      <option value="all">All</option>
+                      {% for plan in trainer_plans %}<option value="plan:{{ plan.id }}">{{ plan.name }}</option>{% endfor %}
+                      <option value="participating">Participating athletes</option>
+                    </select>
+                  </div>
+                  {% endif %}
+                </div>
+
+                <div class="race-entry-list">
+                  <div class="race-entry-head">
+                    <span>Athlete / distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>
+                  </div>
+                  {% for athlete_row in row.athlete_rows %}
+                    <div class="race-entry-athlete" data-plan-ids="{{ athlete_row.plan_ids }}" data-participating="{% if athlete_row.participating %}1{% else %}0{% endif %}">
+                      <input type="hidden" name="athletes" value="{{ athlete_row.athlete.id }}" class="race-athlete-submit-id">
+                      <strong class="race-entry-athlete-name">{{ athlete_row.athlete.name }}</strong>
+                      {% for distance_entry in athlete_row.distance_entries %}
+                        {% with distance=distance_entry.distance entry=distance_entry.entry %}
+                        <div class="race-entry-distance">
+                          <span>{{ distance.display_distance }}</span>
+                          <label><input type="checkbox" name="coach_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.coach_selected %}checked{% endif %} {% if is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
+                          <label><input type="checkbox" name="athlete_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.athlete_selected %}checked{% endif %} {% if not is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
+                          <label><input type="checkbox" name="target_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.target_selected %}checked{% endif %}></label>
+                        </div>
+                        {% endwith %}
+                      {% empty %}
+                        <div class="text-muted small">No distances yet.</div>
+                      {% endfor %}
+                    </div>
+                  {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm mt-3">Save selections</button>
+              </form>
             </div>
             <div class="modal-footer">
+              {% if not is_athlete_user %}
               <form method="post" action="{% url 'race_calendar_delete' race.id %}" onsubmit="return confirm('Delete this race?');">
                 {% csrf_token %}
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <button type="submit" class="btn btn-sm btn-outline-danger">Delete race</button>
               </form>
+              {% endif %}
               <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
           </div>
@@ -228,6 +286,7 @@
     {% endwith %}
   {% endfor %}
 
+  {% if not is_athlete_user %}
   <div class="modal fade" id="addRaceDateModal" tabindex="-1" aria-labelledby="addRaceDateModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -257,6 +316,7 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
 </div>
 
@@ -288,6 +348,26 @@
       input.checked = true;
       badge.style.display = "none";
     });
+  });
+
+  document.querySelectorAll(".race-athlete-filter").forEach(function(select) {
+    function applyFilter() {
+      var form = select.closest(".race-entry-form");
+      var value = select.value || "all";
+      form.querySelectorAll(".race-entry-athlete").forEach(function(row) {
+        var visible = value === "all";
+        if (value === "participating") visible = row.dataset.participating === "1";
+        if (value.indexOf("plan:") === 0) {
+          var planId = value.split(":")[1];
+          visible = (row.dataset.planIds || "").split(",").indexOf(planId) !== -1;
+        }
+        row.hidden = !visible;
+        row.querySelectorAll("input").forEach(function(input) {
+          input.disabled = !visible || input.dataset.roleLocked === "1";
+        });
+      });
+    }
+    select.addEventListener("change", applyFilter);
   });
 })();
 </script>
@@ -409,6 +489,21 @@
   .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
 
+  .race-entry-list { border: 1px solid #dee2e6; border-radius: 7px; overflow: hidden; }
+  .race-entry-head,
+  .race-entry-distance {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) 70px 70px 70px;
+    align-items: center;
+    gap: 6px;
+  }
+  .race-entry-head { padding: 6px 9px; background: #f8f9fa; font-size: .72rem; font-weight: 700; text-align: center; }
+  .race-entry-head span:first-child { text-align: left; }
+  .race-entry-athlete { padding: 7px 9px; border-top: 1px solid #e9ecef; }
+  .race-entry-athlete-name { display: block; margin-bottom: 3px; }
+  .race-entry-distance { min-height: 30px; font-size: .84rem; }
+  .race-entry-distance label { text-align: center; }
+
   @media (max-width: 992px) {
     .year-calendar-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -430,6 +525,11 @@
       grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr);
       gap: 6px;
     }
+
+    .race-entry-head,
+    .race-entry-distance { grid-template-columns: minmax(90px, 1fr) 52px 52px 52px; gap: 2px; }
+    .race-entry-head { font-size: .65rem; padding-inline: 5px; }
+    .race-entry-athlete { padding-inline: 5px; }
   }
 </style>
 {% endblock %}

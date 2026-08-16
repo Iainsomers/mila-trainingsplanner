@@ -579,7 +579,7 @@ def base_week_stats(plan, week_start: date_cls):
                 if special == "STRENGTH":
                     continue
 
-                is_race = special in ("RACE", "IMPORTANT_RACE")
+                is_race = special in ("RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING")
                 z_raw = (seg.zone or "").strip()
                 zone = str(z_raw) if z_raw else ("4" if is_race else "")
 
@@ -681,7 +681,7 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 if special == "STRENGTH":
                     continue
 
-                is_race = special in ("RACE", "IMPORTANT_RACE")
+                is_race = special in ("RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING")
                 z_raw = (seg.zone or "").strip()
                 zone = str(z_raw) if z_raw else ("4" if is_race else "")
 
@@ -831,7 +831,7 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                 if special == "STRENGTH":
                     continue
 
-                is_race = special in ("RACE", "IMPORTANT_RACE")
+                is_race = special in ("RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING")
                 z_raw = (seg.zone or "").strip()
                 zone = str(z_raw) if z_raw else ("4" if is_race else "")
 

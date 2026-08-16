@@ -23,6 +23,7 @@ Bijgewerkt: 15 augustus 2026.
 - Trainers kunnen vitals en training reports voor de geselecteerde atleet ook op toekomstige planningsdagen opslaan; voor atleten zelf blijft toekomstige invoer geblokkeerd.
 - Desktop-vitals worden per gewijzigd veld opgeslagen zonder volledige paginaherlading, zodat het kalenderbeeld niet verspringt en de invoer niet terugvalt.
 - Een trainer met gedeelde toegang gebruikt bij AYC-opslag dezelfde toegangsregel als bij het bekijken van de atleet; vitals en reports worden daardoor niet meer stil genegeerd voor niet-eigen atleten.
+- Race Calendar combineert wedstrijd- en afstandsbeheer met de selectie per atleet. Trainer en atleet hebben eigen vinkjes, Target is gedeeld en de wedstrijdpil toont omlijnd of gevuld of er wederzijds akkoord is.
 
 ## Bekende aandachtspunten
 

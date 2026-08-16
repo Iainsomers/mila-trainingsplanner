@@ -258,7 +258,7 @@ def _slot_has_race(slot) -> bool:
         for seg in slot.segments.all():
             special = (getattr(seg, "special", "") or "").upper()
             text = (getattr(seg, "text", "") or "").lower()
-            if special in {"RACE", "IMPORTANT_RACE"} or "race" in text:
+            if special in {"RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING"} or "race" in text:
                 return True
     except Exception:
         return False
@@ -891,8 +891,13 @@ def _virtual_race_slot_from_entries(entries):
         distance = entry.race_distance
         race = distance.race
         distance_m = _race_distance_m_from_entry(entry)
-        special = "IMPORTANT_RACE" if count >= 3 else "RACE"
-        label = "Race!" if count >= 3 else "Race"
+        confirmed = bool(entry.coach_selected and entry.athlete_selected)
+        if entry.target_selected:
+            special = "IMPORTANT_RACE" if confirmed else "RACE_TARGET_PENDING"
+            label = "Race!"
+        else:
+            special = "RACE" if confirmed else "RACE_PENDING"
+            label = "Race"
         text = f'"{race.name}" {distance.display_distance} {label}'
         segments.append(_VirtualSegment(
             text=text,
@@ -1891,7 +1896,7 @@ def _segment_rep_time_label(athlete, seg):
         return ""
 
     special = (getattr(seg, "special", "") or "").upper()
-    if special in {"RACE", "IMPORTANT_RACE"}:
+    if special in {"RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING"}:
         return ""
 
     distances_m = _segment_rep_distances_m(seg)
@@ -2149,7 +2154,7 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
 
         text = getattr(seg, "text", "") or ""
         special = (getattr(seg, "special", "") or "").upper()
-        is_race = special in ("RACE", "IMPORTANT_RACE") or bool(re.search(r"race", text, re.I))
+        is_race = special in ("RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING") or bool(re.search(r"race", text, re.I))
         fallback_zone = (str(getattr(seg, "zone", "") or "").strip() or ("4" if is_race else "1"))
 
         if seg_type == "ALT":

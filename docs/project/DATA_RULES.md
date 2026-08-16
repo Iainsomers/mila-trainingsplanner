@@ -57,6 +57,8 @@ Compound onderdelen moeten afstand, zone en T-label per deel correct optellen.
 ## Wedstrijden
 
 - Atleet selecteert maximaal drie afstanden per wedstrijd.
+- Trainer kan alleen het trainervinkje wijzigen; atleet alleen het atleetvinkje; beiden mogen Target wijzigen.
+- Een selectie is bevestigd wanneer trainer en atleet beiden hebben aangevinkt. Target bepaalt rood versus oranje, bevestiging bepaalt omlijnd versus gevuld.
 - Doelwedstrijd verschijnt als `Race!`; overige geselecteerde wedstrijd als `Race`.
 
 ## Evaluaties

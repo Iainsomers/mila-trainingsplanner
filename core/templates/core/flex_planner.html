@@ -365,8 +365,10 @@
     .pill-z4 { background-color: #bfe7bf; }
     .pill-z5 { background-color: #b7d7ff; }
     .pill-z6 { background-color: #f2c200; }
-    .pill-race { background-color: #ff7a00; }
-    .pill-important-race { background-color: #cc0000; color: #ffffff; }
+  .pill-race { background-color: #ff7a00; }
+  .pill-important-race { background-color: #cc0000; color: #ffffff; }
+  .pill-race-pending { background-color: #ffffff; border: 2px solid #ff7a00; color: #8a4300; }
+  .pill-race-target-pending { background-color: #ffffff; border: 2px solid #cc0000; color: #990000; }
     .pill-strength { background-color: #d9d9d9 !important; color: #111111; text-decoration: underline; cursor: pointer; }
 
     .flex-muted {
@@ -651,7 +653,7 @@
       const fallbackZone = dataZone || flexZoneFromClass(el) || "1";
       const dataTKey = flexNormalizeTKey(el.getAttribute("data-flex-t") || "");
       const dataSpecial = (el.getAttribute("data-flex-special") || "").toUpperCase();
-      const isRace = dataSpecial === "RACE" || dataSpecial === "IMPORTANT_RACE" || el.classList.contains("pill-race") || /race/i.test(text);
+      const isRace = ["RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING"].includes(dataSpecial) || el.classList.contains("pill-race") || el.classList.contains("pill-race-pending") || el.classList.contains("pill-race-target-pending") || /race/i.test(text);
 
       const compound = flexCompoundLoads(text, fallbackZone);
       if (compound) {

@@ -252,8 +252,13 @@ def _virtual_race_slot_for_slot_reset(athlete, day):
         distance = entry.race_distance
         race = distance.race
         distance_m = _race_distance_m_for_slot_reset(entry)
-        special = "IMPORTANT_RACE" if count >= 3 else "RACE"
-        label = "Race!" if count >= 3 else "Race"
+        confirmed = bool(entry.coach_selected and entry.athlete_selected)
+        if entry.target_selected:
+            special = "IMPORTANT_RACE" if confirmed else "RACE_TARGET_PENDING"
+            label = "Race!"
+        else:
+            special = "RACE" if confirmed else "RACE_PENDING"
+            label = "Race"
         text = f'"{race.name}" {distance.display_distance} {label}'
         segments.append(_VirtualSegment(
             text=text,

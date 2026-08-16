@@ -50,6 +50,8 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 - Houd de lijstweergave compact op één regel: datum, een uitgelijnde naamkolom en bestaande afstanden zijn direct zichtbaar.
 - Toon afstandskeuzes en beheeracties pas nadat de gebruiker een wedstrijd opent.
+- Plaats in dezelfde popup een compacte atletenfilter en per afstand de kolommen Trainer, Athlete en Target.
+- Gebruik voor onbevestigde wedstrijden een witte pil met oranje of rode omlijning; vul de pil pas wanneer trainer en atleet beiden akkoord zijn.
 
 ## Formulieren
 
