@@ -672,6 +672,10 @@ class RaceSelectDisplayTests(TestCase):
             {"seg": pending_segment}
         )
         self.assertIn("pill-race-pending", pending_html)
+        pending_calendar = self.client.get(
+            "/race-calendar/?year=2026&view=list&period=full"
+        )
+        self.assertContains(pending_calendar, "race-summary-pending", html=False)
 
         self.client.force_login(athlete_user)
         athlete_response = self.client.post(
@@ -701,6 +705,9 @@ class RaceSelectDisplayTests(TestCase):
         coach = get_user_model().objects.create_user(
             username="racecalendarcoach", password="secret", is_staff=True
         )
+        Athlete.objects.create(
+            owner=coach, name="Race list athlete", birth_year=2000, gender="X"
+        )
         race = RaceEvent.objects.create(
             owner=coach, name="Track meeting", date="2026-07-16"
         )
@@ -720,6 +727,9 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotIn('name="distances"', list_section)
         self.assertNotIn("Save distances", list_section)
         self.assertContains(response, "grid-template-columns: 220px minmax(0, 1fr)", html=False)
+        self.assertContains(response, 'class="race-distance-management"', html=False)
+        self.assertContains(response, 'class="race-entry-athlete"', html=False)
+        self.assertContains(response, "Open selected", html=False)
 
     def test_target_checkbox_makes_race_important_without_athlete_checkbox(self):
         race = RaceEvent(name="Target Race", date="2026-07-16")

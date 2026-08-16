@@ -177,7 +177,8 @@
             </div>
             <div class="modal-body">
               {% if not is_athlete_user %}
-              <h6>Distances</h6>
+              <details class="race-distance-management">
+                <summary>Manage distances <span class="text-muted">({{ distances|length }})</span></summary>
               <form method="post" action="{% url 'race_calendar_distance_add' race.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="view" value="{{ view_mode }}">
@@ -215,6 +216,7 @@
                   </div>
                 </div>
               </form>
+              </details>
               <hr class="my-4">
               {% else %}
               <div class="mb-3">
@@ -232,13 +234,16 @@
                     <div class="small text-muted">Maximum three distances per athlete.</div>
                   </div>
                   {% if not is_athlete_user %}
-                  <div>
+                  <div class="d-flex align-items-end gap-2 flex-wrap">
+                    <button type="button" class="btn btn-sm btn-outline-secondary race-toggle-selected">Open selected</button>
+                    <div>
                     <label class="form-label small mb-1">Show athletes</label>
                     <select class="form-select form-select-sm race-athlete-filter">
                       <option value="all">All</option>
                       {% for plan in trainer_plans %}<option value="plan:{{ plan.id }}">{{ plan.name }}</option>{% endfor %}
                       <option value="participating">Participating athletes</option>
                     </select>
+                    </div>
                   </div>
                   {% endif %}
                 </div>
@@ -248,9 +253,20 @@
                     <span>Athlete / distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>
                   </div>
                   {% for athlete_row in row.athlete_rows %}
-                    <div class="race-entry-athlete" data-plan-ids="{{ athlete_row.plan_ids }}" data-participating="{% if athlete_row.participating %}1{% else %}0{% endif %}">
+                    <details class="race-entry-athlete" data-plan-ids="{{ athlete_row.plan_ids }}" data-participating="{% if athlete_row.participating %}1{% else %}0{% endif %}">
+                      <summary class="race-entry-athlete-summary">
+                        <strong class="race-entry-athlete-name">{{ athlete_row.athlete.name }}</strong>
+                        <span class="race-entry-summary-pills">
+                          {% for distance_entry in athlete_row.distance_entries %}
+                            {% with distance=distance_entry.distance entry=distance_entry.entry %}
+                              {% if entry.coach_selected or entry.athlete_selected or entry.target_selected %}
+                                <span class="race-summary-pill {% if entry.target_selected %}{% if entry.coach_selected and entry.athlete_selected %}race-summary-target-confirmed{% else %}race-summary-target-pending{% endif %}{% else %}{% if entry.coach_selected and entry.athlete_selected %}race-summary-confirmed{% else %}race-summary-pending{% endif %}{% endif %}">{{ distance.display_distance }}</span>
+                              {% endif %}
+                            {% endwith %}
+                          {% endfor %}
+                        </span>
+                      </summary>
                       <input type="hidden" name="athletes" value="{{ athlete_row.athlete.id }}" class="race-athlete-submit-id">
-                      <strong class="race-entry-athlete-name">{{ athlete_row.athlete.name }}</strong>
                       {% for distance_entry in athlete_row.distance_entries %}
                         {% with distance=distance_entry.distance entry=distance_entry.entry %}
                         <div class="race-entry-distance">
@@ -263,7 +279,7 @@
                       {% empty %}
                         <div class="text-muted small">No distances yet.</div>
                       {% endfor %}
-                    </div>
+                    </details>
                   {% endfor %}
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm mt-3">Save selections</button>
@@ -368,6 +384,18 @@
       });
     }
     select.addEventListener("change", applyFilter);
+  });
+
+  document.querySelectorAll(".race-toggle-selected").forEach(function(button) {
+    button.addEventListener("click", function() {
+      var form = button.closest(".race-entry-form");
+      var selectedRows = Array.from(form.querySelectorAll(".race-entry-athlete")).filter(function(row) {
+        return !row.hidden && row.querySelector('input[type="checkbox"]:checked');
+      });
+      var shouldOpen = selectedRows.some(function(row) { return !row.open; });
+      selectedRows.forEach(function(row) { row.open = shouldOpen; });
+      button.textContent = shouldOpen ? "Close selected" : "Open selected";
+    });
   });
 })();
 </script>
@@ -499,10 +527,28 @@
   }
   .race-entry-head { padding: 6px 9px; background: #f8f9fa; font-size: .72rem; font-weight: 700; text-align: center; }
   .race-entry-head span:first-child { text-align: left; }
-  .race-entry-athlete { padding: 7px 9px; border-top: 1px solid #e9ecef; }
-  .race-entry-athlete-name { display: block; margin-bottom: 3px; }
+  .race-entry-athlete { padding: 0 9px 7px; border-top: 1px solid #e9ecef; }
+  .race-entry-athlete-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 5px 0;
+    cursor: pointer;
+  }
+  .race-entry-athlete-summary::marker { color: #6c757d; }
+  .race-entry-athlete-name { min-width: 150px; }
+  .race-entry-summary-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+  .race-summary-pill { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: .72rem; font-weight: 700; line-height: 1.25; }
+  .race-summary-pending { background: #fff; border: 2px solid #ff7a00; color: #8a4300; }
+  .race-summary-target-pending { background: #fff; border: 2px solid #cc0000; color: #990000; }
+  .race-summary-confirmed { background: #ff7a00; border: 2px solid #ff7a00; color: #111; }
+  .race-summary-target-confirmed { background: #cc0000; border: 2px solid #cc0000; color: #fff; }
   .race-entry-distance { min-height: 30px; font-size: .84rem; }
   .race-entry-distance label { text-align: center; }
+  .race-distance-management { border: 1px solid #dee2e6; border-radius: 7px; padding: 0 10px 10px; }
+  .race-distance-management > summary { cursor: pointer; font-weight: 700; padding: 9px 0; }
+  .race-distance-management:not([open]) { padding-bottom: 0; }
 
   @media (max-width: 992px) {
     .year-calendar-grid {
