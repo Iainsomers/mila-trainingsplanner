@@ -2022,11 +2022,13 @@
                 result.className = "alternative-plan-result";
                 if (alternativeData.ok && alternativeData.alternative_suggestion) {
                   result.appendChild(renderPlanSuggestion(alternativeData.alternative_suggestion));
+                  suggestions.innerHTML = "";
+                  suggestions.appendChild(result);
                 } else {
                   result.className += " small text-danger mb-2";
                   result.textContent = alternativeData.message || "No reliable alternative could be reconstructed.";
+                  warning.insertAdjacentElement("afterend", result);
                 }
-                warning.insertAdjacentElement("afterend", result);
               })
               .catch(function() {
                 warningText.textContent = "❌ Reconstructing the alternative plan failed.";

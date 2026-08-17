@@ -3244,6 +3244,126 @@ def _watch_plan_is_clear_mismatch(plan_text, activities, suggestion):
     return False
 
 
+def _watch_quantile(values, fraction):
+    ordered = sorted(float(value) for value in values)
+    if not ordered:
+        return 0.0
+    index = min(len(ordered) - 1, max(0, round((len(ordered) - 1) * fraction)))
+    return ordered[index]
+
+
+def _watch_pace_pattern_suggestion(activity, athlete=None):
+    """Detect sustained faster sections from the raw one-second speed curve."""
+    raw = activity.get("raw") or {}
+    speed_sample = _polar_sample_map(raw).get("1")
+    if not speed_sample:
+        return None
+    rate = _polar_sample_rate(speed_sample)
+    raw_speeds = _polar_sample_values(speed_sample)
+    speeds = []
+    last = 0.0
+    for value in raw_speeds:
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            value = last
+        if value < 0 or value > 40:
+            value = last
+        speeds.append(value)
+        last = value
+    if len(speeds) < 120:
+        return None
+
+    # An 11-second moving average removes brief GPS spikes without erasing a
+    # 20-30 second acceleration such as a fast 100 metres.
+    radius = max(2, round(5 / rate))
+    prefix = [0.0]
+    for speed in speeds:
+        prefix.append(prefix[-1] + speed)
+    smooth = []
+    for index in range(len(speeds)):
+        start = max(0, index - radius)
+        end = min(len(speeds), index + radius + 1)
+        smooth.append((prefix[end] - prefix[start]) / max(1, end - start))
+
+    moving = [speed for speed in smooth if speed >= 4]
+    if len(moving) < 120:
+        return None
+    easy_speed = _watch_quantile(moving, 0.3)
+    fast_speed = _watch_quantile(moving, 0.9)
+    separation = fast_speed - easy_speed
+    if separation < max(1.5, easy_speed * 0.12):
+        return None
+    threshold = easy_speed + separation * 0.58
+
+    runs = []
+    run_start = None
+    for index, speed in enumerate(smooth + [0.0]):
+        is_fast = index < len(smooth) and speed >= threshold
+        if is_fast and run_start is None:
+            run_start = index
+        elif not is_fast and run_start is not None:
+            runs.append([run_start, index])
+            run_start = None
+
+    # Join very short threshold dips within one acceleration.
+    merged = []
+    max_gap = max(1, round(10 / rate))
+    for start, end in runs:
+        if merged and start - merged[-1][1] <= max_gap:
+            merged[-1][1] = end
+        else:
+            merged.append([start, end])
+    min_points = max(1, round(12 / rate))
+    max_points = max(1, round(8 * 60 / rate))
+    fast_runs = [(start, end) for start, end in merged if min_points <= end - start <= max_points]
+    if not 3 <= len(fast_runs) <= 30:
+        return None
+
+    def block(label, start, end):
+        duration_s = max(rate, (end - start) * rate)
+        distance_m = sum(max(0.0, speed) * 1000.0 / 3600.0 * rate for speed in speeds[start:end])
+        return {
+            "label": label,
+            "distance_m": round(distance_m),
+            "duration": _format_seconds_hms(round(duration_s)),
+            "duration_s": duration_s,
+            "pace": _format_pace(duration_s, distance_m) if distance_m > 0 else "",
+        }
+
+    fast_blocks = [block(f"Fast {index}", start, end) for index, (start, end) in enumerate(fast_runs, 1)]
+    recovery_blocks = [
+        block(f"Recovery {index}", fast_runs[index - 1][1], fast_runs[index][0])
+        for index in range(1, len(fast_runs))
+        if fast_runs[index][0] > fast_runs[index - 1][1]
+    ]
+    fast_distances = [item["distance_m"] for item in fast_blocks]
+    fast_durations = [item["duration_s"] for item in fast_blocks]
+    recovery_distances = [item["distance_m"] for item in recovery_blocks]
+    median_fast_m = _watch_quantile(fast_distances, 0.5)
+    median_fast_s = _watch_quantile(fast_durations, 0.5)
+    median_recovery_m = _watch_quantile(recovery_distances, 0.5) if recovery_distances else 0
+    variation = (max(fast_distances) - min(fast_distances)) / max(1, median_fast_m)
+    confidence = 0.72 if variation <= 0.35 else 0.58
+    summary = f"Detected {len(fast_blocks)} sustained faster sections of about {round(median_fast_m)} m / {_format_seconds_hms(round(median_fast_s))}"
+    if median_recovery_m:
+        summary += f", with about {round(median_recovery_m)} m recovery between them"
+    summary += ". Reconstructed from pace changes; review before use."
+    return {
+        "mode": "alternative_pace_pattern",
+        "activity_id": activity.get("id") or "alternative-watch-pattern",
+        "title": "Alternative plan from pace pattern",
+        "summary": summary,
+        "splits": fast_blocks,
+        # Only the faster sections are displayed; totals over just these
+        # sections would look like totals for the complete workout.
+        "zone_totals": "",
+        "confidence": confidence,
+        "alternative": True,
+        "ai": False,
+    }
+
+
 def _build_alternative_watch_suggestion(activities, v4_sessions=None, athlete=None):
     """Reconstruct a workout concept from watch data, without using the plan."""
     suggestion = _build_polar_v4_lap_suggestion("", v4_sessions or [], athlete=athlete)
@@ -3254,11 +3374,24 @@ def _build_alternative_watch_suggestion(activities, v4_sessions=None, athlete=No
             "confidence": 0.85, "alternative": True,
         })
         return suggestion
+    patterns = [
+        pattern for pattern in (
+            _watch_pace_pattern_suggestion(activity, athlete=athlete)
+            for activity in activities or []
+        ) if pattern
+    ]
+    if patterns:
+        return max(patterns, key=lambda item: (item.get("confidence") or 0, len(item.get("splits") or [])))
     candidates = []
     for activity in activities or []:
         split_info = _polar_exercise_splits(activity.get("raw") or {})
         splits = split_info.get("splits") or []
-        candidates.append((len(splits), float(activity.get("distance_m") or 0), activity, splits, split_info.get("source") or ""))
+        # AccessLink distance/speed samples are converted to automatic kilometre
+        # splits. Those are useful for analysis, but do not describe workout
+        # blocks and must not be presented as a reconstructed plan.
+        source = split_info.get("source") or ""
+        reliable_splits = splits if source not in {"distance samples", "speed samples", "route"} else []
+        candidates.append((len(reliable_splits), float(activity.get("distance_m") or 0), activity, reliable_splits, source))
     if not candidates:
         return None
     _count, _distance, activity, splits, source = max(candidates, key=lambda item: (item[0], item[1]))
@@ -3270,7 +3403,7 @@ def _build_alternative_watch_suggestion(activities, v4_sessions=None, athlete=No
         splits = [{"label": "Continuous block", "distance_m": round(distance_m),
                    "duration": _format_seconds_hms(round(duration_s)), "duration_s": duration_s,
                    "pace": _format_pace(duration_s, distance_m)}]
-        source, confidence = "activity total", 0.45
+        source, confidence = "activity total (no reliable lap structure found)", 0.35
     else:
         confidence = 0.75 if len(splits) >= 3 else 0.6
     total_m = sum(float(split.get("distance_m") or 0) for split in splits)

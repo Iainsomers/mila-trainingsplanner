@@ -39,7 +39,44 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual(suggestion["mode"], "alternative_reconstruction")
         self.assertEqual(suggestion["activity_id"], "polar-1")
         self.assertEqual(suggestion["splits"][0]["label"], "Continuous block")
-        self.assertEqual(suggestion["confidence"], 0.45)
+        self.assertEqual(suggestion["confidence"], 0.35)
+
+    def test_automatic_kilometre_splits_are_not_treated_as_workout_blocks(self):
+        suggestion = _build_alternative_watch_suggestion([{
+            "id": "polar-2",
+            "distance_m": 14800,
+            "duration_seconds": 5757,
+            "raw": {
+                "distance": 14800,
+                "duration": "PT1H35M57S",
+                "samples": [{"sample_type": "10", "recording_rate": 1, "data": "0,1000,2000"}],
+            },
+        }])
+
+        self.assertEqual(len(suggestion["splits"]), 1)
+        self.assertEqual(suggestion["splits"][0]["label"], "Continuous block")
+        self.assertIn("no reliable lap structure", suggestion["summary"])
+
+    def test_repeating_short_accelerations_are_detected_from_speed_curve(self):
+        speeds = []
+        for _repeat in range(5):
+            speeds.extend([10.0] * 45)
+            speeds.extend([16.0] * 25)
+        speeds.extend([10.0] * 60)
+        suggestion = _build_alternative_watch_suggestion([{
+            "id": "fartlek-1",
+            "distance_m": 1450,
+            "duration_seconds": len(speeds),
+            "raw": {
+                "distance": 1450,
+                "duration": f"PT{len(speeds)}S",
+                "samples": [{"sample_type": "1", "recording_rate": 1, "data": speeds}],
+            },
+        }])
+
+        self.assertEqual(suggestion["mode"], "alternative_pace_pattern")
+        self.assertEqual(len(suggestion["splits"]), 5)
+        self.assertIn("5 sustained faster sections", suggestion["summary"])
 
     def test_mobile_ayc_contains_alternative_plan_action(self):
         source = get_template("core/athlete_year_calendar.html").template.source
