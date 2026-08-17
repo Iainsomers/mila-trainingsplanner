@@ -11,7 +11,7 @@ Atleten gebruiken Planning voor drie onderdelen: Athlete Year Planning, Athlete 
 ## Trainer Planning
 
 - Meerdere weken, standaard vier.
-- De lijst met trainerplannen toont achter iedere plannaam compact de naam van de eigenaar/coach.
+- De lijst met trainerplannen toont de eigenaar/coach compact in een eigen, links uitgelijnde middelste kolom.
 - Weken blijven zeven dagen breed en extra weken stapelen verticaal.
 - Huidige week wordt geel gemarkeerd.
 - Vorige/volgende verschuift één week.

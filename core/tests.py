@@ -32,7 +32,17 @@ class TrainerPlanningListTests(TestCase):
         self.assertContains(response, "Middle distance")
         self.assertContains(
             response,
-            '<small class="text-muted ms-1 trainer-plan-owner">Mila Coach</small>',
+            '<th>Coach</th>',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            '<td class="text-start">',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            '<small class="text-muted trainer-plan-owner">Mila Coach</small>',
             html=False,
         )
 

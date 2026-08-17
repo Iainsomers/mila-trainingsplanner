@@ -37,17 +37,16 @@
                 <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Coach</th>
                     <th class="text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for p in plannings %}
                     <tr>
-                      <td>
-                        {{ p.name }}
-                        {% if p.owner %}
-                          <small class="text-muted ms-1 trainer-plan-owner">{{ p.owner.get_full_name|default:p.owner.username }}</small>
-                        {% endif %}
+                      <td>{{ p.name }}</td>
+                      <td class="text-start">
+                        {% if p.owner %}<small class="text-muted trainer-plan-owner">{{ p.owner.get_full_name|default:p.owner.username }}</small>{% endif %}
                       </td>
                       <td class="text-end">
                         <a class="btn btn-sm btn-primary" href="{% url 'trainer_planning_detail' p.id %}">Open</a>
