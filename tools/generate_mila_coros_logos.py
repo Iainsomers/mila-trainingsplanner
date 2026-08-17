@@ -5,6 +5,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "core" / "static" / "core" / "brand" / "coros"
 SIZES = (102, 120, 144, 300)
+APP_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "core" / "static" / "core" / "brand" / "app"
+APP_SIZES = (32, 180, 192, 512)
 
 
 def font(size):
@@ -18,7 +20,7 @@ def font(size):
     return ImageFont.load_default()
 
 
-def render_logo(size):
+def render_logo(size, full_background=False):
     scale = 4
     canvas_size = size * scale
     image = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
@@ -27,11 +29,14 @@ def render_logo(size):
     radius = round(canvas_size * 0.2)
     navy = "#17324D"
     orange = "#F57C20"
-    draw.rounded_rectangle(
-        (margin, margin, canvas_size - margin, canvas_size - margin),
-        radius=radius,
-        fill=navy,
-    )
+    if full_background:
+        draw.rectangle((0, 0, canvas_size, canvas_size), fill=navy)
+    else:
+        draw.rounded_rectangle(
+            (margin, margin, canvas_size - margin, canvas_size - margin),
+            radius=radius,
+            fill=navy,
+        )
 
     wordmark_font = font(round(canvas_size * 0.29))
     wordmark = "MiLa"
@@ -62,6 +67,11 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     for size in SIZES:
         render_logo(size).save(OUTPUT_DIR / f"mila-coros-{size}x{size}.png", optimize=True)
+    APP_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for size in APP_SIZES:
+        render_logo(size, full_background=True).convert("RGB").save(
+            APP_OUTPUT_DIR / f"mila-app-{size}x{size}.png", optimize=True
+        )
 
 
 if __name__ == "__main__":

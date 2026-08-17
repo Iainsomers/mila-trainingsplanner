@@ -1506,3 +1506,30 @@ class TrainerStatsTests(TestCase):
         self.assertEqual([row["athlete"].name for row in by_name.context["rows"]], ["Alpha", "Bravo"])
         self.assertEqual([row["athlete"].name for row in by_previous.context["rows"]], ["Alpha", "Bravo"])
         self.assertEqual([row["athlete"].name for row in by_this.context["rows"]], ["Bravo", "Alpha"])
+
+
+class HomeScreenIconTests(TestCase):
+    def test_login_page_publishes_mila_app_icon(self):
+        response = self.client.get("/login/")
+
+        self.assertContains(response, 'rel="apple-touch-icon"', html=False)
+        self.assertContains(response, '/static/core/brand/app/mila-app-180x180.png', html=False)
+
+    def test_authenticated_pages_publish_mila_app_icons_and_manifest(self):
+        user = get_user_model().objects.create_user(username="appiconcoach", password="secret", is_staff=True)
+        self.client.force_login(user)
+
+        response = self.client.get("/")
+
+        self.assertContains(response, 'rel="apple-touch-icon"', html=False)
+        self.assertContains(response, '/static/core/brand/app/mila-app-180x180.png', html=False)
+        self.assertContains(response, 'rel="manifest"', html=False)
+        self.assertContains(response, '/static/core/brand/app/site.webmanifest', html=False)
+
+    def test_manifest_contains_android_home_screen_icons(self):
+        manifest_path = Path(__file__).parent / "static" / "core" / "brand" / "app" / "site.webmanifest"
+        manifest = manifest_path.read_text(encoding="utf-8")
+
+        self.assertIn('"short_name": "MiLa"', manifest)
+        self.assertIn("mila-app-192x192.png", manifest)
+        self.assertIn("mila-app-512x512.png", manifest)

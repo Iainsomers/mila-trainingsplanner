@@ -8,6 +8,8 @@ Het coachdashboard toont Planning bovenaan. Admin, Stats, Polar en Settings (und
 
 Atleten gebruiken Planning voor drie onderdelen: Athlete Year Planning, Athlete settings en Races.
 
+Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA-icoon. Een snelkoppeling die vanaf een telefoon op het beginscherm wordt gezet, gebruikt daardoor standaard het MiLa-logo.
+
 ## Trainer Planning
 
 - Meerdere weken, standaard vier.

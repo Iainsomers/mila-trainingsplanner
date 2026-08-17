@@ -1,13 +1,13 @@
 # Actuele status
 
-Bijgewerkt: 17 augustus 2026.
+Bijgewerkt: 18 augustus 2026.
 
 ## Productiestatus
 
 - Productiebranch: `main`.
-- Laatst in deze task gepushte commit: `2e0f163` (`Add logout button for athlete users`).
 - Mobiele PM-trainingen vullen bestaande waarden weer vooraf in.
 - Logout is op ingelogde pagina's beschikbaar en leidt naar `/login/`.
+- Het MiLa-logo wordt standaard aangeboden als browser- en mobiel beginschermicoon voor iOS en Android.
 
 ## Belangrijk werkend gedrag
 

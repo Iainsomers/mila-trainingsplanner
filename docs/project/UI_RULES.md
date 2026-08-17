@@ -9,6 +9,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 - Segmenten, zones, totalen en weektypen mogen als compacte pills worden weergegeven.
 - Primaire acties zijn duidelijk; secundaire navigatie gebruikt een outline-stijl.
 - Voorkom horizontaal scrollen op mobiel behalve waar een bewust desktopoverzicht wordt gebruikt.
+- Gebruik het vaste MiLa-logo als browsericoon en als beginschermicoon op iOS en Android.
 
 ## Terminologie
 
