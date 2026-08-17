@@ -3337,7 +3337,9 @@ def planning_overview_view(request):
 
 def _trainer_planning_qs(user):
     return _filter_owned(
-        TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER),
+        TrainingPlan.objects.filter(
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER
+        ).select_related("owner"),
         user,
     )
 

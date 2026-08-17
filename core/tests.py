@@ -10,6 +10,33 @@ from core.views.calendar import _segment_rep_time_label
 from core.views.coach import _parse_pr_time_to_seconds, _race_line_text, _race_selected_count
 
 
+class TrainerPlanningListTests(TestCase):
+    def test_plan_name_shows_owner_name_in_small_muted_text(self):
+        coach = get_user_model().objects.create_user(
+            username="planowner",
+            password="secret",
+            first_name="Mila",
+            last_name="Coach",
+            is_staff=True,
+        )
+        TrainingPlan.objects.create(
+            owner=coach,
+            name="Middle distance",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        self.client.force_login(coach)
+
+        response = self.client.get("/planning/trainer/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Middle distance")
+        self.assertContains(
+            response,
+            '<small class="text-muted ms-1 trainer-plan-owner">Mila Coach</small>',
+            html=False,
+        )
+
+
 class SlotModalSaveTests(TestCase):
     def _user_plan_and_athlete(self):
         user = get_user_model().objects.create_user(
