@@ -104,3 +104,5 @@ Trainer-only, nog in ontwikkeling. Toont per atleet de totale kilometers van dez
 ## Polar
 
 Ondersteunt OAuth en synchronisatie van relevante trainings-, activiteits- en lapgegevens. Watch suggestions kunnen evaluatie-invoer voorstellen. De atleet controleert een voorstel altijd vóór gebruik.
+
+Wanneer horlogedata duidelijk niet aansluit op de geplande training begint de interpretatie met een rood kruis. Via `Suggest alternative plan` kan vervolgens een alternatief trainingsconcept uit de horlogedata worden gereconstrueerd. Dit concept toont een betrouwbaarheidsschatting en vervangt de oorspronkelijke planning nooit automatisch.

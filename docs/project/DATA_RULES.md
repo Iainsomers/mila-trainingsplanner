@@ -69,6 +69,8 @@ Compound onderdelen moeten afstand, zone en T-label per deel correct optellen.
 - Bij handmatige invoer is betekenisvol commentaar vereist volgens de actuele validatie.
 - Gekoppelde horlogedata kan delen van de invoer voorstellen of aanvullen.
 - Een dag is voltooid wanneer alle aanwezige trainingen een effectieve status hebben.
+- Een Polar-planmismatch wordt alleen gemarkeerd bij een duidelijke afwijking: een niet-herkende geplande structuur, zeer lage interpretatiezekerheid, een groot verschil in herhalingen of meer dan 40% afstandsverschil bij een enkel afstandsblok.
+- Een alternatief Polar-plan wordt zonder de geplande tekst uit handmatige laps, beschikbare splits of als laatste mogelijkheid het activiteitstotaal opgebouwd. Het blijft altijd een controleerbaar voorstel.
 
 ## Daily vitals
 

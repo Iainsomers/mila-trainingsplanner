@@ -10,6 +10,10 @@ Trainer en atleet beheren wedstrijddeelname vanuit dezelfde Race Calendar-popup.
 
 Voltooide wijzigingen worden standaard gecommit en naar `main` gepusht zodat Render ze kan uitrollen. Alleen bij een expliciet verzoek om iets lokaal te houden wordt niet gepusht.
 
+## 2026-08-17 — Polar-planmismatch en reconstructie
+
+Een duidelijke afwijking tussen planning en horlogedata wordt met een rood kruis gemarkeerd. De trainer kan expliciet een alternatief plan laten reconstrueren uit de horlogedata. Dit wordt als concept met betrouwbaarheid getoond en overschrijft de oorspronkelijke training niet automatisch.
+
 ## 2026-08-15 — Base Planning en mobiele rapportage voor atleten
 
 Atleten zien Base Planning als alleen-lezen tab. In de mobiele AYC verschijnen ingeschakelde Week reports als vier gekleurde vakken onder de week. Daily vitals worden per dag via een hartknop en popup ingevoerd. De vier weekgemiddelden blijven zichtbaar in compacte vorm en verschijnen pas bij minimaal drie bruikbare waarden.

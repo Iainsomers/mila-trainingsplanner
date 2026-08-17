@@ -1903,11 +1903,11 @@
     title.className = "fw-bold small mb-1";
     title.textContent = suggestion.title || "Watch suggestion";
     box.appendChild(title);
-    if (suggestion.ai) {
+    if (suggestion.ai || suggestion.alternative) {
       var meta = document.createElement("div");
       meta.className = "small text-muted mb-1";
       var confidence = typeof suggestion.confidence === "number" ? " · confidence " + Math.round(suggestion.confidence * 100) + "%" : "";
-      meta.textContent = "AI interpretation" + confidence;
+      meta.textContent = (suggestion.alternative ? "Watch reconstruction" : "AI interpretation") + confidence;
       box.appendChild(meta);
     }
     var summary = document.createElement("div");
@@ -1988,7 +1988,8 @@
     if (!suggestions || !activeAthlete || !activeDate) return;
     suggestions.textContent = "Syncing watch...";
     if (btn) btn.disabled = true;
-    fetch("/integrations/polar/activity-suggestions/?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate) + "&planned=" + encodeURIComponent(activePlannedText || ""), {
+    var suggestionUrl = "/integrations/polar/activity-suggestions/?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate) + "&planned=" + encodeURIComponent(activePlannedText || "");
+    fetch(suggestionUrl, {
       headers: {"Accept": "application/json"}
     })
       .then(function(response) { return response.json(); })
@@ -1997,6 +1998,46 @@
         if (!data.ok || ((!data.activities || !data.activities.length) && !data.v4_plan_suggestion)) {
           suggestions.textContent = data.message || "No watch activities found for this day.";
           return;
+        }
+        if (data.plan_mismatch) {
+          var warning = document.createElement("div");
+          warning.className = "alert alert-danger py-2 mb-2";
+          var warningText = document.createElement("div");
+          warningText.className = "small fw-semibold";
+          warningText.textContent = data.mismatch_message || "❌ Watch data does not match the planned training closely enough.";
+          warning.appendChild(warningText);
+          var alternativeButton = document.createElement("button");
+          alternativeButton.type = "button";
+          alternativeButton.className = "btn btn-sm btn-outline-danger mt-2";
+          alternativeButton.textContent = "Suggest alternative plan";
+          alternativeButton.addEventListener("click", function() {
+            alternativeButton.disabled = true;
+            alternativeButton.textContent = "Reconstructing...";
+            fetch(suggestionUrl + "&alternative=1", {headers: {"Accept": "application/json"}})
+              .then(function(response) { return response.json(); })
+              .then(function(alternativeData) {
+                var oldResult = suggestions.querySelector(".alternative-plan-result");
+                if (oldResult) oldResult.remove();
+                var result = document.createElement("div");
+                result.className = "alternative-plan-result";
+                if (alternativeData.ok && alternativeData.alternative_suggestion) {
+                  result.appendChild(renderPlanSuggestion(alternativeData.alternative_suggestion));
+                } else {
+                  result.className += " small text-danger mb-2";
+                  result.textContent = alternativeData.message || "No reliable alternative could be reconstructed.";
+                }
+                warning.insertAdjacentElement("afterend", result);
+              })
+              .catch(function() {
+                warningText.textContent = "❌ Reconstructing the alternative plan failed.";
+              })
+              .finally(function() {
+                alternativeButton.disabled = false;
+                alternativeButton.textContent = "Suggest alternative plan";
+              });
+          });
+          warning.appendChild(alternativeButton);
+          suggestions.appendChild(warning);
         }
         if (data.ai_status && (!data.plan_suggestion || !data.plan_suggestion.ai)) {
           var aiStatus = document.createElement("div");

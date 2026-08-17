@@ -3211,12 +3211,87 @@ def _polar_activity_debug_summary(raw):
     )
 
 
+def _watch_plan_is_clear_mismatch(plan_text, activities, suggestion):
+    """Only flag differences that are large enough to be unambiguous."""
+    if not plan_text or not activities:
+        return False
+    suggestion = suggestion or {}
+    if suggestion.get("mode") in {"structured_unmatched", "unclear"}:
+        return True
+    try:
+        confidence = float(suggestion.get("confidence"))
+    except (TypeError, ValueError):
+        confidence = None
+    if confidence is not None and confidence < 0.35:
+        return True
+    structure = _planned_interval_structure(plan_text)
+    if structure:
+        expected_reps = int(structure.get("reps_total") or 0)
+        detected_reps = len(suggestion.get("splits") or [])
+        if expected_reps and detected_reps:
+            allowed_difference = max(1, round(expected_reps * 0.35))
+            if abs(expected_reps - detected_reps) > allowed_difference:
+                return True
+    distance_spec = _planned_single_distance_spec(plan_text)
+    if distance_spec:
+        planned_m = float(distance_spec.get("distance_m") or 0)
+        measured = [float(item.get("distance_m") or 0) for item in activities]
+        measured = [value for value in measured if value > 0]
+        if planned_m > 0 and measured:
+            closest_m = min(measured, key=lambda value: abs(value - planned_m))
+            if abs(closest_m - planned_m) / max(closest_m, planned_m) > 0.4:
+                return True
+    return False
+
+
+def _build_alternative_watch_suggestion(activities, v4_sessions=None, athlete=None):
+    """Reconstruct a workout concept from watch data, without using the plan."""
+    suggestion = _build_polar_v4_lap_suggestion("", v4_sessions or [], athlete=athlete)
+    if suggestion:
+        suggestion.update({
+            "mode": "alternative_reconstruction", "title": "Alternative plan from watch laps",
+            "summary": "Reconstructed from Polar manual laps. Review the blocks before using this suggestion.",
+            "confidence": 0.85, "alternative": True,
+        })
+        return suggestion
+    candidates = []
+    for activity in activities or []:
+        split_info = _polar_exercise_splits(activity.get("raw") or {})
+        splits = split_info.get("splits") or []
+        candidates.append((len(splits), float(activity.get("distance_m") or 0), activity, splits, split_info.get("source") or ""))
+    if not candidates:
+        return None
+    _count, _distance, activity, splits, source = max(candidates, key=lambda item: (item[0], item[1]))
+    if not splits:
+        distance_m = float(activity.get("distance_m") or 0)
+        duration_s = float(activity.get("duration_seconds") or 0)
+        if distance_m <= 0 or duration_s <= 0:
+            return None
+        splits = [{"label": "Continuous block", "distance_m": round(distance_m),
+                   "duration": _format_seconds_hms(round(duration_s)), "duration_s": duration_s,
+                   "pace": _format_pace(duration_s, distance_m)}]
+        source, confidence = "activity total", 0.45
+    else:
+        confidence = 0.75 if len(splits) >= 3 else 0.6
+    total_m = sum(float(split.get("distance_m") or 0) for split in splits)
+    total_s = sum(float(split.get("duration_s") or 0) for split in splits)
+    summary = f"Reconstructed {len(splits)} block{'s' if len(splits) != 1 else ''} from {source or 'watch data'}"
+    if total_m > 0 and total_s > 0:
+        summary += f" | {total_m / 1000.0:.2f} km in {_format_seconds_hms(round(total_s))}"
+    summary += ". Review the blocks before using this suggestion."
+    return {"mode": "alternative_reconstruction", "activity_id": activity.get("id") or "alternative-watch-reconstruction",
+            "title": "Alternative plan from watch data", "summary": summary, "splits": splits,
+            "zone_totals": _watch_zone_totals_summary(athlete, splits) if athlete else "",
+            "confidence": confidence, "alternative": True, "ai": False}
+
+
 @login_required
 @require_GET
 def polar_activity_suggestions_view(request):
     athlete_id = (request.GET.get("athlete") or "").strip()
     day = (request.GET.get("date") or "").strip()
     planned_text = (request.GET.get("planned") or "").strip()
+    alternative_requested = request.GET.get("alternative") == "1"
     try:
         target_date = date.fromisoformat(day)
     except Exception:
@@ -3281,6 +3356,16 @@ def polar_activity_suggestions_view(request):
     activities.sort(key=lambda item: item.get("start_time") or "")
     v4_sessions, v4_status = _polar_v4_sessions_for_day(connection, target_date)
     v4_plan_suggestion = _build_polar_v4_lap_suggestion(planned_text, v4_sessions, athlete=athlete)
+    if alternative_requested:
+        alternative_suggestion = _build_alternative_watch_suggestion(
+            activities, v4_sessions=v4_sessions, athlete=athlete
+        )
+        return JsonResponse({
+            "ok": bool(alternative_suggestion),
+            "message": "" if alternative_suggestion else "The watch data was not detailed enough to reconstruct an alternative plan.",
+            "alternative_suggestion": alternative_suggestion,
+            "activities": [],
+        })
     if not activities and not v4_plan_suggestion:
         return JsonResponse({
             "ok": True,
@@ -3297,6 +3382,10 @@ def polar_activity_suggestions_view(request):
             plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, activities, athlete=athlete)
         if not plan_suggestion:
             plan_suggestion = _build_plan_watch_suggestion(planned_text, activities, athlete=athlete)
+    plan_mismatch = _watch_plan_is_clear_mismatch(planned_text, activities, plan_suggestion)
+    if plan_mismatch and plan_suggestion:
+        plan_suggestion["plan_mismatch"] = True
+        plan_suggestion["title"] = "❌ " + str(plan_suggestion.get("title") or "Plan mismatch")
     response_activities = []
     for activity in activities:
         cleaned = dict(activity)
@@ -3312,6 +3401,8 @@ def polar_activity_suggestions_view(request):
         "v4_plan_suggestion": v4_plan_suggestion,
         "plan_suggestion": plan_suggestion,
         "ai_status": ai_status,
+        "plan_mismatch": plan_mismatch,
+        "mismatch_message": "❌ Watch data does not match the planned training closely enough.",
         "watch_debug": watch_debug,
     })
 

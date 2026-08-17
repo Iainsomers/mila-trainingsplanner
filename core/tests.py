@@ -7,7 +7,44 @@ from django.template.loader import get_template
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
-from core.views.coach import _parse_pr_time_to_seconds, _race_line_text, _race_selected_count
+from core.views.coach import (
+    _build_alternative_watch_suggestion,
+    _parse_pr_time_to_seconds,
+    _race_line_text,
+    _race_selected_count,
+    _watch_plan_is_clear_mismatch,
+)
+
+
+class PolarPlanMismatchTests(TestCase):
+    def test_clear_structured_mismatch_is_flagged(self):
+        self.assertTrue(_watch_plan_is_clear_mismatch(
+            "12*400m t3",
+            [{"distance_m": 5000}],
+            {"mode": "structured_unmatched", "confidence": 0.2, "splits": []},
+        ))
+
+    def test_small_distance_difference_is_not_flagged(self):
+        self.assertFalse(_watch_plan_is_clear_mismatch(
+            "5km z2",
+            [{"distance_m": 5100}],
+            {"mode": "distance", "confidence": 0.8, "splits": []},
+        ))
+
+    def test_alternative_can_use_activity_total_as_safe_fallback(self):
+        suggestion = _build_alternative_watch_suggestion([{
+            "id": "polar-1", "distance_m": 5000, "duration_seconds": 1500, "raw": {},
+        }])
+
+        self.assertEqual(suggestion["mode"], "alternative_reconstruction")
+        self.assertEqual(suggestion["activity_id"], "polar-1")
+        self.assertEqual(suggestion["splits"][0]["label"], "Continuous block")
+        self.assertEqual(suggestion["confidence"], 0.45)
+
+    def test_mobile_ayc_contains_alternative_plan_action(self):
+        source = get_template("core/athlete_year_calendar.html").template.source
+        self.assertIn("Suggest alternative plan", source)
+        self.assertIn("&alternative=1", source)
 
 
 class TrainerPlanningListTests(TestCase):
