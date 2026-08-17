@@ -82,6 +82,7 @@ from core.views.slots import (
 )
 
 from core.views.stats_debug import stats_debug_view
+from core.views.coros import coros_status_view, coros_workout_push_view
 
 
 urlpatterns = [
@@ -100,6 +101,8 @@ urlpatterns = [
     path("integrations/polar/splits/", polar_splits_view, name="polar_splits"),
     path("integrations/polar/v4-laps-test/", polar_v4_laps_test_view, name="polar_v4_laps_test"),
     path("integrations/polar/activity-suggestions/", polar_activity_suggestions_view, name="polar_activity_suggestions"),
+    path("integrations/coros/status/", coros_status_view, name="coros_status"),
+    path("integrations/coros/workouts/", coros_workout_push_view, name="coros_workout_push"),
 
     # Coach console
     path("coach/", coach_console_view, name="coach_console"),

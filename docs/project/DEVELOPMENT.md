@@ -18,6 +18,8 @@ Gebruik de lokale virtual environment:
 .\.venv\Scripts\python.exe manage.py test core
 ```
 
+Voor COROS workout-pushes moeten na goedkeuring door COROS de Render-omgevingsvariabelen `COROS_PUSH_CLIENT` en `COROS_PUSH_SECRET` worden ingesteld. De publieke statuscheck heeft geen geheim nodig; de ontvangstroute weigert pushes zolang beide waarden ontbreken.
+
 Bij modelwijzigingen:
 
 ```powershell

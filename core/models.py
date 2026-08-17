@@ -1023,3 +1023,18 @@ class PolarConnection(models.Model):
     def legacy_athlete_day_check_label(self):
         return ""
         return f"{self.athlete} - {self.date} ({self.effective_status or '—'})"
+
+
+class CorosWorkoutPush(models.Model):
+    """Raw, authenticated COROS push awaiting athlete/OAuth processing."""
+
+    payload_hash = models.CharField(max_length=64, unique=True)
+    payload = models.JSONField(default=dict)
+    processed = models.BooleanField(default=False)
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-received_at", "-id"]
+
+    def __str__(self):
+        return f"COROS push {self.payload_hash[:12]}"

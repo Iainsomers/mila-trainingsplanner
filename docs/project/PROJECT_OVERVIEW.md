@@ -27,6 +27,7 @@ De centrale gegevens zijn:
 - Wedstrijden en geselecteerde afstanden.
 - Evaluaties, weekrapporten en dagelijkse waarden.
 - Standaard krachtprogramma's en Polar-koppelingen.
+- COROS-aanvraaginfrastructuur: publieke statuscheck, beveiligde/idempotente workout-pushontvangst en ruwe pushes die op latere OAuth-verwerking wachten.
 
 ## Planningsstroom
 
