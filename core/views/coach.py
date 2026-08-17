@@ -3343,8 +3343,24 @@ def _watch_pace_pattern_suggestion(activity, athlete=None):
     median_fast_m = _watch_quantile(fast_distances, 0.5)
     median_fast_s = _watch_quantile(fast_durations, 0.5)
     median_recovery_m = _watch_quantile(recovery_distances, 0.5) if recovery_distances else 0
-    variation = (max(fast_distances) - min(fast_distances)) / max(1, median_fast_m)
-    confidence = 0.72 if variation <= 0.35 else 0.58
+    fast_distance_spread = (
+        _watch_quantile(fast_distances, 0.8) - _watch_quantile(fast_distances, 0.2)
+    ) / max(1, median_fast_m)
+    fast_duration_spread = (
+        _watch_quantile(fast_durations, 0.8) - _watch_quantile(fast_durations, 0.2)
+    ) / max(1, median_fast_s)
+    recovery_spread = 0.0
+    if len(recovery_distances) >= 3:
+        recovery_spread = (
+            _watch_quantile(recovery_distances, 0.8) - _watch_quantile(recovery_distances, 0.2)
+        ) / max(1, median_recovery_m)
+
+    # A real repeating fartlek may vary slightly, but a collection ranging
+    # from a few seconds to several minutes is ordinary pace variation rather
+    # than a reconstructable workout structure.
+    if fast_distance_spread > 0.65 or fast_duration_spread > 0.65 or recovery_spread > 1.0:
+        return None
+    confidence = 0.76 if max(fast_distance_spread, fast_duration_spread) <= 0.35 else 0.62
     summary = f"Detected {len(fast_blocks)} sustained faster sections of about {round(median_fast_m)} m / {_format_seconds_hms(round(median_fast_s))}"
     if median_recovery_m:
         summary += f", with about {round(median_recovery_m)} m recovery between them"

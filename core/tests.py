@@ -78,6 +78,26 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual(len(suggestion["splits"]), 5)
         self.assertIn("5 sustained faster sections", suggestion["summary"])
 
+    def test_irregular_pace_changes_do_not_become_a_fake_interval_plan(self):
+        speeds = [10.0] * 60
+        for fast_seconds, easy_seconds in [(13, 40), (25, 70), (82, 25), (18, 95), (140, 35)]:
+            speeds.extend([16.0] * fast_seconds)
+            speeds.extend([10.0] * easy_seconds)
+        suggestion = _build_alternative_watch_suggestion([{
+            "id": "variable-run",
+            "distance_m": 4200,
+            "duration_seconds": len(speeds),
+            "raw": {
+                "distance": 4200,
+                "duration": f"PT{len(speeds)}S",
+                "samples": [{"sample_type": "1", "recording_rate": 1, "data": speeds}],
+            },
+        }])
+
+        self.assertEqual(suggestion["mode"], "alternative_reconstruction")
+        self.assertEqual(len(suggestion["splits"]), 1)
+        self.assertIn("no reliable lap structure", suggestion["summary"])
+
     def test_mobile_ayc_contains_alternative_plan_action(self):
         source = get_template("core/athlete_year_calendar.html").template.source
         self.assertIn("Suggest alternative plan", source)
