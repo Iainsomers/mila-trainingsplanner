@@ -33,6 +33,7 @@ Bij modelwijzigingen:
 - Meld bestaande, niet-gerelateerde testfouten expliciet; verberg ze niet.
 - Test zichtbaarheid en mutaties voor zowel trainer als atleet.
 - Test mobiele UI op AM én PM en op bestaande én lege invoer.
+- Polar-reconstructie heeft daarnaast een synthetische testbank in `core/tests_polar_reconstruction.py` met duurloop, progressieve loop, GPS-pieken, stops, korte versnellingen, tijdsintervallen, heuvelherhalingen en onregelmatige fartlek. Voeg bij nieuwe herkenningsregels zowel een positief als een misleidend negatief scenario toe.
 
 ## Git en Render
 

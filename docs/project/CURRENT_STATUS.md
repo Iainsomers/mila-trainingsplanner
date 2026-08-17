@@ -25,6 +25,7 @@ Bijgewerkt: 17 augustus 2026.
 - Een trainer met gedeelde toegang gebruikt bij AYC-opslag dezelfde toegangsregel als bij het bekijken van de atleet; vitals en reports worden daardoor niet meer stil genegeerd voor niet-eigen atleten.
 - Race Calendar combineert wedstrijd- en afstandsbeheer met de selectie per atleet. Trainer en atleet hebben eigen vinkjes, Target is gedeeld en de wedstrijdpil toont omlijnd of gevuld of er wederzijds akkoord is.
 - Polar markeert een duidelijke mismatch tussen plan en horlogedata met een rood kruis. Op verzoek kan een alternatief trainingsconcept uit laps, splits of activiteitstotaal worden gereconstrueerd, zonder de planning automatisch te overschrijven.
+- Polar-patroonherkenning wordt bewaakt met een synthetische horlogetestbank van positieve en misleidende scenario's; dit is de basis voor verdere tuning en eventueel een later model dat van trainercorrecties leert.
 
 ## Bekende aandachtspunten
 
