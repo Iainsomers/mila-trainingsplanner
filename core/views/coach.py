@@ -6854,6 +6854,11 @@ def trainer_stats_view(request):
         query = {"selection": "selection", "saved_selection": selection_id, "athletes": [str(value) for value in selected_ids]}
         return redirect(f"{reverse('trainer_stats')}?{urlencode(query, doseq=True)}")
 
+    show_results = request.GET.get("ok") == "1"
+    sort_mode = (request.GET.get("sort") or "name").strip().lower()
+    if sort_mode not in {"name", "previous", "this"}:
+        sort_mode = "name"
+
     selected_saved_selection = next(
         (item for item in dco_saved_selections if item["id"] == selected_saved_selection_id), None
     )
@@ -6881,6 +6886,8 @@ def trainer_stats_view(request):
         rows.append({
             "athlete": athlete,
             "has_planned_training": bool(totals[previous_week_start] or totals[this_week_start]),
+            "previous_week_m": totals[previous_week_start],
+            "this_week_m": totals[this_week_start],
             "previous_week_km": f"{totals[previous_week_start] / 1000.0:.1f}",
             "this_week_km": f"{totals[this_week_start] / 1000.0:.1f}",
         })
@@ -6890,6 +6897,26 @@ def trainer_stats_view(request):
     elif selection_mode != "all":
         rows = [row for row in rows if row["athlete"].id in selected_athlete_ids]
 
+    if sort_mode == "previous":
+        rows.sort(key=lambda row: (-row["previous_week_m"], row["athlete"].name.lower(), row["athlete"].id))
+    elif sort_mode == "this":
+        rows.sort(key=lambda row: (-row["this_week_m"], row["athlete"].name.lower(), row["athlete"].id))
+    else:
+        rows.sort(key=lambda row: (row["athlete"].name.lower(), row["athlete"].id))
+
+    selection_query = {"selection": selection_mode}
+    if selection_mode == "selection":
+        if selected_saved_selection_id:
+            selection_query["saved_selection"] = selected_saved_selection_id
+        selection_query["athletes"] = [str(value) for value in sorted(selected_athlete_ids)]
+    results_query = dict(selection_query)
+    results_query["ok"] = "1"
+
+    def stats_sort_url(value):
+        query = dict(results_query)
+        query["sort"] = value
+        return f"{reverse('trainer_stats')}?{urlencode(query, doseq=True)}"
+
     return render(request, "core/trainer_stats.html", {
         "rows": rows,
         "all_athletes": all_athletes,
@@ -6897,6 +6924,12 @@ def trainer_stats_view(request):
         "selected_athlete_ids": selected_athlete_ids,
         "dco_saved_selections": dco_saved_selections,
         "selected_saved_selection_id": selected_saved_selection_id,
+        "show_results": show_results,
+        "sort_mode": sort_mode,
+        "selection_url": f"{reverse('trainer_stats')}?{urlencode(selection_query, doseq=True)}",
+        "sort_name_url": stats_sort_url("name"),
+        "sort_previous_url": stats_sort_url("previous"),
+        "sort_this_url": stats_sort_url("this"),
         "previous_week_start": previous_week_start,
         "this_week_start": this_week_start,
     })

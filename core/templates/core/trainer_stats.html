@@ -22,9 +22,13 @@
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Stats <small class="text-muted fs-6">under development</small></h1>
-    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+    <div class="d-flex gap-2">
+      {% if show_results %}<a href="{{ selection_url }}" class="btn btn-outline-secondary">Selection</a>{% endif %}
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+    </div>
   </div>
 
+  {% if not show_results %}
   <form method="get" id="statsSelectionForm" class="card stats-selection-panel mb-3">
     <div class="card-body">
       <div class="row g-3 align-items-end">
@@ -84,7 +88,7 @@
       </div>
 
       <div class="mt-3">
-        <button type="submit" class="btn btn-primary">OK</button>
+        <button type="submit" name="ok" value="1" class="btn btn-primary">OK</button>
       </div>
     </div>
   </form>
@@ -97,15 +101,17 @@
     <input type="hidden" name="standard_selection" id="statsSelectionSaveStandard" value="">
     <div id="statsSelectionSaveAthletes"></div>
   </form>
+  {% endif %}
 
+  {% if show_results %}
   <div class="card">
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
           <tr>
-            <th>Athlete</th>
-            <th class="text-end">Previous week<br><small class="text-muted">from {{ previous_week_start|date:"d M" }}</small></th>
-            <th class="text-end">This week<br><small class="text-muted">from {{ this_week_start|date:"d M" }}</small></th>
+            <th><a href="{{ sort_name_url }}" class="text-decoration-none text-reset">Athlete{% if sort_mode == "name" %} ▲{% endif %}</a></th>
+            <th class="text-end"><a href="{{ sort_previous_url }}" class="text-decoration-none text-reset">Previous week{% if sort_mode == "previous" %} ▼{% endif %}<br><small class="text-muted">from {{ previous_week_start|date:"d M" }}</small></a></th>
+            <th class="text-end"><a href="{{ sort_this_url }}" class="text-decoration-none text-reset">This week{% if sort_mode == "this" %} ▼{% endif %}<br><small class="text-muted">from {{ this_week_start|date:"d M" }}</small></a></th>
           </tr>
         </thead>
         <tbody>
@@ -122,6 +128,7 @@
       </table>
     </div>
   </div>
+  {% endif %}
 </div>
 {% endblock %}
 

@@ -49,6 +49,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 ## Stats en DCO
 
 - Stats gebruikt voor atleetselectie dezelfde compacte bediening en dezelfde opgeslagen coachselecties als de Daily Coach Overview.
+- Stats scheidt selectie en resultaten in twee stappen. De resultatenkoppen zijn aanklikbaar; afstandskolommen sorteren aflopend en de naamkolom alfabetisch.
 
 ## Race Calendar
 

@@ -1315,13 +1315,11 @@ class TrainerStatsTests(TestCase):
         self.client.force_login(trainer)
 
         response = self.client.get(
-            f"/planning/stats/?selection=selection&athletes={selected.id}"
+            f"/planning/stats/?selection=selection&athletes={selected.id}&ok=1"
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="statsSelectionMode"', html=False)
-        self.assertContains(response, ">Trains<", html=False)
-        self.assertContains(response, ">Planned training<", html=False)
+        self.assertContains(response, "Selection")
         self.assertContains(response, "Selected Athlete")
         self.assertNotContains(response, '<td>Hidden Athlete</td>', html=False)
 
@@ -1336,11 +1334,24 @@ class TrainerStatsTests(TestCase):
         )
         self.client.force_login(trainer)
 
-        response = self.client.get("/planning/stats/")
+        selector = self.client.get("/planning/stats/")
+        response = self.client.get("/planning/stats/?selection=selection&saved_selection=squad-a&ok=1")
 
-        self.assertContains(response, "Squad A *")
+        self.assertContains(selector, "Squad A *")
         self.assertContains(response, '<td>Shared Selected</td>', html=False)
         self.assertNotContains(response, '<td>Shared Hidden</td>', html=False)
+
+    def test_stats_landing_page_shows_selector_before_results(self):
+        trainer = get_user_model().objects.create_user(username="statslanding", password="secret", is_staff=True)
+        Athlete.objects.create(owner=trainer, name="Landing Athlete", birth_year=2000, gender="X")
+        self.client.force_login(trainer)
+
+        response = self.client.get("/planning/stats/")
+
+        self.assertContains(response, 'id="statsSelectionMode"', html=False)
+        self.assertContains(response, ">Trains<", html=False)
+        self.assertContains(response, ">Planned training<", html=False)
+        self.assertNotContains(response, "Previous week")
 
     def test_tile_and_page_are_trainer_only(self):
         User = get_user_model()
@@ -1404,7 +1415,7 @@ class TrainerStatsTests(TestCase):
         )
 
         self.client.force_login(trainer)
-        response = self.client.get("/planning/stats/")
+        response = self.client.get("/planning/stats/?ok=1")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Distance Athlete")
@@ -1460,7 +1471,38 @@ class TrainerStatsTests(TestCase):
         )
 
         self.client.force_login(trainer)
-        response = self.client.get("/planning/stats/")
+        response = self.client.get("/planning/stats/?ok=1")
 
         self.assertContains(response, "Base Stats Athlete")
         self.assertContains(response, "7.0 km")
+
+    def test_stats_columns_sort_name_ascending_and_distances_descending(self):
+        trainer = get_user_model().objects.create_user(username="statssort", password="secret", is_staff=True)
+        alpha = Athlete.objects.create(owner=trainer, name="Alpha", birth_year=2000, gender="X")
+        bravo = Athlete.objects.create(owner=trainer, name="Bravo", birth_year=2000, gender="X")
+        this_week = date.today() - timedelta(days=date.today().weekday())
+        previous_week = this_week - timedelta(days=7)
+
+        for athlete, previous_m, current_m in ((alpha, 8000, 2000), (bravo, 1000, 10000)):
+            plan = TrainingPlan.objects.create(
+                owner=trainer,
+                name=f"{athlete.name} sort plan",
+                start_date=previous_week,
+                end_date=this_week + timedelta(days=6),
+            )
+            PlanMembership.objects.create(plan=plan, athlete=athlete)
+            for day, meters in ((previous_week, previous_m), (this_week, current_m)):
+                slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=1)
+                TrainingSegment.objects.create(
+                    slot=slot, type="CORE", text=f"{meters}m z2", zone="2",
+                    distance_m=meters, norm_distance_m=meters,
+                )
+        self.client.force_login(trainer)
+
+        by_name = self.client.get("/planning/stats/?ok=1")
+        by_previous = self.client.get("/planning/stats/?ok=1&sort=previous")
+        by_this = self.client.get("/planning/stats/?ok=1&sort=this")
+
+        self.assertEqual([row["athlete"].name for row in by_name.context["rows"]], ["Alpha", "Bravo"])
+        self.assertEqual([row["athlete"].name for row in by_previous.context["rows"]], ["Alpha", "Bravo"])
+        self.assertEqual([row["athlete"].name for row in by_this.context["rows"]], ["Bravo", "Alpha"])
