@@ -70,6 +70,7 @@ Compound onderdelen moeten afstand, zone en T-label per deel correct optellen.
 - Gekoppelde horlogedata kan delen van de invoer voorstellen of aanvullen.
 - Een dag is voltooid wanneer alle aanwezige trainingen een effectieve status hebben.
 - Een Polar-planmismatch wordt alleen gemarkeerd bij een duidelijke afwijking: een niet-herkende geplande structuur, zeer lage interpretatiezekerheid, een groot verschil in herhalingen of meer dan 40% afstandsverschil bij een enkel afstandsblok.
+- Staan op dezelfde dag meerdere sporten in Polar, dan gebruikt een gewone trainingsplanning alleen de hardloopactiviteit voor interpretatie. Alleen een planning die expliciet fietsen/cycling noemt gebruikt de fietsactiviteit. De overige activiteiten blijven afzonderlijk zichtbaar maar beïnvloeden de analyse niet.
 - Een alternatief Polar-plan wordt zonder de geplande tekst bij voorkeur uit handmatige laps opgebouwd. Zonder laps worden aanhoudende tempowisselingen uit de gladgestreken snelheidscurve gebruikt om herhaalde snelle en rustige stukken te herkennen; een versnelling moet minimaal circa 12 seconden duren en duidelijk sneller zijn dan het rustige tempo. Afstand en duur van de snelle stukken moeten onderling voldoende regelmatig zijn en herstelstukken mogen niet extreem uiteenlopen. Automatische kilometerpunten en gewone onregelmatige tempovariatie gelden niet als trainingsblokken. Zonder betrouwbaar patroon wordt alleen het activiteitstotaal als doorlopend blok met lage zekerheid voorgesteld. Het blijft altijd een controleerbaar voorstel.
 
 ## Daily vitals

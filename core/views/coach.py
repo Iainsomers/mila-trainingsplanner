@@ -3244,6 +3244,44 @@ def _watch_plan_is_clear_mismatch(plan_text, activities, suggestion):
     return False
 
 
+def _watch_activities_for_plan(plan_text, activities):
+    """Keep another sport on the same day out of the plan interpretation."""
+    activities = list(activities or [])
+    if not activities:
+        return []
+    text = str(plan_text or "").lower()
+    cycling_planned = any(term in text for term in ("cycling", "bike", "biking", "fiets", "fietsen"))
+
+    def sport(activity):
+        return str(activity.get("sport") or "").upper()
+
+    if cycling_planned:
+        selected = [activity for activity in activities if any(term in sport(activity) for term in ("CYCL", "BIKE"))]
+    else:
+        selected = [activity for activity in activities if any(term in sport(activity) for term in ("RUN", "JOG"))]
+    return selected or activities
+
+
+def _watch_v4_sessions_for_plan(plan_text, sessions):
+    sessions = list(sessions or [])
+    if not sessions:
+        return []
+    text = str(plan_text or "").lower()
+    cycling_planned = any(term in text for term in ("cycling", "bike", "biking", "fiets", "fietsen"))
+
+    def sport(session):
+        return str(
+            session.get("sport") or session.get("sportId") or session.get("sport-id")
+            or session.get("detailedSportInfo") or session.get("detailed-sport-info") or ""
+        ).upper()
+
+    if cycling_planned:
+        selected = [session for session in sessions if any(term in sport(session) for term in ("CYCL", "BIKE"))]
+    else:
+        selected = [session for session in sessions if any(term in sport(session) for term in ("RUN", "JOG"))]
+    return selected or sessions
+
+
 def _watch_quantile(values, fraction):
     ordered = sorted(float(value) for value in values)
     if not ordered:
@@ -3503,11 +3541,13 @@ def polar_activity_suggestions_view(request):
             })
 
     activities.sort(key=lambda item: item.get("start_time") or "")
+    analysis_activities = _watch_activities_for_plan(planned_text, activities)
     v4_sessions, v4_status = _polar_v4_sessions_for_day(connection, target_date)
-    v4_plan_suggestion = _build_polar_v4_lap_suggestion(planned_text, v4_sessions, athlete=athlete)
+    analysis_v4_sessions = _watch_v4_sessions_for_plan(planned_text, v4_sessions)
+    v4_plan_suggestion = _build_polar_v4_lap_suggestion(planned_text, analysis_v4_sessions, athlete=athlete)
     if alternative_requested:
         alternative_suggestion = _build_alternative_watch_suggestion(
-            activities, v4_sessions=v4_sessions, athlete=athlete
+            analysis_activities, v4_sessions=analysis_v4_sessions, athlete=athlete
         )
         return JsonResponse({
             "ok": bool(alternative_suggestion),
@@ -3524,14 +3564,14 @@ def polar_activity_suggestions_view(request):
     plan_suggestion = None
     ai_status = ""
     if planned_text:
-        if _should_use_direct_distance_splits(planned_text, activities):
-            plan_suggestion = _build_plan_watch_suggestion(planned_text, activities, athlete=athlete)
+        if _should_use_direct_distance_splits(planned_text, analysis_activities):
+            plan_suggestion = _build_plan_watch_suggestion(planned_text, analysis_activities, athlete=athlete)
             ai_status = "Mila direct distance split analysis created."
         if not plan_suggestion:
-            plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, activities, athlete=athlete)
+            plan_suggestion, ai_status = _build_ai_watch_suggestion(planned_text, analysis_activities, athlete=athlete)
         if not plan_suggestion:
-            plan_suggestion = _build_plan_watch_suggestion(planned_text, activities, athlete=athlete)
-    plan_mismatch = _watch_plan_is_clear_mismatch(planned_text, activities, plan_suggestion)
+            plan_suggestion = _build_plan_watch_suggestion(planned_text, analysis_activities, athlete=athlete)
+    plan_mismatch = _watch_plan_is_clear_mismatch(planned_text, analysis_activities, plan_suggestion)
     if plan_mismatch and plan_suggestion:
         plan_suggestion["plan_mismatch"] = True
         plan_suggestion["title"] = "❌ " + str(plan_suggestion.get("title") or "Plan mismatch")

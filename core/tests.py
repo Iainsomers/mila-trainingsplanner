@@ -12,11 +12,43 @@ from core.views.coach import (
     _parse_pr_time_to_seconds,
     _race_line_text,
     _race_selected_count,
+    _watch_activities_for_plan,
     _watch_plan_is_clear_mismatch,
+    _watch_v4_sessions_for_plan,
 )
 
 
 class PolarPlanMismatchTests(TestCase):
+    def test_running_plan_ignores_cycling_activity_on_same_day(self):
+        activities = [
+            {"id": "run", "sport": "RUNNING"},
+            {"id": "ride", "sport": "CYCLING"},
+        ]
+        self.assertEqual(
+            [item["id"] for item in _watch_activities_for_plan("6*200m z4", activities)],
+            ["run"],
+        )
+
+    def test_explicit_cycling_plan_selects_cycling_activity(self):
+        activities = [
+            {"id": "run", "sport": "RUNNING"},
+            {"id": "ride", "sport": "CYCLING"},
+        ]
+        self.assertEqual(
+            [item["id"] for item in _watch_activities_for_plan("45 min cycling z2", activities)],
+            ["ride"],
+        )
+
+    def test_v4_laps_are_also_filtered_by_planned_sport(self):
+        sessions = [
+            {"id": "run", "sport": "RUNNING"},
+            {"id": "ride", "sport": "CYCLING"},
+        ]
+        self.assertEqual(
+            [item["id"] for item in _watch_v4_sessions_for_plan("8*400m", sessions)],
+            ["run"],
+        )
+
     def test_clear_structured_mismatch_is_flagged(self):
         self.assertTrue(_watch_plan_is_clear_mismatch(
             "12*400m t3",

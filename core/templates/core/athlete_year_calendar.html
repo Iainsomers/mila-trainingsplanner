@@ -2057,11 +2057,17 @@
           suggestions.appendChild(renderWatchChoice(activity));
         });
         if (data.watch_debug && data.watch_debug.length) {
+          var debugDetails = document.createElement("details");
+          debugDetails.className = "small text-muted mt-2";
+          var debugSummary = document.createElement("summary");
+          debugSummary.textContent = "Technical watch details";
+          debugDetails.appendChild(debugSummary);
           var debug = document.createElement("pre");
-          debug.className = "small text-muted border rounded p-2 mt-2";
+          debug.className = "small text-muted border rounded p-2 mt-1";
           debug.style.whiteSpace = "pre-wrap";
           debug.textContent = data.watch_debug.join("\n\n");
-          suggestions.appendChild(debug);
+          debugDetails.appendChild(debug);
+          suggestions.appendChild(debugDetails);
         }
       })
       .catch(function() {
