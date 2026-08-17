@@ -5,7 +5,7 @@ from pathlib import Path
 from django.test import TestCase
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _segment_rep_time_label
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -1308,6 +1308,40 @@ class TrainingSegmentLabelTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_stats_uses_same_athlete_selector_modes_as_dco(self):
+        trainer = get_user_model().objects.create_user(username="selectorcoach", password="secret", is_staff=True)
+        selected = Athlete.objects.create(owner=trainer, name="Selected Athlete", birth_year=2000, gender="X")
+        Athlete.objects.create(owner=trainer, name="Hidden Athlete", birth_year=2001, gender="X")
+        self.client.force_login(trainer)
+
+        response = self.client.get(
+            f"/planning/stats/?selection=selection&athletes={selected.id}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="statsSelectionMode"', html=False)
+        self.assertContains(response, ">Trains<", html=False)
+        self.assertContains(response, ">Planned training<", html=False)
+        self.assertContains(response, "Selected Athlete")
+        self.assertNotContains(response, '<td>Hidden Athlete</td>', html=False)
+
+    def test_stats_loads_dco_saved_selection(self):
+        trainer = get_user_model().objects.create_user(username="sharedselectioncoach", password="secret", is_staff=True)
+        selected = Athlete.objects.create(owner=trainer, name="Shared Selected", birth_year=2000, gender="X")
+        Athlete.objects.create(owner=trainer, name="Shared Hidden", birth_year=2001, gender="X")
+        CoachSettings.objects.create(
+            user=trainer,
+            dco_saved_selections=[{"id": "squad-a", "name": "Squad A", "athlete_ids": [selected.id]}],
+            dco_standard_selection_id="squad-a",
+        )
+        self.client.force_login(trainer)
+
+        response = self.client.get("/planning/stats/")
+
+        self.assertContains(response, "Squad A *")
+        self.assertContains(response, '<td>Shared Selected</td>', html=False)
+        self.assertNotContains(response, '<td>Shared Hidden</td>', html=False)
+
     def test_tile_and_page_are_trainer_only(self):
         User = get_user_model()
         trainer = User.objects.create_user(username="statstrainer", password="secret", is_staff=True)

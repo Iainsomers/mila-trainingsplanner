@@ -99,7 +99,7 @@ Selectie op datum, AM/PM, alle atleten, selectie, trains, geplande training en o
 
 ## Stats
 
-Trainer-only, nog in ontwikkeling. Toont per atleet de totale kilometers van deze en vorige week.
+Trainer-only, nog in ontwikkeling. Toont per atleet de totale kilometers van deze en vorige week. De atleetselector gebruikt dezelfde standen, opgeslagen selecties, standaardselectie en `Trains`-lijst als de Daily Coach Overview. `Planned training` beperkt Stats tot atleten met geplande loopkilometers in een van de twee getoonde weken.
 
 ## Polar
 

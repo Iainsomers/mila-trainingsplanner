@@ -2,12 +2,101 @@
 
 {% block title %}Stats (under development){% endblock %}
 
+{% block extra_head %}
+<style>
+  .stats-selection-panel { max-width: 760px; }
+  .stats-athlete-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 6px 12px;
+    max-height: 300px;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Stats <small class="text-muted fs-6">under development</small></h1>
     <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
   </div>
+
+  <form method="get" id="statsSelectionForm" class="card stats-selection-panel mb-3">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-sm-4">
+          <label class="form-label">Selection</label>
+          <select name="selection" id="statsSelectionMode" class="form-select">
+            <option value="all" {% if selection_mode == "all" %}selected{% endif %}>All</option>
+            <option value="selection" {% if selection_mode == "selection" %}selected{% endif %}>Selection</option>
+            <option value="trains" {% if selection_mode == "trains" %}selected{% endif %}>Trains</option>
+            <option value="planned_training" {% if selection_mode == "planned_training" %}selected{% endif %}>Planned training</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="statsAthleteSelection" class="mt-3 {% if selection_mode != 'selection' %}d-none{% endif %}">
+        <div class="row g-2 align-items-end mb-2">
+          <div class="col-sm-4">
+            <label class="form-label">Load selection</label>
+            <select name="saved_selection" id="statsSavedSelection" class="form-select">
+              <option value="">Manual selection</option>
+              {% for saved in dco_saved_selections %}
+                <option
+                  value="{{ saved.id }}"
+                  data-name="{{ saved.name|escape }}"
+                  data-athletes="{{ saved.athlete_ids_csv }}"
+                  data-standard="{% if saved.is_standard %}1{% else %}0{% endif %}"
+                  {% if saved.id == selected_saved_selection_id %}selected{% endif %}
+                >{{ saved.name }}{% if saved.is_standard %} *{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label">Save as</label>
+            <input type="text" id="statsSelectionNameInput" class="form-control" value="">
+          </div>
+          <div class="col-sm-2">
+            <label class="form-check mb-2">
+              <input type="checkbox" id="statsStandardSelectionInput" class="form-check-input">
+              <span class="form-check-label">Standard selection</span>
+            </label>
+          </div>
+          <div class="col-sm-2">
+            <button type="button" id="statsSaveSelectionBtn" class="btn btn-outline-primary btn-sm w-100">Save</button>
+          </div>
+        </div>
+        <label class="form-label">Athletes</label>
+        <div class="stats-athlete-list">
+          {% for athlete in all_athletes %}
+            <label class="form-check mb-0">
+              <input type="checkbox" class="form-check-input" name="athletes" value="{{ athlete.id }}" {% if athlete.id in selected_athlete_ids %}checked{% endif %}>
+              <span class="form-check-label">{{ athlete.name }}</span>
+            </label>
+          {% empty %}
+            <span class="text-muted">No athletes found.</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary">OK</button>
+      </div>
+    </div>
+  </form>
+
+  <form method="post" id="statsSelectionSaveForm" class="d-none">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_dco_selection">
+    <input type="hidden" name="saved_selection" id="statsSelectionSaveId" value="{{ selected_saved_selection_id }}">
+    <input type="hidden" name="selection_name" id="statsSelectionSaveName" value="">
+    <input type="hidden" name="standard_selection" id="statsSelectionSaveStandard" value="">
+    <div id="statsSelectionSaveAthletes"></div>
+  </form>
 
   <div class="card">
     <div class="table-responsive">
@@ -34,4 +123,56 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const form = document.getElementById("statsSelectionForm");
+  const mode = document.getElementById("statsSelectionMode");
+  const athleteSelection = document.getElementById("statsAthleteSelection");
+  const savedSelection = document.getElementById("statsSavedSelection");
+  const nameInput = document.getElementById("statsSelectionNameInput");
+  const standardInput = document.getElementById("statsStandardSelectionInput");
+  const saveButton = document.getElementById("statsSaveSelectionBtn");
+  const saveForm = document.getElementById("statsSelectionSaveForm");
+
+  function updateVisibility() {
+    if (athleteSelection && mode) athleteSelection.classList.toggle("d-none", mode.value !== "selection");
+  }
+  function loadSavedSelection() {
+    if (!savedSelection || !form) return;
+    const option = savedSelection.options[savedSelection.selectedIndex];
+    if (nameInput) nameInput.value = option ? (option.getAttribute("data-name") || "") : "";
+    if (standardInput) standardInput.checked = !!(option && option.getAttribute("data-standard") === "1");
+    if (option && savedSelection.value) {
+      const selectedIds = new Set((option.getAttribute("data-athletes") || "").split(",").filter(Boolean));
+      form.querySelectorAll("input[name='athletes']").forEach(function(input) {
+        input.checked = selectedIds.has(input.value);
+      });
+    }
+  }
+  if (mode) mode.addEventListener("change", updateVisibility);
+  if (savedSelection) savedSelection.addEventListener("change", loadSavedSelection);
+  if (saveButton && form && saveForm) {
+    saveButton.addEventListener("click", function() {
+      document.getElementById("statsSelectionSaveId").value = savedSelection ? savedSelection.value : "";
+      document.getElementById("statsSelectionSaveName").value = nameInput ? nameInput.value : "";
+      document.getElementById("statsSelectionSaveStandard").value = standardInput && standardInput.checked ? "on" : "";
+      const selectedBox = document.getElementById("statsSelectionSaveAthletes");
+      selectedBox.innerHTML = "";
+      form.querySelectorAll("input[name='athletes']:checked").forEach(function(input) {
+        const hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = "athletes";
+        hidden.value = input.value;
+        selectedBox.appendChild(hidden);
+      });
+      saveForm.submit();
+    });
+  }
+  updateVisibility();
+  loadSavedSelection();
+})();
+</script>
 {% endblock %}

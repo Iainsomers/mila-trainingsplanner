@@ -46,6 +46,10 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 - Trainerselectie blijft beschikbaar voor trainers.
 - Toon alle trainingsonderdelen, zones en tijden.
 
+## Stats en DCO
+
+- Stats gebruikt voor atleetselectie dezelfde compacte bediening en dezelfde opgeslagen coachselecties als de Daily Coach Overview.
+
 ## Race Calendar
 
 - Houd de lijstweergave compact op één regel: datum, een uitgelijnde naamkolom en bestaande afstanden zijn direct zichtbaar.

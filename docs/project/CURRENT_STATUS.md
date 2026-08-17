@@ -16,6 +16,7 @@ Bijgewerkt: 17 augustus 2026.
 - PR-invoer gebruikt afstandspecifieke tijdformaten, inclusief 400 m boven 60 seconden.
 - Tijdgebaseerde trainingsonderdelen tonen tempo in min/km.
 - Trainerstats toont huidige en vorige weekkilometers.
+- Trainerstats deelt nu de volledige atleetselectie met de DCO, inclusief opgeslagen en standaardselecties, `Trains` en `Planned training`.
 - Standard Strength is vanuit Mob/Tech beschikbaar.
 - Atleten kunnen hun Base Planning alleen-lezen bekijken.
 - Mobiele AYC ondersteunt gekleurde Week reports, Daily vitals via een hartpopup en compacte weekgemiddelden.
