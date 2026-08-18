@@ -1366,13 +1366,18 @@ class TrainerStatsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["selected_months"], 1)
-        self.assertEqual(len(response.context["weeks"]), 5)
-        self.assertEqual(response.context["average_km"], "4.0")
+        self.assertEqual(len(response.context["weeks"]), 4)
+        self.assertEqual(response.context["average_km"], "3.8")
         self.assertEqual(response.context["minimum_km"], "0.0")
         self.assertEqual(response.context["maximum_km"], "15.0")
         self.assertContains(response, "Weekly average")
         self.assertContains(response, "Highest week")
         self.assertContains(response, "Lowest week")
+
+        custom_period = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=17")
+        self.assertEqual(custom_period.context["selected_months"], 17)
+        self.assertEqual(len(custom_period.context["weeks"]), 74)
+        self.assertContains(custom_period, 'value="17"', html=False)
 
     def test_athlete_chart_is_trainer_only_and_respects_ownership(self):
         owner = get_user_model().objects.create_user(username="chartowner", password="secret", is_staff=True)

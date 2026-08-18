@@ -6962,13 +6962,12 @@ def trainer_athlete_stats_view(request, athlete_id):
         _filter_owned(Athlete.objects.all(), request.user),
         id=athlete_id,
     )
-    month_options = {1: 5, 3: 13, 6: 26, 12: 52}
     try:
         selected_months = int(request.GET.get("months") or 6)
     except (TypeError, ValueError):
         selected_months = 6
-    if selected_months not in month_options:
-        selected_months = 6
+    selected_months = min(max(selected_months, 1), 120)
+    week_count = max(1, round(selected_months * 52 / 12))
 
     plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
     current_week_start = date.today() - timedelta(days=date.today().weekday())
@@ -6976,7 +6975,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         athlete,
         plans,
         current_week_start,
-        week_count=month_options[selected_months],
+        week_count=week_count,
     )
 
     chart_width = 900
@@ -7018,7 +7017,6 @@ def trainer_athlete_stats_view(request, athlete_id):
     return render(request, "core/trainer_athlete_stats.html", {
         "athlete": athlete,
         "weeks": weeks,
-        "month_options": month_options.keys(),
         "selected_months": selected_months,
         "y_ticks": y_ticks,
         "chart_width": chart_width,

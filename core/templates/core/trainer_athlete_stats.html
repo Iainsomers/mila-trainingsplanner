@@ -34,11 +34,11 @@
         <h2 class="h5 mb-0">Total km per week</h2>
         <form method="get" class="d-flex align-items-center gap-2">
           <label for="statsPeriod" class="form-label mb-0">Period</label>
-          <select name="months" id="statsPeriod" class="form-select form-select-sm stats-period-select" onchange="this.form.submit()">
-            {% for months in month_options %}
-              <option value="{{ months }}" {% if months == selected_months %}selected{% endif %}>{{ months }} month{% if months != 1 %}s{% endif %}</option>
-            {% endfor %}
-          </select>
+          <div class="input-group input-group-sm stats-period-select">
+            <input type="number" name="months" id="statsPeriod" class="form-control" value="{{ selected_months }}" min="1" max="120" step="1" aria-label="Number of months">
+            <span class="input-group-text">months</span>
+          </div>
+          <button type="submit" class="btn btn-sm btn-outline-primary">Show</button>
         </form>
       </div>
       <div class="overflow-x-auto">
