@@ -6968,13 +6968,19 @@ def trainer_athlete_stats_view(request, athlete_id):
         selected_months = 6
     selected_months = min(max(selected_months, 1), 120)
     week_count = max(1, round(selected_months * 52 / 12))
+    try:
+        period_index = int(request.GET.get("period") or 0)
+    except (TypeError, ValueError):
+        period_index = 0
+    period_index = min(max(period_index, 0), 120)
 
     plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
     current_week_start = date.today() - timedelta(days=date.today().weekday())
+    period_last_week_start = current_week_start - timedelta(weeks=week_count * period_index)
     weeks = _athlete_week_distance_history(
         athlete,
         plans,
-        current_week_start,
+        period_last_week_start,
         week_count=week_count,
     )
 
@@ -7018,6 +7024,16 @@ def trainer_athlete_stats_view(request, athlete_id):
         "athlete": athlete,
         "weeks": weeks,
         "selected_months": selected_months,
+        "period_index": period_index,
+        "previous_period_url": (
+            f"{reverse('trainer_athlete_stats', args=[athlete.id])}?"
+            f"{urlencode({'months': selected_months, 'period': period_index + 1})}"
+        ),
+        "next_period_url": (
+            f"{reverse('trainer_athlete_stats', args=[athlete.id])}?"
+            f"{urlencode({'months': selected_months, 'period': period_index - 1})}"
+            if period_index > 0 else ""
+        ),
         "y_ticks": y_ticks,
         "chart_width": chart_width,
         "chart_height": chart_height,

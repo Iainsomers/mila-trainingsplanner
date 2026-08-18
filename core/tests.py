@@ -1379,6 +1379,17 @@ class TrainerStatsTests(TestCase):
         self.assertEqual(len(custom_period.context["weeks"]), 74)
         self.assertContains(custom_period, 'value="17"', html=False)
 
+        previous_period = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=1&period=1")
+        self.assertEqual(previous_period.context["period_index"], 1)
+        self.assertEqual(
+            previous_period.context["period_end"] + timedelta(days=1),
+            response.context["period_start"],
+        )
+        self.assertContains(previous_period, "Previous period")
+        self.assertContains(previous_period, "Next period")
+        self.assertIn("period=0", previous_period.context["next_period_url"])
+        self.assertEqual(response.context["next_period_url"], "")
+
     def test_athlete_chart_is_trainer_only_and_respects_ownership(self):
         owner = get_user_model().objects.create_user(username="chartowner", password="secret", is_staff=True)
         other_trainer = get_user_model().objects.create_user(username="chartother", password="secret", is_staff=True)

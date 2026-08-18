@@ -17,7 +17,7 @@ Bijgewerkt: 18 augustus 2026.
 - Tijdgebaseerde trainingsonderdelen tonen tempo in min/km.
 - Trainerstats toont huidige en vorige weekkilometers.
 - Trainerstats deelt nu de volledige atleetselectie met de DCO, inclusief opgeslagen en standaardselecties, `Trains` en `Planned training`.
-- Vanuit Trainerstats opent iedere atleet een eigen grafiek met de effectieve weekkilometers over een vrij in te vullen aantal maanden en een samenvatting met gemiddelde, hoogste en laagste week.
+- Vanuit Trainerstats opent iedere atleet een eigen grafiek met de effectieve weekkilometers over een vrij in te vullen aantal maanden, periodepijlen en een samenvatting met gemiddelde, hoogste en laagste week.
 - Standard Strength is vanuit Mob/Tech beschikbaar.
 - Atleten kunnen hun Base Planning alleen-lezen bekijken.
 - Mobiele AYC ondersteunt gekleurde Week reports, Daily vitals via een hartpopup en compacte weekgemiddelden.

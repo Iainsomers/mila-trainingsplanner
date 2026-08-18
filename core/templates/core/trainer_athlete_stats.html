@@ -32,14 +32,22 @@
     <div class="card-body">
       <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
         <h2 class="h5 mb-0">Total km per week</h2>
-        <form method="get" class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2">
           <label for="statsPeriod" class="form-label mb-0">Period</label>
-          <div class="input-group input-group-sm stats-period-select">
-            <input type="number" name="months" id="statsPeriod" class="form-control" value="{{ selected_months }}" min="1" max="120" step="1" aria-label="Number of months">
-            <span class="input-group-text">months</span>
-          </div>
-          <button type="submit" class="btn btn-sm btn-outline-primary">Show</button>
-        </form>
+          <a href="{{ previous_period_url }}" class="btn btn-sm btn-outline-secondary" aria-label="Previous period" title="Previous period">←</a>
+          <form method="get" class="d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm stats-period-select">
+              <input type="number" name="months" id="statsPeriod" class="form-control" value="{{ selected_months }}" min="1" max="120" step="1" aria-label="Number of months">
+              <span class="input-group-text">months</span>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary">Show</button>
+          </form>
+          {% if next_period_url %}
+            <a href="{{ next_period_url }}" class="btn btn-sm btn-outline-secondary" aria-label="Next period" title="Next period">→</a>
+          {% else %}
+            <button type="button" class="btn btn-sm btn-outline-secondary" aria-label="Next period" title="Next period" disabled>→</button>
+          {% endif %}
+        </div>
       </div>
       <div class="overflow-x-auto">
         <svg class="weekly-distance-chart w-100" viewBox="0 0 {{ chart_width }} {{ chart_height }}" role="img" aria-label="Weekly distance in kilometres for {{ athlete.name }}">
