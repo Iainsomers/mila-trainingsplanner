@@ -6962,9 +6962,22 @@ def trainer_athlete_stats_view(request, athlete_id):
         _filter_owned(Athlete.objects.all(), request.user),
         id=athlete_id,
     )
+    month_options = {1: 5, 3: 13, 6: 26, 12: 52}
+    try:
+        selected_months = int(request.GET.get("months") or 6)
+    except (TypeError, ValueError):
+        selected_months = 6
+    if selected_months not in month_options:
+        selected_months = 6
+
     plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
     current_week_start = date.today() - timedelta(days=date.today().weekday())
-    weeks = _athlete_week_distance_history(athlete, plans, current_week_start)
+    weeks = _athlete_week_distance_history(
+        athlete,
+        plans,
+        current_week_start,
+        week_count=month_options[selected_months],
+    )
 
     chart_width = 900
     chart_height = 360
@@ -6975,6 +6988,9 @@ def trainer_athlete_stats_view(request, athlete_id):
     plot_width = chart_width - plot_left - plot_right
     plot_height = chart_height - plot_top - plot_bottom
     maximum_km = max((week["km"] for week in weeks), default=0.0)
+    minimum_week = min(weeks, key=lambda week: week["km"])
+    maximum_week = max(weeks, key=lambda week: week["km"])
+    average_km = sum(week["km"] for week in weeks) / len(weeks)
     axis_max_km = max(10.0, math.ceil(maximum_km / 10.0) * 10.0)
     column_width = plot_width / len(weeks)
     bar_width = column_width * 0.68
@@ -7002,6 +7018,8 @@ def trainer_athlete_stats_view(request, athlete_id):
     return render(request, "core/trainer_athlete_stats.html", {
         "athlete": athlete,
         "weeks": weeks,
+        "month_options": month_options.keys(),
+        "selected_months": selected_months,
         "y_ticks": y_ticks,
         "chart_width": chart_width,
         "chart_height": chart_height,
@@ -7011,6 +7029,11 @@ def trainer_athlete_stats_view(request, athlete_id):
         "plot_bottom_y": plot_top + plot_height,
         "period_start": weeks[0]["week_start"],
         "period_end": weeks[-1]["week_start"] + timedelta(days=6),
+        "average_km": f"{average_km:.1f}",
+        "minimum_km": f'{minimum_week["km"]:.1f}',
+        "minimum_week_start": minimum_week["week_start"],
+        "maximum_km": f'{maximum_week["km"]:.1f}',
+        "maximum_week_start": maximum_week["week_start"],
     })
 
 

@@ -1339,6 +1339,41 @@ class TrainerStatsTests(TestCase):
         self.assertEqual(detail.context["weeks"][0]["km_label"], "5.0")
         self.assertEqual(detail.context["weeks"][-1]["km_label"], "12.0")
 
+    def test_athlete_chart_period_selector_updates_weeks_and_summary(self):
+        trainer = get_user_model().objects.create_user(username="periodcoach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Period Athlete", birth_year=2000, gender="X")
+        current_week = date.today() - timedelta(days=date.today().weekday())
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Period plan",
+            start_date=current_week - timedelta(weeks=4),
+            end_date=current_week + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        for offset, meters in ((-4, 5000), (0, 15000)):
+            slot = TrainingSlot.objects.create(
+                plan=plan,
+                date=current_week + timedelta(weeks=offset),
+                slot_index=1,
+            )
+            TrainingSegment.objects.create(
+                slot=slot, type="CORE", text=f"{meters}m z2", zone="2",
+                distance_m=meters, norm_distance_m=meters,
+            )
+        self.client.force_login(trainer)
+
+        response = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_months"], 1)
+        self.assertEqual(len(response.context["weeks"]), 5)
+        self.assertEqual(response.context["average_km"], "4.0")
+        self.assertEqual(response.context["minimum_km"], "0.0")
+        self.assertEqual(response.context["maximum_km"], "15.0")
+        self.assertContains(response, "Weekly average")
+        self.assertContains(response, "Highest week")
+        self.assertContains(response, "Lowest week")
+
     def test_athlete_chart_is_trainer_only_and_respects_ownership(self):
         owner = get_user_model().objects.create_user(username="chartowner", password="secret", is_staff=True)
         other_trainer = get_user_model().objects.create_user(username="chartother", password="secret", is_staff=True)

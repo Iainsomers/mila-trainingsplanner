@@ -51,7 +51,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 - Stats gebruikt voor atleetselectie dezelfde compacte bediening en dezelfde opgeslagen coachselecties als de Daily Coach Overview.
 - Stats scheidt selectie en resultaten in twee stappen. De resultatenkoppen zijn aanklikbaar; afstandskolommen sorteren aflopend en de naamkolom alfabetisch.
-- Atleetnamen in Stats zijn aanklikbaar. De detailpagina toont de laatste 26 trainingsweken als een responsieve kilometerstaafgrafiek en vermeldt dat de huidige week nog onvolledig kan zijn.
+- Atleetnamen in Stats zijn aanklikbaar. De detailpagina toont 1, 3, 6 of 12 maanden als een responsieve kilometerstaafgrafiek, met 6 maanden als standaard. Gemiddelde, hoogste en laagste week staan compact onder de grafiek; de pagina vermeldt dat de huidige week nog onvolledig kan zijn.
 
 ## Race Calendar
 

@@ -9,6 +9,12 @@
   .weekly-distance-chart .axis-label { fill: #6c757d; font-size: 12px; }
   .weekly-distance-chart .week-bar { fill: #f57c20; }
   .weekly-distance-chart .week-bar:hover { fill: #d9650e; }
+  .stats-period-select { width: 125px; }
+  .stats-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .stats-summary-value { font-size: 1.35rem; font-weight: 600; }
+  @media (max-width: 575.98px) {
+    .stats-summary { grid-template-columns: 1fr; }
+  }
 </style>
 {% endblock %}
 
@@ -24,7 +30,17 @@
 
   <div class="card">
     <div class="card-body">
-      <h2 class="h5 mb-3">Total km per week</h2>
+      <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+        <h2 class="h5 mb-0">Total km per week</h2>
+        <form method="get" class="d-flex align-items-center gap-2">
+          <label for="statsPeriod" class="form-label mb-0">Period</label>
+          <select name="months" id="statsPeriod" class="form-select form-select-sm stats-period-select" onchange="this.form.submit()">
+            {% for months in month_options %}
+              <option value="{{ months }}" {% if months == selected_months %}selected{% endif %}>{{ months }} month{% if months != 1 %}s{% endif %}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
       <div class="overflow-x-auto">
         <svg class="weekly-distance-chart w-100" viewBox="0 0 {{ chart_width }} {{ chart_height }}" role="img" aria-label="Weekly distance in kilometres for {{ athlete.name }}">
           {% for tick in y_ticks %}
@@ -43,6 +59,22 @@
         </svg>
       </div>
       <div class="small text-muted mt-2">Each bar represents a Monday–Sunday training week. The current week may still be incomplete.</div>
+      <div class="stats-summary mt-4">
+        <div class="border rounded p-3">
+          <div class="small text-muted">Weekly average</div>
+          <div class="stats-summary-value">{{ average_km }} km</div>
+        </div>
+        <div class="border rounded p-3">
+          <div class="small text-muted">Highest week</div>
+          <div class="stats-summary-value">{{ maximum_km }} km</div>
+          <div class="small text-muted">from {{ maximum_week_start|date:"d M Y" }}</div>
+        </div>
+        <div class="border rounded p-3">
+          <div class="small text-muted">Lowest week</div>
+          <div class="stats-summary-value">{{ minimum_km }} km</div>
+          <div class="small text-muted">from {{ minimum_week_start|date:"d M Y" }}</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
