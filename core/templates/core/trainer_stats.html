@@ -117,7 +117,7 @@
         <tbody>
           {% for row in rows %}
           <tr>
-            <td>{{ row.athlete.name }}</td>
+            <td><a href="{% url 'trainer_athlete_stats' row.athlete.id %}" class="fw-semibold text-decoration-none">{{ row.athlete.name }}</a></td>
             <td class="text-end fw-semibold">{{ row.previous_week_km }} km</td>
             <td class="text-end fw-semibold">{{ row.this_week_km }} km</td>
           </tr>

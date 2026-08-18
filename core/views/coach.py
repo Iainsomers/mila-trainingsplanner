@@ -6790,6 +6790,23 @@ def _effective_week_distance_m(athlete, plans, week_start):
     return totals
 
 
+def _athlete_week_distance_history(athlete, plans, last_week_start, week_count=26):
+    first_week_start = last_week_start - timedelta(days=7 * (week_count - 1))
+    totals_by_week = {}
+    for offset in range(0, week_count, 2):
+        pair_start = first_week_start + timedelta(days=7 * offset)
+        pair_totals = _effective_week_distance_m(athlete, plans, pair_start)
+        totals_by_week.update(pair_totals)
+
+    return [
+        {
+            "week_start": first_week_start + timedelta(days=7 * offset),
+            "km": totals_by_week.get(first_week_start + timedelta(days=7 * offset), 0.0) / 1000.0,
+        }
+        for offset in range(week_count)
+    ]
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def trainer_stats_view(request):
@@ -6932,6 +6949,68 @@ def trainer_stats_view(request):
         "sort_this_url": stats_sort_url("this"),
         "previous_week_start": previous_week_start,
         "this_week_start": this_week_start,
+    })
+
+
+@login_required
+@require_GET
+def trainer_athlete_stats_view(request, athlete_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Not allowed", status=403)
+
+    athlete = get_object_or_404(
+        _filter_owned(Athlete.objects.all(), request.user),
+        id=athlete_id,
+    )
+    plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+    current_week_start = date.today() - timedelta(days=date.today().weekday())
+    weeks = _athlete_week_distance_history(athlete, plans, current_week_start)
+
+    chart_width = 900
+    chart_height = 360
+    plot_left = 60
+    plot_right = 20
+    plot_top = 24
+    plot_bottom = 48
+    plot_width = chart_width - plot_left - plot_right
+    plot_height = chart_height - plot_top - plot_bottom
+    maximum_km = max((week["km"] for week in weeks), default=0.0)
+    axis_max_km = max(10.0, math.ceil(maximum_km / 10.0) * 10.0)
+    column_width = plot_width / len(weeks)
+    bar_width = column_width * 0.68
+
+    for index, week in enumerate(weeks):
+        bar_height = (week["km"] / axis_max_km) * plot_height
+        week.update({
+            "km_label": f'{week["km"]:.1f}',
+            "x": plot_left + (index * column_width) + ((column_width - bar_width) / 2),
+            "y": plot_top + plot_height - bar_height,
+            "width": bar_width,
+            "height": bar_height,
+            "show_label": index % 4 == 0 or index == len(weeks) - 1,
+            "label_x": plot_left + (index * column_width) + (column_width / 2),
+        })
+
+    y_ticks = []
+    for index in range(5):
+        value = axis_max_km * index / 4
+        y_ticks.append({
+            "value": f"{value:.0f}",
+            "y": plot_top + plot_height - ((value / axis_max_km) * plot_height),
+        })
+
+    return render(request, "core/trainer_athlete_stats.html", {
+        "athlete": athlete,
+        "weeks": weeks,
+        "y_ticks": y_ticks,
+        "chart_width": chart_width,
+        "chart_height": chart_height,
+        "plot_left": plot_left,
+        "plot_right_x": chart_width - plot_right,
+        "plot_top": plot_top,
+        "plot_bottom_y": plot_top + plot_height,
+        "period_start": weeks[0]["week_start"],
+        "period_end": weeks[-1]["week_start"] + timedelta(days=6),
     })
 
 

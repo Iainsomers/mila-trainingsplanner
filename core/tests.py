@@ -1308,6 +1308,49 @@ class TrainingSegmentLabelTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_athlete_name_links_to_six_month_weekly_distance_chart(self):
+        trainer = get_user_model().objects.create_user(username="chartcoach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Chart Athlete", birth_year=2000, gender="X")
+        current_week = date.today() - timedelta(days=date.today().weekday())
+        first_week = current_week - timedelta(weeks=25)
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Chart plan",
+            start_date=first_week,
+            end_date=current_week + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        for day, meters in ((first_week, 5000), (current_week, 12000)):
+            slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=1)
+            TrainingSegment.objects.create(
+                slot=slot, type="CORE", text=f"{meters}m z2", zone="2",
+                distance_m=meters, norm_distance_m=meters,
+            )
+        self.client.force_login(trainer)
+
+        overview = self.client.get("/planning/stats/?ok=1")
+        detail = self.client.get(f"/planning/stats/athlete/{athlete.id}/")
+
+        self.assertContains(overview, f'/planning/stats/athlete/{athlete.id}/')
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, "Total km per week")
+        self.assertContains(detail, "The current week may still be incomplete.")
+        self.assertEqual(len(detail.context["weeks"]), 26)
+        self.assertEqual(detail.context["weeks"][0]["km_label"], "5.0")
+        self.assertEqual(detail.context["weeks"][-1]["km_label"], "12.0")
+
+    def test_athlete_chart_is_trainer_only_and_respects_ownership(self):
+        owner = get_user_model().objects.create_user(username="chartowner", password="secret", is_staff=True)
+        other_trainer = get_user_model().objects.create_user(username="chartother", password="secret", is_staff=True)
+        athlete_user = get_user_model().objects.create_user(username="chartathlete", password="secret")
+        athlete = Athlete.objects.create(owner=owner, name="Private Chart Athlete", birth_year=2000, gender="X")
+
+        self.client.force_login(other_trainer)
+        self.assertEqual(self.client.get(f"/planning/stats/athlete/{athlete.id}/").status_code, 404)
+
+        self.client.force_login(athlete_user)
+        self.assertEqual(self.client.get(f"/planning/stats/athlete/{athlete.id}/").status_code, 403)
+
     def test_stats_uses_same_athlete_selector_modes_as_dco(self):
         trainer = get_user_model().objects.create_user(username="selectorcoach", password="secret", is_staff=True)
         selected = Athlete.objects.create(owner=trainer, name="Selected Athlete", birth_year=2000, gender="X")
@@ -1321,7 +1364,7 @@ class TrainerStatsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Selection")
         self.assertContains(response, "Selected Athlete")
-        self.assertNotContains(response, '<td>Hidden Athlete</td>', html=False)
+        self.assertNotContains(response, "Hidden Athlete")
 
     def test_stats_loads_dco_saved_selection(self):
         trainer = get_user_model().objects.create_user(username="sharedselectioncoach", password="secret", is_staff=True)
@@ -1338,8 +1381,8 @@ class TrainerStatsTests(TestCase):
         response = self.client.get("/planning/stats/?selection=selection&saved_selection=squad-a&ok=1")
 
         self.assertContains(selector, "Squad A *")
-        self.assertContains(response, '<td>Shared Selected</td>', html=False)
-        self.assertNotContains(response, '<td>Shared Hidden</td>', html=False)
+        self.assertContains(response, "Shared Selected")
+        self.assertNotContains(response, "Shared Hidden")
 
     def test_stats_landing_page_shows_selector_before_results(self):
         trainer = get_user_model().objects.create_user(username="statslanding", password="secret", is_staff=True)

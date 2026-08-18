@@ -1,0 +1,49 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ athlete.name }} | Stats{% endblock %}
+
+{% block extra_head %}
+<style>
+  .weekly-distance-chart { min-width: 680px; }
+  .weekly-distance-chart .grid-line { stroke: #dee2e6; stroke-width: 1; }
+  .weekly-distance-chart .axis-label { fill: #6c757d; font-size: 12px; }
+  .weekly-distance-chart .week-bar { fill: #f57c20; }
+  .weekly-distance-chart .week-bar:hover { fill: #d9650e; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+    <div>
+      <h1 class="mb-1">{{ athlete.name }}</h1>
+      <div class="text-muted">Weekly distance · {{ period_start|date:"d M Y" }} – {{ period_end|date:"d M Y" }}</div>
+    </div>
+    <a href="{% url 'trainer_stats' %}?ok=1" class="btn btn-outline-secondary">Back to stats</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Total km per week</h2>
+      <div class="overflow-x-auto">
+        <svg class="weekly-distance-chart w-100" viewBox="0 0 {{ chart_width }} {{ chart_height }}" role="img" aria-label="Weekly distance in kilometres for {{ athlete.name }}">
+          {% for tick in y_ticks %}
+            <line class="grid-line" x1="{{ plot_left }}" y1="{{ tick.y }}" x2="{{ plot_right_x }}" y2="{{ tick.y }}"></line>
+            <text class="axis-label" x="{{ plot_left|add:'-10' }}" y="{{ tick.y|add:'4' }}" text-anchor="end">{{ tick.value }}</text>
+          {% endfor %}
+          <text class="axis-label" x="12" y="18">km</text>
+          {% for week in weeks %}
+            <rect class="week-bar" x="{{ week.x }}" y="{{ week.y }}" width="{{ week.width }}" height="{{ week.height }}" rx="2">
+              <title>Week from {{ week.week_start|date:"d M Y" }}: {{ week.km_label }} km</title>
+            </rect>
+            {% if week.show_label %}
+              <text class="axis-label" x="{{ week.label_x }}" y="{{ plot_bottom_y|add:'22' }}" text-anchor="middle">{{ week.week_start|date:"d M" }}</text>
+            {% endif %}
+          {% endfor %}
+        </svg>
+      </div>
+      <div class="small text-muted mt-2">Each bar represents a Monday–Sunday training week. The current week may still be incomplete.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
