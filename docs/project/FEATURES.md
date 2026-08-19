@@ -47,7 +47,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 
 ## Trainingen
 
-Ondersteunde onderdelen zijn WU, Mob/Tech, Sprint, Main, Main 2, Alternative en CD. Standaard krachtprogramma's kunnen vanuit Mob/Tech worden geopend. Afstanden tonen waar mogelijk richttijden; tijdsblokken tonen richttempo in min/km.
+Ondersteunde onderdelen zijn WU, Mob/Tech, Sprint, Main, Main 2, Alternative en CD. Standaard krachtprogramma's kunnen vanuit Mob/Tech worden geopend. Afstanden tonen waar mogelijk richttijden; tijdsblokken tonen richttempo in min/km. Alternative-tijdsblokken in Z1, Z2 en Z3 worden in de weektotalen afzonderlijk als ALT-minuten getoond en tellen niet mee als loopkilometers.
 
 ## Evaluaties
 

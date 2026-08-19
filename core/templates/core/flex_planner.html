@@ -655,6 +655,13 @@
       const dataSpecial = (el.getAttribute("data-flex-special") || "").toUpperCase();
       const isRace = ["RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING"].includes(dataSpecial) || el.classList.contains("pill-race") || el.classList.contains("pill-race-pending") || el.classList.contains("pill-race-target-pending") || /race/i.test(text);
 
+      if (segType === "ALT") {
+        const altSeconds = flexNumberAttr(el, "data-flex-duration") || flexDurationSeconds(text);
+        return altSeconds > 0 && ["1", "2", "3"].includes(fallbackZone)
+          ? [{kind: "alt", zone: fallbackZone, seconds: altSeconds}]
+          : [];
+      }
+
       const compound = flexCompoundLoads(text, fallbackZone);
       if (compound) {
         return compound.map((load) => ({...load, race: isRace || load.race}));
@@ -717,11 +724,19 @@
         const zMeters = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         const zSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         const tMeters = {"10000": 0, "5000": 0, "3000": 0, "1500": 0, "800": 0, "TM": 0, "THM": 0, "T4": 0};
+        const altSeconds = {"1": 0, "2": 0, "3": 0};
         let raceMeters = 0;
         let raceSeconds = 0;
 
         segmentEls.forEach((el) => {
           flexLoadsForSegment(el, rowZoneSpeeds).forEach((load) => {
+            if (load.kind === "alt") {
+              if (altSeconds[load.zone] !== undefined) {
+                altSeconds[load.zone] += Number(load.seconds || 0);
+              }
+              return;
+            }
+
             const z = load.zone || "1";
             const speed = Number(rowZoneSpeeds[z] || 0);
             const meters = Number(load.meters || 0);
@@ -756,6 +771,14 @@
         line = "";
         ["4", "5", "6"].forEach((z) => {
           if (zMeters[z] > 0) line += flexPill("pill-z" + z, "Z" + z, flexKm(zMeters[z]));
+        });
+        if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
+
+        line = "";
+        ["1", "2", "3"].forEach((z) => {
+          if (altSeconds[z] > 0) {
+            line += flexPill("pill-z" + z, "ALT Z" + z, Math.round(altSeconds[z] / 60) + "'");
+          }
         });
         if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
 

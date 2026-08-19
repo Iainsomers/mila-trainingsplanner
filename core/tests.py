@@ -1307,6 +1307,17 @@ class TrainingSegmentLabelTests(TestCase):
         self.assertEqual(TrainingSegment(type="CORE2").get_type_display(), "Main 2")
 
 
+class FlexPlannerAltTotalsTests(TestCase):
+    def test_flex_totals_keep_alt_z1_to_z3_separate_from_running_distance(self):
+        source = get_template("core/flex_planner.html").template.source
+
+        self.assertIn('if (segType === "ALT")', source)
+        self.assertIn('["1", "2", "3"].includes(fallbackZone)', source)
+        self.assertIn('? [{kind: "alt", zone: fallbackZone, seconds: altSeconds}]', source)
+        self.assertIn('if (load.kind === "alt")', source)
+        self.assertIn('"ALT Z" + z', source)
+
+
 class TrainerStatsTests(TestCase):
     def test_athlete_name_links_to_six_month_weekly_distance_chart(self):
         trainer = get_user_model().objects.create_user(username="chartcoach", password="secret", is_staff=True)

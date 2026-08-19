@@ -53,6 +53,7 @@ Compound onderdelen moeten afstand, zone en T-label per deel correct optellen.
 
 - Total is het berekende trainingstotaal in kilometers.
 - Toon daarnaast verdeling over zones en wedstrijden.
+- Tijdsblokken in Alternative met Z1, Z2 of Z3 blijven aparte `ALT Z1/Z2/Z3`-minuten en worden niet omgerekend naar hardloopkilometers. Alternative Z4 en Z5 worden niet als ALT-weektotaal getoond.
 - Stats vergelijkt het totaal van de huidige kalenderweek met de vorige kalenderweek.
 
 ## Wedstrijden
