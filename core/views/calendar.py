@@ -2160,11 +2160,19 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
         fallback_zone = (str(getattr(seg, "zone", "") or "").strip() or ("4" if is_race else "1"))
 
         if seg_type == "ALT":
-            duration_s = float(getattr(seg, "duration_s", None) or 0)
-            if duration_s <= 0:
-                duration_s = _ayc_text_duration_s(text)
-            if duration_s > 0:
-                loads.append({"kind": "alt", "zone": fallback_zone, "seconds": duration_s})
+            alt_parts = [part.strip() for part in text.split("//") if part.strip()]
+            if len(alt_parts) > 1:
+                for alt_part in alt_parts:
+                    zone_match = re.search(r"\bz\s*([1-3])\b", alt_part, re.I)
+                    duration_s = _ayc_text_duration_s(alt_part)
+                    if zone_match and duration_s > 0:
+                        loads.append({"kind": "alt", "zone": zone_match.group(1), "seconds": duration_s})
+            else:
+                duration_s = float(getattr(seg, "duration_s", None) or 0)
+                if duration_s <= 0:
+                    duration_s = _ayc_text_duration_s(text)
+                if duration_s > 0 and fallback_zone in {"1", "2", "3"}:
+                    loads.append({"kind": "alt", "zone": fallback_zone, "seconds": duration_s})
             continue
 
         compound = _ayc_compound_loads(text, fallback_zone)

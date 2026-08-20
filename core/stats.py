@@ -383,6 +383,23 @@ def _text_duration_s(text: str) -> int:
     return 0
 
 
+def _alt_zone_durations(seg):
+    text = getattr(seg, "text", "") or ""
+    parts = [part.strip() for part in text.split("//") if part.strip()]
+    if len(parts) > 1:
+        loads = []
+        for part in parts:
+            zone_match = re.search(r"\bz\s*([1-3])\b", part, re.I)
+            duration_s = _text_duration_s(part)
+            if zone_match and duration_s > 0:
+                loads.append((zone_match.group(1), duration_s))
+        return loads
+
+    zone = str(getattr(seg, "zone", "") or "").strip()
+    duration_s = int(getattr(seg, "duration_s", None) or 0) or _text_duration_s(text)
+    return [(zone, duration_s)] if zone in {"1", "2", "3"} and duration_s > 0 else []
+
+
 def _text_fallback_loads(seg, default_zone: str, speeds: dict, t_speed_func=None):
     """
     Fallback for athlete overrides saved as text segments.
@@ -584,8 +601,8 @@ def base_week_stats(plan, week_start: date_cls):
                 zone = str(z_raw) if z_raw else ("4" if is_race else "")
 
                 if seg.type == "ALT":
-                    if zone in alt_zones and seg.duration_s:
-                        alt_zones[zone]["duration_s"] += int(seg.duration_s)
+                    for alt_zone, alt_duration_s in _alt_zone_durations(seg):
+                        alt_zones[alt_zone]["duration_s"] += alt_duration_s
                     continue
 
                 if not zone or zone not in speeds:
@@ -686,15 +703,8 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                 zone = str(z_raw) if z_raw else ("4" if is_race else "")
 
                 if seg.type == "ALT":
-                    if zone in alt_zones:
-                        alt_duration_s = int(seg.duration_s or 0)
-                        if alt_duration_s <= 0:
-                            alt_duration_s = _text_duration_s(getattr(seg, "text", "") or "")
-                            reps_match = re.search(r"(\d+)\s*(?:x|\*|×)", getattr(seg, "text", "") or "")
-                            if reps_match and alt_duration_s > 0:
-                                alt_duration_s *= int(reps_match.group(1))
-                        if alt_duration_s > 0:
-                            alt_zones[zone]["duration_s"] += int(alt_duration_s)
+                    for alt_zone, alt_duration_s in _alt_zone_durations(seg):
+                        alt_zones[alt_zone]["duration_s"] += alt_duration_s
                     continue
 
                 if not zone or zone not in speeds:
@@ -836,8 +846,8 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                 zone = str(z_raw) if z_raw else ("4" if is_race else "")
 
                 if seg.type == "ALT":
-                    if zone in alt_zones and seg.duration_s:
-                        alt_zones[zone]["duration_s"] += int(seg.duration_s)
+                    for alt_zone, alt_duration_s in _alt_zone_durations(seg):
+                        alt_zones[alt_zone]["duration_s"] += alt_duration_s
                     continue
 
                 if not zone or zone not in avg_zone_speeds:

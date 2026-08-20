@@ -656,6 +656,16 @@
       const isRace = ["RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING"].includes(dataSpecial) || el.classList.contains("pill-race") || el.classList.contains("pill-race-pending") || el.classList.contains("pill-race-target-pending") || /race/i.test(text);
 
       if (segType === "ALT") {
+        const altParts = text.split("//").map((part) => part.trim()).filter(Boolean);
+        if (altParts.length > 1) {
+          return altParts.flatMap((part) => {
+            const zoneMatch = part.match(/\bz\s*([1-3])\b/i);
+            const seconds = flexDurationSeconds(part);
+            return zoneMatch && seconds > 0
+              ? [{kind: "alt", zone: zoneMatch[1], seconds: seconds}]
+              : [];
+          });
+        }
         const altSeconds = flexNumberAttr(el, "data-flex-duration") || flexDurationSeconds(text);
         return altSeconds > 0 && ["1", "2", "3"].includes(fallbackZone)
           ? [{kind: "alt", zone: fallbackZone, seconds: altSeconds}]

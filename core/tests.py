@@ -1316,6 +1316,7 @@ class FlexPlannerAltTotalsTests(TestCase):
         self.assertIn('? [{kind: "alt", zone: fallbackZone, seconds: altSeconds}]', source)
         self.assertIn('if (load.kind === "alt")', source)
         self.assertIn('"ALT Z" + z', source)
+        self.assertIn('const altParts = text.split("//")', source)
 
     def test_flex_save_splits_alt_blocks_and_keeps_each_zone_out_of_kilometres(self):
         from core.stats import athlete_week_stats
@@ -1365,6 +1366,37 @@ class FlexPlannerAltTotalsTests(TestCase):
                 {"kind": "alt", "zone": "2", "seconds": 600.0},
                 {"kind": "alt", "zone": "3", "seconds": 600.0},
             ],
+        )
+
+    def test_existing_combined_alt_segment_is_read_as_three_blocks(self):
+        from core.stats import athlete_week_stats
+
+        trainer = get_user_model().objects.create_user(username="legacyaltcoach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Legacy Alt Athlete", birth_year=2000, gender="X")
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        plan = TrainingPlan.objects.create(owner=trainer, name="Legacy alt plan")
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=week_start, slot_index=1)
+        TrainingSegment.objects.create(
+            slot=slot,
+            type="ALT",
+            text="20' z1//10'z2//10'z3",
+            zone="1",
+            duration_s=1200,
+        )
+
+        self.assertEqual(
+            _ayc_slot_loads_for_totals(slot, athlete),
+            [
+                {"kind": "alt", "zone": "1", "seconds": 1200},
+                {"kind": "alt", "zone": "2", "seconds": 600},
+                {"kind": "alt", "zone": "3", "seconds": 600},
+            ],
+        )
+        stats = athlete_week_stats(plan, athlete, week_start)
+        self.assertEqual(
+            {zone: values["duration_s"] for zone, values in stats["alt_zones"].items()},
+            {"1": 1200, "2": 600, "3": 600},
         )
 
 
