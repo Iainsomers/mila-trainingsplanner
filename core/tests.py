@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.template.loader import get_template
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
-from core.views.calendar import _segment_rep_time_label
+from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _parse_pr_time_to_seconds,
@@ -1316,6 +1316,56 @@ class FlexPlannerAltTotalsTests(TestCase):
         self.assertIn('? [{kind: "alt", zone: fallbackZone, seconds: altSeconds}]', source)
         self.assertIn('if (load.kind === "alt")', source)
         self.assertIn('"ALT Z" + z', source)
+
+    def test_flex_save_splits_alt_blocks_and_keeps_each_zone_out_of_kilometres(self):
+        from core.stats import athlete_week_stats
+
+        trainer = get_user_model().objects.create_user(username="altblockscoach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Alt Blocks Athlete", birth_year=2000, gender="X")
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Flex Planner Alt blocks",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        self.client.force_login(trainer)
+
+        response = self.client.post(
+            f"/slot-modal/{week_start.year}/{week_start.month}/{week_start.day}/1/",
+            {
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "source": "flex",
+                "alt_text": "20' z1//10'z2//10'z3",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date=week_start, slot_index=1)
+        segments = list(slot.segments.filter(type="ALT").order_by("order", "id"))
+        self.assertEqual(
+            [(seg.text, seg.zone, seg.duration_s) for seg in segments],
+            [("20' z1", "1", 1200), ("10'z2", "2", 600), ("10'z3", "3", 600)],
+        )
+
+        stats = athlete_week_stats(plan, athlete, week_start)
+        self.assertEqual(stats["alt_zones"]["1"]["duration_s"], 1200)
+        self.assertEqual(stats["alt_zones"]["2"]["duration_s"], 600)
+        self.assertEqual(stats["alt_zones"]["3"]["duration_s"], 600)
+        self.assertTrue(all(zone["distance_m"] == 0 for zone in stats["zones"].values()))
+
+    def test_base_planning_alt_blocks_are_split_too(self):
+        slot = _virtual_slot_from_base_training("ALT=20' z1//10'z2//10'z3")
+
+        self.assertEqual(
+            _ayc_slot_loads_for_totals(slot),
+            [
+                {"kind": "alt", "zone": "1", "seconds": 1200.0},
+                {"kind": "alt", "zone": "2", "seconds": 600.0},
+                {"kind": "alt", "zone": "3", "seconds": 600.0},
+            ],
+        )
 
 
 class TrainerStatsTests(TestCase):

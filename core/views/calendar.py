@@ -858,11 +858,13 @@ def _virtual_segment_from_text(seg_type, text):
 def _virtual_slot_from_base_training(text):
     values = _parse_base_training_text(text)
     order = ("WU", "MOB", "SPR", "CORE", "CORE2", "ALT", "CD")
-    segments = [
-        _virtual_segment_from_text(seg_type, values[seg_type])
-        for seg_type in order
-        if values.get(seg_type)
-    ]
+    segments = []
+    for seg_type in order:
+        value = values.get(seg_type) or ""
+        if not value:
+            continue
+        parts = [part.strip() for part in value.split("//") if part.strip()] if seg_type == "ALT" else [value]
+        segments.extend(_virtual_segment_from_text(seg_type, part) for part in parts)
     return _VirtualSlot(segments) if segments else None
 
 
@@ -2389,14 +2391,34 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
             continue
 
+        if segment_type == "ALT":
+            for alt_part in [part.strip() for part in raw_text.split("//") if part.strip()]:
+                parsed = parse_segment_text(alt_part, zone_required=False)
+                seg = TrainingSegment.objects.create(
+                    slot=override_slot,
+                    order=order,
+                    type="ALT",
+                    text=alt_part,
+                )
+                if parsed and parsed.ok:
+                    _apply_parse_to_segment(seg, parsed)
+                    seg.distance_m = None
+                    seg.norm_distance_m = None
+                    seg.parsed_at = now
+                    seg.save()
+                else:
+                    seg.zone = _zone_from_text(alt_part, default_zone)
+                    seg.parse_ok = False
+                    seg.parsed_at = now
+                    seg.save()
+                order += 1
+            continue
+
         parse_text = raw_text
         if segment_type == "SPR":
             parse_text = f"{raw_text} Z6" if not re.search(r"\bz\s*[1-6]\b", raw_text, re.IGNORECASE) else raw_text
 
-        if segment_type == "ALT":
-            parsed = parse_segment_text(parse_text, zone_required=False)
-        else:
-            parsed = parse_segment_text(parse_text)
+        parsed = parse_segment_text(parse_text)
 
         seg = TrainingSegment.objects.create(
             slot=override_slot,

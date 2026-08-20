@@ -1065,7 +1065,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         sprint_seg = visible_slot.segments.filter(type="SPR").order_by("order", "id").first() if visible_slot else None
         core_segs = list(visible_slot.segments.filter(type="CORE").order_by("order", "id")) if visible_slot else []
         core2_seg = visible_slot.segments.filter(type="CORE2").order_by("order", "id").first() if visible_slot else None
-        alt_seg = visible_slot.segments.filter(type="ALT").order_by("order", "id").first() if visible_slot else None
+        alt_segs = list(visible_slot.segments.filter(type="ALT").order_by("order", "id")) if visible_slot else []
         cd_seg = visible_slot.segments.filter(type="CD").order_by("order", "id").first() if visible_slot else None
 
         return render(
@@ -1088,7 +1088,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "sprint_text": (sprint_seg.text if (sprint_seg and tb_show_sprint) else ""),
                 "core_text": (" // ".join(seg.text for seg in core_segs if seg.text) if core_segs else ""),
                 "core2_text": (core2_seg.text if (core2_seg and tb_show_core2) else ""),
-                "alt_text": (alt_seg.text if alt_seg else ""),
+                "alt_text": (" // ".join(seg.text for seg in alt_segs if seg.text) if alt_segs else ""),
                 "cd_text": (cd_seg.text if (cd_seg and tb_show_cd) else ""),
 
                 "wu_feedback": "", "wu_ok": None,
@@ -1181,7 +1181,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     sprint_seg = slot.segments.filter(type="SPR").order_by("order", "id").first()
     core_seg = slot.segments.filter(type="CORE").order_by("order", "id").first()
     core2_seg = slot.segments.filter(type="CORE2").order_by("order", "id").first()
-    alt_seg = slot.segments.filter(type="ALT").order_by("order", "id").first()
+    alt_segs = list(slot.segments.filter(type="ALT").order_by("order", "id"))
     cd_seg = slot.segments.filter(type="CD").order_by("order", "id").first()
 
     # input texts (respect toggles)
@@ -1449,7 +1449,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     else:
         core_parse = None
     core2_parse = _parse_core_segment_text(core2_text) if core2_text else None
-    alt_parse = parse_segment_text(alt_text, zone_required=False) if alt_text else None
+    alt_parts = [part.strip() for part in alt_text.split("//") if part.strip()]
+    alt_parses = [parse_segment_text(part, zone_required=False) for part in alt_parts]
+    alt_parse = next((parsed for parsed in alt_parses if not parsed.ok), alt_parses[-1] if alt_parses else None)
     cd_parse = parse_segment_text(cd_text) if cd_text else None
 
     parse_block = False
@@ -1615,36 +1617,24 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     else:
         slot.segments.filter(type="CORE").delete()
 
-    # Save ALT (telt nog niet mee)
-        # Save ALT (does not count in normal zones yet, but ALT minutes are possible)
-    if alt_text:
-        if alt_seg:
-            alt_seg.text = alt_text
-            alt_seg.order = next_followup_order + 2
-        else:
-            alt_seg = slot.segments.create(type="ALT", text=alt_text, order=next_followup_order + 2)
-
+    # Save ALT as separate blocks so // keeps Z1-Z3 minutes independent.
+    slot.segments.filter(type="ALT").delete()
+    for index, (alt_part, parsed) in enumerate(zip(alt_parts, alt_parses)):
+        alt_seg = slot.segments.create(
+            type="ALT",
+            text=alt_part,
+            order=next_followup_order + 2 + index,
+        )
         alt_seg.reps = 1
         alt_seg.distance_m = None
         alt_seg.norm_distance_m = None
         alt_seg.special = ""
-
-        if alt_parse and alt_parse.ok:
-            alt_seg.zone = str(alt_parse.zone) if (alt_parse.zone and alt_parse.zone) else ""
-            alt_seg.duration_s = int(alt_parse.duration_s) if (alt_parse and alt_parse.duration_s) else None
-            alt_seg.parse_ok = True
-            alt_seg.parse_message = alt_parse.message or ""
-        else:
-            alt_seg.zone = ""
-            alt_seg.duration_s = None
-            alt_seg.parse_ok = False if alt_parse else True
-            alt_seg.parse_message = (alt_parse.message if alt_parse else "")
-
+        alt_seg.zone = str(parsed.zone or "")
+        alt_seg.duration_s = int(parsed.duration_s) if parsed.duration_s else None
+        alt_seg.parse_ok = bool(parsed.ok)
+        alt_seg.parse_message = parsed.message or ""
         alt_seg.parsed_at = now
         alt_seg.save()
-    else:
-        if alt_seg:
-            alt_seg.delete()
 
 
 

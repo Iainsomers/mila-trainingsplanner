@@ -16,6 +16,7 @@ Bijgewerkt: 18 augustus 2026.
 - PR-invoer gebruikt afstandspecifieke tijdformaten, inclusief 400 m boven 60 seconden.
 - Tijdgebaseerde trainingsonderdelen tonen tempo in min/km.
 - Flex Planner houdt Alternative Z1–Z3 als aparte ALT-minuten buiten de gewone loopkilometers.
+- Meerdere Alternative-blokken met `//` blijven afzonderlijke Z1/Z2/Z3-minuten in Flex, AYC en Base Planning.
 - Trainerstats toont huidige en vorige weekkilometers.
 - Trainerstats deelt nu de volledige atleetselectie met de DCO, inclusief opgeslagen en standaardselecties, `Trains` en `Planned training`.
 - Vanuit Trainerstats opent iedere atleet een eigen grafiek met de effectieve weekkilometers over een vrij in te vullen aantal maanden, periodepijlen en een samenvatting met gemiddelde, hoogste en laagste week.
