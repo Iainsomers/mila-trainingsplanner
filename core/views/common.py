@@ -257,11 +257,19 @@ def _coach_view_options(user):
     User = get_user_model()
     ids = _coach_view_owner_ids(user)
     users_by_id = User.objects.filter(id__in=ids).in_bulk()
+    access_by_owner_id = {
+        access.owner_id: access
+        for access in CoachAccess.objects.filter(grantee=user, owner_id__in=ids)
+    }
     options = []
     for owner_id in ids:
         owner = users_by_id.get(owner_id)
         if owner:
-            options.append(owner)
+            access = access_by_owner_id.get(owner_id)
+            options.append({
+                "user": owner,
+                "access_label": "own" if owner_id == user.id else ("edit" if access and access.can_edit else "view"),
+            })
     return options
 
 
@@ -276,6 +284,34 @@ def _set_active_coach_user(request, owner_id):
         owner_id = user.id
     request.session["active_coach_owner_id"] = owner_id
     request.session.modified = True
+
+
+def _active_coach_access(request):
+    user = request.user
+    if not getattr(user, "is_authenticated", False):
+        return None
+    active_owner = _active_coach_user(request)
+    if active_owner.id == user.id:
+        return None
+    return CoachAccess.objects.filter(owner=active_owner, grantee=user).first()
+
+
+def _active_coach_can_edit(request):
+    user = request.user
+    if not getattr(user, "is_authenticated", False):
+        return False
+    active_owner = _active_coach_user(request)
+    if active_owner.id == user.id:
+        return True
+    access = _active_coach_access(request)
+    return bool(access and access.can_edit)
+
+
+def _active_coach_access_label(request):
+    active_owner = _active_coach_user(request)
+    if active_owner.id == request.user.id:
+        return "own"
+    return "edit" if _active_coach_can_edit(request) else "view"
 
 
 def _filter_owned(qs, user_or_request):

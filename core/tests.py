@@ -613,7 +613,7 @@ class SlotModalSaveTests(TestCase):
             daily_vitals_enabled=True,
             is_private=False,
         )
-        CoachAccess.objects.create(owner=owner, grantee=shared_coach)
+        CoachAccess.objects.create(owner=owner, grantee=shared_coach, can_edit=True)
         self.client.force_login(shared_coach)
 
         dashboard = self.client.get("/")
@@ -677,8 +677,8 @@ class SlotModalSaveTests(TestCase):
         coach_c = get_user_model().objects.create_user(
             username="coach-c", password="secret", is_staff=True
         )
-        CoachAccess.objects.create(owner=coach_b, grantee=coach_a)
-        CoachAccess.objects.create(owner=coach_c, grantee=coach_b)
+        CoachAccess.objects.create(owner=coach_b, grantee=coach_a, can_edit=True)
+        CoachAccess.objects.create(owner=coach_c, grantee=coach_b, can_edit=True)
 
         Athlete.objects.create(
             owner=coach_b,
@@ -708,6 +708,44 @@ class SlotModalSaveTests(TestCase):
         athletes_page = self.client.get("/coach/athletes/")
         self.assertContains(athletes_page, "B athlete")
         self.assertNotContains(athletes_page, "C athlete")
+
+    def test_view_only_coach_access_blocks_writes(self):
+        owner = get_user_model().objects.create_user(
+            username="view-owner", password="secret", is_staff=True
+        )
+        shared_coach = get_user_model().objects.create_user(
+            username="view-only-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="View only athlete",
+            birth_year=2000,
+            gender="X",
+            is_private=False,
+        )
+        CoachAccess.objects.create(owner=owner, grantee=shared_coach)
+
+        self.client.force_login(shared_coach)
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
+        page = self.client.get(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}"
+        )
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "View only athlete")
+
+        response = self.client.post(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}",
+            {
+                "date": date.today().isoformat(),
+                "daily_vitals_submit": "1",
+                "field": "hrv",
+                "value": "81",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(AthleteDailyVital.objects.filter(athlete=athlete).exists())
 
 
 class SegmentRepTimeDisplayTests(TestCase):

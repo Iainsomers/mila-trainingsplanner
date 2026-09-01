@@ -38,6 +38,7 @@ from .common import (
     _active_coach_user,
     _coach_view_options,
     _set_active_coach_user,
+    _active_coach_access_label,
 )
 
 from core.zones import (
@@ -455,6 +456,7 @@ def dashboard_view(request):
         "current_athlete": athlete,
         "coach_view_options": _coach_view_options(request.user),
         "active_coach": active_coach,
+        "active_coach_access_label": _active_coach_access_label(request) if is_trainer_user else "own",
     })
 
 

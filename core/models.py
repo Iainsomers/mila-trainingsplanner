@@ -817,6 +817,8 @@ class CoachAccess(models.Model):
         related_name="access_to_other_coaches",
     )
 
+    can_edit = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -828,7 +830,8 @@ class CoachAccess(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.grantee} can access {self.owner}"
+        mode = "edit" if self.can_edit else "view"
+        return f"{self.grantee} can {mode} {self.owner}"
 
 class AthleteWeekReport(models.Model):
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="week_reports")
