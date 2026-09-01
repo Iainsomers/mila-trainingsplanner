@@ -40,7 +40,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Trainingen openen in een op mobiel beeldvullende popup, maar niet groter dan het scherm.
 - Bestaande AM- én PM-trainingen worden vooraf ingevuld in de popup.
 - Een groen vinkje toont dat alle evaluaties van die dag zijn voltooid.
-- Planner, Dashboard en Logout blijven bereikbaar.
+- Planner, zones/times, Dashboard en Logout blijven bereikbaar.
 - Bij ingeschakelde Week reports staan onder iedere mobiele week vier gekleurde rapportvakken, gelijk aan desktop.
 - Bij ingeschakelde Daily vitals staat naast iedere datum een hartknop die een mobiele invoerpopup opent.
 - Weekgemiddelden voor slaapuren, slaapkwaliteit, ochtendhartslag en HRV staan compact in het weekoverzicht zodra voldoende waarden beschikbaar zijn.
