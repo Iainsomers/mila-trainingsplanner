@@ -397,6 +397,19 @@
         </div>
 
         {% if not self_view %}
+        <div class="mt-3 mb-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="is_private"
+            name="is_private"
+            {% if form.is_private %}checked{% endif %}
+          >
+          <label class="form-check-label" for="is_private">
+            Private (only visible to me)
+          </label>
+        </div>
+
         <div class="mb-3">
           <label class="form-label d-block">Weeks visible ahead</label>
           <input name="view_weeks_ahead" type="number" min="0" class="form-control form-control-sm d-inline-block" value="{{ form.view_weeks_ahead|default_if_none:2 }}" style="width:5rem;">
@@ -508,20 +521,6 @@
             <h6 class="mb-0">PR times</h6>
             <button type="button" class="btn btn-sm btn-outline-primary" id="fillMissingPbsBtn">Fill missing PB's</button>
           </div>
-
-        <div class="mt-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="is_private"
-            name="is_private"
-            {% if form.is_private %}checked{% endif %}
-          >
-          <label class="form-check-label" for="is_private">
-            Private (only visible to me)
-          </label>
-        </div>
-
 
           <div class="pr-time-grid">
             <div class="col-md-2 pr-time-card">
