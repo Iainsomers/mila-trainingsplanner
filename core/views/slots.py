@@ -35,6 +35,7 @@ from .common import (
     _apply_mob_only,
     _compute_norm_distance_m,
     _get_effective_slot,
+    _active_coach_user,
 )
 
 
@@ -71,7 +72,9 @@ def _get_flex_athlete_from_request(request, selected_plan):
         return None
 
     qs = Athlete.objects.filter(id=int(athlete_id))
-    if not request.user.is_superuser:
+    if request.user.is_staff or request.user.is_superuser:
+        qs = qs.filter(owner=_active_coach_user(request))
+    elif not request.user.is_superuser:
         qs = qs.filter(owner=request.user)
     return qs.first()
 
@@ -580,17 +583,29 @@ def _deserialize_slot_template_text(text: str) -> dict:
     return out
 
 
-def _saved_templates_for_user(user):
+def _saved_templates_for_user(user_or_request):
+    request = user_or_request if hasattr(user_or_request, "user") else None
+    user = request.user if request else user_or_request
     if not user or not getattr(user, "is_authenticated", False):
         return SavedTrainingTemplate.objects.none()
+    if request and (user.is_staff or user.is_superuser):
+        return SavedTrainingTemplate.objects.filter(owner=_active_coach_user(request)).order_by("name", "id")
     return SavedTrainingTemplate.objects.filter(
         Q(owner=user) | Q(owner__shared_with_others__grantee=user)
     ).distinct().order_by("name", "id")
 
 
-def _standard_strength_programs_for_user(user):
+def _standard_strength_programs_for_user(user_or_request):
+    request = user_or_request if hasattr(user_or_request, "user") else None
+    user = request.user if request else user_or_request
     if not user or not getattr(user, "is_authenticated", False):
         return StandardStrengthProgram.objects.none()
+    if request and (user.is_staff or user.is_superuser):
+        return (
+            StandardStrengthProgram.objects
+            .filter(owner=_active_coach_user(request))
+            .order_by("sort_order", "name", "id")
+        )
     return (
         StandardStrengthProgram.objects
         .filter(Q(owner=user) | Q(owner__shared_with_others__grantee=user))
@@ -599,9 +614,17 @@ def _standard_strength_programs_for_user(user):
     )
 
 
-def _standard_strength_for_user(user, program_id):
+def _standard_strength_for_user(user_or_request, program_id):
+    request = user_or_request if hasattr(user_or_request, "user") else None
+    user = request.user if request else user_or_request
     if not program_id or not str(program_id).isdigit():
         return None
+    if request and (user.is_staff or user.is_superuser):
+        return (
+            StandardStrengthProgram.objects
+            .filter(owner=_active_coach_user(request), id=int(program_id))
+            .first()
+        )
     return (
         StandardStrengthProgram.objects
         .filter(Q(owner=user) | Q(owner__shared_with_others__grantee=user))
@@ -915,7 +938,7 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
             seg.t_type = item.get("t_type") or ""
         strength_id = item.get("standard_strength_program_id")
         if strength_id:
-            seg.standard_strength_program = _standard_strength_for_user(request.user, strength_id)
+            seg.standard_strength_program = _standard_strength_for_user(request, strength_id)
         seg.parsed_at = now
         seg.save()
 
@@ -999,7 +1022,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     is_athlete_year_calendar = (request.GET.get("source") == "athlete_year") or (request.POST.get("source") == "athlete_year")
     requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
     if requested_plan_id.isdigit() and (_is_flex_source(request) or is_athlete_year_calendar):
-        requested_plan = _filter_owned(TrainingPlan.objects.all(), request.user).filter(id=int(requested_plan_id)).first()
+        requested_plan = _filter_owned(TrainingPlan.objects.all(), request).filter(id=int(requested_plan_id)).first()
         if requested_plan:
             selected_plan = requested_plan
 
@@ -1011,7 +1034,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if _is_flex_source(request) or is_athlete_year_calendar:
         athlete_id = (request.GET.get("athlete") or request.POST.get("athlete") or "").strip()
         if athlete_id.isdigit():
-            athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(athlete_id)).first()
+            athlete = _filter_owned(Athlete.objects.all(), request).filter(id=int(athlete_id)).first()
 
     if not athlete:
         athlete = _get_selected_athlete_from_request(request)
@@ -1024,7 +1047,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         athlete = _get_flex_athlete_from_request(request, selected_plan)
 
     if athlete and requested_plan_id.isdigit() and not selected_plan:
-        requested_plan = _filter_owned(TrainingPlan.objects.all(), request.user).filter(id=int(requested_plan_id)).first()
+        requested_plan = _filter_owned(TrainingPlan.objects.all(), request).filter(id=int(requested_plan_id)).first()
         if requested_plan and (athlete.id in requested_plan.targeted_athlete_ids() or _is_flex_planner_plan(requested_plan)):
             selected_plan = requested_plan
 
@@ -1083,7 +1106,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": (wu_seg.text if (wu_seg and tb_show_wu) else ""),
                 "mob_text": (mob_seg.text if (mob_seg and tb_show_mob) else ""),
-                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": str(getattr(mob_seg, "standard_strength_program_id", "") or ""),
                 "sprint_text": (sprint_seg.text if (sprint_seg and tb_show_sprint) else ""),
                 "core_text": (" // ".join(seg.text for seg in core_segs if seg.text) if core_segs else ""),
@@ -1102,7 +1125,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "selected_athlete": athlete,
                 "is_override": bool(has_fix),
                 "is_athlete_year_calendar": is_athlete_year_calendar,
-                "saved_templates": _saved_templates_for_user(request.user),
+                "saved_templates": _saved_templates_for_user(request),
                 "selected_template_id": "",
                 "template_name": "",
             },
@@ -1187,7 +1210,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # input texts (respect toggles)
     wu_text = (request.POST.get("wu_text") or "").strip() if tb_show_wu else ""
     mob_text = (request.POST.get("mob_text") or "").strip() if tb_show_mob else ""
-    selected_standard_strength = _standard_strength_for_user(request.user, request.POST.get("standard_strength_id")) if tb_show_mob else None
+    selected_standard_strength = _standard_strength_for_user(request, request.POST.get("standard_strength_id")) if tb_show_mob else None
     selected_standard_strength_id = str(selected_standard_strength.id) if selected_standard_strength else ""
     sprint_text = (request.POST.get("sprint_text") or "").strip() if tb_show_sprint else ""
     core_text = (request.POST.get("core_text") or "").strip()
@@ -1216,7 +1239,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                     "wu_text": wu_text,
                     "mob_text": mob_text,
-                    "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                    "standard_strength_programs": _standard_strength_programs_for_user(request),
                     "selected_standard_strength_id": selected_standard_strength_id,
                     "sprint_text": sprint_text,
                     "core_text": core_text,
@@ -1225,7 +1248,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                     "cd_text": cd_text,
 
                     "template_error": "Name is required.",
-                    "saved_templates": _saved_templates_for_user(request.user),
+                    "saved_templates": _saved_templates_for_user(request),
                     "selected_template_id": "",
                     "template_name": template_name,
 
@@ -1243,7 +1266,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             )
 
         SavedTrainingTemplate.objects.create(
-            owner=request.user,
+            owner=_active_coach_user(request) if (request.user.is_staff or request.user.is_superuser) else request.user,
             name=template_name,
             text=_serialize_slot_template_text(
                 wu_text=wu_text,
@@ -1271,7 +1294,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": wu_text,
                 "mob_text": mob_text,
-                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
                 "core_text": core_text,
@@ -1280,7 +1303,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "cd_text": cd_text,
 
                 "template_saved_notice": "Saved training stored.",
-                "saved_templates": _saved_templates_for_user(request.user),
+                "saved_templates": _saved_templates_for_user(request),
                 "selected_template_id": "",
                 "template_name": "",
 
@@ -1294,7 +1317,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "selected_plan": selected_plan,
                 "selected_athlete": athlete,
                 "is_override": is_override,
-                "saved_templates": _saved_templates_for_user(request.user),
+                "saved_templates": _saved_templates_for_user(request),
                 "selected_template_id": "",
                 "template_name": "",
             },
@@ -1307,7 +1330,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             return HttpResponse("No template", status=400)
 
         tpl = SavedTrainingTemplate.objects.filter(
-            Q(owner=request.user) | Q(owner__shared_with_others__grantee=request.user)
+            Q(owner=_active_coach_user(request))
         ).filter(id=template_id).first()
 
         if not tpl:
@@ -1330,7 +1353,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": data.get("WU",""),
                 "mob_text": data.get("MOB",""),
-                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": "",
                 "sprint_text": data.get("SPR",""),
                 "core_text": data.get("CORE",""),
@@ -1363,7 +1386,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": wu_text,
                 "mob_text": mob_text,
-                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
                 "core_text": core_text,
@@ -1372,7 +1395,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "cd_text": cd_text,
 
                 "core_error": "Fill in Main, Mob/Tech, or Alternative.",
-                "saved_templates": _saved_templates_for_user(request.user),
+                "saved_templates": _saved_templates_for_user(request),
                 "selected_template_id": (request.POST.get("template_id") or "").strip(),
                 "template_name": (request.POST.get("template_name") or "").strip(),
 
@@ -1406,7 +1429,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": wu_text,
                 "mob_text": mob_text,
-                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
                 "core_text": core_text,
@@ -1415,7 +1438,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "cd_text": cd_text,
 
                 "core2_error": "Main 2 cannot be the only segment in the slot.",
-                "saved_templates": _saved_templates_for_user(request.user),
+                "saved_templates": _saved_templates_for_user(request),
                 "selected_template_id": (request.POST.get("template_id") or "").strip(),
                 "template_name": (request.POST.get("template_name") or "").strip(),
 
@@ -1484,7 +1507,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": wu_text,
                 "mob_text": mob_text,
-                "standard_strength_programs": _standard_strength_programs_for_user(request.user),
+                "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
                 "core_text": core_text,

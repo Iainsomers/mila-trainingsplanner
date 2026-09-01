@@ -35,6 +35,9 @@ from .common import (
     _plans_targeting_athlete,
     _ranges_overlap,
     _filter_owned,
+    _active_coach_user,
+    _coach_view_options,
+    _set_active_coach_user,
 )
 
 from core.zones import (
@@ -384,7 +387,7 @@ def _polar_connection_for_athlete_request(request, athlete_id):
     athlete_id_str = str(athlete_id or "").strip()
     if athlete_id_str.isdigit():
         if request.user.is_staff or request.user.is_superuser:
-            athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(athlete_id_str)).first()
+            athlete = _filter_owned(Athlete.objects.all(), request).filter(id=int(athlete_id_str)).first()
         else:
             own_athlete = _athlete_for_user(request.user)
             if own_athlete and own_athlete.id == int(athlete_id_str):
@@ -434,15 +437,24 @@ def _format_pace(seconds, distance_m=1000.0):
 
 
 @login_required
-@require_GET
+@require_http_methods(["GET", "POST"])
 def dashboard_view(request):
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    is_trainer_user = bool(request.user.is_staff or request.user.is_superuser)
+
+    if request.method == "POST" and is_trainer_user:
+        _set_active_coach_user(request, request.POST.get("coach_view_owner"))
+        return redirect("dashboard")
+
+    active_coach = _active_coach_user(request) if is_trainer_user else request.user
 
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
-        "is_trainer_user": bool(request.user.is_staff or request.user.is_superuser),
+        "is_trainer_user": is_trainer_user,
         "current_athlete": athlete,
+        "coach_view_options": _coach_view_options(request.user),
+        "active_coach": active_coach,
     })
 
 
@@ -3607,7 +3619,7 @@ def coach_console_view(request):
 def planning_overview_view(request):
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
-    groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.order_by("name"), request.user)
+    groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.order_by("name"), request)
     return render(request, "core/planning.html", {
         "groups": groups,
         "today": date.today(),
@@ -3615,18 +3627,19 @@ def planning_overview_view(request):
     })
 
 
-def _trainer_planning_qs(user):
+def _trainer_planning_qs(user_or_request):
     return _filter_owned(
         TrainingPlan.objects.filter(
             plan_kind=TrainingPlan.PLAN_KIND_TRAINER
         ).select_related("owner"),
-        user,
+        user_or_request,
     )
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def trainer_planning_view(request):
+    active_coach = _active_coach_user(request)
     errors = []
     form = {
         "name": "",
@@ -3645,7 +3658,7 @@ def trainer_planning_view(request):
         if not errors:
             try:
                 plan = TrainingPlan.objects.create(
-                    owner=request.user,
+                    owner=active_coach,
                     name=form["name"],
                     plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
                     start_date=None,
@@ -3660,7 +3673,7 @@ def trainer_planning_view(request):
                     return redirect("trainer_planning")
                 return redirect("trainer_planning_detail", plan_id=plan.id)
 
-    plannings = _trainer_planning_qs(request.user).order_by(Lower("name"))
+    plannings = _trainer_planning_qs(request).order_by(Lower("name"))
     return render(
         request,
         "core/trainer_planning.html",
@@ -3671,7 +3684,7 @@ def trainer_planning_view(request):
 @login_required
 @require_http_methods(["POST"])
 def trainer_planning_delete_view(request, plan_id: int):
-    plan = get_object_or_404(_trainer_planning_qs(request.user), id=plan_id)
+    plan = get_object_or_404(_trainer_planning_qs(request), id=plan_id)
     plan.delete()
     return redirect("trainer_planning")
 
@@ -3679,7 +3692,7 @@ def trainer_planning_delete_view(request, plan_id: int):
 @login_required
 @require_http_methods(["GET", "POST"])
 def trainer_planning_detail_view(request, plan_id: int):
-    plan = get_object_or_404(_trainer_planning_qs(request.user), id=plan_id)
+    plan = get_object_or_404(_trainer_planning_qs(request), id=plan_id)
     errors = []
 
     if request.method == "POST":
@@ -3689,7 +3702,7 @@ def trainer_planning_detail_view(request, plan_id: int):
         plan.auto_cd_m = _clean_non_negative_int(request.POST.get("auto_cd_m"))
         if not new_name:
             errors.append("Name is required.")
-        elif _trainer_planning_qs(request.user).exclude(id=plan.id).filter(name=new_name).exists():
+        elif _trainer_planning_qs(request).exclude(id=plan.id).filter(name=new_name).exists():
             errors.append("Er bestaat al een planning met deze naam.")
         else:
             plan.name = new_name
@@ -4057,7 +4070,7 @@ def athlete_base_planning_view(request):
             trainer_plan = None
             trainer_plan_id = (request.POST.get("trainer_plan") or "").strip()
             if mode == AthleteBasePlanningSlot.MODE_TRAINER and trainer_plan_id.isdigit():
-                trainer_plan = _trainer_planning_qs(request.user).filter(id=int(trainer_plan_id)).first()
+                trainer_plan = _trainer_planning_qs(request).filter(id=int(trainer_plan_id)).first()
 
             slot.mode = mode
             slot.training_text = (request.POST.get("training_text") or "").strip() if mode == AthleteBasePlanningSlot.MODE_TRAINING else ""
@@ -4118,7 +4131,7 @@ def athlete_base_planning_view(request):
             if not errors:
                 trainer_plans = {
                     plan.id: plan
-                    for plan in _trainer_planning_qs(request.user)
+                    for plan in _trainer_planning_qs(request)
                 }
                 with transaction.atomic():
                     AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, planning_kind=planning_kind, id__in=delete_ids).delete()
@@ -4183,7 +4196,7 @@ def athlete_base_planning_view(request):
             "athletes": athletes,
             "selected_athlete": selected_athlete,
             "blocks": blocks,
-            "trainer_plans": _trainer_planning_qs(request.user).order_by(Lower("name")),
+            "trainer_plans": _trainer_planning_qs(request).order_by(Lower("name")),
             "errors": errors,
             "saved": saved,
             "mode_choices": AthleteBasePlanningSlot.MODE_CHOICES,
@@ -4205,7 +4218,7 @@ def _clean_non_negative_int(value):
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_wucd_settings_view(request):
-    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
 
     if request.method == "POST":
         for athlete in athletes:
@@ -4250,26 +4263,28 @@ def _normalize_saved_training_order(user):
 @login_required
 @require_GET
 def coach_saved_trainings_view(request):
-    templates = _normalize_saved_training_order(request.user)
+    templates = _normalize_saved_training_order(_active_coach_user(request))
     return render(request, "core/coach_saved_trainings.html", {"templates": templates})
 
 
 @login_required
 @require_http_methods(["POST"])
 def coach_saved_training_delete_view(request, template_id: int):
+    active_coach = _active_coach_user(request)
     template = get_object_or_404(
-        SavedTrainingTemplate.objects.filter(owner=request.user),
+        SavedTrainingTemplate.objects.filter(owner=active_coach),
         id=template_id,
     )
     template.delete()
-    _normalize_saved_training_order(request.user)
+    _normalize_saved_training_order(active_coach)
     return redirect("coach_saved_trainings")
 
 
 @login_required
 @require_http_methods(["POST"])
 def coach_saved_training_move_view(request, template_id: int, direction: str):
-    templates = _normalize_saved_training_order(request.user)
+    active_coach = _active_coach_user(request)
+    templates = _normalize_saved_training_order(active_coach)
     current_index = next((i for i, template in enumerate(templates) if template.id == template_id), None)
 
     if current_index is None:
@@ -4376,17 +4391,18 @@ def _standard_strength_visible_via_base_planning(program, athlete):
 @login_required
 @require_GET
 def standard_strength_list_view(request):
-    programs = _standard_strength_programs_for_user(request.user)
+    programs = _standard_strength_programs_for_user(_active_coach_user(request))
     return render(request, "core/standard_strength_list.html", {"programs": programs})
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def standard_strength_form_view(request, program_id=None):
+    active_coach = _active_coach_user(request)
     program = None
     if program_id is not None:
         program = get_object_or_404(
-            StandardStrengthProgram.objects.filter(owner=request.user).prefetch_related("exercises"),
+            StandardStrengthProgram.objects.filter(owner=active_coach).prefetch_related("exercises"),
             id=program_id,
         )
 
@@ -4407,14 +4423,14 @@ def standard_strength_form_view(request, program_id=None):
             if not program:
                 max_order = (
                     StandardStrengthProgram.objects
-                    .filter(owner=request.user)
+                    .filter(owner=active_coach)
                     .order_by("-sort_order")
                     .values_list("sort_order", flat=True)
                     .first()
                     or 0
                 )
                 program = StandardStrengthProgram.objects.create(
-                    owner=request.user,
+                    owner=active_coach,
                     name=name,
                     sort_order=max_order + 1,
                 )
@@ -4452,7 +4468,7 @@ def standard_strength_form_view(request, program_id=None):
 @login_required
 @require_http_methods(["POST"])
 def standard_strength_delete_view(request, program_id: int):
-    program = get_object_or_404(StandardStrengthProgram.objects.filter(owner=request.user), id=program_id)
+    program = get_object_or_404(StandardStrengthProgram.objects.filter(owner=_active_coach_user(request)), id=program_id)
     program.delete()
     return redirect("standard_strength_list")
 
@@ -4464,6 +4480,8 @@ def standard_strength_detail_view(request, program_id: int):
         StandardStrengthProgram.objects.prefetch_related("exercises"),
         id=program_id,
     )
+    if (request.user.is_staff or request.user.is_superuser) and program.owner_id != _active_coach_user(request).id:
+        return HttpResponse("Not allowed", status=403)
     if program.owner_id and program.owner_id != request.user.id and not request.user.is_staff:
         athlete = _athlete_for_user(request.user)
         allowed = bool(
@@ -4891,7 +4909,7 @@ def race_calendar_view(request):
             errors.append("Date is invalid.")
 
         if not errors and race_date:
-            race_owner = current_athlete.owner if is_athlete_user else request.user
+            race_owner = current_athlete.owner if is_athlete_user else _active_coach_user(request)
             if race_owner is None:
                 return HttpResponse("Not allowed", status=403)
             RaceEvent.objects.create(
@@ -4913,7 +4931,7 @@ def race_calendar_view(request):
         )
         race_owner_ids.discard(None)
     else:
-        race_owner_ids = {request.user.id}
+        race_owner_ids = {_active_coach_user(request).id}
 
     races = list(
         RaceEvent.objects
@@ -4926,7 +4944,7 @@ def race_calendar_view(request):
         race_athletes = [current_athlete]
         trainer_plans = []
     else:
-        race_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+        race_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
         trainer_plans = list(
             _filter_owned(
                 TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER).prefetch_related("athletes", "groups__athletes"),
@@ -5134,7 +5152,7 @@ def race_calendar_view(request):
 @login_required
 @require_http_methods(["POST"])
 def race_calendar_delete_view(request, race_id: int):
-    race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
+    race = get_object_or_404(RaceEvent.objects.filter(owner=_active_coach_user(request)), id=race_id)
     year = race.date.year
     view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
     period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
@@ -5155,7 +5173,7 @@ def race_calendar_distance_add_view(request, race_id: int):
             RaceEvent.objects.filter(owner_id=current_athlete.owner_id), id=race_id
         )
     else:
-        race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
+        race = get_object_or_404(RaceEvent.objects.filter(owner=_active_coach_user(request)), id=race_id)
     selected_distances = request.POST.getlist("distances")
     remove_distance_ids = request.POST.getlist("remove_distances")
     custom_raw = (request.POST.get("custom_distance_m") or "").strip()
@@ -5199,7 +5217,7 @@ def race_calendar_distance_add_view(request, race_id: int):
 @login_required
 @require_http_methods(["POST"])
 def race_calendar_distance_delete_view(request, race_id: int, distance_id: int):
-    race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
+    race = get_object_or_404(RaceEvent.objects.filter(owner=_active_coach_user(request)), id=race_id)
     distance = get_object_or_404(RaceEventDistance.objects.filter(race=race), id=distance_id)
     view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
     period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
@@ -5229,12 +5247,12 @@ def race_calendar_entries_save_view(request, race_id: int):
         race = get_object_or_404(RaceEvent.objects.filter(owner_id__in=allowed_owner_ids), id=race_id)
         athletes = [current_athlete]
     else:
-        race = get_object_or_404(RaceEvent.objects.filter(owner=request.user), id=race_id)
+        race = get_object_or_404(RaceEvent.objects.filter(owner=_active_coach_user(request)), id=race_id)
         posted_athlete_ids = {
             int(value) for value in request.POST.getlist("athletes") if value.isdigit()
         }
         athletes = list(
-            _filter_owned(Athlete.objects.filter(id__in=posted_athlete_ids), request.user)
+            _filter_owned(Athlete.objects.filter(id__in=posted_athlete_ids), request)
         )
 
     distances = _sorted_race_distances(race)
@@ -5323,7 +5341,7 @@ def race_select_view(request):
 
     current_athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(current_athlete and not request.user.is_staff and not request.user.is_superuser)
-    data_owner = request.user
+    data_owner = _active_coach_user(request)
 
     race_owner_ids = []
     if is_athlete_user:
@@ -5348,7 +5366,7 @@ def race_select_view(request):
 
         race_owner_ids = sorted(owner_ids)
     else:
-        race_owner_ids = [request.user.id]
+        race_owner_ids = [data_owner.id]
 
     scope_mode = (request.GET.get("scope") or request.POST.get("scope") or "group").strip().lower()
     if scope_mode not in ("group", "athlete"):
@@ -5715,7 +5733,7 @@ def coach_plans_view(request):
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
 
-    plans = _exclude_non_legacy_plans(_filter_owned(qs, request.user))
+    plans = _exclude_non_legacy_plans(_filter_owned(qs, request))
     return render(request, "core/coach_plans.html", {"plans": plans})
 
 
@@ -5739,7 +5757,7 @@ def coach_plan_create_view(request):
     else:
         qs = TrainingPlan.objects.order_by("name")
 
-    plans = _exclude_non_legacy_plans(_filter_owned(qs, request.user))
+    plans = _exclude_non_legacy_plans(_filter_owned(qs, request))
 
     if request.method == "POST":
         form["name"] = (request.POST.get("name") or "").strip()
@@ -5780,7 +5798,7 @@ def coach_plan_create_view(request):
                 source_plan_id = None
                 errors.append("Source plan is invalid.")
             if source_plan_id is not None:
-                source_plan = _exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request.user)).filter(id=source_plan_id).first()
+                source_plan = _exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request)).filter(id=source_plan_id).first()
                 if not source_plan:
                     errors.append("Source plan was not found.")
                 elif not start_d or not end_d or not source_plan.start_date or not source_plan.end_date:
@@ -5788,7 +5806,7 @@ def coach_plan_create_view(request):
 
         if not errors:
             new_plan = TrainingPlan.objects.create(
-                owner=request.user,
+                owner=_active_coach_user(request),
                 name=form["name"],
                 start_date=start_d,
                 end_date=end_d,
@@ -5809,7 +5827,7 @@ def coach_plan_create_view(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_plan_edit_view(request, plan_id: int):
-    plan = get_object_or_404(_exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request.user)), id=plan_id)
+    plan = get_object_or_404(_exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request)), id=plan_id)
 
     errors = []
     form = {
@@ -5877,7 +5895,7 @@ def coach_plan_edit_view(request, plan_id: int):
 @login_required
 @require_http_methods(["POST"])
 def coach_plan_delete_view(request, plan_id: int):
-    plan = get_object_or_404(_exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request.user)), id=plan_id)
+    plan = get_object_or_404(_exclude_non_legacy_plans(_filter_owned(TrainingPlan.objects.all(), request)), id=plan_id)
 
     if plan.targeted_athlete_ids():
         return HttpResponse(
@@ -5893,7 +5911,7 @@ def coach_plan_delete_view(request, plan_id: int):
 @login_required
 @require_GET
 def coach_athletes_view(request):
-    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     current_year = date.today().year
     for athlete in athletes:
         try:
@@ -5906,6 +5924,7 @@ def coach_athletes_view(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_athlete_create_view(request):
+    active_coach = _active_coach_user(request)
     unit = "pace"
     unit_label = zone_unit_label(unit)
 
@@ -6129,7 +6148,7 @@ def coach_athlete_create_view(request):
 
         if not errors:
             Athlete.objects.create(
-                owner=request.user,
+                owner=active_coach,
                 name=form["name"],
                 birth_year=int(birth_year),
                 gender=gender,
@@ -6180,7 +6199,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         if athlete.id != athlete_id:
             return HttpResponse("Forbidden", status=403)
     else:
-        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
+        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
     unit = "pace"
     unit_label = zone_unit_label(unit)
 
@@ -6464,7 +6483,7 @@ def athlete_settings_view(request):
 @require_http_methods(["POST"])
 def coach_athlete_target_prs_view(request, athlete_id: int):
     if request.user.is_staff or request.user.is_superuser:
-        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
+        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
     else:
         athlete = _athlete_for_user(request.user)
         if not athlete or athlete.id != athlete_id:
@@ -6489,15 +6508,16 @@ def coach_athlete_target_prs_view(request, athlete_id: int):
 @login_required
 @require_GET
 def coach_groups_view(request):
-    groups = _filter_owned(Group.objects.prefetch_related("athletes").order_by("name"), request.user)
+    groups = _filter_owned(Group.objects.prefetch_related("athletes").order_by("name"), request)
     return render(request, "core/coach_groups.html", {"groups": groups})
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_group_create_view(request):
+    active_coach = _active_coach_user(request)
     errors = []
-    athletes_all = _filter_owned(Athlete.objects.order_by("name"), request.user)
+    athletes_all = _filter_owned(Athlete.objects.order_by("name"), request)
     form = {"name": "", "athlete_ids": []}
 
     if request.method == "POST":
@@ -6508,8 +6528,8 @@ def coach_group_create_view(request):
             errors.append("Group name is required.")
 
         if not errors:
-            g = Group.objects.create(owner=request.user, name=form["name"])
-            g.athletes.set(_filter_owned(Athlete.objects.filter(id__in=form["athlete_ids"]), request.user))
+            g = Group.objects.create(owner=active_coach, name=form["name"])
+            g.athletes.set(_filter_owned(Athlete.objects.filter(id__in=form["athlete_ids"]), request))
             return redirect("coach_groups")
 
     return render(
@@ -6522,8 +6542,8 @@ def coach_group_create_view(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_group_edit_view(request, group_id: int):
-    group = get_object_or_404(_filter_owned(Group.objects.all(), request.user), id=group_id)
-    athletes_all = _filter_owned(Athlete.objects.order_by("name"), request.user)
+    group = get_object_or_404(_filter_owned(Group.objects.all(), request), id=group_id)
+    athletes_all = _filter_owned(Athlete.objects.order_by("name"), request)
 
     selected_ids = set(group.athletes.values_list("id", flat=True))
     errors = []
@@ -6539,7 +6559,7 @@ def coach_group_edit_view(request, group_id: int):
         if not errors:
             group.name = form["name"]
             group.save()
-            group.athletes.set(_filter_owned(Athlete.objects.filter(id__in=form["athlete_ids"]), request.user))
+            group.athletes.set(_filter_owned(Athlete.objects.filter(id__in=form["athlete_ids"]), request))
             return redirect("coach_groups")
 
     return render(
@@ -6563,7 +6583,7 @@ def coach_assignments_view(request):
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
 
-    plans = _filter_owned(qs.prefetch_related("groups", "athletes"), request.user)
+    plans = _filter_owned(qs.prefetch_related("groups", "athletes"), request)
 
     rows = []
     for p in plans:
@@ -6585,10 +6605,10 @@ def coach_assignments_view(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def coach_assignment_edit_view(request, plan_id: int):
-    plan = get_object_or_404(_filter_owned(TrainingPlan.objects.all(), request.user), id=plan_id)
+    plan = get_object_or_404(_filter_owned(TrainingPlan.objects.all(), request), id=plan_id)
 
-    groups_all = _filter_owned(Group.objects.order_by("name"), request.user)
-    athletes_all = _filter_owned(Athlete.objects.order_by("name"), request.user)
+    groups_all = _filter_owned(Group.objects.order_by("name"), request)
+    athletes_all = _filter_owned(Athlete.objects.order_by("name"), request)
 
     selected_group_ids = set(plan.groups.values_list("id", flat=True))
     selected_direct_ids = set(plan.athletes.values_list("id", flat=True))
@@ -6605,7 +6625,7 @@ def coach_assignment_edit_view(request, plan_id: int):
 
         if plan.start_date and plan.end_date:
             selected_group_athlete_ids = set(
-                _filter_owned(Athlete.objects.filter(groups__id__in=form["group_ids"]), request.user).values_list("id", flat=True)
+                _filter_owned(Athlete.objects.filter(groups__id__in=form["group_ids"]), request).values_list("id", flat=True)
             )
             desired_athlete_ids = set(form["athlete_ids"]) | selected_group_athlete_ids
 
@@ -6627,7 +6647,7 @@ def coach_assignment_edit_view(request, plan_id: int):
                         )
 
         if not errors:
-            plan.groups.set(_filter_owned(Group.objects.filter(id__in=form["group_ids"]), request.user))
+            plan.groups.set(_filter_owned(Group.objects.filter(id__in=form["group_ids"]), request))
 
             existing_ids = set(PlanMembership.objects.filter(plan=plan).values_list("athlete_id", flat=True))
             desired_direct_ids = set(form["athlete_ids"])
@@ -6655,7 +6675,7 @@ def coach_assignment_edit_view(request, plan_id: int):
 @login_required
 @require_http_methods(["POST"])
 def coach_athlete_delete_view(request, athlete_id: int):
-    athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request.user), id=athlete_id)
+    athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
     athlete.delete()
     return redirect("coach_athletes")
 
@@ -6666,7 +6686,7 @@ def coach_athlete_delete_view(request, athlete_id: int):
 @login_required
 @require_http_methods(["POST"])
 def coach_group_delete_view(request, group_id: int):
-    group = get_object_or_404(_filter_owned(Group.objects.all(), request.user), id=group_id)
+    group = get_object_or_404(_filter_owned(Group.objects.all(), request), id=group_id)
     group.delete()
     return redirect("coach_groups")
 
@@ -6813,7 +6833,7 @@ def trainer_stats_view(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponse("Not allowed", status=403)
 
-    all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     all_athlete_ids = {athlete.id for athlete in all_athletes}
     coach_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
     dco_saved_selections = []
@@ -6894,7 +6914,7 @@ def trainer_stats_view(request):
     else:
         selected_athlete_ids = set(all_athlete_ids)
 
-    plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+    plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request))
     this_week_start = date.today() - timedelta(days=date.today().weekday())
     previous_week_start = this_week_start - timedelta(days=7)
     rows = []
@@ -6959,7 +6979,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         return HttpResponse("Not allowed", status=403)
 
     athlete = get_object_or_404(
-        _filter_owned(Athlete.objects.all(), request.user),
+        _filter_owned(Athlete.objects.all(), request),
         id=athlete_id,
     )
     try:
@@ -6974,7 +6994,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         period_index = 0
     period_index = min(max(period_index, 0), 120)
 
-    plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+    plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request))
     current_week_start = date.today() - timedelta(days=date.today().weekday())
     period_last_week_start = current_week_start - timedelta(weeks=week_count * period_index)
     weeks = _athlete_week_distance_history(
@@ -7083,7 +7103,7 @@ def daily_overview_view(request):
         d = today
         date_value = d.isoformat()
 
-    all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request.user))
+    all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     all_athlete_ids = {athlete.id for athlete in all_athletes}
     coach_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
     dco_train_athlete_ids = {
@@ -7227,8 +7247,8 @@ def daily_overview_view(request):
     for comment in AthleteDayComment.objects.filter(date=d, athlete_id__in=athlete_ids):
         comment_map[comment.athlete_id] = comment
 
-    accessible_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user).exclude(name__startswith="Flex Planner"))
-    flex_plan = _get_athlete_year_flex_plan(request.user, athletes[0] if athletes else None, d, d + timedelta(days=1))
+    accessible_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request).exclude(name__startswith="Flex Planner"))
+    flex_plan = _get_athlete_year_flex_plan(_active_coach_user(request), athletes[0] if athletes else None, d, d + timedelta(days=1))
 
     plan_targets = {}
     for plan in accessible_plans:

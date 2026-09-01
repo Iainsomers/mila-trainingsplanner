@@ -17,7 +17,7 @@ Een trainer is doorgaans staff- of superuser en kan:
 - in de AYC tussen toegankelijke atleten schakelen;
 - stats, Polar en Django Admin openen waar beschikbaar.
 
-Een trainer ziet alleen gegevens die volgens ownership en planrelaties toegankelijk zijn.
+Een trainer ziet standaard alleen de eigen gegevens. Als via `CoachAccess` toegang tot een andere trainer is gegeven, kiest de trainer op het dashboard expliciet als welke coach hij kijkt. Die keuze toont uitsluitend gegevens van die gekozen coach en mengt ze niet met de eigen atleten, plannen, wedstrijden of templates. Deze toegang is niet transitief: als trainer A trainer B mag zien en B trainer C mag zien, dan ziet A trainer C niet.
 
 ## Atleet
 

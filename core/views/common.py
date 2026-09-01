@@ -4,6 +4,7 @@ import re
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q
+from django.contrib.auth import get_user_model
 
 from core.models import TrainingPlan, Athlete, TrainingSlot, CoachAccess
 
@@ -214,7 +215,80 @@ def _parse_manual_zone_values_required(post, unit: str):
 # =============================
 # Plan / athlete selection helpers
 # =============================
-def _filter_owned(qs, user):
+def _request_and_user(user_or_request):
+    if hasattr(user_or_request, "user"):
+        return user_or_request, user_or_request.user
+    return None, user_or_request
+
+
+def _coach_view_owner_ids(user):
+    if not getattr(user, "is_authenticated", False):
+        return []
+    owner_ids = [user.id]
+    owner_ids.extend(CoachAccess.objects.filter(grantee=user).values_list("owner_id", flat=True))
+    return list(dict.fromkeys(owner_ids))
+
+
+def _active_coach_user(request):
+    user = request.user
+    if not getattr(user, "is_authenticated", False):
+        return user
+    if not (user.is_staff or user.is_superuser):
+        return user
+
+    allowed_ids = _coach_view_owner_ids(user)
+    raw_id = request.session.get("active_coach_owner_id")
+    if isinstance(raw_id, str) and raw_id.isdigit():
+        raw_id = int(raw_id)
+    if raw_id not in allowed_ids:
+        raw_id = user.id
+        request.session["active_coach_owner_id"] = raw_id
+        request.session.modified = True
+
+    User = get_user_model()
+    return User.objects.filter(id=raw_id).first() or user
+
+
+def _coach_view_options(user):
+    if not getattr(user, "is_authenticated", False):
+        return []
+    if not (user.is_staff or user.is_superuser):
+        return []
+    User = get_user_model()
+    ids = _coach_view_owner_ids(user)
+    users_by_id = User.objects.filter(id__in=ids).in_bulk()
+    options = []
+    for owner_id in ids:
+        owner = users_by_id.get(owner_id)
+        if owner:
+            options.append(owner)
+    return options
+
+
+def _set_active_coach_user(request, owner_id):
+    user = request.user
+    allowed_ids = _coach_view_owner_ids(user)
+    try:
+        owner_id = int(owner_id)
+    except (TypeError, ValueError):
+        owner_id = user.id
+    if owner_id not in allowed_ids:
+        owner_id = user.id
+    request.session["active_coach_owner_id"] = owner_id
+    request.session.modified = True
+
+
+def _filter_owned(qs, user_or_request):
+    request, user = _request_and_user(user_or_request)
+    active_owner = _active_coach_user(request) if request else user
+
+    if request:
+        has_is_private = any(f.name == "is_private" for f in qs.model._meta.fields)
+        qs = qs.filter(owner=active_owner)
+        if active_owner.id != user.id and has_is_private:
+            qs = qs.filter(is_private=False)
+        return qs.distinct()
+
     if user.is_superuser:
         return qs
 
@@ -262,7 +336,7 @@ def _plan_targets_athlete(plan: TrainingPlan, athlete: Athlete) -> bool:
 
 
 def _get_selected_plan(request):
-    owned_plans = _filter_owned(TrainingPlan.objects.all(), request.user)
+    owned_plans = _filter_owned(TrainingPlan.objects.all(), request)
 
     plan_id = (request.GET.get("plan") or "").strip()
     if not plan_id:
@@ -299,7 +373,7 @@ def _get_selected_athlete_from_request(request):
     if not athlete_id.isdigit():
         return None
 
-    athlete = _filter_owned(Athlete.objects.all(), request.user).filter(id=int(athlete_id)).first()
+    athlete = _filter_owned(Athlete.objects.all(), request).filter(id=int(athlete_id)).first()
     if not athlete:
         return None
 

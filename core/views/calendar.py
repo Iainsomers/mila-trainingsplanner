@@ -39,6 +39,7 @@ from .common import (
     _pct,
     _apply_parse_to_segment,
     _compute_norm_distance_m,
+    _active_coach_user,
 )
 
 from core.views.slots import (
@@ -59,19 +60,36 @@ def _athlete_plan_for_day(athlete_plans, day):
     return None
 
 
+def _request_and_user(user_or_request):
+    if hasattr(user_or_request, "user"):
+        return user_or_request, user_or_request.user
+    return None, user_or_request
+
+
 def _shared_owner_ids(user):
     if not user.is_authenticated:
         return []
     return list(CoachAccess.objects.filter(grantee=user).values_list("owner_id", flat=True))
 
 
-def _filter_owned(qs, user):
+def _filter_owned(qs, user_or_request):
+    request, user = _request_and_user(user_or_request)
+    if request:
+        active_owner = _active_coach_user(request)
+        qs = qs.filter(owner=active_owner)
+        if active_owner.id != user.id and any(f.name == "is_private" for f in qs.model._meta.fields):
+            qs = qs.filter(is_private=False)
+        return qs.distinct()
     if user.is_superuser:
         return qs
     return qs.filter(owner=user)
 
 
-def _filter_accessible(qs, user):
+def _filter_accessible(qs, user_or_request):
+    request, user = _request_and_user(user_or_request)
+    if request:
+        return _filter_owned(qs, request)
+
     if user.is_superuser:
         return qs
 
@@ -291,7 +309,7 @@ def week_phase_set(request, y: int, m: int, d: int):
         return HttpResponseBadRequest("Missing plan")
 
     try:
-        plan = _filter_accessible(TrainingPlan.objects.all(), request.user).get(id=int(plan_id))
+        plan = _filter_accessible(TrainingPlan.objects.all(), request).get(id=int(plan_id))
     except Exception:
         return HttpResponseBadRequest("Invalid plan")
 
@@ -342,7 +360,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
         return HttpResponseBadRequest("Missing plan/athlete")
 
     try:
-        plan = _filter_accessible(TrainingPlan.objects.all(), request.user).get(id=int(plan_id))
+        plan = _filter_accessible(TrainingPlan.objects.all(), request).get(id=int(plan_id))
     except Exception:
         return HttpResponseBadRequest("Invalid plan")
 
@@ -386,7 +404,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 @login_required
 def calendar_view(request):
     plans = (
-        _filter_accessible(TrainingPlan.objects.order_by("name"), request.user)
+        _filter_accessible(TrainingPlan.objects.order_by("name"), request)
         .exclude(name__startswith="Flex Planner")
         .exclude(plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
     )
@@ -395,12 +413,12 @@ def calendar_view(request):
     plan_id = request.GET.get("plan")
     if plan_id:
         try:
-            selected_plan = _filter_accessible(TrainingPlan.objects.all(), request.user).get(id=int(plan_id))
+            selected_plan = _filter_accessible(TrainingPlan.objects.all(), request).get(id=int(plan_id))
         except Exception:
             selected_plan = None
     else:
         fallback_plan = _get_selected_plan(request)
-        if fallback_plan and _filter_accessible(TrainingPlan.objects.filter(id=fallback_plan.id), request.user).exists():
+        if fallback_plan and _filter_accessible(TrainingPlan.objects.filter(id=fallback_plan.id), request).exists():
             selected_plan = fallback_plan
         else:
             selected_plan = plans.first()
@@ -409,7 +427,7 @@ def calendar_view(request):
         return redirect("trainer_planning_detail", plan_id=selected_plan.id)
 
     selected_athlete = _get_selected_athlete_from_request(request)
-    if selected_athlete and not _filter_accessible(Athlete.objects.filter(id=selected_athlete.id), request.user).exists():
+    if selected_athlete and not _filter_accessible(Athlete.objects.filter(id=selected_athlete.id), request).exists():
         selected_athlete = None
 
     plan_athletes = []
@@ -421,7 +439,7 @@ def calendar_view(request):
             .values_list("athlete_id", flat=True)
         )
         ids.discard(None)
-        plan_athletes = list(_filter_accessible(Athlete.objects.filter(id__in=ids).order_by("name"), request.user))
+        plan_athletes = list(_filter_accessible(Athlete.objects.filter(id__in=ids).order_by("name"), request))
         if selected_athlete and selected_athlete.id not in ids:
             return redirect(f"/calendar/?plan={selected_plan.id}")
 
@@ -959,14 +977,14 @@ def flex_planner_view(request):
     - reads existing TrainingPlan / TrainingSlot data
     - opens the existing slot modal with plan + athlete
     """
-    accessible_athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request.user))
+    accessible_athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request))
     accessible_trainer_plans = list(
         _filter_accessible(
             TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER).order_by("name"),
-            request.user,
+            request,
         )
     )
-    accessible_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request.user).exclude(name__startswith="Flex Planner"))
+    accessible_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request).exclude(name__startswith="Flex Planner"))
 
     today = date.today()
     default_start = today - timedelta(days=today.weekday())
@@ -1030,7 +1048,7 @@ def flex_planner_view(request):
 
     end = start + timedelta(days=7 * weeks)
     week_starts = [start + timedelta(days=7 * i) for i in range(weeks)]
-    flex_plan = _get_or_create_flex_planner_plan(request.user, start, end) if selected_athletes else None
+    flex_plan = _get_or_create_flex_planner_plan(_active_coach_user(request), start, end) if selected_athletes else None
 
     # Determine which plans are relevant per athlete/date.
     # Current project rule: an athlete should not be in overlapping plans for the same dates.
@@ -2236,7 +2254,7 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
 
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if request.user.is_staff:
-        owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request.user))
+        owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request))
     else:
         owned_plans = list(TrainingPlan.objects.order_by("name"))
 
@@ -2313,7 +2331,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if standard_strength_id.isdigit():
         selected_standard_strength = (
             StandardStrengthProgram.objects
-            .filter(Q(owner=request.user) | Q(owner__shared_with_others__grantee=request.user))
+            .filter(owner=_active_coach_user(request))
             .filter(id=int(standard_strength_id))
             .first()
         )
@@ -2472,7 +2490,7 @@ def athlete_year_calendar_view(request):
             athlete_id = request.POST.get("athlete") or request.GET.get("athlete")
             if athlete_id:
                 try:
-                    athlete = _filter_accessible(Athlete.objects.all(), request.user).get(id=int(athlete_id))
+                    athlete = _filter_accessible(Athlete.objects.all(), request).get(id=int(athlete_id))
                 except Exception:
                     athlete = None
         else:
@@ -2675,10 +2693,10 @@ def athlete_year_calendar_view(request):
     selected_athlete = None
 
     if request.user.is_staff:
-        athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request.user))
+        athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request))
         if selected_athlete_id:
             try:
-                selected_athlete = _filter_accessible(Athlete.objects.all(), request.user).get(id=int(selected_athlete_id))
+                selected_athlete = _filter_accessible(Athlete.objects.all(), request).get(id=int(selected_athlete_id))
             except Exception:
                 selected_athlete = None
                 selected_athlete_id = ""
@@ -2747,11 +2765,11 @@ def athlete_year_calendar_view(request):
 
     if selected_athlete:
         if request.user.is_staff:
-            owned_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request.user))
+            owned_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request))
         else:
             owned_plans = list(TrainingPlan.objects.order_by("name"))
 
-        flex_plan = _get_athlete_year_flex_plan(request.user, selected_athlete, full_start, end)
+        flex_plan = _get_athlete_year_flex_plan(_active_coach_user(request), selected_athlete, full_start, end)
         if flex_plan and flex_plan not in owned_plans:
             owned_plans.append(flex_plan)
 

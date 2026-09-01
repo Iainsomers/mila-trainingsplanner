@@ -4,7 +4,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 ## Dashboard en Planning
 
-Het coachdashboard toont Planning bovenaan. Admin, Stats, Polar en Settings (under development) staan onderaan. De Settings-tegel doet voorlopig niets.
+Het coachdashboard toont Planning bovenaan. Onder `Coach dashboard` staat voor trainers met gedeelde toegang een `View as coach`-keuze. Standaard kijkt een trainer als zichzelf; na selectie van een andere toegestane coach tonen plannings- en beheerschermen alleen de gegevens van die coach. Admin, Stats, Polar en Settings (under development) staan onderaan. De Settings-tegel doet voorlopig niets.
 
 Atleten gebruiken Planning voor drie onderdelen: Athlete Year Planning, Athlete settings en Races.
 

@@ -616,6 +616,17 @@ class SlotModalSaveTests(TestCase):
         CoachAccess.objects.create(owner=owner, grantee=shared_coach)
         self.client.force_login(shared_coach)
 
+        dashboard = self.client.get("/")
+        self.assertContains(dashboard, "View as coach")
+        self.assertContains(dashboard, "athleteowner")
+
+        own_page = self.client.get(
+            f"/athlete/year/?year={date.today().year}&athlete={athlete.id}"
+        )
+        self.assertNotContains(own_page, "Shared athlete")
+
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
         page = self.client.get(
             f"/athlete/year/?year={date.today().year}&athlete={athlete.id}"
         )
@@ -655,6 +666,48 @@ class SlotModalSaveTests(TestCase):
         )
         self.assertEqual(shared_report.status, "adjusted_ok")
         self.assertEqual(shared_report.comment, "Shared coach report")
+
+    def test_coach_view_dropdown_is_not_transitive(self):
+        coach_a = get_user_model().objects.create_user(
+            username="coach-a", password="secret", is_staff=True
+        )
+        coach_b = get_user_model().objects.create_user(
+            username="coach-b", password="secret", is_staff=True
+        )
+        coach_c = get_user_model().objects.create_user(
+            username="coach-c", password="secret", is_staff=True
+        )
+        CoachAccess.objects.create(owner=coach_b, grantee=coach_a)
+        CoachAccess.objects.create(owner=coach_c, grantee=coach_b)
+
+        Athlete.objects.create(
+            owner=coach_b,
+            name="B athlete",
+            birth_year=2000,
+            gender="X",
+            is_private=False,
+        )
+        Athlete.objects.create(
+            owner=coach_c,
+            name="C athlete",
+            birth_year=2000,
+            gender="X",
+            is_private=False,
+        )
+
+        self.client.force_login(coach_a)
+        dashboard = self.client.get("/")
+        self.assertContains(dashboard, "coach-b")
+        self.assertNotContains(dashboard, "coach-c")
+
+        self.client.post("/", {"coach_view_owner": str(coach_c.id)})
+        athletes_page = self.client.get("/coach/athletes/")
+        self.assertNotContains(athletes_page, "C athlete")
+
+        self.client.post("/", {"coach_view_owner": str(coach_b.id)})
+        athletes_page = self.client.get("/coach/athletes/")
+        self.assertContains(athletes_page, "B athlete")
+        self.assertNotContains(athletes_page, "C athlete")
 
 
 class SegmentRepTimeDisplayTests(TestCase):
