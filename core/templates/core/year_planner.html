@@ -50,7 +50,11 @@
   }
 
   .year-table th.year-name-cell { z-index: 4; }
-  .year-name-main { font-weight: 400; line-height: 1.15; }
+  .year-name-main {
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.15;
+  }
 
   .year-row-actions {
     display: flex;
@@ -123,12 +127,14 @@
 
   .year-select.has-value {
     color: transparent;
+    font-size: 0;
     text-shadow: none;
   }
 
   .year-select option {
     color: #111;
     background: #fff;
+    font-size: 0.75rem;
   }
 
   .year-select:focus {
@@ -165,15 +171,16 @@
   .year-where-wrap .year-select {
     position: absolute;
     inset: 0;
+    z-index: 1;
   }
 
   .year-where-label {
     position: absolute;
-    inset: 2px 3px 2px 12px;
-    z-index: 1;
+    inset: 2px 3px 2px 13px;
+    z-index: 3;
     border: 0;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.62);
+    background: rgba(255, 255, 255, 0.78);
     color: #111;
     font-size: 0.62rem;
     line-height: 1;
@@ -184,6 +191,12 @@
 
   .year-where-wrap.has-value .year-where-label {
     display: block;
+  }
+
+  .year-where-wrap.has-value .year-select {
+    width: 12px;
+    opacity: 0.01;
+    z-index: 4;
   }
 
   .year-where-label:focus {
@@ -231,6 +244,29 @@
   .year-legend .badge {
     min-width: 1.4rem;
     height: 1rem;
+    color: #111 !important;
+    font-size: 0.72rem;
+    line-height: 0.75rem;
+  }
+
+  .year-legend .year-where-camp,
+  .year-legend .year-where-race {
+    color: #fff !important;
+  }
+
+  .year-legend-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .year-legend-title {
+    min-width: 5.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #555;
   }
 
   .year-save-status {
@@ -310,18 +346,22 @@
         </select>
       </div>
       <div class="col-md-7 col-lg-8 year-legend">
-        <div class="d-flex flex-wrap gap-2">
-          <span class="badge year-training-recovery" title="Recovery"></span>
-          <span class="badge year-training-aerobe" title="Aerobe"></span>
-          <span class="badge year-training-specific" title="Specific"></span>
-          <span class="badge year-training-intense" title="Intense"></span>
-          <span class="badge year-training-taper" title="Taper"></span>
-          <span class="badge year-where-camp" title="Camp"></span>
-          <span class="badge year-where-travel" title="Travel"></span>
-          <span class="badge year-where-test" title="Test"></span>
-          <span class="badge year-where-race" title="Race"></span>
-          <span class="badge year-where-medical" title="Medical"></span>
-          <span class="badge year-where-brinec" title="Brinec"></span>
+        <div class="year-legend-group">
+          <span class="year-legend-title">Training</span>
+          <span class="badge year-training-recovery text-dark">Recovery</span>
+          <span class="badge year-training-aerobe text-dark">Aerobe</span>
+          <span class="badge year-training-specific text-dark">Specific</span>
+          <span class="badge year-training-intense text-dark">Intense</span>
+          <span class="badge year-training-taper text-dark">Taper</span>
+        </div>
+        <div class="year-legend-group">
+          <span class="year-legend-title">Whereabouts</span>
+          <span class="badge year-where-camp text-white">Camp</span>
+          <span class="badge year-where-travel text-dark">Travel</span>
+          <span class="badge year-where-test text-dark">Test</span>
+          <span class="badge year-where-race text-white">Race</span>
+          <span class="badge year-where-medical text-dark">Medical</span>
+          <span class="badge year-where-brinec text-dark">Brinec</span>
         </div>
       </div>
     </div>
