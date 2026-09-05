@@ -50,7 +50,7 @@
   }
 
   .year-table th.year-name-cell { z-index: 4; }
-  .year-name-main { font-weight: 700; line-height: 1.15; }
+  .year-name-main { font-weight: 400; line-height: 1.15; }
 
   .year-row-actions {
     display: flex;
@@ -146,6 +146,51 @@
     border-bottom-right-radius: 0;
   }
 
+  .year-where-wrap.same-prev {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .year-where-wrap.same-next {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .year-where-wrap {
+    position: relative;
+    min-height: calc(var(--year-day-height) / 2);
+    border-radius: 5px;
+  }
+
+  .year-where-wrap .year-select {
+    position: absolute;
+    inset: 0;
+  }
+
+  .year-where-label {
+    position: absolute;
+    inset: 2px 3px 2px 12px;
+    z-index: 1;
+    border: 0;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.62);
+    color: #111;
+    font-size: 0.62rem;
+    line-height: 1;
+    text-align: center;
+    padding: 0 2px;
+    display: none;
+  }
+
+  .year-where-wrap.has-value .year-where-label {
+    display: block;
+  }
+
+  .year-where-label:focus {
+    outline: 2px solid #0d6efd;
+    background: #fff;
+  }
+
   .year-zoom-1 { --year-day-width: 42px; --year-day-height: 44px; }
   .year-zoom-3 { --year-day-width: 16px; --year-day-height: 34px; }
   .year-zoom-12 { --year-day-width: 5px; --year-day-height: 22px; }
@@ -164,6 +209,10 @@
     width: 120px;
     min-width: 120px;
     max-width: 120px;
+  }
+
+  .year-zoom-12 .year-where-label {
+    display: none !important;
   }
 
   .year-training-recovery { background: #f8f8f0; color: #f8f8f0; }
@@ -312,14 +361,24 @@
                       <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                   </select>
-                  <select class="year-select year-layer-whereabouts year-where-{{ cell.payload.whereabouts }}"
-                          data-year-whereabouts
-                          data-year-layer="whereabouts"
-                          aria-label="Whereabouts">
-                    {% for value, label in whereabouts_choices %}
-                      <option value="{{ value }}" {% if cell.payload.whereabouts == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                  </select>
+                  <div class="year-where-wrap year-layer-whereabouts year-where-{{ cell.payload.whereabouts }}"
+                       data-year-where-wrap>
+                    <select class="year-select"
+                            data-year-whereabouts
+                            data-year-layer="whereabouts"
+                            aria-label="Whereabouts">
+                      {% for value, label in whereabouts_choices %}
+                        <option value="{{ value }}" {% if cell.payload.whereabouts == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                    <input class="year-where-label"
+                           type="text"
+                           value="{{ cell.payload.note }}"
+                           maxlength="120"
+                           placeholder="Name"
+                           data-year-note
+                           aria-label="Whereabouts name">
+                  </div>
                 </div>
               </td>
             {% endfor %}
@@ -360,6 +419,7 @@
       date: cell.dataset.date,
       training: cell.querySelector("[data-year-training]")?.value || "",
       whereabouts: cell.querySelector("[data-year-whereabouts]")?.value || "",
+      note: cell.querySelector("[data-year-note]")?.value || "",
     };
   }
 
@@ -375,18 +435,38 @@
     }
   }
 
+  function refreshWhereWrap(wrap) {
+    if (!wrap) return;
+    Array.from(wrap.classList).forEach((cls) => {
+      if (cls.startsWith("year-where-") || cls === "has-value" || cls === "same-prev" || cls === "same-next") {
+        wrap.classList.remove(cls);
+      }
+    });
+    const select = wrap.querySelector("[data-year-whereabouts]");
+    const input = wrap.querySelector("[data-year-note]");
+    if (select && select.value) {
+      wrap.classList.add("year-where-" + select.value);
+      wrap.classList.add("has-value");
+    } else if (input) {
+      input.value = "";
+    }
+  }
+
   function refreshConnections() {
     document.querySelectorAll("[data-year-row]").forEach((row) => {
       ["training", "whereabouts"].forEach((layer) => {
-        const selector = layer === "training" ? "[data-year-training]" : "[data-year-whereabouts]";
+        const selector = layer === "training" ? "[data-year-training]" : "[data-year-where-wrap]";
         const items = Array.from(row.querySelectorAll(selector));
-        items.forEach((select, index) => {
-          select.classList.remove("same-prev", "same-next");
-          if (!select.value) return;
+        items.forEach((item, index) => {
+          item.classList.remove("same-prev", "same-next");
+          const value = layer === "training" ? item.value : item.querySelector("[data-year-whereabouts]")?.value;
+          if (!value) return;
           const prev = items[index - 1];
           const next = items[index + 1];
-          if (prev && prev.value === select.value) select.classList.add("same-prev");
-          if (next && next.value === select.value) select.classList.add("same-next");
+          const prevValue = layer === "training" ? prev?.value : prev?.querySelector("[data-year-whereabouts]")?.value;
+          const nextValue = layer === "training" ? next?.value : next?.querySelector("[data-year-whereabouts]")?.value;
+          if (prev && prevValue === value) item.classList.add("same-prev");
+          if (next && nextValue === value) item.classList.add("same-next");
         });
       });
     });
@@ -394,7 +474,7 @@
 
   function refreshAllClasses() {
     document.querySelectorAll("[data-year-training]").forEach((select) => refreshSelectClass(select, "year-training-"));
-    document.querySelectorAll("[data-year-whereabouts]").forEach((select) => refreshSelectClass(select, "year-where-"));
+    document.querySelectorAll("[data-year-where-wrap]").forEach(refreshWhereWrap);
     refreshConnections();
   }
 
@@ -432,8 +512,29 @@
     const select = cell.querySelector(layer === "training" ? "[data-year-training]" : "[data-year-whereabouts]");
     if (!select) return;
     select.value = value || "";
-    refreshSelectClass(select, layer === "training" ? "year-training-" : "year-where-");
+    if (layer === "training") {
+      refreshSelectClass(select, "year-training-");
+    } else {
+      refreshWhereWrap(select.closest("[data-year-where-wrap]"));
+    }
     changedCells.add(cell);
+  }
+
+  function applyCellPayload(cell, payload) {
+    applyLayer(cell, "training", payload.training);
+    applyLayer(cell, "whereabouts", payload.whereabouts);
+    const note = cell.querySelector("[data-year-note]");
+    if (note) note.value = payload.note || "";
+    refreshWhereWrap(cell.querySelector("[data-year-where-wrap]"));
+  }
+
+  function applyPaintPayload(cell, payload) {
+    applyLayer(cell, payload.layer, payload.value);
+    if (payload.layer === "whereabouts") {
+      const note = cell.querySelector("[data-year-note]");
+      if (note) note.value = payload.note || "";
+      refreshWhereWrap(cell.querySelector("[data-year-where-wrap]"));
+    }
   }
 
   function applyRowPayload(row, payloads) {
@@ -441,8 +542,7 @@
     cells.forEach((cell, index) => {
       const payload = payloads[index];
       if (!payload) return;
-      applyLayer(cell, "training", payload.training);
-      applyLayer(cell, "whereabouts", payload.whereabouts);
+      applyCellPayload(cell, payload);
     });
     refreshConnections();
     saveCells(cells);
@@ -462,7 +562,11 @@
   document.querySelectorAll("[data-year-training], [data-year-whereabouts]").forEach((select) => {
     const layer = select.dataset.yearLayer;
     select.addEventListener("change", () => {
-      refreshSelectClass(select, layer === "training" ? "year-training-" : "year-where-");
+      if (layer === "training") {
+        refreshSelectClass(select, "year-training-");
+      } else {
+        refreshWhereWrap(select.closest("[data-year-where-wrap]"));
+      }
       refreshConnections();
       saveCells([select.closest("[data-year-cell]")]);
     });
@@ -474,9 +578,24 @@
         row: select.closest("[data-year-row]"),
         layer,
         value: select.value,
+        note: select.closest("[data-year-cell]")?.querySelector("[data-year-note]")?.value || "",
         startCell,
       };
       changedCells = new Set();
+    });
+  });
+
+  let noteTimer = null;
+  document.querySelectorAll("[data-year-note]").forEach((input) => {
+    input.addEventListener("mousedown", (event) => event.stopPropagation());
+    input.addEventListener("click", (event) => event.stopPropagation());
+    input.addEventListener("input", () => {
+      window.clearTimeout(noteTimer);
+      noteTimer = window.setTimeout(() => saveCells([input.closest("[data-year-cell]")]), 450);
+    });
+    input.addEventListener("blur", () => {
+      window.clearTimeout(noteTimer);
+      saveCells([input.closest("[data-year-cell]")]);
     });
   });
 
@@ -490,7 +609,7 @@
       const fromIndex = Math.min(startIndex, endIndex);
       const toIndex = Math.max(startIndex, endIndex);
       for (let index = fromIndex; index <= toIndex; index += 1) {
-        applyLayer(cells[index], paint.layer, paint.value);
+        applyPaintPayload(cells[index], paint);
       }
       refreshConnections();
     });
@@ -512,6 +631,7 @@
         return {
           training: payload.training,
           whereabouts: payload.whereabouts,
+          note: payload.note,
         };
       });
       document.body.classList.add("year-row-paste-mode");

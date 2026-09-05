@@ -255,6 +255,7 @@ class YearPlannerTests(TestCase):
                 "date": "2026-09-07",
                 "training": "taper",
                 "whereabouts": "race",
+                "note": "Diamond League",
             }),
             content_type="application/json",
         )
@@ -262,7 +263,7 @@ class YearPlannerTests(TestCase):
         self.assertEqual(base_response.status_code, 200)
         self.assertEqual(athlete_response.status_code, 200)
         self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete__isnull=True, training_type="aerobe", whereabouts_type="camp").exists())
-        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete=athlete, training_type="taper", whereabouts_type="race").exists())
+        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete=athlete, training_type="taper", whereabouts_type="race", note="Diamond League").exists())
 
     def test_empty_year_planner_save_deletes_entry(self):
         coach, athlete = self._coach_and_athlete()
