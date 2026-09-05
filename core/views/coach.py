@@ -3718,19 +3718,32 @@ def year_planner_view(request):
     if year < 2000 or year > 2100:
         year = today.year
 
-    period_mode = (request.GET.get("period") or "full").strip().lower()
-    if period_mode not in {"full", "outdoor", "indoor", "current_next"}:
+    period_mode = (request.GET.get("period") or "season").strip().lower()
+    if period_mode not in {"season", "full", "outdoor", "indoor", "current_next"}:
         period_mode = "full"
-    period = _race_calendar_period_bounds(year, period_mode, today)
+    if period_mode == "season":
+        period = {
+            "start_date": date(year, 9, 1),
+            "end_date": date(year + 1, 8, 31),
+            "label": f"{year}/{str(year + 1)[-2:]}",
+            "previous_year": year - 1,
+            "next_year": year + 1,
+        }
+    else:
+        period = _race_calendar_period_bounds(year, period_mode, today)
     start_date = period["start_date"]
     end_date = period["end_date"]
     days = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
 
-    show_training = (request.GET.get("show_training") or "1") == "1"
-    show_whereabouts = (request.GET.get("show_whereabouts") or "1") == "1"
+    show_training = request.GET.get("show_training", "1") == "1"
+    show_whereabouts = request.GET.get("show_whereabouts", "1") == "1"
     if not show_training and not show_whereabouts:
         show_training = True
         show_whereabouts = True
+
+    zoom_mode = (request.GET.get("zoom") or "3").strip()
+    if zoom_mode not in {"1", "3", "12"}:
+        zoom_mode = "3"
 
     athletes = list(_filter_owned(Athlete.objects.order_by(Lower("name")), request))
     athlete_ids = _clean_int_list(request.GET.getlist("athletes"))
@@ -3780,6 +3793,7 @@ def year_planner_view(request):
         })
 
     period_options = [
+        {"key": "season", "label": f"{year}/{str(year + 1)[-2:]}", "year": year},
         {"key": "current_next", "label": "Current / next month", "year": today.year},
         {"key": "outdoor", "label": f"Outdoor {year}", "year": year},
         {"key": "indoor", "label": f"Indoor {year}/{str(year + 1)[-2:]}", "year": year},
@@ -3799,6 +3813,7 @@ def year_planner_view(request):
         "period_options": period_options,
         "show_training": show_training,
         "show_whereabouts": show_whereabouts,
+        "zoom_mode": zoom_mode,
         "training_choices": YearPlannerEntry.TRAINING_CHOICES,
         "whereabouts_choices": YearPlannerEntry.WHEREABOUTS_CHOICES,
     })

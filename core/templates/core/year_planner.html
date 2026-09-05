@@ -4,13 +4,8 @@
 
 {% block extra_head %}
 <style>
-  .year-toolbar {
-    gap: 0.5rem;
-  }
-
-  .year-athlete-select {
-    min-height: 8.5rem;
-  }
+  .year-toolbar { gap: 0.5rem; }
+  .year-athlete-select { min-height: 8.5rem; }
 
   .year-table-wrap {
     overflow: auto;
@@ -29,13 +24,13 @@
   .year-table th,
   .year-table td {
     border: 1px solid #d8d8d8;
-    padding: 2px;
+    padding: 0;
     vertical-align: top;
   }
 
   .year-table th {
     background: #f5f5f5;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     line-height: 1.1;
     text-align: center;
     position: sticky;
@@ -44,107 +39,149 @@
   }
 
   .year-name-cell {
-    width: 140px;
-    min-width: 140px;
-    max-width: 140px;
-    font-weight: 700;
+    width: 150px;
+    min-width: 150px;
+    max-width: 150px;
     background: #fff;
     position: sticky;
     left: 0;
     z-index: 3;
+    padding: 4px 6px !important;
   }
 
-  .year-table th.year-name-cell {
-    z-index: 4;
+  .year-table th.year-name-cell { z-index: 4; }
+  .year-name-main { font-weight: 700; line-height: 1.15; }
+
+  .year-row-actions {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
   }
 
-  .year-day-head {
-    width: 62px;
-    min-width: 62px;
+  .year-row-copy,
+  .year-row-paste {
+    border: 0;
+    background: #f1f3f5;
+    color: #333;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 3px 6px;
+  }
+
+  .year-row-paste {
+    color: #0d6efd;
+    visibility: hidden;
+  }
+
+  .year-row-paste-mode .year-row-paste { visibility: visible; }
+
+  .year-day-head,
+  .year-day-cell {
+    width: var(--year-day-width);
+    min-width: var(--year-day-width);
   }
 
   .year-day-cell {
-    width: 62px;
-    min-width: 62px;
-    height: 55px;
+    height: var(--year-day-height);
     position: relative;
   }
 
   .year-cell {
-    min-height: 50px;
-    cursor: grab;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 0;
+    min-height: var(--year-day-height);
+    background: #fff;
   }
 
-  .year-cell.dragging {
-    opacity: 0.55;
+  .year-planner-page.year-hide-training .year-layer-training,
+  .year-planner-page.year-hide-whereabouts .year-layer-whereabouts {
+    display: none;
   }
 
-  .year-cell.drop-target {
-    outline: 2px solid #0d6efd;
-    outline-offset: -2px;
+  .year-planner-page.year-hide-training .year-cell,
+  .year-planner-page.year-hide-whereabouts .year-cell {
+    grid-template-rows: 1fr;
   }
 
   .year-select {
     width: 100%;
+    height: 100%;
+    min-height: calc(var(--year-day-height) / 2);
     border: 0;
-    border-radius: 4px;
-    padding: 1px 2px;
-    margin-bottom: 2px;
-    font-size: 0.64rem;
-    line-height: 1.1;
+    border-radius: 5px;
+    padding: 0;
+    margin: 0;
+    font-size: 0.62rem;
+    line-height: 1;
     appearance: none;
     text-align: center;
+    background: transparent;
+  }
+
+  .year-select.has-value {
+    color: transparent;
+    text-shadow: none;
+  }
+
+  .year-select option {
+    color: #111;
+    background: #fff;
   }
 
   .year-select:focus {
     outline: 2px solid #0d6efd;
+    outline-offset: -2px;
   }
 
-  .year-training-recovery { background: #f8f8f0; }
-  .year-training-aerobe { background: #f06f5f; }
-  .year-training-specific { background: #bfe7bf; }
-  .year-training-intense { background: #b7d7ff; }
-  .year-training-taper { background: #f2c200; }
-
-  .year-where-camp { background: #38a169; color: #fff; }
-  .year-where-travel { background: #b7f7b7; color: #111; }
-  .year-where-test { background: #b794f4; color: #111; }
-  .year-where-race { background: #cc0000; color: #fff; }
-  .year-where-medical { background: #fff8cc; color: #111; }
-  .year-where-brinec { background: #ffb347; color: #111; }
-
-  .year-copy-btn,
-  .year-paste-btn {
-    position: absolute;
-    bottom: 2px;
-    border: 0;
-    background: rgba(255, 255, 255, 0.86);
-    color: #333;
-    font-size: 0.63rem;
-    line-height: 1;
-    padding: 1px 4px;
-    border-radius: 4px;
-    font-weight: 700;
-    opacity: 0;
-    pointer-events: none;
+  .year-select.same-prev {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
   }
 
-  .year-copy-btn {
-    left: 3px;
+  .year-select.same-next {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
   }
 
-  .year-paste-btn {
-    right: 3px;
-    color: #0d6efd;
+  .year-zoom-1 { --year-day-width: 42px; --year-day-height: 44px; }
+  .year-zoom-3 { --year-day-width: 16px; --year-day-height: 34px; }
+  .year-zoom-12 { --year-day-width: 5px; --year-day-height: 22px; }
+
+  .year-zoom-3 .year-table th,
+  .year-zoom-12 .year-table th {
+    font-size: 0;
   }
 
-  .year-day-cell:hover .year-copy-btn,
-  .year-day-cell:hover .year-paste-btn,
-  .year-day-cell:focus-within .year-copy-btn,
-  .year-day-cell:focus-within .year-paste-btn,
-  .year-paste-mode .year-paste-btn {
-    opacity: 1;
-    pointer-events: auto;
+  .year-zoom-3 .year-table th:nth-child(7n+2),
+  .year-zoom-12 .year-table th:nth-child(14n+2) {
+    font-size: 0.58rem;
+  }
+
+  .year-zoom-12 .year-name-cell {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+  }
+
+  .year-training-recovery { background: #f8f8f0; color: #f8f8f0; }
+  .year-training-aerobe { background: #f06f5f; color: #f06f5f; }
+  .year-training-specific { background: #bfe7bf; color: #bfe7bf; }
+  .year-training-intense { background: #b7d7ff; color: #b7d7ff; }
+  .year-training-taper { background: #f2c200; color: #f2c200; }
+
+  .year-where-camp { background: #38a169; color: #38a169; }
+  .year-where-travel { background: #b7f7b7; color: #b7f7b7; }
+  .year-where-test { background: #b794f4; color: #b794f4; }
+  .year-where-race { background: #cc0000; color: #cc0000; }
+  .year-where-medical { background: #fff8cc; color: #fff8cc; }
+  .year-where-brinec { background: #ffb347; color: #ffb347; }
+
+  .year-legend .badge {
+    min-width: 1.4rem;
+    height: 1rem;
   }
 
   .year-save-status {
@@ -153,15 +190,13 @@
   }
 
   @media (max-width: 768px) {
-    .year-table-wrap {
-      max-height: none;
-    }
+    .year-table-wrap { max-height: none; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 year-planner-page year-zoom-{{ zoom_mode }} {% if not show_training %}year-hide-training{% endif %} {% if not show_whereabouts %}year-hide-whereabouts{% endif %}">
   <div class="d-flex justify-content-between align-items-start mb-3">
     <div>
       <h1 class="mb-1">Year Planner</h1>
@@ -173,11 +208,11 @@
     </div>
   </div>
 
-  <form method="get" class="mb-3">
+  <form method="get" class="mb-3" id="yearPlannerFilterForm">
     <div class="d-flex flex-wrap align-items-end year-toolbar">
       <div class="btn-group" role="group" aria-label="Period">
         {% for option in period_options %}
-          <a href="?year={{ option.year }}&period={{ option.key }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}"
+          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}"
              class="btn btn-sm {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
             {{ option.label }}
           </a>
@@ -185,13 +220,24 @@
       </div>
 
       {% if period_mode != "current_next" %}
-        <a href="?year={{ previous_year }}&period={{ period_mode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
-        <a href="?year={{ next_year }}&period={{ period_mode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
+        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
+        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
       {% endif %}
 
       <input type="hidden" name="year" value="{{ year }}">
       <input type="hidden" name="period" value="{{ period_mode }}">
 
+      <div>
+        <label for="zoomMode" class="form-label mb-1 small">View</label>
+        <select id="zoomMode" name="zoom" class="form-select form-select-sm">
+          <option value="1" {% if zoom_mode == "1" %}selected{% endif %}>1 month</option>
+          <option value="3" {% if zoom_mode == "3" %}selected{% endif %}>3 months</option>
+          <option value="12" {% if zoom_mode == "12" %}selected{% endif %}>12 months</option>
+        </select>
+      </div>
+
+      <input type="hidden" name="show_training" value="0">
+      <input type="hidden" name="show_whereabouts" value="0">
       <div class="form-check form-check-inline ms-1">
         <input class="form-check-input" type="checkbox" id="showTraining" name="show_training" value="1" {% if show_training %}checked{% endif %}>
         <label class="form-check-label" for="showTraining">Training</label>
@@ -214,19 +260,19 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-7 col-lg-8">
+      <div class="col-md-7 col-lg-8 year-legend">
         <div class="d-flex flex-wrap gap-2">
-          <span class="badge year-training-recovery text-dark">Recovery</span>
-          <span class="badge year-training-aerobe text-dark">Aerobe</span>
-          <span class="badge year-training-specific text-dark">Specific</span>
-          <span class="badge year-training-intense text-dark">Intense</span>
-          <span class="badge year-training-taper text-dark">Taper</span>
-          <span class="badge year-where-camp">Camp</span>
-          <span class="badge year-where-travel">Travel</span>
-          <span class="badge year-where-test">Test</span>
-          <span class="badge year-where-race">Race</span>
-          <span class="badge year-where-medical">Medical</span>
-          <span class="badge year-where-brinec">Brinec</span>
+          <span class="badge year-training-recovery" title="Recovery"></span>
+          <span class="badge year-training-aerobe" title="Aerobe"></span>
+          <span class="badge year-training-specific" title="Specific"></span>
+          <span class="badge year-training-intense" title="Intense"></span>
+          <span class="badge year-training-taper" title="Taper"></span>
+          <span class="badge year-where-camp" title="Camp"></span>
+          <span class="badge year-where-travel" title="Travel"></span>
+          <span class="badge year-where-test" title="Test"></span>
+          <span class="badge year-where-race" title="Race"></span>
+          <span class="badge year-where-medical" title="Medical"></span>
+          <span class="badge year-where-brinec" title="Brinec"></span>
         </div>
       </div>
     </div>
@@ -238,41 +284,43 @@
         <tr>
           <th class="year-name-cell">Athlete</th>
           {% for day in days %}
-            <th class="year-day-head{% if day.weekday == 0 %} border-start border-dark{% endif %}">
-              {{ day|date:"D" }}<br>
-              {{ day|date:"d-m" }}
-            </th>
+            <th class="year-day-head" title="{{ day|date:'D d-m-Y' }}">{{ day|date:"d-m" }}</th>
           {% endfor %}
         </tr>
       </thead>
       <tbody>
         {% for row in rows %}
-          <tr>
-            <td class="year-name-cell">{{ row.label }}</td>
+          <tr data-year-row>
+            <td class="year-name-cell">
+              <div class="year-name-main">{{ row.label }}</div>
+              <div class="year-row-actions">
+                <button type="button" class="year-row-copy" data-year-row-copy>c</button>
+                <button type="button" class="year-row-paste" data-year-row-paste>p</button>
+              </div>
+            </td>
             {% for cell in row.cells %}
-              <td class="year-day-cell{% if cell.date.weekday == 0 %} border-start border-dark{% endif %}">
+              <td class="year-day-cell">
                 <div class="year-cell"
-                     draggable="true"
                      data-year-cell
                      data-scope="{{ row.scope }}"
                      data-date="{{ cell.date|date:'Y-m-d' }}">
-                  {% if show_training %}
-                    <select class="year-select year-training-{{ cell.payload.training }}" data-year-training aria-label="Training type">
-                      {% for value, label in training_choices %}
-                        <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
-                      {% endfor %}
-                    </select>
-                  {% endif %}
-                  {% if show_whereabouts %}
-                    <select class="year-select year-where-{{ cell.payload.whereabouts }}" data-year-whereabouts aria-label="Whereabouts">
-                      {% for value, label in whereabouts_choices %}
-                        <option value="{{ value }}" {% if cell.payload.whereabouts == value %}selected{% endif %}>{{ label }}</option>
-                      {% endfor %}
-                    </select>
-                  {% endif %}
+                  <select class="year-select year-layer-training year-training-{{ cell.payload.training }}"
+                          data-year-training
+                          data-year-layer="training"
+                          aria-label="Training type">
+                    {% for value, label in training_choices %}
+                      <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <select class="year-select year-layer-whereabouts year-where-{{ cell.payload.whereabouts }}"
+                          data-year-whereabouts
+                          data-year-layer="whereabouts"
+                          aria-label="Whereabouts">
+                    {% for value, label in whereabouts_choices %}
+                      <option value="{{ value }}" {% if cell.payload.whereabouts == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
                 </div>
-                <button type="button" class="year-copy-btn" data-year-copy>c</button>
-                <button type="button" class="year-paste-btn" data-year-paste>p</button>
               </td>
             {% endfor %}
           </tr>
@@ -291,10 +339,13 @@
     if (parts.length === 2) return parts.pop().split(";").shift();
   }
 
+  const page = document.querySelector(".year-planner-page");
+  const form = document.getElementById("yearPlannerFilterForm");
   const saveUrl = "{% url 'year_planner_entry_save' %}";
   const saveStatus = document.querySelector("[data-year-save-status]");
-  let clipboard = null;
-  let dragPayload = null;
+  let rowClipboard = null;
+  let paint = null;
+  let changedCells = new Set();
 
   function setStatus(text, isError) {
     if (!saveStatus) return;
@@ -312,24 +363,39 @@
     };
   }
 
-  function applyPayload(cell, payload) {
-    const training = cell.querySelector("[data-year-training]");
-    const whereabouts = cell.querySelector("[data-year-whereabouts]");
-    if (training && Object.prototype.hasOwnProperty.call(payload, "training")) {
-      training.value = payload.training || "";
-      refreshSelectClass(training, "year-training-");
-    }
-    if (whereabouts && Object.prototype.hasOwnProperty.call(payload, "whereabouts")) {
-      whereabouts.value = payload.whereabouts || "";
-      refreshSelectClass(whereabouts, "year-where-");
+  function refreshSelectClass(select, prefix) {
+    Array.from(select.classList).forEach((cls) => {
+      if (cls.startsWith(prefix) || cls === "has-value" || cls === "same-prev" || cls === "same-next") {
+        select.classList.remove(cls);
+      }
+    });
+    if (select.value) {
+      select.classList.add(prefix + select.value);
+      select.classList.add("has-value");
     }
   }
 
-  function refreshSelectClass(select, prefix) {
-    Array.from(select.classList).forEach((cls) => {
-      if (cls.startsWith(prefix)) select.classList.remove(cls);
+  function refreshConnections() {
+    document.querySelectorAll("[data-year-row]").forEach((row) => {
+      ["training", "whereabouts"].forEach((layer) => {
+        const selector = layer === "training" ? "[data-year-training]" : "[data-year-whereabouts]";
+        const items = Array.from(row.querySelectorAll(selector));
+        items.forEach((select, index) => {
+          select.classList.remove("same-prev", "same-next");
+          if (!select.value) return;
+          const prev = items[index - 1];
+          const next = items[index + 1];
+          if (prev && prev.value === select.value) select.classList.add("same-prev");
+          if (next && next.value === select.value) select.classList.add("same-next");
+        });
+      });
     });
-    if (select.value) select.classList.add(prefix + select.value);
+  }
+
+  function refreshAllClasses() {
+    document.querySelectorAll("[data-year-training]").forEach((select) => refreshSelectClass(select, "year-training-"));
+    document.querySelectorAll("[data-year-whereabouts]").forEach((select) => refreshSelectClass(select, "year-where-"));
+    refreshConnections();
   }
 
   async function saveCell(cell) {
@@ -346,79 +412,129 @@
       setStatus("Save failed", true);
       return false;
     }
-    setStatus("Saved", false);
-    window.setTimeout(() => setStatus("", false), 1100);
     return true;
   }
 
-  document.querySelectorAll("[data-year-training]").forEach((select) => {
-    refreshSelectClass(select, "year-training-");
+  async function saveCells(cells) {
+    const uniqueCells = Array.from(new Set(cells)).filter(Boolean);
+    if (!uniqueCells.length) return;
+    setStatus("Saving...", false);
+    const results = await Promise.all(uniqueCells.map((cell) => saveCell(cell)));
+    if (results.every(Boolean)) {
+      setStatus("Saved", false);
+      window.setTimeout(() => setStatus("", false), 1100);
+    } else {
+      setStatus("Save failed", true);
+    }
+  }
+
+  function applyLayer(cell, layer, value) {
+    const select = cell.querySelector(layer === "training" ? "[data-year-training]" : "[data-year-whereabouts]");
+    if (!select) return;
+    select.value = value || "";
+    refreshSelectClass(select, layer === "training" ? "year-training-" : "year-where-");
+    changedCells.add(cell);
+  }
+
+  function applyRowPayload(row, payloads) {
+    const cells = Array.from(row.querySelectorAll("[data-year-cell]"));
+    cells.forEach((cell, index) => {
+      const payload = payloads[index];
+      if (!payload) return;
+      applyLayer(cell, "training", payload.training);
+      applyLayer(cell, "whereabouts", payload.whereabouts);
+    });
+    refreshConnections();
+    saveCells(cells);
+  }
+
+  function updateVisibility() {
+    const showTraining = document.getElementById("showTraining")?.checked;
+    const showWhereabouts = document.getElementById("showWhereabouts")?.checked;
+    page.classList.toggle("year-hide-training", !showTraining);
+    page.classList.toggle("year-hide-whereabouts", !showWhereabouts);
+  }
+
+  document.getElementById("showTraining")?.addEventListener("change", updateVisibility);
+  document.getElementById("showWhereabouts")?.addEventListener("change", updateVisibility);
+  document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
+
+  document.querySelectorAll("[data-year-training], [data-year-whereabouts]").forEach((select) => {
+    const layer = select.dataset.yearLayer;
     select.addEventListener("change", () => {
-      refreshSelectClass(select, "year-training-");
-      saveCell(select.closest("[data-year-cell]"));
+      refreshSelectClass(select, layer === "training" ? "year-training-" : "year-where-");
+      refreshConnections();
+      saveCells([select.closest("[data-year-cell]")]);
+    });
+    select.addEventListener("mousedown", (event) => {
+      if (event.button !== 0) return;
+      if (!select.value) return;
+      const startCell = select.closest("[data-year-cell]");
+      paint = {
+        row: select.closest("[data-year-row]"),
+        layer,
+        value: select.value,
+        startCell,
+      };
+      changedCells = new Set();
     });
   });
 
-  document.querySelectorAll("[data-year-whereabouts]").forEach((select) => {
-    refreshSelectClass(select, "year-where-");
-    select.addEventListener("change", () => {
-      refreshSelectClass(select, "year-where-");
-      saveCell(select.closest("[data-year-cell]"));
+  document.querySelectorAll("[data-year-cell]").forEach((cell) => {
+    cell.addEventListener("mouseenter", () => {
+      if (!paint || paint.row !== cell.closest("[data-year-row]")) return;
+      const cells = Array.from(paint.row.querySelectorAll("[data-year-cell]"));
+      const startIndex = cells.indexOf(paint.startCell);
+      const endIndex = cells.indexOf(cell);
+      if (startIndex < 0 || endIndex < 0) return;
+      const fromIndex = Math.min(startIndex, endIndex);
+      const toIndex = Math.max(startIndex, endIndex);
+      for (let index = fromIndex; index <= toIndex; index += 1) {
+        applyLayer(cells[index], paint.layer, paint.value);
+      }
+      refreshConnections();
     });
   });
 
-  document.querySelectorAll("[data-year-copy]").forEach((button) => {
+  document.addEventListener("mouseup", () => {
+    if (!paint) return;
+    const cells = Array.from(changedCells);
+    paint = null;
+    changedCells = new Set();
+    saveCells(cells);
+  });
+
+  document.querySelectorAll("[data-year-row-copy]").forEach((button) => {
     button.addEventListener("click", () => {
-      const cell = button.closest(".year-day-cell").querySelector("[data-year-cell]");
-      clipboard = cellPayload(cell);
-      delete clipboard.scope;
-      delete clipboard.date;
-      document.body.classList.add("year-paste-mode");
+      const row = button.closest("[data-year-row]");
+      rowClipboard = Array.from(row.querySelectorAll("[data-year-cell]")).map((cell) => {
+        const payload = cellPayload(cell);
+        return {
+          training: payload.training,
+          whereabouts: payload.whereabouts,
+        };
+      });
+      document.body.classList.add("year-row-paste-mode");
     });
   });
 
-  document.querySelectorAll("[data-year-paste]").forEach((button) => {
+  document.querySelectorAll("[data-year-row-paste]").forEach((button) => {
     button.addEventListener("click", () => {
-      if (!clipboard) return;
-      const cell = button.closest(".year-day-cell").querySelector("[data-year-cell]");
-      applyPayload(cell, clipboard);
-      saveCell(cell);
+      if (!rowClipboard) return;
+      applyRowPayload(button.closest("[data-year-row]"), rowClipboard);
     });
   });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
-      clipboard = null;
-      document.body.classList.remove("year-paste-mode");
+      rowClipboard = null;
+      paint = null;
+      changedCells = new Set();
+      document.body.classList.remove("year-row-paste-mode");
     }
   });
 
-  document.querySelectorAll("[data-year-cell]").forEach((cell) => {
-    cell.addEventListener("dragstart", (event) => {
-      dragPayload = cellPayload(cell);
-      delete dragPayload.scope;
-      delete dragPayload.date;
-      cell.classList.add("dragging");
-      event.dataTransfer.effectAllowed = "copy";
-    });
-    cell.addEventListener("dragend", () => {
-      cell.classList.remove("dragging");
-      document.querySelectorAll(".drop-target").forEach((target) => target.classList.remove("drop-target"));
-      dragPayload = null;
-    });
-    cell.addEventListener("dragover", (event) => {
-      if (!dragPayload) return;
-      event.preventDefault();
-      cell.classList.add("drop-target");
-    });
-    cell.addEventListener("dragleave", () => cell.classList.remove("drop-target"));
-    cell.addEventListener("drop", (event) => {
-      if (!dragPayload) return;
-      event.preventDefault();
-      cell.classList.remove("drop-target");
-      applyPayload(cell, dragPayload);
-      saveCell(cell);
-    });
-  });
+  refreshAllClasses();
+  updateVisibility();
 </script>
 {% endblock %}

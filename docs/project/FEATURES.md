@@ -23,12 +23,13 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 ## Year Planner
 
 - Coach-only overzicht onder Planning voor training phases en whereabouts over een flexibele periode.
-- De periode gebruikt dezelfde keuzes als de Race Calendar: current/next month, outdoor, indoor en full year.
+- De periode gebruikt current/next month, outdoor, indoor, full year en een seizoensperiode zoals 2026/2027.
 - Trainers kunnen Training, Whereabouts of beide lagen tonen.
+- De weergave kan worden geschaald naar ongeveer 1, 3 of 12 maanden per schermbreedte.
 - Meerdere atleten kunnen tegelijk worden getoond; daarnaast bestaat een virtuele `Basis`-rij die geen echte atleet in de database is.
 - Training phases gebruiken dezelfde keuzes als de Flex Planner: Recovery, Aerobe, Specific, Intense en Taper.
 - Whereabouts-keuzes zijn Camp, Travel, Test, Race, Medical en Brinec met vaste kleuren.
-- Cellen slaan direct op en kunnen via drag-copy of `c`/`p` worden gekopieerd.
+- Cellen slaan direct op. Gekozen waarden kunnen over een datumrange worden gesleept en hele atletrijen kunnen met `c`/`p` worden gekopieerd.
 
 ## Flex Planner
 
