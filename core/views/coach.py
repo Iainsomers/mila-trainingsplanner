@@ -2555,7 +2555,7 @@ def polar_callback_view(request):
     )
 
     last_error = ""
-    if register_status not in {200, 409}:
+    if not (200 <= int(register_status or 0) < 300) and register_status != 409:
         last_error = f"Polar user registration failed with status {register_status}."
 
     PolarConnection.objects.update_or_create(

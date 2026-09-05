@@ -1,11 +1,13 @@
 from django.contrib.auth import get_user_model
 from datetime import date, timedelta
+import os
 from pathlib import Path
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -19,6 +21,39 @@ from core.views.coach import (
 
 
 class PolarPlanMismatchTests(TestCase):
+    def test_polar_registration_created_status_is_success(self):
+        user = get_user_model().objects.create_user(username="polar-user", password="secret")
+        self.client.force_login(user)
+
+        responses = [
+            (200, {
+                "access_token": "token",
+                "x_user_id": "12345",
+                "token_type": "bearer",
+                "expires_in": 3600,
+                "scope": "accesslink.read_all",
+            }),
+            (201, {"user-id": 12345, "member-id": f"mila-user-{user.id}"}),
+        ]
+
+        session = self.client.session
+        session["polar_oauth_state"] = "state-1"
+        session.save()
+
+        with patch.dict(os.environ, {
+            "POLAR_CLIENT_ID": "client",
+            "POLAR_CLIENT_SECRET": "secret",
+            "POLAR_REDIRECT_URI": "http://testserver/integrations/polar/callback/",
+        }):
+            with patch("core.views.coach._polar_json_request", side_effect=responses):
+                response = self.client.get("/integrations/polar/callback/?code=test-code&state=state-1")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("connected=1", response["Location"])
+        connection = PolarConnection.objects.get(user=user)
+        self.assertEqual(connection.status, PolarConnection.STATUS_CONNECTED)
+        self.assertEqual(connection.last_error, "")
+
     def test_running_plan_ignores_cycling_activity_on_same_day(self):
         activities = [
             {"id": "run", "sport": "RUNNING"},
