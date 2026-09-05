@@ -298,18 +298,29 @@
     min-width: 150px;
   }
 
-  .year-training-recovery { background: #f8f8f0; color: #111; }
-  .year-training-aerobe { background: #f06f5f; color: #111; }
-  .year-training-specific { background: #bfe7bf; color: #111; }
-  .year-training-intense { background: #b7d7ff; color: #111; }
-  .year-training-taper { background: #f2c200; color: #111; }
+  .year-fill.year-training-recovery,
+  .year-legend .year-training-recovery { background: #f8f8f0; color: #111; }
+  .year-fill.year-training-aerobe,
+  .year-legend .year-training-aerobe { background: #f06f5f; color: #111; }
+  .year-fill.year-training-specific,
+  .year-legend .year-training-specific { background: #bfe7bf; color: #111; }
+  .year-fill.year-training-intense,
+  .year-legend .year-training-intense { background: #b7d7ff; color: #111; }
+  .year-fill.year-training-taper,
+  .year-legend .year-training-taper { background: #f2c200; color: #111; }
 
-  .year-where-camp { background: #38a169; color: #fff; }
-  .year-where-travel { background: #b7f7b7; color: #111; }
-  .year-where-test { background: #b794f4; color: #111; }
-  .year-where-race { background: #cc0000; color: #fff; }
-  .year-where-medical { background: #fff8cc; color: #111; }
-  .year-where-brinec { background: #ffb347; color: #111; }
+  .year-fill.year-where-camp,
+  .year-legend .year-where-camp { background: #38a169; color: #fff; }
+  .year-fill.year-where-travel,
+  .year-legend .year-where-travel { background: #b7f7b7; color: #111; }
+  .year-fill.year-where-test,
+  .year-legend .year-where-test { background: #b794f4; color: #111; }
+  .year-fill.year-where-race,
+  .year-legend .year-where-race { background: #cc0000; color: #fff; }
+  .year-fill.year-where-medical,
+  .year-legend .year-where-medical { background: #fff8cc; color: #111; }
+  .year-fill.year-where-brinec,
+  .year-legend .year-where-brinec { background: #ffb347; color: #111; }
 
   .year-legend .badge {
     min-width: 1.4rem;
@@ -594,7 +605,7 @@
   function refreshWhereWrap(wrap) {
     if (!wrap) return;
     Array.from(wrap.classList).forEach((cls) => {
-      if (cls.startsWith("year-where-") || cls === "has-value" || cls === "same-prev" || cls === "same-next") {
+      if ((cls.startsWith("year-where-") && cls !== "year-where-wrap") || cls === "has-value" || cls === "same-prev" || cls === "same-next") {
         wrap.classList.remove(cls);
       }
     });
@@ -782,6 +793,29 @@
       };
       changedCells = new Set();
     });
+  });
+
+  function startPaintFromWrap(wrap, layer, event) {
+    if (event.button !== 0) return;
+    const select = wrap.querySelector(layer === "training" ? "[data-year-training]" : "[data-year-whereabouts]");
+    if (!select || !select.value) return;
+    const startCell = wrap.closest("[data-year-cell]");
+    paint = {
+      row: wrap.closest("[data-year-row]"),
+      layer,
+      value: select.value,
+      note: startCell?.querySelector("[data-year-note]")?.value || "",
+      startCell,
+    };
+    changedCells = new Set([startCell]);
+  }
+
+  document.querySelectorAll("[data-year-training-wrap]").forEach((wrap) => {
+    wrap.addEventListener("mousedown", (event) => startPaintFromWrap(wrap, "training", event));
+  });
+
+  document.querySelectorAll("[data-year-where-wrap]").forEach((wrap) => {
+    wrap.addEventListener("mousedown", (event) => startPaintFromWrap(wrap, "whereabouts", event));
   });
 
   let noteTimer = null;
