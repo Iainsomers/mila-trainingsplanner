@@ -303,6 +303,56 @@ class AthleteWeekPhaseOverride(models.Model):
         return f"{self.plan} · {self.athlete} · {self.week_start} · {p or '—'}"
 
 
+class YearPlannerEntry(models.Model):
+    TRAINING_CHOICES = PlanWeekPhase.PHASE_CHOICES
+    WHEREABOUTS_CHOICES = [
+        ("", "—"),
+        ("camp", "Camp"),
+        ("travel", "Travel"),
+        ("test", "Test"),
+        ("race", "Race"),
+        ("medical", "Medical"),
+        ("brinec", "Brinec"),
+    ]
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="year_planner_entries",
+    )
+    athlete = models.ForeignKey(
+        Athlete,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="year_planner_entries",
+    )
+    date = models.DateField()
+    training_type = models.CharField(max_length=20, choices=TRAINING_CHOICES, blank=True, default="")
+    whereabouts_type = models.CharField(max_length=20, choices=WHEREABOUTS_CHOICES, blank=True, default="")
+    note = models.CharField(max_length=120, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "athlete", "date"],
+                name="unique_year_planner_entry_per_owner_athlete_date",
+            ),
+            models.UniqueConstraint(
+                fields=["owner", "date"],
+                condition=Q(athlete__isnull=True),
+                name="unique_year_planner_base_entry_per_owner_date",
+            ),
+        ]
+        ordering = ["owner_id", "athlete__name", "date"]
+
+    def __str__(self) -> str:
+        label = self.athlete.name if self.athlete_id else "Basis"
+        return f"{label} · {self.date}"
+
+
 def get_default_plan_id() -> int | None:
     try:
         plan = TrainingPlan.objects.filter(name="Default").only("id").first()

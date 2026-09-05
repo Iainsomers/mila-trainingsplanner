@@ -16,6 +16,8 @@ from core.views.coach import (
     polar_activity_suggestions_view,
     coach_console_view,
     planning_overview_view,
+    year_planner_view,
+    year_planner_entry_save_view,
     trainer_stats_view,
     trainer_athlete_stats_view,
     athlete_base_planning_view,
@@ -108,6 +110,8 @@ urlpatterns = [
     # Coach console
     path("coach/", coach_console_view, name="coach_console"),
     path("planning/", planning_overview_view, name="planning_overview"),
+    path("planning/year/", year_planner_view, name="year_planner"),
+    path("planning/year/entry/", year_planner_entry_save_view, name="year_planner_entry_save"),
     path("planning/stats/", trainer_stats_view, name="trainer_stats"),
     path("planning/stats/athlete/<int:athlete_id>/", trainer_athlete_stats_view, name="trainer_athlete_stats"),
     path("planning/base/", athlete_base_planning_view, name="athlete_base_planning"),

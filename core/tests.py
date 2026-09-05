@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from datetime import date, timedelta
+import json
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -7,7 +8,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -206,6 +207,86 @@ class TrainerPlanningListTests(TestCase):
             '<small class="text-muted trainer-plan-owner">Mila Coach</small>',
             html=False,
         )
+
+
+class YearPlannerTests(TestCase):
+    def _coach_and_athlete(self):
+        coach = get_user_model().objects.create_user(
+            username="year-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Year Athlete",
+            birth_year=2001,
+            gender="X",
+        )
+        self.client.force_login(coach)
+        return coach, athlete
+
+    def test_year_planner_shows_basis_and_selected_athlete(self):
+        _, athlete = self._coach_and_athlete()
+
+        response = self.client.get(f"/planning/year/?period=current_next&athletes={athlete.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Basis")
+        self.assertContains(response, "Year Athlete")
+        self.assertContains(response, "Whereabouts")
+
+    def test_year_planner_saves_base_and_athlete_entries(self):
+        coach, athlete = self._coach_and_athlete()
+
+        base_response = self.client.post(
+            "/planning/year/entry/",
+            data=json.dumps({
+                "scope": "basis",
+                "date": "2026-09-07",
+                "training": "aerobe",
+                "whereabouts": "camp",
+            }),
+            content_type="application/json",
+        )
+        athlete_response = self.client.post(
+            "/planning/year/entry/",
+            data=json.dumps({
+                "scope": f"athlete-{athlete.id}",
+                "date": "2026-09-07",
+                "training": "taper",
+                "whereabouts": "race",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(base_response.status_code, 200)
+        self.assertEqual(athlete_response.status_code, 200)
+        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete__isnull=True, training_type="aerobe", whereabouts_type="camp").exists())
+        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete=athlete, training_type="taper", whereabouts_type="race").exists())
+
+    def test_empty_year_planner_save_deletes_entry(self):
+        coach, athlete = self._coach_and_athlete()
+        YearPlannerEntry.objects.create(
+            owner=coach,
+            athlete=athlete,
+            date=date(2026, 9, 7),
+            training_type="aerobe",
+            whereabouts_type="camp",
+        )
+
+        response = self.client.post(
+            "/planning/year/entry/",
+            data=json.dumps({
+                "scope": f"athlete-{athlete.id}",
+                "date": "2026-09-07",
+                "training": "",
+                "whereabouts": "",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(YearPlannerEntry.objects.filter(owner=coach, athlete=athlete, date=date(2026, 9, 7)).exists())
 
 
 class SlotModalSaveTests(TestCase):

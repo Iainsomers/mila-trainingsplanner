@@ -23,7 +23,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, YearPlannerEntry, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -3689,6 +3689,177 @@ def trainer_planning_delete_view(request, plan_id: int):
     plan = get_object_or_404(_trainer_planning_qs(request), id=plan_id)
     plan.delete()
     return redirect("trainer_planning")
+
+
+def _year_planner_scope_key(athlete_id):
+    return "basis" if athlete_id is None else f"athlete-{athlete_id}"
+
+
+def _year_planner_entry_payload(entry):
+    return {
+        "training": entry.training_type if entry else "",
+        "whereabouts": entry.whereabouts_type if entry else "",
+        "note": entry.note if entry else "",
+    }
+
+
+@login_required
+@require_GET
+def year_planner_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("planning_overview")
+
+    today = date.today()
+    try:
+        year = int(request.GET.get("year") or today.year)
+    except ValueError:
+        year = today.year
+    if year < 2000 or year > 2100:
+        year = today.year
+
+    period_mode = (request.GET.get("period") or "full").strip().lower()
+    if period_mode not in {"full", "outdoor", "indoor", "current_next"}:
+        period_mode = "full"
+    period = _race_calendar_period_bounds(year, period_mode, today)
+    start_date = period["start_date"]
+    end_date = period["end_date"]
+    days = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+
+    show_training = (request.GET.get("show_training") or "1") == "1"
+    show_whereabouts = (request.GET.get("show_whereabouts") or "1") == "1"
+    if not show_training and not show_whereabouts:
+        show_training = True
+        show_whereabouts = True
+
+    athletes = list(_filter_owned(Athlete.objects.order_by(Lower("name")), request))
+    athlete_ids = _clean_int_list(request.GET.getlist("athletes"))
+    selected_ids = [athlete_id for athlete_id in athlete_ids if any(a.id == athlete_id for a in athletes)]
+    if not selected_ids:
+        selected_ids = [a.id for a in athletes[:6]]
+
+    selected_athletes = [a for a in athletes if a.id in selected_ids]
+    owner = _active_coach_user(request)
+    entries = (
+        YearPlannerEntry.objects
+        .filter(owner=owner, date__gte=start_date, date__lte=end_date)
+        .filter(Q(athlete__isnull=True) | Q(athlete_id__in=selected_ids))
+        .select_related("athlete")
+    )
+    entry_map = {
+        (entry.athlete_id, entry.date): entry
+        for entry in entries
+    }
+
+    rows = []
+    base_cells = []
+    for day in days:
+        base_cells.append({
+            "date": day,
+            "payload": _year_planner_entry_payload(entry_map.get((None, day))),
+        })
+    rows.append({
+        "label": "Basis",
+        "scope": "basis",
+        "athlete": None,
+        "cells": base_cells,
+    })
+
+    for athlete_obj in selected_athletes:
+        cells = []
+        for day in days:
+            cells.append({
+                "date": day,
+                "payload": _year_planner_entry_payload(entry_map.get((athlete_obj.id, day))),
+            })
+        rows.append({
+            "label": athlete_obj.name,
+            "scope": _year_planner_scope_key(athlete_obj.id),
+            "athlete": athlete_obj,
+            "cells": cells,
+        })
+
+    period_options = [
+        {"key": "current_next", "label": "Current / next month", "year": today.year},
+        {"key": "outdoor", "label": f"Outdoor {year}", "year": year},
+        {"key": "indoor", "label": f"Indoor {year}/{str(year + 1)[-2:]}", "year": year},
+        {"key": "full", "label": f"Full year {year}", "year": year},
+    ]
+
+    return render(request, "core/year_planner.html", {
+        "athletes": athletes,
+        "selected_ids": selected_ids,
+        "rows": rows,
+        "days": days,
+        "year": year,
+        "previous_year": period["previous_year"],
+        "next_year": period["next_year"],
+        "period_mode": period_mode,
+        "period_label": period["label"],
+        "period_options": period_options,
+        "show_training": show_training,
+        "show_whereabouts": show_whereabouts,
+        "training_choices": YearPlannerEntry.TRAINING_CHOICES,
+        "whereabouts_choices": YearPlannerEntry.WHEREABOUTS_CHOICES,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def year_planner_entry_save_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return JsonResponse({"ok": False, "error": "Not allowed"}, status=403)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    scope = (payload.get("scope") or "").strip()
+    try:
+        entry_date = _parse_iso_date(payload.get("date"))
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Invalid date"}, status=400)
+    if not entry_date:
+        return JsonResponse({"ok": False, "error": "Date is required"}, status=400)
+
+    owner = _active_coach_user(request)
+    athlete_obj = None
+    if scope != "basis":
+        match = re.fullmatch(r"athlete-(\d+)", scope)
+        if not match:
+            return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
+        athlete_obj = _filter_owned(Athlete.objects.all(), request).filter(id=int(match.group(1))).first()
+        if not athlete_obj:
+            return JsonResponse({"ok": False, "error": "Athlete not found"}, status=404)
+
+    training_type = (payload.get("training") or "").strip()
+    whereabouts_type = (payload.get("whereabouts") or "").strip()
+    note = (payload.get("note") or "").strip()[:120]
+
+    allowed_training = {choice[0] for choice in YearPlannerEntry.TRAINING_CHOICES}
+    allowed_whereabouts = {choice[0] for choice in YearPlannerEntry.WHEREABOUTS_CHOICES}
+    if training_type not in allowed_training:
+        return JsonResponse({"ok": False, "error": "Invalid training type"}, status=400)
+    if whereabouts_type not in allowed_whereabouts:
+        return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
+
+    if not training_type and not whereabouts_type and not note:
+        YearPlannerEntry.objects.filter(owner=owner, athlete=athlete_obj, date=entry_date).delete()
+        return JsonResponse({"ok": True, "deleted": True})
+
+    entry, _ = YearPlannerEntry.objects.update_or_create(
+        owner=owner,
+        athlete=athlete_obj,
+        date=entry_date,
+        defaults={
+            "training_type": training_type,
+            "whereabouts_type": whereabouts_type,
+            "note": note,
+        },
+    )
+    return JsonResponse({"ok": True, "entry": _year_planner_entry_payload(entry)})
 
 
 @login_required

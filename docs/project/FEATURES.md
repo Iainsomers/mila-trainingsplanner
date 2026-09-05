@@ -20,6 +20,16 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Dag- en weekkopiëren werkt tussen trainerplannen.
 - Trainingsonderdelen worden uiteindelijk in Flex Planner en AYC gebruikt.
 
+## Year Planner
+
+- Coach-only overzicht onder Planning voor training phases en whereabouts over een flexibele periode.
+- De periode gebruikt dezelfde keuzes als de Race Calendar: current/next month, outdoor, indoor en full year.
+- Trainers kunnen Training, Whereabouts of beide lagen tonen.
+- Meerdere atleten kunnen tegelijk worden getoond; daarnaast bestaat een virtuele `Basis`-rij die geen echte atleet in de database is.
+- Training phases gebruiken dezelfde keuzes als de Flex Planner: Recovery, Aerobe, Specific, Intense en Taper.
+- Whereabouts-keuzes zijn Camp, Travel, Test, Race, Medical en Brinec met vaste kleuren.
+- Cellen slaan direct op en kunnen via drag-copy of `c`/`p` worden gekopieerd.
+
 ## Flex Planner
 
 - Toont de effectieve planning per geselecteerde atleet.

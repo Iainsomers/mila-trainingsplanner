@@ -1,0 +1,424 @@
+{% extends "core/base.html" %}
+
+{% block title %}Year Planner{% endblock %}
+
+{% block extra_head %}
+<style>
+  .year-toolbar {
+    gap: 0.5rem;
+  }
+
+  .year-athlete-select {
+    min-height: 8.5rem;
+  }
+
+  .year-table-wrap {
+    overflow: auto;
+    border: 1px solid #d8d8d8;
+    border-radius: 6px;
+    max-height: calc(100vh - 270px);
+    background: #fff;
+  }
+
+  .year-table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-width: max-content;
+  }
+
+  .year-table th,
+  .year-table td {
+    border: 1px solid #d8d8d8;
+    padding: 2px;
+    vertical-align: top;
+  }
+
+  .year-table th {
+    background: #f5f5f5;
+    font-size: 0.72rem;
+    line-height: 1.1;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .year-name-cell {
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+    font-weight: 700;
+    background: #fff;
+    position: sticky;
+    left: 0;
+    z-index: 3;
+  }
+
+  .year-table th.year-name-cell {
+    z-index: 4;
+  }
+
+  .year-day-head {
+    width: 62px;
+    min-width: 62px;
+  }
+
+  .year-day-cell {
+    width: 62px;
+    min-width: 62px;
+    height: 55px;
+    position: relative;
+  }
+
+  .year-cell {
+    min-height: 50px;
+    cursor: grab;
+  }
+
+  .year-cell.dragging {
+    opacity: 0.55;
+  }
+
+  .year-cell.drop-target {
+    outline: 2px solid #0d6efd;
+    outline-offset: -2px;
+  }
+
+  .year-select {
+    width: 100%;
+    border: 0;
+    border-radius: 4px;
+    padding: 1px 2px;
+    margin-bottom: 2px;
+    font-size: 0.64rem;
+    line-height: 1.1;
+    appearance: none;
+    text-align: center;
+  }
+
+  .year-select:focus {
+    outline: 2px solid #0d6efd;
+  }
+
+  .year-training-recovery { background: #f8f8f0; }
+  .year-training-aerobe { background: #f06f5f; }
+  .year-training-specific { background: #bfe7bf; }
+  .year-training-intense { background: #b7d7ff; }
+  .year-training-taper { background: #f2c200; }
+
+  .year-where-camp { background: #38a169; color: #fff; }
+  .year-where-travel { background: #b7f7b7; color: #111; }
+  .year-where-test { background: #b794f4; color: #111; }
+  .year-where-race { background: #cc0000; color: #fff; }
+  .year-where-medical { background: #fff8cc; color: #111; }
+  .year-where-brinec { background: #ffb347; color: #111; }
+
+  .year-copy-btn,
+  .year-paste-btn {
+    position: absolute;
+    bottom: 2px;
+    border: 0;
+    background: rgba(255, 255, 255, 0.86);
+    color: #333;
+    font-size: 0.63rem;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-weight: 700;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .year-copy-btn {
+    left: 3px;
+  }
+
+  .year-paste-btn {
+    right: 3px;
+    color: #0d6efd;
+  }
+
+  .year-day-cell:hover .year-copy-btn,
+  .year-day-cell:hover .year-paste-btn,
+  .year-day-cell:focus-within .year-copy-btn,
+  .year-day-cell:focus-within .year-paste-btn,
+  .year-paste-mode .year-paste-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .year-save-status {
+    min-width: 5rem;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 768px) {
+    .year-table-wrap {
+      max-height: none;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h1 class="mb-1">Year Planner</h1>
+      <div class="text-muted">{{ period_label }}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Planner</a>
+      <a href="/" class="btn btn-outline-secondary">Dashboard</a>
+    </div>
+  </div>
+
+  <form method="get" class="mb-3">
+    <div class="d-flex flex-wrap align-items-end year-toolbar">
+      <div class="btn-group" role="group" aria-label="Period">
+        {% for option in period_options %}
+          <a href="?year={{ option.year }}&period={{ option.key }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}"
+             class="btn btn-sm {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            {{ option.label }}
+          </a>
+        {% endfor %}
+      </div>
+
+      {% if period_mode != "current_next" %}
+        <a href="?year={{ previous_year }}&period={{ period_mode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
+        <a href="?year={{ next_year }}&period={{ period_mode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
+      {% endif %}
+
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="period" value="{{ period_mode }}">
+
+      <div class="form-check form-check-inline ms-1">
+        <input class="form-check-input" type="checkbox" id="showTraining" name="show_training" value="1" {% if show_training %}checked{% endif %}>
+        <label class="form-check-label" for="showTraining">Training</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" id="showWhereabouts" name="show_whereabouts" value="1" {% if show_whereabouts %}checked{% endif %}>
+        <label class="form-check-label" for="showWhereabouts">Whereabouts</label>
+      </div>
+
+      <button type="submit" class="btn btn-sm btn-primary">OK</button>
+      <span class="year-save-status text-muted" data-year-save-status></span>
+    </div>
+
+    <div class="mt-2 row g-2 align-items-end">
+      <div class="col-md-5 col-lg-4">
+        <label for="athleteSelect" class="form-label mb-1">Athletes</label>
+        <select id="athleteSelect" name="athletes" multiple class="form-select form-select-sm year-athlete-select">
+          {% for athlete in athletes %}
+            <option value="{{ athlete.id }}" {% if athlete.id in selected_ids %}selected{% endif %}>{{ athlete.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-7 col-lg-8">
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge year-training-recovery text-dark">Recovery</span>
+          <span class="badge year-training-aerobe text-dark">Aerobe</span>
+          <span class="badge year-training-specific text-dark">Specific</span>
+          <span class="badge year-training-intense text-dark">Intense</span>
+          <span class="badge year-training-taper text-dark">Taper</span>
+          <span class="badge year-where-camp">Camp</span>
+          <span class="badge year-where-travel">Travel</span>
+          <span class="badge year-where-test">Test</span>
+          <span class="badge year-where-race">Race</span>
+          <span class="badge year-where-medical">Medical</span>
+          <span class="badge year-where-brinec">Brinec</span>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="year-table-wrap">
+    <table class="year-table">
+      <thead>
+        <tr>
+          <th class="year-name-cell">Athlete</th>
+          {% for day in days %}
+            <th class="year-day-head{% if day.weekday == 0 %} border-start border-dark{% endif %}">
+              {{ day|date:"D" }}<br>
+              {{ day|date:"d-m" }}
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="year-name-cell">{{ row.label }}</td>
+            {% for cell in row.cells %}
+              <td class="year-day-cell{% if cell.date.weekday == 0 %} border-start border-dark{% endif %}">
+                <div class="year-cell"
+                     draggable="true"
+                     data-year-cell
+                     data-scope="{{ row.scope }}"
+                     data-date="{{ cell.date|date:'Y-m-d' }}">
+                  {% if show_training %}
+                    <select class="year-select year-training-{{ cell.payload.training }}" data-year-training aria-label="Training type">
+                      {% for value, label in training_choices %}
+                        <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  {% endif %}
+                  {% if show_whereabouts %}
+                    <select class="year-select year-where-{{ cell.payload.whereabouts }}" data-year-whereabouts aria-label="Whereabouts">
+                      {% for value, label in whereabouts_choices %}
+                        <option value="{{ value }}" {% if cell.payload.whereabouts == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  {% endif %}
+                </div>
+                <button type="button" class="year-copy-btn" data-year-copy>c</button>
+                <button type="button" class="year-paste-btn" data-year-paste>p</button>
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+  }
+
+  const saveUrl = "{% url 'year_planner_entry_save' %}";
+  const saveStatus = document.querySelector("[data-year-save-status]");
+  let clipboard = null;
+  let dragPayload = null;
+
+  function setStatus(text, isError) {
+    if (!saveStatus) return;
+    saveStatus.textContent = text || "";
+    saveStatus.classList.toggle("text-danger", !!isError);
+    saveStatus.classList.toggle("text-muted", !isError);
+  }
+
+  function cellPayload(cell) {
+    return {
+      scope: cell.dataset.scope,
+      date: cell.dataset.date,
+      training: cell.querySelector("[data-year-training]")?.value || "",
+      whereabouts: cell.querySelector("[data-year-whereabouts]")?.value || "",
+    };
+  }
+
+  function applyPayload(cell, payload) {
+    const training = cell.querySelector("[data-year-training]");
+    const whereabouts = cell.querySelector("[data-year-whereabouts]");
+    if (training && Object.prototype.hasOwnProperty.call(payload, "training")) {
+      training.value = payload.training || "";
+      refreshSelectClass(training, "year-training-");
+    }
+    if (whereabouts && Object.prototype.hasOwnProperty.call(payload, "whereabouts")) {
+      whereabouts.value = payload.whereabouts || "";
+      refreshSelectClass(whereabouts, "year-where-");
+    }
+  }
+
+  function refreshSelectClass(select, prefix) {
+    Array.from(select.classList).forEach((cls) => {
+      if (cls.startsWith(prefix)) select.classList.remove(cls);
+    });
+    if (select.value) select.classList.add(prefix + select.value);
+  }
+
+  async function saveCell(cell) {
+    setStatus("Saving...", false);
+    const response = await fetch(saveUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken") || "",
+      },
+      body: JSON.stringify(cellPayload(cell)),
+    });
+    if (!response.ok) {
+      setStatus("Save failed", true);
+      return false;
+    }
+    setStatus("Saved", false);
+    window.setTimeout(() => setStatus("", false), 1100);
+    return true;
+  }
+
+  document.querySelectorAll("[data-year-training]").forEach((select) => {
+    refreshSelectClass(select, "year-training-");
+    select.addEventListener("change", () => {
+      refreshSelectClass(select, "year-training-");
+      saveCell(select.closest("[data-year-cell]"));
+    });
+  });
+
+  document.querySelectorAll("[data-year-whereabouts]").forEach((select) => {
+    refreshSelectClass(select, "year-where-");
+    select.addEventListener("change", () => {
+      refreshSelectClass(select, "year-where-");
+      saveCell(select.closest("[data-year-cell]"));
+    });
+  });
+
+  document.querySelectorAll("[data-year-copy]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const cell = button.closest(".year-day-cell").querySelector("[data-year-cell]");
+      clipboard = cellPayload(cell);
+      delete clipboard.scope;
+      delete clipboard.date;
+      document.body.classList.add("year-paste-mode");
+    });
+  });
+
+  document.querySelectorAll("[data-year-paste]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!clipboard) return;
+      const cell = button.closest(".year-day-cell").querySelector("[data-year-cell]");
+      applyPayload(cell, clipboard);
+      saveCell(cell);
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      clipboard = null;
+      document.body.classList.remove("year-paste-mode");
+    }
+  });
+
+  document.querySelectorAll("[data-year-cell]").forEach((cell) => {
+    cell.addEventListener("dragstart", (event) => {
+      dragPayload = cellPayload(cell);
+      delete dragPayload.scope;
+      delete dragPayload.date;
+      cell.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "copy";
+    });
+    cell.addEventListener("dragend", () => {
+      cell.classList.remove("dragging");
+      document.querySelectorAll(".drop-target").forEach((target) => target.classList.remove("drop-target"));
+      dragPayload = null;
+    });
+    cell.addEventListener("dragover", (event) => {
+      if (!dragPayload) return;
+      event.preventDefault();
+      cell.classList.add("drop-target");
+    });
+    cell.addEventListener("dragleave", () => cell.classList.remove("drop-target"));
+    cell.addEventListener("drop", (event) => {
+      if (!dragPayload) return;
+      event.preventDefault();
+      cell.classList.remove("drop-target");
+      applyPayload(cell, dragPayload);
+      saveCell(cell);
+    });
+  });
+</script>
+{% endblock %}
