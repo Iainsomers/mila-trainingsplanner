@@ -136,14 +136,16 @@
   .year-layer-wrap,
   .year-where-wrap {
     position: relative;
-    min-height: calc(var(--year-day-height) / 2);
+    height: calc(var(--year-day-height) / 2);
+    min-height: 0;
+    overflow: hidden;
     border-radius: 5px;
     z-index: 1;
   }
 
   .year-fill {
     position: absolute;
-    inset: 0;
+    inset: 1px 0;
     border-radius: inherit;
     pointer-events: none;
     z-index: 1;
@@ -180,7 +182,7 @@
     z-index: 2;
     width: 100%;
     height: 100%;
-    min-height: calc(var(--year-day-height) / 2);
+    min-height: 0;
     border: 0;
     border-radius: 5px;
     padding: 0;
@@ -220,7 +222,7 @@
 
   .year-where-label {
     position: absolute;
-    inset: 2px 3px 2px 13px;
+    inset: 3px 3px;
     z-index: 3;
     border: 0;
     border-radius: 4px;
@@ -236,6 +238,11 @@
 
   .year-where-wrap.has-label .year-where-label {
     display: block;
+  }
+
+  .year-planner-page.year-hide-training .year-where-wrap,
+  .year-planner-page.year-hide-whereabouts .year-layer-wrap {
+    height: calc(var(--year-day-height) * 0.62);
   }
 
   .year-where-wrap.has-value .year-select {
@@ -465,7 +472,7 @@
       <label for="activeWhereName" class="form-label mb-1 small">Name</label>
       <input id="activeWhereName" type="text" class="form-control form-control-sm" maxlength="120" data-active-where-name>
     </div>
-    <button type="button" class="btn btn-sm btn-outline-secondary" data-active-where-close>Close</button>
+    <button type="button" class="btn btn-sm btn-primary" data-active-where-close>Done</button>
   </div>
 
   <div class="year-table-wrap">
@@ -505,7 +512,7 @@
                       {% endfor %}
                     </select>
                   </div>
-                  <div class="year-where-wrap year-layer-whereabouts year-where-{{ cell.payload.whereabouts }}"
+                  <div class="year-where-wrap year-layer-whereabouts"
                        data-year-where-wrap>
                     <div class="year-fill year-where-{{ cell.payload.whereabouts }}" data-year-where-fill></div>
                     <select class="year-select"
@@ -724,6 +731,8 @@
   }
 
   function closeWhereEditor() {
+    window.clearTimeout(activeNoteTimer);
+    syncWhereEditorToCell();
     activeWhereCell = null;
     activeEditor?.classList.remove("is-open");
   }
@@ -736,7 +745,7 @@
     if (note && activeWhereName) note.value = activeWhereName.value || "";
     refreshWhereWrap(activeWhereCell.querySelector("[data-year-where-wrap]"));
     refreshConnections();
-    saveCells([activeWhereCell]);
+    return saveCells([activeWhereCell]);
   }
 
   document.getElementById("showTraining")?.addEventListener("change", updateVisibility);
