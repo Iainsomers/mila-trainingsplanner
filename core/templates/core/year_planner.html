@@ -5,7 +5,17 @@
 {% block extra_head %}
 <style>
   .year-toolbar { gap: 0.5rem; }
-  .year-athlete-select { min-height: 8.5rem; }
+  .year-athlete-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 4px 10px;
+    max-height: 145px;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 0.82rem;
+  }
 
   .year-table-wrap {
     overflow: auto;
@@ -46,7 +56,7 @@
     position: sticky;
     left: 0;
     z-index: 3;
-    padding: 4px 6px !important;
+    padding: 4px 28px 4px 6px !important;
   }
 
   .year-table th.year-name-cell { z-index: 4; }
@@ -57,9 +67,11 @@
   }
 
   .year-row-actions {
+    position: absolute;
+    top: 3px;
+    right: 4px;
     display: flex;
-    gap: 0.25rem;
-    margin-top: 0.25rem;
+    gap: 2px;
   }
 
   .year-row-copy,
@@ -71,7 +83,7 @@
     font-size: 0.68rem;
     font-weight: 700;
     line-height: 1;
-    padding: 3px 6px;
+    padding: 2px 5px;
   }
 
   .year-row-paste {
@@ -108,6 +120,14 @@
   .year-planner-page.year-hide-training .year-cell,
   .year-planner-page.year-hide-whereabouts .year-cell {
     grid-template-rows: 1fr;
+  }
+
+  .year-planner-page.year-hide-training .year-day-cell,
+  .year-planner-page.year-hide-whereabouts .year-day-cell,
+  .year-planner-page.year-hide-training .year-cell,
+  .year-planner-page.year-hide-whereabouts .year-cell {
+    height: calc(var(--year-day-height) * 0.62);
+    min-height: calc(var(--year-day-height) * 0.62);
   }
 
   .year-select {
@@ -189,14 +209,14 @@
     display: none;
   }
 
-  .year-where-wrap.has-value .year-where-label {
+  .year-where-wrap.has-label .year-where-label {
     display: block;
   }
 
   .year-where-wrap.has-value .year-select {
-    width: 12px;
-    opacity: 0.01;
+    opacity: 0;
     z-index: 4;
+    pointer-events: none;
   }
 
   .year-where-label:focus {
@@ -226,6 +246,25 @@
 
   .year-zoom-12 .year-where-label {
     display: none !important;
+  }
+
+  .year-active-editor {
+    display: none;
+    align-items: end;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: #f8f9fa;
+  }
+
+  .year-active-editor.is-open {
+    display: flex;
+  }
+
+  .year-active-editor .form-control,
+  .year-active-editor .form-select {
+    min-width: 150px;
   }
 
   .year-training-recovery { background: #f8f8f0; color: #f8f8f0; }
@@ -338,12 +377,23 @@
 
     <div class="mt-2 row g-2 align-items-end">
       <div class="col-md-5 col-lg-4">
-        <label for="athleteSelect" class="form-label mb-1">Athletes</label>
-        <select id="athleteSelect" name="athletes" multiple class="form-select form-select-sm year-athlete-select">
+        <label class="form-label mb-1">Athletes</label>
+        <div class="year-athlete-list">
           {% for athlete in athletes %}
-            <option value="{{ athlete.id }}" {% if athlete.id in selected_ids %}selected{% endif %}>{{ athlete.name }}</option>
+            <label class="form-check mb-0">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                name="athletes"
+                value="{{ athlete.id }}"
+                {% if athlete.id in selected_ids %}checked{% endif %}
+              >
+              <span class="form-check-label">{{ athlete.name }}</span>
+            </label>
+          {% empty %}
+            <span class="text-muted">No athletes found.</span>
           {% endfor %}
-        </select>
+        </div>
       </div>
       <div class="col-md-7 col-lg-8 year-legend">
         <div class="year-legend-group">
@@ -366,6 +416,22 @@
       </div>
     </div>
   </form>
+
+  <div class="year-active-editor mb-2" data-year-active-editor>
+    <div>
+      <label for="activeWhereType" class="form-label mb-1 small">Whereabouts</label>
+      <select id="activeWhereType" class="form-select form-select-sm" data-active-where-type>
+        {% for value, label in whereabouts_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="activeWhereName" class="form-label mb-1 small">Name</label>
+      <input id="activeWhereName" type="text" class="form-control form-control-sm" maxlength="120" data-active-where-name>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-active-where-close>Close</button>
+  </div>
 
   <div class="year-table-wrap">
     <table class="year-table">
@@ -442,9 +508,13 @@
   const form = document.getElementById("yearPlannerFilterForm");
   const saveUrl = "{% url 'year_planner_entry_save' %}";
   const saveStatus = document.querySelector("[data-year-save-status]");
+  const activeEditor = document.querySelector("[data-year-active-editor]");
+  const activeWhereType = document.querySelector("[data-active-where-type]");
+  const activeWhereName = document.querySelector("[data-active-where-name]");
   let rowClipboard = null;
   let paint = null;
   let changedCells = new Set();
+  let activeWhereCell = null;
 
   function setStatus(text, isError) {
     if (!saveStatus) return;
@@ -484,11 +554,14 @@
     });
     const select = wrap.querySelector("[data-year-whereabouts]");
     const input = wrap.querySelector("[data-year-note]");
+    const hasLabel = !!(input && input.value.trim());
     if (select && select.value) {
       wrap.classList.add("year-where-" + select.value);
       wrap.classList.add("has-value");
+      wrap.classList.toggle("has-label", hasLabel);
     } else if (input) {
       input.value = "";
+      wrap.classList.remove("has-label");
     }
   }
 
@@ -595,6 +668,32 @@
     page.classList.toggle("year-hide-whereabouts", !showWhereabouts);
   }
 
+  function openWhereEditor(cell) {
+    activeWhereCell = cell;
+    const select = cell.querySelector("[data-year-whereabouts]");
+    const note = cell.querySelector("[data-year-note]");
+    if (activeWhereType) activeWhereType.value = select?.value || "";
+    if (activeWhereName) activeWhereName.value = note?.value || "";
+    activeEditor?.classList.add("is-open");
+    window.setTimeout(() => activeWhereName?.focus(), 0);
+  }
+
+  function closeWhereEditor() {
+    activeWhereCell = null;
+    activeEditor?.classList.remove("is-open");
+  }
+
+  function syncWhereEditorToCell() {
+    if (!activeWhereCell) return;
+    const select = activeWhereCell.querySelector("[data-year-whereabouts]");
+    const note = activeWhereCell.querySelector("[data-year-note]");
+    if (select && activeWhereType) select.value = activeWhereType.value || "";
+    if (note && activeWhereName) note.value = activeWhereName.value || "";
+    refreshWhereWrap(activeWhereCell.querySelector("[data-year-where-wrap]"));
+    refreshConnections();
+    saveCells([activeWhereCell]);
+  }
+
   document.getElementById("showTraining")?.addEventListener("change", updateVisibility);
   document.getElementById("showWhereabouts")?.addEventListener("change", updateVisibility);
   document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
@@ -637,6 +736,26 @@
       window.clearTimeout(noteTimer);
       saveCells([input.closest("[data-year-cell]")]);
     });
+  });
+
+  let activeNoteTimer = null;
+  activeWhereType?.addEventListener("change", syncWhereEditorToCell);
+  activeWhereName?.addEventListener("input", () => {
+    if (!activeWhereCell) return;
+    const note = activeWhereCell.querySelector("[data-year-note]");
+    if (note) note.value = activeWhereName.value || "";
+    refreshWhereWrap(activeWhereCell.querySelector("[data-year-where-wrap]"));
+    window.clearTimeout(activeNoteTimer);
+    activeNoteTimer = window.setTimeout(syncWhereEditorToCell, 450);
+  });
+  activeWhereName?.addEventListener("blur", () => {
+    window.clearTimeout(activeNoteTimer);
+    syncWhereEditorToCell();
+  });
+  document.querySelector("[data-active-where-close]")?.addEventListener("click", closeWhereEditor);
+
+  document.querySelectorAll("[data-year-where-wrap]").forEach((wrap) => {
+    wrap.addEventListener("click", () => openWhereEditor(wrap.closest("[data-year-cell]")));
   });
 
   document.querySelectorAll("[data-year-cell]").forEach((cell) => {
