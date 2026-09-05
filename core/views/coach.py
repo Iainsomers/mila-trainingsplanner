@@ -3746,12 +3746,37 @@ def year_planner_view(request):
         zoom_mode = "3"
 
     athletes = list(_filter_owned(Athlete.objects.order_by(Lower("name")), request))
-    athlete_ids = _clean_int_list(request.GET.getlist("athletes"))
-    selected_ids = [athlete_id for athlete_id in athlete_ids if any(a.id == athlete_id for a in athletes)]
-    if not selected_ids:
-        selected_ids = [a.id for a in athletes[:6]]
+    trainer_plans = list(_trainer_planning_qs(request).order_by(Lower("name")))
+    for plan in trainer_plans:
+        plan.year_planner_filter_key = f"plan-{plan.id}"
+    group_filter = (request.GET.get("athlete_group") or "all").strip()
+    group_filtered_athlete_ids = {athlete_obj.id for athlete_obj in athletes}
+    if group_filter.startswith("plan-"):
+        raw_plan_id = group_filter.removeprefix("plan-")
+        selected_filter_plan = next((plan for plan in trainer_plans if str(plan.id) == raw_plan_id), None)
+        if selected_filter_plan:
+            group_filtered_athlete_ids = set(
+                AthleteBasePlanningSlot.objects
+                .filter(
+                    trainer_plan=selected_filter_plan,
+                    block__planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+                    block__athlete__in=athletes,
+                )
+                .values_list("block__athlete_id", flat=True)
+                .distinct()
+            )
+        else:
+            group_filter = "all"
+    else:
+        group_filter = "all"
 
-    selected_athletes = [a for a in athletes if a.id in selected_ids]
+    visible_athletes = [athlete_obj for athlete_obj in athletes if athlete_obj.id in group_filtered_athlete_ids]
+    athlete_ids = _clean_int_list(request.GET.getlist("athletes"))
+    selected_ids = [athlete_id for athlete_id in athlete_ids if athlete_id in group_filtered_athlete_ids]
+    if not selected_ids:
+        selected_ids = [a.id for a in visible_athletes[:6]]
+
+    selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
     owner = _active_coach_user(request)
     entries = (
         YearPlannerEntry.objects
@@ -3801,7 +3826,9 @@ def year_planner_view(request):
     ]
 
     return render(request, "core/year_planner.html", {
-        "athletes": athletes,
+        "athletes": visible_athletes,
+        "trainer_plans": trainer_plans,
+        "group_filter": group_filter,
         "selected_ids": selected_ids,
         "rows": rows,
         "days": days,

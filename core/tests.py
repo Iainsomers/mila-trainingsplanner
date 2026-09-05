@@ -289,6 +289,36 @@ class YearPlannerTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(YearPlannerEntry.objects.filter(owner=coach, athlete=athlete, date=date(2026, 9, 7)).exists())
 
+    def test_year_planner_group_filter_uses_trainer_plan_references(self):
+        coach, athlete = self._coach_and_athlete()
+        other = Athlete.objects.create(owner=coach, name="Other Athlete", birth_year=2002, gender="X")
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Tuesday group",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=1,
+            slot_index=2,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=plan,
+        )
+
+        response = self.client.get(f"/planning/year/?period=current_next&athlete_group=plan-{plan.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Year Athlete")
+        self.assertNotContains(response, "Other Athlete")
+
 
 class SlotModalSaveTests(TestCase):
     def _user_plan_and_athlete(self):
