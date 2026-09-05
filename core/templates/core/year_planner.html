@@ -49,14 +49,14 @@
   }
 
   .year-name-cell {
-    width: 150px;
-    min-width: 150px;
-    max-width: 150px;
+    width: 155px;
+    min-width: 155px;
+    max-width: 155px;
     background: #fff;
     position: sticky;
     left: 0;
     z-index: 3;
-    padding: 4px 28px 4px 6px !important;
+    padding: 4px 42px 4px 6px !important;
   }
 
   .year-table th.year-name-cell { z-index: 4; }
@@ -68,10 +68,12 @@
 
   .year-row-actions {
     position: absolute;
-    top: 1px;
-    right: 1px;
+    top: 0;
+    right: 0;
     display: flex;
     gap: 2px;
+    padding: 2px;
+    background: #fff;
   }
 
   .year-row-copy,
@@ -131,7 +133,51 @@
     min-height: calc(var(--year-day-height) * 0.62);
   }
 
+  .year-layer-wrap,
+  .year-where-wrap {
+    position: relative;
+    min-height: calc(var(--year-day-height) / 2);
+    border-radius: 5px;
+    z-index: 1;
+  }
+
+  .year-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .year-layer-wrap.same-prev,
+  .year-where-wrap.same-prev {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .year-layer-wrap.same-next,
+  .year-where-wrap.same-next {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .year-layer-wrap.same-prev .year-fill,
+  .year-where-wrap.same-prev .year-fill {
+    left: -1px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .year-layer-wrap.same-next .year-fill,
+  .year-where-wrap.same-next .year-fill {
+    right: -1px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
   .year-select {
+    position: relative;
+    z-index: 2;
     width: 100%;
     height: 100%;
     min-height: calc(var(--year-day-height) / 2);
@@ -144,6 +190,8 @@
     appearance: none;
     text-align: center;
     background: transparent;
+    opacity: 0;
+    cursor: pointer;
   }
 
   .year-select.has-value {
@@ -163,49 +211,11 @@
     outline-offset: -2px;
   }
 
-  .year-select.same-prev {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
-
-  .year-select.same-next {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  .year-where-wrap.same-prev {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    margin-left: -1px;
-  }
-
-  .year-where-wrap.same-next {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    margin-right: -1px;
-  }
-
-  .year-where-wrap.same-prev .year-where-label {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
-
-  .year-where-wrap.same-next .year-where-label {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  .year-where-wrap {
-    position: relative;
-    min-height: calc(var(--year-day-height) / 2);
-    border-radius: 5px;
-    z-index: 1;
-  }
-
   .year-where-wrap .year-select {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    z-index: 2;
+    pointer-events: none;
   }
 
   .year-where-label {
@@ -230,7 +240,6 @@
 
   .year-where-wrap.has-value .year-select {
     opacity: 0;
-    z-index: 4;
     pointer-events: none;
   }
 
@@ -282,18 +291,18 @@
     min-width: 150px;
   }
 
-  .year-training-recovery { background: #f8f8f0; color: #f8f8f0; }
-  .year-training-aerobe { background: #f06f5f; color: #f06f5f; }
-  .year-training-specific { background: #bfe7bf; color: #bfe7bf; }
-  .year-training-intense { background: #b7d7ff; color: #b7d7ff; }
-  .year-training-taper { background: #f2c200; color: #f2c200; }
+  .year-training-recovery { background: #f8f8f0; color: #111; }
+  .year-training-aerobe { background: #f06f5f; color: #111; }
+  .year-training-specific { background: #bfe7bf; color: #111; }
+  .year-training-intense { background: #b7d7ff; color: #111; }
+  .year-training-taper { background: #f2c200; color: #111; }
 
-  .year-where-camp { background: #38a169; color: #38a169; }
-  .year-where-travel { background: #b7f7b7; color: #b7f7b7; }
-  .year-where-test { background: #b794f4; color: #b794f4; }
-  .year-where-race { background: #cc0000; color: #cc0000; }
-  .year-where-medical { background: #fff8cc; color: #fff8cc; }
-  .year-where-brinec { background: #ffb347; color: #ffb347; }
+  .year-where-camp { background: #38a169; color: #fff; }
+  .year-where-travel { background: #b7f7b7; color: #111; }
+  .year-where-test { background: #b794f4; color: #111; }
+  .year-where-race { background: #cc0000; color: #fff; }
+  .year-where-medical { background: #fff8cc; color: #111; }
+  .year-where-brinec { background: #ffb347; color: #111; }
 
   .year-legend .badge {
     min-width: 1.4rem;
@@ -485,16 +494,20 @@
                      data-year-cell
                      data-scope="{{ row.scope }}"
                      data-date="{{ cell.date|date:'Y-m-d' }}">
-                  <select class="year-select year-layer-training year-training-{{ cell.payload.training }}"
-                          data-year-training
-                          data-year-layer="training"
-                          aria-label="Training type">
-                    {% for value, label in training_choices %}
-                      <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                  </select>
+                  <div class="year-layer-wrap year-layer-training" data-year-training-wrap>
+                    <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
+                    <select class="year-select"
+                            data-year-training
+                            data-year-layer="training"
+                            aria-label="Training type">
+                      {% for value, label in training_choices %}
+                        <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
                   <div class="year-where-wrap year-layer-whereabouts year-where-{{ cell.payload.whereabouts }}"
                        data-year-where-wrap>
+                    <div class="year-fill year-where-{{ cell.payload.whereabouts }}" data-year-where-fill></div>
                     <select class="year-select"
                             data-year-whereabouts
                             data-year-layer="whereabouts"
@@ -559,16 +572,16 @@
     };
   }
 
-  function refreshSelectClass(select, prefix) {
-    Array.from(select.classList).forEach((cls) => {
-      if (cls.startsWith(prefix) || cls === "has-value" || cls === "same-prev" || cls === "same-next") {
-        select.classList.remove(cls);
-      }
+  function refreshTrainingWrap(wrap) {
+    if (!wrap) return;
+    wrap.classList.toggle("has-value", !!wrap.querySelector("[data-year-training]")?.value);
+    const fill = wrap.querySelector("[data-year-training-fill]");
+    if (!fill) return;
+    Array.from(fill.classList).forEach((cls) => {
+      if (cls.startsWith("year-training-")) fill.classList.remove(cls);
     });
-    if (select.value) {
-      select.classList.add(prefix + select.value);
-      select.classList.add("has-value");
-    }
+    const value = wrap.querySelector("[data-year-training]")?.value || "";
+    if (value) fill.classList.add("year-training-" + value);
   }
 
   function refreshWhereWrap(wrap) {
@@ -580,9 +593,15 @@
     });
     const select = wrap.querySelector("[data-year-whereabouts]");
     const input = wrap.querySelector("[data-year-note]");
+    const fill = wrap.querySelector("[data-year-where-fill]");
+    if (fill) {
+      Array.from(fill.classList).forEach((cls) => {
+        if (cls.startsWith("year-where-")) fill.classList.remove(cls);
+      });
+    }
     const hasLabel = !!(input && input.value.trim());
     if (select && select.value) {
-      wrap.classList.add("year-where-" + select.value);
+      if (fill) fill.classList.add("year-where-" + select.value);
       wrap.classList.add("has-value");
       wrap.classList.toggle("has-label", hasLabel);
     } else if (input) {
@@ -594,16 +613,16 @@
   function refreshConnections() {
     document.querySelectorAll("[data-year-row]").forEach((row) => {
       ["training", "whereabouts"].forEach((layer) => {
-        const selector = layer === "training" ? "[data-year-training]" : "[data-year-where-wrap]";
+        const selector = layer === "training" ? "[data-year-training-wrap]" : "[data-year-where-wrap]";
         const items = Array.from(row.querySelectorAll(selector));
         items.forEach((item, index) => {
           item.classList.remove("same-prev", "same-next");
-          const value = layer === "training" ? item.value : item.querySelector("[data-year-whereabouts]")?.value;
+          const value = layer === "training" ? item.querySelector("[data-year-training]")?.value : item.querySelector("[data-year-whereabouts]")?.value;
           if (!value) return;
           const prev = items[index - 1];
           const next = items[index + 1];
-          const prevValue = layer === "training" ? prev?.value : prev?.querySelector("[data-year-whereabouts]")?.value;
-          const nextValue = layer === "training" ? next?.value : next?.querySelector("[data-year-whereabouts]")?.value;
+          const prevValue = layer === "training" ? prev?.querySelector("[data-year-training]")?.value : prev?.querySelector("[data-year-whereabouts]")?.value;
+          const nextValue = layer === "training" ? next?.querySelector("[data-year-training]")?.value : next?.querySelector("[data-year-whereabouts]")?.value;
           if (prev && prevValue === value) item.classList.add("same-prev");
           if (next && nextValue === value) item.classList.add("same-next");
         });
@@ -612,7 +631,7 @@
   }
 
   function refreshAllClasses() {
-    document.querySelectorAll("[data-year-training]").forEach((select) => refreshSelectClass(select, "year-training-"));
+    document.querySelectorAll("[data-year-training-wrap]").forEach(refreshTrainingWrap);
     document.querySelectorAll("[data-year-where-wrap]").forEach(refreshWhereWrap);
     refreshConnections();
   }
@@ -652,7 +671,7 @@
     if (!select) return;
     select.value = value || "";
     if (layer === "training") {
-      refreshSelectClass(select, "year-training-");
+      refreshTrainingWrap(select.closest("[data-year-training-wrap]"));
     } else {
       refreshWhereWrap(select.closest("[data-year-where-wrap]"));
     }
@@ -734,7 +753,7 @@
     const layer = select.dataset.yearLayer;
     select.addEventListener("change", () => {
       if (layer === "training") {
-        refreshSelectClass(select, "year-training-");
+        refreshTrainingWrap(select.closest("[data-year-training-wrap]"));
       } else {
         refreshWhereWrap(select.closest("[data-year-where-wrap]"));
       }

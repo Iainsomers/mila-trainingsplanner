@@ -3841,8 +3841,8 @@ def year_planner_view(request):
         "show_training": show_training,
         "show_whereabouts": show_whereabouts,
         "zoom_mode": zoom_mode,
-        "training_choices": [(value, "" if not value else label) for value, label in YearPlannerEntry.TRAINING_CHOICES],
-        "whereabouts_choices": [(value, "" if not value else label) for value, label in YearPlannerEntry.WHEREABOUTS_CHOICES],
+        "training_choices": YearPlannerEntry.TRAINING_CHOICES,
+        "whereabouts_choices": YearPlannerEntry.WHEREABOUTS_CHOICES,
     })
 
 
