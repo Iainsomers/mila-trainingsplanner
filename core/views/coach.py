@@ -3755,6 +3755,10 @@ def year_planner_view(request):
     zoom_mode = (request.GET.get("zoom") or "3").strip()
     if zoom_mode not in {"1", "3", "12"}:
         zoom_mode = "3"
+    layout_mode = (request.GET.get("layout") or "scroll").strip().lower()
+    if layout_mode not in {"scroll", "stack"}:
+        layout_mode = "scroll"
+    show_basis = request.GET.get("basis", "1") == "1"
 
     athletes = list(_filter_owned(Athlete.objects.order_by(Lower("name")), request))
     trainer_plans = list(_trainer_planning_qs(request).order_by(Lower("name")))
@@ -3789,20 +3793,26 @@ def year_planner_view(request):
 
     selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
     owner = _active_coach_user(request)
+    entry_scope_filter = Q(athlete_id__in=selected_ids)
+    if show_basis:
+        entry_scope_filter |= Q(athlete__isnull=True)
     entries = (
         YearPlannerEntry.objects
         .filter(owner=owner, date__gte=start_date, date__lte=end_date)
-        .filter(Q(athlete__isnull=True) | Q(athlete_id__in=selected_ids))
+        .filter(entry_scope_filter)
         .select_related("athlete")
     )
     entry_map = {
         (entry.athlete_id, entry.date): entry
         for entry in entries
     }
+    where_scope_filter = Q(athlete_id__in=selected_ids)
+    if show_basis:
+        where_scope_filter |= Q(athlete__isnull=True)
     whereabout_ranges = list(
         YearPlannerWhereabout.objects
         .filter(owner=owner, start_date__lte=end_date, end_date__gte=start_date)
-        .filter(Q(athlete__isnull=True) | Q(athlete_id__in=selected_ids))
+        .filter(where_scope_filter)
         .select_related("athlete")
     )
     ranges_by_athlete = {}
@@ -3848,20 +3858,21 @@ def year_planner_view(request):
         return cell_ranges
 
     rows = []
-    base_cells = []
-    base_range_cells = row_range_cells(None)
-    for day in days:
-        base_cells.append({
-            "date": day,
-            "payload": _year_planner_entry_payload(entry_map.get((None, day))),
-            "where_range": base_range_cells.get(day),
+    if show_basis:
+        base_cells = []
+        base_range_cells = row_range_cells(None)
+        for day in days:
+            base_cells.append({
+                "date": day,
+                "payload": _year_planner_entry_payload(entry_map.get((None, day))),
+                "where_range": base_range_cells.get(day),
+            })
+        rows.append({
+            "label": "Basis",
+            "scope": "basis",
+            "athlete": None,
+            "cells": base_cells,
         })
-    rows.append({
-        "label": "Basis",
-        "scope": "basis",
-        "athlete": None,
-        "cells": base_cells,
-    })
 
     for athlete_obj in selected_athletes:
         cells = []
@@ -3887,6 +3898,47 @@ def year_planner_view(request):
         {"key": "full", "label": f"Full year {year}", "year": year},
     ]
 
+    def add_months(day, months):
+        year_value = day.year + ((day.month - 1 + months) // 12)
+        month_value = ((day.month - 1 + months) % 12) + 1
+        return date(year_value, month_value, 1)
+
+    def chunk_spans():
+        if layout_mode == "scroll":
+            return [(0, len(days), period["label"])]
+        months_per_chunk = int(zoom_mode)
+        spans = []
+        current = date(start_date.year, start_date.month, 1)
+        while current <= end_date:
+            chunk_start = max(current, start_date)
+            next_month = add_months(current, months_per_chunk)
+            chunk_end = min(next_month - timedelta(days=1), end_date)
+            start_index = (chunk_start - start_date).days
+            end_index = (chunk_end - start_date).days + 1
+            if start_index < end_index:
+                label = chunk_start.strftime("%b %Y")
+                if chunk_start.month != chunk_end.month or chunk_start.year != chunk_end.year:
+                    label = f"{chunk_start.strftime('%b %Y')} - {chunk_end.strftime('%b %Y')}"
+                spans.append((start_index, end_index, label))
+            current = next_month
+        return spans
+
+    chunks = []
+    for start_index, end_index, label in chunk_spans():
+        chunks.append({
+            "label": label,
+            "days": days[start_index:end_index],
+            "rows": [
+                {
+                    "label": row["label"],
+                    "scope": row["scope"],
+                    "athlete": row["athlete"],
+                    "cells": row["cells"][start_index:end_index],
+                }
+                for row in rows
+            ],
+        })
+
     return render(request, "core/year_planner.html", {
         "athletes": visible_athletes,
         "trainer_plans": trainer_plans,
@@ -3894,6 +3946,8 @@ def year_planner_view(request):
         "selected_ids": selected_ids,
         "rows": rows,
         "days": days,
+        "chunks": chunks,
+        "show_basis": show_basis,
         "year": year,
         "previous_year": period["previous_year"],
         "next_year": period["next_year"],
@@ -3903,6 +3957,7 @@ def year_planner_view(request):
         "show_training": show_training,
         "show_whereabouts": show_whereabouts,
         "zoom_mode": zoom_mode,
+        "layout_mode": layout_mode,
         "training_choices": YearPlannerEntry.TRAINING_CHOICES,
         "whereabouts_choices": YearPlannerEntry.WHEREABOUTS_CHOICES,
     })

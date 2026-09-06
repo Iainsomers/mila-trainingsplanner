@@ -30,6 +30,32 @@
     background: #fff;
   }
 
+  .year-table-wrap.year-layout-stack {
+    overflow-x: hidden;
+  }
+
+  .year-chunk {
+    margin-bottom: 0.85rem;
+  }
+
+  .year-chunk-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #555;
+    margin: 0 0 0.2rem;
+  }
+
+  .year-layout-stack .year-table {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .year-layout-stack .year-day-head,
+  .year-layout-stack .year-day-cell {
+    width: auto;
+    min-width: 0;
+  }
+
   .year-table {
     border-collapse: collapse;
     table-layout: fixed;
@@ -452,6 +478,14 @@
     color: #555;
   }
 
+  .year-title-legend {
+    margin-top: 0.35rem;
+  }
+
+  .year-title-legend .year-legend-title {
+    min-width: auto;
+  }
+
   .year-save-status {
     min-width: 5rem;
     font-size: 0.8rem;
@@ -469,6 +503,25 @@
     <div>
       <h1 class="mb-1">Year Planner</h1>
       <div class="text-muted">{{ period_label }}</div>
+      <div class="year-legend year-title-legend">
+        <div class="year-legend-group">
+          <span class="year-legend-title">Training</span>
+          <span class="badge year-training-recovery text-dark">Recovery</span>
+          <span class="badge year-training-aerobe text-dark">Aerobe</span>
+          <span class="badge year-training-specific text-dark">Specific</span>
+          <span class="badge year-training-intense text-dark">Intense</span>
+          <span class="badge year-training-taper text-dark">Taper</span>
+        </div>
+        <div class="year-legend-group">
+          <span class="year-legend-title">Whereabouts</span>
+          <span class="badge year-where-camp text-white">Camp</span>
+          <span class="badge year-where-travel text-dark">Travel</span>
+          <span class="badge year-where-test text-dark">Test</span>
+          <span class="badge year-where-race text-white">Race</span>
+          <span class="badge year-where-medical text-dark">Medical</span>
+          <span class="badge year-where-brinec text-dark">Brinec</span>
+        </div>
+      </div>
     </div>
     <div class="d-flex gap-2">
       <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Planner</a>
@@ -480,7 +533,7 @@
     <div class="d-flex flex-wrap align-items-end year-toolbar">
       <div class="btn-group" role="group" aria-label="Period">
         {% for option in period_options %}
-          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&athlete_group={{ group_filter|urlencode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}"
+          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}"
              class="btn btn-sm {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
             {{ option.label }}
           </a>
@@ -488,12 +541,13 @@
       </div>
 
       {% if period_mode != "current_next" %}
-        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&athlete_group={{ group_filter|urlencode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
-        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&athlete_group={{ group_filter|urlencode }}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
+        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
+        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
       {% endif %}
 
       <input type="hidden" name="year" value="{{ year }}">
       <input type="hidden" name="period" value="{{ period_mode }}">
+      <input type="hidden" name="basis" value="0">
 
       <div>
         <label for="zoomMode" class="form-label mb-1 small">View</label>
@@ -501,6 +555,14 @@
           <option value="1" {% if zoom_mode == "1" %}selected{% endif %}>1 month</option>
           <option value="3" {% if zoom_mode == "3" %}selected{% endif %}>3 months</option>
           <option value="12" {% if zoom_mode == "12" %}selected{% endif %}>12 months</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="layoutMode" class="form-label mb-1 small">Layout</label>
+        <select id="layoutMode" name="layout" class="form-select form-select-sm">
+          <option value="scroll" {% if layout_mode == "scroll" %}selected{% endif %}>Scroll</option>
+          <option value="stack" {% if layout_mode == "stack" %}selected{% endif %}>Stacked</option>
         </select>
       </div>
 
@@ -537,6 +599,16 @@
           </div>
         </div>
         <div class="year-athlete-list">
+          <label class="form-check mb-0">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              name="basis"
+              value="1"
+              {% if show_basis %}checked{% endif %}
+            >
+            <span class="form-check-label">Basis</span>
+          </label>
           {% for athlete in athletes %}
             <label class="form-check mb-0">
               <input
@@ -551,25 +623,6 @@
           {% empty %}
             <span class="text-muted">No athletes found.</span>
           {% endfor %}
-        </div>
-      </div>
-      <div class="col-md-7 col-lg-8 year-legend">
-        <div class="year-legend-group">
-          <span class="year-legend-title">Training</span>
-          <span class="badge year-training-recovery text-dark">Recovery</span>
-          <span class="badge year-training-aerobe text-dark">Aerobe</span>
-          <span class="badge year-training-specific text-dark">Specific</span>
-          <span class="badge year-training-intense text-dark">Intense</span>
-          <span class="badge year-training-taper text-dark">Taper</span>
-        </div>
-        <div class="year-legend-group">
-          <span class="year-legend-title">Whereabouts</span>
-          <span class="badge year-where-camp text-white">Camp</span>
-          <span class="badge year-where-travel text-dark">Travel</span>
-          <span class="badge year-where-test text-dark">Test</span>
-          <span class="badge year-where-race text-white">Race</span>
-          <span class="badge year-where-medical text-dark">Medical</span>
-          <span class="badge year-where-brinec text-dark">Brinec</span>
         </div>
       </div>
     </div>
@@ -600,75 +653,82 @@
     <button type="button" class="btn btn-sm btn-primary" data-active-where-close>Done</button>
   </div>
 
-  <div class="year-table-wrap">
-    <table class="year-table">
-      <thead>
-        <tr>
-          <th class="year-name-cell">Athlete</th>
-          {% for day in days %}
-            <th class="year-day-head" title="{{ day|date:'D d-m-Y' }}">{{ day|date:"d-m" }}</th>
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in rows %}
-          <tr data-year-row {% if row.scope == "basis" %}class="year-basis-row"{% endif %}>
-            <td class="year-name-cell">
-              <div class="year-name-main">{{ row.label }}</div>
-              <div class="year-row-actions">
-                <button type="button" class="year-row-copy" data-year-row-copy>c</button>
-                <button type="button" class="year-row-paste" data-year-row-paste>p</button>
-              </div>
-            </td>
-            {% for cell in row.cells %}
-              <td class="year-day-cell">
-                <div class="year-cell"
-                     data-year-cell
-                     data-scope="{{ row.scope }}"
-                     data-date="{{ cell.date|date:'Y-m-d' }}">
-                  <div class="year-layer-wrap year-layer-training" data-year-training-wrap>
-                    <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
-                    <select class="year-select"
-                            data-year-training
-                            data-year-layer="training"
-                            aria-label="Training type">
-                      {% for value, label in training_choices %}
-                        <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
-                      {% endfor %}
-                    </select>
+  <div class="year-table-wrap {% if layout_mode == 'stack' %}year-layout-stack{% endif %}">
+    {% for chunk in chunks %}
+      <div class="year-chunk">
+        {% if layout_mode == "stack" %}
+          <div class="year-chunk-title">{{ chunk.label }}</div>
+        {% endif %}
+        <table class="year-table">
+          <thead>
+            <tr>
+              <th class="year-name-cell">Athlete</th>
+              {% for day in chunk.days %}
+                <th class="year-day-head" title="{{ day|date:'D d-m-Y' }}">{{ day|date:"d-m" }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in chunk.rows %}
+              <tr data-year-row {% if row.scope == "basis" %}class="year-basis-row"{% endif %}>
+                <td class="year-name-cell">
+                  <div class="year-name-main">{{ row.label }}</div>
+                  <div class="year-row-actions">
+                    <button type="button" class="year-row-copy" data-year-row-copy>c</button>
+                    <button type="button" class="year-row-paste" data-year-row-paste>p</button>
                   </div>
-                  <div class="year-where-wrap year-layer-whereabouts"
-                       data-year-where-wrap
-                       data-year-scope="{{ row.scope }}"
-                       data-year-date="{{ cell.date|date:'Y-m-d' }}">
-                    {% if cell.where_range %}
-                      <button type="button"
-                              class="year-range-pill year-where-{{ cell.where_range.whereabouts }} {% if cell.where_range.is_start %}year-range-start{% endif %} {% if cell.where_range.is_end %}year-range-end{% endif %}"
-                              data-year-range-id="{{ cell.where_range.id }}"
-                              data-year-range-type="{{ cell.where_range.whereabouts }}"
-                              data-year-range-note="{{ cell.where_range.note }}"
-                              data-year-range-start="{{ cell.where_range.start_date }}"
-                              data-year-range-end="{{ cell.where_range.end_date }}"
-                              data-year-range-scope="{{ row.scope }}">
-                        {% if cell.where_range.is_start %}
-                          <span class="year-range-handle year-range-handle-start" data-year-range-resize="start"></span>
+                </td>
+                {% for cell in row.cells %}
+                  <td class="year-day-cell">
+                    <div class="year-cell"
+                         data-year-cell
+                         data-scope="{{ row.scope }}"
+                         data-date="{{ cell.date|date:'Y-m-d' }}">
+                      <div class="year-layer-wrap year-layer-training" data-year-training-wrap>
+                        <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
+                        <select class="year-select"
+                                data-year-training
+                                data-year-layer="training"
+                                aria-label="Training type">
+                          {% for value, label in training_choices %}
+                            <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <div class="year-where-wrap year-layer-whereabouts"
+                           data-year-where-wrap
+                           data-year-scope="{{ row.scope }}"
+                           data-year-date="{{ cell.date|date:'Y-m-d' }}">
+                        {% if cell.where_range %}
+                          <button type="button"
+                                  class="year-range-pill year-where-{{ cell.where_range.whereabouts }} {% if cell.where_range.is_start %}year-range-start{% endif %} {% if cell.where_range.is_end %}year-range-end{% endif %}"
+                                  data-year-range-id="{{ cell.where_range.id }}"
+                                  data-year-range-type="{{ cell.where_range.whereabouts }}"
+                                  data-year-range-note="{{ cell.where_range.note }}"
+                                  data-year-range-start="{{ cell.where_range.start_date }}"
+                                  data-year-range-end="{{ cell.where_range.end_date }}"
+                                  data-year-range-scope="{{ row.scope }}">
+                            {% if cell.where_range.is_start %}
+                              <span class="year-range-handle year-range-handle-start" data-year-range-resize="start"></span>
+                            {% endif %}
+                            {% if cell.where_range.show_label %}
+                              <span class="year-range-label">{{ cell.where_range.note }}</span>
+                            {% endif %}
+                            {% if cell.where_range.is_end %}
+                              <span class="year-range-handle year-range-handle-end" data-year-range-resize="end"></span>
+                            {% endif %}
+                          </button>
                         {% endif %}
-                        {% if cell.where_range.show_label %}
-                          <span class="year-range-label">{{ cell.where_range.note }}</span>
-                        {% endif %}
-                        {% if cell.where_range.is_end %}
-                          <span class="year-range-handle year-range-handle-end" data-year-range-resize="end"></span>
-                        {% endif %}
-                      </button>
-                    {% endif %}
-                  </div>
-                </div>
-              </td>
+                      </div>
+                    </div>
+                  </td>
+                {% endfor %}
+              </tr>
             {% endfor %}
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
   </div>
 </div>
 {% endblock %}
@@ -896,7 +956,10 @@
   }
 
   function isoDate(date) {
-    return date.toISOString().slice(0, 10);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
 
   function removeRangeSegments(id) {
@@ -1065,6 +1128,7 @@
     athleteToggle.textContent = collapsed ? "Show" : "Hide";
   });
   document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
+  document.getElementById("layoutMode")?.addEventListener("change", () => form.submit());
   document.getElementById("yearAthleteGroup")?.addEventListener("change", () => {
     document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
       input.checked = false;

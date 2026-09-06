@@ -235,6 +235,24 @@ class YearPlannerTests(TestCase):
         self.assertContains(response, "Year Athlete")
         self.assertContains(response, "Whereabouts")
 
+    def test_year_planner_can_hide_basis_row(self):
+        _, athlete = self._coach_and_athlete()
+
+        response = self.client.get(f"/planning/year/?period=current_next&basis=0&athletes={athlete.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(any(row["scope"] == "basis" for row in response.context["rows"]))
+        self.assertContains(response, "Year Athlete")
+
+    def test_year_planner_stacked_layout_renders_chunks(self):
+        _, athlete = self._coach_and_athlete()
+
+        response = self.client.get(f"/planning/year/?year=2026&period=season&layout=stack&zoom=3&athletes={athlete.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sep 2026 - Nov 2026")
+        self.assertContains(response, "year-layout-stack")
+
     def test_year_planner_saves_base_and_athlete_entries(self):
         coach, athlete = self._coach_and_athlete()
 
