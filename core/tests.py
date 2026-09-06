@@ -319,6 +319,35 @@ class YearPlannerTests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "Altitude camp")
 
+    def test_year_planner_allows_overlapping_whereabout_ranges(self):
+        coach, athlete = self._coach_and_athlete()
+        YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=athlete,
+            start_date=date(2026, 9, 1),
+            end_date=date(2026, 9, 17),
+            whereabouts_type="camp",
+            note="Altitude camp",
+        )
+
+        response = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"athlete-{athlete.id}",
+                "start_date": "2026-09-08",
+                "end_date": "2026-09-08",
+                "whereabouts": "test",
+                "note": "Blood test",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete).count(), 2)
+        self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="camp").exists())
+        page = self.client.get(f"/planning/year/?year=2026&period=season&athletes={athlete.id}")
+        self.assertContains(page, "Blood test")
+
     def test_empty_year_planner_save_deletes_entry(self):
         coach, athlete = self._coach_and_athlete()
         YearPlannerEntry.objects.create(

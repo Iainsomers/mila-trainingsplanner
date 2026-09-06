@@ -3852,7 +3852,12 @@ def year_planner_view(request):
                 segment["is_start"] = offset == 0
                 segment["is_end"] = offset == item["span"] - 1
                 segment["show_label"] = index == label_index
-                cell_ranges[days[index]] = segment
+                cell_ranges.setdefault(days[index], []).append(segment)
+        for segments in cell_ranges.values():
+            segments.sort(key=lambda segment: (segment["span"], segment["id"]))
+            for index, segment in enumerate(segments):
+                segment["overlap_count"] = len(segments)
+                segment["overlap_index"] = index
         return cell_ranges
 
     rows = []
@@ -3863,7 +3868,7 @@ def year_planner_view(request):
             base_cells.append({
                 "date": day,
                 "payload": _year_planner_entry_payload(entry_map.get((None, day))),
-                "where_range": base_range_cells.get(day),
+                "where_ranges": base_range_cells.get(day, []),
             })
         rows.append({
             "label": "Basis",
@@ -3879,7 +3884,7 @@ def year_planner_view(request):
             cells.append({
                 "date": day,
                 "payload": _year_planner_entry_payload(entry_map.get((athlete_obj.id, day))),
-                "where_range": athlete_range_cells.get(day),
+                "where_ranges": athlete_range_cells.get(day, []),
             })
         rows.append({
             "label": athlete_obj.name,
@@ -4052,16 +4057,6 @@ def year_planner_whereabout_save_view(request):
         existing = YearPlannerWhereabout.objects.filter(owner=owner, id=range_id).first()
         if existing and existing.athlete_id != (athlete_obj.id if athlete_obj else None):
             range_id = None
-
-    overlap_qs = YearPlannerWhereabout.objects.filter(
-        owner=owner,
-        athlete=athlete_obj,
-        start_date__lte=end_date,
-        end_date__gte=start_date,
-    )
-    if range_id:
-        overlap_qs = overlap_qs.exclude(id=range_id)
-    overlap_qs.delete()
 
     if not whereabouts_type:
         if range_id:

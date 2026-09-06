@@ -364,6 +364,25 @@
   .year-range-handle-start { left: 0; }
   .year-range-handle-end { right: 0; }
 
+  .year-where-wrap.has-overlaps .year-range-pill {
+    inset: 1px 0;
+    border-radius: 0;
+  }
+
+  .year-where-wrap.has-overlaps .year-range-overlap-0 {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
+  .year-where-wrap.has-overlaps .year-range-overlap-1 {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+
+  .year-where-wrap.has-overlaps .year-range-overlap-extra {
+    clip-path: none;
+    inset: auto 1px 1px;
+    height: 35%;
+  }
+
   .year-range-pill:active {
     cursor: grabbing;
   }
@@ -712,25 +731,27 @@
                            data-year-where-wrap
                            data-year-scope="{{ row.scope }}"
                            data-year-date="{{ cell.date|date:'Y-m-d' }}">
-                        {% if cell.where_range %}
+                        {% if cell.where_ranges %}
+                          {% for range in cell.where_ranges %}
                           <button type="button"
-                                  class="year-range-pill year-where-{{ cell.where_range.whereabouts }} {% if cell.where_range.is_start %}year-range-start{% endif %} {% if cell.where_range.is_end %}year-range-end{% endif %}"
-                                  data-year-range-id="{{ cell.where_range.id }}"
-                                  data-year-range-type="{{ cell.where_range.whereabouts }}"
-                                  data-year-range-note="{{ cell.where_range.note }}"
-                                  data-year-range-start="{{ cell.where_range.start_date }}"
-                                  data-year-range-end="{{ cell.where_range.end_date }}"
+                                  class="year-range-pill year-where-{{ range.whereabouts }} {% if range.is_start %}year-range-start{% endif %} {% if range.is_end %}year-range-end{% endif %} {% if range.overlap_count > 1 %}{% if range.overlap_index == 0 %}year-range-overlap-0{% elif range.overlap_index == 1 %}year-range-overlap-1{% else %}year-range-overlap-extra{% endif %}{% endif %}"
+                                  data-year-range-id="{{ range.id }}"
+                                  data-year-range-type="{{ range.whereabouts }}"
+                                  data-year-range-note="{{ range.note }}"
+                                  data-year-range-start="{{ range.start_date }}"
+                                  data-year-range-end="{{ range.end_date }}"
                                   data-year-range-scope="{{ row.scope }}">
-                            {% if cell.where_range.is_start %}
+                            {% if range.is_start %}
                               <span class="year-range-handle year-range-handle-start" data-year-range-resize="start"></span>
                             {% endif %}
-                            {% if cell.where_range.show_label %}
-                              <span class="year-range-label">{{ cell.where_range.note }}</span>
+                            {% if range.show_label and range.overlap_count == 1 %}
+                              <span class="year-range-label">{{ range.note }}</span>
                             {% endif %}
-                            {% if cell.where_range.is_end %}
+                            {% if range.is_end %}
                               <span class="year-range-handle year-range-handle-end" data-year-range-resize="end"></span>
                             {% endif %}
                           </button>
+                          {% endfor %}
                         {% endif %}
                       </div>
                     </div>
@@ -981,18 +1002,34 @@
   }
 
   function removeOverlappingRangeSegments(scope, startDate, endDate) {
-    const start = dateMs(startDate);
-    const end = dateMs(endDate);
-    const seen = new Set();
-    document.querySelectorAll(`[data-year-range-scope="${scope}"]`).forEach((segment) => {
-      const id = segment.dataset.yearRangeId || "";
-      if (seen.has(id)) return;
-      const segmentStart = dateMs(segment.dataset.yearRangeStart || "");
-      const segmentEnd = dateMs(segment.dataset.yearRangeEnd || "");
-      if (segmentStart <= end && segmentEnd >= start) {
-        seen.add(id);
-        removeRangeSegments(id);
-      }
+    updateWhereOverlapClasses(scope, startDate, endDate);
+  }
+
+  function updateWhereOverlapClasses(scope, startDate, endDate) {
+    document.querySelectorAll(`[data-year-cell][data-scope="${scope}"]`).forEach((cell) => {
+      if (cell.dataset.date < startDate || cell.dataset.date > endDate) return;
+      const wrap = cell.querySelector("[data-year-where-wrap]");
+      const segments = Array.from(wrap?.querySelectorAll("[data-year-range-id]") || []);
+      wrap?.classList.toggle("has-overlaps", segments.length > 1);
+      segments
+        .sort((a, b) => {
+          const aSpan = dateMs(a.dataset.yearRangeEnd) - dateMs(a.dataset.yearRangeStart);
+          const bSpan = dateMs(b.dataset.yearRangeEnd) - dateMs(b.dataset.yearRangeStart);
+          return aSpan - bSpan;
+        })
+        .forEach((segment, index) => {
+          segment.classList.remove("year-range-overlap-0", "year-range-overlap-1", "year-range-overlap-extra");
+          if (segments.length <= 1) return;
+          if (index === 0) segment.classList.add("year-range-overlap-0");
+          else if (index === 1) segment.classList.add("year-range-overlap-1");
+          else segment.classList.add("year-range-overlap-extra");
+        });
+    });
+  }
+
+  function updateAllWhereOverlapClasses() {
+    document.querySelectorAll("[data-year-cell]").forEach((cell) => {
+      updateWhereOverlapClasses(cell.dataset.scope, cell.dataset.date, cell.dataset.date);
     });
   }
 
@@ -1087,7 +1124,7 @@
 
   function renderRange(range) {
     if (!range?.id || !range.scope || !range.whereabouts) return;
-    removeOverlappingRangeSegments(range.scope, range.start_date, range.end_date);
+    removeRangeSegments(range.id);
     const cells = Array.from(document.querySelectorAll(`[data-year-cell][data-scope="${range.scope}"]`))
       .filter((cell) => cell.dataset.date >= range.start_date && cell.dataset.date <= range.end_date);
     const labelIndex = Math.floor((cells.length - 1) / 2);
@@ -1096,6 +1133,7 @@
       if (!wrap) return;
       wrap.appendChild(makeRangeSegment(range, cell, index === 0, index === cells.length - 1, index === labelIndex));
     });
+    updateWhereOverlapClasses(range.scope, range.start_date, range.end_date);
   }
 
   async function saveActiveWhereRange() {
@@ -1129,8 +1167,12 @@
       note: "",
     });
     if (data?.deleted) {
+      const scope = activeWhereRange.scope;
+      const start = activeWhereRange.start;
+      const end = activeWhereRange.end;
       removeRangeSegments(activeWhereRange.id);
       closeWhereEditor();
+      updateWhereOverlapClasses(scope, start, end);
     }
   }
 
@@ -1355,6 +1397,7 @@
   });
 
   refreshAllClasses();
+  updateAllWhereOverlapClasses();
   updateVisibility();
 </script>
 {% endblock %}
