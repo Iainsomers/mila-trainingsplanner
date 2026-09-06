@@ -1135,6 +1135,9 @@
     });
     form.submit();
   });
+  document.querySelectorAll(".year-athlete-list input[name='athletes'], .year-athlete-list input[name='basis']").forEach((input) => {
+    input.addEventListener("change", () => form.submit());
+  });
 
   document.querySelectorAll("[data-year-training]").forEach((select) => {
     const layer = select.dataset.yearLayer;
