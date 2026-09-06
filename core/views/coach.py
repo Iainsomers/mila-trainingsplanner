@@ -3755,9 +3755,9 @@ def year_planner_view(request):
     zoom_mode = (request.GET.get("zoom") or "3").strip()
     if zoom_mode not in {"1", "3", "12"}:
         zoom_mode = "3"
-    layout_mode = (request.GET.get("layout") or "scroll").strip().lower()
+    layout_mode = (request.GET.get("layout") or "stack").strip().lower()
     if layout_mode not in {"scroll", "stack"}:
-        layout_mode = "scroll"
+        layout_mode = "stack"
     show_basis = request.GET.get("basis", "1") == "1"
 
     athletes = list(_filter_owned(Athlete.objects.order_by(Lower("name")), request))
@@ -3788,8 +3788,6 @@ def year_planner_view(request):
     visible_athletes = [athlete_obj for athlete_obj in athletes if athlete_obj.id in group_filtered_athlete_ids]
     athlete_ids = _clean_int_list(request.GET.getlist("athletes"))
     selected_ids = [athlete_id for athlete_id in athlete_ids if athlete_id in group_filtered_athlete_ids]
-    if not selected_ids:
-        selected_ids = [a.id for a in visible_athletes[:6]]
 
     selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
     owner = _active_coach_user(request)

@@ -235,6 +235,17 @@ class YearPlannerTests(TestCase):
         self.assertContains(response, "Year Athlete")
         self.assertContains(response, "Whereabouts")
 
+    def test_year_planner_does_not_preselect_athletes(self):
+        _, athlete = self._coach_and_athlete()
+
+        response = self.client.get("/planning/year/?period=current_next")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(any(row["scope"] == "basis" for row in response.context["rows"]))
+        self.assertFalse(any(row["scope"] == f"athlete-{athlete.id}" for row in response.context["rows"]))
+        self.assertNotContains(response, f'value="{athlete.id}"\n                checked')
+        self.assertContains(response, "year-layout-stack")
+
     def test_year_planner_can_hide_basis_row(self):
         _, athlete = self._coach_and_athlete()
 

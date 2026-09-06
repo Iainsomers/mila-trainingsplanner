@@ -22,6 +22,13 @@
     display: none !important;
   }
 
+  .year-athlete-panel {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px;
+    background: #fff;
+  }
+
   .year-table-wrap {
     overflow: auto;
     border: 1px solid #d8d8d8;
@@ -83,11 +90,13 @@
     width: 155px;
     min-width: 155px;
     max-width: 155px;
+    height: var(--year-day-height);
     background: #fff;
     position: sticky;
     left: 0;
     z-index: 3;
     padding: 4px 42px 4px 6px !important;
+    overflow: hidden;
   }
 
   .year-table th.year-name-cell { z-index: 4; }
@@ -95,6 +104,10 @@
     font-size: 0.78rem;
     font-weight: 400;
     line-height: 1.15;
+    max-height: calc(var(--year-day-height) - 8px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .year-row-actions {
