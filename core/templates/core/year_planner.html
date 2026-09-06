@@ -105,6 +105,7 @@
   .year-day-cell {
     height: var(--year-day-height);
     position: relative;
+    overflow: visible;
   }
 
   .year-cell {
@@ -113,6 +114,7 @@
     gap: 0;
     min-height: var(--year-day-height);
     background: #fff;
+    overflow: visible;
   }
 
   .year-planner-page.year-hide-training .year-layer-training,
@@ -133,14 +135,22 @@
     min-height: calc(var(--year-day-height) * 0.62);
   }
 
-  .year-layer-wrap,
-  .year-where-wrap {
+  .year-layer-wrap {
     position: relative;
     height: calc(var(--year-day-height) / 2);
     min-height: 0;
     overflow: hidden;
     border-radius: 5px;
     z-index: 1;
+  }
+
+  .year-where-wrap {
+    position: relative;
+    height: calc(var(--year-day-height) / 2);
+    min-height: 0;
+    overflow: visible;
+    border-radius: 5px;
+    z-index: 4;
   }
 
   .year-fill {
@@ -253,7 +263,7 @@
   .year-range-pill {
     position: absolute;
     inset: 1px auto 1px 0;
-    z-index: 5;
+    z-index: 20;
     width: calc(var(--year-day-width) * var(--range-span));
     border-radius: 5px;
     cursor: grab;
@@ -270,6 +280,10 @@
   }
 
   .year-range-pill:active {
+    cursor: grabbing;
+  }
+
+  .year-range-dragging .year-range-pill {
     cursor: grabbing;
   }
 
@@ -878,17 +892,15 @@
 
   document.querySelectorAll("[data-year-where-wrap]").forEach((wrap) => {
     wrap.addEventListener("click", () => openWhereEditorForCell(wrap.closest("[data-year-cell]")));
-    wrap.addEventListener("mouseenter", () => {
-      if (!rangeDrag) return;
-      const cell = wrap.closest("[data-year-cell]");
-      rangeDropCell = cell;
-      if (cell !== rangeDrag.startCell) rangeDrag.moved = true;
-    });
   });
 
   document.querySelectorAll("[data-year-range-id]").forEach((pill) => {
     pill.addEventListener("click", (event) => {
       event.stopPropagation();
+      if (pill.dataset.suppressClick === "1") {
+        pill.dataset.suppressClick = "";
+        return;
+      }
       openWhereEditorForRange(pill);
     });
     pill.addEventListener("mousedown", (event) => {
@@ -901,10 +913,25 @@
         note: pill.dataset.yearRangeNote || "",
         days: Math.max(1, Math.round((end - start) / 86400000) + 1),
         startCell: pill.closest("[data-year-cell]"),
+        pill,
+        startX: event.clientX,
+        startY: event.clientY,
         moved: false,
       };
       rangeDropCell = rangeDrag.startCell;
     });
+  });
+
+  document.addEventListener("mousemove", (event) => {
+    if (!rangeDrag) return;
+    const dx = Math.abs(event.clientX - rangeDrag.startX);
+    const dy = Math.abs(event.clientY - rangeDrag.startY);
+    if (dx < 4 && dy < 4) return;
+    rangeDrag.moved = true;
+    if (rangeDrag.pill) rangeDrag.pill.style.pointerEvents = "none";
+    document.body.classList.add("year-range-dragging");
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-year-cell]");
+    if (target) rangeDropCell = target;
   });
 
   document.querySelectorAll("[data-year-cell]").forEach((cell) => {
@@ -929,6 +956,11 @@
       const drag = rangeDrag;
       rangeDrag = null;
       rangeDropCell = null;
+      document.body.classList.remove("year-range-dragging");
+      if (drag.pill) {
+        drag.pill.style.pointerEvents = "";
+        drag.pill.dataset.suppressClick = drag.moved ? "1" : "";
+      }
       if (!drag.moved) return;
       if (target) {
         const start = new Date(target.dataset.date + "T00:00:00");
