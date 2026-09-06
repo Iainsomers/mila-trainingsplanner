@@ -342,16 +342,22 @@
   .year-legend .year-training-taper { background: #f2c200; color: #111; }
 
   .year-fill.year-where-camp,
+  .year-range-pill.year-where-camp,
   .year-legend .year-where-camp { background: #38a169; color: #fff; }
   .year-fill.year-where-travel,
+  .year-range-pill.year-where-travel,
   .year-legend .year-where-travel { background: #b7f7b7; color: #111; }
   .year-fill.year-where-test,
+  .year-range-pill.year-where-test,
   .year-legend .year-where-test { background: #b794f4; color: #111; }
   .year-fill.year-where-race,
+  .year-range-pill.year-where-race,
   .year-legend .year-where-race { background: #cc0000; color: #fff; }
   .year-fill.year-where-medical,
+  .year-range-pill.year-where-medical,
   .year-legend .year-where-medical { background: #fff8cc; color: #111; }
   .year-fill.year-where-brinec,
+  .year-range-pill.year-where-brinec,
   .year-legend .year-where-brinec { background: #ffb347; color: #111; }
 
   .year-legend .badge {
@@ -873,7 +879,10 @@
   document.querySelectorAll("[data-year-where-wrap]").forEach((wrap) => {
     wrap.addEventListener("click", () => openWhereEditorForCell(wrap.closest("[data-year-cell]")));
     wrap.addEventListener("mouseenter", () => {
-      if (rangeDrag) rangeDropCell = wrap.closest("[data-year-cell]");
+      if (!rangeDrag) return;
+      const cell = wrap.closest("[data-year-cell]");
+      rangeDropCell = cell;
+      if (cell !== rangeDrag.startCell) rangeDrag.moved = true;
     });
   });
 
@@ -891,8 +900,10 @@
         type: pill.dataset.yearRangeType || "",
         note: pill.dataset.yearRangeNote || "",
         days: Math.max(1, Math.round((end - start) / 86400000) + 1),
+        startCell: pill.closest("[data-year-cell]"),
+        moved: false,
       };
-      rangeDropCell = pill.closest("[data-year-cell]");
+      rangeDropCell = rangeDrag.startCell;
     });
   });
 
@@ -918,6 +929,7 @@
       const drag = rangeDrag;
       rangeDrag = null;
       rangeDropCell = null;
+      if (!drag.moved) return;
       if (target) {
         const start = new Date(target.dataset.date + "T00:00:00");
         const end = new Date(start);
