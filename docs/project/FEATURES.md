@@ -28,8 +28,8 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - De weergave kan worden geschaald naar ongeveer 1, 3 of 12 maanden per schermbreedte.
 - Meerdere atleten kunnen tegelijk worden getoond; de atletenlijst kan eerst op `All` of op een Trainer Planning-verwijzing worden gefilterd. Daarnaast bestaat een virtuele `Basis`-rij die geen echte atleet in de database is.
 - Training phases gebruiken dezelfde keuzes als de Flex Planner: Recovery, Aerobe, Specific, Intense en Taper.
-- Whereabouts-keuzes zijn Camp, Travel, Test, Race, Medical en Brinec met vaste kleuren; gekozen whereabouts kunnen een compact naamlabel krijgen.
-- Cellen slaan direct op. Gekozen waarden kunnen over een datumrange worden gesleept en hele atletrijen kunnen met `c`/`p` worden gekopieerd.
+- Whereabouts-keuzes zijn Camp, Travel, Test, Race, Medical en Brinec met vaste kleuren. Ze worden als echte datumranges opgeslagen, zodat een kamp of reis als één doorlopende pil met gecentreerde naam verschijnt en naar een andere atleet kan worden gekopieerd.
+- Trainingcellen slaan direct op. Gekozen trainingswaarden kunnen over een datumrange worden gesleept en hele atletrijen kunnen met `c`/`p` worden gekopieerd.
 
 ## Flex Planner
 

@@ -8,7 +8,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -244,7 +244,6 @@ class YearPlannerTests(TestCase):
                 "scope": "basis",
                 "date": "2026-09-07",
                 "training": "aerobe",
-                "whereabouts": "camp",
             }),
             content_type="application/json",
         )
@@ -254,16 +253,42 @@ class YearPlannerTests(TestCase):
                 "scope": f"athlete-{athlete.id}",
                 "date": "2026-09-07",
                 "training": "taper",
-                "whereabouts": "race",
-                "note": "Diamond League",
             }),
             content_type="application/json",
         )
 
         self.assertEqual(base_response.status_code, 200)
         self.assertEqual(athlete_response.status_code, 200)
-        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete__isnull=True, training_type="aerobe", whereabouts_type="camp").exists())
-        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete=athlete, training_type="taper", whereabouts_type="race", note="Diamond League").exists())
+        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete__isnull=True, training_type="aerobe").exists())
+        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete=athlete, training_type="taper").exists())
+
+    def test_year_planner_saves_whereabout_range(self):
+        coach, athlete = self._coach_and_athlete()
+
+        response = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"athlete-{athlete.id}",
+                "start_date": "2026-09-07",
+                "end_date": "2026-09-17",
+                "whereabouts": "camp",
+                "note": "Altitude camp",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(YearPlannerWhereabout.objects.filter(
+            owner=coach,
+            athlete=athlete,
+            start_date=date(2026, 9, 7),
+            end_date=date(2026, 9, 17),
+            whereabouts_type="camp",
+            note="Altitude camp",
+        ).exists())
+        page = self.client.get(f"/planning/year/?year=2026&period=season&athletes={athlete.id}")
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Altitude camp")
 
     def test_empty_year_planner_save_deletes_entry(self):
         coach, athlete = self._coach_and_athlete()
@@ -272,7 +297,6 @@ class YearPlannerTests(TestCase):
             athlete=athlete,
             date=date(2026, 9, 7),
             training_type="aerobe",
-            whereabouts_type="camp",
         )
 
         response = self.client.post(

@@ -353,6 +353,44 @@ class YearPlannerEntry(models.Model):
         return f"{label} · {self.date}"
 
 
+class YearPlannerWhereabout(models.Model):
+    WHEREABOUTS_CHOICES = YearPlannerEntry.WHEREABOUTS_CHOICES
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="year_planner_whereabouts",
+    )
+    athlete = models.ForeignKey(
+        Athlete,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="year_planner_whereabouts",
+    )
+    start_date = models.DateField()
+    end_date = models.DateField()
+    whereabouts_type = models.CharField(max_length=20, choices=WHEREABOUTS_CHOICES)
+    note = models.CharField(max_length=120, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["owner_id", "athlete__name", "start_date", "end_date"]
+        indexes = [
+            models.Index(fields=["owner", "athlete", "start_date", "end_date"]),
+            models.Index(fields=["owner", "start_date", "end_date"]),
+        ]
+
+    def clean(self):
+        if self.end_date and self.start_date and self.end_date < self.start_date:
+            raise ValidationError("End date cannot be before start date.")
+
+    def __str__(self) -> str:
+        label = self.athlete.name if self.athlete_id else "Basis"
+        return f"{label} · {self.whereabouts_type} · {self.start_date} - {self.end_date}"
+
+
 def get_default_plan_id() -> int | None:
     try:
         plan = TrainingPlan.objects.filter(name="Default").only("id").first()

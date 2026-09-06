@@ -23,7 +23,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, YearPlannerEntry, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -3695,11 +3695,22 @@ def _year_planner_scope_key(athlete_id):
     return "basis" if athlete_id is None else f"athlete-{athlete_id}"
 
 
+def _year_planner_scope_athlete(request, scope):
+    scope = (scope or "").strip()
+    if scope == "basis":
+        return None
+    match = re.fullmatch(r"athlete-(\d+)", scope)
+    if not match:
+        raise ValueError("Invalid scope")
+    athlete_obj = _filter_owned(Athlete.objects.all(), request).filter(id=int(match.group(1))).first()
+    if not athlete_obj:
+        raise LookupError("Athlete not found")
+    return athlete_obj
+
+
 def _year_planner_entry_payload(entry):
     return {
         "training": entry.training_type if entry else "",
-        "whereabouts": entry.whereabouts_type if entry else "",
-        "note": entry.note if entry else "",
     }
 
 
@@ -3788,6 +3799,38 @@ def year_planner_view(request):
         (entry.athlete_id, entry.date): entry
         for entry in entries
     }
+    whereabout_ranges = list(
+        YearPlannerWhereabout.objects
+        .filter(owner=owner, start_date__lte=end_date, end_date__gte=start_date)
+        .filter(Q(athlete__isnull=True) | Q(athlete_id__in=selected_ids))
+        .select_related("athlete")
+    )
+    ranges_by_athlete = {}
+    for range_obj in whereabout_ranges:
+        ranges_by_athlete.setdefault(range_obj.athlete_id, []).append(range_obj)
+    day_index = {day: index for index, day in enumerate(days)}
+
+    def row_ranges(athlete_id):
+        rendered = []
+        for range_obj in ranges_by_athlete.get(athlete_id, []):
+            visible_start = max(range_obj.start_date, start_date)
+            visible_end = min(range_obj.end_date, end_date)
+            start_index = day_index.get(visible_start)
+            if start_index is None:
+                continue
+            span = (visible_end - visible_start).days + 1
+            rendered.append({
+                "id": range_obj.id,
+                "whereabouts": range_obj.whereabouts_type,
+                "note": range_obj.note,
+                "start_date": range_obj.start_date.isoformat(),
+                "end_date": range_obj.end_date.isoformat(),
+                "visible_start": visible_start,
+                "start_index": start_index,
+                "span": span,
+                "span_width": f"calc(var(--year-day-width) * {span})",
+            })
+        return rendered
 
     rows = []
     base_cells = []
@@ -3801,6 +3844,7 @@ def year_planner_view(request):
         "scope": "basis",
         "athlete": None,
         "cells": base_cells,
+        "ranges": row_ranges(None),
     })
 
     for athlete_obj in selected_athletes:
@@ -3815,6 +3859,7 @@ def year_planner_view(request):
             "scope": _year_planner_scope_key(athlete_obj.id),
             "athlete": athlete_obj,
             "cells": cells,
+            "ranges": row_ranges(athlete_obj.id),
         })
 
     period_options = [
@@ -3867,27 +3912,20 @@ def year_planner_entry_save_view(request):
         return JsonResponse({"ok": False, "error": "Date is required"}, status=400)
 
     owner = _active_coach_user(request)
-    athlete_obj = None
-    if scope != "basis":
-        match = re.fullmatch(r"athlete-(\d+)", scope)
-        if not match:
-            return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
-        athlete_obj = _filter_owned(Athlete.objects.all(), request).filter(id=int(match.group(1))).first()
-        if not athlete_obj:
-            return JsonResponse({"ok": False, "error": "Athlete not found"}, status=404)
+    try:
+        athlete_obj = _year_planner_scope_athlete(request, scope)
+    except ValueError:
+        return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
+    except LookupError:
+        return JsonResponse({"ok": False, "error": "Athlete not found"}, status=404)
 
     training_type = (payload.get("training") or "").strip()
-    whereabouts_type = (payload.get("whereabouts") or "").strip()
-    note = (payload.get("note") or "").strip()[:120]
 
     allowed_training = {choice[0] for choice in YearPlannerEntry.TRAINING_CHOICES}
-    allowed_whereabouts = {choice[0] for choice in YearPlannerEntry.WHEREABOUTS_CHOICES}
     if training_type not in allowed_training:
         return JsonResponse({"ok": False, "error": "Invalid training type"}, status=400)
-    if whereabouts_type not in allowed_whereabouts:
-        return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
 
-    if not training_type and not whereabouts_type and not note:
+    if not training_type:
         YearPlannerEntry.objects.filter(owner=owner, athlete=athlete_obj, date=entry_date).delete()
         return JsonResponse({"ok": True, "deleted": True})
 
@@ -3897,11 +3935,101 @@ def year_planner_entry_save_view(request):
         date=entry_date,
         defaults={
             "training_type": training_type,
-            "whereabouts_type": whereabouts_type,
-            "note": note,
         },
     )
     return JsonResponse({"ok": True, "entry": _year_planner_entry_payload(entry)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def year_planner_whereabout_save_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return JsonResponse({"ok": False, "error": "Not allowed"}, status=403)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    scope = (payload.get("scope") or "").strip()
+    try:
+        athlete_obj = _year_planner_scope_athlete(request, scope)
+    except ValueError:
+        return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
+    except LookupError:
+        return JsonResponse({"ok": False, "error": "Athlete not found"}, status=404)
+
+    try:
+        start_date = _parse_iso_date(payload.get("start_date"))
+        end_date = _parse_iso_date(payload.get("end_date"))
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Invalid date"}, status=400)
+    if not start_date or not end_date:
+        return JsonResponse({"ok": False, "error": "Date is required"}, status=400)
+    if end_date < start_date:
+        start_date, end_date = end_date, start_date
+
+    whereabouts_type = (payload.get("whereabouts") or "").strip()
+    note = (payload.get("note") or "").strip()[:120]
+    allowed_whereabouts = {choice[0] for choice in YearPlannerWhereabout.WHEREABOUTS_CHOICES}
+    if whereabouts_type not in allowed_whereabouts:
+        return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
+
+    owner = _active_coach_user(request)
+    range_id = payload.get("id")
+    if range_id:
+        existing = YearPlannerWhereabout.objects.filter(owner=owner, id=range_id).first()
+        if existing and existing.athlete_id != (athlete_obj.id if athlete_obj else None):
+            range_id = None
+
+    overlap_qs = YearPlannerWhereabout.objects.filter(
+        owner=owner,
+        athlete=athlete_obj,
+        start_date__lte=end_date,
+        end_date__gte=start_date,
+    )
+    if range_id:
+        overlap_qs = overlap_qs.exclude(id=range_id)
+    overlap_qs.delete()
+
+    if not whereabouts_type:
+        if range_id:
+            YearPlannerWhereabout.objects.filter(owner=owner, id=range_id).delete()
+        return JsonResponse({"ok": True, "deleted": True})
+
+    if range_id:
+        range_obj, _ = YearPlannerWhereabout.objects.update_or_create(
+            owner=owner,
+            id=range_id,
+            defaults={
+                "athlete": athlete_obj,
+                "start_date": start_date,
+                "end_date": end_date,
+                "whereabouts_type": whereabouts_type,
+                "note": note,
+            },
+        )
+    else:
+        range_obj = YearPlannerWhereabout.objects.create(
+            owner=owner,
+            athlete=athlete_obj,
+            start_date=start_date,
+            end_date=end_date,
+            whereabouts_type=whereabouts_type,
+            note=note,
+        )
+    return JsonResponse({
+        "ok": True,
+        "range": {
+            "id": range_obj.id,
+            "scope": _year_planner_scope_key(range_obj.athlete_id),
+            "start_date": range_obj.start_date.isoformat(),
+            "end_date": range_obj.end_date.isoformat(),
+            "whereabouts": range_obj.whereabouts_type,
+            "note": range_obj.note,
+        },
+    })
 
 
 @login_required
