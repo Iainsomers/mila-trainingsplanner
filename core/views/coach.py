@@ -3858,6 +3858,7 @@ def year_planner_view(request):
             for index, segment in enumerate(segments):
                 segment["overlap_count"] = len(segments)
                 segment["overlap_index"] = index
+                segment["show_overlap_label"] = len(segments) > 1 and index == 0
         return cell_ranges
 
     rows = []
