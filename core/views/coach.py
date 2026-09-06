@@ -3832,34 +3832,51 @@ def year_planner_view(request):
             })
         return rendered
 
+    def row_range_cells(athlete_id):
+        cell_ranges = {}
+        for item in row_ranges(athlete_id):
+            label_index = item["start_index"] + (item["span"] - 1) // 2
+            for offset in range(item["span"]):
+                index = item["start_index"] + offset
+                if index < 0 or index >= len(days):
+                    continue
+                segment = dict(item)
+                segment["is_start"] = offset == 0
+                segment["is_end"] = offset == item["span"] - 1
+                segment["show_label"] = index == label_index
+                cell_ranges[days[index]] = segment
+        return cell_ranges
+
     rows = []
     base_cells = []
+    base_range_cells = row_range_cells(None)
     for day in days:
         base_cells.append({
             "date": day,
             "payload": _year_planner_entry_payload(entry_map.get((None, day))),
+            "where_range": base_range_cells.get(day),
         })
     rows.append({
         "label": "Basis",
         "scope": "basis",
         "athlete": None,
         "cells": base_cells,
-        "ranges": row_ranges(None),
     })
 
     for athlete_obj in selected_athletes:
         cells = []
+        athlete_range_cells = row_range_cells(athlete_obj.id)
         for day in days:
             cells.append({
                 "date": day,
                 "payload": _year_planner_entry_payload(entry_map.get((athlete_obj.id, day))),
+                "where_range": athlete_range_cells.get(day),
             })
         rows.append({
             "label": athlete_obj.name,
             "scope": _year_planner_scope_key(athlete_obj.id),
             "athlete": athlete_obj,
             "cells": cells,
-            "ranges": row_ranges(athlete_obj.id),
         })
 
     period_options = [
