@@ -17,6 +17,11 @@
     font-size: 0.82rem;
   }
 
+  .year-athlete-panel.is-collapsed .year-athlete-list,
+  .year-athlete-panel.is-collapsed .year-athlete-group {
+    display: none !important;
+  }
+
   .year-table-wrap {
     overflow: auto;
     border: 1px solid #d8d8d8;
@@ -515,8 +520,12 @@
     </div>
 
     <div class="mt-2 row g-2 align-items-end">
-      <div class="col-md-5 col-lg-4">
-        <div class="d-flex align-items-end gap-2 mb-1">
+      <div class="col-md-5 col-lg-4 year-athlete-panel" data-year-athlete-panel>
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <label class="form-label mb-0">Athletes</label>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-year-athlete-toggle>Hide</button>
+        </div>
+        <div class="d-flex align-items-end gap-2 mb-1 year-athlete-group">
           <div class="flex-grow-1">
             <label for="yearAthleteGroup" class="form-label mb-1">Group</label>
             <select id="yearAthleteGroup" name="athlete_group" class="form-select form-select-sm">
@@ -527,7 +536,6 @@
             </select>
           </div>
         </div>
-        <label class="form-label mb-1">Athletes</label>
         <div class="year-athlete-list">
           {% for athlete in athletes %}
             <label class="form-check mb-0">
@@ -588,6 +596,7 @@
       <label for="activeWhereEnd" class="form-label mb-1 small">To</label>
       <input id="activeWhereEnd" type="date" class="form-control form-control-sm" data-active-where-end>
     </div>
+    <button type="button" class="btn btn-sm btn-outline-danger" data-active-where-delete>Delete</button>
     <button type="button" class="btn btn-sm btn-primary" data-active-where-close>Done</button>
   </div>
 
@@ -682,6 +691,9 @@
   const activeWhereName = document.querySelector("[data-active-where-name]");
   const activeWhereStart = document.querySelector("[data-active-where-start]");
   const activeWhereEnd = document.querySelector("[data-active-where-end]");
+  const activeWhereDelete = document.querySelector("[data-active-where-delete]");
+  const athletePanel = document.querySelector("[data-year-athlete-panel]");
+  const athleteToggle = document.querySelector("[data-year-athlete-toggle]");
   let rowClipboard = null;
   let paint = null;
   let changedCells = new Set();
@@ -831,6 +843,7 @@
     if (activeWhereName) activeWhereName.value = "";
     if (activeWhereStart) activeWhereStart.value = cell.dataset.date;
     if (activeWhereEnd) activeWhereEnd.value = cell.dataset.date;
+    if (activeWhereDelete) activeWhereDelete.disabled = true;
     activeEditor?.classList.add("is-open");
     window.setTimeout(() => activeWhereName?.focus(), 0);
   }
@@ -848,6 +861,7 @@
     if (activeWhereName) activeWhereName.value = activeWhereRange.note;
     if (activeWhereStart) activeWhereStart.value = activeWhereRange.start;
     if (activeWhereEnd) activeWhereEnd.value = activeWhereRange.end;
+    if (activeWhereDelete) activeWhereDelete.disabled = !activeWhereRange.id;
     activeEditor?.classList.add("is-open");
     window.setTimeout(() => activeWhereName?.focus(), 0);
   }
@@ -920,11 +934,13 @@
       event.stopPropagation();
       const start = new Date(segment.dataset.yearRangeStart + "T00:00:00");
       const end = new Date(segment.dataset.yearRangeEnd + "T00:00:00");
+      const sourceCell = segment.closest("[data-year-cell]");
       rangeDrag = {
         type: segment.dataset.yearRangeType || "",
         note: segment.dataset.yearRangeNote || "",
         days: Math.max(1, Math.round((end - start) / 86400000) + 1),
-        startCell: segment.closest("[data-year-cell]"),
+        startCell: sourceCell,
+        offsetDays: Math.max(0, Math.round((dateMs(sourceCell?.dataset.date || segment.dataset.yearRangeStart) - dateMs(segment.dataset.yearRangeStart)) / 86400000)),
         segments: Array.from(document.querySelectorAll(`[data-year-range-id="${segment.dataset.yearRangeId}"]`)),
         startX: event.clientX,
         startY: event.clientY,
@@ -1026,8 +1042,28 @@
     }
   }
 
+  async function deleteActiveWhereRange() {
+    if (!activeWhereRange?.id) return;
+    const data = await saveWhereRange({
+      id: activeWhereRange.id,
+      scope: activeWhereRange.scope,
+      start_date: activeWhereRange.start,
+      end_date: activeWhereRange.end,
+      whereabouts: "",
+      note: "",
+    });
+    if (data?.deleted) {
+      removeRangeSegments(activeWhereRange.id);
+      closeWhereEditor();
+    }
+  }
+
   document.getElementById("showTraining")?.addEventListener("change", updateVisibility);
   document.getElementById("showWhereabouts")?.addEventListener("change", updateVisibility);
+  athleteToggle?.addEventListener("click", () => {
+    const collapsed = athletePanel?.classList.toggle("is-collapsed");
+    athleteToggle.textContent = collapsed ? "Show" : "Hide";
+  });
   document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
   document.getElementById("yearAthleteGroup")?.addEventListener("change", () => {
     document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
@@ -1079,6 +1115,7 @@
   });
 
   document.querySelector("[data-active-where-close]")?.addEventListener("click", saveActiveWhereRange);
+  activeWhereDelete?.addEventListener("click", deleteActiveWhereRange);
 
   document.querySelectorAll("[data-year-where-wrap]").forEach((wrap) => {
     wrap.addEventListener("click", () => openWhereEditorForCell(wrap.closest("[data-year-cell]")));
@@ -1169,12 +1206,13 @@
       if (!drag.moved) return;
       if (target) {
         const start = new Date(target.dataset.date + "T00:00:00");
+        start.setDate(start.getDate() - (drag.offsetDays || 0));
         const end = new Date(start);
         end.setDate(start.getDate() + drag.days - 1);
         saveWhereRange({
           scope: target.dataset.scope,
-          start_date: target.dataset.date,
-          end_date: end.toISOString().slice(0, 10),
+          start_date: isoDate(start),
+          end_date: isoDate(end),
           whereabouts: drag.type,
           note: drag.note,
         }).then((data) => {
