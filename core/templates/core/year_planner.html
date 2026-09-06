@@ -805,7 +805,9 @@
         whereabouts: range.whereabouts,
         note: range.note,
       })));
-      if (results.every(Boolean)) window.location.reload();
+      results.forEach((data) => {
+        if (data?.range) renderRange(data.range);
+      });
     }
   }
 
@@ -867,10 +869,141 @@
     });
     if (!response.ok) {
       setStatus("Save failed", true);
-      return false;
+      return null;
     }
+    const data = await response.json();
     setStatus("Saved", false);
-    return true;
+    window.setTimeout(() => setStatus("", false), 1100);
+    return data;
+  }
+
+  function dateMs(value) {
+    return new Date(value + "T00:00:00").getTime();
+  }
+
+  function isoDate(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function removeRangeSegments(id) {
+    if (!id) return;
+    document.querySelectorAll(`[data-year-range-id="${id}"]`).forEach((segment) => segment.remove());
+  }
+
+  function removeOverlappingRangeSegments(scope, startDate, endDate) {
+    const start = dateMs(startDate);
+    const end = dateMs(endDate);
+    const seen = new Set();
+    document.querySelectorAll(`[data-year-range-scope="${scope}"]`).forEach((segment) => {
+      const id = segment.dataset.yearRangeId || "";
+      if (seen.has(id)) return;
+      const segmentStart = dateMs(segment.dataset.yearRangeStart || "");
+      const segmentEnd = dateMs(segment.dataset.yearRangeEnd || "");
+      if (segmentStart <= end && segmentEnd >= start) {
+        seen.add(id);
+        removeRangeSegments(id);
+      }
+    });
+  }
+
+  function bindRangeSegment(segment) {
+    segment.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (segment.dataset.suppressClick === "1") {
+        segment.dataset.suppressClick = "";
+        return;
+      }
+      openWhereEditorForRange(segment);
+    });
+    segment.addEventListener("mousedown", (event) => {
+      if (event.button !== 0 || event.target.closest("[data-year-range-resize]")) return;
+      event.stopPropagation();
+      const start = new Date(segment.dataset.yearRangeStart + "T00:00:00");
+      const end = new Date(segment.dataset.yearRangeEnd + "T00:00:00");
+      rangeDrag = {
+        type: segment.dataset.yearRangeType || "",
+        note: segment.dataset.yearRangeNote || "",
+        days: Math.max(1, Math.round((end - start) / 86400000) + 1),
+        startCell: segment.closest("[data-year-cell]"),
+        segments: Array.from(document.querySelectorAll(`[data-year-range-id="${segment.dataset.yearRangeId}"]`)),
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+      };
+      rangeDropCell = rangeDrag.startCell;
+    });
+  }
+
+  function bindRangeHandle(handle) {
+    handle.addEventListener("click", (event) => event.stopPropagation());
+    handle.addEventListener("mousedown", (event) => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      const segment = handle.closest("[data-year-range-id]");
+      rangeResize = {
+        id: segment.dataset.yearRangeId || "",
+        scope: segment.dataset.yearRangeScope || "",
+        type: segment.dataset.yearRangeType || "",
+        note: segment.dataset.yearRangeNote || "",
+        start: segment.dataset.yearRangeStart || "",
+        end: segment.dataset.yearRangeEnd || "",
+        side: handle.dataset.yearRangeResize,
+        segments: Array.from(document.querySelectorAll(`[data-year-range-id="${segment.dataset.yearRangeId}"]`)),
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+      };
+      rangeDropCell = segment.closest("[data-year-cell]");
+    });
+  }
+
+  function makeRangeSegment(range, cell, isStart, isEnd, showLabel) {
+    const segment = document.createElement("button");
+    segment.type = "button";
+    segment.className = `year-range-pill year-where-${range.whereabouts || ""}`;
+    if (isStart) segment.classList.add("year-range-start");
+    if (isEnd) segment.classList.add("year-range-end");
+    segment.dataset.yearRangeId = range.id || "";
+    segment.dataset.yearRangeType = range.whereabouts || "";
+    segment.dataset.yearRangeNote = range.note || "";
+    segment.dataset.yearRangeStart = range.start_date || "";
+    segment.dataset.yearRangeEnd = range.end_date || "";
+    segment.dataset.yearRangeScope = range.scope || cell.dataset.scope || "";
+    if (isStart) {
+      const handle = document.createElement("span");
+      handle.className = "year-range-handle year-range-handle-start";
+      handle.dataset.yearRangeResize = "start";
+      segment.appendChild(handle);
+      bindRangeHandle(handle);
+    }
+    if (showLabel && range.note) {
+      const label = document.createElement("span");
+      label.className = "year-range-label";
+      label.textContent = range.note;
+      segment.appendChild(label);
+    }
+    if (isEnd) {
+      const handle = document.createElement("span");
+      handle.className = "year-range-handle year-range-handle-end";
+      handle.dataset.yearRangeResize = "end";
+      segment.appendChild(handle);
+      bindRangeHandle(handle);
+    }
+    bindRangeSegment(segment);
+    return segment;
+  }
+
+  function renderRange(range) {
+    if (!range?.id || !range.scope || !range.whereabouts) return;
+    removeOverlappingRangeSegments(range.scope, range.start_date, range.end_date);
+    const cells = Array.from(document.querySelectorAll(`[data-year-cell][data-scope="${range.scope}"]`))
+      .filter((cell) => cell.dataset.date >= range.start_date && cell.dataset.date <= range.end_date);
+    const labelIndex = Math.floor((cells.length - 1) / 2);
+    cells.forEach((cell, index) => {
+      const wrap = cell.querySelector("[data-year-where-wrap]");
+      if (!wrap) return;
+      wrap.appendChild(makeRangeSegment(range, cell, index === 0, index === cells.length - 1, index === labelIndex));
+    });
   }
 
   async function saveActiveWhereRange() {
@@ -883,8 +1016,14 @@
       whereabouts: activeWhereType?.value || "",
       note: activeWhereName?.value || "",
     };
-    const ok = await saveWhereRange(payload);
-    if (ok) window.location.reload();
+    const data = await saveWhereRange(payload);
+    if (data?.deleted) {
+      removeRangeSegments(payload.id);
+      closeWhereEditor();
+    } else if (data?.range) {
+      renderRange(data.range);
+      closeWhereEditor();
+    }
   }
 
   document.getElementById("showTraining")?.addEventListener("change", updateVisibility);
@@ -945,57 +1084,9 @@
     wrap.addEventListener("click", () => openWhereEditorForCell(wrap.closest("[data-year-cell]")));
   });
 
-  document.querySelectorAll("[data-year-range-id]").forEach((pill) => {
-    pill.addEventListener("click", (event) => {
-      event.stopPropagation();
-      if (pill.dataset.suppressClick === "1") {
-        pill.dataset.suppressClick = "";
-        return;
-      }
-      openWhereEditorForRange(pill);
-    });
-    pill.addEventListener("mousedown", (event) => {
-      if (event.button !== 0) return;
-      event.stopPropagation();
-      const start = new Date(pill.dataset.yearRangeStart + "T00:00:00");
-      const end = new Date(pill.dataset.yearRangeEnd + "T00:00:00");
-      rangeDrag = {
-        type: pill.dataset.yearRangeType || "",
-        note: pill.dataset.yearRangeNote || "",
-        days: Math.max(1, Math.round((end - start) / 86400000) + 1),
-        startCell: pill.closest("[data-year-cell]"),
-        pill,
-        segments: Array.from(document.querySelectorAll(`[data-year-range-id="${pill.dataset.yearRangeId}"]`)),
-        startX: event.clientX,
-        startY: event.clientY,
-        moved: false,
-      };
-      rangeDropCell = rangeDrag.startCell;
-    });
-  });
+  document.querySelectorAll("[data-year-range-id]").forEach(bindRangeSegment);
 
-  document.querySelectorAll("[data-year-range-resize]").forEach((handle) => {
-    handle.addEventListener("click", (event) => event.stopPropagation());
-    handle.addEventListener("mousedown", (event) => {
-      if (event.button !== 0) return;
-      event.stopPropagation();
-      const pill = handle.closest("[data-year-range-id]");
-      rangeResize = {
-        id: pill.dataset.yearRangeId || "",
-        scope: pill.dataset.yearRangeScope || "",
-        type: pill.dataset.yearRangeType || "",
-        note: pill.dataset.yearRangeNote || "",
-        start: pill.dataset.yearRangeStart || "",
-        end: pill.dataset.yearRangeEnd || "",
-        side: handle.dataset.yearRangeResize,
-        segments: Array.from(document.querySelectorAll(`[data-year-range-id="${pill.dataset.yearRangeId}"]`)),
-        startX: event.clientX,
-        startY: event.clientY,
-        moved: false,
-      };
-      rangeDropCell = pill.closest("[data-year-cell]");
-    });
-  });
+  document.querySelectorAll("[data-year-range-resize]").forEach(bindRangeHandle);
 
   document.addEventListener("mousemove", (event) => {
     if (rangeResize) {
@@ -1060,8 +1151,8 @@
         whereabouts: resize.type,
         note: resize.note,
       };
-      saveWhereRange(payload).then((ok) => {
-        if (ok) window.location.reload();
+      saveWhereRange(payload).then((data) => {
+        if (data?.range) renderRange(data.range);
       });
       return;
     }
@@ -1086,8 +1177,8 @@
           end_date: end.toISOString().slice(0, 10),
           whereabouts: drag.type,
           note: drag.note,
-        }).then((ok) => {
-          if (ok) window.location.reload();
+        }).then((data) => {
+          if (data?.range) renderRange(data.range);
         });
       }
       return;
@@ -1102,6 +1193,7 @@
   document.querySelectorAll("[data-year-row-copy]").forEach((button) => {
     button.addEventListener("click", () => {
       const row = button.closest("[data-year-row]");
+      const seenRangeIds = new Set();
       rowClipboard = {
         cells: Array.from(row.querySelectorAll("[data-year-cell]")).map((cell) => {
           const payload = cellPayload(cell);
@@ -1109,12 +1201,17 @@
             training: payload.training,
           };
         }),
-        ranges: Array.from(row.querySelectorAll("[data-year-range-id]")).map((pill) => ({
-          start_date: pill.dataset.yearRangeStart || "",
-          end_date: pill.dataset.yearRangeEnd || "",
-          whereabouts: pill.dataset.yearRangeType || "",
-          note: pill.dataset.yearRangeNote || "",
-        })),
+        ranges: Array.from(row.querySelectorAll("[data-year-range-id]")).filter((pill) => {
+          const id = pill.dataset.yearRangeId || "";
+          if (seenRangeIds.has(id)) return false;
+          seenRangeIds.add(id);
+          return true;
+        }).map((pill) => ({
+            start_date: pill.dataset.yearRangeStart || "",
+            end_date: pill.dataset.yearRangeEnd || "",
+            whereabouts: pill.dataset.yearRangeType || "",
+            note: pill.dataset.yearRangeNote || "",
+          })),
       };
       document.body.classList.add("year-row-paste-mode");
     });
