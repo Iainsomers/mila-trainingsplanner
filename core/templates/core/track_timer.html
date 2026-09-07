@@ -185,12 +185,6 @@
     opacity: 0.58;
   }
 
-  .marker-label {
-    display: block;
-    font-size: 0.76rem;
-    color: #667589;
-  }
-
   .marker-100 { left: 75%; top: 15%; }
   .marker-200 { left: 25%; top: 15%; }
   .marker-300 { left: 25%; top: 85%; }
@@ -204,10 +198,6 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 5px;
     align-content: center;
-  }
-
-  .multi-marker .marker-label {
-    grid-column: 1 / -1;
   }
 
   .runner-dot {
@@ -381,19 +371,15 @@
 
           <button type="button" class="track-marker marker-100" data-marker="100">
             <span data-single>Finish</span>
-            <span class="marker-label">100m</span>
           </button>
           <button type="button" class="track-marker marker-200" data-marker="200">
             <span data-single>Finish</span>
-            <span class="marker-label">200m</span>
           </button>
           <button type="button" class="track-marker marker-300" data-marker="300">
             <span data-single>Finish</span>
-            <span class="marker-label">300m</span>
           </button>
           <button type="button" class="track-marker marker-400" data-marker="400">
             <span data-single>Finish</span>
-            <span class="marker-label">400m</span>
           </button>
         </div>
         <p id="timerHint" class="timer-hint">Choose a distance, press Start, then tap the logical finish point. For distances above 400m, tap each 400m passage first.</p>
@@ -502,10 +488,6 @@
       button.innerHTML = "";
 
       if (mode === "multiple") {
-        const label = document.createElement("span");
-        label.className = "marker-label";
-        label.textContent = `${marker}m`;
-        button.appendChild(label);
         runners.forEach((runner, index) => {
           const dot = document.createElement("span");
           dot.className = `runner-dot ${runner.className}`;
@@ -518,10 +500,7 @@
       } else {
         const main = document.createElement("span");
         main.textContent = marker === markerForDistance(selectedDistance()) ? "Finish" : "Split";
-        const label = document.createElement("span");
-        label.className = "marker-label";
-        label.textContent = `${marker}m`;
-        button.append(main, label);
+        button.appendChild(main);
       }
 
       const isRequired = athleteStates.some((state) => !state.finished && markerForDistance(nextRequiredDistance(state)) === marker);
