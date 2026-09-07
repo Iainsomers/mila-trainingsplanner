@@ -36,6 +36,25 @@ class TrackTimerTests(TestCase):
         self.assertContains(timer, "1600m")
 
 
+class PlanningOverviewTests(TestCase):
+    def test_coach_planning_overview_is_grouped(self):
+        user = get_user_model().objects.create_user(
+            username="planning-coach",
+            password="secret",
+            is_staff=True,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/planning/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Coach plannings")
+        self.assertContains(response, "Views")
+        self.assertContains(response, "Standards")
+        self.assertContains(response, "Year Planner")
+        self.assertContains(response, "Standard Strength")
+
+
 class PolarPlanMismatchTests(TestCase):
     def test_polar_registration_created_status_is_success(self):
         user = get_user_model().objects.create_user(username="polar-user", password="secret")

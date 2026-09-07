@@ -6,7 +6,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 
 Het coachdashboard toont Planning bovenaan. Onder `Coach dashboard` staat voor trainers met gedeelde toegang een `View as coach`-keuze. Standaard kijkt een trainer als zichzelf; na selectie van een andere toegestane coach tonen plannings- en beheerschermen alleen de gegevens van die coach. De dropdown toont of die toegang view-only of edit is; bij view-only worden schrijfacties server-side geblokkeerd. Admin, Stats, Polar en Settings (under development) staan onderaan. De Settings-tegel doet voorlopig niets.
 
-Atleten gebruiken Planning voor drie onderdelen: Athlete Year Planning, Athlete settings en Races.
+Planning is voor coaches gegroepeerd in Coach plannings, Views en Standards. Coach plannings bevat Athletes, Trainer planning, Flex Planner, Races en Year Planner. Views bevat AYP en Daily Coach Overview. Standards bevat Saved Trainings en Standard Strength. Atleten gebruiken Planning voor Athlete Year Planning, Athlete settings en Races.
 
 Het dashboard bevat daarnaast een Track Timer voor baantrainingen. De timer toont een getekende atletiekbaan met 100m-punten, een afstandskeuze van 100m tot 1600m en een single/multiple-modus voor één of vijf atleten. Bij afstanden boven 400m moeten 400m-doorkomsten worden vastgelegd voordat de eindtijd kan worden gestopt.
 
