@@ -158,11 +158,17 @@
     font-size: 1.05rem;
     font-weight: 800;
     cursor: grab;
+    touch-action: none;
   }
 
   .track-start-btn.dragging {
     cursor: grabbing;
     opacity: 0.82;
+  }
+
+  body.timer-dragging-start {
+    user-select: none;
+    touch-action: none;
   }
 
   .track-start-btn.running {
@@ -833,6 +839,7 @@
   });
   startButton.addEventListener("pointerdown", (event) => {
     if (running) return;
+    event.preventDefault();
     startDrag = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -841,9 +848,11 @@
     };
     startButton.setPointerCapture(event.pointerId);
     startButton.classList.add("dragging");
+    document.body.classList.add("timer-dragging-start");
   });
-  startButton.addEventListener("pointermove", (event) => {
+  document.addEventListener("pointermove", (event) => {
     if (!startDrag || event.pointerId !== startDrag.pointerId) return;
+    event.preventDefault();
     if (Math.hypot(event.clientX - startDrag.startX, event.clientY - startDrag.startY) > 8) {
       startDrag.moved = true;
     }
@@ -856,8 +865,12 @@
   });
   function finishStartDrag(event) {
     if (!startDrag || event.pointerId !== startDrag.pointerId) return;
-    startButton.releasePointerCapture(event.pointerId);
+    event.preventDefault();
+    if (startButton.hasPointerCapture?.(event.pointerId)) {
+      startButton.releasePointerCapture(event.pointerId);
+    }
     startButton.classList.remove("dragging");
+    document.body.classList.remove("timer-dragging-start");
     if (startDrag.moved) {
       startPoint = nearestTrackPoint(event.clientX, event.clientY);
       startButton.dataset.suppressClick = "1";
@@ -867,8 +880,8 @@
     }
     startDrag = null;
   }
-  startButton.addEventListener("pointerup", finishStartDrag);
-  startButton.addEventListener("pointercancel", finishStartDrag);
+  document.addEventListener("pointerup", finishStartDrag);
+  document.addEventListener("pointercancel", finishStartDrag);
   resetButton.addEventListener("click", resetTimer);
   distanceInput.addEventListener("change", resetTimer);
   singleMode.addEventListener("click", () => setMode("single"));
