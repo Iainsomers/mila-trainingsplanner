@@ -522,7 +522,7 @@
   function requiredDistances(total) {
     const items = [];
     for (let distance = 400; distance < total; distance += 400) {
-      items.push(distance);
+      if (total - distance > 400) items.push(distance);
     }
     items.push(total);
     return items;
