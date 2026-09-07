@@ -852,15 +852,15 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
         for seg in visible_slot.segments.order_by("order", "id"):
             segments_payload.append({
                 "type": seg.type,
-                "order": int(seg.order or 0),
+                "order": int(getattr(seg, "order", 0) or 0),
                 "text": seg.text or "",
                 "zone": (seg.zone or ""),
                 "reps": int(seg.reps or 1),
                 "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
                 "duration_s": int(seg.duration_s) if seg.duration_s is not None else None,
                 "norm_distance_m": int(seg.norm_distance_m) if seg.norm_distance_m is not None else None,
-                "parse_ok": bool(seg.parse_ok),
-                "parse_message": seg.parse_message or "",
+                "parse_ok": bool(getattr(seg, "parse_ok", False)),
+                "parse_message": getattr(seg, "parse_message", "") or "",
                 "special": (getattr(seg, "special", "") or ""),
                 "t_type": (getattr(seg, "t_type", "") or ""),
                 "standard_strength_program_id": getattr(seg, "standard_strength_program_id", None),

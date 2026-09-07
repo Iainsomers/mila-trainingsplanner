@@ -534,6 +534,53 @@ class SlotModalSaveTests(TestCase):
         segments = list(slot.segments.order_by("order", "id"))
         self.assertEqual([seg.type for seg in segments], ["WU", "CORE", "CD"])
 
+    def test_flex_can_copy_training_from_athlete_base_week(self):
+        user = get_user_model().objects.create_user(
+            username="base-copy-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Base Copy Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        flex_plan = TrainingPlan.objects.create(owner=user, name="Flex Planner base copy")
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINING,
+            training_text="WU=1000m z1\nCORE=6*400m z4\nCD=1000m z1",
+        )
+        self.client.force_login(user)
+
+        copy_response = self.client.post(
+            f"/slot-copy/2026/01/05/1/?plan={flex_plan.id}&athlete={athlete.id}&source=flex"
+        )
+        self.assertEqual(copy_response.status_code, 200)
+        clipboard = self.client.session.get("training_clipboard")
+        self.assertEqual([item["type"] for item in clipboard["segments"]], ["WU", "CORE", "CD"])
+
+        paste_response = self.client.post(
+            f"/slot-paste/2026/01/06/2/?plan={flex_plan.id}&athlete={athlete.id}&source=flex"
+        )
+        self.assertEqual(paste_response.status_code, 200)
+        slot = TrainingSlot.objects.get(plan=flex_plan, athlete=athlete, date="2026-01-06", slot_index=2)
+        self.assertEqual(
+            [segment.text for segment in slot.segments.order_by("order", "id")],
+            ["1000m z1", "6*400m z4", "1000m z1"],
+        )
+
     def test_group_auto_wucd_is_applied_for_base_plan_training(self):
         user = get_user_model().objects.create_user(
             username="groupcoach",
