@@ -103,7 +103,7 @@
 
   .timer-board {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 310px;
+    grid-template-columns: minmax(0, 1fr) 440px;
     gap: 14px;
     align-items: start;
   }
@@ -266,10 +266,16 @@
   }
 
   .split-list li {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(78px, 1fr) 78px 84px 86px;
     gap: 12px;
     padding: 2px 0;
+    align-items: baseline;
+  }
+
+  .split-list .split-metric {
+    text-align: right;
+    white-space: nowrap;
   }
 
   .timer-hint {
@@ -441,6 +447,18 @@
     return `${minutes}:${String(seconds).padStart(2, "0")}.${String(centis).padStart(2, "0")}`;
   }
 
+  function formatShortTime(ms) {
+    const totalSeconds = Math.max(0, Math.round(ms / 1000));
+    const seconds = totalSeconds % 60;
+    const minutes = Math.floor(totalSeconds / 60);
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  function formatPace(ms, distanceMeters) {
+    if (!distanceMeters || distanceMeters <= 0) return "-";
+    return `${formatShortTime(ms * (1000 / distanceMeters))}/km`;
+  }
+
   function distanceLabel(distance) {
     return `${distance}m`;
   }
@@ -551,10 +569,19 @@
         empty.innerHTML = "<span>No times yet</span><span></span>";
         list.appendChild(empty);
       } else {
-        state.records.forEach((record) => {
+        state.records.forEach((record, recordIndex) => {
+          const previous = state.records[recordIndex - 1] || { distance: 0, elapsed: 0 };
+          const segmentDistance = record.distance - previous.distance;
+          const segmentElapsed = record.elapsed - previous.elapsed;
+          const per100 = segmentDistance > 0 ? segmentElapsed * (100 / segmentDistance) : 0;
           const item = document.createElement("li");
           const label = record.final ? `Finish ${distanceLabel(record.distance)}` : `${record.required ? "Lap" : "Split"} ${distanceLabel(record.distance)}`;
-          item.innerHTML = `<span>${label}</span><strong>${formatTime(record.elapsed)}</strong>`;
+          item.innerHTML = `
+            <span>${label}</span>
+            <strong class="split-metric">${formatTime(record.elapsed)}</strong>
+            <span class="split-metric">${formatShortTime(per100)}/100</span>
+            <span class="split-metric">${formatPace(segmentElapsed, segmentDistance)}</span>
+          `;
           list.appendChild(item);
         });
       }
