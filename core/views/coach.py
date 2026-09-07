@@ -3752,9 +3752,9 @@ def year_planner_view(request):
         show_training = True
         show_whereabouts = True
 
-    zoom_mode = (request.GET.get("zoom") or "3").strip()
+    zoom_mode = (request.GET.get("zoom") or "1").strip()
     if zoom_mode not in {"1", "3", "12"}:
-        zoom_mode = "3"
+        zoom_mode = "1"
     layout_mode = (request.GET.get("layout") or "stack").strip().lower()
     if layout_mode not in {"scroll", "stack"}:
         layout_mode = "stack"
