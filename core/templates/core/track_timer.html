@@ -214,12 +214,30 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
+    padding: 0;
+    appearance: none;
     border: 2px solid white;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
     justify-self: center;
   }
 
+  .runner-all {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    padding: 0;
+    appearance: none;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+    justify-self: center;
+    background: #111827;
+  }
+
   .runner-dot.done {
+    opacity: 0.35;
+  }
+
+  .runner-all.done {
     opacity: 0.35;
   }
 
@@ -533,7 +551,8 @@
         label.textContent = `${marker}m`;
         button.appendChild(label);
         runners.forEach((runner, index) => {
-          const dot = document.createElement("span");
+          const dot = document.createElement("button");
+          dot.type = "button";
           dot.className = `runner-dot ${runner.className}`;
           dot.dataset.runner = String(index);
           dot.title = runner.name;
@@ -541,6 +560,13 @@
           if (state?.finished) dot.classList.add("done");
           button.appendChild(dot);
         });
+        const allButton = document.createElement("button");
+        allButton.type = "button";
+        allButton.className = "runner-all";
+        allButton.dataset.allRunners = "1";
+        allButton.title = "All athletes";
+        if (athleteStates.every((state) => state.finished)) allButton.classList.add("done");
+        button.appendChild(allButton);
       } else {
         const main = document.createElement("span");
         main.textContent = marker === markerForDistance(selectedDistance()) ? "Finish" : "Split";
@@ -678,7 +704,7 @@
     renderAll();
   }
 
-  function recordMarker(marker, runnerIndex) {
+  function recordMarker(marker, runnerIndex, elapsedOverride = null) {
     if (!running) {
       renderHint("Press Start first.");
       return;
@@ -686,7 +712,7 @@
     const state = athleteStates[runnerIndex] || athleteStates[0];
     if (!state || state.finished) return;
 
-    const elapsed = performance.now() - startedAt;
+    const elapsed = elapsedOverride ?? performance.now() - startedAt;
     const optionalDistance = nextOptionalDistance(state, marker);
     const requiredDistance = nextRequiredDistance(state);
     if (!optionalDistance) return;
@@ -710,6 +736,17 @@
     stopIfComplete();
   }
 
+  function recordAllAtMarker(marker) {
+    if (!running) {
+      renderHint("Press Start first.");
+      return;
+    }
+    const elapsed = performance.now() - startedAt;
+    athleteStates.forEach((state) => {
+      if (!state.finished) recordMarker(marker, state.index, elapsed);
+    });
+  }
+
   function setMode(nextMode) {
     if (running) return;
     mode = nextMode;
@@ -727,6 +764,10 @@
   multiMode.addEventListener("click", () => setMode("multiple"));
   markerButtons.forEach((button) => {
     button.addEventListener("click", (event) => {
+      if (mode === "multiple" && event.target.closest("[data-all-runners]")) {
+        recordAllAtMarker(Number(button.dataset.marker));
+        return;
+      }
       const runnerDot = event.target.closest("[data-runner]");
       if (mode === "multiple" && !runnerDot) return;
       const runnerIndex = mode === "multiple" ? Number(runnerDot?.dataset.runner || 0) : 0;
