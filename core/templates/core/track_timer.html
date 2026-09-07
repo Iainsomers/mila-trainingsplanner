@@ -598,6 +598,15 @@
     return state.required[state.nextRequiredIndex] || null;
   }
 
+  function advanceRequiredDistances(state, coveredDistance) {
+    while (
+      state.nextRequiredIndex < state.required.length
+      && state.required[state.nextRequiredIndex] <= coveredDistance
+    ) {
+      state.nextRequiredIndex += 1;
+    }
+  }
+
   function renderMarkers() {
     applyStartLayout();
     markerButtons.forEach((button) => {
@@ -777,7 +786,7 @@
     const requiredDistance = nextRequiredDistance(state);
     if (!optionalDistance) return;
 
-    const isRequired = optionalDistance === requiredDistance;
+    const isRequired = requiredDistance !== null && optionalDistance >= requiredDistance;
     const isFinal = optionalDistance === selectedDistance();
     if (isFinal && !isRequired) {
       renderAll(`Tap ${distanceLabel(requiredDistance)} first before the finish.`);
@@ -790,7 +799,7 @@
       required: isRequired,
       final: isFinal,
     });
-    if (isRequired) state.nextRequiredIndex += 1;
+    if (isRequired) advanceRequiredDistances(state, optionalDistance);
     if (isFinal) state.finished = true;
     renderAll();
     stopIfComplete();
