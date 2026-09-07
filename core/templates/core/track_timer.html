@@ -157,6 +157,12 @@
     color: white;
     font-size: 1.05rem;
     font-weight: 800;
+    cursor: grab;
+  }
+
+  .track-start-btn.dragging {
+    cursor: grabbing;
+    opacity: 0.82;
   }
 
   .track-start-btn.running {
@@ -402,7 +408,7 @@
             <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="var(--timer-track)" stroke-width="58"></path>
             <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="rgba(255,255,255,0.72)" stroke-width="2" stroke-dasharray="18 12"></path>
             <ellipse cx="500" cy="310" rx="250" ry="145" fill="var(--timer-grass)"></ellipse>
-            <line x1="750" y1="470" x2="750" y2="590" stroke="#ffffff" stroke-width="5"></line>
+            <line id="finishLine" x1="750" y1="470" x2="750" y2="590" stroke="#ffffff" stroke-width="5"></line>
           </svg>
 
           <button type="button" id="startButton" class="track-start-btn">Start</button>
@@ -457,12 +463,24 @@
   const resultsList = document.getElementById("resultsList");
   const timerHint = document.getElementById("timerHint");
   const markerButtons = Array.from(document.querySelectorAll("[data-marker]"));
+  const trackWrap = document.getElementById("trackWrap");
+  const finishLine = document.getElementById("finishLine");
+
+  const trackPoints = {
+    400: { left: 75, top: 85, line: [750, 470, 750, 590] },
+    100: { left: 75, top: 15, line: [750, 30, 750, 150] },
+    200: { left: 25, top: 15, line: [250, 30, 250, 150] },
+    300: { left: 25, top: 85, line: [250, 470, 250, 590] },
+  };
+  const runningOrder = [400, 100, 200, 300];
 
   let mode = "single";
   let running = false;
   let startedAt = 0;
   let rafId = null;
   let athleteStates = [];
+  let startPoint = 400;
+  let startDrag = null;
 
   function formatTime(ms) {
     const totalCentis = Math.max(0, Math.floor(ms / 10));
@@ -515,6 +533,47 @@
     return marker === 0 ? 400 : marker;
   }
 
+  function physicalPointForMarker(marker) {
+    const startIndex = runningOrder.indexOf(startPoint);
+    const markerSteps = marker === 400 ? 0 : marker / 100;
+    return runningOrder[(startIndex + markerSteps) % runningOrder.length];
+  }
+
+  function applyStartLayout() {
+    const start = trackPoints[startPoint] || trackPoints[400];
+    startButton.style.left = `${start.left}%`;
+    startButton.style.top = `${start.top}%`;
+    if (finishLine && start.line) {
+      finishLine.setAttribute("x1", String(start.line[0]));
+      finishLine.setAttribute("y1", String(start.line[1]));
+      finishLine.setAttribute("x2", String(start.line[2]));
+      finishLine.setAttribute("y2", String(start.line[3]));
+    }
+    markerButtons.forEach((button) => {
+      const logicalMarker = Number(button.dataset.marker);
+      const point = trackPoints[physicalPointForMarker(logicalMarker)] || trackPoints[logicalMarker];
+      button.style.left = `${point.left}%`;
+      button.style.top = `${point.top}%`;
+    });
+  }
+
+  function nearestTrackPoint(clientX, clientY) {
+    const rect = trackWrap.getBoundingClientRect();
+    let bestPoint = startPoint;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    runningOrder.forEach((pointKey) => {
+      const point = trackPoints[pointKey];
+      const x = rect.left + (rect.width * point.left / 100);
+      const y = rect.top + (rect.height * point.top / 100);
+      const distance = Math.hypot(clientX - x, clientY - y);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestPoint = pointKey;
+      }
+    });
+    return bestPoint;
+  }
+
   function resetStates() {
     const total = selectedDistance();
     athleteStates = Array.from({ length: activeRunnerCount() }, (_, index) => ({
@@ -540,6 +599,7 @@
   }
 
   function renderMarkers() {
+    applyStartLayout();
     markerButtons.forEach((button) => {
       const marker = Number(button.dataset.marker);
       button.classList.toggle("multi-marker", mode === "multiple");
@@ -756,8 +816,50 @@
   }
 
   startButton.addEventListener("click", () => {
+    if (startButton.dataset.suppressClick === "1") {
+      startButton.dataset.suppressClick = "";
+      return;
+    }
     if (!running) startTimer();
   });
+  startButton.addEventListener("pointerdown", (event) => {
+    if (running) return;
+    startDrag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    };
+    startButton.setPointerCapture(event.pointerId);
+    startButton.classList.add("dragging");
+  });
+  startButton.addEventListener("pointermove", (event) => {
+    if (!startDrag || event.pointerId !== startDrag.pointerId) return;
+    if (Math.hypot(event.clientX - startDrag.startX, event.clientY - startDrag.startY) > 8) {
+      startDrag.moved = true;
+    }
+    if (!startDrag.moved) return;
+    const rect = trackWrap.getBoundingClientRect();
+    const left = ((event.clientX - rect.left) / rect.width) * 100;
+    const top = ((event.clientY - rect.top) / rect.height) * 100;
+    startButton.style.left = `${Math.min(95, Math.max(5, left))}%`;
+    startButton.style.top = `${Math.min(95, Math.max(5, top))}%`;
+  });
+  function finishStartDrag(event) {
+    if (!startDrag || event.pointerId !== startDrag.pointerId) return;
+    startButton.releasePointerCapture(event.pointerId);
+    startButton.classList.remove("dragging");
+    if (startDrag.moved) {
+      startPoint = nearestTrackPoint(event.clientX, event.clientY);
+      startButton.dataset.suppressClick = "1";
+      renderAll(`Start/finish moved to this track point.`);
+    } else {
+      applyStartLayout();
+    }
+    startDrag = null;
+  }
+  startButton.addEventListener("pointerup", finishStartDrag);
+  startButton.addEventListener("pointercancel", finishStartDrag);
   resetButton.addEventListener("click", resetTimer);
   distanceInput.addEventListener("change", resetTimer);
   singleMode.addEventListener("click", () => setMode("single"));
