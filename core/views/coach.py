@@ -460,6 +460,14 @@ def dashboard_view(request):
     })
 
 
+@login_required
+@require_GET
+def track_timer_view(request):
+    return render(request, "core/track_timer.html", {
+        "distances": list(range(100, 1700, 100)),
+    })
+
+
 POLAR_AUTHORIZATION_URL = "https://flow.polar.com/oauth2/authorization"
 POLAR_TOKEN_URL = "https://polarremote.com/v2/oauth2/token"
 POLAR_V4_AUTHORIZATION_URL = "https://auth.polar.com/oauth/authorize"

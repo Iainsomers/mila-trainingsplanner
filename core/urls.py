@@ -5,6 +5,7 @@ from django.contrib.auth import views as auth_views
 from core.views.coach import (
     daily_overview_view,
     dashboard_view,
+    track_timer_view,
     polar_integration_view,
     polar_connect_view,
     polar_v4_connect_view,
@@ -96,6 +97,7 @@ urlpatterns = [
 
     # Dashboard / settings
     path("", dashboard_view, name="dashboard"),
+    path("timer/", track_timer_view, name="track_timer"),
     path("integrations/polar/", polar_integration_view, name="polar_integration"),
     path("integrations/polar/connect/", polar_connect_view, name="polar_connect"),
     path("integrations/polar/connect-v4/", polar_v4_connect_view, name="polar_v4_connect"),

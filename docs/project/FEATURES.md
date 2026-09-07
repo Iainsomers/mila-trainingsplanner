@@ -8,6 +8,8 @@ Het coachdashboard toont Planning bovenaan. Onder `Coach dashboard` staat voor t
 
 Atleten gebruiken Planning voor drie onderdelen: Athlete Year Planning, Athlete settings en Races.
 
+Het dashboard bevat daarnaast een Track Timer voor baantrainingen. De timer toont een getekende atletiekbaan met 100m-punten, een afstandskeuze van 100m tot 1600m en een single/multiple-modus voor één of vijf atleten. Bij afstanden boven 400m moeten 400m-doorkomsten worden vastgelegd voordat de eindtijd kan worden gestopt.
+
 Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA-icoon. Een snelkoppeling die vanaf een telefoon op het beginscherm wordt gezet, gebruikt daardoor standaard het MiLa-logo.
 
 ## Trainer Planning

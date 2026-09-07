@@ -1,0 +1,696 @@
+{% extends "core/base.html" %}
+
+{% block title %}Track Timer{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root {
+    --timer-blue: #2166c2;
+    --timer-track: #d86f57;
+    --timer-lane: rgba(255, 255, 255, 0.62);
+    --timer-grass: #d7ead7;
+    --timer-ink: #1f2933;
+  }
+
+  body {
+    background: #f5f7fb;
+    color: var(--timer-ink);
+    overscroll-behavior: none;
+  }
+
+  .timer-page {
+    min-height: 100vh;
+    padding: 18px clamp(12px, 3vw, 32px) 28px;
+  }
+
+  .timer-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .timer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .timer-title h1 {
+    margin: 0;
+    font-size: clamp(1.7rem, 3vw, 2.6rem);
+    font-weight: 700;
+  }
+
+  .timer-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    padding: 12px;
+    background: white;
+    border: 1px solid #d9e0ea;
+    border-radius: 8px;
+    margin-bottom: 14px;
+  }
+
+  .timer-field {
+    min-width: 150px;
+  }
+
+  .timer-mode {
+    display: inline-grid;
+    grid-template-columns: 1fr 1fr;
+    min-width: 220px;
+    padding: 3px;
+    border: 1px solid #cfd8e3;
+    border-radius: 999px;
+    background: #eef3f8;
+  }
+
+  .timer-mode button {
+    border: 0;
+    border-radius: 999px;
+    padding: 9px 14px;
+    color: #546272;
+    background: transparent;
+    font-weight: 700;
+  }
+
+  .timer-mode button.active {
+    color: white;
+    background: var(--timer-blue);
+  }
+
+  .timer-clock {
+    margin-left: auto;
+    min-width: 190px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .timer-clock-main {
+    display: block;
+    font-size: clamp(2.1rem, 5vw, 4rem);
+    line-height: 1;
+    font-weight: 800;
+  }
+
+  .timer-clock-sub {
+    color: #617084;
+    font-size: 0.9rem;
+  }
+
+  .timer-board {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .track-card,
+  .results-card {
+    background: white;
+    border: 1px solid #d9e0ea;
+    border-radius: 8px;
+  }
+
+  .track-card {
+    position: relative;
+    min-height: min(66vh, 620px);
+    padding: 12px;
+    touch-action: manipulation;
+  }
+
+  .track-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    min-height: 360px;
+  }
+
+  .track-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .track-start-btn,
+  .track-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    border: 0;
+    box-shadow: 0 5px 16px rgba(28, 39, 52, 0.16);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .track-start-btn {
+    left: 84%;
+    top: 50%;
+    z-index: 30;
+    min-width: 110px;
+    min-height: 54px;
+    border-radius: 999px;
+    background: #20a464;
+    color: white;
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  .track-start-btn.running {
+    background: #314256;
+    opacity: 0.18;
+    pointer-events: none;
+  }
+
+  .track-marker {
+    z-index: 20;
+    width: 68px;
+    min-height: 54px;
+    border-radius: 10px;
+    background: white;
+    color: #1d2835;
+    font-weight: 800;
+    border: 2px solid #d3dce7;
+  }
+
+  .track-marker.required {
+    border-color: #111827;
+    box-shadow: 0 0 0 4px rgba(33, 102, 194, 0.16);
+  }
+
+  .track-marker.finished {
+    opacity: 0.58;
+  }
+
+  .marker-label {
+    display: block;
+    font-size: 0.76rem;
+    color: #667589;
+  }
+
+  .marker-100 { left: 50%; top: 14%; }
+  .marker-200 { left: 16%; top: 50%; }
+  .marker-300 { left: 50%; top: 86%; }
+  .marker-400 { left: 84%; top: 50%; }
+
+  .multi-marker {
+    width: 96px;
+    min-height: 74px;
+    padding: 6px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    align-content: center;
+  }
+
+  .multi-marker .marker-label {
+    grid-column: 1 / -1;
+  }
+
+  .runner-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+    justify-self: center;
+  }
+
+  .runner-dot.done {
+    opacity: 0.35;
+  }
+
+  .runner-0 { background: #2563eb; }
+  .runner-1 { background: #e11d48; }
+  .runner-2 { background: #16a34a; }
+  .runner-3 { background: #f59e0b; }
+  .runner-4 { background: #7c3aed; }
+
+  .results-card {
+    padding: 14px;
+    max-height: min(70vh, 650px);
+    overflow: auto;
+  }
+
+  .result-row {
+    border-top: 1px solid #e5ebf2;
+    padding: 10px 0;
+  }
+
+  .result-row:first-child {
+    border-top: 0;
+  }
+
+  .result-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+  }
+
+  .result-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+  }
+
+  .split-list {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.94rem;
+  }
+
+  .split-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 0;
+  }
+
+  .timer-hint {
+    margin: 10px 0 0;
+    color: #526173;
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 900px) {
+    .timer-board {
+      grid-template-columns: 1fr;
+    }
+
+    .results-card {
+      max-height: none;
+    }
+
+    .timer-clock {
+      margin-left: 0;
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .timer-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .track-wrap {
+      min-height: 300px;
+    }
+
+    .track-marker {
+      width: 58px;
+      min-height: 48px;
+      font-size: 0.9rem;
+    }
+
+    .multi-marker {
+      width: 84px;
+      min-height: 68px;
+      gap: 4px;
+    }
+
+    .runner-dot {
+      width: 22px;
+      height: 22px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="timer-page">
+  <div class="timer-shell">
+    <div class="timer-header">
+      <div class="timer-title">
+        <h1>Track Timer</h1>
+        <div class="text-muted">Trackside timing for 100m points, laps and finishes.</div>
+      </div>
+      <div class="d-flex gap-2 pe-5">
+        <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary bg-white">Dashboard</a>
+        <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary bg-white">Planner</a>
+      </div>
+    </div>
+
+    <div class="timer-controls">
+      <div class="timer-field">
+        <label for="timerDistance" class="form-label mb-1 small text-muted">Distance</label>
+        <select id="timerDistance" class="form-select">
+          {% for distance in distances %}
+            <option value="{{ distance }}" {% if distance == 400 %}selected{% endif %}>{{ distance }}m</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="timer-field">
+        <div class="form-label mb-1 small text-muted">Mode</div>
+        <div class="timer-mode" role="group" aria-label="Timer mode">
+          <button type="button" id="singleMode" class="active">Single</button>
+          <button type="button" id="multiMode">Multiple</button>
+        </div>
+      </div>
+      <button type="button" id="resetTimer" class="btn btn-outline-secondary">Reset</button>
+      <div class="timer-clock">
+        <span id="clockMain" class="timer-clock-main">0:00.00</span>
+        <span id="clockSub" class="timer-clock-sub">Ready</span>
+      </div>
+    </div>
+
+    <div class="timer-board">
+      <div class="track-card">
+        <div class="track-wrap" id="trackWrap">
+          <svg class="track-svg" viewBox="0 0 1000 620" aria-hidden="true">
+            <rect x="0" y="0" width="1000" height="620" fill="#dfeee0"></rect>
+            <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="var(--timer-track)" stroke-width="108" stroke-linecap="round"></path>
+            <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="var(--timer-lane)" stroke-width="82"></path>
+            <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="var(--timer-track)" stroke-width="58"></path>
+            <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="rgba(255,255,255,0.72)" stroke-width="2" stroke-dasharray="18 12"></path>
+            <ellipse cx="500" cy="310" rx="250" ry="145" fill="var(--timer-grass)"></ellipse>
+            <line x1="840" y1="230" x2="840" y2="390" stroke="#ffffff" stroke-width="5"></line>
+            <text x="854" y="318" font-size="25" font-weight="700" fill="#243342">0/400</text>
+            <text x="492" y="80" text-anchor="middle" font-size="24" font-weight="700" fill="#243342">100</text>
+            <text x="145" y="318" text-anchor="middle" font-size="24" font-weight="700" fill="#243342">200</text>
+            <text x="492" y="562" text-anchor="middle" font-size="24" font-weight="700" fill="#243342">300</text>
+          </svg>
+
+          <button type="button" id="startButton" class="track-start-btn">Start</button>
+
+          <button type="button" class="track-marker marker-100" data-marker="100">
+            <span data-single>Finish</span>
+            <span class="marker-label">100m</span>
+          </button>
+          <button type="button" class="track-marker marker-200" data-marker="200">
+            <span data-single>Finish</span>
+            <span class="marker-label">200m</span>
+          </button>
+          <button type="button" class="track-marker marker-300" data-marker="300">
+            <span data-single>Finish</span>
+            <span class="marker-label">300m</span>
+          </button>
+          <button type="button" class="track-marker marker-400" data-marker="400">
+            <span data-single>Finish</span>
+            <span class="marker-label">400m</span>
+          </button>
+        </div>
+        <p id="timerHint" class="timer-hint">Choose a distance, press Start, then tap the logical finish point. For distances above 400m, tap each 400m passage first.</p>
+      </div>
+
+      <div class="results-card">
+        <h2 class="h5 mb-2">Times</h2>
+        <div id="resultsList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+  const runners = [
+    { name: "Athlete 1", className: "runner-0" },
+    { name: "Athlete 2", className: "runner-1" },
+    { name: "Athlete 3", className: "runner-2" },
+    { name: "Athlete 4", className: "runner-3" },
+    { name: "Athlete 5", className: "runner-4" },
+  ];
+
+  const distanceInput = document.getElementById("timerDistance");
+  const singleMode = document.getElementById("singleMode");
+  const multiMode = document.getElementById("multiMode");
+  const startButton = document.getElementById("startButton");
+  const resetButton = document.getElementById("resetTimer");
+  const clockMain = document.getElementById("clockMain");
+  const clockSub = document.getElementById("clockSub");
+  const resultsList = document.getElementById("resultsList");
+  const timerHint = document.getElementById("timerHint");
+  const markerButtons = Array.from(document.querySelectorAll("[data-marker]"));
+
+  let mode = "single";
+  let running = false;
+  let startedAt = 0;
+  let rafId = null;
+  let athleteStates = [];
+
+  function formatTime(ms) {
+    const totalCentis = Math.max(0, Math.floor(ms / 10));
+    const centis = totalCentis % 100;
+    const totalSeconds = Math.floor(totalCentis / 100);
+    const seconds = totalSeconds % 60;
+    const minutes = Math.floor(totalSeconds / 60);
+    return `${minutes}:${String(seconds).padStart(2, "0")}.${String(centis).padStart(2, "0")}`;
+  }
+
+  function distanceLabel(distance) {
+    return `${distance}m`;
+  }
+
+  function selectedDistance() {
+    return Number(distanceInput.value || 400);
+  }
+
+  function activeRunnerCount() {
+    return mode === "multiple" ? runners.length : 1;
+  }
+
+  function requiredDistances(total) {
+    const items = [];
+    for (let distance = 400; distance < total; distance += 400) {
+      items.push(distance);
+    }
+    items.push(total);
+    return items;
+  }
+
+  function markerForDistance(distance) {
+    const marker = distance % 400;
+    return marker === 0 ? 400 : marker;
+  }
+
+  function resetStates() {
+    const total = selectedDistance();
+    athleteStates = Array.from({ length: activeRunnerCount() }, (_, index) => ({
+      index,
+      required: requiredDistances(total),
+      nextRequiredIndex: 0,
+      records: [],
+      finished: false,
+    }));
+  }
+
+  function nextOptionalDistance(state, marker) {
+    const total = selectedDistance();
+    const last = state.records.length ? state.records[state.records.length - 1].distance : 0;
+    for (let distance = last + 100; distance <= total; distance += 100) {
+      if (markerForDistance(distance) === marker) return distance;
+    }
+    return null;
+  }
+
+  function nextRequiredDistance(state) {
+    return state.required[state.nextRequiredIndex] || null;
+  }
+
+  function renderMarkers() {
+    markerButtons.forEach((button) => {
+      const marker = Number(button.dataset.marker);
+      button.classList.toggle("multi-marker", mode === "multiple");
+      button.innerHTML = "";
+
+      if (mode === "multiple") {
+        const label = document.createElement("span");
+        label.className = "marker-label";
+        label.textContent = `${marker}m`;
+        button.appendChild(label);
+        runners.forEach((runner, index) => {
+          const dot = document.createElement("span");
+          dot.className = `runner-dot ${runner.className}`;
+          dot.dataset.runner = String(index);
+          dot.title = runner.name;
+          const state = athleteStates[index];
+          if (state?.finished) dot.classList.add("done");
+          button.appendChild(dot);
+        });
+      } else {
+        const main = document.createElement("span");
+        main.textContent = marker === markerForDistance(selectedDistance()) ? "Finish" : "Split";
+        const label = document.createElement("span");
+        label.className = "marker-label";
+        label.textContent = `${marker}m`;
+        button.append(main, label);
+      }
+
+      const isRequired = athleteStates.some((state) => !state.finished && markerForDistance(nextRequiredDistance(state)) === marker);
+      button.classList.toggle("required", running && isRequired);
+      button.classList.toggle("finished", running && athleteStates.every((state) => state.finished));
+    });
+  }
+
+  function renderResults() {
+    resultsList.innerHTML = "";
+    athleteStates.forEach((state, index) => {
+      const runner = runners[index] || runners[0];
+      const row = document.createElement("div");
+      row.className = "result-row";
+      const name = document.createElement("div");
+      name.className = "result-name";
+      if (mode === "multiple") {
+        const dot = document.createElement("span");
+        dot.className = `result-dot ${runner.className}`;
+        name.appendChild(dot);
+      }
+      const text = document.createElement("span");
+      text.textContent = mode === "multiple" ? runner.name : "Single";
+      name.appendChild(text);
+      row.appendChild(name);
+
+      const list = document.createElement("ul");
+      list.className = "split-list";
+      if (!state.records.length) {
+        const empty = document.createElement("li");
+        empty.innerHTML = "<span>No times yet</span><span></span>";
+        list.appendChild(empty);
+      } else {
+        state.records.forEach((record) => {
+          const item = document.createElement("li");
+          const label = record.final ? `Finish ${distanceLabel(record.distance)}` : `${record.required ? "Lap" : "Split"} ${distanceLabel(record.distance)}`;
+          item.innerHTML = `<span>${label}</span><strong>${formatTime(record.elapsed)}</strong>`;
+          list.appendChild(item);
+        });
+      }
+      row.appendChild(list);
+      resultsList.appendChild(row);
+    });
+  }
+
+  function renderHint(message) {
+    const total = selectedDistance();
+    if (message) {
+      timerHint.textContent = message;
+      return;
+    }
+    if (!running) {
+      timerHint.textContent = "Choose a distance, press Start, then tap the logical finish point. For distances above 400m, tap each 400m passage first.";
+      return;
+    }
+    const pending = athleteStates
+      .filter((state) => !state.finished)
+      .map((state) => nextRequiredDistance(state))
+      .filter(Boolean);
+    if (!pending.length) {
+      timerHint.textContent = `All athletes finished ${total}m.`;
+      return;
+    }
+    timerHint.textContent = `Next required point: ${distanceLabel(pending[0])}. Other 100m points can be tapped as optional splits.`;
+  }
+
+  function renderAll(message = "") {
+    renderMarkers();
+    renderResults();
+    renderHint(message);
+  }
+
+  function tick() {
+    if (!running) return;
+    clockMain.textContent = formatTime(performance.now() - startedAt);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function startTimer() {
+    resetStates();
+    running = true;
+    startedAt = performance.now();
+    startButton.textContent = "Running";
+    startButton.classList.add("running");
+    distanceInput.disabled = true;
+    clockSub.textContent = `${selectedDistance()}m · ${mode === "multiple" ? "multiple" : "single"}`;
+    renderAll();
+    tick();
+  }
+
+  function stopIfComplete() {
+    if (!athleteStates.every((state) => state.finished)) return;
+    running = false;
+    cancelAnimationFrame(rafId);
+    startButton.textContent = "Start";
+    startButton.classList.remove("running");
+    distanceInput.disabled = false;
+    clockSub.textContent = "Finished";
+  }
+
+  function resetTimer() {
+    running = false;
+    cancelAnimationFrame(rafId);
+    clockMain.textContent = "0:00.00";
+    clockSub.textContent = "Ready";
+    startButton.textContent = "Start";
+    startButton.classList.remove("running");
+    distanceInput.disabled = false;
+    resetStates();
+    renderAll();
+  }
+
+  function recordMarker(marker, runnerIndex) {
+    if (!running) {
+      renderHint("Press Start first.");
+      return;
+    }
+    const state = athleteStates[runnerIndex] || athleteStates[0];
+    if (!state || state.finished) return;
+
+    const elapsed = performance.now() - startedAt;
+    const optionalDistance = nextOptionalDistance(state, marker);
+    const requiredDistance = nextRequiredDistance(state);
+    if (!optionalDistance) return;
+
+    const isRequired = optionalDistance === requiredDistance;
+    const isFinal = optionalDistance === selectedDistance();
+    if (isFinal && !isRequired) {
+      renderAll(`Tap ${distanceLabel(requiredDistance)} first before the finish.`);
+      return;
+    }
+
+    state.records.push({
+      distance: optionalDistance,
+      elapsed,
+      required: isRequired,
+      final: isFinal,
+    });
+    if (isRequired) state.nextRequiredIndex += 1;
+    if (isFinal) state.finished = true;
+    renderAll();
+    stopIfComplete();
+  }
+
+  function setMode(nextMode) {
+    if (running) return;
+    mode = nextMode;
+    singleMode.classList.toggle("active", mode === "single");
+    multiMode.classList.toggle("active", mode === "multiple");
+    resetTimer();
+  }
+
+  startButton.addEventListener("click", () => {
+    if (!running) startTimer();
+  });
+  resetButton.addEventListener("click", resetTimer);
+  distanceInput.addEventListener("change", resetTimer);
+  singleMode.addEventListener("click", () => setMode("single"));
+  multiMode.addEventListener("click", () => setMode("multiple"));
+  markerButtons.forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const runnerDot = event.target.closest("[data-runner]");
+      if (mode === "multiple" && !runnerDot) return;
+      const runnerIndex = mode === "multiple" ? Number(runnerDot?.dataset.runner || 0) : 0;
+      recordMarker(Number(button.dataset.marker), runnerIndex);
+    });
+  });
+
+  resetTimer();
+})();
+</script>
+{% endblock %}

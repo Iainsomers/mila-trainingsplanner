@@ -21,6 +21,21 @@ from core.views.coach import (
 )
 
 
+class TrackTimerTests(TestCase):
+    def test_timer_page_is_available_from_dashboard(self):
+        user = get_user_model().objects.create_user(username="timer-user", password="secret")
+        self.client.force_login(user)
+
+        dashboard = self.client.get("/")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "Open timer")
+
+        timer = self.client.get("/timer/")
+        self.assertEqual(timer.status_code, 200)
+        self.assertContains(timer, "Track Timer")
+        self.assertContains(timer, "1600m")
+
+
 class PolarPlanMismatchTests(TestCase):
     def test_polar_registration_created_status_is_success(self):
         user = get_user_model().objects.create_user(username="polar-user", password="secret")
