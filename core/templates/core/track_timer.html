@@ -273,6 +273,14 @@
     align-items: baseline;
   }
 
+  .split-list .split-header {
+    color: #69798b;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding-top: 6px;
+    text-transform: uppercase;
+  }
+
   .split-list .split-metric {
     text-align: right;
     white-space: nowrap;
@@ -454,9 +462,13 @@
     return `${minutes}:${String(seconds).padStart(2, "0")}`;
   }
 
+  function formatPer100(ms) {
+    return (Math.max(0, ms) / 1000).toFixed(1);
+  }
+
   function formatPace(ms, distanceMeters) {
     if (!distanceMeters || distanceMeters <= 0) return "-";
-    return `${formatShortTime(ms * (1000 / distanceMeters))}/km`;
+    return formatShortTime(ms * (1000 / distanceMeters));
   }
 
   function distanceLabel(distance) {
@@ -566,9 +578,18 @@
       list.className = "split-list";
       if (!state.records.length) {
         const empty = document.createElement("li");
-        empty.innerHTML = "<span>No times yet</span><span></span>";
+        empty.innerHTML = "<span>No times yet</span><span></span><span></span><span></span>";
         list.appendChild(empty);
       } else {
+        const header = document.createElement("li");
+        header.className = "split-header";
+        header.innerHTML = `
+          <span></span>
+          <span class="split-metric">Time</span>
+          <span class="split-metric">/100</span>
+          <span class="split-metric">min/km</span>
+        `;
+        list.appendChild(header);
         state.records.forEach((record, recordIndex) => {
           const previous = state.records[recordIndex - 1] || { distance: 0, elapsed: 0 };
           const segmentDistance = record.distance - previous.distance;
@@ -579,7 +600,7 @@
           item.innerHTML = `
             <span>${label}</span>
             <strong class="split-metric">${formatTime(record.elapsed)}</strong>
-            <span class="split-metric">${formatShortTime(per100)}/100</span>
+            <span class="split-metric">${formatPer100(per100)}</span>
             <span class="split-metric">${formatPace(segmentElapsed, segmentDistance)}</span>
           `;
           list.appendChild(item);
