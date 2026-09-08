@@ -304,7 +304,7 @@ def _fallback_slot_after_flex_reset(athlete, day, slot_index):
 
 
 _CORE_ZONE_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)z\s*([1-6])\s*(?:-|>)\s*z\s*([1-6])\s*$", re.IGNORECASE)
-_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)(?:T\s*)?(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*(?:T\s*)?(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
+_CORE_T_RANGE_RE = re.compile(r"^(.*?)(?:\s+|\b)(?:T\s*)?(TM|THM|T4|8|15|3|5|10|1|6|600|800|1000|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*(?:-|>)\s*(?:T\s*)?(TM|THM|T4|8|15|3|5|10|1|6|600|800|1000|1500|3000|5000|10000)(?:\s+z\s*([1-6]))?\s*$", re.IGNORECASE)
 
 
 def _format_distance_text(distance_m: int) -> str:
@@ -394,7 +394,7 @@ def _t_type_progressive_zone(t_type: str, explicit_zone=None):
         return int(explicit_zone)
 
     t = _normalize_t_type_label(t_type)
-    if t in ("800", "1500", "T4"):
+    if t in ("600", "800", "1000", "1500", "T4"):
         return 5
     if t in ("5000", "10000"):
         return 4
@@ -512,6 +512,8 @@ def _normalize_t_type_label(value: str) -> str:
     v = str(value or "").strip().upper()
     mapping = {
         "8": "800",
+        "6": "600",
+        "1": "1000",
         "15": "1500",
         "3": "3000",
         "5": "5000",
@@ -523,7 +525,9 @@ def _normalize_t_type_label(value: str) -> str:
 def _display_t_type_label(value: str) -> str:
     v = _normalize_t_type_label(value)
     mapping = {
+        "600": "6",
         "800": "8",
+        "1000": "1",
         "1500": "15",
         "3000": "3",
         "5000": "5",
@@ -532,7 +536,7 @@ def _display_t_type_label(value: str) -> str:
     return mapping.get(v, v)
 
 
-_T_TYPE_RE = re.compile(r"\bT\s*(TM|THM|T4|8|15|3|5|10|800|1500|3000|5000|10000)\b", re.IGNORECASE)
+_T_TYPE_RE = re.compile(r"\bT\s*(TM|THM|T4|8|15|3|5|10|1|6|600|800|1000|1500|3000|5000|10000)\b", re.IGNORECASE)
 _CORE_REPEATED_SET_RE = re.compile(r"^\s*(\d+)\s*(?:x|\*|×)\s*\(\s*(.+?)\s*\)\s*$", re.IGNORECASE)
 
 

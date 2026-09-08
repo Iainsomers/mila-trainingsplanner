@@ -12,7 +12,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v14"
+STATS_SCHEMA_VERSION = "v15"
 
 
 def _stats_version() -> int:
@@ -34,7 +34,7 @@ def _athlete_zones_sig(athlete) -> str:
         z = {}
 
     pr_items = []
-    for t in ("800", "1500", "3000", "5000", "10000"):
+    for t in ("600", "800", "1000", "1500", "3000", "5000", "10000"):
         pr_items.append((t, getattr(athlete, f"pr_{t}_s", None)))
     pr_items.append(("TM", getattr(athlete, "pr_tm_s", None)))
     pr_items.append(("THM", getattr(athlete, "pr_thm_s", None)))
@@ -62,7 +62,9 @@ def _empty_alt_bucket():
 
 def _empty_t_bucket():
     return {
+        "600": {"distance_m": 0, "duration_s": 0},
         "800": {"distance_m": 0, "duration_s": 0},
+        "1000": {"distance_m": 0, "duration_s": 0},
         "1500": {"distance_m": 0, "duration_s": 0},
         "3000": {"distance_m": 0, "duration_s": 0},
         "5000": {"distance_m": 0, "duration_s": 0},
@@ -78,7 +80,9 @@ def _t_speed_mps(athlete, t_type: str):
         return None
 
     field_map = {
+        "600": "pr_600_s",
         "800": "pr_800_s",
+        "1000": "pr_1000_s",
         "1500": "pr_1500_s",
         "3000": "pr_3000_s",
         "5000": "pr_5000_s",
@@ -89,7 +93,9 @@ def _t_speed_mps(athlete, t_type: str):
     }
 
     distance_map = {
+        "600": 600.0,
         "800": 800.0,
+        "1000": 1000.0,
         "1500": 1500.0,
         "3000": 3000.0,
         "5000": 5000.0,
@@ -157,7 +163,7 @@ def _dur_s(seg, nm: int, speed_mps: float) -> int:
 _COMPOUND_SET_RE = re.compile(r"\b(\d+)\s*(?:x|\*|×)\s*\(\s*([^)]+?)\s*\)", re.IGNORECASE)
 _COMPOUND_DISTANCE_RE = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b", re.IGNORECASE)
 _COMPOUND_ZONE_RE = re.compile(r"\bZ\s*([1-6])\b", re.IGNORECASE)
-_COMPOUND_T_RE = re.compile(r"\b(T\s*(?:800|1500|3000|5000|10000|8|15|3|5|10|4)|TM|THM)\b", re.IGNORECASE)
+_COMPOUND_T_RE = re.compile(r"\b(T\s*(?:600|800|1000|1500|3000|5000|10000|6|8|1|15|3|5|10|4)|TM|THM)\b", re.IGNORECASE)
 
 
 _PROGRESSIVE_ZONE_RE = re.compile(
@@ -165,7 +171,7 @@ _PROGRESSIVE_ZONE_RE = re.compile(
     re.IGNORECASE,
 )
 _PROGRESSIVE_T_RE = re.compile(
-    r"\b(T\s*(?:800|1500|3000|5000|10000|15|8|10|5|3|4)|TM|THM)\s*(?:>|-)\s*(T\s*(?:800|1500|3000|5000|10000|15|8|10|5|3|4)|TM|THM)\b",
+    r"\b(T\s*(?:600|800|1000|1500|3000|5000|10000|15|10|8|6|5|4|3|1)|TM|THM)\s*(?:>|-)\s*(T\s*(?:600|800|1000|1500|3000|5000|10000|15|10|8|6|5|4|3|1)|TM|THM)\b",
     re.IGNORECASE,
 )
 
@@ -197,7 +203,7 @@ def _progressive_zone_range(start_zone, end_zone):
 
 
 def _progressive_t_range(start_t, end_t):
-    order = ["TM", "THM", "10000", "5000", "3000", "1500", "800", "T4"]
+    order = ["TM", "THM", "10000", "5000", "3000", "1500", "1000", "800", "600", "T4"]
     start = _normalize_compound_t_type(start_t)
     end = _normalize_compound_t_type(end_t)
     if not start or not end or start == end or start not in order or end not in order:
@@ -226,7 +232,9 @@ def _default_zone_for_t_type(t_type: str):
         "5000": "4",
         "3000": "4",
         "1500": "5",
+        "1000": "5",
         "800": "5",
+        "600": "5",
         "T4": "5",
     }
     return mapping.get(str(t_type or "").strip().upper())
@@ -280,15 +288,20 @@ def _normalize_compound_t_type(value: str):
     mapping = {
         "8": "800",
         "15": "1500",
+        "1": "1000",
         "3": "3000",
         "5": "5000",
         "10": "10000",
+        "T6": "600",
         "T8": "800",
+        "T1": "1000",
         "T15": "1500",
         "T3": "3000",
         "T5": "5000",
         "T10": "10000",
+        "T600": "600",
         "T800": "800",
+        "T1000": "1000",
         "T1500": "1500",
         "T3000": "3000",
         "T5000": "5000",
@@ -297,7 +310,7 @@ def _normalize_compound_t_type(value: str):
         "THM": "THM",
         "T4": "T4",
     }
-    return mapping.get(v, v if v in ("800", "1500", "3000", "5000", "10000") else "")
+    return mapping.get(v, v if v in ("600", "800", "1000", "1500", "3000", "5000", "10000") else "")
 
 
 def _compound_distance_to_m(value: str, unit: str) -> int:

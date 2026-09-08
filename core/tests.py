@@ -1684,13 +1684,16 @@ class AthleteTimeInputFormatTests(TestCase):
         html = response.content.decode()
         self.assertIn('class="zone-time-grid"', html)
         self.assertIn('class="pr-time-grid"', html)
-        self.assertEqual(html.count('class="col-md-2 pr-time-card"'), 8)
-        self.assertEqual(html.count('data-time-label="PR"'), 8)
-        self.assertEqual(html.count('data-time-label="Doel"'), 8)
+        self.assertEqual(html.count('class="col-md-2 pr-time-card"'), 10)
+        self.assertEqual(html.count('data-time-label="PR"'), 10)
+        self.assertEqual(html.count('data-time-label="Doel"'), 10)
         for name in ("t4", "target_t4"):
             self.assertIn(f'name="{name}"', html)
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="seconds-hundredths"')
-        for name in ("pr_800", "target_pr_800", "pr_1500", "target_pr_1500"):
+        for name in (
+            "pr_600", "target_pr_600", "pr_800", "target_pr_800",
+            "pr_1000", "target_pr_1000", "pr_1500", "target_pr_1500",
+        ):
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="minutes-seconds-hundredths"')
         for name in (
             "pr_3000", "target_pr_3000", "pr_5000", "target_pr_5000",
@@ -1852,6 +1855,39 @@ class FlexPlannerAltTotalsTests(TestCase):
         self.assertEqual(
             {key: values["distance_m"] for key, values in stats["t_totals"].items() if values["distance_m"]},
             {"5000": 1000, "3000": 1000, "1500": 1000},
+        )
+
+    def test_progressive_t_range_includes_new_blue_t_types(self):
+        from core.stats import base_week_stats
+
+        cache.clear()
+        trainer = get_user_model().objects.create_user(username="bluecoach", password="secret", is_staff=True)
+        plan = TrainingPlan.objects.create(owner=trainer, name="Blue t plan")
+        week_start = date(2026, 9, 7)
+        slot = TrainingSlot.objects.create(plan=plan, date=week_start, slot_index=1)
+        TrainingSegment.objects.create(
+            slot=slot,
+            type="CORE",
+            text="5km t15>t4",
+            zone="5",
+            t_type="1500",
+            norm_distance_m=5000,
+        )
+
+        self.assertEqual(
+            [(load["zone"], load["t_key"], round(load["meters"])) for load in _ayc_slot_loads_for_totals(slot)],
+            [
+                ("5", "1500", 1000),
+                ("5", "1000", 1000),
+                ("5", "800", 1000),
+                ("5", "600", 1000),
+                ("5", "T4", 1000),
+            ],
+        )
+        stats = base_week_stats(plan, week_start)
+        self.assertEqual(
+            {key: values["distance_m"] for key, values in stats["t_totals"].items() if values["distance_m"]},
+            {"1500": 1000, "1000": 1000, "800": 1000, "600": 1000, "T4": 1000},
         )
 
 

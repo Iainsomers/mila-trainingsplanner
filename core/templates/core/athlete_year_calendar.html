@@ -1168,7 +1168,9 @@
               {% if w.has_t5000 %}<span class="total-pill total-race">T5 {{ w.sum_t5000_km }}</span>{% endif %}
               {% if w.has_t3000 %}<span class="total-pill total-race">T3 {{ w.sum_t3000_km }}</span>{% endif %}
               {% if w.has_t1500 %}<span class="total-pill total-race">T15 {{ w.sum_t1500_km }}</span>{% endif %}
+              {% if w.has_t1000 %}<span class="total-pill total-race">T1 {{ w.sum_t1000_km }}</span>{% endif %}
               {% if w.has_t800 %}<span class="total-pill total-race">T8 {{ w.sum_t800_km }}</span>{% endif %}
+              {% if w.has_t600 %}<span class="total-pill total-race">T6 {{ w.sum_t600_km }}</span>{% endif %}
               {% if w.has_tm %}<span class="total-pill total-race">TM {{ w.sum_tm_km }}</span>{% endif %}
               {% if w.has_thm %}<span class="total-pill total-race">THM {{ w.sum_thm_km }}</span>{% endif %}
               {% if w.has_t4 %}<span class="total-pill total-race">T4 {{ w.sum_t4_km }}</span>{% endif %}
@@ -1485,19 +1487,21 @@
         "T5": "5000", "T5000": "5000", "5000": "5000",
         "T3": "3000", "T3000": "3000", "3000": "3000",
         "T15": "1500", "T1500": "1500", "1500": "1500",
-        "T8": "800", "T800": "800", "800": "800"
+        "T1": "1000", "T1000": "1000", "1000": "1000",
+        "T8": "800", "T800": "800", "800": "800",
+        "T6": "600", "T600": "600", "600": "600"
       };
       return mapping[s] || "";
     }
 
     function flexProgressiveTKeys(text) {
       const s = (text || "").toUpperCase().replace(/\s+/g, "");
-      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
+      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))/);
       if (!m) return null;
       const a = flexNormalizeTKey(m[1]);
       const b = flexNormalizeTKey(m[2]);
       if (!a || !b || a === b) return null;
-      const order = ["TM", "THM", "10000", "5000", "3000", "1500", "800", "T4"];
+      const order = ["TM", "THM", "10000", "5000", "3000", "1500", "1000", "800", "600", "T4"];
       const startIndex = order.indexOf(a);
       const endIndex = order.indexOf(b);
       if (startIndex < 0 || endIndex < 0) return null;
@@ -1518,6 +1522,10 @@
         "800": "#b7d7ff",
         "TM": "#f7c6d0",
         "THM": "#f06f5f",
+        "1000": "#b7d7ff",
+        "T8": "#b7d7ff",
+        "800": "#b7d7ff",
+        "600": "#b7d7ff",
         "T4": "#b7d7ff"
       };
       return mapping[tKey] || "";

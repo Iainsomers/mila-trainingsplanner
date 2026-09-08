@@ -45,8 +45,14 @@
       {% if show_all_t_totals or w.has_t1500 %}
         <span class="pill pill-race">T1500 {{ w.sum_t1500_km|default:"—" }}</span>
       {% endif %}
+      {% if show_all_t_totals or w.has_t1000 %}
+        <span class="pill pill-race">T1000 {{ w.sum_t1000_km|default:"—" }}</span>
+      {% endif %}
       {% if show_all_t_totals or w.has_t800 %}
         <span class="pill pill-race">T800 {{ w.sum_t800_km|default:"—" }}</span>
+      {% endif %}
+      {% if show_all_t_totals or w.has_t600 %}
+        <span class="pill pill-race">T600 {{ w.sum_t600_km|default:"—" }}</span>
       {% endif %}
     </div>
   {% endif %}

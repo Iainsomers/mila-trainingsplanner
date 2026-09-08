@@ -24,7 +24,7 @@ _RACE_RE = re.compile(r"\brace\b", re.IGNORECASE)
 _STRENGTH_RE = re.compile(r"\bstrength\b", re.IGNORECASE)
 
 # --- T labels ---
-_T_RE = re.compile(r"\b(?:TM|THM|T4|T\s*(10|5|3|15|8|800|1500|3000|5000|10000))\b", re.IGNORECASE)
+_T_RE = re.compile(r"\b(?:TM|THM|T4|T\s*(10|5|3|15|1|8|6|600|800|1000|1500|3000|5000|10000))\b", re.IGNORECASE)
 
 # --- Zone & reguliere parsing ---
 _ZONE_RE = re.compile(r"Z\s*([1-6])\b", re.IGNORECASE)
@@ -101,17 +101,23 @@ def _normalize_t_type(raw_t: Optional[str]) -> Optional[str]:
         "T5": "5000",
         "T3": "3000",
         "T15": "1500",
+        "T1": "1000",
         "T8": "800",
+        "T6": "600",
         "10": "10000",
         "5": "5000",
         "3": "3000",
         "15": "1500",
+        "1": "1000",
         "8": "800",
+        "6": "600",
         "10000": "10000",
         "5000": "5000",
         "3000": "3000",
         "1500": "1500",
+        "1000": "1000",
         "800": "800",
+        "600": "600",
     }
     return mapping.get(str(raw_t or "").strip().upper()) or None
 
@@ -125,7 +131,9 @@ def _display_t_type(t_type: Optional[str]) -> str:
         "5000": "5",
         "3000": "3",
         "1500": "15",
+        "1000": "1",
         "800": "8",
+        "600": "6",
     }
     return mapping.get(str(t_type or "").strip().upper(), str(t_type or "").strip())
 
@@ -154,7 +162,7 @@ def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
         if t_type == "T4":
             return 5, t_type, None
 
-        if t_type in ("800", "1500"):
+        if t_type in ("600", "800", "1000", "1500"):
             return 5, t_type, None
 
         if t_type in ("5000", "10000"):
@@ -263,7 +271,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 zone = 3
             elif t_type in ("5000", "10000"):
                 zone = 4
-            elif t_type in ("800", "1500", "3000", "T4"):
+            elif t_type in ("600", "800", "1000", "1500", "3000", "T4"):
                 zone = 5
 
         return ParseResult(
@@ -306,7 +314,7 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
                 zone = 3
             elif t_type in ("5000", "10000"):
                 zone = 4
-            elif t_type in ("800", "1500", "3000", "T4"):
+            elif t_type in ("600", "800", "1000", "1500", "3000", "T4"):
                 zone = 5
 
         return ParseResult(

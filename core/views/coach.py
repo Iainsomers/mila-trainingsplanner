@@ -151,7 +151,9 @@ def _parse_optional_target_prs(post):
     values = {}
     errors = []
     fields = (
+        ("target_pr_600", "target_pr_600_s", "Goal T600"),
         ("target_pr_800", "target_pr_800_s", "Goal T800"),
+        ("target_pr_1000", "target_pr_1000_s", "Goal T1000"),
         ("target_pr_1500", "target_pr_1500_s", "Goal T1500"),
         ("target_pr_3000", "target_pr_3000_s", "Goal T3000"),
         ("target_pr_5000", "target_pr_5000_s", "Goal T5000"),
@@ -886,7 +888,7 @@ def _ayc_like_meters(value, unit):
 def _coach_duration_token_seconds(token):
     s = str(token or "").replace("”", '"').replace("“", '"').replace("″", '"').replace("’", "'").replace("‘", "'").replace("′", "'")
     s = re.sub(r"\bz\s*[1-6]\b", "", s, flags=re.I).strip()
-    s = re.sub(r"\b(?:tm|thm|t4|t\s*(?:10|5|3|15|8|800|1500|3000|5000|10000))\b", "", s, flags=re.I).strip()
+    s = re.sub(r"\b(?:tm|thm|t4|t\s*(?:10|5|3|15|1|8|6|600|800|1000|1500|3000|5000|10000))\b", "", s, flags=re.I).strip()
     m = re.fullmatch(r"(\d{1,2}):(\d{2})(?::(\d{2}))?", s)
     if m:
         a = int(m.group(1))
@@ -905,7 +907,7 @@ def _coach_duration_token_seconds(token):
 def _coach_distance_token_m(token):
     s = str(token or "").replace(",", ".")
     s = re.sub(r"\bz\s*[1-6]\b", "", s, flags=re.I).strip()
-    s = re.sub(r"\b(?:tm|thm|t4|t\s*(?:10|5|3|15|8|800|1500|3000|5000|10000))\b", "", s, flags=re.I).strip()
+    s = re.sub(r"\b(?:tm|thm|t4|t\s*(?:10|5|3|15|1|8|6|600|800|1000|1500|3000|5000|10000))\b", "", s, flags=re.I).strip()
     total = 0.0
     for value, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(km|k|m)\b", s, flags=re.I):
         total += _ayc_like_meters(value, unit)
@@ -1018,7 +1020,9 @@ def _watch_t_reference_speeds(athlete):
         "T5": 5000.0,
         "T3": 3000.0,
         "T15": 1500.0,
+        "T1": 1000.0,
         "T8": 800.0,
+        "T6": 600.0,
         "T4": 400.0,
     }
     attr_names = {
@@ -1028,7 +1032,9 @@ def _watch_t_reference_speeds(athlete):
         "T5": ["pr_5000_s", "pr_5000", "pr_5k_s", "pr_5k", "pr_t5_s", "pr_t5"],
         "T3": ["pr_3000_s", "pr_3000", "pr_3k_s", "pr_3k", "pr_t3_s", "pr_t3"],
         "T15": ["pr_1500_s", "pr_1500", "pr_t15_s", "pr_t15"],
+        "T1": ["pr_1000_s", "pr_1000", "pr_t1_s", "pr_t1"],
         "T8": ["pr_800_s", "pr_800", "pr_t8_s", "pr_t8"],
+        "T6": ["pr_600_s", "pr_600", "pr_t6_s", "pr_t6"],
         "T4": ["pr_t4_s", "pr_t4", "pr_400_s", "pr_400"],
     }
     speeds = {}
@@ -1122,7 +1128,7 @@ def _watch_zone_totals_summary(athlete, splits):
         zone_order = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"]
         lines.append(", ".join(f"{label} {_km_label(z_totals[label])}" for label in zone_order if z_totals.get(label)))
     if t_totals:
-        t_order = ["TM", "THM", "T10", "T5", "T3", "T15", "T8", "T4"]
+        t_order = ["TM", "THM", "T10", "T5", "T3", "T15", "T1", "T8", "T6", "T4"]
         lines.append(", ".join(f"{label} {_km_label(t_totals[label])}" for label in t_order if t_totals.get(label)))
     return "\n".join(lines)
 
@@ -4322,7 +4328,12 @@ def _base_pill_class(text: str):
         return "base-pill-race"
     if "z6" in s or "z 6" in s:
         return "base-pill-z6"
-    if "z5" in s or "z 5" in s or "t8" in s or "t15" in s or "t800" in s or "t1500" in s or "t4" in s:
+    if (
+        "z5" in s or "z 5" in s
+        or "t1" in s or "t 1" in s or "t6" in s or "t 6" in s
+        or "t8" in s or "t15" in s or "t1000" in s or "t600" in s
+        or "t800" in s or "t1500" in s or "t4" in s
+    ):
         return "base-pill-z5"
     if "z4" in s or "z 4" in s or "t3" in s or "t5" in s or "t10" in s or "t3000" in s or "t5000" in s or "t10000" in s:
         return "base-pill-z4"
@@ -5001,8 +5012,12 @@ def _race_training_marker(distance_m):
         return "Z6"
     if d <= 599:
         return "T4"
-    if d <= 1000:
+    if d <= 700:
+        return "T6"
+    if d <= 900:
         return "T8"
+    if d <= 1200:
+        return "T1"
     if d <= 2000:
         return "T15"
     if d <= 3500:
@@ -6354,7 +6369,9 @@ def coach_athlete_create_view(request):
         "gender": "",
         "vdot": "",
         "zone_method": "manual",
+        "pr_600": "",
         "pr_800": "",
+        "pr_1000": "",
         "pr_1500": "",
         "pr_3000": "",
         "pr_5000": "",
@@ -6362,7 +6379,9 @@ def coach_athlete_create_view(request):
         "tm": "",
         "thm": "",
         "t4": "",
+        "target_pr_600": "",
         "target_pr_800": "",
+        "target_pr_1000": "",
         "target_pr_1500": "",
         "target_pr_3000": "",
         "target_pr_5000": "",
@@ -6404,7 +6423,9 @@ def coach_athlete_create_view(request):
         form["gender"] = (request.POST.get("gender") or "").strip()
         form["vdot"] = (request.POST.get("vdot") or "").strip()
         form["zone_method"] = (request.POST.get("zone_method") or "").strip() or "manual"
+        form["pr_600"] = (request.POST.get("pr_600") or "").strip()
         form["pr_800"] = (request.POST.get("pr_800") or "").strip()
+        form["pr_1000"] = (request.POST.get("pr_1000") or "").strip()
         form["pr_1500"] = (request.POST.get("pr_1500") or "").strip()
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
@@ -6412,7 +6433,9 @@ def coach_athlete_create_view(request):
         form["tm"] = (request.POST.get("tm") or "").strip()
         form["thm"] = (request.POST.get("thm") or "").strip()
         form["t4"] = (request.POST.get("t4") or "").strip()
+        form["target_pr_600"] = (request.POST.get("target_pr_600") or "").strip()
         form["target_pr_800"] = (request.POST.get("target_pr_800") or "").strip()
+        form["target_pr_1000"] = (request.POST.get("target_pr_1000") or "").strip()
         form["target_pr_1500"] = (request.POST.get("target_pr_1500") or "").strip()
         form["target_pr_3000"] = (request.POST.get("target_pr_3000") or "").strip()
         form["target_pr_5000"] = (request.POST.get("target_pr_5000") or "").strip()
@@ -6469,10 +6492,22 @@ def coach_athlete_create_view(request):
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
 
         try:
+            pr_600_s = _parse_pr_time_to_seconds(form["pr_600"]) if form["pr_600"] else None
+        except ValueError:
+            pr_600_s = None
+            errors.append("T600 invalid format.")
+
+        try:
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
         except ValueError:
             pr_800_s = None
             errors.append("T800 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+
+        try:
+            pr_1000_s = _parse_pr_time_to_seconds(form["pr_1000"]) if form["pr_1000"] else None
+        except ValueError:
+            pr_1000_s = None
+            errors.append("T1000 invalid format.")
 
         try:
             pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
@@ -6516,11 +6551,14 @@ def coach_athlete_create_view(request):
             t4_s = None
             errors.append("T4 invalid format.")
 
-        target_pr_800_s, target_pr_1500_s, target_pr_3000_s = None, None, None
+        target_pr_600_s, target_pr_800_s, target_pr_1000_s = None, None, None
+        target_pr_1500_s, target_pr_3000_s = None, None
         target_pr_5000_s, target_pr_10000_s, target_tm_s = None, None, None
         target_thm_s, target_t4_s = None, None
         for key, label in (
+            ("target_pr_600", "Goal T600"),
             ("target_pr_800", "Goal T800"),
+            ("target_pr_1000", "Goal T1000"),
             ("target_pr_1500", "Goal T1500"),
             ("target_pr_3000", "Goal T3000"),
             ("target_pr_5000", "Goal T5000"),
@@ -6534,8 +6572,12 @@ def coach_athlete_create_view(request):
             except ValueError:
                 value = None
                 errors.append(f"{label} invalid format.")
-            if key == "target_pr_800":
+            if key == "target_pr_600":
+                target_pr_600_s = value
+            elif key == "target_pr_800":
                 target_pr_800_s = value
+            elif key == "target_pr_1000":
+                target_pr_1000_s = value
             elif key == "target_pr_1500":
                 target_pr_1500_s = value
             elif key == "target_pr_3000":
@@ -6579,7 +6621,9 @@ def coach_athlete_create_view(request):
                 auto_wucd_enabled=form["auto_wucd_enabled"],
                 auto_wu_m=auto_wu_m,
                 auto_cd_m=auto_cd_m,
+                pr_600_s=pr_600_s,
                 pr_800_s=pr_800_s,
+                pr_1000_s=pr_1000_s,
                 pr_1500_s=pr_1500_s,
                 pr_3000_s=pr_3000_s,
                 pr_5000_s=pr_5000_s,
@@ -6587,7 +6631,9 @@ def coach_athlete_create_view(request):
                 pr_tm_s=tm_s,
                 pr_thm_s=thm_s,
                 pr_400_s=t4_s,
+                target_pr_600_s=target_pr_600_s,
                 target_pr_800_s=target_pr_800_s,
+                target_pr_1000_s=target_pr_1000_s,
                 target_pr_1500_s=target_pr_1500_s,
                 target_pr_3000_s=target_pr_3000_s,
                 target_pr_5000_s=target_pr_5000_s,
@@ -6636,7 +6682,9 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "gender": athlete.gender or "",
         "vdot": (str(athlete.vdot) if athlete.vdot is not None else ""),
         "zone_method": getattr(athlete, "zone_method", "manual") or "manual",
+        "pr_600": _format_pr_seconds(getattr(athlete, "pr_600_s", None)),
         "pr_800": _format_pr_seconds(getattr(athlete, "pr_800_s", None)),
+        "pr_1000": _format_pr_seconds(getattr(athlete, "pr_1000_s", None)),
         "pr_1500": _format_pr_seconds(getattr(athlete, "pr_1500_s", None)),
         "pr_3000": _format_pr_seconds(getattr(athlete, "pr_3000_s", None)),
         "pr_5000": _format_pr_seconds(getattr(athlete, "pr_5000_s", None)),
@@ -6644,7 +6692,9 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "tm": _format_pr_seconds(getattr(athlete, "pr_tm_s", None)),
         "thm": _format_pr_seconds(getattr(athlete, "pr_thm_s", None)),
         "t4": _format_pr_seconds(getattr(athlete, "pr_400_s", None)),
+        "target_pr_600": _format_pr_seconds(getattr(athlete, "target_pr_600_s", None)),
         "target_pr_800": _format_pr_seconds(getattr(athlete, "target_pr_800_s", None)),
+        "target_pr_1000": _format_pr_seconds(getattr(athlete, "target_pr_1000_s", None)),
         "target_pr_1500": _format_pr_seconds(getattr(athlete, "target_pr_1500_s", None)),
         "target_pr_3000": _format_pr_seconds(getattr(athlete, "target_pr_3000_s", None)),
         "target_pr_5000": _format_pr_seconds(getattr(athlete, "target_pr_5000_s", None)),
@@ -6671,7 +6721,9 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["gender"] = (request.POST.get("gender") or "").strip()
         form["vdot"] = (request.POST.get("vdot") or "").strip()
         form["zone_method"] = (request.POST.get("zone_method") or "").strip() or "manual"
+        form["pr_600"] = (request.POST.get("pr_600") or "").strip()
         form["pr_800"] = (request.POST.get("pr_800") or "").strip()
+        form["pr_1000"] = (request.POST.get("pr_1000") or "").strip()
         form["pr_1500"] = (request.POST.get("pr_1500") or "").strip()
         form["pr_3000"] = (request.POST.get("pr_3000") or "").strip()
         form["pr_5000"] = (request.POST.get("pr_5000") or "").strip()
@@ -6679,7 +6731,9 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["tm"] = (request.POST.get("tm") or "").strip()
         form["thm"] = (request.POST.get("thm") or "").strip()
         form["t4"] = (request.POST.get("t4") or "").strip()
+        form["target_pr_600"] = (request.POST.get("target_pr_600") or "").strip()
         form["target_pr_800"] = (request.POST.get("target_pr_800") or "").strip()
+        form["target_pr_1000"] = (request.POST.get("target_pr_1000") or "").strip()
         form["target_pr_1500"] = (request.POST.get("target_pr_1500") or "").strip()
         form["target_pr_3000"] = (request.POST.get("target_pr_3000") or "").strip()
         form["target_pr_5000"] = (request.POST.get("target_pr_5000") or "").strip()
@@ -6742,10 +6796,22 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
 
         try:
+            pr_600_s = _parse_pr_time_to_seconds(form["pr_600"]) if form["pr_600"] else None
+        except ValueError:
+            pr_600_s = None
+            errors.append("T600 invalid format.")
+
+        try:
             pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
         except ValueError:
             pr_800_s = None
             errors.append("T800 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+
+        try:
+            pr_1000_s = _parse_pr_time_to_seconds(form["pr_1000"]) if form["pr_1000"] else None
+        except ValueError:
+            pr_1000_s = None
+            errors.append("T1000 invalid format.")
 
         try:
             pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
@@ -6789,11 +6855,14 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             t4_s = None
             errors.append("T4 invalid format.")
 
-        target_pr_800_s, target_pr_1500_s, target_pr_3000_s = None, None, None
+        target_pr_600_s, target_pr_800_s, target_pr_1000_s = None, None, None
+        target_pr_1500_s, target_pr_3000_s = None, None
         target_pr_5000_s, target_pr_10000_s, target_tm_s = None, None, None
         target_thm_s, target_t4_s = None, None
         for key, label in (
+            ("target_pr_600", "Goal T600"),
             ("target_pr_800", "Goal T800"),
+            ("target_pr_1000", "Goal T1000"),
             ("target_pr_1500", "Goal T1500"),
             ("target_pr_3000", "Goal T3000"),
             ("target_pr_5000", "Goal T5000"),
@@ -6807,8 +6876,12 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             except ValueError:
                 value = None
                 errors.append(f"{label} invalid format.")
-            if key == "target_pr_800":
+            if key == "target_pr_600":
+                target_pr_600_s = value
+            elif key == "target_pr_800":
                 target_pr_800_s = value
+            elif key == "target_pr_1000":
+                target_pr_1000_s = value
             elif key == "target_pr_1500":
                 target_pr_1500_s = value
             elif key == "target_pr_3000":
@@ -6850,7 +6923,9 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.auto_wucd_enabled = form["auto_wucd_enabled"]
             athlete.auto_wu_m = auto_wu_m
             athlete.auto_cd_m = auto_cd_m
+            athlete.pr_600_s = pr_600_s
             athlete.pr_800_s = pr_800_s
+            athlete.pr_1000_s = pr_1000_s
             athlete.pr_1500_s = pr_1500_s
             athlete.pr_3000_s = pr_3000_s
             athlete.pr_5000_s = pr_5000_s
@@ -6858,7 +6933,9 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.pr_tm_s = tm_s
             athlete.pr_thm_s = thm_s
             athlete.pr_400_s = t4_s
+            athlete.target_pr_600_s = target_pr_600_s
             athlete.target_pr_800_s = target_pr_800_s
+            athlete.target_pr_1000_s = target_pr_1000_s
             athlete.target_pr_1500_s = target_pr_1500_s
             athlete.target_pr_3000_s = target_pr_3000_s
             athlete.target_pr_5000_s = target_pr_5000_s

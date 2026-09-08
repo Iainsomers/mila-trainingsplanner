@@ -472,14 +472,16 @@
         "T5": "5000", "T5000": "5000", "5000": "5000",
         "T3": "3000", "T3000": "3000", "3000": "3000",
         "T15": "1500", "T1500": "1500", "1500": "1500",
-        "T8": "800", "T800": "800", "800": "800"
+        "T1": "1000", "T1000": "1000", "1000": "1000",
+        "T8": "800", "T800": "800", "800": "800",
+        "T6": "600", "T600": "600", "600": "600"
       };
       return mapping[s] || "";
     }
 
     function flexTKey(text) {
       const s = (text || "").toUpperCase().replace(/\s+/g, "");
-      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
+      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))/);
       return m ? flexNormalizeTKey(m[1]) : "";
     }
 
@@ -491,14 +493,16 @@
         "5000": "4",
         "3000": "4",
         "1500": "5",
+        "1000": "5",
         "800": "5",
+        "600": "5",
         "T4": "5"
       };
       return mapping[String(tKey || "")] || "";
     }
 
     function flexTKeyRange(startKey, endKey) {
-      const order = ["TM", "THM", "10000", "5000", "3000", "1500", "800", "T4"];
+      const order = ["TM", "THM", "10000", "5000", "3000", "1500", "1000", "800", "600", "T4"];
       const start = flexNormalizeTKey(startKey);
       const end = flexNormalizeTKey(endKey);
       if (!start || !end || start === end) return null;
@@ -515,7 +519,7 @@
 
     function flexProgressiveTKeys(text) {
       const s = (text || "").toUpperCase().replace(/\s+/g, "");
-      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
+      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))/);
       if (!m) return null;
       const a = flexNormalizeTKey(m[1]);
       const b = flexNormalizeTKey(m[2]);
@@ -528,7 +532,9 @@
         "5000": "#bfe7bf",
         "3000": "#bfe7bf",
         "1500": "#b7d7ff",
+        "1000": "#b7d7ff",
         "800": "#b7d7ff",
+        "600": "#b7d7ff",
         "TM": "#f7c6d0",
         "THM": "#f06f5f",
         "T4": "#b7d7ff"
@@ -767,7 +773,7 @@
 
         const zMeters = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         const zSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
-        const tMeters = {"10000": 0, "5000": 0, "3000": 0, "1500": 0, "800": 0, "TM": 0, "THM": 0, "T4": 0};
+        const tMeters = {"10000": 0, "5000": 0, "3000": 0, "1500": 0, "1000": 0, "800": 0, "600": 0, "TM": 0, "THM": 0, "T4": 0};
         const altSeconds = {"1": 0, "2": 0, "3": 0};
         let raceMeters = 0;
         let raceSeconds = 0;
@@ -831,13 +837,13 @@
         }
 
         line = "";
-        [["10000", "T10"], ["5000", "T5"], ["TM", "TM"], ["THM", "THM"], ["T4", "T4"]].forEach(([key, label]) => {
+        [["TM", "TM"], ["THM", "THM"], ["10000", "T10"], ["5000", "T5"], ["T4", "T4"]].forEach(([key, label]) => {
           if (tMeters[key] > 0) line += flexPill("pill-race", label, flexKm(tMeters[key]));
         });
         if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
 
         line = "";
-        [["3000", "T3"], ["1500", "T15"], ["800", "T8"]].forEach(([key, label]) => {
+        [["3000", "T3"], ["1500", "T15"], ["1000", "T1"], ["800", "T8"], ["600", "T6"]].forEach(([key, label]) => {
           if (tMeters[key] > 0) line += flexPill("pill-race", label, flexKm(tMeters[key]));
         });
         if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
@@ -1331,7 +1337,9 @@
                     <div class="flex-total-line">
                       {% if row.has_t3000 %}<span class="pill pill-race">T3 {{ row.sum_t3000_km|default:"—" }}</span>{% endif %}
                       {% if row.has_t1500 %}<span class="pill pill-race">T15 {{ row.sum_t1500_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_t1000 %}<span class="pill pill-race">T1 {{ row.sum_t1000_km|default:"—" }}</span>{% endif %}
                       {% if row.has_t800 %}<span class="pill pill-race">T8 {{ row.sum_t800_km|default:"—" }}</span>{% endif %}
+                      {% if row.has_t600 %}<span class="pill pill-race">T6 {{ row.sum_t600_km|default:"—" }}</span>{% endif %}
                     </div>
 
                     {% if row.alt_z1_min %}

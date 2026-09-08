@@ -1,6 +1,6 @@
 # Data-, invoer- en rekenregels
 
-Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 8 september 2026.
 
 ## Zones
 
@@ -12,11 +12,12 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 ## PR- en doel-PR-formaten
 
 - 400 m (T4): `ss.ss`; seconden mogen hoger dan 60 zijn, bijvoorbeeld `72.50`.
-- 800 m en 1500 m: `mm:ss.ss`.
+- 600 m (T6), 800 m (T8), 1000 m (T1) en 1500 m (T15): `mm:ss.ss`.
 - 3000 m, 5000 m en 10.000 m: `mm:ss`.
 - Halve marathon en marathon: `hh:mm:ss`.
 - Dezelfde formaten gelden voor huidige PR en doel-PR.
 - Oude geldige 400 m-tijden boven 60 seconden mogen niet stilzwijgend worden genormaliseerd naar maximaal 60.
+- `Fill missing PB's` gebruikt de WR-verhoudingen in de keten TM, THM, T10, T5, T3, T15, T1, T8, T6, T4.
 
 ## Richttijden en richttempo
 
@@ -35,6 +36,7 @@ Onder meer ondersteund:
 
 - `6*400m t3`;
 - `t3>t15` en `z2>z5`;
+- T-progressies lopen via tussenliggende labels, bijvoorbeeld `t15>t4` splitst over T15, T1, T8, T6 en T4;
 - `2*(600m-400m) t15`;
 - `5*(1000m z3-200m t8)`;
 - minuten met `'` en seconden met `"`;

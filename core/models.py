@@ -119,20 +119,24 @@ class Athlete(models.Model):
     )
 
     pr_800_s = models.FloatField(null=True, blank=True)
+    pr_1000_s = models.FloatField(null=True, blank=True)
     pr_1500_s = models.FloatField(null=True, blank=True)
     pr_3000_s = models.FloatField(null=True, blank=True)
     pr_5000_s = models.FloatField(null=True, blank=True)
     pr_10000_s = models.FloatField(null=True, blank=True)
     pr_tm_s = models.FloatField(null=True, blank=True)
     pr_thm_s = models.FloatField(null=True, blank=True)
+    pr_600_s = models.FloatField(null=True, blank=True)
     pr_400_s = models.FloatField(null=True, blank=True)
     target_pr_800_s = models.FloatField(null=True, blank=True)
+    target_pr_1000_s = models.FloatField(null=True, blank=True)
     target_pr_1500_s = models.FloatField(null=True, blank=True)
     target_pr_3000_s = models.FloatField(null=True, blank=True)
     target_pr_5000_s = models.FloatField(null=True, blank=True)
     target_pr_10000_s = models.FloatField(null=True, blank=True)
     target_pr_tm_s = models.FloatField(null=True, blank=True)
     target_pr_thm_s = models.FloatField(null=True, blank=True)
+    target_pr_600_s = models.FloatField(null=True, blank=True)
     target_pr_400_s = models.FloatField(null=True, blank=True)
 
     def __str__(self) -> str:
@@ -378,8 +382,8 @@ class YearPlannerWhereabout(models.Model):
     class Meta:
         ordering = ["owner_id", "athlete__name", "start_date", "end_date"]
         indexes = [
-            models.Index(fields=["owner", "athlete", "start_date", "end_date"]),
-            models.Index(fields=["owner", "start_date", "end_date"]),
+            models.Index(fields=["owner", "athlete", "start_date", "end_date"], name="core_yearpl_owner_i_fca5c0_idx"),
+            models.Index(fields=["owner", "start_date", "end_date"], name="core_yearpl_owner_i_586df5_idx"),
         ]
 
     def clean(self):
@@ -606,7 +610,9 @@ class TrainingSegment(models.Model):
 
     T_TYPE_CHOICES = [
         ("", "—"),
+        ("600", "T6"),
         ("800", "T800"),
+        ("1000", "T1"),
         ("1500", "T1500"),
         ("3000", "T3000"),
         ("5000", "T5000"),

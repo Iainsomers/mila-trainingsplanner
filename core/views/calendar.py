@@ -516,7 +516,9 @@ def calendar_view(request):
             "5000": 0.0,
             "3000": 0.0,
             "1500": 0.0,
+            "1000": 0.0,
             "800": 0.0,
+            "600": 0.0,
             "TM": 0.0,
             "THM": 0.0,
             "T4": 0.0,
@@ -551,7 +553,7 @@ def calendar_view(request):
             race_m = float(race.get("distance_m") or 0)
             race_time_s = float(race.get("duration_s") or 0)
 
-            for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4"):
+            for t in ("10000", "5000", "3000", "1500", "1000", "800", "600", "TM", "THM", "T4"):
                 vals = t_totals.get(t) or {"distance_m": 0, "duration_s": 0}
                 t_m[t] = float(vals.get("distance_m") or 0)
 
@@ -573,7 +575,7 @@ def calendar_view(request):
 
         has_z = {z: (z_m[z] > 0) for z in ("1", "2", "3", "4", "5", "6")}
         has_race = (race_m > 0)
-        has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4")}
+        has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "1000", "800", "600", "TM", "THM", "T4")}
 
         base_phase = base_phase_by_week.get(week_start, "")
         athlete_phase = athlete_phase_by_week.get(week_start, "")
@@ -605,7 +607,9 @@ def calendar_view(request):
             "sum_t5000_km": _km_str_with_small(t_m["5000"]),
             "sum_t3000_km": _km_str_with_small(t_m["3000"]),
             "sum_t1500_km": _km_str_with_small(t_m["1500"]),
+            "sum_t1000_km": _km_str_with_small(t_m["1000"]),
             "sum_t800_km": _km_str_with_small(t_m["800"]),
+            "sum_t600_km": _km_str_with_small(t_m["600"]),
             "sum_tm_km": _km_str_with_small(t_m["TM"]),
             "sum_thm_km": _km_str_with_small(t_m["THM"]),
             "sum_t4_km": _km_str_with_small(t_m["T4"]),
@@ -620,7 +624,9 @@ def calendar_view(request):
             "has_t5000": has_t["5000"],
             "has_t3000": has_t["3000"],
             "has_t1500": has_t["1500"],
+            "has_t1000": has_t["1000"],
             "has_t800": has_t["800"],
+            "has_t600": has_t["600"],
             "has_tm": has_t["TM"],
             "has_thm": has_t["THM"],
             "has_t4": has_t["T4"],
@@ -1336,7 +1342,7 @@ def _invalidate_stats_cache():
 
 def _t_type_from_text(text: str) -> str:
     match = re.search(
-        r"\b(T\s*(?:800|1500|3000|5000|10000|8|15|3|5|10|4)|TM|THM)\b",
+        r"\b(T\s*(?:600|800|1000|1500|3000|5000|10000|6|8|1|15|3|5|10|4)|TM|THM)\b",
         text or "",
         re.IGNORECASE,
     )
@@ -1345,6 +1351,10 @@ def _t_type_from_text(text: str) -> str:
 
     raw = match.group(1).upper().replace(" ", "")
     mapping = {
+        "T6": "600",
+        "T600": "600",
+        "T1": "1000",
+        "T1000": "1000",
         "T8": "800",
         "T800": "800",
         "T15": "1500",
@@ -1374,7 +1384,7 @@ def _zone_from_text(text: str, default: str = "1") -> str:
         return "3"
     if t_type in ("10000", "5000", "3000"):
         return "4"
-    if t_type in ("1500", "800", "T4"):
+    if t_type in ("1500", "1000", "800", "600", "T4"):
         return "5"
 
     return default
@@ -1475,7 +1485,9 @@ def _athlete_t_pr_seconds(athlete, key):
         "T5": ["pr_5000_s", "pr_5000", "pr_5k_s", "pr_5k", "pr_t5_s", "pr_t5"],
         "T3": ["pr_3000_s", "pr_3000", "pr_3k_s", "pr_3k", "pr_t3_s", "pr_t3"],
         "T15": ["pr_1500_s", "pr_1500", "pr_t15_s", "pr_t15"],
+        "T1": ["pr_1000_s", "pr_1000", "pr_t1_s", "pr_t1"],
         "T8": ["pr_800_s", "pr_800", "pr_t8_s", "pr_t8"],
+        "T6": ["pr_600_s", "pr_600", "pr_t6_s", "pr_t6"],
         "T4": ["pr_t4_s", "pr_t4", "pr_400_s", "pr_400"],
     }
     _, value = _first_athlete_attr(athlete, attr_names.get(key, []))
@@ -1490,7 +1502,9 @@ def _athlete_target_t_pr_seconds(athlete, key):
         "T5": ["target_pr_5000_s", "target_pr_5000", "target_5k_s", "target_5k", "goal_pr_5000_s", "goal_5k_s"],
         "T3": ["target_pr_3000_s", "target_pr_3000", "target_3k_s", "target_3k", "goal_pr_3000_s", "goal_3k_s"],
         "T15": ["target_pr_1500_s", "target_pr_1500", "target_t15_s", "target_t15", "goal_pr_1500_s", "goal_t15_s"],
+        "T1": ["target_pr_1000_s", "target_pr_1000", "target_t1_s", "target_t1", "goal_pr_1000_s", "goal_t1_s"],
         "T8": ["target_pr_800_s", "target_pr_800", "target_t8_s", "target_t8", "goal_pr_800_s", "goal_t8_s"],
+        "T6": ["target_pr_600_s", "target_pr_600", "target_t6_s", "target_t6", "goal_pr_600_s", "goal_t6_s"],
         "T4": ["target_pr_400_s", "target_t4_s", "target_t4", "goal_pr_400_s", "goal_t4_s", "goal_t4"],
     }
     _, value = _first_athlete_attr(athlete, attr_names.get(key, []))
@@ -1594,7 +1608,7 @@ def _zone_speed_mps(athlete, label):
 
 
 def _build_zones_times_rows(athlete):
-    labels = ["Z1", "Z2", "Z3", "Z4", "Z5", "TM", "THM", "T10", "T5", "T3", "T15", "T8", "T4"]
+    labels = ["Z1", "Z2", "Z3", "Z4", "Z5", "TM", "THM", "T10", "T5", "T3", "T15", "T1", "T8", "T6", "T4"]
     t_distances = {
         "TM": 42195,
         "THM": 21097.5,
@@ -1602,7 +1616,9 @@ def _build_zones_times_rows(athlete):
         "T5": 5000,
         "T3": 3000,
         "T15": 1500,
+        "T1": 1000,
         "T8": 800,
+        "T6": 600,
         "T4": 400,
     }
 
@@ -1647,8 +1663,12 @@ def _build_zones_times_rows(athlete):
 def _t_label_from_type(t_type):
     value = str(t_type or "").strip().upper()
     mapping = {
+        "600": "T6",
+        "T6": "T6",
         "800": "T8",
         "T8": "T8",
+        "1000": "T1",
+        "T1": "T1",
         "1500": "T15",
         "T15": "T15",
         "3000": "T3",
@@ -1668,7 +1688,7 @@ def _segment_t_labels(seg):
     text = getattr(seg, "text", "") or ""
     labels = []
 
-    for raw in re.findall(r"\b(?:T\s*(?:800|1500|3000|5000|10000|8|15|3|5|10|4)|TM|THM)\b", text, re.IGNORECASE):
+    for raw in re.findall(r"\b(?:T\s*(?:600|800|1000|1500|3000|5000|10000|6|8|1|15|3|5|10|4)|TM|THM)\b", text, re.IGNORECASE):
         label = _t_label_from_type(raw.upper().replace(" ", ""))
         if label and label not in labels:
             labels.append(label)
@@ -1855,7 +1875,9 @@ def _segment_duration_pace_label(athlete, seg):
         "T5": 5000,
         "T3": 3000,
         "T15": 1500,
+        "T1": 1000,
         "T8": 800,
+        "T6": 600,
         "T4": 400,
     }
     for t_label in _segment_t_labels(seg):
@@ -1932,7 +1954,9 @@ def _segment_rep_time_label(athlete, seg):
         "T5": 5000,
         "T3": 3000,
         "T15": 1500,
+        "T1": 1000,
         "T8": 800,
+        "T6": 600,
         "T4": 400,
     }
 
@@ -2010,6 +2034,9 @@ def _annotate_slot_segment_display_times(slot, athlete):
 def _ayc_normalize_t_key(value):
     s = re.sub(r"\s+", "", (value or "").upper())
     mapping = {
+        "T6": "600",
+        "T600": "600",
+        "600": "600",
         "T10": "10000",
         "T10000": "10000",
         "10000": "10000",
@@ -2022,6 +2049,9 @@ def _ayc_normalize_t_key(value):
         "T15": "1500",
         "T1500": "1500",
         "1500": "1500",
+        "T1": "1000",
+        "T1000": "1000",
+        "1000": "1000",
         "T8": "800",
         "T800": "800",
         "800": "800",
@@ -2034,7 +2064,7 @@ def _ayc_normalize_t_key(value):
 
 def _ayc_t_key(text):
     s = re.sub(r"\s+", "", (text or "").upper())
-    m = re.search(r"(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))", s)
+    m = re.search(r"(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))", s)
     return _ayc_normalize_t_key(m.group(1)) if m else ""
 
 
@@ -2046,7 +2076,9 @@ def _ayc_zone_for_t_key(t_key):
         "5000": "4",
         "3000": "4",
         "1500": "5",
+        "1000": "5",
         "800": "5",
+        "600": "5",
         "T4": "5",
     }
     return mapping.get(str(t_key or ""), "")
@@ -2055,8 +2087,8 @@ def _ayc_zone_for_t_key(t_key):
 def _ayc_progressive_t_keys(text):
     s = re.sub(r"\s+", "", (text or "").upper())
     m = re.search(
-        r"(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)"
-        r"(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))",
+        r"(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?:>|-)"
+        r"(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))",
         s,
     )
     if not m:
@@ -2079,7 +2111,7 @@ def _ayc_zone_range_keys(start_zone, end_zone):
 
 
 def _ayc_t_range_keys(start_key, end_key):
-    order = ["TM", "THM", "10000", "5000", "3000", "1500", "800", "T4"]
+    order = ["TM", "THM", "10000", "5000", "3000", "1500", "1000", "800", "600", "T4"]
     start = _ayc_normalize_t_key(start_key)
     end = _ayc_normalize_t_key(end_key)
     if not start or not end or start == end or start not in order or end not in order:
@@ -3126,7 +3158,9 @@ def athlete_year_calendar_view(request):
             "5000": 0.0,
             "3000": 0.0,
             "1500": 0.0,
+            "1000": 0.0,
             "800": 0.0,
+            "600": 0.0,
             "TM": 0.0,
             "THM": 0.0,
             "T4": 0.0,
@@ -3188,7 +3222,7 @@ def athlete_year_calendar_view(request):
 
         has_z = {z: (z_m[z] > 0) for z in ("1", "2", "3", "4", "5", "6")}
         has_race = (race_m > 0)
-        has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "800", "TM", "THM", "T4")}
+        has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "1000", "800", "600", "TM", "THM", "T4")}
         has_alt = (alt_z1_min > 0 or alt_z2_min > 0 or alt_z3_min > 0)
 
         def _vitals_week_avg(field_name, decimals=0):
@@ -3255,7 +3289,9 @@ def athlete_year_calendar_view(request):
             "sum_t5000_km": _km_str_with_small(t_m["5000"]),
             "sum_t3000_km": _km_str_with_small(t_m["3000"]),
             "sum_t1500_km": _km_str_with_small(t_m["1500"]),
+            "sum_t1000_km": _km_str_with_small(t_m["1000"]),
             "sum_t800_km": _km_str_with_small(t_m["800"]),
+            "sum_t600_km": _km_str_with_small(t_m["600"]),
             "sum_tm_km": _km_str_with_small(t_m["TM"]),
             "sum_thm_km": _km_str_with_small(t_m["THM"]),
             "sum_t4_km": _km_str_with_small(t_m["T4"]),
@@ -3270,7 +3306,9 @@ def athlete_year_calendar_view(request):
             "has_t5000": has_t["5000"],
             "has_t3000": has_t["3000"],
             "has_t1500": has_t["1500"],
+            "has_t1000": has_t["1000"],
             "has_t800": has_t["800"],
+            "has_t600": has_t["600"],
             "has_tm": has_t["TM"],
             "has_thm": has_t["THM"],
             "has_t4": has_t["T4"],
