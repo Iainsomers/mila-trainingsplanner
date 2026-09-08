@@ -1790,6 +1790,14 @@ class FlexPlannerAltTotalsTests(TestCase):
         self.assertIn('"ALT Z" + z', source)
         self.assertIn('const altParts = text.split("//")', source)
 
+    def test_flex_slot_modal_uses_capture_click_opener(self):
+        source = get_template("core/flex_planner.html").template.source
+
+        self.assertIn("function openFlexSlotModal(url)", source)
+        self.assertIn('event.stopImmediatePropagation();', source)
+        self.assertIn('".flex-cell[hx-get]"', source)
+        self.assertIn("}, true);", source)
+
     def test_flex_save_splits_alt_blocks_and_keeps_each_zone_out_of_kilometres(self):
         from core.stats import athlete_week_stats
 

@@ -409,6 +409,37 @@
       document.body.style.removeProperty("padding-right");
     });
 
+    function openFlexSlotModal(url) {
+      if (!url) return;
+      fetch(url, { credentials: "same-origin" })
+        .then((response) => {
+          if (!response.ok) throw new Error("Training could not be opened.");
+          return response.text();
+        })
+        .then((html) => {
+          const container = document.getElementById("modal-container");
+          if (!container) return;
+          container.innerHTML = html;
+          const el = document.getElementById("slotModal");
+          if (el && window.bootstrap) bootstrap.Modal.getOrCreateInstance(el).show();
+        })
+        .catch(() => {
+          alert("Training could not be opened. Refresh the page and try again.");
+        });
+    }
+
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("[data-flex-copy-btn], [data-flex-paste-btn], [data-flex-delete-btn], [data-flex-report-btn], [data-strength-href]")) {
+        return;
+      }
+      const flexCell = event.target.closest(".flex-cell[hx-get]");
+      if (!flexCell) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      openFlexSlotModal(flexCell.getAttribute("hx-get") || "");
+    }, true);
+
     function limitAthleteSelection(maxCount) {
       const boxes = Array.from(document.querySelectorAll("[data-flex-athlete-checkbox]"));
       const checked = boxes.filter((box) => box.checked);
@@ -1003,9 +1034,13 @@
         flexPost(pasteUrl)
           .then(() => window.location.reload())
           .catch(() => {
-            alert("Paste failed.");
-          });
+          alert("Paste failed.");
+        });
+        return;
       }
+
+      const strengthLink = event.target.closest("[data-strength-href]");
+      if (strengthLink) return;
     });
 
     document.addEventListener("keydown", (event) => {
