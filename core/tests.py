@@ -1205,6 +1205,42 @@ class SlotModalSaveTests(TestCase):
         slot = TrainingSlot.objects.get(plan=flex_plan, athlete=athlete, date=day, slot_index=1)
         self.assertEqual(slot.core_text(), "1000m z3")
 
+    def test_athlete_year_modal_uses_flex_plan_when_source_plan_is_trainer_planning(self):
+        owner = get_user_model().objects.create_user(
+            username="ayc-source-owner", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="AYC Source Plan Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        source_plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="AYC source trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        flex_plan = TrainingPlan.objects.create(owner=owner, name="Flex Planner ayc source owner")
+        self.client.force_login(owner)
+
+        day = date.today()
+        open_response = self.client.get(
+            f"/slot-modal/{day.year}/{day.month}/{day.day}/2/?plan={source_plan.id}&athlete={athlete.id}&source=athlete_year"
+        )
+        self.assertEqual(open_response.status_code, 200)
+        self.assertContains(open_response, f'value="{flex_plan.id}"')
+
+    def test_athlete_year_pm_training_contains_modal_prefill_values(self):
+        template_path = get_template("core/athlete_year_calendar.html").origin.name
+        template_source = Path(template_path).read_text(encoding="utf-8")
+        pm_desktop_block = template_source.split(
+            '<tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">',
+            1,
+        )[1].split("{% if show_training_reports %}", 1)[0]
+
+        for field in ("wu", "mob", "sprint", "core", "core2", "alt", "cd"):
+            self.assertIn(f'data-prefill-{field}=', pm_desktop_block)
+
 
 class SegmentRepTimeDisplayTests(TestCase):
     def test_compound_reps_show_split_times_for_current_and_goal_pr(self):

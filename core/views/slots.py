@@ -71,8 +71,12 @@ def _is_flex_source(request) -> bool:
     return (request.GET.get("source") == "flex") or (request.POST.get("source") == "flex")
 
 
+def _is_athlete_year_source(request) -> bool:
+    return (request.GET.get("source") == "athlete_year") or (request.POST.get("source") == "athlete_year")
+
+
 def _flex_edit_plan_for_request(request, selected_plan, athlete):
-    if not _is_flex_source(request):
+    if not (_is_flex_source(request) or _is_athlete_year_source(request)):
         return selected_plan
     if _is_flex_planner_plan(selected_plan):
         return selected_plan

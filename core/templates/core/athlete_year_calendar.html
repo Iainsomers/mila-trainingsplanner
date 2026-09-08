@@ -1231,11 +1231,11 @@
             <td>
               <div class="emptyline">
                 {% if cell.slot %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                     {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                   </div>
                 {% elif cell.plan_id %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                   </div>
                 {% endif %}
               </div>
@@ -2460,9 +2460,16 @@
         var modalEl = document.getElementById("slotModal");
         if (!modalEl) return;
 
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        if (window.bootstrap) {
+          bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        } else {
+          modalEl.classList.add("show");
+          modalEl.style.display = "block";
+          modalEl.removeAttribute("aria-hidden");
+        }
       })
-      .catch(function() {
+      .catch(function(error) {
+        if (window.console) console.error(error);
         window.alert("Training could not be opened. Refresh the page and try again.");
       });
   }
