@@ -497,13 +497,29 @@
       return mapping[String(tKey || "")] || "";
     }
 
+    function flexTKeyRange(startKey, endKey) {
+      const order = ["TM", "THM", "10000", "5000", "3000", "1500", "800", "T4"];
+      const start = flexNormalizeTKey(startKey);
+      const end = flexNormalizeTKey(endKey);
+      if (!start || !end || start === end) return null;
+      const startIndex = order.indexOf(start);
+      const endIndex = order.indexOf(end);
+      if (startIndex < 0 || endIndex < 0) return null;
+      const step = endIndex > startIndex ? 1 : -1;
+      const keys = [];
+      for (let index = startIndex; index !== endIndex + step; index += step) {
+        keys.push(order[index]);
+      }
+      return keys;
+    }
+
     function flexProgressiveTKeys(text) {
       const s = (text || "").toUpperCase().replace(/\s+/g, "");
       const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|800|10|5|3|15|8))/);
       if (!m) return null;
       const a = flexNormalizeTKey(m[1]);
       const b = flexNormalizeTKey(m[2]);
-      return (a && b && a !== b) ? [a, b] : null;
+      return (a && b && a !== b) ? flexTKeyRange(a, b) : null;
     }
 
     function flexTColor(tKey) {
@@ -523,7 +539,15 @@
     function flexProgressiveZones(text) {
       const s = text || "";
       const m = s.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
-      return (m && m[1] !== m[2]) ? [m[1], m[2]] : null;
+      if (!m || m[1] === m[2]) return null;
+      const start = Number(m[1]);
+      const end = Number(m[2]);
+      const step = end > start ? 1 : -1;
+      const zones = [];
+      for (let zone = start; zone !== end + step; zone += step) {
+        zones.push(String(zone));
+      }
+      return zones;
     }
 
     function flexZoneColor(zone) {
@@ -543,12 +567,17 @@
         const text = el.textContent || "";
         const tRange = flexProgressiveTKeys(text);
         const zoneRange = tRange ? null : flexProgressiveZones(text);
+        const colors = (tRange || zoneRange || [])
+          .map((value) => tRange ? flexTColor(value) : flexZoneColor(value))
+          .filter(Boolean);
+        if (colors.length < 2) return;
 
-        const leftColor = tRange ? flexTColor(tRange[0]) : flexZoneColor(zoneRange ? zoneRange[0] : "");
-        const rightColor = tRange ? flexTColor(tRange[1]) : flexZoneColor(zoneRange ? zoneRange[1] : "");
-        if (!leftColor || !rightColor) return;
-
-        el.style.background = `linear-gradient(30deg, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
+        const stops = colors.map((color, index) => {
+          const start = (100 * index / colors.length).toFixed(3);
+          const end = (100 * (index + 1) / colors.length).toFixed(3);
+          return `${color} ${start}%, ${color} ${end}%`;
+        });
+        el.style.background = `linear-gradient(30deg, ${stops.join(", ")})`;
       });
     }
 
@@ -701,17 +730,22 @@
       const tKey = dataTKey || flexTKey(text);
 
       if (progressive && progressive[1] !== progressive[2]) {
-        return [
-          {zone: progressive[1], meters: meters / 2, tKey: tRange ? tRange[0] : tKey, race: isRace},
-          {zone: progressive[2], meters: meters / 2, tKey: tRange ? tRange[1] : tKey, race: isRace}
-        ];
+        const zoneRange = flexProgressiveZones(text) || [];
+        return zoneRange.map((zone, index) => ({
+          zone: zone,
+          meters: meters / zoneRange.length,
+          tKey: tRange && index < tRange.length ? tRange[index] : tKey,
+          race: isRace
+        }));
       }
 
       if (tRange) {
-        return [
-          {zone: fallbackZone, meters: meters / 2, tKey: tRange[0], race: isRace},
-          {zone: fallbackZone, meters: meters / 2, tKey: tRange[1], race: isRace}
-        ];
+        return tRange.map((rangeTKey) => ({
+          zone: flexZoneForTKey(rangeTKey) || fallbackZone,
+          meters: meters / tRange.length,
+          tKey: rangeTKey,
+          race: isRace
+        }));
       }
 
       return [{zone: fallbackZone, meters: meters, tKey: tKey, race: isRace}];

@@ -1496,7 +1496,17 @@
       if (!m) return null;
       const a = flexNormalizeTKey(m[1]);
       const b = flexNormalizeTKey(m[2]);
-      return (a && b && a !== b) ? [a, b] : null;
+      if (!a || !b || a === b) return null;
+      const order = ["TM", "THM", "10000", "5000", "3000", "1500", "800", "T4"];
+      const startIndex = order.indexOf(a);
+      const endIndex = order.indexOf(b);
+      if (startIndex < 0 || endIndex < 0) return null;
+      const step = endIndex > startIndex ? 1 : -1;
+      const keys = [];
+      for (let index = startIndex; index !== endIndex + step; index += step) {
+        keys.push(order[index]);
+      }
+      return keys;
     }
 
     function flexTColor(tKey) {
@@ -1516,7 +1526,15 @@
     function flexProgressiveZones(text) {
       const s = text || "";
       const m = s.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
-      return (m && m[1] !== m[2]) ? [m[1], m[2]] : null;
+      if (!m || m[1] === m[2]) return null;
+      const start = Number(m[1]);
+      const end = Number(m[2]);
+      const step = end > start ? 1 : -1;
+      const zones = [];
+      for (let zone = start; zone !== end + step; zone += step) {
+        zones.push(String(zone));
+      }
+      return zones;
     }
 
     function flexZoneColor(zone) {
@@ -1537,11 +1555,17 @@
         const tRange = flexProgressiveTKeys(text);
         const zoneRange = tRange ? null : flexProgressiveZones(text);
 
-        const leftColor = tRange ? flexTColor(tRange[0]) : flexZoneColor(zoneRange ? zoneRange[0] : "");
-        const rightColor = tRange ? flexTColor(tRange[1]) : flexZoneColor(zoneRange ? zoneRange[1] : "");
-        if (!leftColor || !rightColor) return;
+        const colors = (tRange || zoneRange || [])
+          .map((value) => tRange ? flexTColor(value) : flexZoneColor(value))
+          .filter(Boolean);
+        if (colors.length < 2) return;
 
-        el.style.background = `linear-gradient(30deg, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
+        const stops = colors.map((color, index) => {
+          const start = (100 * index / colors.length).toFixed(3);
+          const end = (100 * (index + 1) / colors.length).toFixed(3);
+          return `${color} ${start}%, ${color} ${end}%`;
+        });
+        el.style.background = `linear-gradient(30deg, ${stops.join(", ")})`;
       });
     }
 

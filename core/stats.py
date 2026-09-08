@@ -12,7 +12,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v13"
+STATS_SCHEMA_VERSION = "v14"
 
 
 def _stats_version() -> int:
@@ -181,7 +181,41 @@ def _progressive_t_types(seg):
     if not t1 or not t2 or t1 == t2:
         return None
 
-    return t1, t2
+    return tuple(_progressive_t_range(t1, t2))
+
+
+def _progressive_zone_range(start_zone, end_zone):
+    try:
+        start = int(start_zone)
+        end = int(end_zone)
+    except (TypeError, ValueError):
+        return []
+    if start == end or start < 1 or start > 6 or end < 1 or end > 6:
+        return []
+    step = 1 if end > start else -1
+    return [str(zone) for zone in range(start, end + step, step)]
+
+
+def _progressive_t_range(start_t, end_t):
+    order = ["TM", "THM", "10000", "5000", "3000", "1500", "800", "T4"]
+    start = _normalize_compound_t_type(start_t)
+    end = _normalize_compound_t_type(end_t)
+    if not start or not end or start == end or start not in order or end not in order:
+        return []
+    start_index = order.index(start)
+    end_index = order.index(end)
+    step = 1 if end_index > start_index else -1
+    return order[start_index:end_index + step:step]
+
+
+def _split_int_total(total, pieces):
+    pieces = int(pieces or 0)
+    if pieces <= 0:
+        return []
+    total = int(total or 0)
+    base = total // pieces
+    remainder = total % pieces
+    return [base + (1 if index >= pieces - remainder else 0) for index in range(pieces)]
 
 
 def _default_zone_for_t_type(t_type: str):
@@ -208,9 +242,8 @@ def _progressive_zone_loads(seg, speeds: dict, total_nm: int, total_duration_s: 
     if not match:
         return None
 
-    z1 = str(match.group(1))
-    z2 = str(match.group(2))
-    if z1 not in speeds or z2 not in speeds or z1 == z2:
+    zones = _progressive_zone_range(match.group(1), match.group(2))
+    if not zones or any(zone not in speeds for zone in zones):
         return None
 
     total_nm = int(total_nm or 0)
@@ -220,23 +253,18 @@ def _progressive_zone_loads(seg, speeds: dict, total_nm: int, total_duration_s: 
         return None
 
     if total_duration_s > 0 and total_nm <= 0:
-        half_duration_1 = int(round(float(total_duration_s) / 2.0))
-        half_duration_2 = int(total_duration_s) - half_duration_1
         loads = []
-        for z, dur in ((z1, half_duration_1), (z2, half_duration_2)):
+        for z, dur in zip(zones, _split_int_total(total_duration_s, len(zones))):
             speed = float(total_speed_mps or speeds[z])
             loads.append({
                 "zone": z,
                 "distance_m": int(round(float(dur) * speed)),
                 "duration_s": int(dur),
-            })
+        })
         return loads
 
-    half_nm_1 = int(round(float(total_nm) / 2.0))
-    half_nm_2 = int(total_nm) - half_nm_1
-
     loads = []
-    for z, nm in ((z1, half_nm_1), (z2, half_nm_2)):
+    for z, nm in zip(zones, _split_int_total(total_nm, len(zones))):
         speed = float(speeds[z])
         loads.append({
             "zone": z,
@@ -476,33 +504,29 @@ def _apply_progressive_zone_split(seg, zones, speeds, nm, dur, t_totals=None, t=
         text = (getattr(seg, "text", "") or "").strip()
         has_explicit_zone = bool(_COMPOUND_ZONE_RE.search(text))
 
-        half_nm_1 = int(round(float(nm or 0) / 2.0))
-        half_nm_2 = int(nm or 0) - half_nm_1
-        half_dur_1 = int(round(float(dur or 0) / 2.0))
-        half_dur_2 = int(dur or 0) - half_dur_1
-
-        z1 = str(zone or getattr(seg, "zone", "") or "")
-        z2 = z1
+        zones_for_t = [str(zone or getattr(seg, "zone", "") or "") for _ in progressive_t]
         if not has_explicit_zone:
-            z1 = _default_zone_for_t_type(progressive_t[0]) or z1
-            z2 = _default_zone_for_t_type(progressive_t[1]) or z2
+            zones_for_t = [
+                _default_zone_for_t_type(t_type) or zones_for_t[index]
+                for index, t_type in enumerate(progressive_t)
+            ]
 
-        if not z1 or not z2 or z1 not in speeds or z2 not in speeds:
+        if any((not z or z not in speeds) for z in zones_for_t):
             return False
 
         progressive_loads = [
             {
-                "zone": z1,
-                "t_type": progressive_t[0],
-                "distance_m": half_nm_1,
-                "duration_s": half_dur_1,
-            },
-            {
-                "zone": z2,
-                "t_type": progressive_t[1],
-                "distance_m": half_nm_2,
-                "duration_s": half_dur_2,
-            },
+                "zone": load_zone,
+                "t_type": load_t,
+                "distance_m": load_nm,
+                "duration_s": load_dur,
+            }
+            for load_t, load_zone, load_nm, load_dur in zip(
+                progressive_t,
+                zones_for_t,
+                _split_int_total(nm, len(progressive_t)),
+                _split_int_total(dur, len(progressive_t)),
+            )
         ]
 
     split_count = len(progressive_loads)

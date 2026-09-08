@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.core.cache import cache
 from django.template.loader import get_template
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
@@ -1798,6 +1799,59 @@ class FlexPlannerAltTotalsTests(TestCase):
         self.assertEqual(
             {zone: values["duration_s"] for zone, values in stats["alt_zones"].items()},
             {"1": 1200, "2": 600, "3": 600},
+        )
+
+    def test_progressive_zone_range_includes_intermediate_zones(self):
+        from core.stats import base_week_stats
+
+        cache.clear()
+        trainer = get_user_model().objects.create_user(username="rangezonecoach", password="secret", is_staff=True)
+        plan = TrainingPlan.objects.create(owner=trainer, name="Range zone plan")
+        week_start = date(2026, 9, 7)
+        slot = TrainingSlot.objects.create(plan=plan, date=week_start, slot_index=1)
+        TrainingSegment.objects.create(
+            slot=slot,
+            type="CORE",
+            text="6km z2>z4",
+            zone="2",
+            norm_distance_m=6000,
+        )
+
+        self.assertEqual(
+            [(load["zone"], round(load["meters"])) for load in _ayc_slot_loads_for_totals(slot)],
+            [("2", 2000), ("3", 2000), ("4", 2000)],
+        )
+        stats = base_week_stats(plan, week_start)
+        self.assertEqual(
+            {zone: values["distance_m"] for zone, values in stats["zones"].items() if values["distance_m"]},
+            {"2": 2000, "3": 2000, "4": 2000},
+        )
+
+    def test_progressive_t_range_includes_intermediate_t_types(self):
+        from core.stats import base_week_stats
+
+        cache.clear()
+        trainer = get_user_model().objects.create_user(username="rangetcoach", password="secret", is_staff=True)
+        plan = TrainingPlan.objects.create(owner=trainer, name="Range t plan")
+        week_start = date(2026, 9, 7)
+        slot = TrainingSlot.objects.create(plan=plan, date=week_start, slot_index=1)
+        TrainingSegment.objects.create(
+            slot=slot,
+            type="CORE",
+            text="3km t5>t15",
+            zone="4",
+            t_type="5000",
+            norm_distance_m=3000,
+        )
+
+        self.assertEqual(
+            [(load["zone"], load["t_key"], round(load["meters"])) for load in _ayc_slot_loads_for_totals(slot)],
+            [("4", "5000", 1000), ("4", "3000", 1000), ("5", "1500", 1000)],
+        )
+        stats = base_week_stats(plan, week_start)
+        self.assertEqual(
+            {key: values["distance_m"] for key, values in stats["t_totals"].items() if values["distance_m"]},
+            {"5000": 1000, "3000": 1000, "1500": 1000},
         )
 
 

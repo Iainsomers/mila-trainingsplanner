@@ -2063,7 +2063,39 @@ def _ayc_progressive_t_keys(text):
         return None
     a = _ayc_normalize_t_key(m.group(1))
     b = _ayc_normalize_t_key(m.group(2))
-    return [a, b] if a and b and a != b else None
+    return _ayc_t_range_keys(a, b) if a and b and a != b else None
+
+
+def _ayc_zone_range_keys(start_zone, end_zone):
+    try:
+        start = int(start_zone)
+        end = int(end_zone)
+    except (TypeError, ValueError):
+        return []
+    if start == end or start < 1 or start > 6 or end < 1 or end > 6:
+        return []
+    step = 1 if end > start else -1
+    return [str(zone) for zone in range(start, end + step, step)]
+
+
+def _ayc_t_range_keys(start_key, end_key):
+    order = ["TM", "THM", "10000", "5000", "3000", "1500", "800", "T4"]
+    start = _ayc_normalize_t_key(start_key)
+    end = _ayc_normalize_t_key(end_key)
+    if not start or not end or start == end or start not in order or end not in order:
+        return []
+    start_index = order.index(start)
+    end_index = order.index(end)
+    step = 1 if end_index > start_index else -1
+    return order[start_index:end_index + step:step]
+
+
+def _ayc_split_meters(total_meters, count):
+    count = int(count or 0)
+    if count <= 0:
+        return []
+    base = float(total_meters or 0) / count
+    return [base for _ in range(count)]
 
 
 def _ayc_meters_from_value(value, unit):
@@ -2228,23 +2260,25 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
         t_key = data_t_key or _ayc_t_key(text)
 
         if progressive and progressive.group(1) != progressive.group(2):
-            loads.append({
-                "zone": progressive.group(1),
-                "meters": meters / 2,
-                "t_key": t_range[0] if t_range else t_key,
-                "race": is_race,
-            })
-            loads.append({
-                "zone": progressive.group(2),
-                "meters": meters / 2,
-                "t_key": t_range[1] if t_range else t_key,
-                "race": is_race,
-            })
+            zone_range = _ayc_zone_range_keys(progressive.group(1), progressive.group(2))
+            t_keys = t_range or []
+            for index, zone in enumerate(zone_range):
+                loads.append({
+                    "zone": zone,
+                    "meters": _ayc_split_meters(meters, len(zone_range))[index],
+                    "t_key": t_keys[index] if index < len(t_keys) else t_key,
+                    "race": is_race,
+                })
             continue
 
         if t_range:
-            loads.append({"zone": fallback_zone, "meters": meters / 2, "t_key": t_range[0], "race": is_race})
-            loads.append({"zone": fallback_zone, "meters": meters / 2, "t_key": t_range[1], "race": is_race})
+            for index, range_t_key in enumerate(t_range):
+                loads.append({
+                    "zone": _ayc_zone_for_t_key(range_t_key) or fallback_zone,
+                    "meters": _ayc_split_meters(meters, len(t_range))[index],
+                    "t_key": range_t_key,
+                    "race": is_race,
+                })
             continue
 
         loads.append({"zone": fallback_zone, "meters": meters, "t_key": t_key, "race": is_race})
