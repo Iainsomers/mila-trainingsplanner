@@ -1839,6 +1839,7 @@ class FlexPlannerAltTotalsTests(TestCase):
         source = get_template("core/flex_planner.html").template.source
 
         self.assertIn("function openFlexSlotModal(url)", source)
+        self.assertIn("window.htmx.process(container)", source)
         self.assertIn('event.stopImmediatePropagation();', source)
         self.assertIn('".flex-cell[hx-get]"', source)
         self.assertIn("}, true);", source)

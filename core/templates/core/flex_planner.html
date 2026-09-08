@@ -420,6 +420,9 @@
           const container = document.getElementById("modal-container");
           if (!container) return;
           container.innerHTML = html;
+          if (window.htmx && typeof window.htmx.process === "function") {
+            window.htmx.process(container);
+          }
           const el = document.getElementById("slotModal");
           if (el && window.bootstrap) bootstrap.Modal.getOrCreateInstance(el).show();
         })
