@@ -390,9 +390,10 @@
     });
 
     document.addEventListener("htmx:afterSwap", (e) => {
-      if (e.target && e.target.id === "modal-container") {
+      const target = e.detail && e.detail.target ? e.detail.target : e.target;
+      if (target && target.id === "modal-container") {
         const el = document.getElementById("slotModal");
-        if (el) new bootstrap.Modal(el).show();
+        if (el && window.bootstrap) bootstrap.Modal.getOrCreateInstance(el).show();
       }
     });
 
