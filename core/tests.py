@@ -714,6 +714,41 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual([seg.type for seg in segments], ["WU", "CORE", "CD"])
         self.assertEqual(segments[1].text, "1000m z3")
 
+    def test_athlete_year_can_save_flex_override_outside_flex_plan_date_range(self):
+        user = get_user_model().objects.create_user(
+            username="ayc-flex-range-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="AYC Flex Range Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        flex_plan = TrainingPlan.objects.create(
+            owner=user,
+            name="Flex Planner old range",
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 7),
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            f"/athlete/year/?year=2026&athlete={athlete.id}",
+            {
+                "date": "2026-03-10",
+                "slot_index": "1",
+                "plan": str(flex_plan.id),
+                "slot_text": "1000m z3",
+                "core_text": "1000m z3",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(plan=flex_plan, athlete=athlete, date="2026-03-10", slot_index=1)
+        self.assertEqual(slot.core_text(), "1000m z3")
+
     def test_mobile_pm_training_contains_modal_prefill_values(self):
         template_path = get_template("core/athlete_year_calendar.html").origin.name
         template_source = Path(template_path).read_text(encoding="utf-8")

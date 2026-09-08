@@ -2333,16 +2333,16 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         for plan in owned_plans:
             if plan.id != int(requested_plan_id):
                 continue
-            try:
-                if athlete.id not in plan.targeted_athlete_ids() and not _is_flex_planner_plan(plan):
+            if not _is_flex_planner_plan(plan):
+                try:
+                    if athlete.id not in plan.targeted_athlete_ids():
+                        continue
+                except Exception:
                     continue
-            except Exception:
-                if not _is_flex_planner_plan(plan):
+                if plan.start_date and plan.start_date > d:
                     continue
-            if plan.start_date and plan.start_date > d:
-                continue
-            if plan.end_date and plan.end_date < d:
-                continue
+                if plan.end_date and plan.end_date < d:
+                    continue
             selected_plan = plan
             break
 
