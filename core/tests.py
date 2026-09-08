@@ -1888,6 +1888,13 @@ class AthleteTimeInputFormatTests(TestCase):
         for zone in range(1, 6):
             self.assertRegex(html, rf'name="z{zone}_pace"[^>]+data-time-format="minutes-seconds"')
 
+    def test_fill_missing_pbs_accepts_blank_hundredths(self):
+        source = get_template("core/coach_athlete_form.html").template.source
+
+        self.assertIn('seconds ? seconds + "." + (hundredths || "00") : ""', source)
+        self.assertIn('minutes && seconds ? minutes + ":" + seconds + "." + (hundredths || "00") : ""', source)
+        self.assertIn("target._setFixedTimeSeconds(calculatedSeconds)", source)
+
 
 class TrainingSegmentLabelTests(TestCase):
     def test_main_labels_replace_core_labels(self):

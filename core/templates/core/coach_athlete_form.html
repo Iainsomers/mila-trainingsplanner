@@ -246,9 +246,9 @@
                 const seconds = parts.seconds ? parts.seconds.value : "";
                 const hundredths = parts.hundredths ? parts.hundredths.value : "";
                 if (format === "seconds-hundredths") {
-                  input.value = seconds && hundredths ? seconds + "." + hundredths : "";
+                  input.value = seconds ? seconds + "." + (hundredths || "00") : "";
                 } else if (format === "minutes-seconds-hundredths") {
-                  input.value = minutes && seconds && hundredths ? minutes + ":" + seconds + "." + hundredths : "";
+                  input.value = minutes && seconds ? minutes + ":" + seconds + "." + (hundredths || "00") : "";
                 } else if (format === "hours-minutes-seconds") {
                   input.value = hours && minutes && seconds ? hours + ":" + minutes + ":" + seconds : "";
                 } else {
@@ -347,8 +347,11 @@
 
                     if (!targetValue && sourceSeconds && sourceSeconds > 0) {
                       const calculatedSeconds = sourceSeconds * rel.factor;
-                      target.value = formatSeconds(calculatedSeconds);
-                      if (target._setFixedTimeSeconds) target._setFixedTimeSeconds(calculatedSeconds);
+                      if (target._setFixedTimeSeconds) {
+                        target._setFixedTimeSeconds(calculatedSeconds);
+                      } else {
+                        target.value = formatSeconds(calculatedSeconds);
+                      }
                       changed = true;
                     }
                   });
