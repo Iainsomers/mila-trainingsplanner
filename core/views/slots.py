@@ -36,15 +36,23 @@ from .common import (
     _compute_norm_distance_m,
     _get_effective_slot,
     _active_coach_user,
+    _active_coach_can_edit,
 )
 
 
 def _forbid_if_not_plan_owner(request, plan):
     if plan and hasattr(plan, "owner"):
-        if request.user.is_staff:
+        owner_id = getattr(plan, "owner_id", None)
+        if owner_id is None or owner_id == getattr(request.user, "id", None):
             return None
-        if plan.owner != request.user:
-            return HttpResponse("Forbidden", status=403)
+        active_owner = _active_coach_user(request)
+        if (
+            getattr(request.user, "is_staff", False)
+            and owner_id == getattr(active_owner, "id", None)
+            and _active_coach_can_edit(request)
+        ):
+            return None
+        return HttpResponse("Forbidden", status=403)
     return None
 
 STATS_VERSION_KEY = "mila:stats:version"

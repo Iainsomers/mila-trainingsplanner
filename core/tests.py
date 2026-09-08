@@ -1058,6 +1058,34 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertFalse(AthleteDailyVital.objects.filter(athlete=athlete).exists())
 
+    def test_edit_access_coach_can_edit_shared_trainer_planning_slot(self):
+        owner = get_user_model().objects.create_user(
+            username="slot-owner", password="secret", is_staff=True
+        )
+        shared_coach = get_user_model().objects.create_user(
+            username="slot-edit-coach", password="secret", is_staff=True
+        )
+        plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="Shared trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        CoachAccess.objects.create(owner=owner, grantee=shared_coach, can_edit=True)
+        self.client.force_login(shared_coach)
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
+        day = date.today()
+        response = self.client.post(
+            f"/slot-modal/{day.year}/{day.month}/{day.day}/1/?plan={plan.id}",
+            {
+                "core_text": "1000m z2",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(plan=plan, athlete__isnull=True, date=day, slot_index=1)
+        self.assertEqual(slot.core_text(), "1000m z2")
+
 
 class SegmentRepTimeDisplayTests(TestCase):
     def test_compound_reps_show_split_times_for_current_and_goal_pr(self):
