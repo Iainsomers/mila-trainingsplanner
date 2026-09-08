@@ -71,6 +71,43 @@ def _is_flex_source(request) -> bool:
     return (request.GET.get("source") == "flex") or (request.POST.get("source") == "flex")
 
 
+def _flex_edit_plan_for_request(request, selected_plan, athlete):
+    if not _is_flex_source(request):
+        return selected_plan
+    if _is_flex_planner_plan(selected_plan):
+        return selected_plan
+
+    owner = None
+    if request.user.is_staff or request.user.is_superuser:
+        owner = _active_coach_user(request)
+    if owner is None and athlete is not None:
+        owner = getattr(athlete, "owner", None)
+    if owner is None:
+        owner = request.user
+
+    plan = (
+        TrainingPlan.objects
+        .filter(owner=owner, name__startswith="Flex Planner")
+        .order_by("id")
+        .first()
+    )
+    if plan:
+        return plan
+
+    name = f"Flex Planner {getattr(owner, 'id', 'legacy')}"
+    kwargs = {"owner": owner, "name": name}
+    fields = {field.name for field in TrainingPlan._meta.fields}
+    if "plan_kind" in fields:
+        kwargs["plan_kind"] = TrainingPlan.PLAN_KIND_LEGACY
+    if "start_date" in fields:
+        kwargs["start_date"] = date_cls.today()
+    if "end_date" in fields:
+        kwargs["end_date"] = date_cls.today()
+    if "description" in fields:
+        kwargs["description"] = "Automatically created fallback plan for Flex Planner cells."
+    return TrainingPlan.objects.create(**kwargs)
+
+
 def _get_flex_athlete_from_request(request, selected_plan):
     if not (_is_flex_source(request) and _is_flex_planner_plan(selected_plan)):
         return None
@@ -1068,6 +1105,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             if athlete.id in plan.targeted_athlete_ids():
                 selected_plan = plan
                 break
+
+    selected_plan = _flex_edit_plan_for_request(request, selected_plan, athlete)
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
 
     forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:

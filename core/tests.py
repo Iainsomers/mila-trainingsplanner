@@ -1125,6 +1125,51 @@ class SlotModalSaveTests(TestCase):
         slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date=day, slot_index=1)
         self.assertEqual(slot.core_text(), "1000m z2")
 
+    def test_flex_modal_uses_flex_plan_when_source_plan_is_trainer_planning(self):
+        owner = get_user_model().objects.create_user(
+            username="flex-source-owner", password="secret", is_staff=True
+        )
+        shared_coach = get_user_model().objects.create_user(
+            username="flex-source-edit-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="Source Plan Athlete",
+            birth_year=2000,
+            gender="X",
+            is_private=False,
+        )
+        source_plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="Source trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        flex_plan = TrainingPlan.objects.create(owner=owner, name="Flex Planner source owner")
+        CoachAccess.objects.create(owner=owner, grantee=shared_coach, can_edit=True)
+        self.client.force_login(shared_coach)
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
+        day = date.today()
+        open_response = self.client.get(
+            f"/slot-modal/{day.year}/{day.month}/{day.day}/1/?plan={source_plan.id}&athlete={athlete.id}&source=flex"
+        )
+        self.assertEqual(open_response.status_code, 200)
+        self.assertContains(open_response, f'value="{flex_plan.id}"')
+
+        save_response = self.client.post(
+            f"/slot-modal/{day.year}/{day.month}/{day.day}/1/?plan={source_plan.id}&athlete={athlete.id}&source=flex",
+            {
+                "plan": str(source_plan.id),
+                "athlete": str(athlete.id),
+                "source": "flex",
+                "core_text": "1000m z3",
+            },
+        )
+        self.assertEqual(save_response.status_code, 200)
+        self.assertFalse(TrainingSlot.objects.filter(plan=source_plan, athlete=athlete).exists())
+        slot = TrainingSlot.objects.get(plan=flex_plan, athlete=athlete, date=day, slot_index=1)
+        self.assertEqual(slot.core_text(), "1000m z3")
+
 
 class SegmentRepTimeDisplayTests(TestCase):
     def test_compound_reps_show_split_times_for_current_and_goal_pr(self):
