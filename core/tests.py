@@ -87,6 +87,8 @@ U16 Vrouwen
         match.refresh_from_db()
         self.assertEqual(match.name, "Test match")
         self.assertEqual(len(match.rows), 2)
+        self.assertEqual(match.rows[0]["event_name"], "80 meter horden")
+        self.assertEqual(match.rows[0]["event_detail"], "")
         self.assertNotContains(response, "id=\"scheduleText\"")
         self.assertNotContains(response, "id=\"participantsText\"")
         rows = response.context["rows"]
@@ -136,6 +138,8 @@ U16 Vrouwen
         self.assertContains(detail, "checked")
         self.assertContains(detail, "matchNotesForm")
         self.assertContains(detail, "Saving...")
+        self.assertNotContains(detail, "Before race")
+        self.assertNotContains(detail, "PR, SB, DNS, note")
         self.assertNotContains(detail, "Save notes")
         self.assertNotContains(detail, "<th>Category</th>")
         self.assertNotContains(detail, "id=\"scheduleText\"")
@@ -237,6 +241,8 @@ U14 Vrouwen
         self.assertEqual(len(kogel_rows), 1)
         self.assertEqual(kogel_rows[0]["time"], "20:15")
         self.assertEqual(kogel_rows[0]["event"], "Kogelstoten Groep 2")
+        self.assertEqual(kogel_rows[0]["event_name"], "Kogelstoten")
+        self.assertEqual(kogel_rows[0]["event_detail"], "Groep 2")
 
 
 class PlanningOverviewTests(TestCase):

@@ -18,8 +18,27 @@
     white-space: nowrap;
   }
 
+  .match-results-table tbody tr:nth-child(odd) td {
+    background: #fff;
+  }
+
+  .match-results-table tbody tr:nth-child(even) td {
+    background: #f1f3f5;
+  }
+
+  .match-results-table th,
+  .match-results-table td {
+    height: 38px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    white-space: nowrap;
+  }
+
   .match-note-input {
     min-width: 190px;
+    height: 30px;
+    padding-top: 2px;
+    padding-bottom: 2px;
   }
 
   .match-pb-row td {
@@ -27,13 +46,28 @@
   }
 
   .match-pb-row .form-control {
-    background: #dff6e7;
-    border-color: #8ed3a5;
+    background: #dff6e7 !important;
+    border-color: #8ed3a5 !important;
   }
 
   .match-pb-check {
     width: 1.3rem;
     height: 1.3rem;
+  }
+
+  .match-event-btn {
+    border: 0;
+    background: transparent;
+    color: #0d6efd;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .match-event-btn:hover,
+  .match-event-btn:focus {
+    text-decoration: underline;
   }
 
   @media (max-width: 768px) {
@@ -121,9 +155,15 @@
                 <tr class="{% if row.pb %}match-pb-row{% endif %}">
                   <td class="fw-semibold">{{ row.time }}</td>
                   <td>{{ row.athlete }}</td>
-                  <td>{{ row.event }}</td>
-                  <td><input type="text" name="pre_note_{{ forloop.counter0 }}" value="{{ row.pre_note }}" class="form-control form-control-sm match-note-input" placeholder="Before race" {% if not can_edit %}disabled{% endif %}></td>
-                  <td><input type="text" name="note_{{ forloop.counter0 }}" value="{{ row.note }}" class="form-control form-control-sm match-note-input" placeholder="PR, SB, DNS, note" {% if not can_edit %}disabled{% endif %}></td>
+                  <td>
+                    {% if row.event_detail %}
+                      <button type="button" class="match-event-btn" data-bs-toggle="modal" data-bs-target="#matchEventDetailModal" data-event-name="{{ row.event_name }}" data-event-detail="{{ row.event_detail }}">{{ row.event_name }}</button>
+                    {% else %}
+                      {{ row.event_name }}
+                    {% endif %}
+                  </td>
+                  <td><input type="text" name="pre_note_{{ forloop.counter0 }}" value="{{ row.pre_note }}" class="form-control form-control-sm match-note-input" {% if not can_edit %}disabled{% endif %}></td>
+                  <td><input type="text" name="note_{{ forloop.counter0 }}" value="{{ row.note }}" class="form-control form-control-sm match-note-input" {% if not can_edit %}disabled{% endif %}></td>
                   <td class="text-center"><input type="checkbox" name="pb_{{ forloop.counter0 }}" value="1" class="form-check-input match-pb-check" {% if row.pb %}checked{% endif %} {% if not can_edit %}disabled{% endif %}></td>
                 </tr>
               {% endfor %}
@@ -138,6 +178,18 @@
       <div class="alert alert-warning">No matching starts found. Check whether both Atletiek.nu blocks were pasted completely.</div>
     {% endif %}
   {% endif %}
+
+  <div class="modal fade" id="matchEventDetailModal" tabindex="-1" aria-labelledby="matchEventDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title h6" id="matchEventDetailTitle"></h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="matchEventDetailBody"></div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -197,5 +249,14 @@
     window.clearTimeout(notesSaveTimer);
     saveMatchNotes({ keepalive: true });
   });
+
+  const eventDetailModal = document.getElementById("matchEventDetailModal");
+  if (eventDetailModal) {
+    eventDetailModal.addEventListener("show.bs.modal", (event) => {
+      const button = event.relatedTarget;
+      document.getElementById("matchEventDetailTitle").textContent = button?.dataset.eventName || "";
+      document.getElementById("matchEventDetailBody").textContent = button?.dataset.eventDetail || "";
+    });
+  }
 </script>
 {% endblock %}

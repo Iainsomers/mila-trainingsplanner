@@ -598,11 +598,26 @@ def _normalize_match_rows(rows):
         updated["athlete"] = str(updated.get("athlete", ""))
         updated["category"] = str(updated.get("category", ""))
         updated["event"] = str(updated.get("event", ""))
+        updated["event_name"] = str(updated.get("event_name", "")) or updated["event"]
+        updated["event_detail"] = str(updated.get("event_detail", ""))
+        if not updated["event_detail"]:
+            event_name, event_detail = _split_match_event_label(updated["event"])
+            updated["event_name"] = event_name
+            updated["event_detail"] = event_detail
         updated["pre_note"] = str(updated.get("pre_note", ""))
         updated["note"] = str(updated.get("note", ""))
         updated["pb"] = bool(updated.get("pb", False))
         normalized.append(updated)
     return normalized
+
+
+def _split_match_event_label(label):
+    text = str(label or "").strip()
+    for marker in (" Groep ", " groep "):
+        if marker in text:
+            before, after = text.split(marker, 1)
+            return before.strip(), f"Groep {after.strip()}"
+    return text, ""
 
 
 def _parse_match_participants(participants_text, schedule_entries, club="AV Atverni"):
@@ -658,6 +673,8 @@ def _parse_match_participants(participants_text, schedule_entries, club="AV Atve
                 "athlete": athlete_name,
                 "category": category,
                 "event": entry["label"],
+                "event_name": entry["event"],
+                "event_detail": entry["group"],
                 "pre_note": "",
                 "note": "",
                 "pb": False,
