@@ -1,6 +1,34 @@
 from django.http import HttpResponse
+from django.shortcuts import redirect
 
+from core.access import is_coach_tools_only_user
 from core.views.common import _active_coach_can_edit, _active_coach_user
+
+
+class CoachToolsOnlyMiddleware:
+    """
+    Keeps the shared coach-tools login away from the main Mila planner.
+    """
+
+    ALLOWED_PATHS = {"/", "/login/", "/logout/"}
+    ALLOWED_PREFIXES = (
+        "/coach-tools/",
+        "/timer/",
+        "/static/",
+        "/favicon.ico",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, "user", None)
+        if user and is_coach_tools_only_user(user):
+            path = request.path_info or request.path or ""
+            if path not in self.ALLOWED_PATHS and not path.startswith(self.ALLOWED_PREFIXES):
+                return redirect("coach_tools")
+
+        return self.get_response(request)
 
 
 class CoachViewEditAccessMiddleware:

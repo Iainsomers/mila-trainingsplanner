@@ -46,6 +46,31 @@ class TrackTimerTests(TestCase):
         self.assertContains(timer, "Track Timer")
         self.assertContains(timer, "1600m")
 
+    def test_coach_tools_only_user_is_limited_to_coach_tools(self):
+        user = get_user_model().objects.create_user(username="coachtools", password="secret")
+        self.client.force_login(user)
+
+        dashboard = self.client.get("/")
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "Coach tools dashboard")
+        self.assertContains(dashboard, "Go to Coach tools")
+        self.assertNotContains(dashboard, "Go to planning")
+        self.assertNotContains(dashboard, "Open Polar")
+        self.assertNotContains(dashboard, "Go to admin")
+
+        planning = self.client.get("/planning/")
+        self.assertEqual(planning.status_code, 302)
+        self.assertEqual(planning["Location"], "/coach-tools/")
+
+        tools = self.client.get("/coach-tools/")
+        self.assertEqual(tools.status_code, 200)
+        self.assertContains(tools, "Timer")
+        self.assertContains(tools, "Match overview")
+
+        create_response = self.client.post("/coach-tools/match-overview/new/")
+        self.assertEqual(create_response.status_code, 302)
+        self.assertTrue(MatchOverview.objects.filter(owner=user).exists())
+
 
 class MatchOverviewTests(TestCase):
     def test_match_overview_page_processes_pasted_atletiek_data(self):

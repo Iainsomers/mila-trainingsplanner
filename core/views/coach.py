@@ -23,6 +23,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 
+from core.access import is_coach_tools_only_user
 from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, MatchOverview, MatchAthleteRecord, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
@@ -445,8 +446,9 @@ def dashboard_view(request):
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
     is_trainer_user = bool(request.user.is_staff or request.user.is_superuser)
+    coach_tools_only = is_coach_tools_only_user(request.user)
 
-    if request.method == "POST" and is_trainer_user:
+    if request.method == "POST" and is_trainer_user and not coach_tools_only:
         _set_active_coach_user(request, request.POST.get("coach_view_owner"))
         return redirect("dashboard")
 
@@ -459,6 +461,7 @@ def dashboard_view(request):
         "coach_view_options": _coach_view_options(request.user),
         "active_coach": active_coach,
         "active_coach_access_label": _active_coach_access_label(request) if is_trainer_user else "own",
+        "coach_tools_only": coach_tools_only,
     })
 
 
