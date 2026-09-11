@@ -693,12 +693,29 @@ def match_overview_detail_view(request, match_id):
         if action == "process":
             match.schedule_text = request.POST.get("schedule_text", "")
             match.participants_text = request.POST.get("participants_text", "")
+            old_notes = {
+                (str(row.get("time", "")), str(row.get("athlete", "")), str(row.get("event", ""))): str(row.get("note", ""))
+                for row in (match.rows or [])
+                if isinstance(row, dict)
+            }
             schedule_entries = _parse_match_schedule(match.schedule_text)
-            match.rows = _parse_match_participants(match.participants_text, schedule_entries)
+            rows = _parse_match_participants(match.participants_text, schedule_entries)
+            for row in rows:
+                row["note"] = old_notes.get((row["time"], row["athlete"], row["event"]), row.get("note", ""))
+            match.rows = rows
             schedule_count = len(schedule_entries)
+        elif action == "save_notes":
+            rows = []
+            for idx, row in enumerate(match.rows or []):
+                if not isinstance(row, dict):
+                    continue
+                updated_row = dict(row)
+                updated_row["note"] = (request.POST.get(f"note_{idx}") or "").strip()
+                rows.append(updated_row)
+            match.rows = rows
 
         match.save()
-        if action == "save_name":
+        if action in {"save_name", "save_notes"}:
             return redirect("match_overview_detail", match_id=match.id)
     elif request.method == "POST":
         return redirect("match_overview_detail", match_id=match.id)
@@ -706,13 +723,17 @@ def match_overview_detail_view(request, match_id):
     if schedule_count is None and (match.schedule_text or match.participants_text):
         schedule_count = len(_parse_match_schedule(match.schedule_text))
 
+    rows = match.rows or []
+    show_paste_form = not rows and not match.schedule_text and not match.participants_text
+
     return render(request, "core/match_overview.html", {
         "match": match,
         "schedule_text": match.schedule_text,
         "participants_text": match.participants_text,
-        "rows": match.rows or [],
+        "rows": rows,
         "schedule_count": schedule_count,
         "can_edit": can_edit,
+        "show_paste_form": show_paste_form,
     })
 
 

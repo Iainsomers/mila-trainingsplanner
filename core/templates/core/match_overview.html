@@ -59,10 +59,13 @@
         <div class="pt-4 d-flex gap-2">
           {% if can_edit %}
             <button type="submit" name="action" value="save_name" class="btn btn-outline-primary">Save name</button>
-            <button type="submit" name="action" value="process" class="btn btn-primary">Process</button>
+            {% if show_paste_form %}
+              <button type="submit" name="action" value="process" class="btn btn-primary">Process</button>
+            {% endif %}
           {% endif %}
         </div>
       </div>
+      {% if show_paste_form %}
       <div class="row g-3">
         <div class="col-lg-6">
           <label for="scheduleText" class="form-label">Time schedule</label>
@@ -73,6 +76,7 @@
           <textarea id="participantsText" name="participants_text" class="form-control match-paste" spellcheck="false" {% if not can_edit %}disabled{% endif %}>{{ participants_text }}</textarea>
         </div>
       </div>
+      {% endif %}
     </div>
   </form>
 
@@ -83,30 +87,38 @@
     </div>
 
     {% if rows %}
-      <div class="match-results-wrap">
-        <table class="table table-sm table-striped align-middle match-results-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Athlete</th>
-              <th>Category</th>
-              <th>Event</th>
-              <th>Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in rows %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="match-results-wrap">
+          <table class="table table-sm table-striped align-middle match-results-table">
+            <thead>
               <tr>
-                <td class="fw-semibold">{{ row.time }}</td>
-                <td>{{ row.athlete }}</td>
-                <td>{{ row.category }}</td>
-                <td>{{ row.event }}</td>
-                <td><input type="text" class="form-control form-control-sm match-note-input" placeholder="PR, SB, DNS, note"></td>
+                <th>Time</th>
+                <th>Athlete</th>
+                <th>Category</th>
+                <th>Event</th>
+                <th>Note</th>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr>
+                  <td class="fw-semibold">{{ row.time }}</td>
+                  <td>{{ row.athlete }}</td>
+                  <td>{{ row.category }}</td>
+                  <td>{{ row.event }}</td>
+                  <td><input type="text" name="note_{{ forloop.counter0 }}" value="{{ row.note }}" class="form-control form-control-sm match-note-input" placeholder="PR, SB, DNS, note" {% if not can_edit %}disabled{% endif %}></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if can_edit %}
+          <div class="d-flex justify-content-end">
+            <button type="submit" name="action" value="save_notes" class="btn btn-primary">Save notes</button>
+          </div>
+        {% endif %}
+      </form>
     {% else %}
       <div class="alert alert-warning">No matching starts found. Check whether both Atletiek.nu blocks were pasted completely.</div>
     {% endif %}

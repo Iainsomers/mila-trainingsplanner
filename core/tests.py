@@ -87,12 +87,48 @@ U16 Vrouwen
         match.refresh_from_db()
         self.assertEqual(match.name, "Test match")
         self.assertEqual(len(match.rows), 2)
+        self.assertNotContains(response, "id=\"scheduleText\"")
+        self.assertNotContains(response, "id=\"participantsText\"")
         rows = response.context["rows"]
         self.assertEqual(len(rows), 2)
         self.assertEqual([row["athlete"] for row in rows], ["Aurora Somers", "Aurora Somers"])
         self.assertEqual([row["event"] for row in rows], ["80 meter horden", "80 meter"])
         self.assertContains(response, "80 meter horden")
         self.assertContains(response, "80 meter")
+
+    def test_match_overview_notes_are_saved(self):
+        user = get_user_model().objects.create_user(
+            username="match-notes-coach",
+            password="secret",
+            is_staff=True,
+        )
+        match = MatchOverview.objects.create(
+            owner=user,
+            name="Notes match",
+            schedule_text="19:30\t\t80 meter horden\t 4 series",
+            participants_text="26\tAurora Somers\tAV Atverni\t80mH\n80 meter horden\nU16 Vrouwen",
+            rows=[{
+                "time": "19:30",
+                "athlete": "Aurora Somers",
+                "category": "U16 Vrouwen",
+                "event": "80 meter horden",
+                "note": "",
+            }],
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
+            "action": "save_notes",
+            "note_0": "PR candidate",
+        })
+
+        self.assertEqual(response.status_code, 302)
+        match.refresh_from_db()
+        self.assertEqual(match.rows[0]["note"], "PR candidate")
+
+        detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+        self.assertContains(detail, "PR candidate")
+        self.assertNotContains(detail, "id=\"scheduleText\"")
 
     def test_match_parser_keeps_multiple_events_as_separate_rows(self):
         schedule = _parse_match_schedule("""
