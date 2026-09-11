@@ -607,19 +607,41 @@ def _match_effective_group(group):
     return lines[-1] if lines else ""
 
 
+def _match_participant_effective_group(lines):
+    group_lines = []
+    for line in lines:
+        line_key = _match_key(line)
+        if "groep" not in line_key:
+            continue
+        if any(event_word in line_key for event_word in (
+            "meter",
+            "horden",
+            "verspringen",
+            "hoogspringen",
+            "kogelstoten",
+            "kogelslingeren",
+            "speerwerpen",
+            "vortexwerpen",
+        )):
+            continue
+        group_lines.append(line)
+    return group_lines[-1] if group_lines else ""
+
+
 def _match_schedule_entry_in_participant(chunk, entry):
     if not entry.get("group"):
         return _event_phrase_is_present(chunk, entry["event"])
 
     participant_lines = [line.strip() for line in _clean_match_text(chunk).splitlines() if line.strip()]
     participant_is_multievent = "meerkamp" in _match_words(chunk)
+    participant_effective_group = _match_participant_effective_group(participant_lines) if participant_is_multievent else ""
     for group_line in _match_group_lines(entry["group"]):
         for line in participant_lines:
             event_present = _event_phrase_is_present(line, entry["event"])
             group_present = _group_phrase_is_present(line, group_line)
             if event_present and group_present:
                 return True
-            if participant_is_multievent and _match_key(line) == _match_key(group_line):
+            if participant_is_multievent and participant_effective_group and _match_key(participant_effective_group) == _match_key(group_line):
                 return True
     return False
 
