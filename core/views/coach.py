@@ -23,7 +23,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 
-from core.access import is_coach_tools_only_user
+from core.access import coach_tools_data_owner, is_coach_tools_only_user
 from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, MatchOverview, MatchAthleteRecord, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
@@ -979,6 +979,7 @@ def match_overview_view(request):
         return redirect("dashboard")
 
     active_coach = _active_coach_user(request)
+    active_coach = coach_tools_data_owner(active_coach)
     matches = MatchOverview.objects.filter(owner=active_coach).order_by("-updated_at", "-id")
 
     return render(request, "core/match_overview_list.html", {
@@ -997,6 +998,7 @@ def match_overview_create_view(request):
         return redirect("match_overview")
 
     active_coach = _active_coach_user(request)
+    active_coach = coach_tools_data_owner(active_coach)
     next_number = MatchOverview.objects.filter(owner=active_coach).count() + 1
     match = MatchOverview.objects.create(
         owner=active_coach,
@@ -1015,6 +1017,7 @@ def match_overview_delete_view(request, match_id):
         return redirect("match_overview")
 
     active_coach = _active_coach_user(request)
+    active_coach = coach_tools_data_owner(active_coach)
     MatchOverview.objects.filter(owner=active_coach, id=match_id).delete()
     return redirect("match_overview")
 
@@ -1027,6 +1030,7 @@ def match_overview_detail_view(request, match_id):
         return redirect("dashboard")
 
     active_coach = _active_coach_user(request)
+    active_coach = coach_tools_data_owner(active_coach)
     match = get_object_or_404(MatchOverview.objects.filter(owner=active_coach), id=match_id)
     can_edit = _active_coach_access_label(request) != "view"
     schedule_count = None

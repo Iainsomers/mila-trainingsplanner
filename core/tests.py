@@ -71,6 +71,23 @@ class TrackTimerTests(TestCase):
         self.assertEqual(create_response.status_code, 302)
         self.assertTrue(MatchOverview.objects.filter(owner=user).exists())
 
+    def test_coach_tools_only_user_uses_iain_match_data(self):
+        owner = get_user_model().objects.create_user(username="Iain_somers", password="secret", is_staff=True)
+        user = get_user_model().objects.create_user(username="coachtools", password="secret")
+        match = MatchOverview.objects.create(owner=owner, name="Shared match")
+        self.client.force_login(user)
+
+        list_response = self.client.get("/coach-tools/match-overview/")
+        self.assertContains(list_response, "Shared match")
+
+        create_response = self.client.post("/coach-tools/match-overview/new/")
+        self.assertEqual(create_response.status_code, 302)
+        self.assertEqual(MatchOverview.objects.filter(owner=owner).count(), 2)
+        self.assertFalse(MatchOverview.objects.filter(owner=user).exists())
+
+        detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+        self.assertEqual(detail.status_code, 200)
+
 
 class MatchOverviewTests(TestCase):
     def test_match_overview_page_processes_pasted_atletiek_data(self):
