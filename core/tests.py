@@ -134,8 +134,31 @@ U16 Vrouwen
         self.assertContains(detail, "Lane 4")
         self.assertContains(detail, "PR candidate")
         self.assertContains(detail, "checked")
+        self.assertContains(detail, "matchNotesForm")
+        self.assertContains(detail, "Saving...")
+        self.assertNotContains(detail, "Save notes")
         self.assertNotContains(detail, "<th>Category</th>")
         self.assertNotContains(detail, "id=\"scheduleText\"")
+
+    def test_match_overview_can_be_deleted_from_list(self):
+        user = get_user_model().objects.create_user(
+            username="match-delete-coach",
+            password="secret",
+            is_staff=True,
+        )
+        match = MatchOverview.objects.create(owner=user, name="Delete me")
+        keep_match = MatchOverview.objects.create(owner=user, name="Keep me")
+        self.client.force_login(user)
+
+        list_response = self.client.get("/coach-tools/match-overview/")
+        self.assertContains(list_response, "Delete me")
+        self.assertContains(list_response, "Del")
+
+        response = self.client.post(f"/coach-tools/match-overview/{match.id}/delete/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(MatchOverview.objects.filter(id=match.id).exists())
+        self.assertTrue(MatchOverview.objects.filter(id=keep_match.id).exists())
 
     def test_match_parser_keeps_multiple_events_as_separate_rows(self):
         schedule = _parse_match_schedule("""

@@ -702,6 +702,20 @@ def match_overview_create_view(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def match_overview_delete_view(request, match_id):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("dashboard")
+    if _active_coach_access_label(request) == "view":
+        return redirect("match_overview")
+
+    active_coach = _active_coach_user(request)
+    MatchOverview.objects.filter(owner=active_coach, id=match_id).delete()
+    return redirect("match_overview")
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def match_overview_detail_view(request, match_id):
     athlete = _athlete_for_user(request.user)

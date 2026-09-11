@@ -26,6 +26,11 @@
     background: #dff6e7 !important;
   }
 
+  .match-pb-row .form-control {
+    background: #dff6e7;
+    border-color: #8ed3a5;
+  }
+
   .match-pb-check {
     width: 1.3rem;
     height: 1.3rem;
@@ -96,8 +101,9 @@
     </div>
 
     {% if rows %}
-      <form method="post">
+      <form method="post" id="matchNotesForm">
         {% csrf_token %}
+        <input type="hidden" name="action" value="save_notes">
         <div class="match-results-wrap">
           <table class="table table-sm table-striped align-middle match-results-table">
             <thead>
@@ -125,9 +131,7 @@
           </table>
         </div>
         {% if can_edit %}
-          <div class="d-flex justify-content-end">
-            <button type="submit" name="action" value="save_notes" class="btn btn-primary">Save notes</button>
-          </div>
+          <div id="matchNotesStatus" class="text-end text-muted small" aria-live="polite"></div>
         {% endif %}
       </form>
     {% else %}
@@ -139,11 +143,59 @@
 
 {% block extra_js %}
 <script>
+  const notesForm = document.getElementById("matchNotesForm");
+  const notesStatus = document.getElementById("matchNotesStatus");
+  let notesSaveTimer = null;
+  let notesSaveController = null;
+
+  function setNotesStatus(text) {
+    if (notesStatus) notesStatus.textContent = text;
+  }
+
+  function saveMatchNotes(options = {}) {
+    if (!notesForm) return;
+    const formData = new FormData(notesForm);
+    if (notesSaveController) notesSaveController.abort();
+    notesSaveController = new AbortController();
+    setNotesStatus("Saving...");
+    fetch(window.location.href, {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+      keepalive: Boolean(options.keepalive),
+      signal: options.keepalive ? undefined : notesSaveController.signal,
+    }).then((response) => {
+      if (!response.ok) throw new Error("save failed");
+      setNotesStatus("Saved");
+    }).catch((error) => {
+      if (error.name === "AbortError") return;
+      setNotesStatus("Save failed");
+    });
+  }
+
+  function queueMatchNotesSave() {
+    if (!notesForm) return;
+    window.clearTimeout(notesSaveTimer);
+    notesSaveTimer = window.setTimeout(() => saveMatchNotes(), 450);
+  }
+
   document.addEventListener("change", (event) => {
     const checkbox = event.target.closest(".match-pb-check");
-    if (!checkbox) return;
-    const row = checkbox.closest("tr");
-    if (row) row.classList.toggle("match-pb-row", checkbox.checked);
+    if (checkbox) {
+      const row = checkbox.closest("tr");
+      if (row) row.classList.toggle("match-pb-row", checkbox.checked);
+      queueMatchNotesSave();
+    }
+  });
+
+  document.addEventListener("input", (event) => {
+    if (event.target.closest("#matchNotesForm")) queueMatchNotesSave();
+  });
+
+  window.addEventListener("pagehide", () => {
+    if (!notesForm) return;
+    window.clearTimeout(notesSaveTimer);
+    saveMatchNotes({ keepalive: true });
   });
 </script>
 {% endblock %}
