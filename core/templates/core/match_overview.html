@@ -41,6 +41,24 @@
     padding-bottom: 2px;
   }
 
+  .match-result-input {
+    min-width: 120px;
+    height: 30px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .match-pr-cell {
+    min-width: 86px;
+    line-height: 1.05;
+  }
+
+  .match-pr-date {
+    display: block;
+    color: #6c757d;
+    font-size: 0.72rem;
+  }
+
   .match-pb-row td {
     background: #dff6e7 !important;
   }
@@ -171,8 +189,9 @@
                 <th>Time</th>
                 <th>Athlete</th>
                 <th>Event</th>
-                <th>Pre-note</th>
-                <th>Note</th>
+                <th>PR</th>
+                <th>Result</th>
+                <th>Trainer notes</th>
                 <th>PB</th>
               </tr>
             </thead>
@@ -190,7 +209,15 @@
                       {{ row.event_name }}
                     {% endif %}
                   </td>
-                  <td><input type="text" name="pre_note_{{ forloop.counter0 }}" value="{{ row.pre_note }}" class="form-control form-control-sm match-note-input" {% if not can_edit %}disabled{% endif %}></td>
+                  <td class="match-pr-cell">
+                    {% if row.pr_display.value %}
+                      <span>{{ row.pr_display.value }}</span>
+                      {% if row.pr_display.date %}
+                        <span class="match-pr-date">{{ row.pr_display.date }}</span>
+                      {% endif %}
+                    {% endif %}
+                  </td>
+                  <td><input type="text" name="result_{{ forloop.counter0 }}" value="{{ row.result }}" class="form-control form-control-sm match-result-input" {% if not can_edit %}disabled{% endif %}></td>
                   <td><input type="text" name="note_{{ forloop.counter0 }}" value="{{ row.note }}" class="form-control form-control-sm match-note-input" {% if not can_edit %}disabled{% endif %}></td>
                   <td class="text-center"><input type="checkbox" name="pb_{{ forloop.counter0 }}" value="1" class="form-check-input match-pb-check" {% if row.pb %}checked{% endif %} {% if not can_edit %}disabled{% endif %}></td>
                 </tr>

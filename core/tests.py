@@ -122,19 +122,19 @@ U16 Vrouwen
 
         response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
             "action": "save_notes",
-            "pre_note_0": "Lane 4",
+            "result_0": "13.42",
             "note_0": "PR candidate",
             "pb_0": "1",
         })
 
         self.assertEqual(response.status_code, 302)
         match.refresh_from_db()
-        self.assertEqual(match.rows[0]["pre_note"], "Lane 4")
+        self.assertEqual(match.rows[0]["result"], "13.42")
         self.assertEqual(match.rows[0]["note"], "PR candidate")
         self.assertEqual(match.rows[0]["pb"], True)
 
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
-        self.assertContains(detail, "Lane 4")
+        self.assertContains(detail, "13.42")
         self.assertContains(detail, "PR candidate")
         self.assertContains(detail, "checked")
         self.assertContains(detail, "matchNotesForm")
@@ -143,6 +143,10 @@ U16 Vrouwen
         self.assertNotContains(detail, "PR, SB, DNS, note")
         self.assertNotContains(detail, "Save notes")
         self.assertNotContains(detail, "<th>Category</th>")
+        self.assertNotContains(detail, "<th>Pre-note</th>")
+        self.assertContains(detail, "<th>PR</th>")
+        self.assertContains(detail, "<th>Result</th>")
+        self.assertContains(detail, "<th>Trainer notes</th>")
         self.assertNotContains(detail, "id=\"scheduleText\"")
 
     def test_match_overview_can_be_deleted_from_list(self):
@@ -355,14 +359,16 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
         self.assertEqual(response.status_code, 302)
         record = MatchAthleteRecord.objects.get(owner=user, athlete_name="Elodie Costerus")
         self.assertEqual(record.records["verspringen"]["label"], "2,97 (04/10/2025)")
+        self.assertEqual(record.records["verspringen"]["display_date"], "10/2025")
         match.refresh_from_db()
-        self.assertEqual(match.rows[0]["pre_note"], "PR 2,97 (04/10/2025)")
 
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
-        self.assertContains(detail, "PR 2,97 (04/10/2025)")
+        self.assertContains(detail, "2,97")
+        self.assertContains(detail, "10/2025")
+        self.assertNotContains(detail, "PR 2,97")
         self.assertContains(detail, "matchAthletePrModal")
 
-    def test_match_athlete_pr_notes_survive_blank_notes_autosave(self):
+    def test_match_athlete_pr_display_survives_notes_autosave(self):
         user = get_user_model().objects.create_user(
             username="match-pr-autosave-coach",
             password="secret",
@@ -408,16 +414,21 @@ Vortex	16,36	30/05/2026
 
         response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
             "action": "save_notes",
-            "pre_note_0": "",
+            "result_0": "2,91",
             "note_0": "",
-            "pre_note_1": "",
+            "result_1": "17,02",
             "note_1": "",
         })
 
         self.assertEqual(response.status_code, 302)
         match.refresh_from_db()
-        self.assertEqual(match.rows[0]["pre_note"], "PR 2,97 (04/10/2025)")
-        self.assertEqual(match.rows[1]["pre_note"], "PR 16,36 (30/05/2026)")
+        self.assertEqual(match.rows[0]["result"], "2,91")
+        self.assertEqual(match.rows[1]["result"], "17,02")
+        detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+        self.assertContains(detail, "2,97")
+        self.assertContains(detail, "10/2025")
+        self.assertContains(detail, "16,36")
+        self.assertContains(detail, "05/2026")
 
 
 class PlanningOverviewTests(TestCase):

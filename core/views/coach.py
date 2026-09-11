@@ -669,6 +669,7 @@ def _normalize_match_rows(rows):
             updated["event_name"] = event_name
             updated["event_detail"] = event_detail
         updated["pre_note"] = str(updated.get("pre_note", ""))
+        updated["result"] = str(updated.get("result", ""))
         updated["note"] = str(updated.get("note", ""))
         updated["pb"] = bool(updated.get("pb", False))
         normalized.append(updated)
@@ -801,7 +802,11 @@ def _parse_match_athlete_records(raw_text):
 
         if value:
             label = value.replace(".", ",")
+            display_date = ""
             if date_value:
+                date_parts = date_value.split("/")
+                if len(date_parts) == 3:
+                    display_date = f"{date_parts[1]}/{date_parts[2]}"
                 label = f"{label} ({date_value})"
             key = _match_record_event_key(event)
             display_event = MATCH_RECORD_EVENT_ALIASES.get(_match_key(event), event)
@@ -810,18 +815,37 @@ def _parse_match_athlete_records(raw_text):
                 "value": value,
                 "label": label,
                 "date": date_value,
+                "display_date": display_date,
                 "context": " ".join(context[:2]),
             }
 
     return records
 
 
-def _match_pr_note_for_row(row, records_by_athlete):
+def _match_pr_record_for_row(row, records_by_athlete):
     athlete_records = records_by_athlete.get(_match_key(row.get("athlete"))) or {}
-    record = athlete_records.get(_match_record_event_key(row.get("event_name") or row.get("event")))
+    return athlete_records.get(_match_record_event_key(row.get("event_name") or row.get("event"))) or {}
+
+
+def _match_pr_note_for_row(row, records_by_athlete):
+    record = _match_pr_record_for_row(row, records_by_athlete)
+    return str(record.get("label") or "").strip()
+
+
+def _match_pr_display_for_row(row, records_by_athlete):
+    record = _match_pr_record_for_row(row, records_by_athlete)
     if not record:
-        return ""
-    return f"PR {record.get('label', '').strip()}".strip()
+        return {}
+    value = str(record.get("value") or "").replace(".", ",")
+    display_date = str(record.get("display_date") or "")
+    if not display_date and record.get("date"):
+        date_parts = str(record["date"]).split("/")
+        if len(date_parts) == 3:
+            display_date = f"{date_parts[1]}/{date_parts[2]}"
+    return {
+        "value": value,
+        "date": display_date,
+    }
 
 
 def _apply_match_pr_notes(rows, records_by_athlete):
@@ -830,8 +854,7 @@ def _apply_match_pr_notes(rows, records_by_athlete):
         updated = dict(row)
         pr_note = _match_pr_note_for_row(updated, records_by_athlete)
         updated["pr_note"] = pr_note
-        if pr_note and not updated.get("pre_note"):
-            updated["pre_note"] = pr_note
+        updated["pr_display"] = _match_pr_display_for_row(updated, records_by_athlete)
         applied.append(updated)
     return applied
 
@@ -916,6 +939,7 @@ def _parse_match_participants(participants_text, schedule_entries, club="AV Atve
                 "event_name": entry["event"],
                 "event_detail": matched_group or entry["group"],
                 "pre_note": "",
+                "result": "",
                 "note": "",
                 "pb": False,
             })
@@ -1003,6 +1027,7 @@ def match_overview_detail_view(request, match_id):
             for row in rows:
                 old_row = old_notes.get((row["time"], row["athlete"], row["event"]), {})
                 row["pre_note"] = old_row.get("pre_note", row.get("pre_note", ""))
+                row["result"] = old_row.get("result", row.get("result", ""))
                 row["note"] = old_row.get("note", row.get("note", ""))
                 row["pb"] = bool(old_row.get("pb", row.get("pb", False)))
             rows = _apply_match_pr_notes(rows, records_by_athlete)
@@ -1016,9 +1041,8 @@ def match_overview_detail_view(request, match_id):
                 if not isinstance(row, dict):
                     continue
                 updated_row = dict(row)
-                updated_row["pre_note"] = (request.POST.get(f"pre_note_{idx}") or "").strip()
-                if not updated_row["pre_note"]:
-                    updated_row["pre_note"] = _match_pr_note_for_row(updated_row, records_by_athlete)
+                updated_row["pr_note"] = _match_pr_note_for_row(updated_row, records_by_athlete)
+                updated_row["result"] = (request.POST.get(f"result_{idx}") or "").strip()
                 updated_row["note"] = (request.POST.get(f"note_{idx}") or "").strip()
                 updated_row["pb"] = request.POST.get(f"pb_{idx}") == "1"
                 rows.append(updated_row)
