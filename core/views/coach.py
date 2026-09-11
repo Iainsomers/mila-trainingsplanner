@@ -588,6 +588,23 @@ def _match_schedule_entry_in_participant(chunk, entry):
     return False
 
 
+def _normalize_match_rows(rows):
+    normalized = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        updated = dict(row)
+        updated["time"] = str(updated.get("time", ""))
+        updated["athlete"] = str(updated.get("athlete", ""))
+        updated["category"] = str(updated.get("category", ""))
+        updated["event"] = str(updated.get("event", ""))
+        updated["pre_note"] = str(updated.get("pre_note", ""))
+        updated["note"] = str(updated.get("note", ""))
+        updated["pb"] = bool(updated.get("pb", False))
+        normalized.append(updated)
+    return normalized
+
+
 def _parse_match_participants(participants_text, schedule_entries, club="AV Atverni"):
     source_text = str(participants_text or "")
     source_text = re.sub(r"<br\s*/?>", "\n", source_text, flags=re.IGNORECASE)
@@ -641,7 +658,9 @@ def _parse_match_participants(participants_text, schedule_entries, club="AV Atve
                 "athlete": athlete_name,
                 "category": category,
                 "event": entry["label"],
+                "pre_note": "",
                 "note": "",
+                "pb": False,
             })
 
     rows.sort(key=lambda row: (row["time"], row["event"].lower(), row["athlete"].lower()))
@@ -704,23 +723,27 @@ def match_overview_detail_view(request, match_id):
             match.schedule_text = request.POST.get("schedule_text", "")
             match.participants_text = request.POST.get("participants_text", "")
             old_notes = {
-                (str(row.get("time", "")), str(row.get("athlete", "")), str(row.get("event", ""))): str(row.get("note", ""))
-                for row in (match.rows or [])
-                if isinstance(row, dict)
+                (row["time"], row["athlete"], row["event"]): row
+                for row in _normalize_match_rows(match.rows)
             }
             schedule_entries = _parse_match_schedule(match.schedule_text)
             rows = _parse_match_participants(match.participants_text, schedule_entries)
             for row in rows:
-                row["note"] = old_notes.get((row["time"], row["athlete"], row["event"]), row.get("note", ""))
+                old_row = old_notes.get((row["time"], row["athlete"], row["event"]), {})
+                row["pre_note"] = old_row.get("pre_note", row.get("pre_note", ""))
+                row["note"] = old_row.get("note", row.get("note", ""))
+                row["pb"] = bool(old_row.get("pb", row.get("pb", False)))
             match.rows = rows
             schedule_count = len(schedule_entries)
         elif action == "save_notes":
             rows = []
-            for idx, row in enumerate(match.rows or []):
+            for idx, row in enumerate(_normalize_match_rows(match.rows)):
                 if not isinstance(row, dict):
                     continue
                 updated_row = dict(row)
+                updated_row["pre_note"] = (request.POST.get(f"pre_note_{idx}") or "").strip()
                 updated_row["note"] = (request.POST.get(f"note_{idx}") or "").strip()
+                updated_row["pb"] = request.POST.get(f"pb_{idx}") == "1"
                 rows.append(updated_row)
             match.rows = rows
 
@@ -733,7 +756,7 @@ def match_overview_detail_view(request, match_id):
     if schedule_count is None and (match.schedule_text or match.participants_text):
         schedule_count = len(_parse_match_schedule(match.schedule_text))
 
-    rows = match.rows or []
+    rows = _normalize_match_rows(match.rows)
     show_paste_form = not rows and not match.schedule_text and not match.participants_text
 
     return render(request, "core/match_overview.html", {

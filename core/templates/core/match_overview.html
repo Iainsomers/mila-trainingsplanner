@@ -19,7 +19,16 @@
   }
 
   .match-note-input {
-    min-width: 220px;
+    min-width: 190px;
+  }
+
+  .match-pb-row td {
+    background: #dff6e7 !important;
+  }
+
+  .match-pb-check {
+    width: 1.3rem;
+    height: 1.3rem;
   }
 
   @media (max-width: 768px) {
@@ -95,19 +104,21 @@
               <tr>
                 <th>Time</th>
                 <th>Athlete</th>
-                <th>Category</th>
                 <th>Event</th>
+                <th>Pre-note</th>
                 <th>Note</th>
+                <th>PB</th>
               </tr>
             </thead>
             <tbody>
               {% for row in rows %}
-                <tr>
+                <tr class="{% if row.pb %}match-pb-row{% endif %}">
                   <td class="fw-semibold">{{ row.time }}</td>
                   <td>{{ row.athlete }}</td>
-                  <td>{{ row.category }}</td>
                   <td>{{ row.event }}</td>
+                  <td><input type="text" name="pre_note_{{ forloop.counter0 }}" value="{{ row.pre_note }}" class="form-control form-control-sm match-note-input" placeholder="Before race" {% if not can_edit %}disabled{% endif %}></td>
                   <td><input type="text" name="note_{{ forloop.counter0 }}" value="{{ row.note }}" class="form-control form-control-sm match-note-input" placeholder="PR, SB, DNS, note" {% if not can_edit %}disabled{% endif %}></td>
+                  <td class="text-center"><input type="checkbox" name="pb_{{ forloop.counter0 }}" value="1" class="form-check-input match-pb-check" {% if row.pb %}checked{% endif %} {% if not can_edit %}disabled{% endif %}></td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -124,4 +135,15 @@
     {% endif %}
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener("change", (event) => {
+    const checkbox = event.target.closest(".match-pb-check");
+    if (!checkbox) return;
+    const row = checkbox.closest("tr");
+    if (row) row.classList.toggle("match-pb-row", checkbox.checked);
+  });
+</script>
 {% endblock %}

@@ -119,15 +119,22 @@ U16 Vrouwen
 
         response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
             "action": "save_notes",
+            "pre_note_0": "Lane 4",
             "note_0": "PR candidate",
+            "pb_0": "1",
         })
 
         self.assertEqual(response.status_code, 302)
         match.refresh_from_db()
+        self.assertEqual(match.rows[0]["pre_note"], "Lane 4")
         self.assertEqual(match.rows[0]["note"], "PR candidate")
+        self.assertEqual(match.rows[0]["pb"], True)
 
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+        self.assertContains(detail, "Lane 4")
         self.assertContains(detail, "PR candidate")
+        self.assertContains(detail, "checked")
+        self.assertNotContains(detail, "<th>Category</th>")
         self.assertNotContains(detail, "id=\"scheduleText\"")
 
     def test_match_parser_keeps_multiple_events_as_separate_rows(self):
