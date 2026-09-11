@@ -97,6 +97,45 @@ U16 Vrouwen
         self.assertEqual([row["time"] for row in rows], ["19:30", "21:50"])
         self.assertEqual([row["athlete"] for row in rows], ["Aurora Somers", "Aurora Somers"])
 
+    def test_match_parser_accepts_tab_schedule_and_partial_bib_rows(self):
+        schedule = _parse_match_schedule("""
+18:45		110 meter horden	 3 series
+19:05		100 meter horden	 4 series
+19:00	Groep 1 aanvang 1,03m	Hoogspringen
+Hoog 1	 13 atleten
+21:30	Groep 3	Verspringen
+Ver 1	 16 atleten
+21:15		400 meter	 7 series
+""")
+        rows = _parse_match_participants("""
+Aimee Bonouvrie	AV Atverni	 100mH
+ Ver
+100 meter horden
+Verspringen groep 3
+U18 Vrouwen
+522	 Thomas Pronk	AV Atverni	 400m
+ Hoog
+400 meter
+Hoogspringen groep 2 aanvang 1,23m
+U18 Mannen
+""", schedule)
+
+        self.assertEqual([row["athlete"] for row in rows], ["Aimee Bonouvrie", "Thomas Pronk", "Aimee Bonouvrie"])
+        self.assertEqual([row["event"] for row in rows], ["100 meter horden", "400 meter", "Verspringen Groep 3"])
+
+    def test_match_parser_ignores_short_only_abbreviations(self):
+        schedule = _parse_match_schedule("""
+19:30		80 meter horden	 4 series
+21:50		80 meter	 3 series
+""")
+        rows = _parse_match_participants("""
+26	Nederland<br><span class='subtext'>Europe</span> Aurora Somers	AV Atverni	 80m
+ 80mH
+U16 Vrouwen
+""", schedule)
+
+        self.assertEqual(rows, [])
+
 
 class PlanningOverviewTests(TestCase):
     def test_coach_planning_overview_is_grouped(self):

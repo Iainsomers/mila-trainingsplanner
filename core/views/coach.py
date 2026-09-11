@@ -503,7 +503,11 @@ def _parse_match_schedule(schedule_text):
             continue
         start_time = time_match.group(1).zfill(5)
 
-        cells = [_clean_match_text(cell).strip() for cell in raw_line.strip().strip("|").split("|")]
+        if "|" in raw_line:
+            cells = [_clean_match_text(cell).strip() for cell in raw_line.strip().strip("|").split("|")]
+        else:
+            cells = [_clean_match_text(cell).strip() for cell in raw_line.rstrip().split("\t")]
+
         if len(cells) >= 3:
             group = cells[1] if cells[1] != start_time else ""
             event = cells[2].splitlines()[0].strip()
@@ -543,30 +547,10 @@ def _event_phrase_is_present(text, event):
     if not words:
         return False
     event_key = _match_key(event)
-    short_event_aliases = {
-        "60meter": "60m",
-        "80meter": "80m",
-        "100meter": "100m",
-        "110meter": "110m",
-        "60meterhorden": "60mh",
-        "80meterhorden": "80mh",
-        "100meterhorden": "100mh",
-        "110meterhorden": "110mh",
-    }
     if event_key in {"60meter", "80meter", "100meter", "110meter"}:
         for line in _clean_match_text(text).splitlines():
             line_key = _match_key(line)
-            line_tokens = {_match_key(token) for token in str(line).split()}
-            if line_key == event_key or line_key == short_event_aliases.get(event_key):
-                return True
-            if short_event_aliases.get(event_key) in line_tokens:
-                return True
-        return False
-    if event_key in short_event_aliases:
-        alias_key = _match_key(short_event_aliases[event_key])
-        for line in _clean_match_text(text).splitlines():
-            line_key = _match_key(line)
-            if line_key == event_key or line_key == alias_key:
+            if line_key == event_key:
                 return True
         return False
     pattern = r"\b" + r"\s+".join(re.escape(word) for word in words) + r"\b"
@@ -576,22 +560,30 @@ def _event_phrase_is_present(text, event):
 def _group_phrase_is_present(text, group):
     if not group:
         return True
-    words = _match_words(group)
-    if not words:
+    group_key = _match_key(group)
+    if not group_key:
         return True
-    pattern = r"\b" + r"\s+".join(re.escape(word) for word in words) + r"\b"
-    return bool(re.search(pattern, text, flags=re.IGNORECASE))
+    return group_key in _match_key(text)
 
 
 def _parse_match_participants(participants_text, schedule_entries, club="AV Atverni"):
-    clean_text = _clean_match_text(participants_text)
+    source_text = str(participants_text or "")
+    source_text = re.sub(r"<br\s*/?>", "\n", source_text, flags=re.IGNORECASE)
+    source_text = re.sub(r"<[^>]+>", " ", source_text)
+    source_text = source_text.replace("&nbsp;", " ").replace("&#x20;", " ")
+    source_text = source_text.replace("\\", " ")
     country_pattern = r"(?:Nederland|Belgium|Germany|France|Europe)"
-    chunks = re.split(rf"(?m)(?=^\s*\d+\s+{country_pattern}\b)", clean_text, flags=re.IGNORECASE)
+    club_pattern = re.escape(club)
+    chunks = re.split(
+        rf"(?m)(?=^\s*(?:\d+\t|\d+\s+{country_pattern}\b|[^\n\t]+\t{club_pattern}\b))",
+        source_text,
+        flags=re.IGNORECASE,
+    )
     rows = []
     seen = set()
 
     for chunk in chunks:
-        chunk = chunk.strip()
+        chunk = _clean_match_text(chunk)
         if not chunk or club.lower() not in chunk.lower():
             continue
 
