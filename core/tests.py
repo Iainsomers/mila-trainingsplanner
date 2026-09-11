@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.core.cache import cache
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -32,8 +32,12 @@ class TrackTimerTests(TestCase):
         dashboard = self.client.get("/")
         self.assertEqual(dashboard.status_code, 200)
         self.assertContains(dashboard, "Coach tools")
-        self.assertContains(dashboard, "Open timer")
-        self.assertContains(dashboard, "Match overview")
+        self.assertContains(dashboard, "Go to Coach tools")
+
+        tools = self.client.get("/coach-tools/")
+        self.assertEqual(tools.status_code, 200)
+        self.assertContains(tools, "Timer")
+        self.assertContains(tools, "Match overview")
 
         timer = self.client.get("/timer/")
         self.assertEqual(timer.status_code, 200)
@@ -49,6 +53,10 @@ class MatchOverviewTests(TestCase):
             is_staff=True,
         )
         self.client.force_login(user)
+
+        create_response = self.client.post("/coach-tools/match-overview/new/")
+        self.assertEqual(create_response.status_code, 302)
+        match = MatchOverview.objects.get(owner=user)
 
         schedule = """
 | [19:00](x) | [Groep 1](x) | [Verspringen](x) | |
@@ -68,12 +76,17 @@ U16 Vrouwen
 U16 Vrouwen
 """
 
-        response = self.client.post("/coach-tools/match-overview/", {
+        response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
+            "name": "Test match",
             "schedule_text": schedule,
             "participants_text": participants,
+            "action": "process",
         })
 
         self.assertEqual(response.status_code, 200)
+        match.refresh_from_db()
+        self.assertEqual(match.name, "Test match")
+        self.assertEqual(len(match.rows), 2)
         rows = response.context["rows"]
         self.assertEqual(len(rows), 2)
         self.assertEqual([row["athlete"] for row in rows], ["Aurora Somers", "Aurora Somers"])

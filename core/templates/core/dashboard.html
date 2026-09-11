@@ -26,7 +26,7 @@
   </form>
   {% endif %}
 
-  <div class="row g-4 mb-4">
+  <div class="row g-4 mb-5">
     <div class="col-md-6 col-lg-4">
       <div class="card h-100">
         <div class="card-body d-flex flex-column">
@@ -40,43 +40,21 @@
         </div>
       </div>
     </div>
-  </div>
 
-  {% if not is_athlete_user %}
-  <section class="mb-5">
-    <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
-      <div>
-        <h2 class="h4 mb-1">Coach tools</h2>
-        <p class="text-muted mb-0">Trackside tools for timing and competition overview.</p>
-      </div>
-    </div>
-    <div class="row g-4">
+    {% if not is_athlete_user %}
     <div class="col-md-6 col-lg-4">
       <div class="card h-100">
         <div class="card-body d-flex flex-column">
-          <h5 class="card-title">Timer</h5>
-          <p class="card-text">Trackside stopwatch for 100m splits, laps and finishes.</p>
+          <h5 class="card-title">Coach tools</h5>
+          <p class="card-text">Track timer and competition overview tools.</p>
           <div class="mt-auto">
-            <a href="{% url 'track_timer' %}" class="btn btn-outline-primary">Open timer</a>
+            <a href="{% url 'coach_tools' %}" class="btn btn-primary">Go to Coach tools</a>
           </div>
         </div>
       </div>
     </div>
-
-    <div class="col-md-6 col-lg-4">
-      <div class="card h-100">
-        <div class="card-body d-flex flex-column">
-          <h5 class="card-title">Match overview</h5>
-          <p class="card-text">Paste Atletiek.nu schedule and participants to create a coach timeline.</p>
-          <div class="mt-auto">
-            <a href="{% url 'match_overview' %}" class="btn btn-outline-primary">Make new match</a>
-          </div>
-        </div>
-      </div>
-    </div>
+    {% endif %}
   </div>
-  </section>
-  {% endif %}
 
   {% if not is_athlete_user %}
   <div class="row g-4 mt-auto pt-5">

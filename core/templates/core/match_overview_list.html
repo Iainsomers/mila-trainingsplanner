@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+
+{% block title %}Match overview{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="mb-1">Match overview</h1>
+      <p class="text-muted mb-0">Saved coach timelines.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'coach_tools' %}" class="btn btn-sm btn-outline-secondary">Coach tools</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h5 mb-0">Matches</h2>
+    {% if can_edit %}
+      <form method="post" action="{% url 'match_overview_create' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Make new match</button>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if matches %}
+    <div class="list-group">
+      {% for match in matches %}
+        <a href="{% url 'match_overview_detail' match.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-3">
+          <span class="fw-semibold">{{ match.name }}</span>
+          <span class="text-muted small">{{ match.updated_at|date:"Y-m-d H:i" }} · {{ match.rows|length }} starts</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-light border">No matches yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

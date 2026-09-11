@@ -42,6 +42,8 @@
       <p class="text-muted mb-0">Paste Atletiek.nu data and build a coach timeline.</p>
     </div>
     <div class="d-flex gap-2">
+      <a href="{% url 'match_overview' %}" class="btn btn-sm btn-outline-secondary">Matches</a>
+      <a href="{% url 'coach_tools' %}" class="btn btn-sm btn-outline-secondary">Coach tools</a>
       <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
     </div>
   </div>
@@ -50,17 +52,25 @@
     {% csrf_token %}
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
-        <h2 class="h5 mb-0">Make new match</h2>
-        <button type="submit" class="btn btn-primary">Process</button>
+        <div class="flex-grow-1">
+          <label for="matchName" class="form-label">Name</label>
+          <input id="matchName" name="name" type="text" class="form-control" value="{{ match.name }}" {% if not can_edit %}disabled{% endif %}>
+        </div>
+        <div class="pt-4 d-flex gap-2">
+          {% if can_edit %}
+            <button type="submit" name="action" value="save_name" class="btn btn-outline-primary">Save name</button>
+            <button type="submit" name="action" value="process" class="btn btn-primary">Process</button>
+          {% endif %}
+        </div>
       </div>
       <div class="row g-3">
         <div class="col-lg-6">
           <label for="scheduleText" class="form-label">Time schedule</label>
-          <textarea id="scheduleText" name="schedule_text" class="form-control match-paste" spellcheck="false">{{ schedule_text }}</textarea>
+          <textarea id="scheduleText" name="schedule_text" class="form-control match-paste" spellcheck="false" {% if not can_edit %}disabled{% endif %}>{{ schedule_text }}</textarea>
         </div>
         <div class="col-lg-6">
           <label for="participantsText" class="form-label">Participants</label>
-          <textarea id="participantsText" name="participants_text" class="form-control match-paste" spellcheck="false">{{ participants_text }}</textarea>
+          <textarea id="participantsText" name="participants_text" class="form-control match-paste" spellcheck="false" {% if not can_edit %}disabled{% endif %}>{{ participants_text }}</textarea>
         </div>
       </div>
     </div>

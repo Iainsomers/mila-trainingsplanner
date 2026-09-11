@@ -64,6 +64,26 @@ class CoachSettings(models.Model):
         return f"CoachSettings({self.user_id})"
 
 
+class MatchOverview(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="match_overviews",
+    )
+    name = models.CharField(max_length=160)
+    schedule_text = models.TextField(blank=True, default="")
+    participants_text = models.TextField(blank=True, default="")
+    rows = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Athlete(models.Model):
     """
     Minimal Athlete model for coach-only phase.

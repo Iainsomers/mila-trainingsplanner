@@ -23,7 +23,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, MatchOverview, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -470,6 +470,16 @@ def track_timer_view(request):
     })
 
 
+@login_required
+@require_GET
+def coach_tools_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("dashboard")
+
+    return render(request, "core/coach_tools.html")
+
+
 def _clean_match_text(value):
     text = str(value or "")
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
@@ -629,29 +639,80 @@ def _parse_match_participants(participants_text, schedule_entries, club="AV Atve
 
 
 @login_required
-@require_http_methods(["GET", "POST"])
+@require_GET
 def match_overview_view(request):
     athlete = _athlete_for_user(request.user)
     if athlete and not request.user.is_staff and not request.user.is_superuser:
         return redirect("dashboard")
 
-    schedule_text = ""
-    participants_text = ""
-    rows = []
+    active_coach = _active_coach_user(request)
+    matches = MatchOverview.objects.filter(owner=active_coach).order_by("-updated_at", "-id")
+
+    return render(request, "core/match_overview_list.html", {
+        "matches": matches,
+        "can_edit": _active_coach_access_label(request) != "view",
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def match_overview_create_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("dashboard")
+    if _active_coach_access_label(request) == "view":
+        return redirect("match_overview")
+
+    active_coach = _active_coach_user(request)
+    next_number = MatchOverview.objects.filter(owner=active_coach).count() + 1
+    match = MatchOverview.objects.create(
+        owner=active_coach,
+        name=f"Match Race {next_number} - {timezone.localdate().isoformat()}",
+    )
+    return redirect("match_overview_detail", match_id=match.id)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def match_overview_detail_view(request, match_id):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("dashboard")
+
+    active_coach = _active_coach_user(request)
+    match = get_object_or_404(MatchOverview.objects.filter(owner=active_coach), id=match_id)
+    can_edit = _active_coach_access_label(request) != "view"
     schedule_count = None
 
-    if request.method == "POST":
-        schedule_text = request.POST.get("schedule_text", "")
-        participants_text = request.POST.get("participants_text", "")
-        schedule_entries = _parse_match_schedule(schedule_text)
-        rows = _parse_match_participants(participants_text, schedule_entries)
-        schedule_count = len(schedule_entries)
+    if request.method == "POST" and can_edit:
+        action = request.POST.get("action") or "process"
+        name = (request.POST.get("name") or "").strip()
+        if name:
+            match.name = name[:160]
+
+        if action == "process":
+            match.schedule_text = request.POST.get("schedule_text", "")
+            match.participants_text = request.POST.get("participants_text", "")
+            schedule_entries = _parse_match_schedule(match.schedule_text)
+            match.rows = _parse_match_participants(match.participants_text, schedule_entries)
+            schedule_count = len(schedule_entries)
+
+        match.save()
+        if action == "save_name":
+            return redirect("match_overview_detail", match_id=match.id)
+    elif request.method == "POST":
+        return redirect("match_overview_detail", match_id=match.id)
+
+    if schedule_count is None and (match.schedule_text or match.participants_text):
+        schedule_count = len(_parse_match_schedule(match.schedule_text))
 
     return render(request, "core/match_overview.html", {
-        "schedule_text": schedule_text,
-        "participants_text": participants_text,
-        "rows": rows,
+        "match": match,
+        "schedule_text": match.schedule_text,
+        "participants_text": match.participants_text,
+        "rows": match.rows or [],
         "schedule_count": schedule_count,
+        "can_edit": can_edit,
     })
 
 
