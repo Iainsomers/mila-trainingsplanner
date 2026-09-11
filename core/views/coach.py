@@ -500,10 +500,25 @@ def _match_key(value):
     return "".join(_match_words(value))
 
 
+def _match_schedule_blocks(schedule_text):
+    blocks = []
+    current = ""
+    for raw_line in str(schedule_text or "").splitlines():
+        if re.search(r"^\s*(?:\|\s*)?(?:\[)?\d{1,2}:\d{2}\b", raw_line):
+            if current.strip():
+                blocks.append(current)
+            current = raw_line
+        elif current and raw_line.strip():
+            current = f"{current}\n{raw_line}"
+    if current.strip():
+        blocks.append(current)
+    return blocks
+
+
 def _parse_match_schedule(schedule_text):
     entries = []
     seen = set()
-    for raw_line in str(schedule_text or "").splitlines():
+    for raw_line in _match_schedule_blocks(schedule_text):
         if not re.search(r"\b\d{1,2}:\d{2}\b", raw_line):
             continue
 
@@ -576,15 +591,29 @@ def _group_phrase_is_present(text, group):
     return group_key in _match_key(text)
 
 
+def _match_group_lines(group):
+    lines = []
+    for line in _clean_match_text(group).splitlines():
+        cleaned = line.strip()
+        if cleaned and not re.search(r"\b\d+\s+atleten\b|\b\d+\s+series\b", cleaned, flags=re.IGNORECASE):
+            lines.append(cleaned)
+    return lines or ([str(group or "").strip()] if str(group or "").strip() else [])
+
+
 def _match_schedule_entry_in_participant(chunk, entry):
     if not entry.get("group"):
         return _event_phrase_is_present(chunk, entry["event"])
 
-    for line in _clean_match_text(chunk).splitlines():
-        if not _event_phrase_is_present(line, entry["event"]):
-            continue
-        if _group_phrase_is_present(line, entry["group"]):
-            return True
+    participant_lines = [line.strip() for line in _clean_match_text(chunk).splitlines() if line.strip()]
+    participant_is_multievent = "meerkamp" in _match_words(chunk)
+    for group_line in _match_group_lines(entry["group"]):
+        for line in participant_lines:
+            event_present = _event_phrase_is_present(line, entry["event"])
+            group_present = _group_phrase_is_present(line, group_line)
+            if event_present and group_present:
+                return True
+            if participant_is_multievent and _match_key(line) == _match_key(group_line):
+                return True
     return False
 
 

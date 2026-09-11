@@ -244,6 +244,35 @@ U14 Vrouwen
         self.assertEqual(kogel_rows[0]["event_name"], "Kogelstoten")
         self.assertEqual(kogel_rows[0]["event_detail"], "Groep 2")
 
+    def test_match_parser_supports_multievent_group_schedule_rows(self):
+        schedule = _parse_match_schedule("""
+10:05	U10 - V Groep 2	Verspringen
+Ver 2	 18 atleten
+11:40	U10-V - Groep 1
+U10 - V Groep 2	40 meter	 5 series
+12:25	U10-V - Groep 1	Kogelstoten	 18 atleten
+13:00	U10 - V Groep 2	Kogelstoten	 18 atleten
+14:40	U10-V - Groep 1
+U10 - V Groep 2	1000 meter	 2 series
+""")
+        rows = _parse_match_participants("""
+Elodie Costerus	AV Atverni	Meerkamp
+U10-V - Groep 1
+U10 - V Groep 2
+U10 Vrouwen
+""", schedule)
+
+        self.assertEqual(
+            [(row["time"], row["event_name"], row["event_detail"]) for row in rows],
+            [
+                ("10:05", "Verspringen", "U10 - V Groep 2"),
+                ("11:40", "40 meter", "U10-V - Groep 1\nU10 - V Groep 2"),
+                ("12:25", "Kogelstoten", "U10-V - Groep 1"),
+                ("13:00", "Kogelstoten", "U10 - V Groep 2"),
+                ("14:40", "1000 meter", "U10-V - Groep 1\nU10 - V Groep 2"),
+            ],
+        )
+
 
 class PlanningOverviewTests(TestCase):
     def test_coach_planning_overview_is_grouped(self):
