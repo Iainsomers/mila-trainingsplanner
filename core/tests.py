@@ -282,6 +282,8 @@ U10 Vrouwen
 Nederland<br><span class="subtext">Europe</span> Nieuwegein
 600 meter	2:25,13	13/09/2025
 Nederland<br><span class="subtext">Europe</span> Zeist
+Vortex	16,36	30/05/2026
+Nederland<br><span class="subtext">Europe</span> Utrecht
 Verspringen
 Ontbrekende windmeting	2,97
 n/a	04/10/2025
@@ -290,6 +292,7 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
 
         self.assertEqual(records["verspringen"]["label"], "2,97 (04/10/2025)")
         self.assertEqual(records["40meter"]["label"], "7,05 (20/06/2026)")
+        self.assertEqual(records["vortexwerpen"]["label"], "16,36 (30/05/2026)")
 
     def test_match_athlete_prs_can_be_imported_from_match_row(self):
         user = get_user_model().objects.create_user(
@@ -334,6 +337,63 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
         self.assertContains(detail, "PR 2,97 (04/10/2025)")
         self.assertContains(detail, "matchAthletePrModal")
+
+    def test_match_athlete_pr_notes_survive_blank_notes_autosave(self):
+        user = get_user_model().objects.create_user(
+            username="match-pr-autosave-coach",
+            password="secret",
+            is_staff=True,
+        )
+        match = MatchOverview.objects.create(
+            owner=user,
+            name="PR autosave match",
+            rows=[
+                {
+                    "time": "10:05",
+                    "athlete": "Logan Bosch",
+                    "category": "U8 Mannen",
+                    "event": "Verspringen U8-M - Groep 1",
+                    "event_name": "Verspringen",
+                    "event_detail": "U8-M - Groep 1",
+                    "pre_note": "",
+                    "note": "",
+                    "pb": False,
+                },
+                {
+                    "time": "11:15",
+                    "athlete": "Logan Bosch",
+                    "category": "U8 Mannen",
+                    "event": "Vortexwerpen U8-M - Groep 1",
+                    "event_name": "Vortexwerpen",
+                    "event_detail": "U8-M - Groep 1",
+                    "pre_note": "",
+                    "note": "",
+                    "pb": False,
+                },
+            ],
+        )
+        self.client.force_login(user)
+        MatchAthleteRecord.objects.create(
+            owner=user,
+            athlete_name="Logan Bosch",
+            records=_parse_match_athlete_records("""
+Verspringen	2,97	04/10/2025
+Vortex	16,36	30/05/2026
+"""),
+        )
+
+        response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
+            "action": "save_notes",
+            "pre_note_0": "",
+            "note_0": "",
+            "pre_note_1": "",
+            "note_1": "",
+        })
+
+        self.assertEqual(response.status_code, 302)
+        match.refresh_from_db()
+        self.assertEqual(match.rows[0]["pre_note"], "PR 2,97 (04/10/2025)")
+        self.assertEqual(match.rows[1]["pre_note"], "PR 16,36 (30/05/2026)")
 
 
 class PlanningOverviewTests(TestCase):

@@ -696,10 +696,15 @@ MATCH_RECORD_EVENTS = [
     "Kogelstoten",
     "Kogelslingeren",
     "Speerwerpen",
+    "Vortex",
     "Vortexwerpen",
     "Hoogspringen",
     "Verspringen",
 ]
+
+MATCH_RECORD_EVENT_ALIASES = {
+    "vortex": "Vortexwerpen",
+}
 
 
 def _match_record_event_for_line(line):
@@ -724,7 +729,8 @@ def _match_record_event_tail(line, event):
 
 def _match_record_event_key(event):
     event_name, _event_detail = _split_match_event_label(event)
-    return _match_key(event_name)
+    key = _match_key(event_name)
+    return _match_key(MATCH_RECORD_EVENT_ALIASES.get(key, event_name))
 
 
 def _looks_like_match_record_value(value):
@@ -792,8 +798,9 @@ def _parse_match_athlete_records(raw_text):
             if date_value:
                 label = f"{label} ({date_value})"
             key = _match_record_event_key(event)
+            display_event = MATCH_RECORD_EVENT_ALIASES.get(_match_key(event), event)
             records[key] = {
-                "event": event,
+                "event": display_event,
                 "value": value,
                 "label": label,
                 "date": date_value,
@@ -993,11 +1000,15 @@ def match_overview_detail_view(request, match_id):
             schedule_count = len(schedule_entries)
         elif action == "save_notes":
             rows = []
+            current_rows = _normalize_match_rows(match.rows)
+            records_by_athlete, _ui_records = _match_records_for_rows(active_coach, current_rows)
             for idx, row in enumerate(_normalize_match_rows(match.rows)):
                 if not isinstance(row, dict):
                     continue
                 updated_row = dict(row)
                 updated_row["pre_note"] = (request.POST.get(f"pre_note_{idx}") or "").strip()
+                if not updated_row["pre_note"]:
+                    updated_row["pre_note"] = _match_pr_note_for_row(updated_row, records_by_athlete)
                 updated_row["note"] = (request.POST.get(f"note_{idx}") or "").strip()
                 updated_row["pb"] = request.POST.get(f"pb_{idx}") == "1"
                 rows.append(updated_row)
