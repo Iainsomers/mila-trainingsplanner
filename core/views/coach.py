@@ -541,6 +541,8 @@ def _parse_match_schedule(schedule_text):
             group = ""
             event = remainder.splitlines()[0].strip()
 
+        group = _match_effective_group(group)
+
         if not event or "weegmoment" in event.lower() or "jury" in event.lower():
             continue
 
@@ -598,6 +600,11 @@ def _match_group_lines(group):
         if cleaned and not re.search(r"\b\d+\s+atleten\b|\b\d+\s+series\b", cleaned, flags=re.IGNORECASE):
             lines.append(cleaned)
     return lines or ([str(group or "").strip()] if str(group or "").strip() else [])
+
+
+def _match_effective_group(group):
+    lines = _match_group_lines(group)
+    return lines[-1] if lines else ""
 
 
 def _match_schedule_entry_in_participant(chunk, entry):

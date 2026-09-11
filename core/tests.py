@@ -266,10 +266,10 @@ U10 Vrouwen
             [(row["time"], row["event_name"], row["event_detail"]) for row in rows],
             [
                 ("10:05", "Verspringen", "U10 - V Groep 2"),
-                ("11:40", "40 meter", "U10-V - Groep 1\nU10 - V Groep 2"),
+                ("11:40", "40 meter", "U10 - V Groep 2"),
                 ("12:25", "Kogelstoten", "U10-V - Groep 1"),
                 ("13:00", "Kogelstoten", "U10 - V Groep 2"),
-                ("14:40", "1000 meter", "U10-V - Groep 1\nU10 - V Groep 2"),
+                ("14:40", "1000 meter", "U10 - V Groep 2"),
             ],
         )
 
