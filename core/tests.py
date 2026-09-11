@@ -125,6 +125,7 @@ U16 Vrouwen
             "action": "save_notes",
             "result_0": "13.42",
             "note_0": "PR candidate",
+            "done_0": "1",
             "pb_0": "1",
         })
 
@@ -132,6 +133,7 @@ U16 Vrouwen
         match.refresh_from_db()
         self.assertEqual(match.rows[0]["result"], "13.42")
         self.assertEqual(match.rows[0]["note"], "PR candidate")
+        self.assertEqual(match.rows[0]["done"], True)
         self.assertEqual(match.rows[0]["pb"], True)
 
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
@@ -148,6 +150,7 @@ U16 Vrouwen
         self.assertContains(detail, "<th>PR</th>")
         self.assertContains(detail, "<th>Result</th>")
         self.assertContains(detail, "<th>Trainer notes</th>")
+        self.assertContains(detail, "<th>Done?</th>")
         self.assertNotContains(detail, "id=\"scheduleText\"")
 
     def test_match_overview_can_be_deleted_from_list(self):
@@ -417,6 +420,7 @@ Vortex	16,36	30/05/2026
             "action": "save_notes",
             "result_0": "2,91",
             "note_0": "",
+            "done_0": "1",
             "result_1": "17,02",
             "note_1": "",
         })
@@ -424,12 +428,15 @@ Vortex	16,36	30/05/2026
         self.assertEqual(response.status_code, 302)
         match.refresh_from_db()
         self.assertEqual(match.rows[0]["result"], "2,91")
+        self.assertEqual(match.rows[0]["done"], True)
         self.assertEqual(match.rows[1]["result"], "17,02")
+        self.assertEqual(match.rows[1]["done"], False)
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
         self.assertContains(detail, "2,97")
         self.assertContains(detail, "10/2025")
         self.assertContains(detail, "16,36")
         self.assertContains(detail, "05/2026")
+        self.assertContains(detail, "match-done-row")
 
     def test_match_athlete_names_show_pr_record_age_status(self):
         user = get_user_model().objects.create_user(

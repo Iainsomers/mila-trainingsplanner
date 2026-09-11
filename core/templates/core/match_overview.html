@@ -35,14 +35,14 @@
   }
 
   .match-note-input {
-    min-width: 190px;
+    min-width: 280px;
     height: 30px;
     padding-top: 2px;
     padding-bottom: 2px;
   }
 
   .match-result-input {
-    min-width: 120px;
+    min-width: 60px;
     height: 30px;
     padding-top: 2px;
     padding-bottom: 2px;
@@ -68,7 +68,17 @@
     border-color: #8ed3a5 !important;
   }
 
-  .match-pb-check {
+  .match-done-row td {
+    background: #fff3cd !important;
+  }
+
+  .match-done-row .form-control {
+    background: #fff3cd !important;
+    border-color: #e6c86c !important;
+  }
+
+  .match-pb-check,
+  .match-done-check {
     width: 1.3rem;
     height: 1.3rem;
   }
@@ -136,7 +146,7 @@
     }
 
     .match-note-input {
-      min-width: 180px;
+      min-width: 240px;
     }
   }
 </style>
@@ -208,12 +218,13 @@
                 <th>PR</th>
                 <th>Result</th>
                 <th>Trainer notes</th>
+                <th>Done?</th>
                 <th>PB</th>
               </tr>
             </thead>
             <tbody>
               {% for row in rows %}
-                <tr class="{% if row.pb %}match-pb-row{% endif %}">
+                <tr class="{% if row.pb %}match-pb-row{% elif row.done %}match-done-row{% endif %}">
                   <td class="fw-semibold">{{ row.time }}</td>
                   <td>
                     <button type="button" class="match-athlete-btn {{ row.pr_status_class }}" data-bs-toggle="modal" data-bs-target="#matchAthletePrModal" data-athlete="{{ row.athlete }}">{{ row.athlete }}</button>
@@ -235,6 +246,7 @@
                   </td>
                   <td><input type="text" name="result_{{ forloop.counter0 }}" value="{{ row.result }}" class="form-control form-control-sm match-result-input" {% if not can_edit %}disabled{% endif %}></td>
                   <td><input type="text" name="note_{{ forloop.counter0 }}" value="{{ row.note }}" class="form-control form-control-sm match-note-input" {% if not can_edit %}disabled{% endif %}></td>
+                  <td class="text-center"><input type="checkbox" name="done_{{ forloop.counter0 }}" value="1" class="form-check-input match-done-check" {% if row.done %}checked{% endif %} {% if not can_edit %}disabled{% endif %}></td>
                   <td class="text-center"><input type="checkbox" name="pb_{{ forloop.counter0 }}" value="1" class="form-check-input match-pb-check" {% if row.pb %}checked{% endif %} {% if not can_edit %}disabled{% endif %}></td>
                 </tr>
               {% endfor %}
@@ -335,10 +347,15 @@
   }
 
   document.addEventListener("change", (event) => {
-    const checkbox = event.target.closest(".match-pb-check");
+    const checkbox = event.target.closest(".match-pb-check, .match-done-check");
     if (checkbox) {
       const row = checkbox.closest("tr");
-      if (row) row.classList.toggle("match-pb-row", checkbox.checked);
+      if (row) {
+        const pbChecked = Boolean(row.querySelector(".match-pb-check")?.checked);
+        const doneChecked = Boolean(row.querySelector(".match-done-check")?.checked);
+        row.classList.toggle("match-pb-row", pbChecked);
+        row.classList.toggle("match-done-row", doneChecked && !pbChecked);
+      }
       queueMatchNotesSave();
     }
   });

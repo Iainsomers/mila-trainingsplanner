@@ -671,6 +671,7 @@ def _normalize_match_rows(rows):
         updated["pre_note"] = str(updated.get("pre_note", ""))
         updated["result"] = str(updated.get("result", ""))
         updated["note"] = str(updated.get("note", ""))
+        updated["done"] = bool(updated.get("done", False))
         updated["pb"] = bool(updated.get("pb", False))
         normalized.append(updated)
     return normalized
@@ -959,6 +960,7 @@ def _parse_match_participants(participants_text, schedule_entries, club="AV Atve
                 "pre_note": "",
                 "result": "",
                 "note": "",
+                "done": False,
                 "pb": False,
             })
 
@@ -1047,6 +1049,7 @@ def match_overview_detail_view(request, match_id):
                 row["pre_note"] = old_row.get("pre_note", row.get("pre_note", ""))
                 row["result"] = old_row.get("result", row.get("result", ""))
                 row["note"] = old_row.get("note", row.get("note", ""))
+                row["done"] = bool(old_row.get("done", row.get("done", False)))
                 row["pb"] = bool(old_row.get("pb", row.get("pb", False)))
             rows = _apply_match_pr_notes(rows, records_by_athlete)
             match.rows = rows
@@ -1062,6 +1065,7 @@ def match_overview_detail_view(request, match_id):
                 updated_row["pr_note"] = _match_pr_note_for_row(updated_row, records_by_athlete)
                 updated_row["result"] = (request.POST.get(f"result_{idx}") or "").strip()
                 updated_row["note"] = (request.POST.get(f"note_{idx}") or "").strip()
+                updated_row["done"] = request.POST.get(f"done_{idx}") == "1"
                 updated_row["pb"] = request.POST.get(f"pb_{idx}") == "1"
                 rows.append(updated_row)
             match.rows = rows
