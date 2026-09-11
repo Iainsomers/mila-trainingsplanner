@@ -103,6 +103,22 @@
     text-decoration: underline;
   }
 
+  .match-pr-fresh {
+    color: #198754;
+  }
+
+  .match-pr-recent {
+    color: #0d6efd;
+  }
+
+  .match-pr-aging {
+    color: #fd7e14;
+  }
+
+  .match-pr-stale {
+    color: #dc3545;
+  }
+
   .match-pr-paste {
     min-height: 190px;
     font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
@@ -200,7 +216,7 @@
                 <tr class="{% if row.pb %}match-pb-row{% endif %}">
                   <td class="fw-semibold">{{ row.time }}</td>
                   <td>
-                    <button type="button" class="match-athlete-btn" data-bs-toggle="modal" data-bs-target="#matchAthletePrModal" data-athlete="{{ row.athlete }}">{{ row.athlete }}</button>
+                    <button type="button" class="match-athlete-btn {{ row.pr_status_class }}" data-bs-toggle="modal" data-bs-target="#matchAthletePrModal" data-athlete="{{ row.athlete }}">{{ row.athlete }}</button>
                   </td>
                   <td>
                     {% if row.event_detail %}

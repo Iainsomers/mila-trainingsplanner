@@ -852,11 +852,26 @@ def _apply_match_pr_notes(rows, records_by_athlete):
     applied = []
     for row in _normalize_match_rows(rows):
         updated = dict(row)
+        athlete_record_bucket = records_by_athlete.get(_match_key(updated.get("athlete"))) or {}
         pr_note = _match_pr_note_for_row(updated, records_by_athlete)
         updated["pr_note"] = pr_note
         updated["pr_display"] = _match_pr_display_for_row(updated, records_by_athlete)
+        updated["pr_status_class"] = athlete_record_bucket.get("__status_class", "match-pr-stale")
         applied.append(updated)
     return applied
+
+
+def _match_record_status_class(updated_at):
+    if not updated_at:
+        return "match-pr-stale"
+    age_days = (timezone.now() - updated_at).days
+    if age_days < 14:
+        return "match-pr-fresh"
+    if age_days < 42:
+        return "match-pr-recent"
+    if age_days < 84:
+        return "match-pr-aging"
+    return "match-pr-stale"
 
 
 def _match_records_for_rows(owner, rows):
@@ -870,10 +885,13 @@ def _match_records_for_rows(owner, rows):
         key = _match_key(record.athlete_name)
         if key not in athlete_keys:
             continue
-        records_by_athlete[key] = record.records or {}
+        athlete_records = dict(record.records or {})
+        athlete_records["__status_class"] = _match_record_status_class(record.updated_at)
+        records_by_athlete[key] = athlete_records
         ui_records[record.athlete_name] = {
             "raw_text": record.raw_text or "",
             "records": list((record.records or {}).values()),
+            "updated_at": record.updated_at.isoformat() if record.updated_at else "",
         }
 
     return records_by_athlete, ui_records

@@ -8,6 +8,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.core.cache import cache
 from django.template.loader import get_template
+from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, MatchAthleteRecord, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
@@ -429,6 +430,82 @@ Vortex	16,36	30/05/2026
         self.assertContains(detail, "10/2025")
         self.assertContains(detail, "16,36")
         self.assertContains(detail, "05/2026")
+
+    def test_match_athlete_names_show_pr_record_age_status(self):
+        user = get_user_model().objects.create_user(
+            username="match-pr-status-coach",
+            password="secret",
+            is_staff=True,
+        )
+        match = MatchOverview.objects.create(
+            owner=user,
+            name="PR status match",
+            rows=[
+                {
+                    "time": "10:00",
+                    "athlete": "Fresh Athlete",
+                    "event": "40 meter",
+                    "event_name": "40 meter",
+                    "event_detail": "",
+                    "note": "",
+                    "pb": False,
+                },
+                {
+                    "time": "10:05",
+                    "athlete": "Recent Athlete",
+                    "event": "40 meter",
+                    "event_name": "40 meter",
+                    "event_detail": "",
+                    "note": "",
+                    "pb": False,
+                },
+                {
+                    "time": "10:10",
+                    "athlete": "Aging Athlete",
+                    "event": "40 meter",
+                    "event_name": "40 meter",
+                    "event_detail": "",
+                    "note": "",
+                    "pb": False,
+                },
+                {
+                    "time": "10:15",
+                    "athlete": "Stale Athlete",
+                    "event": "40 meter",
+                    "event_name": "40 meter",
+                    "event_detail": "",
+                    "note": "",
+                    "pb": False,
+                },
+                {
+                    "time": "10:20",
+                    "athlete": "Never Athlete",
+                    "event": "40 meter",
+                    "event_name": "40 meter",
+                    "event_detail": "",
+                    "note": "",
+                    "pb": False,
+                },
+            ],
+        )
+        for name in ("Fresh Athlete", "Recent Athlete", "Aging Athlete", "Stale Athlete"):
+            MatchAthleteRecord.objects.create(
+                owner=user,
+                athlete_name=name,
+                records=_parse_match_athlete_records("40 meter\t7,05\t20/06/2026"),
+            )
+        MatchAthleteRecord.objects.filter(owner=user, athlete_name="Recent Athlete").update(updated_at=timezone.now() - timedelta(days=20))
+        MatchAthleteRecord.objects.filter(owner=user, athlete_name="Aging Athlete").update(updated_at=timezone.now() - timedelta(days=55))
+        MatchAthleteRecord.objects.filter(owner=user, athlete_name="Stale Athlete").update(updated_at=timezone.now() - timedelta(days=100))
+        self.client.force_login(user)
+
+        detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+
+        self.assertContains(detail, 'match-athlete-btn match-pr-fresh')
+        self.assertContains(detail, 'match-athlete-btn match-pr-recent')
+        self.assertContains(detail, 'match-athlete-btn match-pr-aging')
+        self.assertContains(detail, 'match-athlete-btn match-pr-stale" data-bs-toggle="modal" data-bs-target="#matchAthletePrModal" data-athlete="Stale Athlete"')
+        self.assertContains(detail, 'match-athlete-btn match-pr-stale" data-bs-toggle="modal" data-bs-target="#matchAthletePrModal" data-athlete="Never Athlete"')
 
 
 class PlanningOverviewTests(TestCase):
