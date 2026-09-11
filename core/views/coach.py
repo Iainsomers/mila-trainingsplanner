@@ -470,6 +470,176 @@ def track_timer_view(request):
     })
 
 
+def _clean_match_text(value):
+    text = str(value or "")
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = text.replace("&nbsp;", " ").replace("&#x20;", " ")
+    text = text.replace("\\", " ")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\s*\n\s*", "\n", text)
+    return text.strip()
+
+
+def _match_words(value):
+    return re.findall(r"[a-z0-9]+", str(value or "").lower())
+
+
+def _match_key(value):
+    return "".join(_match_words(value))
+
+
+def _parse_match_schedule(schedule_text):
+    entries = []
+    seen = set()
+    for raw_line in str(schedule_text or "").splitlines():
+        if not re.search(r"\b\d{1,2}:\d{2}\b", raw_line):
+            continue
+
+        cleaned_line = _clean_match_text(raw_line)
+        time_match = re.search(r"\b(\d{1,2}:\d{2})\b", cleaned_line)
+        if not time_match:
+            continue
+        start_time = time_match.group(1).zfill(5)
+
+        cells = [_clean_match_text(cell).strip() for cell in raw_line.strip().strip("|").split("|")]
+        if len(cells) >= 3:
+            group = cells[1] if cells[1] != start_time else ""
+            event = cells[2]
+        else:
+            remainder = cleaned_line[time_match.end():].strip()
+            group = ""
+            event = remainder
+
+        if not event or "weegmoment" in event.lower() or "jury" in event.lower():
+            continue
+
+        label = event
+        if group and group.lower() not in {"-", "none"}:
+            label = f"{event} {group}"
+
+        event_key = _match_key(event)
+        group_key = _match_key(group)
+        if not event_key:
+            continue
+        dedupe_key = (start_time, event_key, group_key)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        entries.append({
+            "time": start_time,
+            "event": event,
+            "group": group,
+            "label": label,
+            "event_key": event_key,
+            "group_key": group_key,
+        })
+    return entries
+
+
+def _event_phrase_is_present(text, event):
+    words = _match_words(event)
+    if not words:
+        return False
+    if _match_key(event) in {"60meter", "80meter", "100meter", "110meter"}:
+        for line in _clean_match_text(text).splitlines():
+            if _match_key(line) == _match_key(event):
+                return True
+        return False
+    pattern = r"\b" + r"\s+".join(re.escape(word) for word in words) + r"\b"
+    return bool(re.search(pattern, text, flags=re.IGNORECASE))
+
+
+def _group_phrase_is_present(text, group):
+    if not group:
+        return True
+    words = _match_words(group)
+    if not words:
+        return True
+    pattern = r"\b" + r"\s+".join(re.escape(word) for word in words) + r"\b"
+    return bool(re.search(pattern, text, flags=re.IGNORECASE))
+
+
+def _parse_match_participants(participants_text, schedule_entries, club="AV Atverni"):
+    clean_text = _clean_match_text(participants_text)
+    chunks = re.split(r"(?m)(?=^\s*\d+\s+Nederland\b)", clean_text)
+    rows = []
+    seen = set()
+
+    for chunk in chunks:
+        chunk = chunk.strip()
+        if not chunk or club.lower() not in chunk.lower():
+            continue
+
+        lines = [line.strip() for line in chunk.splitlines() if line.strip()]
+        club_match = re.search(re.escape(club), chunk, flags=re.IGNORECASE)
+        if not club_match:
+            continue
+
+        before_club = chunk[:club_match.start()].replace("\n", " ")
+        before_club = re.sub(r"^\s*\d+\s+", "", before_club).strip()
+        before_club = re.sub(r"^(Nederland|Europe)\s+", "", before_club, flags=re.IGNORECASE).strip()
+        before_club = re.sub(r"^(Nederland|Europe)\s+", "", before_club, flags=re.IGNORECASE).strip()
+        athlete_name = before_club
+        if not athlete_name:
+            continue
+
+        category = ""
+        for line in reversed(lines):
+            if re.match(r"^(U\d+|Senioren|Masters)\b", line, flags=re.IGNORECASE):
+                category = line
+                break
+
+        for entry in schedule_entries:
+            if not _event_phrase_is_present(chunk, entry["event"]):
+                continue
+            if not _group_phrase_is_present(chunk, entry["group"]):
+                continue
+
+            dedupe_key = (entry["time"], athlete_name.lower(), entry["label"].lower())
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            rows.append({
+                "time": entry["time"],
+                "athlete": athlete_name,
+                "category": category,
+                "event": entry["label"],
+                "note": "",
+            })
+
+    rows.sort(key=lambda row: (row["time"], row["event"].lower(), row["athlete"].lower()))
+    return rows
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def match_overview_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("dashboard")
+
+    schedule_text = ""
+    participants_text = ""
+    rows = []
+    schedule_count = None
+
+    if request.method == "POST":
+        schedule_text = request.POST.get("schedule_text", "")
+        participants_text = request.POST.get("participants_text", "")
+        schedule_entries = _parse_match_schedule(schedule_text)
+        rows = _parse_match_participants(participants_text, schedule_entries)
+        schedule_count = len(schedule_entries)
+
+    return render(request, "core/match_overview.html", {
+        "schedule_text": schedule_text,
+        "participants_text": participants_text,
+        "rows": rows,
+        "schedule_count": schedule_count,
+    })
+
+
 POLAR_AUTHORIZATION_URL = "https://flow.polar.com/oauth2/authorization"
 POLAR_TOKEN_URL = "https://polarremote.com/v2/oauth2/token"
 POLAR_V4_AUTHORIZATION_URL = "https://auth.polar.com/oauth/authorize"

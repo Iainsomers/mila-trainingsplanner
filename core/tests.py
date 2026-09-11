@@ -13,6 +13,8 @@ from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSl
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
+    _parse_match_participants,
+    _parse_match_schedule,
     _parse_pr_time_to_seconds,
     _race_line_text,
     _race_selected_count,
@@ -29,12 +31,71 @@ class TrackTimerTests(TestCase):
 
         dashboard = self.client.get("/")
         self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "Coach tools")
         self.assertContains(dashboard, "Open timer")
+        self.assertContains(dashboard, "Match overview")
 
         timer = self.client.get("/timer/")
         self.assertEqual(timer.status_code, 200)
         self.assertContains(timer, "Track Timer")
         self.assertContains(timer, "1600m")
+
+
+class MatchOverviewTests(TestCase):
+    def test_match_overview_page_processes_pasted_atletiek_data(self):
+        user = get_user_model().objects.create_user(
+            username="match-coach",
+            password="secret",
+            is_staff=True,
+        )
+        self.client.force_login(user)
+
+        schedule = """
+| [19:00](x) | [Groep 1](x) | [Verspringen](x) | |
+| [19:30](x) | | [80 meter horden](x) | |
+| [21:50](x) | | [80 meter](x) | |
+| [22:00](x) | | [100 meter](x) | |
+"""
+        participants = """
+26 Nederland<br><span class='subtext'>Europe</span> Aurora Somers AV Atverni 80m
+ 80mH
+80 meter
+80 meter horden
+U16 Vrouwen
+199 Nederland<br><span class='subtext'>Europe</span> Lene Prins AV Atverni 1000m
+ Speer
+1000 meter
+U16 Vrouwen
+"""
+
+        response = self.client.post("/coach-tools/match-overview/", {
+            "schedule_text": schedule,
+            "participants_text": participants,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        rows = response.context["rows"]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual([row["athlete"] for row in rows], ["Aurora Somers", "Aurora Somers"])
+        self.assertEqual([row["event"] for row in rows], ["80 meter horden", "80 meter"])
+        self.assertContains(response, "80 meter horden")
+        self.assertContains(response, "80 meter")
+
+    def test_match_parser_keeps_multiple_events_as_separate_rows(self):
+        schedule = _parse_match_schedule("""
+| [19:30](x) | | [80 meter horden](x) | |
+| [21:50](x) | | [80 meter](x) | |
+""")
+        rows = _parse_match_participants("""
+26 Nederland<br><span class='subtext'>Europe</span> Aurora Somers AV Atverni 80m
+ 80mH
+80 meter
+80 meter horden
+U16 Vrouwen
+""", schedule)
+
+        self.assertEqual([row["time"] for row in rows], ["19:30", "21:50"])
+        self.assertEqual([row["athlete"] for row in rows], ["Aurora Somers", "Aurora Somers"])
 
 
 class PlanningOverviewTests(TestCase):

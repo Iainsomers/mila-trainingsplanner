@@ -1,0 +1,105 @@
+{% extends "core/base.html" %}
+
+{% block title %}Match overview{% endblock %}
+
+{% block extra_head %}
+<style>
+  .match-page {
+    max-width: 1180px;
+  }
+
+  .match-paste {
+    min-height: 240px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.86rem;
+  }
+
+  .match-results-table th {
+    white-space: nowrap;
+  }
+
+  .match-note-input {
+    min-width: 220px;
+  }
+
+  @media (max-width: 768px) {
+    .match-results-wrap {
+      overflow-x: auto;
+    }
+
+    .match-note-input {
+      min-width: 180px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 match-page">
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="mb-1">Match overview</h1>
+      <p class="text-muted mb-0">Paste Atletiek.nu data and build a coach timeline.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+    </div>
+  </div>
+
+  <form method="post" class="card mb-4">
+    {% csrf_token %}
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+        <h2 class="h5 mb-0">Make new match</h2>
+        <button type="submit" class="btn btn-primary">Process</button>
+      </div>
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <label for="scheduleText" class="form-label">Time schedule</label>
+          <textarea id="scheduleText" name="schedule_text" class="form-control match-paste" spellcheck="false">{{ schedule_text }}</textarea>
+        </div>
+        <div class="col-lg-6">
+          <label for="participantsText" class="form-label">Participants</label>
+          <textarea id="participantsText" name="participants_text" class="form-control match-paste" spellcheck="false">{{ participants_text }}</textarea>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  {% if schedule_count != None %}
+    <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+      <h2 class="h5 mb-0">Coach timeline</h2>
+      <div class="text-muted small">{{ rows|length }} starts from {{ schedule_count }} schedule rows</div>
+    </div>
+
+    {% if rows %}
+      <div class="match-results-wrap">
+        <table class="table table-sm table-striped align-middle match-results-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Athlete</th>
+              <th>Category</th>
+              <th>Event</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                <td class="fw-semibold">{{ row.time }}</td>
+                <td>{{ row.athlete }}</td>
+                <td>{{ row.category }}</td>
+                <td>{{ row.event }}</td>
+                <td><input type="text" class="form-control form-control-sm match-note-input" placeholder="PR, SB, DNS, note"></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-warning">No matching starts found. Check whether both Atletiek.nu blocks were pasted completely.</div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
