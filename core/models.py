@@ -84,6 +84,30 @@ class MatchOverview(models.Model):
         return self.name
 
 
+class MatchAthleteRecord(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="match_athlete_records",
+    )
+    athlete_name = models.CharField(max_length=160)
+    records = models.JSONField(default=dict, blank=True)
+    raw_text = models.TextField(blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["athlete_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "athlete_name"],
+                name="unique_match_athlete_record_per_owner",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return self.athlete_name
+
+
 class Athlete(models.Model):
     """
     Minimal Athlete model for coach-only phase.

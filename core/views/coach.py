@@ -23,7 +23,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, MatchOverview, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, MatchOverview, MatchAthleteRecord, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -678,6 +678,171 @@ def _split_match_event_label(label):
     return text, ""
 
 
+MATCH_RECORD_EVENTS = [
+    "40 meter",
+    "60 meter",
+    "80 meter",
+    "100 meter",
+    "110 meter horden",
+    "100 meter horden",
+    "80 meter horden",
+    "60 meter horden",
+    "200 meter",
+    "400 meter",
+    "600 meter",
+    "800 meter",
+    "1000 meter",
+    "1500 meter",
+    "Kogelstoten",
+    "Kogelslingeren",
+    "Speerwerpen",
+    "Vortexwerpen",
+    "Hoogspringen",
+    "Verspringen",
+]
+
+
+def _match_record_event_for_line(line):
+    line_key = _match_key(line)
+    for event in sorted(MATCH_RECORD_EVENTS, key=len, reverse=True):
+        event_key = _match_key(event)
+        if line_key == event_key or line_key.startswith(event_key):
+            return event
+    return ""
+
+
+def _match_record_event_tail(line, event):
+    words = _match_words(event)
+    text = str(line or "").strip()
+    for word in words:
+        match = re.search(r"\b" + re.escape(word) + r"\b", text, flags=re.IGNORECASE)
+        if not match:
+            return ""
+        text = text[match.end():].strip()
+    return text
+
+
+def _match_record_event_key(event):
+    event_name, _event_detail = _split_match_event_label(event)
+    return _match_key(event_name)
+
+
+def _looks_like_match_record_value(value):
+    text = str(value or "").strip()
+    if not text or re.search(r"\d{1,2}/\d{1,2}/\d{4}", text):
+        return False
+    if re.search(r"[<>]", text):
+        return False
+    return bool(re.search(r"\d", text) and re.fullmatch(r"[0-9:,.]+", text))
+
+
+def _extract_match_record_value(line):
+    text = str(line or "").strip()
+    if not text:
+        return ""
+    text = re.sub(r"\d{1,2}/\d{1,2}/\d{4}", " ", text)
+    if re.search(r"m\s*/\s*s", text, flags=re.IGNORECASE):
+        return ""
+    candidates = re.findall(r"\d+(?::\d+)*(?:[,.]\d+)?", text)
+    if not candidates:
+        return ""
+    return candidates[-1].replace(",", ".")
+
+
+def _parse_match_athlete_records(raw_text):
+    lines = [
+        line.strip()
+        for line in _clean_match_text(raw_text).splitlines()
+        if line.strip()
+    ]
+    records = {}
+    idx = 0
+    while idx < len(lines):
+        event = _match_record_event_for_line(lines[idx])
+        if not event:
+            idx += 1
+            continue
+
+        block = []
+        event_tail = _match_record_event_tail(lines[idx], event)
+        if event_tail:
+            block.append(event_tail)
+        idx += 1
+        while idx < len(lines) and not _match_record_event_for_line(lines[idx]):
+            block.append(lines[idx])
+            idx += 1
+
+        value = ""
+        date_value = ""
+        context = []
+        for item in block:
+            date_match = re.search(r"\d{1,2}/\d{1,2}/\d{4}", item)
+            if date_match:
+                date_value = date_match.group(0)
+            if not value:
+                extracted = _extract_match_record_value(item)
+                if extracted:
+                    value = extracted
+                continue
+            if not value and item:
+                context.append(item)
+
+        if value:
+            label = value.replace(".", ",")
+            if date_value:
+                label = f"{label} ({date_value})"
+            key = _match_record_event_key(event)
+            records[key] = {
+                "event": event,
+                "value": value,
+                "label": label,
+                "date": date_value,
+                "context": " ".join(context[:2]),
+            }
+
+    return records
+
+
+def _match_pr_note_for_row(row, records_by_athlete):
+    athlete_records = records_by_athlete.get(_match_key(row.get("athlete"))) or {}
+    record = athlete_records.get(_match_record_event_key(row.get("event_name") or row.get("event")))
+    if not record:
+        return ""
+    return f"PR {record.get('label', '').strip()}".strip()
+
+
+def _apply_match_pr_notes(rows, records_by_athlete):
+    applied = []
+    for row in _normalize_match_rows(rows):
+        updated = dict(row)
+        pr_note = _match_pr_note_for_row(updated, records_by_athlete)
+        updated["pr_note"] = pr_note
+        if pr_note and not updated.get("pre_note"):
+            updated["pre_note"] = pr_note
+        applied.append(updated)
+    return applied
+
+
+def _match_records_for_rows(owner, rows):
+    athlete_keys = {_match_key(row.get("athlete")) for row in rows if row.get("athlete")}
+    records_by_athlete = {}
+    ui_records = {}
+    if not athlete_keys:
+        return records_by_athlete, ui_records
+
+    for record in MatchAthleteRecord.objects.filter(owner=owner):
+        key = _match_key(record.athlete_name)
+        if key not in athlete_keys:
+            continue
+        records_by_athlete[key] = record.records or {}
+        ui_records[record.athlete_name] = {
+            "raw_text": record.raw_text or "",
+            "records": list((record.records or {}).values()),
+        }
+
+    return records_by_athlete, ui_records
+
+
 def _parse_match_participants(participants_text, schedule_entries, club="AV Atverni"):
     source_text = str(participants_text or "")
     source_text = re.sub(r"<br\s*/?>", "\n", source_text, flags=re.IGNORECASE)
@@ -817,11 +982,13 @@ def match_overview_detail_view(request, match_id):
             }
             schedule_entries = _parse_match_schedule(match.schedule_text)
             rows = _parse_match_participants(match.participants_text, schedule_entries)
+            records_by_athlete, _ui_records = _match_records_for_rows(active_coach, rows)
             for row in rows:
                 old_row = old_notes.get((row["time"], row["athlete"], row["event"]), {})
                 row["pre_note"] = old_row.get("pre_note", row.get("pre_note", ""))
                 row["note"] = old_row.get("note", row.get("note", ""))
                 row["pb"] = bool(old_row.get("pb", row.get("pb", False)))
+            rows = _apply_match_pr_notes(rows, records_by_athlete)
             match.rows = rows
             schedule_count = len(schedule_entries)
         elif action == "save_notes":
@@ -835,9 +1002,25 @@ def match_overview_detail_view(request, match_id):
                 updated_row["pb"] = request.POST.get(f"pb_{idx}") == "1"
                 rows.append(updated_row)
             match.rows = rows
+        elif action == "save_prs":
+            athlete_name = (request.POST.get("athlete_name") or "").strip()
+            raw_records = request.POST.get("records_text") or ""
+            if athlete_name:
+                parsed_records = _parse_match_athlete_records(raw_records)
+                MatchAthleteRecord.objects.update_or_create(
+                    owner=active_coach,
+                    athlete_name=athlete_name[:160],
+                    defaults={
+                        "records": parsed_records,
+                        "raw_text": raw_records,
+                    },
+                )
+                rows = _normalize_match_rows(match.rows)
+                records_by_athlete, _ui_records = _match_records_for_rows(active_coach, rows)
+                match.rows = _apply_match_pr_notes(rows, records_by_athlete)
 
         match.save()
-        if action in {"save_name", "save_notes"}:
+        if action in {"save_name", "save_notes", "save_prs"}:
             return redirect("match_overview_detail", match_id=match.id)
     elif request.method == "POST":
         return redirect("match_overview_detail", match_id=match.id)
@@ -846,6 +1029,10 @@ def match_overview_detail_view(request, match_id):
         schedule_count = len(_parse_match_schedule(match.schedule_text))
 
     rows = _normalize_match_rows(match.rows)
+    records_by_athlete, athlete_records = _match_records_for_rows(active_coach, rows)
+    rows = _apply_match_pr_notes(rows, records_by_athlete)
+    if schedule_count is None and rows:
+        schedule_count = 0
     show_paste_form = not rows and not match.schedule_text and not match.participants_text
 
     return render(request, "core/match_overview.html", {
@@ -856,6 +1043,7 @@ def match_overview_detail_view(request, match_id):
         "schedule_count": schedule_count,
         "can_edit": can_edit,
         "show_paste_form": show_paste_form,
+        "athlete_records": athlete_records,
     })
 
 

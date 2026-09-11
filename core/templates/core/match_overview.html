@@ -70,6 +70,32 @@
     text-decoration: underline;
   }
 
+  .match-athlete-btn {
+    border: 0;
+    background: transparent;
+    color: #212529;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+  }
+
+  .match-athlete-btn:hover,
+  .match-athlete-btn:focus {
+    color: #0d6efd;
+    text-decoration: underline;
+  }
+
+  .match-pr-paste {
+    min-height: 190px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.86rem;
+  }
+
+  .match-pr-list {
+    max-height: 180px;
+    overflow: auto;
+  }
+
   @media (max-width: 768px) {
     .match-results-wrap {
       overflow-x: auto;
@@ -154,7 +180,9 @@
               {% for row in rows %}
                 <tr class="{% if row.pb %}match-pb-row{% endif %}">
                   <td class="fw-semibold">{{ row.time }}</td>
-                  <td>{{ row.athlete }}</td>
+                  <td>
+                    <button type="button" class="match-athlete-btn" data-bs-toggle="modal" data-bs-target="#matchAthletePrModal" data-athlete="{{ row.athlete }}">{{ row.athlete }}</button>
+                  </td>
                   <td>
                     {% if row.event_detail %}
                       <button type="button" class="match-event-btn" data-bs-toggle="modal" data-bs-target="#matchEventDetailModal" data-event-name="{{ row.event_name }}" data-event-detail="{{ row.event_detail }}">{{ row.event_name }}</button>
@@ -190,11 +218,43 @@
       </div>
     </div>
   </div>
+
+  <div class="modal fade" id="matchAthletePrModal" tabindex="-1" aria-labelledby="matchAthletePrTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save_prs">
+          <input type="hidden" name="athlete_name" id="matchPrAthleteInput">
+          <div class="modal-header">
+            <h2 class="modal-title h6" id="matchAthletePrTitle"></h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <div class="fw-semibold mb-2">Stored PRs</div>
+              <div id="matchPrList" class="match-pr-list small text-muted">No PRs stored yet.</div>
+            </div>
+            <label for="matchPrText" class="form-label">Paste new PRs</label>
+            <textarea id="matchPrText" name="records_text" class="form-control match-pr-paste" spellcheck="false" {% if not can_edit %}disabled{% endif %}></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            {% if can_edit %}
+              <button type="submit" class="btn btn-primary">Import PRs</button>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{{ athlete_records|json_script:"matchAthleteRecordsData" }}
 <script>
+  const athleteRecordsData = JSON.parse(document.getElementById("matchAthleteRecordsData")?.textContent || "{}");
   const notesForm = document.getElementById("matchNotesForm");
   const notesStatus = document.getElementById("matchNotesStatus");
   let notesSaveTimer = null;
@@ -256,6 +316,38 @@
       const button = event.relatedTarget;
       document.getElementById("matchEventDetailTitle").textContent = button?.dataset.eventName || "";
       document.getElementById("matchEventDetailBody").textContent = button?.dataset.eventDetail || "";
+    });
+  }
+
+  const athletePrModal = document.getElementById("matchAthletePrModal");
+  if (athletePrModal) {
+    athletePrModal.addEventListener("show.bs.modal", (event) => {
+      const athlete = event.relatedTarget?.dataset.athlete || "";
+      const data = athleteRecordsData[athlete] || { raw_text: "", records: [] };
+      document.getElementById("matchAthletePrTitle").textContent = athlete ? `${athlete} PRs` : "Athlete PRs";
+      document.getElementById("matchPrAthleteInput").value = athlete;
+      document.getElementById("matchPrText").value = data.raw_text || "";
+      const list = document.getElementById("matchPrList");
+      if (!data.records || !data.records.length) {
+        list.textContent = "No PRs stored yet.";
+        return;
+      }
+      list.replaceChildren();
+      data.records.forEach((record) => {
+        const item = document.createElement("div");
+        const eventName = document.createElement("span");
+        eventName.className = "fw-semibold";
+        eventName.textContent = String(record.event || "");
+        item.appendChild(eventName);
+        item.appendChild(document.createTextNode(`: ${String(record.label || record.value || "")}`));
+        if (record.context) {
+          const context = document.createElement("span");
+          context.className = "text-muted";
+          context.textContent = ` ${String(record.context)}`;
+          item.appendChild(context);
+        }
+        list.appendChild(item);
+      });
     });
   }
 </script>

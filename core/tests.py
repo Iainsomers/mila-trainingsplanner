@@ -9,10 +9,11 @@ from django.test import TestCase
 from django.core.cache import cache
 from django.template.loader import get_template
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, MatchAthleteRecord, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
+    _parse_match_athlete_records,
     _parse_match_participants,
     _parse_match_schedule,
     _parse_pr_time_to_seconds,
@@ -273,6 +274,66 @@ U10 Vrouwen
                 ("14:40", "1000 meter", "U10 - V Groep 2"),
             ],
         )
+
+    def test_match_athlete_records_parse_atletiek_pr_block(self):
+        records = _parse_match_athlete_records("""
+40 meter	7,05
++1,3 m/s	20/06/2026
+Nederland<br><span class="subtext">Europe</span> Nieuwegein
+600 meter	2:25,13	13/09/2025
+Nederland<br><span class="subtext">Europe</span> Zeist
+Verspringen
+Ontbrekende windmeting	2,97
+n/a	04/10/2025
+Nederland<br><span class="subtext">Europe</span> Nieuwegein
+""")
+
+        self.assertEqual(records["verspringen"]["label"], "2,97 (04/10/2025)")
+        self.assertEqual(records["40meter"]["label"], "7,05 (20/06/2026)")
+
+    def test_match_athlete_prs_can_be_imported_from_match_row(self):
+        user = get_user_model().objects.create_user(
+            username="match-pr-coach",
+            password="secret",
+            is_staff=True,
+        )
+        match = MatchOverview.objects.create(
+            owner=user,
+            name="PR match",
+            rows=[{
+                "time": "10:05",
+                "athlete": "Elodie Costerus",
+                "category": "U10 Vrouwen",
+                "event": "Verspringen U10 - V Groep 2",
+                "event_name": "Verspringen",
+                "event_detail": "U10 - V Groep 2",
+                "pre_note": "",
+                "note": "",
+                "pb": False,
+            }],
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
+            "action": "save_prs",
+            "athlete_name": "Elodie Costerus",
+            "records_text": """
+Verspringen
+Ontbrekende windmeting	2,97
+n/a	04/10/2025
+Nederland<br><span class="subtext">Europe</span> Nieuwegein
+""",
+        })
+
+        self.assertEqual(response.status_code, 302)
+        record = MatchAthleteRecord.objects.get(owner=user, athlete_name="Elodie Costerus")
+        self.assertEqual(record.records["verspringen"]["label"], "2,97 (04/10/2025)")
+        match.refresh_from_db()
+        self.assertEqual(match.rows[0]["pre_note"], "PR 2,97 (04/10/2025)")
+
+        detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+        self.assertContains(detail, "PR 2,97 (04/10/2025)")
+        self.assertContains(detail, "matchAthletePrModal")
 
 
 class PlanningOverviewTests(TestCase):
