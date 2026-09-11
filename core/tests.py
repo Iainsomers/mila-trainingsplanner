@@ -275,6 +275,30 @@ U10 Vrouwen
             ],
         )
 
+    def test_match_parser_matches_multievent_combined_race_rows_for_top_group(self):
+        schedule = _parse_match_schedule("""
+10:40	U8-M - Groep 1
+U8-M Groep 2	40 meter	 5 series
+11:15	U8-M - Groep 1	Vortexwerpen
+Vortex 1	 17 atleten
+13:40	U8-M - Groep 1
+U8-M Groep 2	600 meter	 2 series
+""")
+        rows = _parse_match_participants("""
+569	Nederland<br><span class='subtext'>Europe</span> Logan Bosch	AV Atverni	Meerkamp
+U8-M - Groep 1
+U8 Mannen
+""", schedule)
+
+        self.assertEqual(
+            [(row["time"], row["event_name"], row["event_detail"]) for row in rows],
+            [
+                ("10:40", "40 meter", "U8-M - Groep 1"),
+                ("11:15", "Vortexwerpen", "U8-M - Groep 1"),
+                ("13:40", "600 meter", "U8-M - Groep 1"),
+            ],
+        )
+
     def test_match_athlete_records_parse_atletiek_pr_block(self):
         records = _parse_match_athlete_records("""
 40 meter	7,05

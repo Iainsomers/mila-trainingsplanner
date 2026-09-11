@@ -541,6 +541,7 @@ def _parse_match_schedule(schedule_text):
             group = ""
             event = remainder.splitlines()[0].strip()
 
+        group_lines = _match_group_lines(group)
         group = _match_effective_group(group)
 
         if not event or "weegmoment" in event.lower() or "jury" in event.lower():
@@ -565,6 +566,7 @@ def _parse_match_schedule(schedule_text):
             "label": label,
             "event_key": event_key,
             "group_key": group_key,
+            "group_lines": group_lines,
         })
     return entries
 
@@ -628,22 +630,26 @@ def _match_participant_effective_group(lines):
     return group_lines[-1] if group_lines else ""
 
 
-def _match_schedule_entry_in_participant(chunk, entry):
+def _match_schedule_entry_group_in_participant(chunk, entry):
     if not entry.get("group"):
-        return _event_phrase_is_present(chunk, entry["event"])
+        return "" if _event_phrase_is_present(chunk, entry["event"]) else None
 
     participant_lines = [line.strip() for line in _clean_match_text(chunk).splitlines() if line.strip()]
     participant_is_multievent = "meerkamp" in _match_words(chunk)
     participant_effective_group = _match_participant_effective_group(participant_lines) if participant_is_multievent else ""
-    for group_line in _match_group_lines(entry["group"]):
+    for group_line in (entry.get("group_lines") or _match_group_lines(entry["group"])):
         for line in participant_lines:
             event_present = _event_phrase_is_present(line, entry["event"])
             group_present = _group_phrase_is_present(line, group_line)
             if event_present and group_present:
-                return True
+                return group_line
             if participant_is_multievent and participant_effective_group and _match_key(participant_effective_group) == _match_key(group_line):
-                return True
-    return False
+                return group_line
+    return None
+
+
+def _match_schedule_entry_in_participant(chunk, entry):
+    return _match_schedule_entry_group_in_participant(chunk, entry) is not None
 
 
 def _normalize_match_rows(rows):
@@ -891,10 +897,14 @@ def _parse_match_participants(participants_text, schedule_entries, club="AV Atve
                 break
 
         for entry in schedule_entries:
-            if not _match_schedule_entry_in_participant(chunk, entry):
+            matched_group = _match_schedule_entry_group_in_participant(chunk, entry)
+            if matched_group is None:
                 continue
 
-            dedupe_key = (entry["time"], athlete_name.lower(), entry["label"].lower())
+            event_label = entry["event"]
+            if matched_group:
+                event_label = f"{entry['event']} {matched_group}"
+            dedupe_key = (entry["time"], athlete_name.lower(), event_label.lower())
             if dedupe_key in seen:
                 continue
             seen.add(dedupe_key)
@@ -902,9 +912,9 @@ def _parse_match_participants(participants_text, schedule_entries, club="AV Atve
                 "time": entry["time"],
                 "athlete": athlete_name,
                 "category": category,
-                "event": entry["label"],
+                "event": event_label,
                 "event_name": entry["event"],
-                "event_detail": entry["group"],
+                "event_detail": matched_group or entry["group"],
                 "pre_note": "",
                 "note": "",
                 "pb": False,
