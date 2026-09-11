@@ -185,6 +185,29 @@ U16 Vrouwen
 
         self.assertEqual(rows, [])
 
+    def test_match_parser_does_not_cross_match_groups_between_events(self):
+        schedule = _parse_match_schedule("""
+19:00	Groep 1	Kogelstoten	 16 atleten
+20:15	Groep 2	Kogelstoten	 17 atleten
+21:30	Groep 3	Kogelstoten	 17 atleten
+19:00	Groep 1 aanvang 1,03m	Hoogspringen
+21:30	Groep 3	Verspringen
+""")
+        rows = _parse_match_participants("""
+99	Nederland<br><span class='subtext'>Europe</span> Fenna Coevoet	AV Atverni	 Kogel
+ Hoog
+ Ver
+Kogelstoten groep 2
+Hoogspringen groep 1 aanvang 1,03m
+Verspringen groep 3
+U14 Vrouwen
+""", schedule)
+
+        kogel_rows = [row for row in rows if row["event"].startswith("Kogelstoten")]
+        self.assertEqual(len(kogel_rows), 1)
+        self.assertEqual(kogel_rows[0]["time"], "20:15")
+        self.assertEqual(kogel_rows[0]["event"], "Kogelstoten Groep 2")
+
 
 class PlanningOverviewTests(TestCase):
     def test_coach_planning_overview_is_grouped(self):

@@ -576,6 +576,18 @@ def _group_phrase_is_present(text, group):
     return group_key in _match_key(text)
 
 
+def _match_schedule_entry_in_participant(chunk, entry):
+    if not entry.get("group"):
+        return _event_phrase_is_present(chunk, entry["event"])
+
+    for line in _clean_match_text(chunk).splitlines():
+        if not _event_phrase_is_present(line, entry["event"]):
+            continue
+        if _group_phrase_is_present(line, entry["group"]):
+            return True
+    return False
+
+
 def _parse_match_participants(participants_text, schedule_entries, club="AV Atverni"):
     source_text = str(participants_text or "")
     source_text = re.sub(r"<br\s*/?>", "\n", source_text, flags=re.IGNORECASE)
@@ -617,9 +629,7 @@ def _parse_match_participants(participants_text, schedule_entries, club="AV Atve
                 break
 
         for entry in schedule_entries:
-            if not _event_phrase_is_present(chunk, entry["event"]):
-                continue
-            if not _group_phrase_is_present(chunk, entry["group"]):
+            if not _match_schedule_entry_in_participant(chunk, entry):
                 continue
 
             dedupe_key = (entry["time"], athlete_name.lower(), entry["label"].lower())
