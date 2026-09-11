@@ -506,11 +506,11 @@ def _parse_match_schedule(schedule_text):
         cells = [_clean_match_text(cell).strip() for cell in raw_line.strip().strip("|").split("|")]
         if len(cells) >= 3:
             group = cells[1] if cells[1] != start_time else ""
-            event = cells[2]
+            event = cells[2].splitlines()[0].strip()
         else:
             remainder = cleaned_line[time_match.end():].strip()
             group = ""
-            event = remainder
+            event = remainder.splitlines()[0].strip()
 
         if not event or "weegmoment" in event.lower() or "jury" in event.lower():
             continue
@@ -542,9 +542,31 @@ def _event_phrase_is_present(text, event):
     words = _match_words(event)
     if not words:
         return False
-    if _match_key(event) in {"60meter", "80meter", "100meter", "110meter"}:
+    event_key = _match_key(event)
+    short_event_aliases = {
+        "60meter": "60m",
+        "80meter": "80m",
+        "100meter": "100m",
+        "110meter": "110m",
+        "60meterhorden": "60mh",
+        "80meterhorden": "80mh",
+        "100meterhorden": "100mh",
+        "110meterhorden": "110mh",
+    }
+    if event_key in {"60meter", "80meter", "100meter", "110meter"}:
         for line in _clean_match_text(text).splitlines():
-            if _match_key(line) == _match_key(event):
+            line_key = _match_key(line)
+            line_tokens = {_match_key(token) for token in str(line).split()}
+            if line_key == event_key or line_key == short_event_aliases.get(event_key):
+                return True
+            if short_event_aliases.get(event_key) in line_tokens:
+                return True
+        return False
+    if event_key in short_event_aliases:
+        alias_key = _match_key(short_event_aliases[event_key])
+        for line in _clean_match_text(text).splitlines():
+            line_key = _match_key(line)
+            if line_key == event_key or line_key == alias_key:
                 return True
         return False
     pattern = r"\b" + r"\s+".join(re.escape(word) for word in words) + r"\b"
@@ -563,7 +585,8 @@ def _group_phrase_is_present(text, group):
 
 def _parse_match_participants(participants_text, schedule_entries, club="AV Atverni"):
     clean_text = _clean_match_text(participants_text)
-    chunks = re.split(r"(?m)(?=^\s*\d+\s+Nederland\b)", clean_text)
+    country_pattern = r"(?:Nederland|Belgium|Germany|France|Europe)"
+    chunks = re.split(rf"(?m)(?=^\s*\d+\s+{country_pattern}\b)", clean_text, flags=re.IGNORECASE)
     rows = []
     seen = set()
 
