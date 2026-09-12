@@ -1290,27 +1290,35 @@ def match_overview_detail_view(request, match_id):
             athlete_name = (request.POST.get("athlete_name") or "").strip()
             atletiek_nu_id = re.sub(r"\D+", "", request.POST.get("atletiek_nu_id") or "")
             if athlete_name:
+                record, _created = MatchAthleteRecord.objects.get_or_create(
+                    owner=active_coach,
+                    athlete_name=athlete_name[:160],
+                    defaults={
+                        "atletiek_nu_id": atletiek_nu_id,
+                        "records": {},
+                        "raw_text": "",
+                    },
+                )
+                if record.atletiek_nu_id != atletiek_nu_id:
+                    record.atletiek_nu_id = atletiek_nu_id
+                    record.save(update_fields=["atletiek_nu_id", "updated_at"])
                 records, url, error = _fetch_atletiek_nu_records(atletiek_nu_id)
                 if records:
                     raw_records = "\n".join(
                         f"{item.get('event') or ''}\n{str(item.get('value') or '').replace('.', ',')}\t{item.get('date') or ''}".rstrip()
                         for item in sorted(records.values(), key=lambda record: str(record.get("event") or "").lower())
                     )
-                    MatchAthleteRecord.objects.update_or_create(
-                        owner=active_coach,
-                        athlete_name=athlete_name[:160],
-                        defaults={
-                            "atletiek_nu_id": atletiek_nu_id,
-                            "records": records,
-                            "raw_text": raw_records,
-                        },
-                    )
+                    record.atletiek_nu_id = atletiek_nu_id
+                    record.records = records
+                    record.raw_text = raw_records
+                    record.save(update_fields=["atletiek_nu_id", "records", "raw_text", "updated_at"])
                     rows = _normalize_match_rows(match.rows)
                     records_by_athlete, _ui_records = _match_records_for_rows(active_coach, rows)
                     match.rows = _apply_match_pr_notes(rows, records_by_athlete)
                     request.session["match_pr_status"] = f"Fetched {len(records)} PRs from Atletiek.nu for {athlete_name}."
                 else:
-                    request.session["match_pr_status"] = error or f"No PRs fetched from {url or 'Atletiek.nu'}."
+                    prefix = f"Saved Atletiek.nu ID {atletiek_nu_id} for {athlete_name}. " if atletiek_nu_id else ""
+                    request.session["match_pr_status"] = prefix + (error or f"No PRs fetched from {url or 'Atletiek.nu'}.")
 
         match.save()
         if action in {"save_name", "save_notes", "save_prs", "fetch_prs"}:
