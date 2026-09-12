@@ -192,6 +192,13 @@
     border: 2px solid #d3dce7;
   }
 
+  .track-marker.multi-marker {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: transparent;
+  }
+
   .marker-label {
     display: block;
     font-size: 0.76rem;
@@ -213,39 +220,39 @@
   .marker-400 { left: 75%; top: 85%; }
 
   .multi-marker {
-    width: 214px;
-    min-height: 112px;
-    padding: 7px;
+    width: 230px;
+    min-height: 64px;
+    padding: 0;
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
     align-content: center;
     align-items: center;
   }
 
   .multi-marker .marker-label {
-    grid-column: 1 / -1;
+    display: none;
   }
 
   .track-marker.multi-marker.marker-100 {
-    transform: translate(-50%, -100%);
+    transform: translate(-50%, -115%);
   }
 
   .track-marker.multi-marker.marker-200 {
-    transform: translate(-50%, -100%);
+    transform: translate(-50%, -115%);
   }
 
   .track-marker.multi-marker.marker-300 {
-    transform: translate(-50%, 0);
+    transform: translate(-50%, 15%);
   }
 
   .track-marker.multi-marker.marker-400 {
-    transform: translate(-50%, 0);
+    transform: translate(-50%, 15%);
   }
 
   .runner-dot {
-    width: 30px;
-    height: 30px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     padding: 0;
     appearance: none;
@@ -255,9 +262,9 @@
   }
 
   .runner-all {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
     padding: 0;
     appearance: none;
     border: 2px solid white;
@@ -277,8 +284,22 @@
   .runner-0 { background: #e11d48; }
   .runner-1 { background: #16a34a; }
   .runner-2 { background: #7c3aed; }
-  .runner-3 { background: #ea580c; }
-  .runner-4 { background: #6b7280; }
+
+  .track-measure-line {
+    stroke: #fff;
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+
+  .track-measure-label {
+    fill: #fff;
+    font-size: 24px;
+    font-weight: 800;
+    paint-order: stroke;
+    stroke: rgba(31, 41, 51, 0.42);
+    stroke-linejoin: round;
+    stroke-width: 3px;
+  }
 
   .results-card {
     padding: 14px;
@@ -392,15 +413,15 @@
     }
 
     .multi-marker {
-      width: 190px;
-      min-height: 106px;
-      gap: 5px;
+      width: 196px;
+      min-height: 54px;
+      gap: 6px;
     }
 
     .runner-dot,
     .runner-all {
-      width: 28px;
-      height: 28px;
+      width: 42px;
+      height: 42px;
     }
   }
 </style>
@@ -458,6 +479,12 @@
             <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="rgba(255,255,255,0.72)" stroke-width="2" stroke-dasharray="18 12"></path>
             <ellipse cx="500" cy="310" rx="250" ry="145" fill="var(--timer-grass)"></ellipse>
             <path id="targetGuidePath" d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="none"></path>
+            <line class="track-measure-line" x1="750" y1="30" x2="750" y2="150"></line>
+            <line class="track-measure-line" x1="250" y1="30" x2="250" y2="150"></line>
+            <line class="track-measure-line" x1="250" y1="470" x2="250" y2="590"></line>
+            <text class="track-measure-label" x="710" y="176" text-anchor="middle">100m</text>
+            <text class="track-measure-label" x="290" y="176" text-anchor="middle">200m</text>
+            <text class="track-measure-label" x="292" y="452" text-anchor="middle">300m</text>
             <line id="finishLine" x1="750" y1="470" x2="750" y2="590" stroke="#ffffff" stroke-width="5"></line>
             <line id="targetPaceLine" class="target-pace-line" x1="750" y1="470" x2="750" y2="590" stroke="#111827" stroke-width="6" stroke-linecap="round"></line>
           </svg>
@@ -500,8 +527,6 @@
     { name: "Athlete 1", className: "runner-0" },
     { name: "Athlete 2", className: "runner-1" },
     { name: "Athlete 3", className: "runner-2" },
-    { name: "Athlete 4", className: "runner-3" },
-    { name: "Athlete 5", className: "runner-4" },
   ];
 
   const distanceInput = document.getElementById("timerDistance");
