@@ -1,0 +1,84 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ record.athlete_name }} PRs{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pr-detail-card {
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .pr-detail-table {
+    margin-bottom: 0;
+  }
+
+  .pr-detail-table th {
+    color: #65758b;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+  }
+
+  .match-pr-fresh {
+    color: #198754;
+  }
+
+  .match-pr-recent {
+    color: #0d6efd;
+  }
+
+  .match-pr-aging {
+    color: #fd7e14;
+  }
+
+  .match-pr-stale {
+    color: #dc3545;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="mb-1 {{ status_class }}">{{ record.athlete_name }}</h1>
+      <p class="text-muted mb-0">Last PR update: {{ record.updated_at|date:"Y-m-d H:i" }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'pr_database' %}" class="btn btn-sm btn-outline-secondary">PR-database</a>
+      <a href="{% url 'coach_tools' %}" class="btn btn-sm btn-outline-secondary">Coach tools</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+    </div>
+  </div>
+
+  <div class="pr-detail-card">
+    {% if prs %}
+      <div class="table-responsive">
+        <table class="table table-striped align-middle pr-detail-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>PR</th>
+              <th>Date</th>
+              <th>Context</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pr in prs %}
+              <tr>
+                <td>{{ pr.event }}</td>
+                <td>{{ pr.value }}</td>
+                <td>{{ pr.display_date|default:pr.date }}</td>
+                <td class="text-muted">{{ pr.context }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-3 text-muted">No PRs stored for this athlete yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

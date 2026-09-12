@@ -41,6 +41,7 @@ class TrackTimerTests(TestCase):
         self.assertEqual(tools.status_code, 200)
         self.assertContains(tools, "Timer")
         self.assertContains(tools, "Match overview")
+        self.assertContains(tools, "PR-database")
 
         timer = self.client.get("/timer/")
         self.assertEqual(timer.status_code, 200)
@@ -74,6 +75,7 @@ class TrackTimerTests(TestCase):
         self.assertEqual(tools.status_code, 200)
         self.assertContains(tools, "Timer")
         self.assertContains(tools, "Match overview")
+        self.assertContains(tools, "PR-database")
 
         create_response = self.client.post("/coach-tools/match-overview/new/")
         self.assertEqual(create_response.status_code, 302)
@@ -95,6 +97,55 @@ class TrackTimerTests(TestCase):
 
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
         self.assertEqual(detail.status_code, 200)
+
+    def test_pr_database_lists_records_with_freshness_colors(self):
+        user = get_user_model().objects.create_user(username="pr-db-coach", password="secret", is_staff=True)
+        fresh = MatchAthleteRecord.objects.create(
+            owner=user,
+            athlete_name="Fresh Athlete",
+            records=_parse_match_athlete_records("40 meter\t7,05\t20/06/2026"),
+        )
+        stale = MatchAthleteRecord.objects.create(
+            owner=user,
+            athlete_name="Stale Athlete",
+            records=_parse_match_athlete_records("600 meter\t2:25,13\t13/09/2025"),
+        )
+        MatchAthleteRecord.objects.filter(id=stale.id).update(updated_at=timezone.now() - timedelta(days=100))
+        self.client.force_login(user)
+
+        response = self.client.get("/coach-tools/pr-database/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "PR-database")
+        self.assertContains(response, f'href="/coach-tools/pr-database/{fresh.id}/"')
+        self.assertContains(response, "Fresh Athlete")
+        self.assertContains(response, "match-pr-fresh")
+        self.assertContains(response, "Stale Athlete")
+        self.assertContains(response, "match-pr-stale")
+
+    def test_pr_database_detail_shows_current_prs(self):
+        user = get_user_model().objects.create_user(username="pr-db-detail-coach", password="secret", is_staff=True)
+        record = MatchAthleteRecord.objects.create(
+            owner=user,
+            athlete_name="Elodie Costerus",
+            records=_parse_match_athlete_records(
+                "40 meter\t7,05\t20/06/2026\n"
+                "Verspringen\n"
+                "Ontbrekende windmeting\t2,97\n"
+                "n/a\t04/10/2025"
+            ),
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(f"/coach-tools/pr-database/{record.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Elodie Costerus")
+        self.assertContains(response, "Last PR update")
+        self.assertContains(response, "40 meter")
+        self.assertContains(response, "7.05")
+        self.assertContains(response, "Verspringen")
+        self.assertContains(response, "2.97")
 
 
 class MatchOverviewTests(TestCase):

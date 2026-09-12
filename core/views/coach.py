@@ -1121,6 +1121,50 @@ def match_overview_detail_view(request, match_id):
     })
 
 
+@login_required
+@require_GET
+def pr_database_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("dashboard")
+
+    active_coach = coach_tools_data_owner(_active_coach_user(request))
+    records = []
+    for record in MatchAthleteRecord.objects.filter(owner=active_coach).order_by(Lower("athlete_name")):
+        records.append({
+            "id": record.id,
+            "athlete_name": record.athlete_name,
+            "status_class": _match_record_status_class(record.updated_at),
+            "updated_at": record.updated_at,
+            "record_count": len(record.records or {}),
+        })
+
+    return render(request, "core/pr_database.html", {
+        "records": records,
+    })
+
+
+@login_required
+@require_GET
+def pr_database_detail_view(request, record_id):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("dashboard")
+
+    active_coach = coach_tools_data_owner(_active_coach_user(request))
+    record = get_object_or_404(MatchAthleteRecord.objects.filter(owner=active_coach), id=record_id)
+    prs = sorted(
+        (record.records or {}).values(),
+        key=lambda item: str(item.get("event") or "").lower(),
+    )
+
+    return render(request, "core/pr_database_detail.html", {
+        "record": record,
+        "prs": prs,
+        "status_class": _match_record_status_class(record.updated_at),
+    })
+
+
 POLAR_AUTHORIZATION_URL = "https://flow.polar.com/oauth2/authorization"
 POLAR_TOKEN_URL = "https://polarremote.com/v2/oauth2/token"
 POLAR_V4_AUTHORIZATION_URL = "https://auth.polar.com/oauth/authorize"
