@@ -593,6 +593,12 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual(structure["pattern_m"], ([1000] * 7) + ([500] * 3))
         self.assertEqual(structure["core_distance_m"], 8500)
 
+    def test_planned_interval_structure_accepts_extra_repeat_asterisk(self):
+        structure = _planned_interval_structure("7*1000m z3 // 3**500m z3")
+
+        self.assertEqual(structure["reps_total"], 10)
+        self.assertEqual(structure["pattern_m"], ([1000] * 7) + ([500] * 3))
+
     def test_planned_interval_structure_keeps_bookends_around_multiple_repeat_blocks(self):
         structure = _planned_interval_structure("2000m z1 // 7*1000m z3 // 3*500m z3 // 1000m z1")
 

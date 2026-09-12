@@ -1427,7 +1427,7 @@ def _polar_splits_for_distance(exercise, split_m, max_count=None):
 
 def _planned_rep_spec(plan_text):
     text = str(plan_text or "").lower().replace(",", ".")
-    match = re.search(r"(\d+)\s*\*\s*(?:\(\s*)?(\d+(?:\.\d+)?)\s*m", text)
+    match = re.search(r"(\d+)\s*\*+\s*(?:\(\s*)?(\d+(?:\.\d+)?)\s*m", text)
     if not match:
         return None
     reps = int(match.group(1))
@@ -1454,10 +1454,10 @@ def _planned_single_distance_spec(plan_text):
 
 def _planned_interval_structure(plan_text):
     text = str(plan_text or "").lower().replace(",", ".")
-    match = re.search(r"(\d+)\s*\*\s*\(([^)]+)\)", text)
+    match = re.search(r"(\d+)\s*\*+\s*\(([^)]+)\)", text)
     simple_matches = []
     if not match:
-        simple_matches = list(re.finditer(r"(\d+)\s*\*\s*(\d+(?:\.\d+)?)\s*(km|k|m)\b", text, re.I))
+        simple_matches = list(re.finditer(r"(\d+)\s*\*+\s*(\d+(?:\.\d+)?)\s*(km|k|m)\b", text, re.I))
         if not simple_matches:
             return None
 
