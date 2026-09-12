@@ -459,6 +459,24 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
         self.assertEqual(records["40meter"]["label"], "7,05 (20/06/2026)")
         self.assertEqual(records["vortexwerpen"]["label"], "16,36 (30/05/2026)")
 
+    def test_match_athlete_records_parse_profile_events_without_bleeding_dates(self):
+        records = _parse_match_athlete_records("""
+200 meter 22,64 03/02/2024
+Metz
+300 meter 40,14 07/05/2016
+Lisse
+400 meter 49,17 02/03/2024
+Glasgow
+400 meter horden
+76.2cm 50,95 14/07/2024
+La Chaux-De-Fonds
+""")
+
+        self.assertEqual(records["200meter"]["label"], "22,64 (03/02/2024)")
+        self.assertEqual(records["300meter"]["label"], "40,14 (07/05/2016)")
+        self.assertEqual(records["400meter"]["label"], "49,17 (02/03/2024)")
+        self.assertEqual(records["400meterhorden"]["label"], "50,95 (14/07/2024)")
+
     def test_match_athlete_prs_can_be_imported_from_match_row(self):
         user = get_user_model().objects.create_user(
             username="match-pr-coach",
