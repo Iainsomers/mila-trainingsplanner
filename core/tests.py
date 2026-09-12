@@ -14,6 +14,7 @@ from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSl
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
+    _planned_interval_structure,
     _parse_match_athlete_records,
     _parse_match_participants,
     _parse_match_schedule,
@@ -581,6 +582,21 @@ class PlanningOverviewTests(TestCase):
 
 
 class PolarPlanMismatchTests(TestCase):
+    def test_planned_interval_structure_keeps_multiple_simple_repeat_blocks(self):
+        structure = _planned_interval_structure("7*1000m z3 // 3*500m z3")
+
+        self.assertEqual(structure["pattern_type"], "distance")
+        self.assertEqual(structure["reps_total"], 10)
+        self.assertEqual(structure["pattern_m"], ([1000] * 7) + ([500] * 3))
+        self.assertEqual(structure["core_distance_m"], 8500)
+
+    def test_planned_interval_structure_keeps_bookends_around_multiple_repeat_blocks(self):
+        structure = _planned_interval_structure("2000m z1 // 7*1000m z3 // 3*500m z3 // 1000m z1")
+
+        self.assertEqual(structure["pattern_m"], ([1000] * 7) + ([500] * 3))
+        self.assertEqual(structure["lead_in_m"], 2000)
+        self.assertEqual(structure["lead_out_m"], 1000)
+
     def test_polar_registration_created_status_is_success(self):
         user = get_user_model().objects.create_user(username="polar-user", password="secret")
         self.client.force_login(user)

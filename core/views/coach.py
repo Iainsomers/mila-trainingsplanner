@@ -1455,10 +1455,10 @@ def _planned_single_distance_spec(plan_text):
 def _planned_interval_structure(plan_text):
     text = str(plan_text or "").lower().replace(",", ".")
     match = re.search(r"(\d+)\s*\*\s*\(([^)]+)\)", text)
-    simple_match = None
+    simple_matches = []
     if not match:
-        simple_match = re.search(r"(\d+)\s*\*\s*(\d+(?:\.\d+)?)\s*(km|k|m)\b", text, re.I)
-        if not simple_match:
+        simple_matches = list(re.finditer(r"(\d+)\s*\*\s*(\d+(?:\.\d+)?)\s*(km|k|m)\b", text, re.I))
+        if not simple_matches:
             return None
 
     try:
@@ -1468,17 +1468,20 @@ def _planned_interval_structure(plan_text):
     if sets <= 0:
         return None
 
-    if simple_match:
-        try:
-            simple_reps = int(simple_match.group(1))
-        except (TypeError, ValueError):
-            return None
-        meters = _ayc_like_meters(simple_match.group(2), simple_match.group(3))
-        if simple_reps <= 0 or meters <= 0:
-            return None
-        inner = "-".join([f"{int(round(meters))}m"] * simple_reps)
-        match_start = simple_match.start()
-        match_end = simple_match.end()
+    if simple_matches:
+        simple_parts = []
+        for simple_match in simple_matches:
+            try:
+                simple_reps = int(simple_match.group(1))
+            except (TypeError, ValueError):
+                return None
+            meters = _ayc_like_meters(simple_match.group(2), simple_match.group(3))
+            if simple_reps <= 0 or meters <= 0:
+                return None
+            simple_parts.extend([f"{int(round(meters))}m"] * simple_reps)
+        inner = "-".join(simple_parts)
+        match_start = simple_matches[0].start()
+        match_end = simple_matches[-1].end()
     else:
         inner = match.group(2) or ""
         match_start = match.start()
