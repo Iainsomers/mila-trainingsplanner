@@ -826,6 +826,163 @@ def _parse_match_athlete_records(raw_text):
     return records
 
 
+def _normalise_result_event_label(label):
+    key = _match_key(label)
+    aliases = {
+        "40m": "40 meter",
+        "60m": "60 meter",
+        "80m": "80 meter",
+        "100m": "100 meter",
+        "110mh": "110 meter horden",
+        "100mh": "100 meter horden",
+        "80mh": "80 meter horden",
+        "60mh": "60 meter horden",
+        "200m": "200 meter",
+        "400m": "400 meter",
+        "600m": "600 meter",
+        "800m": "800 meter",
+        "1000m": "1000 meter",
+        "1500m": "1500 meter",
+        "kogel": "Kogelstoten",
+        "kogelsl": "Kogelslingeren",
+        "speer": "Speerwerpen",
+        "vortex": "Vortexwerpen",
+        "hoog": "Hoogspringen",
+        "ver": "Verspringen",
+    }
+    return aliases.get(key, MATCH_RECORD_EVENT_ALIASES.get(key, str(label or "").strip()))
+
+
+def _match_record_is_track_event(event_name):
+    key = _match_record_event_key(event_name)
+    return bool(re.search(r"(?:meter|horden)$", key))
+
+
+def _parse_field_result_value(value):
+    try:
+        parsed = float(str(value or "").strip().replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _match_result_is_better(event_name, result_value, current_value):
+    if str(result_value or "").strip().upper() in {"DNS", "DNF", "DQ", "NM", "NT"}:
+        return False
+    try:
+        if _match_record_is_track_event(event_name):
+            new_value = _parse_pr_time_to_seconds(str(result_value))
+            old_value = _parse_pr_time_to_seconds(str(current_value)) if current_value else None
+            return old_value is None or new_value < old_value
+        new_value = _parse_field_result_value(result_value)
+        old_value = _parse_field_result_value(current_value) if current_value else None
+    except ValueError:
+        return False
+    if new_value is None:
+        return False
+    return old_value is None or new_value > old_value
+
+
+def _parse_match_result_rows_for_pbs(raw_text, import_date=None):
+    import_date = import_date or timezone.localdate()
+    date_value = import_date.strftime("%d/%m/%Y")
+    display_date = import_date.strftime("%m/%Y")
+    lines = [
+        line.strip()
+        for line in _clean_match_text(raw_text).splitlines()
+        if line.strip()
+    ]
+    headers = []
+    parsed = []
+    for line in lines:
+        if line.startswith("#"):
+            cells = [cell.strip() for cell in line.split() if cell.strip()]
+            if not cells or not any(_match_key(cell) == "naam" for cell in cells):
+                headers = []
+                continue
+            name_index = next((idx for idx, cell in enumerate(cells) if _match_key(cell) == "naam"), -1)
+            points_index = next((idx for idx, cell in enumerate(cells) if _match_key(cell).startswith("punten")), len(cells))
+            headers = [
+                _normalise_result_event_label(cell)
+                for cell in cells[name_index + 1:points_index]
+                if _normalise_result_event_label(cell)
+            ]
+            continue
+        if not headers or re.search(r"\bestafette(?:team)?\b", line, flags=re.I):
+            continue
+
+        tokens = line.split()
+        if tokens and tokens[0].isdigit():
+            tokens = tokens[1:]
+        while tokens and _match_key(tokens[0]) in {"nederland", "europe"}:
+            tokens = tokens[1:]
+        if len(tokens) < len(headers) + 2:
+            continue
+
+        results = tokens[-(len(headers) + 1):-1]
+        name = " ".join(tokens[:-(len(headers) + 1)]).strip()
+        if not name:
+            continue
+        for event_name, result in zip(headers, results):
+            result = str(result or "").strip()
+            if not result or result.upper() in {"DNS", "DNF", "DQ"}:
+                continue
+            parsed.append({
+                "athlete_name": name,
+                "event": event_name,
+                "key": _match_record_event_key(event_name),
+                "value": result.replace(",", "."),
+                "label": f"{result} ({date_value})",
+                "date": date_value,
+                "display_date": display_date,
+                "context": "Imported from results",
+            })
+    return parsed
+
+
+def _apply_match_result_pbs(owner, raw_text, import_date=None):
+    candidates = _parse_match_result_rows_for_pbs(raw_text, import_date=import_date)
+    updated = []
+    skipped = 0
+    missing_names = set()
+    existing_records = {
+        _match_key(record.athlete_name): record
+        for record in MatchAthleteRecord.objects.filter(owner=owner)
+    }
+    for candidate in candidates:
+        record = existing_records.get(_match_key(candidate["athlete_name"]))
+        if record is None:
+            missing_names.add(candidate["athlete_name"])
+            skipped += 1
+            continue
+        records = dict(record.records or {})
+        current = records.get(candidate["key"]) or {}
+        if not _match_result_is_better(candidate["event"], candidate["value"], current.get("value")):
+            skipped += 1
+            continue
+        records[candidate["key"]] = {
+            "event": candidate["event"],
+            "value": candidate["value"],
+            "label": candidate["label"],
+            "date": candidate["date"],
+            "display_date": candidate["display_date"],
+            "context": candidate["context"],
+        }
+        record.records = records
+        record.save(update_fields=["records", "updated_at"])
+        updated.append({
+            "athlete_name": candidate["athlete_name"],
+            "event": candidate["event"],
+            "value": candidate["value"],
+        })
+    return {
+        "checked": len(candidates),
+        "updated": updated,
+        "skipped": skipped,
+        "missing": sorted(missing_names, key=str.lower),
+    }
+
+
 def _match_pr_record_for_row(row, records_by_athlete):
     athlete_records = records_by_athlete.get(_match_key(row.get("athlete"))) or {}
     return athlete_records.get(_match_record_event_key(row.get("event_name") or row.get("event"))) or {}
@@ -1141,6 +1298,28 @@ def pr_database_view(request):
 
     return render(request, "core/pr_database.html", {
         "records": records,
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def pr_database_import_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return redirect("dashboard")
+    if _active_coach_access_label(request) == "view":
+        return redirect("pr_database")
+
+    active_coach = coach_tools_data_owner(_active_coach_user(request))
+    raw_text = ""
+    result = None
+    if request.method == "POST":
+        raw_text = request.POST.get("results_text") or ""
+        result = _apply_match_result_pbs(active_coach, raw_text)
+
+    return render(request, "core/pr_database_import.html", {
+        "results_text": raw_text,
+        "result": result,
     })
 
 

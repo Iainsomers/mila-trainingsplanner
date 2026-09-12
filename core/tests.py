@@ -147,6 +147,38 @@ class TrackTimerTests(TestCase):
         self.assertContains(response, "Verspringen")
         self.assertContains(response, "2.97")
 
+    def test_pr_database_import_updates_only_known_athlete_pbs(self):
+        user = get_user_model().objects.create_user(username="pr-db-import-coach", password="secret", is_staff=True)
+        MatchAthleteRecord.objects.create(
+            owner=user,
+            athlete_name="Logan Bosch",
+            records=_parse_match_athlete_records(
+                "40 meter\t8,20\t20/06/2026\n"
+                "Vortex\t20,00\t20/06/2026"
+            ),
+        )
+        self.client.force_login(user)
+
+        response = self.client.post("/coach-tools/pr-database/add-pbs/", {
+            "results_text": """
+U8 Mannen - Meerkamp
+# Naam 40m 600m Vortex Ver Punten totaal
+11 Nederland<br><span class='subtext'>Europe</span> Logan Bosch 7,93 2:27,42 19,36 2,41 1155
+12 Nederland<br><span class='subtext'>Europe</span> Unknown Runner 7,70 2:20,00 21,00 2,60 1300
+""",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<strong>3</strong> PBs updated")
+        self.assertContains(response, "Missing athletes")
+        self.assertContains(response, "Unknown Runner")
+        self.assertFalse(MatchAthleteRecord.objects.filter(owner=user, athlete_name="Unknown Runner").exists())
+        record = MatchAthleteRecord.objects.get(owner=user, athlete_name="Logan Bosch")
+        self.assertEqual(record.records["40meter"]["value"], "7.93")
+        self.assertEqual(record.records["600meter"]["value"], "2:27.42")
+        self.assertEqual(record.records["vortexwerpen"]["value"], "20.00")
+        self.assertEqual(record.records["verspringen"]["value"], "2.41")
+
 
 class MatchOverviewTests(TestCase):
     def test_match_overview_page_processes_pasted_atletiek_data(self):

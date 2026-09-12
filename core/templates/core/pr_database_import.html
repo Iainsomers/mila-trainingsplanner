@@ -1,0 +1,124 @@
+{% extends "core/base.html" %}
+
+{% block title %}Add pb's{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pr-import-text {
+    min-height: 360px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.86rem;
+  }
+
+  .pr-import-results {
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .pr-import-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(120px, auto) minmax(80px, auto);
+    gap: 12px;
+    padding: 8px 12px;
+    border-top: 1px solid #edf1f6;
+  }
+
+  .pr-import-row:first-child {
+    border-top: 0;
+  }
+
+  .pr-import-row:nth-child(even) {
+    background: #f7f9fc;
+  }
+
+  @media (max-width: 640px) {
+    .pr-import-row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="mb-1">Add pb's</h1>
+      <p class="text-muted mb-0">Paste Atletiek.nu result tables. Only new PBs are stored.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'pr_database' %}" class="btn btn-sm btn-outline-secondary">PR-database</a>
+      <a href="{% url 'coach_tools' %}" class="btn btn-sm btn-outline-secondary">Coach tools</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
+    </div>
+  </div>
+
+  <form method="post" class="card mb-4">
+    {% csrf_token %}
+    <div class="card-body">
+      <textarea name="results_text" class="form-control pr-import-text" spellcheck="false">{{ results_text }}</textarea>
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Process</button>
+      </div>
+    </div>
+  </form>
+
+  {% if result %}
+    {% if result.missing %}
+      <div class="alert alert-warning">
+        <strong>Missing athletes in PR-database:</strong>
+        {{ result.missing|join:", " }}
+      </div>
+      <div class="modal fade" id="missingAthletesModal" tabindex="-1" aria-labelledby="missingAthletesModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="missingAthletesModalLabel">Missing athletes</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted">These athletes are not in the PR-database yet and were ignored.</p>
+              <ul class="mb-0">
+                {% for name in result.missing %}
+                  <li>{{ name }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+    <div class="mb-3">
+      <strong>{{ result.updated|length }}</strong> PB{{ result.updated|length|pluralize }} updated,
+      <strong>{{ result.skipped }}</strong> result{{ result.skipped|pluralize }} ignored,
+      <strong>{{ result.checked }}</strong> checked.
+    </div>
+    {% if result.updated %}
+      <div class="pr-import-results">
+        {% for item in result.updated %}
+          <div class="pr-import-row">
+            <strong>{{ item.athlete_name }}</strong>
+            <span>{{ item.event }}</span>
+            <span>{{ item.value }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if result.missing %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const modalElement = document.getElementById("missingAthletesModal");
+    if (modalElement && window.bootstrap) {
+      window.bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}
