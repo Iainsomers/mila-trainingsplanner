@@ -440,6 +440,7 @@
             <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="var(--timer-track)" stroke-width="58"></path>
             <path d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="rgba(255,255,255,0.72)" stroke-width="2" stroke-dasharray="18 12"></path>
             <ellipse cx="500" cy="310" rx="250" ry="145" fill="var(--timer-grass)"></ellipse>
+            <path id="targetGuidePath" d="M250 90 H750 A220 220 0 0 1 750 530 H250 A220 220 0 0 1 250 90 Z" fill="none" stroke="none"></path>
             <line id="finishLine" x1="750" y1="470" x2="750" y2="590" stroke="#ffffff" stroke-width="5"></line>
             <line id="targetPaceLine" class="target-pace-line" x1="750" y1="470" x2="750" y2="590" stroke="#111827" stroke-width="6" stroke-linecap="round"></line>
           </svg>
@@ -500,6 +501,7 @@
   const trackWrap = document.getElementById("trackWrap");
   const finishLine = document.getElementById("finishLine");
   const targetPaceLine = document.getElementById("targetPaceLine");
+  const targetGuidePath = document.getElementById("targetGuidePath");
 
   const trackPoints = {
     400: { left: 75, top: 85, line: [750, 470, 750, 590] },
@@ -617,24 +619,39 @@
     });
   }
 
-  function logicalTrackPosition(distanceMeters) {
-    const totalProgress = (((distanceMeters / 100) % 4) + 4) % 4;
-    const segment = Math.floor(totalProgress);
-    const fraction = totalProgress - segment;
-    const fromMarker = runningOrder[segment];
-    const toMarker = runningOrder[(segment + 1) % runningOrder.length];
-    const from = trackPoints[physicalPointForMarker(fromMarker)];
-    const to = trackPoints[physicalPointForMarker(toMarker)];
+  function wrappedPathLength(length, totalLength) {
+    return ((length % totalLength) + totalLength) % totalLength;
+  }
+
+  function pathPointAt(length, totalLength) {
+    return targetGuidePath.getPointAtLength(wrappedPathLength(length, totalLength));
+  }
+
+  function targetTrackPosition(distanceMeters) {
+    const totalLength = targetGuidePath.getTotalLength();
+    const topStraight = 500;
+    const bendLength = Math.PI * 220;
+    const pathStarts = {
+      100: topStraight,
+      200: 0,
+      300: topStraight + bendLength + 500,
+      400: topStraight + bendLength,
+    };
+    const startLength = pathStarts[startPoint] ?? pathStarts[400];
+    const pathLength = startLength - ((distanceMeters / 400) * totalLength);
+    const point = pathPointAt(pathLength, totalLength);
+    const before = pathPointAt(pathLength + 3, totalLength);
+    const after = pathPointAt(pathLength - 3, totalLength);
     return {
-      x: from.left + ((to.left - from.left) * fraction),
-      y: from.top + ((to.top - from.top) * fraction),
-      dx: to.left - from.left,
-      dy: to.top - from.top,
+      x: point.x,
+      y: point.y,
+      dx: after.x - before.x,
+      dy: after.y - before.y,
     };
   }
 
   function renderTargetPaceLine() {
-    if (!targetPaceLine) return;
+    if (!targetPaceLine || !targetGuidePath) return;
     const targetMs = parseTargetMs();
     const elapsed = running ? performance.now() - startedAt : 0;
     if (!targetMs || !running) {
@@ -643,15 +660,15 @@
     }
     const total = selectedDistance();
     const targetDistance = Math.min(total, (elapsed / targetMs) * total);
-    const point = logicalTrackPosition(targetDistance);
+    const point = targetTrackPosition(targetDistance);
     const length = Math.hypot(point.dx, point.dy) || 1;
     const nx = -point.dy / length;
     const ny = point.dx / length;
-    const halfLinePct = 7.5;
-    const x1 = (point.x + (nx * halfLinePct)) * 10;
-    const y1 = (point.y + (ny * halfLinePct)) * 6.2;
-    const x2 = (point.x - (nx * halfLinePct)) * 10;
-    const y2 = (point.y - (ny * halfLinePct)) * 6.2;
+    const halfLine = 58;
+    const x1 = point.x + (nx * halfLine);
+    const y1 = point.y + (ny * halfLine);
+    const x2 = point.x - (nx * halfLine);
+    const y2 = point.y - (ny * halfLine);
     targetPaceLine.setAttribute("x1", String(x1));
     targetPaceLine.setAttribute("y1", String(y1));
     targetPaceLine.setAttribute("x2", String(x2));
