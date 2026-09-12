@@ -45,6 +45,10 @@ class TrackTimerTests(TestCase):
         self.assertEqual(timer.status_code, 200)
         self.assertContains(timer, "Track Timer")
         self.assertContains(timer, "1600m")
+        self.assertContains(timer, 'id="timerTarget"')
+        self.assertContains(timer, 'id="targetPaceLine"')
+        self.assertContains(timer, "Target")
+        self.assertContains(timer, "min/km")
 
     def test_coach_tools_only_user_is_limited_to_coach_tools(self):
         user = get_user_model().objects.create_user(username="coachtools", password="secret")
