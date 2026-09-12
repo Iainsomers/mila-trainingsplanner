@@ -298,9 +298,10 @@
               <div class="input-group">
                 <input id="matchAtletiekNuId" name="atletiek_nu_id" class="form-control" inputmode="numeric" autocomplete="off" {% if not can_edit %}disabled{% endif %}>
                 {% if can_edit %}
-                  <button type="submit" name="action" value="fetch_prs" class="btn btn-outline-primary">Fetch pb's</button>
+                  <button type="submit" name="action" value="fetch_prs" id="matchFetchPrButton" class="btn btn-outline-primary">Fetch pb's</button>
                 {% endif %}
               </div>
+              <div id="matchFetchPrStatus" class="form-text" aria-live="polite"></div>
             </div>
             <label for="matchPrText" class="form-label">Paste new PRs</label>
             <textarea id="matchPrText" name="records_text" class="form-control match-pr-paste" spellcheck="false" {% if not can_edit %}disabled{% endif %}></textarea>
@@ -393,6 +394,20 @@
 
   const athletePrModal = document.getElementById("matchAthletePrModal");
   if (athletePrModal) {
+    const athletePrForm = athletePrModal.querySelector("form");
+    athletePrForm?.addEventListener("submit", (event) => {
+      if (event.submitter?.value !== "fetch_prs") return;
+      const button = document.getElementById("matchFetchPrButton");
+      const status = document.getElementById("matchFetchPrStatus");
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Fetching...";
+      }
+      if (status) {
+        status.textContent = "Opening Atletiek.nu fetch. This can take a moment.";
+      }
+    });
+
     athletePrModal.addEventListener("show.bs.modal", (event) => {
       const athlete = event.relatedTarget?.dataset.athlete || "";
       const data = athleteRecordsData[athlete] || { raw_text: "", records: [] };
@@ -400,6 +415,13 @@
       document.getElementById("matchPrAthleteInput").value = athlete;
       document.getElementById("matchPrText").value = data.raw_text || "";
       document.getElementById("matchAtletiekNuId").value = data.atletiek_nu_id || "";
+      const button = document.getElementById("matchFetchPrButton");
+      const status = document.getElementById("matchFetchPrStatus");
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Fetch pb's";
+      }
+      if (status) status.textContent = "";
       const list = document.getElementById("matchPrList");
       if (!data.records || !data.records.length) {
         list.textContent = "No PRs stored yet.";

@@ -522,6 +522,8 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
         self.assertContains(detail, "10/2025")
         self.assertNotContains(detail, "PR 2,97")
         self.assertContains(detail, "matchAthletePrModal")
+        self.assertContains(detail, "matchFetchPrButton")
+        self.assertContains(detail, "Opening Atletiek.nu fetch. This can take a moment.")
 
     def test_match_athlete_prs_can_be_fetched_from_atletiek_id(self):
         user = get_user_model().objects.create_user(
