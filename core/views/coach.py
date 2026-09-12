@@ -50,6 +50,32 @@ from core.zones import (
 )
 
 
+def _atletiek_nu_profile_url(athlete_id):
+    cleaned = re.sub(r"\D+", "", str(athlete_id or ""))
+    return f"https://www.atletiek.nu/atleet/profiel/{cleaned}/#records" if cleaned else ""
+
+
+def _fetch_atletiek_nu_records(athlete_id):
+    url = _atletiek_nu_profile_url(athlete_id)
+    if not url:
+        return {}, "", "No Atletiek.nu athlete id was provided."
+    try:
+        from tools.atletiek_pr_browser_fetch import fetch_text_with_browser, records_section_from_profile_text
+    except Exception as exc:
+        return {}, "", f"Atletiek.nu browser fetcher is unavailable: {exc}"
+    try:
+        page_text = fetch_text_with_browser(url)
+    except Exception as exc:
+        return {}, url, f"Atletiek.nu fetch failed: {exc}"
+    records_text = records_section_from_profile_text(page_text)
+    if not records_text:
+        return {}, url, "No personal records section found on Atletiek.nu."
+    records = _parse_match_athlete_records(records_text)
+    if not records:
+        return {}, url, "No usable PRs found on Atletiek.nu."
+    return records, url, ""
+
+
 def _parse_pr_time_to_seconds(value: str):
     s = (value or "").strip().replace(";", ":")
     if not s:
@@ -1060,6 +1086,7 @@ def _match_records_for_rows(owner, rows):
         ui_records[record.athlete_name] = {
             "raw_text": record.raw_text or "",
             "records": list((record.records or {}).values()),
+            "atletiek_nu_id": record.atletiek_nu_id or "",
             "updated_at": record.updated_at.isoformat() if record.updated_at else "",
         }
 
@@ -1244,12 +1271,14 @@ def match_overview_detail_view(request, match_id):
         elif action == "save_prs":
             athlete_name = (request.POST.get("athlete_name") or "").strip()
             raw_records = request.POST.get("records_text") or ""
+            atletiek_nu_id = re.sub(r"\D+", "", request.POST.get("atletiek_nu_id") or "")
             if athlete_name:
                 parsed_records = _parse_match_athlete_records(raw_records)
                 MatchAthleteRecord.objects.update_or_create(
                     owner=active_coach,
                     athlete_name=athlete_name[:160],
                     defaults={
+                        "atletiek_nu_id": atletiek_nu_id,
                         "records": parsed_records,
                         "raw_text": raw_records,
                     },
@@ -1257,9 +1286,34 @@ def match_overview_detail_view(request, match_id):
                 rows = _normalize_match_rows(match.rows)
                 records_by_athlete, _ui_records = _match_records_for_rows(active_coach, rows)
                 match.rows = _apply_match_pr_notes(rows, records_by_athlete)
+        elif action == "fetch_prs":
+            athlete_name = (request.POST.get("athlete_name") or "").strip()
+            atletiek_nu_id = re.sub(r"\D+", "", request.POST.get("atletiek_nu_id") or "")
+            if athlete_name:
+                records, url, error = _fetch_atletiek_nu_records(atletiek_nu_id)
+                if records:
+                    raw_records = "\n".join(
+                        f"{item.get('event') or ''}\n{str(item.get('value') or '').replace('.', ',')}\t{item.get('date') or ''}".rstrip()
+                        for item in sorted(records.values(), key=lambda record: str(record.get("event") or "").lower())
+                    )
+                    MatchAthleteRecord.objects.update_or_create(
+                        owner=active_coach,
+                        athlete_name=athlete_name[:160],
+                        defaults={
+                            "atletiek_nu_id": atletiek_nu_id,
+                            "records": records,
+                            "raw_text": raw_records,
+                        },
+                    )
+                    rows = _normalize_match_rows(match.rows)
+                    records_by_athlete, _ui_records = _match_records_for_rows(active_coach, rows)
+                    match.rows = _apply_match_pr_notes(rows, records_by_athlete)
+                    request.session["match_pr_status"] = f"Fetched {len(records)} PRs from Atletiek.nu for {athlete_name}."
+                else:
+                    request.session["match_pr_status"] = error or f"No PRs fetched from {url or 'Atletiek.nu'}."
 
         match.save()
-        if action in {"save_name", "save_notes", "save_prs"}:
+        if action in {"save_name", "save_notes", "save_prs", "fetch_prs"}:
             return redirect("match_overview_detail", match_id=match.id)
     elif request.method == "POST":
         return redirect("match_overview_detail", match_id=match.id)
@@ -1283,6 +1337,7 @@ def match_overview_detail_view(request, match_id):
         "can_edit": can_edit,
         "show_paste_form": show_paste_form,
         "athlete_records": athlete_records,
+        "match_pr_status": request.session.pop("match_pr_status", ""),
     })
 
 

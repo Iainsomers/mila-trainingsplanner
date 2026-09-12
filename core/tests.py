@@ -523,6 +523,55 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
         self.assertNotContains(detail, "PR 2,97")
         self.assertContains(detail, "matchAthletePrModal")
 
+    def test_match_athlete_prs_can_be_fetched_from_atletiek_id(self):
+        user = get_user_model().objects.create_user(
+            username="match-pr-fetch-coach",
+            password="secret",
+            is_staff=True,
+        )
+        match = MatchOverview.objects.create(
+            owner=user,
+            name="PR fetch match",
+            rows=[{
+                "time": "10:05",
+                "athlete": "Elodie Costerus",
+                "category": "U10 Vrouwen",
+                "event": "Verspringen U10 - V Groep 2",
+                "event_name": "Verspringen",
+                "event_detail": "U10 - V Groep 2",
+                "pre_note": "",
+                "note": "",
+                "pb": False,
+            }],
+        )
+        self.client.force_login(user)
+
+        with patch("core.views.coach._fetch_atletiek_nu_records", return_value=({
+            "verspringen": {
+                "event": "Verspringen",
+                "value": "3.28",
+                "label": "3,28 (12/09/2026)",
+                "date": "12/09/2026",
+                "display_date": "09/2026",
+                "context": "",
+            },
+        }, "https://www.atletiek.nu/atleet/profiel/2912083/#records", "")):
+            response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
+                "action": "fetch_prs",
+                "athlete_name": "Elodie Costerus",
+                "atletiek_nu_id": "2912083",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        record = MatchAthleteRecord.objects.get(owner=user, athlete_name="Elodie Costerus")
+        self.assertEqual(record.atletiek_nu_id, "2912083")
+        self.assertEqual(record.records["verspringen"]["value"], "3.28")
+
+        detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+        self.assertContains(detail, "Fetched 1 PRs from Atletiek.nu for Elodie Costerus.")
+        self.assertContains(detail, "3,28")
+        self.assertContains(detail, "2912083")
+
     def test_match_athlete_pr_display_survives_notes_autosave(self):
         user = get_user_model().objects.create_user(
             username="match-pr-autosave-coach",

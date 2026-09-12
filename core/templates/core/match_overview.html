@@ -262,6 +262,10 @@
     {% endif %}
   {% endif %}
 
+  {% if match_pr_status %}
+    <div class="alert alert-info">{{ match_pr_status }}</div>
+  {% endif %}
+
   <div class="modal fade" id="matchEventDetailModal" tabindex="-1" aria-labelledby="matchEventDetailTitle" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered">
       <div class="modal-content">
@@ -279,7 +283,6 @@
       <div class="modal-content">
         <form method="post">
           {% csrf_token %}
-          <input type="hidden" name="action" value="save_prs">
           <input type="hidden" name="athlete_name" id="matchPrAthleteInput">
           <div class="modal-header">
             <h2 class="modal-title h6" id="matchAthletePrTitle"></h2>
@@ -290,13 +293,22 @@
               <div class="fw-semibold mb-2">Stored PRs</div>
               <div id="matchPrList" class="match-pr-list small text-muted">No PRs stored yet.</div>
             </div>
+            <div class="mb-3">
+              <label for="matchAtletiekNuId" class="form-label">Atletiek.nu athlete ID</label>
+              <div class="input-group">
+                <input id="matchAtletiekNuId" name="atletiek_nu_id" class="form-control" inputmode="numeric" autocomplete="off" {% if not can_edit %}disabled{% endif %}>
+                {% if can_edit %}
+                  <button type="submit" name="action" value="fetch_prs" class="btn btn-outline-primary">Fetch pb's</button>
+                {% endif %}
+              </div>
+            </div>
             <label for="matchPrText" class="form-label">Paste new PRs</label>
             <textarea id="matchPrText" name="records_text" class="form-control match-pr-paste" spellcheck="false" {% if not can_edit %}disabled{% endif %}></textarea>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
             {% if can_edit %}
-              <button type="submit" class="btn btn-primary">Import PRs</button>
+              <button type="submit" name="action" value="save_prs" class="btn btn-primary">Import PRs</button>
             {% endif %}
           </div>
         </form>
@@ -387,6 +399,7 @@
       document.getElementById("matchAthletePrTitle").textContent = athlete ? `${athlete} PRs` : "Athlete PRs";
       document.getElementById("matchPrAthleteInput").value = athlete;
       document.getElementById("matchPrText").value = data.raw_text || "";
+      document.getElementById("matchAtletiekNuId").value = data.atletiek_nu_id || "";
       const list = document.getElementById("matchPrList");
       if (!data.records || !data.records.length) {
         list.textContent = "No PRs stored yet.";

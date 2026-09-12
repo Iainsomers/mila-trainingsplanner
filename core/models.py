@@ -91,6 +91,7 @@ class MatchAthleteRecord(models.Model):
         related_name="match_athlete_records",
     )
     athlete_name = models.CharField(max_length=160)
+    atletiek_nu_id = models.CharField(max_length=32, blank=True, default="")
     records = models.JSONField(default=dict, blank=True)
     raw_text = models.TextField(blank=True, default="")
     updated_at = models.DateTimeField(auto_now=True)
