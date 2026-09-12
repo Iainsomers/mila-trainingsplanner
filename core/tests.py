@@ -572,6 +572,40 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
         self.assertContains(detail, "3,28")
         self.assertContains(detail, "2912083")
 
+    def test_match_athlete_pr_fetch_failure_shows_message(self):
+        user = get_user_model().objects.create_user(
+            username="match-pr-fetch-error-coach",
+            password="secret",
+            is_staff=True,
+        )
+        match = MatchOverview.objects.create(
+            owner=user,
+            name="PR fetch error match",
+            rows=[{
+                "time": "10:05",
+                "athlete": "Elodie Costerus",
+                "category": "U10 Vrouwen",
+                "event": "Verspringen U10 - V Groep 2",
+                "event_name": "Verspringen",
+                "event_detail": "U10 - V Groep 2",
+                "pre_note": "",
+                "note": "",
+                "pb": False,
+            }],
+        )
+        self.client.force_login(user)
+
+        with patch("core.views.coach._fetch_atletiek_nu_records", return_value=({}, "https://www.atletiek.nu/atleet/profiel/2912083/#records", "Atletiek.nu fetch failed: Playwright is not installed.")):
+            response = self.client.post(f"/coach-tools/match-overview/{match.id}/", {
+                "action": "fetch_prs",
+                "athlete_name": "Elodie Costerus",
+                "atletiek_nu_id": "2912083",
+            })
+
+        self.assertEqual(response.status_code, 302)
+        detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+        self.assertContains(detail, "Atletiek.nu fetch failed: Playwright is not installed.")
+
     def test_match_athlete_pr_display_survives_notes_autosave(self):
         user = get_user_model().objects.create_user(
             username="match-pr-autosave-coach",

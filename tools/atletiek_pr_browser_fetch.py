@@ -94,7 +94,7 @@ def fetch_text_with_browser(url: str, timeout_ms: int = 120_000) -> str:
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
-        raise SystemExit(
+        raise RuntimeError(
             "Playwright is not installed in this venv.\n"
             "Run:\n"
             "  pip install playwright\n"
