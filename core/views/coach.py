@@ -1040,9 +1040,12 @@ def _parse_atletiek_batch_pr_blocks(raw_text):
             continue
         if stripped.startswith("MILA_ATLETIEK_PB_EXPORT_V1"):
             continue
-        if stripped.startswith("ATHLETE\t"):
+        if re.match(r"^ATHLETE\s+", stripped):
             finish_current()
-            parts = stripped.split("\t")
+            parts = [part.strip() for part in re.split(r"\t+|\s{2,}", stripped) if part.strip()]
+            if len(parts) < 3:
+                fallback = re.match(r"^ATHLETE\s+(.+?)\s+(\d{4,})$", stripped)
+                parts = ["ATHLETE", fallback.group(1), fallback.group(2)] if fallback else parts
             current = {
                 "athlete_name": (parts[1] if len(parts) > 1 else "").strip(),
                 "atletiek_nu_id": re.sub(r"\D+", "", parts[2] if len(parts) > 2 else ""),
@@ -1468,7 +1471,7 @@ def pr_database_import_view(request):
     if request.method == "POST":
         raw_text = request.POST.get("results_text") or ""
         action = request.POST.get("action") or "process_results"
-        if action == "import_fetched_prs":
+        if action == "import_fetched_prs" or "MILA_ATLETIEK_PB_EXPORT_V1" in raw_text or re.search(r"(?m)^ATHLETE\s+", raw_text):
             result = _apply_atletiek_batch_prs(active_coach, raw_text)
         else:
             result = _apply_match_result_pbs(active_coach, raw_text)

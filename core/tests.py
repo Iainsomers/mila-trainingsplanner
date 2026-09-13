@@ -212,6 +212,27 @@ END
         self.assertEqual(record.records["60meter"]["value"], "9.54")
         self.assertEqual(record.records["verspringen"]["display_date"], "01/2026")
 
+    def test_pr_database_import_auto_detects_space_separated_fetch_output(self):
+        user = get_user_model().objects.create_user(username="pr-db-space-batch-coach", password="secret", is_staff=True)
+        self.client.force_login(user)
+
+        response = self.client.post("/coach-tools/pr-database/add-pbs/", {
+            "action": "process_results",
+            "results_text": """
+MILA_ATLETIEK_PB_EXPORT_V1
+ATHLETE Aurora Somers 906160
+80 meter
+11,11	01/09/2026
+END
+""",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<strong>1</strong> PB updated")
+        record = MatchAthleteRecord.objects.get(owner=user, athlete_name="Aurora Somers")
+        self.assertEqual(record.atletiek_nu_id, "906160")
+        self.assertEqual(record.records["80meter"]["value"], "11.11")
+
 
 class MatchOverviewTests(TestCase):
     def test_match_overview_page_processes_pasted_atletiek_data(self):
