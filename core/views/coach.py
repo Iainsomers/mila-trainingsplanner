@@ -514,6 +514,8 @@ def _clean_match_text(value):
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = text.replace("**", "")
+    text = text.replace("|", " ")
     text = text.replace("&nbsp;", " ").replace("&#x20;", " ")
     text = text.replace("\\", " ")
     text = re.sub(r"[ \t]+", " ", text)
@@ -736,6 +738,7 @@ MATCH_RECORD_EVENTS = [
     "1500 meter",
     "Kogelstoten",
     "Kogelslingeren",
+    "Discuswerpen",
     "Speerwerpen",
     "Vortex",
     "Vortexwerpen",
@@ -810,6 +813,7 @@ def _extract_match_record_value(line):
     if not text:
         return ""
     text = re.sub(r"\d{1,2}/\d{1,2}/\d{4}", " ", text)
+    text = re.sub(r"\b\d+(?:[,.]\d+)?\s*kg\b", " ", text, flags=re.IGNORECASE)
     if re.search(r"m\s*/\s*s", text, flags=re.IGNORECASE):
         return ""
     candidates = re.findall(r"\d+(?::\d+)*(?:[,.]\d+)?", text)
@@ -908,6 +912,7 @@ def _normalise_result_event_label(label):
         "1500m": "1500 meter",
         "kogel": f"Kogelstoten{weight_suffix}",
         "kogelsl": "Kogelslingeren",
+        "discus": "Discuswerpen",
         "speer": "Speerwerpen",
         "vortex": "Vortexwerpen",
         "hoog": "Hoogspringen",

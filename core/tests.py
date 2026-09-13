@@ -550,6 +550,19 @@ Utrecht
         self.assertEqual(records["kogelstoten3kg"]["label"], "3,21 (01/09/2026)")
         self.assertEqual(records["kogelslingeren4kg"]["event"], "Kogelslingeren 4kg")
 
+    def test_match_athlete_records_parse_markdown_weighted_field_rows(self):
+        records = _parse_match_athlete_records("""
+| Kogelstoten<br>3kg | **8,14** | **06/06/2026**<br>** Hilversum ** |
+| :----------------- | :------- | :------------------------------------------ |
+| Discuswerpen | **17,22** | **06/06/2026**<br>** Hilversum ** |
+""")
+
+        self.assertEqual(records["kogelstoten3kg"]["event"], "Kogelstoten 3kg")
+        self.assertEqual(records["kogelstoten3kg"]["value"], "8.14")
+        self.assertEqual(records["kogelstoten3kg"]["display_date"], "06/2026")
+        self.assertEqual(records["discuswerpen"]["event"], "Discuswerpen")
+        self.assertEqual(records["discuswerpen"]["value"], "17.22")
+
     def test_match_athlete_prs_can_be_imported_from_match_row(self):
         user = get_user_model().objects.create_user(
             username="match-pr-coach",
