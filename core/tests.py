@@ -531,6 +531,25 @@ La Chaux-De-Fonds
         self.assertEqual(records["400meter"]["label"], "49,17 (02/03/2024)")
         self.assertEqual(records["400meterhorden"]["label"], "50,95 (14/07/2024)")
 
+    def test_match_athlete_records_keep_shot_put_weights_separate(self):
+        records = _parse_match_athlete_records("""
+Kogelstoten
+2kg	3,87	20/06/2026
+Nieuwegein
+Kogelstoten
+3kg	3,21	01/09/2026
+Zeist
+Kogelslingeren
+4kg	18,00	02/09/2026
+Utrecht
+""")
+
+        self.assertEqual(records["kogelstoten2kg"]["event"], "Kogelstoten 2kg")
+        self.assertEqual(records["kogelstoten2kg"]["label"], "3,87 (20/06/2026)")
+        self.assertEqual(records["kogelstoten3kg"]["event"], "Kogelstoten 3kg")
+        self.assertEqual(records["kogelstoten3kg"]["label"], "3,21 (01/09/2026)")
+        self.assertEqual(records["kogelslingeren4kg"]["event"], "Kogelslingeren 4kg")
+
     def test_match_athlete_prs_can_be_imported_from_match_row(self):
         user = get_user_model().objects.create_user(
             username="match-pr-coach",

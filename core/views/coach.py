@@ -774,6 +774,28 @@ def _match_record_event_key(event):
     return _match_key(MATCH_RECORD_EVENT_ALIASES.get(key, event_name))
 
 
+def _match_record_weight_suffix(event, block):
+    event_key = _match_record_event_key(event)
+    if event_key not in {"kogelstoten", "kogelslingeren"}:
+        return ""
+    text = " ".join([str(event or "")] + [str(item or "") for item in block])
+    match = re.search(r"\b(\d+(?:[,.]\d+)?)\s*kg\b", text, flags=re.IGNORECASE)
+    if not match:
+        return ""
+    weight = match.group(1).replace(",", ".")
+    if weight.endswith(".0"):
+        weight = weight[:-2]
+    return f"{weight}kg"
+
+
+def _match_record_display_event(event, block):
+    display_event = MATCH_RECORD_EVENT_ALIASES.get(_match_key(event), event)
+    weight_suffix = _match_record_weight_suffix(display_event, block)
+    if weight_suffix and weight_suffix not in _match_key(display_event):
+        return f"{display_event} {weight_suffix}"
+    return display_event
+
+
 def _looks_like_match_record_value(value):
     text = str(value or "").strip()
     if not text or re.search(r"\d{1,2}/\d{1,2}/\d{4}", text):
@@ -842,8 +864,8 @@ def _parse_match_athlete_records(raw_text):
                 if len(date_parts) == 3:
                     display_date = f"{date_parts[1]}/{date_parts[2]}"
                 label = f"{label} ({date_value})"
-            key = _match_record_event_key(event)
-            display_event = MATCH_RECORD_EVENT_ALIASES.get(_match_key(event), event)
+            display_event = _match_record_display_event(event, block)
+            key = _match_record_event_key(display_event)
             records[key] = {
                 "event": display_event,
                 "value": value,
@@ -858,6 +880,13 @@ def _parse_match_athlete_records(raw_text):
 
 def _normalise_result_event_label(label):
     key = _match_key(label)
+    weight_match = re.search(r"\b(\d+(?:[,.]\d+)?)\s*kg\b", str(label or ""), flags=re.IGNORECASE)
+    weight_suffix = ""
+    if weight_match:
+        weight = weight_match.group(1).replace(",", ".")
+        if weight.endswith(".0"):
+            weight = weight[:-2]
+        weight_suffix = f" {weight}kg"
     aliases = {
         "40m": "40 meter",
         "60m": "60 meter",
@@ -877,13 +906,17 @@ def _normalise_result_event_label(label):
         "800m": "800 meter",
         "1000m": "1000 meter",
         "1500m": "1500 meter",
-        "kogel": "Kogelstoten",
+        "kogel": f"Kogelstoten{weight_suffix}",
         "kogelsl": "Kogelslingeren",
         "speer": "Speerwerpen",
         "vortex": "Vortexwerpen",
         "hoog": "Hoogspringen",
         "ver": "Verspringen",
     }
+    if key.startswith("kogel") and weight_suffix:
+        return f"Kogelstoten{weight_suffix}"
+    if key.startswith("kogelsl") and weight_suffix:
+        return f"Kogelslingeren{weight_suffix}"
     return aliases.get(key, MATCH_RECORD_EVENT_ALIASES.get(key, str(label or "").strip()))
 
 
