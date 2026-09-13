@@ -110,6 +110,12 @@ class TrackTimerTests(TestCase):
             athlete_name="Stale Athlete",
             records=_parse_match_athlete_records("600 meter\t2:25,13\t13/09/2025"),
         )
+        MatchAthleteRecord.objects.create(
+            owner=user,
+            athlete_name="Id Only Athlete",
+            atletiek_nu_id="911547",
+            records={},
+        )
         MatchAthleteRecord.objects.filter(id=stale.id).update(updated_at=timezone.now() - timedelta(days=100))
         self.client.force_login(user)
 
@@ -122,6 +128,7 @@ class TrackTimerTests(TestCase):
         self.assertContains(response, "match-pr-fresh")
         self.assertContains(response, "Stale Athlete")
         self.assertContains(response, "match-pr-stale")
+        self.assertNotContains(response, "Id Only Athlete")
 
     def test_pr_database_detail_shows_current_prs(self):
         user = get_user_model().objects.create_user(username="pr-db-detail-coach", password="secret", is_staff=True)
@@ -605,12 +612,16 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
             })
 
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(MatchAthleteRecord.objects.filter(owner=user, athlete_name="Elodie Costerus").exists())
+        record = MatchAthleteRecord.objects.get(owner=user, athlete_name="Elodie Costerus")
+        self.assertEqual(record.atletiek_nu_id, "2912083")
+        self.assertEqual(record.records, {})
         match.refresh_from_db()
         self.assertEqual(len(match.rows), 1)
         self.assertEqual(match.rows[0]["athlete"], "Elodie Costerus")
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
+        self.assertContains(detail, "Saved Atletiek.nu ID 2912083 for Elodie Costerus.")
         self.assertContains(detail, "Atletiek.nu fetch failed: Playwright is not installed.")
+        self.assertContains(detail, "2912083")
 
     def test_match_athlete_pr_display_survives_notes_autosave(self):
         user = get_user_model().objects.create_user(
