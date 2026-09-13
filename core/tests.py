@@ -605,12 +605,12 @@ Nederland<br><span class="subtext">Europe</span> Nieuwegein
             })
 
         self.assertEqual(response.status_code, 302)
-        record = MatchAthleteRecord.objects.get(owner=user, athlete_name="Elodie Costerus")
-        self.assertEqual(record.atletiek_nu_id, "2912083")
+        self.assertFalse(MatchAthleteRecord.objects.filter(owner=user, athlete_name="Elodie Costerus").exists())
+        match.refresh_from_db()
+        self.assertEqual(len(match.rows), 1)
+        self.assertEqual(match.rows[0]["athlete"], "Elodie Costerus")
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
-        self.assertContains(detail, "Saved Atletiek.nu ID 2912083 for Elodie Costerus.")
         self.assertContains(detail, "Atletiek.nu fetch failed: Playwright is not installed.")
-        self.assertContains(detail, "2912083")
 
     def test_match_athlete_pr_display_survives_notes_autosave(self):
         user = get_user_model().objects.create_user(
