@@ -1017,6 +1017,81 @@ def _apply_match_result_pbs(owner, raw_text, import_date=None):
     }
 
 
+def _parse_atletiek_batch_pr_blocks(raw_text):
+    lines = [line.rstrip() for line in str(raw_text or "").splitlines()]
+    blocks = []
+    current = None
+
+    def finish_current():
+        if not current:
+            return
+        records_text = "\n".join(current["lines"]).strip()
+        records = _parse_match_athlete_records(records_text)
+        if records:
+            current["records"] = records
+            current["raw_text"] = records_text
+            blocks.append(current.copy())
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if current:
+                current["lines"].append("")
+            continue
+        if stripped.startswith("MILA_ATLETIEK_PB_EXPORT_V1"):
+            continue
+        if stripped.startswith("ATHLETE\t"):
+            finish_current()
+            parts = stripped.split("\t")
+            current = {
+                "athlete_name": (parts[1] if len(parts) > 1 else "").strip(),
+                "atletiek_nu_id": re.sub(r"\D+", "", parts[2] if len(parts) > 2 else ""),
+                "lines": [],
+            }
+            continue
+        if stripped == "END":
+            finish_current()
+            current = None
+            continue
+        if current:
+            current["lines"].append(line)
+
+    finish_current()
+    return blocks
+
+
+def _apply_atletiek_batch_prs(owner, raw_text):
+    blocks = _parse_atletiek_batch_pr_blocks(raw_text)
+    updated = []
+    skipped = 0
+    for block in blocks:
+        athlete_name = block["athlete_name"]
+        if not athlete_name:
+            skipped += 1
+            continue
+        record, _created = MatchAthleteRecord.objects.update_or_create(
+            owner=owner,
+            athlete_name=athlete_name[:160],
+            defaults={
+                "atletiek_nu_id": block["atletiek_nu_id"],
+                "records": block["records"],
+                "raw_text": block["raw_text"],
+            },
+        )
+        for item in block["records"].values():
+            updated.append({
+                "athlete_name": record.athlete_name,
+                "event": item.get("event") or "Atletiek.nu PR",
+                "value": item.get("value") or "",
+            })
+    return {
+        "checked": len(blocks),
+        "updated": updated,
+        "skipped": skipped,
+        "missing": [],
+    }
+
+
 def _match_pr_record_for_row(row, records_by_athlete):
     athlete_records = records_by_athlete.get(_match_key(row.get("athlete"))) or {}
     return athlete_records.get(_match_record_event_key(row.get("event_name") or row.get("event"))) or {}
@@ -1358,7 +1433,10 @@ def pr_database_view(request):
 
     active_coach = coach_tools_data_owner(_active_coach_user(request))
     records = []
+    fetch_lines = []
     for record in MatchAthleteRecord.objects.filter(owner=active_coach).order_by(Lower("athlete_name")):
+        if record.atletiek_nu_id:
+            fetch_lines.append(f"{record.athlete_name}\t{record.atletiek_nu_id}")
         if not record.records:
             continue
         records.append({
@@ -1371,6 +1449,7 @@ def pr_database_view(request):
 
     return render(request, "core/pr_database.html", {
         "records": records,
+        "fetch_list": "\n".join(fetch_lines),
     })
 
 
@@ -1388,7 +1467,11 @@ def pr_database_import_view(request):
     result = None
     if request.method == "POST":
         raw_text = request.POST.get("results_text") or ""
-        result = _apply_match_result_pbs(active_coach, raw_text)
+        action = request.POST.get("action") or "process_results"
+        if action == "import_fetched_prs":
+            result = _apply_atletiek_batch_prs(active_coach, raw_text)
+        else:
+            result = _apply_match_result_pbs(active_coach, raw_text)
 
     return render(request, "core/pr_database_import.html", {
         "results_text": raw_text,

@@ -6,6 +6,7 @@ Cloudflare/Turnstile to scripts, while a real browser session can pass it.
 
 Usage:
   python tools/atletiek_pr_browser_fetch.py https://www.atletiek.nu/atleet/profiel/876749/#records
+  python tools/atletiek_pr_browser_fetch.py --batch-file atletiek_fetch_list.txt
 
 First-time setup:
   pip install playwright
@@ -89,6 +90,39 @@ def mila_paste_text(records: dict) -> str:
     return "\n".join(lines)
 
 
+def _parse_batch_fetch_list(text: str) -> list[tuple[str, str]]:
+    athletes = []
+    for line in str(text or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split("\t") if part.strip()]
+        if len(parts) >= 2:
+            athlete_id = re.sub(r"\D+", "", parts[-1])
+            name = " ".join(parts[:-1]).strip()
+        else:
+            match = re.search(r"(\d{4,})\s*$", line)
+            if not match:
+                continue
+            athlete_id = match.group(1)
+            name = line[: match.start()].strip()
+        if name and athlete_id:
+            athletes.append((name, athlete_id))
+    return athletes
+
+
+def _format_batch_export_item(name: str, athlete_id: str, records: dict) -> str:
+    lines = [
+        "MILA_ATLETIEK_PB_EXPORT_V1",
+        f"ATHLETE\t{name}\t{athlete_id}",
+    ]
+    paste_text = mila_paste_text(records)
+    if paste_text:
+        lines.append(paste_text)
+    lines.append("END")
+    return "\n".join(lines)
+
+
 def fetch_text_with_browser(url: str, timeout_ms: int = 120_000) -> str:
     try:
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -131,8 +165,34 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Fetch Atletiek.nu PRs with a real browser.")
     parser.add_argument("url", nargs="?", help="Atletiek.nu athlete profile URL.")
     parser.add_argument("--text-file", help="Parse a saved page text file instead of opening a browser.")
+    parser.add_argument("--batch-file", help="Fetch multiple athletes from a pasted Mila list with 'name<TAB>id' rows.")
     parser.add_argument("--json", action="store_true", help="Print parsed records as JSON.")
     args = parser.parse_args(argv)
+
+    if args.batch_file:
+        batch_text = Path(args.batch_file).read_text(encoding="utf-8")
+        athletes = _parse_batch_fetch_list(batch_text)
+        if not athletes:
+            print("No athletes found in batch file.")
+            return 2
+        outputs = []
+        failures = []
+        for name, athlete_id in athletes:
+            url = f"https://www.atletiek.nu/atleet/profiel/{athlete_id}/#records"
+            try:
+                page_text = fetch_text_with_browser(url)
+                records_text = records_section_from_profile_text(page_text)
+                records = normalise_records_for_mila(records_text) if records_text else {}
+            except Exception as exc:
+                records = {}
+                failures.append(f"{name} ({athlete_id}): {exc}")
+            outputs.append(_format_batch_export_item(name, athlete_id, records))
+        print("\n\n".join(outputs))
+        if failures:
+            print("\n\n# Failed")
+            for failure in failures:
+                print(f"# {failure}")
+        return 0
 
     if args.text_file:
         page_text = Path(args.text_file).read_text(encoding="utf-8")

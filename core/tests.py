@@ -128,7 +128,9 @@ class TrackTimerTests(TestCase):
         self.assertContains(response, "match-pr-fresh")
         self.assertContains(response, "Stale Athlete")
         self.assertContains(response, "match-pr-stale")
-        self.assertNotContains(response, "Id Only Athlete")
+        self.assertNotContains(response, "0 PRs")
+        self.assertContains(response, "Atletiek.nu fetch list")
+        self.assertContains(response, "Id Only Athlete\t911547")
 
     def test_pr_database_detail_shows_current_prs(self):
         user = get_user_model().objects.create_user(username="pr-db-detail-coach", password="secret", is_staff=True)
@@ -185,6 +187,30 @@ U8 Mannen - Meerkamp
         self.assertEqual(record.records["600meter"]["value"], "2:27.42")
         self.assertEqual(record.records["vortexwerpen"]["value"], "20.00")
         self.assertEqual(record.records["verspringen"]["value"], "2.41")
+
+    def test_pr_database_import_accepts_local_atletiek_fetch_output(self):
+        user = get_user_model().objects.create_user(username="pr-db-batch-coach", password="secret", is_staff=True)
+        self.client.force_login(user)
+
+        response = self.client.post("/coach-tools/pr-database/add-pbs/", {
+            "action": "import_fetched_prs",
+            "results_text": """
+MILA_ATLETIEK_PB_EXPORT_V1
+ATHLETE	Fenna Coevoet	911547
+60 meter
+9,54	03/04/2026
+Verspringen
+3,93	24/01/2026
+END
+""",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<strong>2</strong> PBs updated")
+        record = MatchAthleteRecord.objects.get(owner=user, athlete_name="Fenna Coevoet")
+        self.assertEqual(record.atletiek_nu_id, "911547")
+        self.assertEqual(record.records["60meter"]["value"], "9.54")
+        self.assertEqual(record.records["verspringen"]["display_date"], "01/2026")
 
 
 class MatchOverviewTests(TestCase):

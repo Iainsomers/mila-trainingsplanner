@@ -65,6 +65,12 @@
     white-space: nowrap;
   }
 
+  .pr-fetch-list {
+    min-height: 120px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.86rem;
+  }
+
   @media (max-width: 640px) {
     .pr-db-row {
       grid-template-columns: minmax(0, 1fr);
@@ -92,6 +98,16 @@
     </div>
   </div>
 
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+        <h2 class="h6 mb-0">Atletiek.nu fetch list</h2>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="copyPrFetchList">Copy</button>
+      </div>
+      <textarea class="form-control pr-fetch-list" id="prFetchList" readonly>{{ fetch_list }}</textarea>
+    </div>
+  </div>
+
   {% if records %}
     <div class="pr-db-list">
       {% for record in records %}
@@ -106,4 +122,19 @@
     <div class="alert alert-light border">No athletes in the PR database yet.</div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById("copyPrFetchList")?.addEventListener("click", async () => {
+    const field = document.getElementById("prFetchList");
+    if (!field) return;
+    field.select();
+    try {
+      await navigator.clipboard.writeText(field.value);
+    } catch (_error) {
+      document.execCommand("copy");
+    }
+  });
+</script>
 {% endblock %}
