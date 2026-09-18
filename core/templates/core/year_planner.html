@@ -402,6 +402,48 @@
     cursor: grabbing;
   }
 
+  .year-range-copy,
+  .year-where-paste {
+    position: absolute;
+    z-index: 8;
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(0,0,0,0.25);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.92);
+    color: #111;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .year-range-copy {
+    top: -8px;
+    left: -8px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .year-range-pill:hover .year-range-copy,
+  .year-range-pill:focus-within .year-range-copy {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .year-where-paste {
+    right: 2px;
+    bottom: 2px;
+    visibility: hidden;
+  }
+
+  .year-where-paste-mode .year-where-paste {
+    visibility: visible;
+  }
+
   .year-range-dragging .year-range-pill {
     cursor: grabbing;
   }
@@ -766,6 +808,7 @@
                            data-year-where-wrap
                            data-year-scope="{{ row.scope }}"
                            data-year-date="{{ cell.date|date:'Y-m-d' }}">
+                        <button type="button" class="year-where-paste" data-year-where-paste>p</button>
                         {% if cell.where_ranges %}
                           {% for range in cell.where_ranges %}
                           <button type="button"
@@ -776,6 +819,7 @@
                                   data-year-range-start="{{ range.start_date }}"
                                   data-year-range-end="{{ range.end_date }}"
                                   data-year-range-scope="{{ row.scope }}">
+                            <span class="year-range-copy" data-year-range-copy>c</span>
                             {% if range.is_start %}
                               <span class="year-range-handle year-range-handle-start" data-year-range-resize="start"></span>
                             {% endif %}
@@ -824,6 +868,7 @@
   const athletePanel = document.querySelector("[data-year-athlete-panel]");
   const athleteToggle = document.querySelector("[data-year-athlete-toggle]");
   let rowClipboard = null;
+  let whereClipboard = null;
   let paint = null;
   let changedCells = new Set();
   let activeWhereRange = null;
@@ -1098,6 +1143,27 @@
     });
   }
 
+  function bindRangeCopyButton(button) {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const segment = button.closest("[data-year-range-id]");
+      if (!segment) return;
+      const start = segment.dataset.yearRangeStart || "";
+      const end = segment.dataset.yearRangeEnd || "";
+      whereClipboard = {
+        whereabouts: segment.dataset.yearRangeType || "",
+        note: segment.dataset.yearRangeNote || "",
+        days: Math.max(1, Math.round((dateMs(end) - dateMs(start)) / 86400000) + 1),
+      };
+      document.body.classList.add("year-where-paste-mode");
+    });
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  }
+
   function bindRangeHandle(handle) {
     handle.addEventListener("click", (event) => event.stopPropagation());
     handle.addEventListener("mousedown", (event) => {
@@ -1133,6 +1199,12 @@
     segment.dataset.yearRangeStart = range.start_date || "";
     segment.dataset.yearRangeEnd = range.end_date || "";
     segment.dataset.yearRangeScope = range.scope || cell.dataset.scope || "";
+    const copyButton = document.createElement("span");
+    copyButton.className = "year-range-copy";
+    copyButton.dataset.yearRangeCopy = "";
+    copyButton.textContent = "c";
+    segment.appendChild(copyButton);
+    bindRangeCopyButton(copyButton);
     if (isStart) {
       const handle = document.createElement("span");
       handle.className = "year-range-handle year-range-handle-start";
@@ -1282,6 +1354,34 @@
 
   document.querySelectorAll("[data-year-range-resize]").forEach(bindRangeHandle);
 
+  document.querySelectorAll("[data-year-range-copy]").forEach(bindRangeCopyButton);
+
+  document.querySelectorAll("[data-year-where-paste]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!whereClipboard?.whereabouts) return;
+      const cell = button.closest("[data-year-cell]");
+      if (!cell) return;
+      const start = new Date(cell.dataset.date + "T00:00:00");
+      const end = new Date(start);
+      end.setDate(start.getDate() + Math.max(1, whereClipboard.days || 1) - 1);
+      saveWhereRange({
+        scope: cell.dataset.scope,
+        start_date: isoDate(start),
+        end_date: isoDate(end),
+        whereabouts: whereClipboard.whereabouts,
+        note: whereClipboard.note,
+      }).then((data) => {
+        if (data?.range) renderRange(data.range);
+      });
+    });
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  });
+
   document.addEventListener("mousemove", (event) => {
     if (rangeResize) {
       const dx = Math.abs(event.clientX - rangeResize.startX);
@@ -1422,12 +1522,14 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       rowClipboard = null;
+      whereClipboard = null;
       paint = null;
       rangeDrag = null;
       rangeResize = null;
       rangeDropCell = null;
       changedCells = new Set();
       document.body.classList.remove("year-row-paste-mode");
+      document.body.classList.remove("year-where-paste-mode");
     }
   });
 
