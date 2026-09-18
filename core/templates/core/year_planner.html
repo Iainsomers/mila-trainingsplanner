@@ -746,7 +746,7 @@
           </thead>
           <tbody>
             {% for row in chunk.rows %}
-              <tr data-year-row {% if row.scope == "basis" %}class="year-basis-row"{% endif %}>
+              <tr data-year-row data-year-row-scope="{{ row.scope }}" {% if row.scope == "basis" %}class="year-basis-row"{% endif %}>
                 <td class="year-name-cell">
                   <div class="year-name-main">{{ row.label }}</div>
                   <div class="year-row-actions">
@@ -1391,6 +1391,7 @@
   document.querySelectorAll("[data-year-row-copy]").forEach((button) => {
     button.addEventListener("click", () => {
       const row = button.closest("[data-year-row]");
+      whereRowClipboard = null;
       rowClipboard = {
         cells: Array.from(row.querySelectorAll("[data-year-cell]")).map((cell) => {
           const payload = cellPayload(cell);
@@ -1399,6 +1400,7 @@
           };
         }),
       };
+      document.body.classList.remove("year-row-where-paste-mode");
       document.body.classList.add("year-row-paste-mode");
     });
   });
@@ -1414,6 +1416,7 @@
     button.addEventListener("click", () => {
       const row = button.closest("[data-year-row]");
       const seenRangeIds = new Set();
+      rowClipboard = null;
       whereRowClipboard = {
         ranges: Array.from(row.querySelectorAll("[data-year-range-id]")).filter((pill) => {
           const id = pill.dataset.yearRangeId || "";
@@ -1427,6 +1430,8 @@
           note: pill.dataset.yearRangeNote || "",
         })),
       };
+      document.body.classList.remove("year-row-paste-mode");
+      document.body.classList.remove("year-row-where-paste-mode");
       if (whereRowClipboard.ranges.length) {
         document.body.classList.add("year-row-where-paste-mode");
       }
@@ -1437,7 +1442,7 @@
     button.addEventListener("click", () => {
       if (!whereRowClipboard?.ranges?.length) return;
       const row = button.closest("[data-year-row]");
-      const targetScope = row.querySelector("[data-year-cell]")?.dataset.scope;
+      const targetScope = row?.dataset.yearRowScope || row?.querySelector("[data-year-cell]")?.dataset.scope;
       if (!targetScope) return;
       Promise.all(whereRowClipboard.ranges.map((range) => saveWhereRange({
         scope: targetScope,
