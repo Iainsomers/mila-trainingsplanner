@@ -40,8 +40,8 @@ class TrackTimerTests(TestCase):
         tools = self.client.get("/coach-tools/")
         self.assertEqual(tools.status_code, 200)
         self.assertContains(tools, "Timer")
-        self.assertContains(tools, "Match overview")
-        self.assertContains(tools, "PR-database")
+        self.assertNotContains(tools, "Match overview")
+        self.assertNotContains(tools, "PR-database")
 
         timer = self.client.get("/timer/")
         self.assertEqual(timer.status_code, 200)
@@ -74,8 +74,8 @@ class TrackTimerTests(TestCase):
         tools = self.client.get("/coach-tools/")
         self.assertEqual(tools.status_code, 200)
         self.assertContains(tools, "Timer")
-        self.assertContains(tools, "Match overview")
-        self.assertContains(tools, "PR-database")
+        self.assertNotContains(tools, "Match overview")
+        self.assertNotContains(tools, "PR-database")
 
         create_response = self.client.post("/coach-tools/match-overview/new/")
         self.assertEqual(create_response.status_code, 302)
