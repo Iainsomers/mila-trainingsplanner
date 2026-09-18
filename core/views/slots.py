@@ -1193,6 +1193,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     # Delete action
     if action == "delete" and athlete:
+        keep_empty_override = _is_flex_source(request) or is_athlete_year_calendar
         if visible_slot and getattr(visible_slot, "athlete_id", None):
             visible_slot.delete()
         elif visible_slot:
@@ -1218,6 +1219,15 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 plan=selected_plan,
                 athlete=athlete,
             ).delete()
+
+        if keep_empty_override:
+            empty_override, _ = TrainingSlot.objects.get_or_create(
+                date=d,
+                slot_index=slot_index,
+                plan=selected_plan,
+                athlete=athlete,
+            )
+            empty_override.segments.all().delete()
 
         _bump_stats_version()
 

@@ -1579,6 +1579,71 @@ class SlotModalSaveTests(TestCase):
         slot = TrainingSlot.objects.get(plan=flex_plan, athlete=athlete, date="2026-03-10", slot_index=1)
         self.assertEqual(slot.core_text(), "1000m z3")
 
+    def test_flex_delete_blocks_base_planning_training_in_athlete_year_calendar(self):
+        user = get_user_model().objects.create_user(
+            username="ayc-flex-delete-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Brenn Style Athlete",
+            birth_year=2010,
+            gender="M",
+        )
+        flex_plan = TrainingPlan.objects.create(owner=user, name=f"Flex Planner {user.id}")
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINING,
+            training_text="5 km z2",
+        )
+        flex_slot = TrainingSlot.objects.create(
+            plan=flex_plan,
+            athlete=athlete,
+            date=date(2026, 9, 21),
+            slot_index=1,
+        )
+        flex_slot.segments.create(type="CORE", text="3 km z3", zone="3", order=1)
+        self.client.force_login(user)
+
+        response = self.client.post(
+            f"/slot-modal/2026/09/21/1/?plan={flex_plan.id}&athlete={athlete.id}&source=flex",
+            {"action": "delete"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        empty_override = TrainingSlot.objects.get(
+            plan=flex_plan,
+            athlete=athlete,
+            date=date(2026, 9, 21),
+            slot_index=1,
+        )
+        self.assertFalse(empty_override.segments.exists())
+
+        page = self.client.get(f"/athlete/year/?year=2026&athlete={athlete.id}&hide=none")
+
+        self.assertEqual(page.status_code, 200)
+        target_cell = None
+        for week in page.context["week_rows"]:
+            for cell in week["cells1"]:
+                if cell["day"] == date(2026, 9, 21):
+                    target_cell = cell
+                    break
+            if target_cell:
+                break
+        self.assertIsNotNone(target_cell)
+        self.assertIsNone(target_cell["slot"])
+
     def test_mobile_pm_training_contains_modal_prefill_values(self):
         template_path = get_template("core/athlete_year_calendar.html").origin.name
         template_source = Path(template_path).read_text(encoding="utf-8")
