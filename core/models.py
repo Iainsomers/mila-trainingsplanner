@@ -359,7 +359,11 @@ class YearPlannerEntry(models.Model):
         ("camp", "Camp"),
         ("travel", "Travel"),
         ("test", "Test"),
-        ("race", "Race"),
+        ("championship", "Championship"),
+        ("race_gold", "Race Gold"),
+        ("race_silver", "Race Silver"),
+        ("race_bronze", "Race Bronze"),
+        ("expermeetings", "Expermeetings"),
         ("medical", "Medical"),
         ("brinec", "Brinec"),
     ]
