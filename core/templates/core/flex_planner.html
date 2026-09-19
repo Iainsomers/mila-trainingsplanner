@@ -45,44 +45,6 @@
       margin: 8px 0 6px;
     }
 
-    .flex-week-phase-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding: 6px 8px;
-      margin: 0 0 6px;
-      border: 1px solid #d5d5d5;
-      border-radius: 8px;
-      background: #fafafa;
-    }
-
-    .flex-week-phase-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .flex-week-phase-label {
-      font-size: 12px;
-      font-weight: 700;
-      display: inline-block;
-      padding: 2px 7px;
-      border-radius: 8px;
-      background: rgba(0,0,0,0.06);
-    }
-
-    .flex-week-phase-label.phase-recovery { background: #e8ddff; }
-    .flex-week-phase-label.phase-aerobe { background: #f06f5f; }
-    .flex-week-phase-label.phase-specific { background: #bfe7bf; }
-    .flex-week-phase-label.phase-intense { background: #b7d7ff; }
-    .flex-week-phase-label.phase-taper { background: #ff7a00; }
-
-    .flex-week-phase-select {
-      width: 140px;
-    }
-
     .flex-table-wrap {
       overflow-x: auto;
       border: 1px solid #cccccc;
@@ -122,28 +84,11 @@
       z-index: 2;
     }
 
-    .flex-athlete-col.phase-recovery { background-color: #e8ddff; }
+    .flex-athlete-col.phase-recovery { background-color: #f8f8f0; }
     .flex-athlete-col.phase-aerobe { background-color: #f06f5f; }
     .flex-athlete-col.phase-specific { background-color: #bfe7bf; }
     .flex-athlete-col.phase-intense { background-color: #b7d7ff; }
-    .flex-athlete-col.phase-taper { background-color: #ff7a00; }
-
-    .flex-athlete-phase-wrap {
-      margin-top: 5px;
-    }
-
-    .flex-athlete-phase-wrap .form-select {
-      font-weight: 400;
-      background-color: inherit;
-    }
-
-    .flex-athlete-phase-wrap {
-      margin-top: 6px;
-      display: flex;
-      align-items: flex-start;
-      gap: 4px;
-      flex-direction: column;
-    }
+    .flex-athlete-col.phase-taper { background-color: #f2c200; }
 
     .flex-total-col {
       width: 165px;
@@ -1105,108 +1050,11 @@
 
 
 
-    function flexPlanIdFromRows(firstRow) {
-      const rows = [firstRow, firstRow ? firstRow.nextElementSibling : null].filter(Boolean);
-      for (const row of rows) {
-        const el = row.querySelector("[data-flex-paste-url*='plan='], [data-flex-copy-url*='plan=']");
-        if (!el) continue;
-        const url = el.getAttribute("data-flex-paste-url") || el.getAttribute("data-flex-copy-url") || "";
-        const match = url.match(/[?&]plan=(\d+)/);
-        if (match) return match[1];
-      }
-      return "";
-    }
-
-    function flexApplyWeekPhaseClass(select, value) {
-      const cell = select ? select.closest(".flex-athlete-col") : null;
-      if (!cell) return;
-      cell.classList.remove("phase-recovery", "phase-aerobe", "phase-specific", "phase-intense", "phase-taper");
-      if (value) cell.classList.add("phase-" + value);
-    }
-
-    function flexFallbackWeekPhaseUrl(select) {
-      const existing = select.getAttribute("data-flex-week-phase-url") || "";
-      if (existing) return existing;
-
-      const firstRow = select.closest("tr");
-      const planId = flexPlanIdFromRows(firstRow);
-      const athleteId = select.getAttribute("data-flex-athlete-id") || "";
-      const y = select.getAttribute("data-flex-week-y") || "";
-      const m = select.getAttribute("data-flex-week-m") || "";
-      const d = select.getAttribute("data-flex-week-d") || "";
-      if (!planId || !athleteId || !y || !m || !d) return "";
-
-      return `/athlete-week-phase/${y}/${m}/${d}/?plan=${planId}&athlete=${athleteId}`;
-    }
-
-    function flexWeekPhaseStorageKey(select) {
-      const url = flexFallbackWeekPhaseUrl(select);
-      const athleteId = select.getAttribute("data-flex-athlete-id") || "";
-      const y = select.getAttribute("data-flex-week-y") || "";
-      const m = select.getAttribute("data-flex-week-m") || "";
-      const d = select.getAttribute("data-flex-week-d") || "";
-      const planMatch = url.match(/[?&]plan=(\d+)/);
-      const planId = planMatch ? planMatch[1] : "";
-      if (!planId || !athleteId || !y || !m || !d) return "";
-      return `mila:flex-week-phase:${planId}:${athleteId}:${y}-${m}-${d}`;
-    }
-
-    function flexInitialWeekPhaseValue(select) {
-      return select.getAttribute("data-flex-server-week-phase") || "";
-    }
-
-    function bindFlexWeekPhaseSelect(select) {
-      if (!select || select.getAttribute("data-flex-week-phase-bound") === "1") return;
-      select.setAttribute("data-flex-week-phase-bound", "1");
-
-      const initialUrl = flexFallbackWeekPhaseUrl(select);
-      if (initialUrl) {
-        select.setAttribute("data-flex-week-phase-url", initialUrl);
-        select.disabled = false;
-      }
-
-      const initialValue = flexInitialWeekPhaseValue(select);
-      select.value = initialValue;
-      flexApplyWeekPhaseClass(select, initialValue);
-
-      select.addEventListener("change", () => {
-        const url = flexFallbackWeekPhaseUrl(select);
-        if (!url) {
-          select.value = flexInitialWeekPhaseValue(select);
-          flexApplyWeekPhaseClass(select, select.value || "");
-          alert("No plan found for this athlete/week.");
-          return;
-        }
-
-        const value = select.value || "";
-        flexApplyWeekPhaseClass(select, value);
-
-        const token = getCookie("csrftoken");
-        const body = new URLSearchParams();
-        body.set("phase", value);
-
-        fetch(url, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: token ? {"X-CSRFToken": token, "Content-Type": "application/x-www-form-urlencoded"} : {"Content-Type": "application/x-www-form-urlencoded"},
-          body: body.toString()
-        }).then((response) => {
-          if (!response.ok) throw new Error("Saving week type failed");
-          window.location.reload();
-        }).catch(() => alert("Saving week type failed."));
-      });
-    }
-
-    function initFlexWeekPhaseControls() {
-      document.querySelectorAll("select[data-flex-week-phase-select]").forEach(bindFlexWeekPhaseSelect);
-    }
-
     document.addEventListener("DOMContentLoaded", () => {
       updateFlexTotalsFromVisibleRows();
       applyFlexProgressivePillColors();
       initFlexDragCopy();
       restoreFlexClickPasteMode();
-      initFlexWeekPhaseControls();
       initFlexReportAndDeleteButtons();
     });
     document.addEventListener("htmx:afterSwap", () => {
@@ -1214,7 +1062,6 @@
       applyFlexProgressivePillColors();
       initFlexDragCopy();
       restoreFlexClickPasteMode();
-      initFlexWeekPhaseControls();
       initFlexReportAndDeleteButtons();
     });
   </script>
@@ -1319,29 +1166,8 @@
           <tbody>
             {% for row in week.athlete_rows %}
               <tr class="flex-athlete-row-start" data-flex-zone-speeds="{{ row.zone_speeds_json|escape }}">
-                <td class="flex-athlete-col {% if row.week_phase %}phase-{{ row.week_phase }}{% endif %}" rowspan="2">
+                <td class="flex-athlete-col {% if row.week_phase %}phase-{{ row.week_phase }}{% endif %}" rowspan="2" {% if row.week_phase_style %}style="{{ row.week_phase_style }}"{% endif %}>
                   <div>{{ row.athlete.name }}</div>
-                  <div class="flex-athlete-phase-wrap">
-                    <select
-                      class="form-select form-select-sm flex-week-phase-select"
-                      name="phase"
-                      aria-label="Week type"
-                      data-flex-week-phase-select
-                      data-flex-server-week-phase="{{ row.week_phase|default:'' }}"
-                      data-flex-week-phase-url="{% if row.week_phase_plan_id %}/athlete-week-phase/{{ week.week_start|date:'Y' }}/{{ week.week_start|date:'m' }}/{{ week.week_start|date:'d' }}/?plan={{ row.week_phase_plan_id }}&athlete={{ row.athlete.id }}{% endif %}"
-                      data-flex-athlete-id="{{ row.athlete.id }}"
-                      data-flex-week-y="{{ week.week_start|date:'Y' }}"
-                      data-flex-week-m="{{ week.week_start|date:'m' }}"
-                      data-flex-week-d="{{ week.week_start|date:'d' }}"
-                    >
-                      <option value="" {% if not row.week_phase %}selected{% endif %}>—</option>
-                      <option value="recovery" {% if row.week_phase == "recovery" %}selected{% endif %}>Recovery</option>
-                      <option value="aerobe" {% if row.week_phase == "aerobe" %}selected{% endif %}>Aerobe</option>
-                      <option value="specific" {% if row.week_phase == "specific" %}selected{% endif %}>Specific</option>
-                      <option value="intense" {% if row.week_phase == "intense" %}selected{% endif %}>Intense</option>
-                      <option value="taper" {% if row.week_phase == "taper" %}selected{% endif %}>Taper</option>
-                    </select>
-                  </div>
                 </td>
                 <td class="flex-total-col" rowspan="2" data-flex-total-cell>
                   <div class="flex-total-content" title="{{ row.sum_pct_tooltip|default:'' }}">

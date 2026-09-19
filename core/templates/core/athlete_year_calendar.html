@@ -47,11 +47,11 @@
     background: rgba(255,255,255,0.55);
   }
 
-  .weeklabel.phase-recovery { background: #e8ddff !important; }
+  .weeklabel.phase-recovery { background: #f8f8f0 !important; }
   .weeklabel.phase-aerobe   { background: #f06f5f !important; }
   .weeklabel.phase-specific { background: #bfe7bf !important; }
   .weeklabel.phase-intense  { background: #b7d7ff !important; }
-  .weeklabel.phase-taper    { background: #ff7a00 !important; }
+  .weeklabel.phase-taper    { background: #f2c200 !important; }
 
 
   .sumcol {
@@ -593,11 +593,11 @@
     }
     .ayc-mobile-vitals-avg strong { display: block; font-size: .76rem; }
     .ayc-mobile-phase { color: #111; border: 1px solid rgba(0,0,0,.12); }
-    .ayc-mobile-phase.phase-recovery { background: #e8ddff; }
+    .ayc-mobile-phase.phase-recovery { background: #f8f8f0; }
     .ayc-mobile-phase.phase-aerobe { background: #f06f5f; }
     .ayc-mobile-phase.phase-specific { background: #bfe7bf; }
     .ayc-mobile-phase.phase-intense { background: #b7d7ff; }
-    .ayc-mobile-phase.phase-taper { background: #ff7a00; }
+    .ayc-mobile-phase.phase-taper { background: #f2c200; }
     .ayc-mobile-day {
       border: 1px solid #d8d8d8;
       border-radius: 12px;
@@ -805,7 +805,7 @@
              data-week-start="{{ w.week_start|date:'Y-m-d' }}"
              data-week-end="{{ w.week_end|date:'Y-m-d' }}"
              data-week-label="{{ w.week_start|date:'d M' }} – {{ w.week_end|date:'d M Y' }}">
-      <div class="ayc-mobile-summary{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}">
+      <div class="ayc-mobile-summary{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" {% if w.week_phase_style %}style="{{ w.week_phase_style }}"{% endif %}>
         <div class="d-flex justify-content-between align-items-center gap-2">
           <div><div class="ayc-mobile-total-label">Total</div><div class="ayc-mobile-total">{{ w.sum_tot_km }} km</div></div>
           {% if w.week_phase_label %}<span class="week-phase-label ayc-mobile-phase phase-{{ w.week_phase }}">{{ w.week_phase_label }}</span>{% endif %}
@@ -1136,7 +1136,7 @@
     <tbody>
       {% for w in week_rows %}
         <tr class="slotrow week-start-row {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="{{ ayc_rowspan }}">
+          <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="{{ ayc_rowspan }}" {% if w.week_phase_style %}style="{{ w.week_phase_style }}"{% endif %}>
             <div>{{ w.week_start|date:"d-m" }}</div>
             <div>{{ w.week_end|date:"d-m" }}</div>
             {% if show_daily_vitals %}

@@ -27,6 +27,7 @@ from core.models import (
     CoachAccess,
     RaceEntry,
     StandardStrengthProgram,
+    YearPlannerEntry,
 )
 from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from core.parser import parse_segment_text
@@ -1054,7 +1055,8 @@ def flex_planner_view(request):
 
     end = start + timedelta(days=7 * weeks)
     week_starts = [start + timedelta(days=7 * i) for i in range(weeks)]
-    flex_plan = _get_or_create_flex_planner_plan(_active_coach_user(request), start, end) if selected_athletes else None
+    owner = _active_coach_user(request)
+    flex_plan = _get_or_create_flex_planner_plan(owner, start, end) if selected_athletes else None
 
     # Determine which plans are relevant per athlete/date.
     # Current project rule: an athlete should not be in overlapping plans for the same dates.
@@ -1129,20 +1131,55 @@ def flex_planner_view(request):
         ):
             check_lookup[(check.athlete_id, check.date, check.slot_index)] = check
 
-    base_phase_by_plan_week = {}
-    athlete_phase_by_plan_week = {}
+    year_training_by_athlete_day = {}
+    if selected_athlete_ids:
+        for entry in YearPlannerEntry.objects.filter(
+            owner=owner,
+            date__gte=start,
+            date__lt=end,
+        ).filter(
+            Q(athlete_id__in=selected_athlete_ids) | Q(athlete__isnull=True)
+        ).only("athlete_id", "date", "training_type"):
+            year_training_by_athlete_day[(entry.athlete_id, entry.date)] = entry.training_type or ""
 
-    if relevant_plan_ids:
-        for obj in PlanWeekPhase.objects.filter(plan_id__in=relevant_plan_ids, week_start__in=week_starts):
-            base_phase_by_plan_week[(obj.plan_id, obj.week_start)] = (obj.phase or "")
+    year_training_colors = {
+        "recovery": "#f8f8f0",
+        "aerobe": "#f06f5f",
+        "specific": "#bfe7bf",
+        "intense": "#b7d7ff",
+        "taper": "#f2c200",
+    }
 
-    if relevant_plan_ids and selected_athlete_ids:
-        for obj in AthleteWeekPhaseOverride.objects.filter(
-            plan_id__in=relevant_plan_ids,
-            athlete_id__in=selected_athlete_ids,
-            week_start__in=week_starts,
-        ):
-            athlete_phase_by_plan_week[(obj.plan_id, obj.athlete_id, obj.week_start)] = (obj.phase or "")
+    def week_training_style(athlete_id, days):
+        values = [
+            year_training_by_athlete_day.get((athlete_id, day))
+            or year_training_by_athlete_day.get((None, day), "")
+            for day in days
+        ]
+        values = [value for value in values if value in year_training_colors]
+        if not values:
+            return "", ""
+
+        runs = []
+        for value in values:
+            if runs and runs[-1]["value"] == value:
+                runs[-1]["count"] += 1
+            else:
+                runs.append({"value": value, "count": 1})
+
+        if len(runs) == 1:
+            value = runs[0]["value"]
+            return f"background: {year_training_colors[value]};", value
+
+        total = sum(item["count"] for item in runs) or 1
+        cursor = 0.0
+        stops = []
+        for item in runs:
+            start_pct = cursor
+            cursor += (item["count"] / total) * 100.0
+            color = year_training_colors[item["value"]]
+            stops.append(f"{color} {start_pct:.2f}%, {color} {cursor:.2f}%")
+        return f"background: linear-gradient(135deg, {', '.join(stops)});", ""
 
     base_blocks_by_athlete = {}
     trainer_plan_ids = set()
@@ -1270,19 +1307,7 @@ def flex_planner_view(request):
                         "check": _flex_check_payload(check_lookup.get((athlete.id, day, slot_index))),
                     })
 
-            week_phase = ""
-            week_phase_plan_id = ""
-
-            for day in days:
-                plan = plan_for_athlete_day.get((athlete.id, day))
-                if not plan:
-                    continue
-
-                athlete_phase = athlete_phase_by_plan_week.get((plan.id, athlete.id, week_start), "")
-                base_phase = base_phase_by_plan_week.get((plan.id, week_start), "")
-                week_phase = athlete_phase or base_phase
-                week_phase_plan_id = plan.id
-                break
+            week_phase_style, week_phase = week_training_style(athlete.id, days)
 
             athlete_rows.append({
                 "athlete": athlete,
@@ -1290,7 +1315,7 @@ def flex_planner_view(request):
                 "am_cells": am_cells,
                 "pm_cells": pm_cells,
                 "week_phase": week_phase,
-                "week_phase_plan_id": week_phase_plan_id,
+                "week_phase_style": week_phase_style,
             })
 
         week_rows.append({
@@ -2822,6 +2847,7 @@ def athlete_year_calendar_view(request):
     start = max(full_start, cutoff) if cutoff else full_start
     weeks = max(0, ((end - start).days // 7) + 1)
 
+    owner = _active_coach_user(request)
     slot_map = {}
     has_fix_keys = set()
     flex_plan = None
@@ -2835,7 +2861,7 @@ def athlete_year_calendar_view(request):
         else:
             owned_plans = list(TrainingPlan.objects.order_by("name"))
 
-        flex_plan = _get_athlete_year_flex_plan(_active_coach_user(request), selected_athlete, full_start, end)
+        flex_plan = _get_athlete_year_flex_plan(owner, selected_athlete, full_start, end)
         if flex_plan and flex_plan not in owned_plans:
             owned_plans.append(flex_plan)
 
@@ -2934,19 +2960,56 @@ def athlete_year_calendar_view(request):
     }
 
     week_starts = [start + timedelta(days=7 * i) for i in range(weeks)]
-    base_phase_by_plan_week = {}
-    athlete_phase_by_plan_week = {}
+    year_training_by_day = {}
+    if selected_athlete:
+        for entry in YearPlannerEntry.objects.filter(
+            owner=owner,
+            date__gte=start,
+            date__lte=end,
+        ).filter(
+            Q(athlete=selected_athlete) | Q(athlete__isnull=True)
+        ).only("athlete_id", "date", "training_type"):
+            key = "athlete" if entry.athlete_id else "basis"
+            year_training_by_day[(key, entry.date)] = entry.training_type or ""
 
-    if selected_athlete and athlete_plans:
-        for obj in PlanWeekPhase.objects.filter(plan__in=athlete_plans, week_start__in=week_starts):
-            base_phase_by_plan_week[(obj.plan_id, obj.week_start)] = (obj.phase or "")
+    year_training_colors = {
+        "recovery": "#f8f8f0",
+        "aerobe": "#f06f5f",
+        "specific": "#bfe7bf",
+        "intense": "#b7d7ff",
+        "taper": "#f2c200",
+    }
 
-        for obj in AthleteWeekPhaseOverride.objects.filter(
-            plan__in=athlete_plans,
-            athlete=selected_athlete,
-            week_start__in=week_starts,
-        ):
-            athlete_phase_by_plan_week[(obj.plan_id, obj.week_start)] = (obj.phase or "")
+    def ayc_week_training_style(days):
+        values = [
+            year_training_by_day.get(("athlete", day))
+            or year_training_by_day.get(("basis", day), "")
+            for day in days
+        ]
+        values = [value for value in values if value in year_training_colors]
+        if not values:
+            return "", ""
+
+        runs = []
+        for value in values:
+            if runs and runs[-1]["value"] == value:
+                runs[-1]["count"] += 1
+            else:
+                runs.append({"value": value, "count": 1})
+
+        if len(runs) == 1:
+            value = runs[0]["value"]
+            return f"background: {year_training_colors[value]};", value
+
+        total = sum(item["count"] for item in runs) or 1
+        cursor = 0.0
+        stops = []
+        for item in runs:
+            start_pct = cursor
+            cursor += (item["count"] / total) * 100.0
+            color = year_training_colors[item["value"]]
+            stops.append(f"{color} {start_pct:.2f}%, {color} {cursor:.2f}%")
+        return f"background: linear-gradient(135deg, {', '.join(stops)});", ""
 
     # BULK FETCH checks & comments (performance)
     check_map = {}
@@ -3124,30 +3187,7 @@ def athlete_year_calendar_view(request):
                 "vitals": daily_vitals_map.get(day),
             })
 
-        week_phase = ""
-        if selected_athlete and athlete_plans:
-            for plan in athlete_plans:
-                if plan.start_date and plan.start_date > week_end:
-                    continue
-                if plan.end_date and plan.end_date < week_start:
-                    continue
-
-                athlete_phase = ""
-                base_phase = ""
-
-                for (pid, ws), phase in athlete_phase_by_plan_week.items():
-                    if pid == plan.id and week_start <= ws <= week_end:
-                        athlete_phase = phase
-                        break
-
-                for (pid, ws), phase in base_phase_by_plan_week.items():
-                    if pid == plan.id and week_start <= ws <= week_end:
-                        base_phase = phase
-                        break
-
-                week_phase = athlete_phase or base_phase
-                if week_phase:
-                    break
+        week_phase_style, week_phase = ayc_week_training_style([week_start + timedelta(days=i) for i in range(7)])
 
         z_m = {str(i): 0.0 for i in range(1, 7)}
         z_time_s = {str(i): 0.0 for i in range(1, 7)}
@@ -3276,6 +3316,7 @@ def athlete_year_calendar_view(request):
             "mobile_days": mobile_days,
             "daily_vitals_avg": daily_vitals_avg,
             "week_phase": week_phase,
+            "week_phase_style": week_phase_style,
             "week_phase_label": phase_label.get(week_phase, ""),
             "sum_tot_km": _format_km(tot_m),
             "sum_z1_km": _km_str_with_small(z_m["1"]),
