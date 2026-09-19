@@ -144,8 +144,8 @@
     visibility: hidden;
   }
 
-  .year-row-paste-mode .year-row-training-paste,
-  .year-row-where-paste-mode .year-row-where-paste {
+  .year-paste-training-active .year-row-training-paste,
+  .year-paste-where-active .year-row-where-paste {
     visibility: visible;
   }
 
@@ -731,7 +731,7 @@
 
   <div class="year-table-wrap {% if layout_mode == 'stack' %}year-layout-stack{% endif %}">
     {% for chunk in chunks %}
-      <div class="year-chunk">
+      <div class="year-chunk" data-year-chunk="{{ forloop.counter0 }}">
         {% if layout_mode == "stack" %}
           <div class="year-chunk-title">{{ chunk.label }}</div>
         {% endif %}
@@ -746,7 +746,7 @@
           </thead>
           <tbody>
             {% for row in chunk.rows %}
-              <tr data-year-row data-year-row-scope="{{ row.scope }}" {% if row.scope == "basis" %}class="year-basis-row"{% endif %}>
+              <tr data-year-row data-year-row-scope="{{ row.scope }}" data-year-row-chunk="{{ forloop.parentloop.counter0 }}" {% if row.scope == "basis" %}class="year-basis-row"{% endif %}>
                 <td class="year-name-cell">
                   <div class="year-name-main">{{ row.label }}</div>
                   <div class="year-row-actions">
@@ -864,6 +864,19 @@
     if (text) {
       statusTimer = window.setTimeout(() => setStatus("", false), delay);
     }
+  }
+
+  function clearRowPasteModes() {
+    document.querySelectorAll("[data-year-chunk]").forEach((chunk) => {
+      chunk.classList.remove("year-paste-training-active", "year-paste-where-active");
+    });
+  }
+
+  function activateRowPasteMode(row, mode) {
+    clearRowPasteModes();
+    const chunk = row?.closest("[data-year-chunk]");
+    if (!chunk) return;
+    chunk.classList.add(mode === "where" ? "year-paste-where-active" : "year-paste-training-active");
   }
 
   function cellPayload(cell) {
@@ -1419,8 +1432,7 @@
           };
         }),
       };
-      document.body.classList.remove("year-row-where-paste-mode");
-      document.body.classList.add("year-row-paste-mode");
+      activateRowPasteMode(row, "training");
     });
   });
 
@@ -1449,10 +1461,10 @@
           note: pill.dataset.yearRangeNote || "",
         })),
       };
-      document.body.classList.remove("year-row-paste-mode");
-      document.body.classList.remove("year-row-where-paste-mode");
       if (whereRowClipboard.ranges.length) {
-        document.body.classList.add("year-row-where-paste-mode");
+        activateRowPasteMode(row, "where");
+      } else {
+        clearRowPasteModes();
       }
     });
   });
@@ -1503,8 +1515,7 @@
       rangeResize = null;
       rangeDropCell = null;
       changedCells = new Set();
-      document.body.classList.remove("year-row-paste-mode");
-      document.body.classList.remove("year-row-where-paste-mode");
+      clearRowPasteModes();
     }
   });
 
