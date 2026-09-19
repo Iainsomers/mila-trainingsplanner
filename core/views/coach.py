@@ -4908,7 +4908,17 @@ def year_planner_view(request):
 
     def row_ranges(athlete_id):
         rendered = []
+        seen_ranges = set()
         for range_obj in ranges_by_athlete.get(athlete_id, []):
+            range_key = (
+                range_obj.start_date,
+                range_obj.end_date,
+                range_obj.whereabouts_type,
+                range_obj.note,
+            )
+            if range_key in seen_ranges:
+                continue
+            seen_ranges.add(range_key)
             visible_start = max(range_obj.start_date, start_date)
             visible_end = min(range_obj.end_date, end_date)
             start_index = day_index.get(visible_start)
@@ -5138,7 +5148,7 @@ def year_planner_whereabout_save_view(request):
     ranges_payload = payload.get("ranges")
     if isinstance(ranges_payload, list):
         owner = _active_coach_user(request)
-        created_ranges = []
+        validated_ranges = []
         for item in ranges_payload:
             if not isinstance(item, dict):
                 return JsonResponse({"ok": False, "error": "Invalid range"}, status=400)
@@ -5154,14 +5164,33 @@ def year_planner_whereabout_save_view(request):
             whereabouts_type = (item.get("whereabouts") or "").strip()
             if whereabouts_type not in allowed_whereabouts:
                 return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
-            created_ranges.append(YearPlannerWhereabout.objects.create(
+            validated_ranges.append({
+                "start_date": start_date,
+                "end_date": end_date,
+                "whereabouts_type": whereabouts_type,
+                "note": (item.get("note") or "").strip()[:120],
+            })
+        if payload.get("replace") and validated_ranges:
+            replace_start = min(item["start_date"] for item in validated_ranges)
+            replace_end = max(item["end_date"] for item in validated_ranges)
+            YearPlannerWhereabout.objects.filter(
                 owner=owner,
                 athlete=athlete_obj,
-                start_date=start_date,
-                end_date=end_date,
-                whereabouts_type=whereabouts_type,
-                note=(item.get("note") or "").strip()[:120],
-            ))
+                start_date__lte=replace_end,
+                end_date__gte=replace_start,
+            ).delete()
+        created_ranges = [
+            YearPlannerWhereabout(
+                owner=owner,
+                athlete=athlete_obj,
+                start_date=item["start_date"],
+                end_date=item["end_date"],
+                whereabouts_type=item["whereabouts_type"],
+                note=item["note"],
+            )
+            for item in validated_ranges
+        ]
+        YearPlannerWhereabout.objects.bulk_create(created_ranges)
         return JsonResponse({"ok": True, "ranges": [range_payload(range_obj) for range_obj in created_ranges]})
 
     try:

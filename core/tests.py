@@ -1215,11 +1215,20 @@ class YearPlannerTests(TestCase):
 
     def test_year_planner_saves_whereabout_ranges_in_batch(self):
         coach, athlete = self._coach_and_athlete()
+        YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=athlete,
+            start_date=date(2026, 9, 3),
+            end_date=date(2026, 9, 4),
+            whereabouts_type="medical",
+            note="Old",
+        )
 
         response = self.client.post(
             "/planning/year/whereabout/",
             data=json.dumps({
                 "scope": f"athlete-{athlete.id}",
+                "replace": True,
                 "ranges": [
                     {
                         "start_date": "2026-09-01",
@@ -1244,6 +1253,7 @@ class YearPlannerTests(TestCase):
         self.assertEqual(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete).count(), 2)
         self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="camp").exists())
         self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="test").exists())
+        self.assertFalse(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="medical").exists())
 
     def test_empty_year_planner_save_deletes_entry(self):
         coach, athlete = self._coach_and_athlete()
