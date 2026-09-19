@@ -422,7 +422,7 @@
 
   .year-zoom-1 { --year-day-width: 42px; --year-day-height: 44px; }
   .year-zoom-3 { --year-day-width: 16px; --year-day-height: 34px; }
-  .year-zoom-12 { --year-day-width: 5px; --year-day-height: 22px; }
+  .year-zoom-12 { --year-day-width: 5px; --year-day-height: 34px; }
 
   .year-zoom-3 .year-table th,
   .year-zoom-12 .year-table th {
@@ -474,6 +474,11 @@
 
   .year-active-editor input[type="date"] {
     min-width: 120px;
+  }
+
+  .year-active-editor .year-active-check {
+    min-width: 170px;
+    padding-bottom: 0.25rem;
   }
 
   .year-fill.year-training-recovery,
@@ -725,6 +730,10 @@
       <label for="activeWhereEnd" class="form-label mb-1 small">To</label>
       <input id="activeWhereEnd" type="date" class="form-control form-control-sm" data-active-where-end>
     </div>
+    <label class="form-check year-active-check">
+      <input class="form-check-input" type="checkbox" data-active-where-all>
+      <span class="form-check-label small">Use for all selected athletes</span>
+    </label>
     <button type="button" class="btn btn-sm btn-outline-danger" data-active-where-delete>Delete</button>
     <button type="button" class="btn btn-sm btn-primary" data-active-where-close>Done</button>
   </div>
@@ -836,6 +845,7 @@
   const activeWhereStart = document.querySelector("[data-active-where-start]");
   const activeWhereEnd = document.querySelector("[data-active-where-end]");
   const activeWhereDelete = document.querySelector("[data-active-where-delete]");
+  const activeWhereAll = document.querySelector("[data-active-where-all]");
   const athletePanel = document.querySelector("[data-year-athlete-panel]");
   const athleteToggle = document.querySelector("[data-year-athlete-toggle]");
   let rowClipboard = null;
@@ -1001,6 +1011,7 @@
     if (activeWhereStart) activeWhereStart.value = cell.dataset.date;
     if (activeWhereEnd) activeWhereEnd.value = cell.dataset.date;
     if (activeWhereDelete) activeWhereDelete.disabled = true;
+    if (activeWhereAll) activeWhereAll.checked = false;
     activeEditor?.classList.add("is-open");
     window.setTimeout(() => activeWhereName?.focus(), 0);
   }
@@ -1019,6 +1030,7 @@
     if (activeWhereStart) activeWhereStart.value = activeWhereRange.start;
     if (activeWhereEnd) activeWhereEnd.value = activeWhereRange.end;
     if (activeWhereDelete) activeWhereDelete.disabled = !activeWhereRange.id;
+    if (activeWhereAll) activeWhereAll.checked = false;
     activeEditor?.classList.add("is-open");
     window.setTimeout(() => activeWhereName?.focus(), 0);
   }
@@ -1206,6 +1218,14 @@
     updateWhereOverlapClasses(range.scope, range.start_date, range.end_date);
   }
 
+  function selectedAthleteScopes() {
+    return Array.from(new Set(
+      Array.from(document.querySelectorAll("[data-year-row-scope]"))
+        .map((row) => row.dataset.yearRowScope || "")
+        .filter((scope) => scope.startsWith("athlete-"))
+    ));
+  }
+
   async function saveActiveWhereRange() {
     if (!activeWhereRange) return;
     const payload = {
@@ -1216,12 +1236,19 @@
       whereabouts: activeWhereType?.value || "",
       note: activeWhereName?.value || "",
     };
+    if (activeWhereAll?.checked) {
+      const scopes = selectedAthleteScopes();
+      if (scopes.length) payload.scopes = scopes;
+    }
     const data = await saveWhereRange(payload);
     if (data?.deleted) {
       removeRangeSegments(payload.id);
       closeWhereEditor();
     } else if (data?.range) {
       renderRange(data.range);
+      closeWhereEditor();
+    } else if (data?.ranges) {
+      data.ranges.forEach((range) => renderRange(range));
       closeWhereEditor();
     }
   }

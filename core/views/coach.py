@@ -5193,6 +5193,74 @@ def year_planner_whereabout_save_view(request):
         YearPlannerWhereabout.objects.bulk_create(created_ranges)
         return JsonResponse({"ok": True, "ranges": [range_payload(range_obj) for range_obj in created_ranges]})
 
+    scopes_payload = payload.get("scopes")
+    if isinstance(scopes_payload, list) and scopes_payload:
+        try:
+            start_date = _parse_iso_date(payload.get("start_date"))
+            end_date = _parse_iso_date(payload.get("end_date"))
+        except (TypeError, ValueError):
+            return JsonResponse({"ok": False, "error": "Invalid date"}, status=400)
+        if not start_date or not end_date:
+            return JsonResponse({"ok": False, "error": "Date is required"}, status=400)
+        if end_date < start_date:
+            start_date, end_date = end_date, start_date
+
+        whereabouts_type = (payload.get("whereabouts") or "").strip()
+        note = (payload.get("note") or "").strip()[:120]
+        if whereabouts_type not in allowed_whereabouts:
+            return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
+
+        target_athletes = []
+        seen_athlete_ids = set()
+        for target_scope in scopes_payload:
+            target_scope = (target_scope or "").strip()
+            if not target_scope.startswith("athlete-"):
+                continue
+            try:
+                target_athlete = _year_planner_scope_athlete(request, target_scope)
+            except (ValueError, LookupError):
+                return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
+            if not target_athlete or target_athlete.id in seen_athlete_ids:
+                continue
+            seen_athlete_ids.add(target_athlete.id)
+            target_athletes.append(target_athlete)
+        if not target_athletes:
+            return JsonResponse({"ok": False, "error": "No selected athletes"}, status=400)
+
+        owner = _active_coach_user(request)
+        range_id = payload.get("id")
+        existing = None
+        if range_id:
+            existing = YearPlannerWhereabout.objects.filter(owner=owner, id=range_id).first()
+
+        saved_ranges = []
+        for target_athlete in target_athletes:
+            if existing and existing.athlete_id == target_athlete.id:
+                existing.start_date = start_date
+                existing.end_date = end_date
+                existing.whereabouts_type = whereabouts_type
+                existing.note = note
+                existing.save(update_fields=["start_date", "end_date", "whereabouts_type", "note"])
+                saved_ranges.append(existing)
+                continue
+            YearPlannerWhereabout.objects.filter(
+                owner=owner,
+                athlete=target_athlete,
+                start_date=start_date,
+                end_date=end_date,
+                whereabouts_type=whereabouts_type,
+                note=note,
+            ).delete()
+            saved_ranges.append(YearPlannerWhereabout.objects.create(
+                owner=owner,
+                athlete=target_athlete,
+                start_date=start_date,
+                end_date=end_date,
+                whereabouts_type=whereabouts_type,
+                note=note,
+            ))
+        return JsonResponse({"ok": True, "ranges": [range_payload(range_obj) for range_obj in saved_ranges]})
+
     try:
         start_date = _parse_iso_date(payload.get("start_date"))
         end_date = _parse_iso_date(payload.get("end_date"))
