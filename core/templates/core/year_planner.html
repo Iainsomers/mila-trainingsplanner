@@ -846,12 +846,24 @@
   let rangeDrag = null;
   let rangeResize = null;
   let rangeDropCell = null;
+  let statusTimer = null;
 
   function setStatus(text, isError) {
     if (!saveStatus) return;
+    if (statusTimer) {
+      window.clearTimeout(statusTimer);
+      statusTimer = null;
+    }
     saveStatus.textContent = text || "";
     saveStatus.classList.toggle("text-danger", !!isError);
     saveStatus.classList.toggle("text-muted", !isError);
+  }
+
+  function setStatusThenClear(text, isError, delay = 1100) {
+    setStatus(text, isError);
+    if (text) {
+      statusTimer = window.setTimeout(() => setStatus("", false), delay);
+    }
   }
 
   function cellPayload(cell) {
@@ -1003,8 +1015,9 @@
     activeEditor?.classList.remove("is-open");
   }
 
-  async function saveWhereRange(payload) {
-    setStatus("Saving...", false);
+  async function saveWhereRange(payload, options = {}) {
+    const quiet = !!options.quiet;
+    if (!quiet) setStatus("Saving...", false);
     const response = await fetch(whereaboutSaveUrl, {
       method: "POST",
       headers: {
@@ -1014,12 +1027,11 @@
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      setStatus("Save failed", true);
+      if (!quiet) setStatus("Save failed", true);
       return null;
     }
     const data = await response.json();
-    setStatus("Saved", false);
-    window.setTimeout(() => setStatus("", false), 1100);
+    if (!quiet) setStatusThenClear("Saved", false);
     return data;
   }
 
@@ -1439,22 +1451,32 @@
   });
 
   document.querySelectorAll("[data-year-row-where-paste]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       if (!whereRowClipboard?.ranges?.length) return;
       const row = button.closest("[data-year-row]");
       const targetScope = row?.dataset.yearRowScope || row?.querySelector("[data-year-cell]")?.dataset.scope;
       if (!targetScope) return;
-      Promise.all(whereRowClipboard.ranges.map((range) => saveWhereRange({
-        scope: targetScope,
-        start_date: range.start_date,
-        end_date: range.end_date,
-        whereabouts: range.whereabouts,
-        note: range.note,
-      }))).then((results) => {
-        results.forEach((data) => {
-          if (data?.range) renderRange(data.range);
-        });
-      });
+      button.disabled = true;
+      setStatus("Saving...", false);
+      try {
+        const data = await saveWhereRange({
+          scope: targetScope,
+          ranges: whereRowClipboard.ranges.map((range) => ({
+            start_date: range.start_date,
+            end_date: range.end_date,
+            whereabouts: range.whereabouts,
+            note: range.note,
+          })),
+        }, { quiet: true });
+        if (!data?.ok) {
+          setStatus("Save failed", true);
+          return;
+        }
+        (data.ranges || []).forEach((range) => renderRange(range));
+        setStatusThenClear("Saved", false);
+      } finally {
+        button.disabled = false;
+      }
     });
   });
 

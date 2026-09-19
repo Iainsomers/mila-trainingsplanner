@@ -1213,6 +1213,38 @@ class YearPlannerTests(TestCase):
         page = self.client.get(f"/planning/year/?year=2026&period=season&athletes={athlete.id}")
         self.assertContains(page, "Blood test")
 
+    def test_year_planner_saves_whereabout_ranges_in_batch(self):
+        coach, athlete = self._coach_and_athlete()
+
+        response = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"athlete-{athlete.id}",
+                "ranges": [
+                    {
+                        "start_date": "2026-09-01",
+                        "end_date": "2026-09-10",
+                        "whereabouts": "camp",
+                        "note": "Camp",
+                    },
+                    {
+                        "start_date": "2026-09-15",
+                        "end_date": "2026-09-15",
+                        "whereabouts": "test",
+                        "note": "Test",
+                    },
+                ],
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["ranges"]), 2)
+        self.assertEqual(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete).count(), 2)
+        self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="camp").exists())
+        self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="test").exists())
+
     def test_empty_year_planner_save_deletes_entry(self):
         coach, athlete = self._coach_and_athlete()
         YearPlannerEntry.objects.create(

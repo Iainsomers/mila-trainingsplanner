@@ -5124,6 +5124,46 @@ def year_planner_whereabout_save_view(request):
     except LookupError:
         return JsonResponse({"ok": False, "error": "Athlete not found"}, status=404)
 
+    def range_payload(range_obj):
+        return {
+            "id": range_obj.id,
+            "scope": _year_planner_scope_key(range_obj.athlete_id),
+            "start_date": range_obj.start_date.isoformat(),
+            "end_date": range_obj.end_date.isoformat(),
+            "whereabouts": range_obj.whereabouts_type,
+            "note": range_obj.note,
+        }
+
+    allowed_whereabouts = {choice[0] for choice in YearPlannerWhereabout.WHEREABOUTS_CHOICES}
+    ranges_payload = payload.get("ranges")
+    if isinstance(ranges_payload, list):
+        owner = _active_coach_user(request)
+        created_ranges = []
+        for item in ranges_payload:
+            if not isinstance(item, dict):
+                return JsonResponse({"ok": False, "error": "Invalid range"}, status=400)
+            try:
+                start_date = _parse_iso_date(item.get("start_date"))
+                end_date = _parse_iso_date(item.get("end_date"))
+            except (TypeError, ValueError):
+                return JsonResponse({"ok": False, "error": "Invalid date"}, status=400)
+            if not start_date or not end_date:
+                return JsonResponse({"ok": False, "error": "Date is required"}, status=400)
+            if end_date < start_date:
+                start_date, end_date = end_date, start_date
+            whereabouts_type = (item.get("whereabouts") or "").strip()
+            if whereabouts_type not in allowed_whereabouts:
+                return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
+            created_ranges.append(YearPlannerWhereabout.objects.create(
+                owner=owner,
+                athlete=athlete_obj,
+                start_date=start_date,
+                end_date=end_date,
+                whereabouts_type=whereabouts_type,
+                note=(item.get("note") or "").strip()[:120],
+            ))
+        return JsonResponse({"ok": True, "ranges": [range_payload(range_obj) for range_obj in created_ranges]})
+
     try:
         start_date = _parse_iso_date(payload.get("start_date"))
         end_date = _parse_iso_date(payload.get("end_date"))
@@ -5136,7 +5176,6 @@ def year_planner_whereabout_save_view(request):
 
     whereabouts_type = (payload.get("whereabouts") or "").strip()
     note = (payload.get("note") or "").strip()[:120]
-    allowed_whereabouts = {choice[0] for choice in YearPlannerWhereabout.WHEREABOUTS_CHOICES}
     if whereabouts_type not in allowed_whereabouts:
         return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
 
@@ -5175,14 +5214,7 @@ def year_planner_whereabout_save_view(request):
         )
     return JsonResponse({
         "ok": True,
-        "range": {
-            "id": range_obj.id,
-            "scope": _year_planner_scope_key(range_obj.athlete_id),
-            "start_date": range_obj.start_date.isoformat(),
-            "end_date": range_obj.end_date.isoformat(),
-            "whereabouts": range_obj.whereabouts_type,
-            "note": range_obj.note,
-        },
+        "range": range_payload(range_obj),
     })
 
 
