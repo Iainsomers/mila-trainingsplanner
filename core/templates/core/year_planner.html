@@ -281,6 +281,12 @@
     outline-offset: -2px;
   }
 
+  .year-training-static {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
   .year-where-wrap .year-select {
     position: absolute;
     inset: 0;
@@ -775,16 +781,22 @@
                          data-year-cell
                          data-scope="{{ row.scope }}"
                          data-date="{{ cell.date|date:'Y-m-d' }}">
-                      <div class="year-layer-wrap year-layer-training" data-year-training-wrap>
+                      <div class="year-layer-wrap year-layer-training"
+                           data-year-training-wrap
+                           data-year-training-value="{{ cell.payload.training }}">
                         <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
-                        <select class="year-select"
-                                data-year-training
-                                data-year-layer="training"
-                                aria-label="Training type">
-                          {% for value, label in training_choices %}
-                            <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
-                          {% endfor %}
-                        </select>
+                        {% if zoom_mode == "12" %}
+                          <span class="year-training-static" aria-hidden="true"></span>
+                        {% else %}
+                          <select class="year-select"
+                                  data-year-training
+                                  data-year-layer="training"
+                                  aria-label="Training type">
+                            {% for value, label in training_choices %}
+                              <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                          </select>
+                        {% endif %}
                       </div>
                       <div class="year-where-wrap year-layer-whereabouts"
                            data-year-where-wrap
@@ -890,22 +902,24 @@
   }
 
   function cellPayload(cell) {
+    const trainingWrap = cell.querySelector("[data-year-training-wrap]");
     return {
       scope: cell.dataset.scope,
       date: cell.dataset.date,
-      training: cell.querySelector("[data-year-training]")?.value || "",
+      training: cell.querySelector("[data-year-training]")?.value || trainingWrap?.dataset.yearTrainingValue || "",
     };
   }
 
   function refreshTrainingWrap(wrap) {
     if (!wrap) return;
-    wrap.classList.toggle("has-value", !!wrap.querySelector("[data-year-training]")?.value);
+    const value = wrap.querySelector("[data-year-training]")?.value || wrap.dataset.yearTrainingValue || "";
+    wrap.dataset.yearTrainingValue = value;
+    wrap.classList.toggle("has-value", !!value);
     const fill = wrap.querySelector("[data-year-training-fill]");
     if (!fill) return;
     Array.from(fill.classList).forEach((cls) => {
       if (cls.startsWith("year-training-")) fill.classList.remove(cls);
     });
-    const value = wrap.querySelector("[data-year-training]")?.value || "";
     if (value) fill.classList.add("year-training-" + value);
   }
 
@@ -918,12 +932,12 @@
       const items = Array.from(row.querySelectorAll("[data-year-training-wrap]"));
       items.forEach((item, index) => {
         item.classList.remove("same-prev", "same-next");
-        const value = item.querySelector("[data-year-training]")?.value;
+        const value = item.querySelector("[data-year-training]")?.value || item.dataset.yearTrainingValue || "";
         if (!value) return;
         const prev = items[index - 1];
         const next = items[index + 1];
-        const prevValue = prev?.querySelector("[data-year-training]")?.value;
-        const nextValue = next?.querySelector("[data-year-training]")?.value;
+        const prevValue = prev?.querySelector("[data-year-training]")?.value || prev?.dataset.yearTrainingValue || "";
+        const nextValue = next?.querySelector("[data-year-training]")?.value || next?.dataset.yearTrainingValue || "";
         if (prev && prevValue === value) item.classList.add("same-prev");
         if (next && nextValue === value) item.classList.add("same-next");
       });
@@ -967,10 +981,12 @@
   }
 
   function applyLayer(cell, layer, value) {
-    const select = cell.querySelector("[data-year-training]");
-    if (!select) return;
-    select.value = value || "";
-    refreshTrainingWrap(select.closest("[data-year-training-wrap]"));
+    const wrap = cell.querySelector("[data-year-training-wrap]");
+    if (!wrap) return;
+    const select = wrap.querySelector("[data-year-training]");
+    if (select) select.value = value || "";
+    wrap.dataset.yearTrainingValue = value || "";
+    refreshTrainingWrap(wrap);
     changedCells.add(cell);
   }
 
