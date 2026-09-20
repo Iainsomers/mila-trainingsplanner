@@ -787,14 +787,18 @@
                   <div class="year-name-main">{{ row.label }}</div>
                   {% if not year_planner_read_only %}
                   <div class="year-row-actions">
+                    {% if show_training %}
                     <div class="year-row-action-line">
                       <button type="button" class="year-row-copy" data-year-row-copy title="Copy training row">c</button>
                       <button type="button" class="year-row-paste year-row-training-paste" data-year-row-paste title="Paste training row">p</button>
                     </div>
+                    {% endif %}
+                    {% if show_whereabouts %}
                     <div class="year-row-action-line">
                       <button type="button" class="year-row-copy" data-year-row-where-copy title="Copy whereabouts row">c</button>
                       <button type="button" class="year-row-paste year-row-where-paste" data-year-row-where-paste title="Paste whereabouts row">p</button>
                     </div>
+                    {% endif %}
                   </div>
                   {% endif %}
                 </td>
