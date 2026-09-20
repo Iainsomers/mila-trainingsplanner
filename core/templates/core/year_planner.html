@@ -1126,6 +1126,15 @@
     updateWhereOverlapClasses(scope, startDate, endDate);
   }
 
+  function rowDateBounds(row) {
+    const dates = Array.from(row?.querySelectorAll("[data-year-cell]") || [])
+      .map((cell) => cell.dataset.date || "")
+      .filter(Boolean)
+      .sort();
+    if (!dates.length) return { start: "", end: "" };
+    return { start: dates[0], end: dates[dates.length - 1] };
+  }
+
   function updateWhereOverlapClasses(scope, startDate, endDate) {
     document.querySelectorAll(`[data-year-cell][data-scope="${scope}"]`).forEach((cell) => {
       if (cell.dataset.date < startDate || cell.dataset.date > endDate) return;
@@ -1514,7 +1523,10 @@
       const row = button.closest("[data-year-row]");
       const seenRangeIds = new Set();
       rowClipboard = null;
+      const bounds = rowDateBounds(row);
       whereRowClipboard = {
+        replace_start: bounds.start,
+        replace_end: bounds.end,
         ranges: Array.from(row.querySelectorAll("[data-year-range-id]")).filter((pill) => {
           const id = pill.dataset.yearRangeId || "";
           if (seenRangeIds.has(id)) return false;
@@ -1527,7 +1539,7 @@
           note: pill.dataset.yearRangeNote || "",
         })),
       };
-      if (whereRowClipboard.ranges.length) {
+      if (whereRowClipboard.replace_start && whereRowClipboard.replace_end) {
         activateRowPasteMode(row, "where");
       } else {
         clearRowPasteModes();
@@ -1537,16 +1549,21 @@
 
   document.querySelectorAll("[data-year-row-where-paste]").forEach((button) => {
     button.addEventListener("click", async () => {
-      if (!whereRowClipboard?.ranges?.length) return;
+      if (!whereRowClipboard) return;
       const row = button.closest("[data-year-row]");
       const targetScope = row?.dataset.yearRowScope || row?.querySelector("[data-year-cell]")?.dataset.scope;
       if (!targetScope) return;
+      const replaceStart = whereRowClipboard.replace_start || "";
+      const replaceEnd = whereRowClipboard.replace_end || "";
+      if (!replaceStart || !replaceEnd) return;
       button.disabled = true;
       setStatus("Saving...", false);
       try {
         const data = await saveWhereRange({
           scope: targetScope,
           replace: true,
+          replace_start: replaceStart,
+          replace_end: replaceEnd,
           ranges: whereRowClipboard.ranges.map((range) => ({
             start_date: range.start_date,
             end_date: range.end_date,
@@ -1559,11 +1576,7 @@
           return;
         }
         const pastedRanges = data.ranges || [];
-        if (pastedRanges.length) {
-          const replaceStart = pastedRanges.reduce((value, range) => range.start_date < value ? range.start_date : value, pastedRanges[0].start_date);
-          const replaceEnd = pastedRanges.reduce((value, range) => range.end_date > value ? range.end_date : value, pastedRanges[0].end_date);
-          removeOverlappingRangeSegments(targetScope, replaceStart, replaceEnd);
-        }
+        removeOverlappingRangeSegments(targetScope, replaceStart, replaceEnd);
         pastedRanges.forEach((range) => renderRange(range));
         setStatusThenClear("Saved", false);
       } finally {

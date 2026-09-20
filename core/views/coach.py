@@ -5207,9 +5207,21 @@ def year_planner_whereabout_save_view(request):
                 "whereabouts_type": whereabouts_type,
                 "note": (item.get("note") or "").strip()[:120],
             })
-        if payload.get("replace") and validated_ranges:
-            replace_start = min(item["start_date"] for item in validated_ranges)
-            replace_end = max(item["end_date"] for item in validated_ranges)
+        if payload.get("replace"):
+            try:
+                replace_start = _parse_iso_date(payload.get("replace_start"))
+                replace_end = _parse_iso_date(payload.get("replace_end"))
+            except (TypeError, ValueError):
+                replace_start = None
+                replace_end = None
+            if not replace_start or not replace_end:
+                if validated_ranges:
+                    replace_start = min(item["start_date"] for item in validated_ranges)
+                    replace_end = max(item["end_date"] for item in validated_ranges)
+                else:
+                    return JsonResponse({"ok": False, "error": "Replace range is required"}, status=400)
+            if replace_end < replace_start:
+                replace_start, replace_end = replace_end, replace_start
             YearPlannerWhereabout.objects.filter(
                 owner=owner,
                 athlete=athlete_obj,

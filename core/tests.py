@@ -1293,6 +1293,42 @@ class YearPlannerTests(TestCase):
         self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="test").exists())
         self.assertFalse(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="medical").exists())
 
+    def test_year_planner_empty_whereabout_batch_replace_clears_period(self):
+        coach, athlete = self._coach_and_athlete()
+        YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=athlete,
+            start_date=date(2026, 9, 3),
+            end_date=date(2026, 9, 4),
+            whereabouts_type="medical",
+            note="Old",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=athlete,
+            start_date=date(2026, 10, 3),
+            end_date=date(2026, 10, 4),
+            whereabouts_type="camp",
+            note="Keep",
+        )
+
+        response = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"athlete-{athlete.id}",
+                "replace": True,
+                "replace_start": "2026-09-01",
+                "replace_end": "2026-09-30",
+                "ranges": [],
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["ranges"], [])
+        self.assertFalse(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="medical").exists())
+        self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="camp").exists())
+
     def test_empty_year_planner_save_deletes_entry(self):
         coach, athlete = self._coach_and_athlete()
         YearPlannerEntry.objects.create(
