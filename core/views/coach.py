@@ -5375,6 +5375,17 @@ def trainer_planning_detail_view(request, plan_id: int):
     slot_map = {(slot.date, int(slot.slot_index)): slot for slot in slots}
 
     targeted_athlete_ids = set(plan.targeted_athlete_ids())
+    targeted_athlete_ids |= set(
+        AthleteBasePlanningSlot.objects
+        .filter(
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=plan,
+            block__planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+        )
+        .values_list("block__athlete_id", flat=True)
+        .distinct()
+    )
+    targeted_athlete_ids.discard(None)
     year_training_by_athlete_day = {}
     if targeted_athlete_ids:
         for entry in YearPlannerEntry.objects.filter(
