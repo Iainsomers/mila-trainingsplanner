@@ -25,7 +25,7 @@
     }
 
     .trainer-planning-slot {
-      width: 52px;
+      width: 104px;
       font-weight: 700;
       background: #fafafa;
     }
@@ -552,7 +552,7 @@
         <table class="trainer-planning-table">
           <thead>
             <tr>
-              <th class="trainer-planning-slot">
+              <th class="trainer-planning-slot" {% if week.week_phase_style %}style="{{ week.week_phase_style }}"{% endif %}>
                 {% if has_week_clipboard and not week.has_clipboard_source %}
                   <button
                     type="button"
@@ -579,7 +579,7 @@
           <tbody>
             {% for row in week.rows %}
               <tr>
-                <th class="trainer-planning-slot">{{ row.label }}</th>
+                <th class="trainer-planning-slot" {% if week.week_phase_style %}style="{{ week.week_phase_style }}"{% endif %}>{{ row.label }}</th>
                 {% for cell in row.cells %}
                   {% include "core/partials/trainer_planning_cell.html" with day=cell.day slot=cell.slot slot_index=row.slot_index selected_plan=selected_plan %}
                 {% endfor %}

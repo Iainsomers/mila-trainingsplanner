@@ -5374,6 +5374,62 @@ def trainer_planning_detail_view(request, plan_id: int):
     )
     slot_map = {(slot.date, int(slot.slot_index)): slot for slot in slots}
 
+    targeted_athlete_ids = set(plan.targeted_athlete_ids())
+    year_training_by_athlete_day = {}
+    if targeted_athlete_ids:
+        for entry in YearPlannerEntry.objects.filter(
+            owner=plan.owner,
+            date__gte=week_start,
+            date__lte=week_end,
+        ).filter(
+            Q(athlete_id__in=targeted_athlete_ids) | Q(athlete__isnull=True)
+        ).only("athlete_id", "date", "training_type"):
+            year_training_by_athlete_day[(entry.athlete_id, entry.date)] = entry.training_type or ""
+
+    year_training_colors = {
+        "recovery": "#f8f8f0",
+        "aerobe": "#f06f5f",
+        "specific": "#bfe7bf",
+        "intense": "#b7d7ff",
+        "taper": "#f2c200",
+    }
+
+    def trainer_week_training_style(week_days):
+        if not targeted_athlete_ids:
+            return ""
+        counts = {key: 0 for key in year_training_colors}
+        for athlete_id in targeted_athlete_ids:
+            has_athlete_year_planning = any(
+                (athlete_id, day) in year_training_by_athlete_day
+                for day in week_days
+            )
+            if not has_athlete_year_planning:
+                continue
+            for day in week_days:
+                value = (
+                    year_training_by_athlete_day.get((athlete_id, day))
+                    or year_training_by_athlete_day.get((None, day), "")
+                )
+                if value in counts:
+                    counts[value] += 1
+
+        items = [(value, count) for value, count in counts.items() if count > 0]
+        if not items:
+            return ""
+        if len(items) == 1:
+            value = items[0][0]
+            return f"background: {year_training_colors[value]};"
+
+        total = sum(count for _value, count in items) or 1
+        cursor = 0.0
+        stops = []
+        for value, count in items:
+            start_pct = cursor
+            cursor += (count / total) * 100.0
+            color = year_training_colors[value]
+            stops.append(f"{color} {start_pct:.2f}%, {color} {cursor:.2f}%")
+        return f"background: linear-gradient(135deg, {', '.join(stops)});"
+
     week_rows = []
     for visible_week_start in week_starts:
         week_days = [visible_week_start + timedelta(days=i) for i in range(7)]
@@ -5392,6 +5448,7 @@ def trainer_planning_detail_view(request, plan_id: int):
             "week_end": visible_week_start + timedelta(days=6),
             "days": week_days,
             "rows": rows,
+            "week_phase_style": trainer_week_training_style(week_days),
             "is_current_week": visible_week_start == today_week_start,
             "has_clipboard_source": (
                 clipboard_plan_id == plan.id and clipboard_week_start == visible_week_start.isoformat()
