@@ -376,9 +376,6 @@
               <button class="nav-link {% if active_tab == 'ideal-week' %}active{% endif %}" id="ideal-week-tab" data-bs-toggle="tab" data-bs-target="#ideal-week-pane" type="button" role="tab">Ideal week</button>
             </li>
           {% endif %}
-          <li class="nav-item" role="presentation">
-            <button class="nav-link {% if active_tab == 'wu-settings' %}active{% endif %}" id="wu-settings-tab" data-bs-toggle="tab" data-bs-target="#wu-settings-pane" type="button" role="tab">WU settings</button>
-          </li>
         </ul>
 
         <div class="tab-content">
@@ -469,6 +466,32 @@
           <div class="form-text">Training reports controls the existing 3rd row in the Athlete Year Calendar. Existing report data is preserved when hidden.</div>
         </div>
         {% endif %}
+
+        <div class="mt-3 mb-3">
+          <label class="form-label d-block">WU/CD settings</label>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="auto_wucd_enabled"
+                  name="auto_wucd_enabled"
+                  {% if form.auto_wucd_enabled %}checked{% endif %}
+                >
+                <label class="form-check-label" for="auto_wucd_enabled">Auto WU/CD</label>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">WU m</label>
+              <input name="auto_wu_m" type="number" min="0" step="100" class="form-control" value="{{ form.auto_wu_m }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">CD m</label>
+              <input name="auto_cd_m" type="number" min="0" step="100" class="form-control" value="{{ form.auto_cd_m }}">
+            </div>
+          </div>
+        </div>
 
           </div>
           <div class="tab-pane fade {% if active_tab == 'zones' %}show active{% endif %}" id="zones-pane" role="tabpanel" aria-labelledby="zones-tab">
@@ -608,35 +631,6 @@
               ></iframe>
             </div>
           {% endif %}
-          <div class="tab-pane fade {% if active_tab == 'wu-settings' %}show active{% endif %}" id="wu-settings-pane" role="tabpanel" aria-labelledby="wu-settings-tab">
-            <div class="row g-3 align-items-end">
-              <div class="col-md-3">
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    id="auto_wucd_enabled"
-                    name="auto_wucd_enabled"
-                    {% if form.auto_wucd_enabled %}checked{% endif %}
-                  >
-                  <label class="form-check-label" for="auto_wucd_enabled">Auto WU/CD</label>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">WU m</label>
-                <input name="auto_wu_m" type="number" min="0" step="100" class="form-control" value="{{ form.auto_wu_m }}">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">CD m</label>
-                <input name="auto_cd_m" type="number" min="0" step="100" class="form-control" value="{{ form.auto_cd_m }}">
-              </div>
-              {% if mode == "edit" %}
-                <div class="col-md-3">
-                  <button type="submit" name="action" value="save_wucd" class="btn btn-primary" formnovalidate>Save WU settings</button>
-                </div>
-              {% endif %}
-            </div>
-          </div>
         </div>
 
         <div class="mt-4 d-flex gap-2">
@@ -706,8 +700,6 @@
             });
 
             form.addEventListener("submit", function (event) {
-              const submitter = event.submitter;
-              if (submitter && submitter.name === "action" && submitter.value === "save_wucd") return;
               if (!targetPrDirty) return;
               event.preventDefault();
               saveTargetPrs().finally(function () {

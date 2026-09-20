@@ -7674,21 +7674,6 @@ def coach_athlete_create_view(request):
     }
 
     if request.method == "POST":
-        if (request.POST.get("action") or "").strip() == "save_wucd":
-            athlete.auto_wucd_enabled = request.POST.get("auto_wucd_enabled") == "on"
-            athlete.auto_wu_m = _clean_non_negative_int(request.POST.get("auto_wu_m"))
-            athlete.auto_cd_m = _clean_non_negative_int(request.POST.get("auto_cd_m"))
-            athlete.save(update_fields=["auto_wucd_enabled", "auto_wu_m", "auto_cd_m"])
-            form["auto_wucd_enabled"] = athlete.auto_wucd_enabled
-            form["auto_wu_m"] = athlete.auto_wu_m
-            form["auto_cd_m"] = athlete.auto_cd_m
-            saved_notice = "WU settings saved."
-            return render(
-                request,
-                "core/coach_athlete_form.html",
-                {"mode": "edit", "athlete": athlete, "form": form, "errors": errors, "saved_notice": saved_notice, "active_tab": "wu-settings"},
-            )
-
         form["name"] = (request.POST.get("name") or "").strip()
         form["birth_year"] = (request.POST.get("birth_year") or "").strip()
         form["gender"] = (request.POST.get("gender") or "").strip()
@@ -7943,7 +7928,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
     errors = []
     saved_notice = "Opgeslagen." if request.GET.get("saved") == "1" else None
     active_tab = (request.GET.get("tab") or "general").strip()
-    allowed_tabs = {"general", "zones", "base-planning", "ideal-week", "wu-settings"}
+    allowed_tabs = {"general", "zones", "base-planning", "ideal-week"}
     if active_tab not in allowed_tabs:
         active_tab = "general"
 
