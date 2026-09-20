@@ -595,6 +595,7 @@
       <h1 class="mb-1">Year Planner</h1>
       <div class="text-muted">{{ period_label }}</div>
       <div class="year-legend year-title-legend">
+        {% if show_training %}
         <div class="year-legend-group">
           <span class="year-legend-title">Training</span>
           <span class="badge year-training-recovery text-dark">Recovery</span>
@@ -603,6 +604,8 @@
           <span class="badge year-training-intense text-dark">Intense</span>
           <span class="badge year-training-taper text-dark">Taper</span>
         </div>
+        {% endif %}
+        {% if show_whereabouts %}
         <div class="year-legend-group">
           <span class="year-legend-title">Whereabouts</span>
           <span class="badge year-where-camp text-white">Camp</span>
@@ -617,6 +620,7 @@
           <span class="badge year-where-medical text-dark">Medical</span>
           <span class="badge year-where-brinec text-dark">Brinec</span>
         </div>
+        {% endif %}
       </div>
     </div>
     <div class="d-flex gap-2">
