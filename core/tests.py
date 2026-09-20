@@ -1129,6 +1129,44 @@ class YearPlannerTests(TestCase):
         self.assertContains(response, "Sep 2026 - Nov 2026")
         self.assertContains(response, "year-layout-stack")
 
+    def test_athlete_year_planner_is_hidden_by_default(self):
+        _, athlete = self._coach_and_athlete()
+        athlete_user = get_user_model().objects.create_user(username="Year_Athlete", password="secret")
+        self.client.force_login(athlete_user)
+
+        planning = self.client.get("/planning/")
+        response = self.client.get("/planning/year/")
+
+        self.assertEqual(planning.status_code, 200)
+        self.assertNotContains(planning, "Season planning")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/planning/")
+
+    def test_athlete_year_planner_shows_only_self_when_enabled(self):
+        coach, athlete = self._coach_and_athlete()
+        athlete.year_planner_training_enabled = True
+        athlete.save(update_fields=["year_planner_training_enabled"])
+        other = Athlete.objects.create(owner=coach, name="Other Year Athlete", birth_year=2002, gender="X")
+        YearPlannerEntry.objects.create(owner=coach, athlete=athlete, date=date(2026, 9, 7), training_type="aerobe")
+        YearPlannerEntry.objects.create(owner=coach, athlete=other, date=date(2026, 9, 7), training_type="taper")
+        athlete_user = get_user_model().objects.create_user(username="Year_Athlete", password="secret")
+        self.client.force_login(athlete_user)
+
+        planning = self.client.get("/planning/")
+        response = self.client.get("/planning/year/?year=2026&period=season&athletes={}".format(other.id))
+
+        self.assertEqual(planning.status_code, 200)
+        self.assertContains(planning, "Season planning")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_ids"], [athlete.id])
+        self.assertFalse(response.context["show_basis"])
+        self.assertContains(response, "Year Athlete")
+        self.assertNotContains(response, "Other Year Athlete")
+        self.assertNotContains(response, '<label class="form-label mb-0">Athletes</label>', html=True)
+        self.assertNotContains(response, 'title="Copy training row"')
+        self.assertContains(response, "year-read-only")
+        self.assertContains(response, "year-training-aerobe")
+
     def test_year_planner_saves_base_and_athlete_entries(self):
         coach, athlete = self._coach_and_athlete()
 

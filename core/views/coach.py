@@ -4709,11 +4709,20 @@ def coach_console_view(request):
 def planning_overview_view(request):
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    athlete_can_view_year_planner = bool(
+        is_athlete_user
+        and athlete
+        and (
+            getattr(athlete, "year_planner_training_enabled", False)
+            or getattr(athlete, "year_planner_whereabouts_enabled", False)
+        )
+    )
     groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.order_by("name"), request)
     return render(request, "core/planning.html", {
         "groups": groups,
         "today": date.today(),
         "is_athlete_user": is_athlete_user,
+        "athlete_can_view_year_planner": athlete_can_view_year_planner,
     })
 
 
@@ -4806,8 +4815,15 @@ def _year_planner_entry_payload(entry):
 @require_GET
 def year_planner_view(request):
     athlete = _athlete_for_user(request.user)
-    if athlete and not request.user.is_staff and not request.user.is_superuser:
-        return redirect("planning_overview")
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    if is_athlete_user:
+        athlete_can_view_training = bool(getattr(athlete, "year_planner_training_enabled", False))
+        athlete_can_view_whereabouts = bool(getattr(athlete, "year_planner_whereabouts_enabled", False))
+        if not athlete_can_view_training and not athlete_can_view_whereabouts:
+            return redirect("planning_overview")
+    else:
+        athlete_can_view_training = True
+        athlete_can_view_whereabouts = True
 
     today = date.today()
     try:
@@ -4836,9 +4852,16 @@ def year_planner_view(request):
 
     show_training = request.GET.get("show_training", "1") == "1"
     show_whereabouts = request.GET.get("show_whereabouts", "1") == "1"
+    if is_athlete_user:
+        show_training = show_training and athlete_can_view_training
+        show_whereabouts = show_whereabouts and athlete_can_view_whereabouts
     if not show_training and not show_whereabouts:
-        show_training = True
-        show_whereabouts = True
+        if is_athlete_user:
+            show_training = athlete_can_view_training
+            show_whereabouts = athlete_can_view_whereabouts
+        else:
+            show_training = True
+            show_whereabouts = True
 
     zoom_mode = (request.GET.get("zoom") or "1").strip()
     if zoom_mode not in {"1", "3", "12"}:
@@ -4848,13 +4871,20 @@ def year_planner_view(request):
         layout_mode = "stack"
     show_basis = request.GET.get("basis", "1") == "1"
 
-    athletes = list(_filter_owned(Athlete.objects.order_by(Lower("name")), request))
-    trainer_plans = list(_trainer_planning_qs(request).order_by(Lower("name")))
+    if is_athlete_user:
+        show_basis = False
+        athletes = [athlete]
+        trainer_plans = []
+    else:
+        athletes = list(_filter_owned(Athlete.objects.order_by(Lower("name")), request))
+        trainer_plans = list(_trainer_planning_qs(request).order_by(Lower("name")))
     for plan in trainer_plans:
         plan.year_planner_filter_key = f"plan-{plan.id}"
     group_filter = (request.GET.get("athlete_group") or "all").strip()
     group_filtered_athlete_ids = {athlete_obj.id for athlete_obj in athletes}
-    if group_filter.startswith("plan-"):
+    if is_athlete_user:
+        group_filter = "all"
+    elif group_filter.startswith("plan-"):
         raw_plan_id = group_filter.removeprefix("plan-")
         selected_filter_plan = next((plan for plan in trainer_plans if str(plan.id) == raw_plan_id), None)
         if selected_filter_plan:
@@ -4874,11 +4904,14 @@ def year_planner_view(request):
         group_filter = "all"
 
     visible_athletes = [athlete_obj for athlete_obj in athletes if athlete_obj.id in group_filtered_athlete_ids]
-    athlete_ids = _clean_int_list(request.GET.getlist("athletes"))
-    selected_ids = [athlete_id for athlete_id in athlete_ids if athlete_id in group_filtered_athlete_ids]
+    if is_athlete_user:
+        selected_ids = [athlete.id]
+    else:
+        athlete_ids = _clean_int_list(request.GET.getlist("athletes"))
+        selected_ids = [athlete_id for athlete_id in athlete_ids if athlete_id in group_filtered_athlete_ids]
 
     selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
-    owner = _active_coach_user(request)
+    owner = athlete.owner if is_athlete_user and athlete.owner_id else _active_coach_user(request)
     entry_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
         entry_scope_filter |= Q(athlete__isnull=True)
@@ -5062,6 +5095,10 @@ def year_planner_view(request):
         "layout_mode": layout_mode,
         "training_choices": YearPlannerEntry.TRAINING_CHOICES,
         "whereabouts_choices": YearPlannerEntry.WHEREABOUTS_CHOICES,
+        "is_athlete_user": is_athlete_user,
+        "year_planner_read_only": is_athlete_user,
+        "athlete_can_view_year_planner_training": athlete_can_view_training,
+        "athlete_can_view_year_planner_whereabouts": athlete_can_view_whereabouts,
     })
 
 
@@ -7665,6 +7702,8 @@ def coach_athlete_create_view(request):
         "training_reports_enabled": True,
         "week_report_enabled": False,
         "daily_vitals_enabled": False,
+        "year_planner_training_enabled": False,
+        "year_planner_whereabouts_enabled": False,
         "auto_wucd_enabled": False,
         "auto_wu_m": 0,
         "auto_cd_m": 0,
@@ -7704,6 +7743,8 @@ def coach_athlete_create_view(request):
         form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
         form["week_report_enabled"] = (request.POST.get("week_report_enabled") == "on")
         form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
+        form["year_planner_training_enabled"] = (request.POST.get("year_planner_training_enabled") == "on")
+        form["year_planner_whereabouts_enabled"] = (request.POST.get("year_planner_whereabouts_enabled") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
@@ -7874,6 +7915,8 @@ def coach_athlete_create_view(request):
                 training_reports_enabled=form["training_reports_enabled"],
                 week_report_enabled=form["week_report_enabled"],
                 daily_vitals_enabled=form["daily_vitals_enabled"],
+                year_planner_training_enabled=form["year_planner_training_enabled"],
+                year_planner_whereabouts_enabled=form["year_planner_whereabouts_enabled"],
                 auto_wucd_enabled=form["auto_wucd_enabled"],
                 auto_wu_m=auto_wu_m,
                 auto_cd_m=auto_cd_m,
@@ -7963,6 +8006,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
+        "year_planner_training_enabled": getattr(athlete, "year_planner_training_enabled", False),
+        "year_planner_whereabouts_enabled": getattr(athlete, "year_planner_whereabouts_enabled", False),
         "auto_wucd_enabled": getattr(athlete, "auto_wucd_enabled", False),
         "auto_wu_m": getattr(athlete, "auto_wu_m", 0),
         "auto_cd_m": getattr(athlete, "auto_cd_m", 0),
@@ -8003,11 +8048,15 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["training_reports_enabled"] = getattr(athlete, "training_reports_enabled", True)
             form["week_report_enabled"] = getattr(athlete, "week_report_enabled", False)
             form["daily_vitals_enabled"] = getattr(athlete, "daily_vitals_enabled", False)
+            form["year_planner_training_enabled"] = getattr(athlete, "year_planner_training_enabled", False)
+            form["year_planner_whereabouts_enabled"] = getattr(athlete, "year_planner_whereabouts_enabled", False)
         else:
             form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
             form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
             form["week_report_enabled"] = (request.POST.get("week_report_enabled") == "on")
             form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
+            form["year_planner_training_enabled"] = (request.POST.get("year_planner_training_enabled") == "on")
+            form["year_planner_whereabouts_enabled"] = (request.POST.get("year_planner_whereabouts_enabled") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
@@ -8176,6 +8225,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.week_report_enabled = form["week_report_enabled"]
             athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
+            athlete.year_planner_training_enabled = form["year_planner_training_enabled"]
+            athlete.year_planner_whereabouts_enabled = form["year_planner_whereabouts_enabled"]
             athlete.auto_wucd_enabled = form["auto_wucd_enabled"]
             athlete.auto_wu_m = auto_wu_m
             athlete.auto_cd_m = auto_cd_m

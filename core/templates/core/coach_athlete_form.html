@@ -465,6 +465,38 @@
 
           <div class="form-text">Training reports controls the existing 3rd row in the Athlete Year Calendar. Existing report data is preserved when hidden.</div>
         </div>
+
+        <div class="mb-3">
+          <label class="form-label d-block">Year Planner visibility</label>
+
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="year_planner_training_enabled"
+              name="year_planner_training_enabled"
+              {% if form.year_planner_training_enabled %}checked{% endif %}
+            >
+            <label class="form-check-label" for="year_planner_training_enabled">
+              Training calendar
+            </label>
+          </div>
+
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="year_planner_whereabouts_enabled"
+              name="year_planner_whereabouts_enabled"
+              {% if form.year_planner_whereabouts_enabled %}checked{% endif %}
+            >
+            <label class="form-check-label" for="year_planner_whereabouts_enabled">
+              Whereabouts
+            </label>
+          </div>
+
+          <div class="form-text">Controls whether the athlete can see their own Year Planner rows.</div>
+        </div>
         {% endif %}
 
         <div class="mt-3 mb-3">

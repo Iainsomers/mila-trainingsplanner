@@ -153,6 +153,8 @@ class Athlete(models.Model):
     training_reports_enabled = models.BooleanField(default=True)
     week_report_enabled = models.BooleanField(default=False)
     daily_vitals_enabled = models.BooleanField(default=False)
+    year_planner_training_enabled = models.BooleanField(default=False)
+    year_planner_whereabouts_enabled = models.BooleanField(default=False)
 
     auto_wucd_enabled = models.BooleanField(default=False)
     auto_wu_m = models.PositiveIntegerField(default=0)

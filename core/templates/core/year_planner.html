@@ -193,6 +193,11 @@
     min-height: calc(var(--year-day-height) * 0.62);
   }
 
+  .year-planner-page.year-read-only .year-layer-training,
+  .year-planner-page.year-read-only .year-layer-whereabouts {
+    pointer-events: none;
+  }
+
   .year-layer-wrap {
     position: relative;
     height: calc(var(--year-day-height) / 2);
@@ -584,7 +589,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 year-planner-page year-zoom-{{ zoom_mode }} {% if not show_training %}year-hide-training{% endif %} {% if not show_whereabouts %}year-hide-whereabouts{% endif %}">
+<div class="container-fluid py-4 year-planner-page year-zoom-{{ zoom_mode }} {% if not show_training %}year-hide-training{% endif %} {% if not show_whereabouts %}year-hide-whereabouts{% endif %} {% if year_planner_read_only %}year-read-only{% endif %}">
   <div class="d-flex justify-content-between align-items-start mb-3">
     <div>
       <h1 class="mb-1">Year Planner</h1>
@@ -659,19 +664,24 @@
 
       <input type="hidden" name="show_training" value="0">
       <input type="hidden" name="show_whereabouts" value="0">
+      {% if not is_athlete_user or athlete_can_view_year_planner_training %}
       <div class="form-check form-check-inline ms-1">
         <input class="form-check-input" type="checkbox" id="showTraining" name="show_training" value="1" {% if show_training %}checked{% endif %}>
         <label class="form-check-label" for="showTraining">Training</label>
       </div>
+      {% endif %}
+      {% if not is_athlete_user or athlete_can_view_year_planner_whereabouts %}
       <div class="form-check form-check-inline">
         <input class="form-check-input" type="checkbox" id="showWhereabouts" name="show_whereabouts" value="1" {% if show_whereabouts %}checked{% endif %}>
         <label class="form-check-label" for="showWhereabouts">Whereabouts</label>
       </div>
+      {% endif %}
 
       <button type="submit" class="btn btn-sm btn-primary">OK</button>
       <span class="year-save-status text-muted" data-year-save-status></span>
     </div>
 
+    {% if not is_athlete_user %}
     <div class="mt-2 row g-2 align-items-end">
       <div class="col-md-5 col-lg-4 year-athlete-panel" data-year-athlete-panel>
         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -717,8 +727,10 @@
         </div>
       </div>
     </div>
+    {% endif %}
   </form>
 
+  {% if not year_planner_read_only %}
   <div class="year-active-editor mb-2" data-year-active-editor>
     <div>
       <label for="activeWhereType" class="form-label mb-1 small">Whereabouts</label>
@@ -747,6 +759,7 @@
     <button type="button" class="btn btn-sm btn-outline-danger" data-active-where-delete>Delete</button>
     <button type="button" class="btn btn-sm btn-primary" data-active-where-close>Done</button>
   </div>
+  {% endif %}
 
   <div class="year-table-wrap {% if layout_mode == 'stack' %}year-layout-stack{% endif %}">
     {% for chunk in chunks %}
@@ -768,6 +781,7 @@
               <tr data-year-row data-year-row-scope="{{ row.scope }}" data-year-row-chunk="{{ forloop.parentloop.counter0 }}" {% if row.scope == "basis" %}class="year-basis-row"{% endif %}>
                 <td class="year-name-cell">
                   <div class="year-name-main">{{ row.label }}</div>
+                  {% if not year_planner_read_only %}
                   <div class="year-row-actions">
                     <div class="year-row-action-line">
                       <button type="button" class="year-row-copy" data-year-row-copy title="Copy training row">c</button>
@@ -778,6 +792,7 @@
                       <button type="button" class="year-row-paste year-row-where-paste" data-year-row-where-paste title="Paste whereabouts row">p</button>
                     </div>
                   </div>
+                  {% endif %}
                 </td>
                 {% for cell in row.cells %}
                   <td class="year-day-cell">
@@ -789,7 +804,7 @@
                            data-year-training-wrap
                            data-year-training-value="{{ cell.payload.training }}">
                         <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
-                        {% if zoom_mode == "12" %}
+                        {% if zoom_mode == "12" or year_planner_read_only %}
                           <span class="year-training-static" aria-hidden="true"></span>
                         {% else %}
                           <select class="year-select"
