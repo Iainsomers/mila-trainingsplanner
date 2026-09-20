@@ -4869,10 +4869,9 @@ def year_planner_view(request):
     layout_mode = (request.GET.get("layout") or "stack").strip().lower()
     if layout_mode not in {"scroll", "stack"}:
         layout_mode = "stack"
-    show_basis = request.GET.get("basis", "1") == "1"
+    show_basis = False
 
     if is_athlete_user:
-        show_basis = False
         athletes = [athlete]
         trainer_plans = []
     else:
@@ -4911,6 +4910,7 @@ def year_planner_view(request):
         selected_ids = [athlete_id for athlete_id in athlete_ids if athlete_id in group_filtered_athlete_ids]
 
     selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
+    all_visible_athletes_selected = bool(visible_athletes) and set(selected_ids) == {a.id for a in visible_athletes}
     owner = athlete.owner if is_athlete_user and athlete.owner_id else _active_coach_user(request)
     entry_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
@@ -5079,6 +5079,7 @@ def year_planner_view(request):
         "trainer_plans": trainer_plans,
         "group_filter": group_filter,
         "selected_ids": selected_ids,
+        "all_visible_athletes_selected": all_visible_athletes_selected,
         "rows": rows,
         "days": days,
         "chunks": chunks,

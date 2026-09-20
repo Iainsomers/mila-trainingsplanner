@@ -29,6 +29,10 @@
     background: #fff;
   }
 
+  .year-athlete-disabled .form-check-label {
+    color: #dc3545;
+  }
+
   .year-table-wrap {
     overflow: auto;
     border: 1px solid #d8d8d8;
@@ -713,14 +717,14 @@
             <input
               type="checkbox"
               class="form-check-input"
-              name="basis"
+              data-year-athlete-all
               value="1"
-              {% if show_basis %}checked{% endif %}
+              {% if all_visible_athletes_selected %}checked{% endif %}
             >
-            <span class="form-check-label">Basis</span>
+            <span class="form-check-label">All</span>
           </label>
           {% for athlete in athletes %}
-            <label class="form-check mb-0">
+            <label class="form-check mb-0 {% if not athlete.year_planner_training_enabled and not athlete.year_planner_whereabouts_enabled %}year-athlete-disabled{% endif %}">
               <input
                 type="checkbox"
                 class="form-check-input"
@@ -1348,7 +1352,14 @@
     });
     form.submit();
   });
-  document.querySelectorAll(".year-athlete-list input[name='athletes'], .year-athlete-list input[name='basis']").forEach((input) => {
+  document.querySelector("[data-year-athlete-all]")?.addEventListener("change", (event) => {
+    const checked = event.target.checked;
+    document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
+      input.checked = checked;
+    });
+    form.submit();
+  });
+  document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
     input.addEventListener("change", () => form.submit());
   });
 

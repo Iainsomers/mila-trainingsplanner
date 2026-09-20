@@ -1090,13 +1090,13 @@ class YearPlannerTests(TestCase):
         self.client.force_login(coach)
         return coach, athlete
 
-    def test_year_planner_shows_basis_and_selected_athlete(self):
+    def test_year_planner_shows_selected_athlete_without_basis(self):
         _, athlete = self._coach_and_athlete()
 
         response = self.client.get(f"/planning/year/?period=current_next&athletes={athlete.id}")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Basis")
+        self.assertFalse(any(row["scope"] == "basis" for row in response.context["rows"]))
         self.assertContains(response, "Year Athlete")
         self.assertContains(response, "Whereabouts")
 
@@ -1106,15 +1106,15 @@ class YearPlannerTests(TestCase):
         response = self.client.get("/planning/year/?period=current_next")
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(any(row["scope"] == "basis" for row in response.context["rows"]))
+        self.assertFalse(any(row["scope"] == "basis" for row in response.context["rows"]))
         self.assertFalse(any(row["scope"] == f"athlete-{athlete.id}" for row in response.context["rows"]))
         self.assertNotContains(response, f'value="{athlete.id}"\n                checked')
         self.assertContains(response, "year-layout-stack")
 
-    def test_year_planner_can_hide_basis_row(self):
+    def test_year_planner_ignores_legacy_basis_query(self):
         _, athlete = self._coach_and_athlete()
 
-        response = self.client.get(f"/planning/year/?period=current_next&basis=0&athletes={athlete.id}")
+        response = self.client.get(f"/planning/year/?period=current_next&basis=1&athletes={athlete.id}")
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(any(row["scope"] == "basis" for row in response.context["rows"]))
