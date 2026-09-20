@@ -909,6 +909,16 @@
   let rangeResize = null;
   let rangeDropCell = null;
   let statusTimer = null;
+  const allYearRows = Array.from(document.querySelectorAll("[data-year-row]"));
+  const allYearCells = Array.from(document.querySelectorAll("[data-year-cell]"));
+  const allTrainingWraps = Array.from(document.querySelectorAll("[data-year-training-wrap]"));
+  const allWhereWraps = Array.from(document.querySelectorAll("[data-year-where-wrap]"));
+  const cellsByScope = new Map();
+  allYearCells.forEach((cell) => {
+    const scope = cell.dataset.scope || "";
+    if (!cellsByScope.has(scope)) cellsByScope.set(scope, []);
+    cellsByScope.get(scope).push(cell);
+  });
 
   function setStatus(text, isError) {
     if (!saveStatus) return;
@@ -968,7 +978,7 @@
   }
 
   function refreshConnections() {
-    document.querySelectorAll("[data-year-row]").forEach((row) => {
+    allYearRows.forEach((row) => {
       const items = Array.from(row.querySelectorAll("[data-year-training-wrap]"));
       items.forEach((item, index) => {
         item.classList.remove("same-prev", "same-next");
@@ -985,13 +995,12 @@
   }
 
   function refreshAllClasses() {
-    document.querySelectorAll("[data-year-training-wrap]").forEach(refreshTrainingWrap);
-    document.querySelectorAll("[data-year-where-wrap]").forEach(refreshWhereWrap);
+    allTrainingWraps.forEach(refreshTrainingWrap);
+    allWhereWraps.forEach(refreshWhereWrap);
     refreshConnections();
   }
 
   async function saveCell(cell) {
-    setStatus("Saving...", false);
     const response = await fetch(saveUrl, {
       method: "POST",
       headers: {
@@ -1120,6 +1129,16 @@
     return new Date(value + "T00:00:00").getTime();
   }
 
+  function rangeSegments(id) {
+    if (!id) return [];
+    return Array.from(document.querySelectorAll(`[data-year-range-id="${id}"]`));
+  }
+
+  function scopeCells(scope) {
+    if (!scope) return [];
+    return cellsByScope.get(scope) || [];
+  }
+
   function isoDate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -1129,7 +1148,7 @@
 
   function removeRangeSegments(id) {
     if (!id) return;
-    document.querySelectorAll(`[data-year-range-id="${id}"]`).forEach((segment) => segment.remove());
+    rangeSegments(id).forEach((segment) => segment.remove());
   }
 
   function removeOverlappingRangeSegments(scope, startDate, endDate) {
@@ -1153,7 +1172,7 @@
   }
 
   function updateWhereOverlapClasses(scope, startDate, endDate) {
-    document.querySelectorAll(`[data-year-cell][data-scope="${scope}"]`).forEach((cell) => {
+    scopeCells(scope).forEach((cell) => {
       if (cell.dataset.date < startDate || cell.dataset.date > endDate) return;
       const wrap = cell.querySelector("[data-year-where-wrap]");
       const segments = Array.from(wrap?.querySelectorAll("[data-year-range-id]") || []);
@@ -1175,8 +1194,22 @@
   }
 
   function updateAllWhereOverlapClasses() {
-    document.querySelectorAll("[data-year-cell]").forEach((cell) => {
-      updateWhereOverlapClasses(cell.dataset.scope, cell.dataset.date, cell.dataset.date);
+    allWhereWraps.forEach((wrap) => {
+      const segments = Array.from(wrap.querySelectorAll("[data-year-range-id]"));
+      wrap.classList.toggle("has-overlaps", segments.length > 1);
+      segments
+        .sort((a, b) => {
+          const aSpan = dateMs(a.dataset.yearRangeEnd) - dateMs(a.dataset.yearRangeStart);
+          const bSpan = dateMs(b.dataset.yearRangeEnd) - dateMs(b.dataset.yearRangeStart);
+          return aSpan - bSpan;
+        })
+        .forEach((segment, index) => {
+          segment.classList.remove("year-range-overlap-0", "year-range-overlap-1", "year-range-overlap-extra");
+          if (segments.length <= 1) return;
+          if (index === 0) segment.classList.add("year-range-overlap-0");
+          else if (index === 1) segment.classList.add("year-range-overlap-1");
+          else segment.classList.add("year-range-overlap-extra");
+        });
     });
   }
 
@@ -1201,7 +1234,7 @@
         days: Math.max(1, Math.round((end - start) / 86400000) + 1),
         startCell: sourceCell,
         offsetDays: Math.max(0, Math.round((dateMs(sourceCell?.dataset.date || segment.dataset.yearRangeStart) - dateMs(segment.dataset.yearRangeStart)) / 86400000)),
-        segments: Array.from(document.querySelectorAll(`[data-year-range-id="${segment.dataset.yearRangeId}"]`)),
+        segments: rangeSegments(segment.dataset.yearRangeId),
         startX: event.clientX,
         startY: event.clientY,
         moved: false,
@@ -1224,7 +1257,7 @@
         start: segment.dataset.yearRangeStart || "",
         end: segment.dataset.yearRangeEnd || "",
         side: handle.dataset.yearRangeResize,
-        segments: Array.from(document.querySelectorAll(`[data-year-range-id="${segment.dataset.yearRangeId}"]`)),
+        segments: rangeSegments(segment.dataset.yearRangeId),
         startX: event.clientX,
         startY: event.clientY,
         moved: false,
@@ -1272,7 +1305,7 @@
   function renderRange(range) {
     if (!range?.id || !range.scope || !range.whereabouts) return;
     removeRangeSegments(range.id);
-    const cells = Array.from(document.querySelectorAll(`[data-year-cell][data-scope="${range.scope}"]`))
+    const cells = scopeCells(range.scope)
       .filter((cell) => cell.dataset.date >= range.start_date && cell.dataset.date <= range.end_date);
     const labelIndex = Math.floor((cells.length - 1) / 2);
     cells.forEach((cell, index) => {
@@ -1401,14 +1434,14 @@
     changedCells = new Set([startCell]);
   }
 
-  document.querySelectorAll("[data-year-training-wrap]").forEach((wrap) => {
+  allTrainingWraps.forEach((wrap) => {
     wrap.addEventListener("mousedown", (event) => startPaintFromWrap(wrap, "training", event));
   });
 
   document.querySelector("[data-active-where-close]")?.addEventListener("click", saveActiveWhereRange);
   activeWhereDelete?.addEventListener("click", deleteActiveWhereRange);
 
-  document.querySelectorAll("[data-year-where-wrap]").forEach((wrap) => {
+  allWhereWraps.forEach((wrap) => {
     wrap.addEventListener("click", () => openWhereEditorForCell(wrap.closest("[data-year-cell]")));
   });
 
@@ -1443,7 +1476,7 @@
     if (target) rangeDropCell = target;
   });
 
-  document.querySelectorAll("[data-year-cell]").forEach((cell) => {
+  allYearCells.forEach((cell) => {
     cell.addEventListener("mouseenter", () => {
       if (!paint || paint.row !== cell.closest("[data-year-row]")) return;
       const cells = Array.from(paint.row.querySelectorAll("[data-year-cell]"));
