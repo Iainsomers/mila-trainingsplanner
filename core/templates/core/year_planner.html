@@ -813,50 +813,54 @@
                          data-year-cell
                          data-scope="{{ row.scope }}"
                          data-date="{{ cell.date|date:'Y-m-d' }}">
-                      <div class="year-layer-wrap year-layer-training"
-                           data-year-training-wrap
-                           data-year-training-value="{{ cell.payload.training }}">
-                        <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
-                        {% if zoom_mode == "12" or year_planner_read_only %}
-                          <span class="year-training-static" aria-hidden="true"></span>
-                        {% else %}
-                          <select class="year-select"
-                                  data-year-training
-                                  data-year-layer="training"
-                                  aria-label="Training type">
-                            {% for value, label in training_choices %}
-                              <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
+                      {% if show_training %}
+                        <div class="year-layer-wrap year-layer-training"
+                             data-year-training-wrap
+                             data-year-training-value="{{ cell.payload.training }}">
+                          <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
+                          {% if zoom_mode != "1" or year_planner_read_only %}
+                            <span class="year-training-static" aria-hidden="true"></span>
+                          {% else %}
+                            <select class="year-select"
+                                    data-year-training
+                                    data-year-layer="training"
+                                    aria-label="Training type">
+                              {% for value, label in training_choices %}
+                                <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
+                              {% endfor %}
+                            </select>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                      {% if show_whereabouts %}
+                        <div class="year-where-wrap year-layer-whereabouts"
+                             data-year-where-wrap
+                             data-year-scope="{{ row.scope }}"
+                             data-year-date="{{ cell.date|date:'Y-m-d' }}">
+                          {% if cell.where_ranges %}
+                            {% for range in cell.where_ranges %}
+                            <button type="button"
+                                    class="year-range-pill year-where-{{ range.whereabouts }} {% if range.is_start %}year-range-start{% endif %} {% if range.is_end %}year-range-end{% endif %} {% if range.overlap_count > 1 %}{% if range.overlap_index == 0 %}year-range-overlap-0{% elif range.overlap_index == 1 %}year-range-overlap-1{% else %}year-range-overlap-extra{% endif %}{% endif %}"
+                                    data-year-range-id="{{ range.id }}"
+                                    data-year-range-type="{{ range.whereabouts }}"
+                                    data-year-range-note="{{ range.note }}"
+                                    data-year-range-start="{{ range.start_date }}"
+                                    data-year-range-end="{{ range.end_date }}"
+                                    data-year-range-scope="{{ row.scope }}">
+                              {% if range.is_start %}
+                                <span class="year-range-handle year-range-handle-start" data-year-range-resize="start"></span>
+                              {% endif %}
+                              {% if range.note and range.show_label and range.overlap_count == 1 or range.note and range.show_overlap_label %}
+                                <span class="year-range-label">{{ range.note }}</span>
+                              {% endif %}
+                              {% if range.is_end %}
+                                <span class="year-range-handle year-range-handle-end" data-year-range-resize="end"></span>
+                              {% endif %}
+                            </button>
                             {% endfor %}
-                          </select>
-                        {% endif %}
-                      </div>
-                      <div class="year-where-wrap year-layer-whereabouts"
-                           data-year-where-wrap
-                           data-year-scope="{{ row.scope }}"
-                           data-year-date="{{ cell.date|date:'Y-m-d' }}">
-                        {% if cell.where_ranges %}
-                          {% for range in cell.where_ranges %}
-                          <button type="button"
-                                  class="year-range-pill year-where-{{ range.whereabouts }} {% if range.is_start %}year-range-start{% endif %} {% if range.is_end %}year-range-end{% endif %} {% if range.overlap_count > 1 %}{% if range.overlap_index == 0 %}year-range-overlap-0{% elif range.overlap_index == 1 %}year-range-overlap-1{% else %}year-range-overlap-extra{% endif %}{% endif %}"
-                                  data-year-range-id="{{ range.id }}"
-                                  data-year-range-type="{{ range.whereabouts }}"
-                                  data-year-range-note="{{ range.note }}"
-                                  data-year-range-start="{{ range.start_date }}"
-                                  data-year-range-end="{{ range.end_date }}"
-                                  data-year-range-scope="{{ row.scope }}">
-                            {% if range.is_start %}
-                              <span class="year-range-handle year-range-handle-start" data-year-range-resize="start"></span>
-                            {% endif %}
-                            {% if range.note and range.show_label and range.overlap_count == 1 or range.note and range.show_overlap_label %}
-                              <span class="year-range-label">{{ range.note }}</span>
-                            {% endif %}
-                            {% if range.is_end %}
-                              <span class="year-range-handle year-range-handle-end" data-year-range-resize="end"></span>
-                            {% endif %}
-                          </button>
-                          {% endfor %}
-                        {% endif %}
-                      </div>
+                          {% endif %}
+                        </div>
+                      {% endif %}
                     </div>
                   </td>
                 {% endfor %}
