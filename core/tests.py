@@ -1404,6 +1404,75 @@ class SlotModalSaveTests(TestCase):
         self.client.force_login(user)
         return user, plan, athlete
 
+    def test_base_planning_autosave_allows_intermediate_overlapping_blocks(self):
+        user, _, athlete = self._user_plan_and_athlete()
+        block1 = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 1",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=1,
+        )
+        block2 = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 2",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=2,
+        )
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "save",
+                "autosave": "1",
+                "block_id": [str(block1.id), str(block2.id)],
+                f"block_{block1.id}_label": "Winter",
+                f"block_{block1.id}_start": "01-01",
+                f"block_{block1.id}_end": "30-06",
+                f"block_{block2.id}_label": "Summer",
+                f"block_{block2.id}_start": "01-01",
+                f"block_{block2.id}_end": "31-12",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        block1.refresh_from_db()
+        block2.refresh_from_db()
+        self.assertEqual((block1.start_month, block1.start_day, block1.end_month, block1.end_day), (1, 1, 6, 30))
+        self.assertEqual((block2.start_month, block2.start_day, block2.end_month, block2.end_day), (1, 1, 12, 31))
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "save",
+                "autosave": "1",
+                "block_id": [str(block1.id), str(block2.id)],
+                f"block_{block1.id}_label": "Winter",
+                f"block_{block1.id}_start": "01-01",
+                f"block_{block1.id}_end": "30-06",
+                f"block_{block2.id}_label": "Summer",
+                f"block_{block2.id}_start": "01-07",
+                f"block_{block2.id}_end": "31-12",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        block2.refresh_from_db()
+        self.assertEqual((block2.start_month, block2.start_day, block2.end_month, block2.end_day), (7, 1, 12, 31))
+
     def test_cd_is_saved_after_all_split_core_segments(self):
         user = get_user_model().objects.create_user(
             username="coach",

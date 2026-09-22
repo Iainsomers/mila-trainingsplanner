@@ -5875,7 +5875,9 @@ def athlete_base_planning_view(request):
             if not block_values:
                 errors.append("Er moet minimaal een datumblok zijn.")
 
-            errors.extend(_validate_base_planning_coverage(block_values))
+            is_autosave = request.POST.get("autosave") == "1"
+            if not is_autosave:
+                errors.extend(_validate_base_planning_coverage(block_values))
 
             if not errors:
                 trainer_plans = {
@@ -5915,9 +5917,9 @@ def athlete_base_planning_view(request):
                                 slot.trainer_plan = None
                             slot.save()
                 saved = True
-                if request.POST.get("autosave") == "1":
+                if is_autosave:
                     return JsonResponse({"ok": True})
-            elif request.POST.get("autosave") == "1":
+            elif is_autosave:
                 return JsonResponse({"ok": False, "errors": errors}, status=400)
 
     blocks = []
