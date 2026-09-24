@@ -1,0 +1,135 @@
+{% extends "core/base.html" %}
+
+{% block title %}Evaluaties{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="mb-1">Evaluaties</h1>
+      <p class="text-muted mb-0">
+        {% if is_athlete_user %}Beschikbare vragenlijsten en jouw eerdere antwoorden.{% else %}Maak vragenlijsten en bekijk ingevulde evaluaties.{% endif %}
+      </p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+  </div>
+
+  {% if is_athlete_user %}
+    <div class="row g-3">
+      {% for row in rows %}
+        {% with questionnaire=row.questionnaire response=row.response %}
+        <div class="col-md-6 col-xl-4">
+          <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between gap-2">
+                <h5 class="card-title mb-1">{{ questionnaire.title }}</h5>
+                {% if response %}<span class="badge text-bg-success align-self-start">Filled</span>{% endif %}
+              </div>
+              {% if questionnaire.description %}
+                <p class="card-text text-muted">{{ questionnaire.description }}</p>
+              {% endif %}
+              <div class="small text-muted mb-3">{{ questionnaire.questions.count }} questions</div>
+              {% if response %}
+                <div class="small mb-3">Last filled: {{ response.submitted_at|date:"d-m-Y H:i" }}</div>
+              {% endif %}
+              <div class="mt-auto">
+                <a href="{% url 'evaluation_fill' questionnaire.id %}" class="btn btn-primary">
+                  {% if response %}Open answers{% else %}Fill in{% endif %}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+      {% empty %}
+        <div class="col-12">
+          <div class="alert alert-info">No questionnaires available yet.</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="row g-4">
+      {% if can_edit %}
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">New questionnaire</h5>
+            <form method="post">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" name="title" class="form-control" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Questions</label>
+                <textarea name="questions" class="form-control" rows="8" placeholder="One question per line" required></textarea>
+              </div>
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="is_active" id="evaluation-active" checked>
+                <label class="form-check-label" for="evaluation-active">Available for all athletes</label>
+              </div>
+              <button type="submit" class="btn btn-primary">Create questionnaire</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="{% if can_edit %}col-lg-7{% else %}col-12{% endif %}">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">Questionnaires</h5>
+            <div class="list-group list-group-flush">
+              {% for questionnaire in questionnaires %}
+                <div class="list-group-item px-0">
+                  <div class="d-flex justify-content-between gap-2">
+                    <div>
+                      <strong>{{ questionnaire.title }}</strong>
+                      {% if questionnaire.description %}<div class="text-muted small">{{ questionnaire.description }}</div>{% endif %}
+                      <div class="text-muted small">{{ questionnaire.questions.count }} questions</div>
+                    </div>
+                    <span class="badge {% if questionnaire.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %} align-self-start">
+                      {% if questionnaire.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                  </div>
+                </div>
+              {% empty %}
+                <div class="text-muted">No questionnaires yet.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Filled forms</h5>
+            {% for response in responses %}
+              <div class="border-bottom py-3">
+                <div class="d-flex justify-content-between gap-3">
+                  <div>
+                    <strong>{{ response.athlete.name }}</strong>
+                    <span class="text-muted">- {{ response.questionnaire.title }}</span>
+                  </div>
+                  <div class="text-muted small">{{ response.submitted_at|date:"d-m-Y H:i" }}</div>
+                </div>
+                <dl class="row small mb-0 mt-2">
+                  {% for row in response.answer_rows %}
+                    <dt class="col-sm-5">{{ row.question.text }}</dt>
+                    <dd class="col-sm-7">{{ row.answer|default:"-" }}</dd>
+                  {% endfor %}
+                </dl>
+              </div>
+            {% empty %}
+              <div class="text-muted">No filled forms yet.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

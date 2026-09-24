@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, Group, MatchAthleteRecord, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -97,6 +97,50 @@ class TrackTimerTests(TestCase):
 
         detail = self.client.get(f"/coach-tools/match-overview/{match.id}/")
         self.assertEqual(detail.status_code, 200)
+
+    def test_evaluations_coach_creates_and_athlete_fills_questionnaire(self):
+        coach = get_user_model().objects.create_user(username="eval-coach", password="secret", is_staff=True)
+        athlete_user = get_user_model().objects.create_user(username="eval_athlete", password="secret")
+        athlete = Athlete.objects.create(owner=coach, name="eval athlete", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+
+        dashboard = self.client.get("/")
+        self.assertContains(dashboard, "Evaluaties")
+
+        create_response = self.client.post(
+            "/evaluations/",
+            {
+                "title": "Wellbeing",
+                "description": "Short check",
+                "questions": "How do you feel?\nAny pain?",
+                "is_active": "on",
+            },
+        )
+
+        self.assertEqual(create_response.status_code, 302)
+        questionnaire = EvaluationQuestionnaire.objects.get(title="Wellbeing")
+        self.assertEqual(questionnaire.questions.count(), 2)
+
+        self.client.force_login(athlete_user)
+        athlete_list = self.client.get("/evaluations/")
+        self.assertContains(athlete_list, "Wellbeing")
+
+        fill_response = self.client.post(
+            f"/evaluations/{questionnaire.id}/",
+            {
+                f"question_{questionnaire.questions.first().id}": "Good",
+                f"question_{questionnaire.questions.last().id}": "No pain",
+            },
+        )
+
+        self.assertEqual(fill_response.status_code, 302)
+        response = EvaluationResponse.objects.get(questionnaire=questionnaire, athlete=athlete)
+        self.assertIn("Good", response.answers.values())
+
+        self.client.force_login(coach)
+        coach_list = self.client.get("/evaluations/")
+        self.assertContains(coach_list, "eval athlete")
+        self.assertContains(coach_list, "No pain")
 
     def test_pr_database_lists_records_with_freshness_colors(self):
         user = get_user_model().objects.create_user(username="pr-db-coach", password="secret", is_staff=True)

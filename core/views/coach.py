@@ -24,7 +24,7 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, is_coach_tools_only_user
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, MatchOverview, MatchAthleteRecord, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -507,6 +507,139 @@ def coach_tools_view(request):
         return redirect("dashboard")
 
     return render(request, "core/coach_tools.html")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def evaluations_view(request):
+    athlete = _athlete_for_user(request.user)
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    if is_coach_tools_only_user(request.user):
+        return redirect("dashboard")
+
+    if is_athlete_user:
+        questionnaires = list(
+            EvaluationQuestionnaire.objects
+            .filter(owner=athlete.owner, is_active=True)
+            .prefetch_related("questions")
+            .order_by("title", "id")
+        )
+        responses = {
+            response.questionnaire_id: response
+            for response in EvaluationResponse.objects.filter(
+                athlete=athlete,
+                questionnaire__in=questionnaires,
+            )
+        }
+        rows = [
+            {"questionnaire": questionnaire, "response": responses.get(questionnaire.id)}
+            for questionnaire in questionnaires
+        ]
+        return render(request, "core/evaluations.html", {
+            "is_athlete_user": True,
+            "rows": rows,
+            "current_athlete": athlete,
+        })
+
+    owner = _active_coach_user(request)
+    can_edit = _active_coach_access_label(request) != "view"
+    if request.method == "POST":
+        if not can_edit:
+            return HttpResponse("Forbidden", status=403)
+        title = (request.POST.get("title") or "").strip()
+        description = (request.POST.get("description") or "").strip()
+        questions_text = (request.POST.get("questions") or "").strip()
+        is_active = bool(request.POST.get("is_active"))
+        if title and questions_text:
+            questionnaire = EvaluationQuestionnaire.objects.create(
+                owner=owner,
+                title=title,
+                description=description,
+                is_active=is_active,
+            )
+            questions = [
+                line.strip()
+                for line in questions_text.splitlines()
+                if line.strip()
+            ]
+            EvaluationQuestion.objects.bulk_create([
+                EvaluationQuestion(
+                    questionnaire=questionnaire,
+                    text=text,
+                    order=index,
+                    required=False,
+                )
+                for index, text in enumerate(questions, start=1)
+            ])
+            return redirect("evaluations")
+
+    questionnaires = list(
+        EvaluationQuestionnaire.objects
+        .filter(owner=owner)
+        .prefetch_related("questions")
+        .order_by("-updated_at", "-id")
+    )
+    responses = list(
+        EvaluationResponse.objects
+        .filter(questionnaire__owner=owner)
+        .select_related("questionnaire", "athlete")
+        .prefetch_related("questionnaire__questions")
+        .order_by("-submitted_at", "athlete__name")
+    )
+    for response in responses:
+        response.answer_rows = [
+            {
+                "question": question,
+                "answer": (response.answers or {}).get(str(question.id), ""),
+            }
+            for question in response.questionnaire.questions.all()
+        ]
+    return render(request, "core/evaluations.html", {
+        "is_athlete_user": False,
+        "questionnaires": questionnaires,
+        "responses": responses,
+        "can_edit": can_edit,
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def evaluation_fill_view(request, questionnaire_id):
+    athlete = _athlete_for_user(request.user)
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    if not is_athlete_user:
+        return redirect("evaluations")
+
+    questionnaire = get_object_or_404(
+        EvaluationQuestionnaire.objects.prefetch_related("questions"),
+        id=questionnaire_id,
+        owner=athlete.owner,
+        is_active=True,
+    )
+    response = EvaluationResponse.objects.filter(
+        questionnaire=questionnaire,
+        athlete=athlete,
+    ).first()
+
+    if request.method == "POST":
+        answers = {}
+        for question in questionnaire.questions.all():
+            answers[str(question.id)] = (request.POST.get(f"question_{question.id}") or "").strip()
+        EvaluationResponse.objects.update_or_create(
+            questionnaire=questionnaire,
+            athlete=athlete,
+            defaults={"answers": answers},
+        )
+        return redirect("evaluations")
+
+    answers = response.answers if response else {}
+    for question in questionnaire.questions.all():
+        question.current_answer = answers.get(str(question.id), "")
+
+    return render(request, "core/evaluation_fill.html", {
+        "questionnaire": questionnaire,
+        "response": response,
+    })
 
 
 def _clean_match_text(value):

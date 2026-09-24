@@ -109,6 +109,69 @@ class MatchAthleteRecord(models.Model):
         return self.athlete_name
 
 
+class EvaluationQuestionnaire(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="evaluation_questionnaires",
+    )
+    title = models.CharField(max_length=160)
+    description = models.TextField(blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class EvaluationQuestion(models.Model):
+    questionnaire = models.ForeignKey(
+        EvaluationQuestionnaire,
+        on_delete=models.CASCADE,
+        related_name="questions",
+    )
+    text = models.CharField(max_length=240)
+    order = models.PositiveIntegerField(default=0)
+    required = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self) -> str:
+        return self.text
+
+
+class EvaluationResponse(models.Model):
+    questionnaire = models.ForeignKey(
+        EvaluationQuestionnaire,
+        on_delete=models.CASCADE,
+        related_name="responses",
+    )
+    athlete = models.ForeignKey(
+        "Athlete",
+        on_delete=models.CASCADE,
+        related_name="evaluation_responses",
+    )
+    answers = models.JSONField(default=dict, blank=True)
+    submitted_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-submitted_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["questionnaire", "athlete"],
+                name="unique_evaluation_response_per_athlete",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.questionnaire} - {self.athlete}"
+
+
 class Athlete(models.Model):
     """
     Minimal Athlete model for coach-only phase.
