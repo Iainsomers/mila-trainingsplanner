@@ -1505,7 +1505,7 @@ class SlotModalSaveTests(TestCase):
             {
                 "athlete_id": str(athlete.id),
                 "kind": AthleteBasePlanningBlock.KIND_BASE,
-                "copy_block_id": str(block.id),
+                "action": f"copy_block:{block.id}",
             },
         )
 
@@ -1623,12 +1623,44 @@ class SlotModalSaveTests(TestCase):
             {
                 "athlete_id": str(athlete.id),
                 "kind": AthleteBasePlanningBlock.KIND_BASE,
-                "delete_block_id": str(block.id),
+                "action": f"delete_block:{block.id}",
             },
         )
 
         self.assertEqual(response.status_code, 302)
         self.assertFalse(AthleteBasePlanningBlock.objects.filter(id=block.id).exists())
+
+    def test_base_planning_save_does_not_copy_even_with_copy_id_present(self):
+        user, _, athlete = self._user_plan_and_athlete()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 1",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=1,
+        )
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "save",
+                "copy_block_id": str(block.id),
+                "block_id": [str(block.id)],
+                f"block_{block.id}_label": "Saved label",
+                f"block_{block.id}_start": "01-01",
+                f"block_{block.id}_end": "31-12",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(AthleteBasePlanningBlock.objects.filter(athlete=athlete).count(), 1)
+        block.refresh_from_db()
+        self.assertEqual(block.label, "Saved label")
 
     def test_base_planning_add_block_rejects_after_year_end(self):
         user, _, athlete = self._user_plan_and_athlete()

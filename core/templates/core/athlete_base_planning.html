@@ -219,8 +219,8 @@
                   </div>
                   <div class="col-md-4">
                     <div class="d-flex flex-wrap align-items-center gap-2">
-                      <button type="submit" name="copy_block_id" value="{{ block.id }}" class="btn btn-outline-secondary btn-sm">Copy block</button>
-                      <button type="submit" name="delete_block_id" value="{{ block.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this block?');">Delete</button>
+                      <button type="submit" name="action" value="copy_block:{{ block.id }}" class="btn btn-outline-secondary btn-sm">Copy block</button>
+                      <button type="submit" name="action" value="delete_block:{{ block.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this block?');">Delete</button>
                     </div>
                   </div>
                 </div>

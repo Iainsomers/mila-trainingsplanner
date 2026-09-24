@@ -5761,13 +5761,16 @@ def athlete_base_planning_view(request):
         return HttpResponse("Forbidden", status=403)
 
     if request.method == "POST" and selected_athlete:
-        action = (request.POST.get("action") or "").strip()
-        copy_block_id = (request.POST.get("copy_block_id") or "").strip()
-        delete_block_id = (request.POST.get("delete_block_id") or "").strip()
-        if copy_block_id.isdigit():
+        raw_action = (request.POST.get("action") or "").strip()
+        action = raw_action
+        copy_block_id = ""
+        delete_block_id = ""
+        if raw_action.startswith("copy_block:"):
             action = "copy_block"
-        if delete_block_id.isdigit():
+            copy_block_id = raw_action.split(":", 1)[1].strip()
+        elif raw_action.startswith("delete_block:"):
             action = "delete_block"
+            delete_block_id = raw_action.split(":", 1)[1].strip()
 
         def save_posted_block_fields(validate_coverage=True, allow_delete=False):
             block_ids = [
