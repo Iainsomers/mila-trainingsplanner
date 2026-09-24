@@ -366,6 +366,7 @@ class YearPlannerEntry(models.Model):
         ("race_silver", "Race Silver"),
         ("race_bronze", "Race Bronze"),
         ("race_other", "Race Other"),
+        ("diamond_l", "Diamond L"),
         ("expermeetings", "Expermeetings"),
         ("medical", "Medical"),
         ("brinec", "Brinec"),
