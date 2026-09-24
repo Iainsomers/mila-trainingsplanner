@@ -5874,6 +5874,7 @@ def athlete_base_planning_view(request):
             return JsonResponse({"ok": True})
 
         if action == "save":
+            is_autosave = request.POST.get("autosave") == "1"
             block_ids = [
                 int(value)
                 for value in request.POST.getlist("block_id")
@@ -5890,6 +5891,8 @@ def athlete_base_planning_view(request):
                 for value in request.POST.getlist("delete_block")
                 if str(value).isdigit()
             }
+            if is_autosave:
+                delete_ids = set()
 
             for index, block_id in enumerate(block_ids, start=1):
                 if block_id in delete_ids:
@@ -5919,7 +5922,6 @@ def athlete_base_planning_view(request):
             if not block_values:
                 errors.append("Er moet minimaal een datumblok zijn.")
 
-            is_autosave = request.POST.get("autosave") == "1"
             if not is_autosave:
                 errors.extend(_validate_base_planning_coverage(block_values))
 

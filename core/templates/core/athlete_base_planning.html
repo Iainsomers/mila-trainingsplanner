@@ -184,6 +184,7 @@
           </form>
 
           <button type="submit" name="action" value="add_block" form="basePlanningForm" class="btn btn-outline-primary btn-sm">Add block</button>
+          <button type="submit" name="action" value="save" form="basePlanningForm" class="btn btn-primary btn-sm">Save</button>
           <span id="baseAutosaveStatus" class="small text-muted"></span>
         {% endif %}
       </div>
@@ -372,6 +373,7 @@
     let modal = null;
     let draggedSlotId = "";
     let autosaveTimer = null;
+    const blockAutosaveDelayMs = 20000;
 
     function getModal() {
       if (!modal && window.bootstrap) {
@@ -486,7 +488,13 @@
 
     function autosaveNow() {
       if (!planningForm) return;
+      const blockState = validateBlocksForAutosave();
+      if (!blockState.ok) {
+        setAutosaveStatus(blockState.message, blockState.isError);
+        return;
+      }
       const data = new FormData(planningForm);
+      data.delete("delete_block");
       data.set("action", "save");
       data.set("autosave", "1");
       setAutosaveStatus("Saving...", false);
@@ -575,7 +583,63 @@
       if (autosaveTimer) {
         window.clearTimeout(autosaveTimer);
       }
-      autosaveTimer = window.setTimeout(autosaveNow, 250);
+      setAutosaveStatus("Autosave pending...", false);
+      autosaveTimer = window.setTimeout(autosaveNow, blockAutosaveDelayMs);
+    }
+
+    function parseMonthDay(value) {
+      const parts = String(value || "").trim().split("-");
+      if (parts.length !== 2) return null;
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      const monthLengths = [0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      if (!Number.isInteger(day) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+      if (day < 1 || day > monthLengths[month]) return null;
+      let index = day;
+      for (let m = 1; m < month; m += 1) {
+        index += monthLengths[m];
+      }
+      return index;
+    }
+
+    function blockDays(start, end) {
+      const days = [];
+      if (start <= end) {
+        for (let day = start; day <= end; day += 1) days.push(day);
+        return days;
+      }
+      for (let day = start; day <= 366; day += 1) days.push(day);
+      for (let day = 1; day <= end; day += 1) days.push(day);
+      return days;
+    }
+
+    function validateBlocksForAutosave() {
+      if (!planningForm) return { ok: true };
+      if (planningForm.querySelector('input[name="delete_block"]:checked')) {
+        return { ok: false, message: "Click Save to delete block", isError: false };
+      }
+
+      const usedDays = new Set();
+      const blockIds = Array.from(planningForm.querySelectorAll('input[name="block_id"]'))
+        .map((input) => input.value || "")
+        .filter(Boolean);
+
+      for (const blockId of blockIds) {
+        const startInput = planningForm.querySelector('input[name="block_' + blockId + '_start"]');
+        const endInput = planningForm.querySelector('input[name="block_' + blockId + '_end"]');
+        const start = parseMonthDay(startInput ? startInput.value : "");
+        const end = parseMonthDay(endInput ? endInput.value : "");
+        if (!start || !end) {
+          return { ok: false, message: "Autosave paused: check block dates", isError: false };
+        }
+        for (const day of blockDays(start, end)) {
+          if (usedDays.has(day)) {
+            return { ok: false, message: "Autosave paused: overlapping blocks", isError: false };
+          }
+          usedDays.add(day);
+        }
+      }
+      return { ok: true };
     }
 
     function copySlot(sourceId, targetId) {

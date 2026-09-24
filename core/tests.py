@@ -1521,6 +1521,51 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(copied_slots[(1, 2)].mode, AthleteBasePlanningSlot.MODE_TRAINING)
         self.assertEqual(copied_slots[(1, 2)].training_text, "CORE=5 km z2")
 
+    def test_base_planning_autosave_does_not_delete_blocks(self):
+        user, _, athlete = self._user_plan_and_athlete()
+        block1 = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 1",
+            start_month=1,
+            start_day=1,
+            end_month=6,
+            end_day=30,
+            sort_order=1,
+        )
+        block2 = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 2",
+            start_month=7,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=2,
+        )
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "save",
+                "autosave": "1",
+                "block_id": [str(block1.id), str(block2.id)],
+                "delete_block": [str(block2.id)],
+                f"block_{block1.id}_label": "Block 1",
+                f"block_{block1.id}_start": "01-01",
+                f"block_{block1.id}_end": "30-06",
+                f"block_{block2.id}_label": "Block 2",
+                f"block_{block2.id}_start": "01-07",
+                f"block_{block2.id}_end": "31-12",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(AthleteBasePlanningBlock.objects.filter(id=block2.id).exists())
+
     def test_cd_is_saved_after_all_split_core_segments(self):
         user = get_user_model().objects.create_user(
             username="coach",
