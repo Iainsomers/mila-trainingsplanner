@@ -1566,6 +1566,117 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(AthleteBasePlanningBlock.objects.filter(id=block2.id).exists())
 
+    def test_base_planning_add_block_splits_existing_block(self):
+        user, plan, athlete = self._user_plan_and_athlete()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 1",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=1,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=plan,
+        )
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "add_block",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        blocks = list(AthleteBasePlanningBlock.objects.filter(athlete=athlete).order_by("sort_order"))
+        self.assertEqual(len(blocks), 2)
+        self.assertEqual((blocks[0].start_month, blocks[0].start_day, blocks[0].end_month, blocks[0].end_day), (1, 1, 6, 30))
+        self.assertEqual((blocks[1].start_month, blocks[1].start_day, blocks[1].end_month, blocks[1].end_day), (7, 1, 12, 31))
+        self.assertEqual(blocks[1].slots.get(weekday=0, slot_index=1).trainer_plan, plan)
+
+    def test_base_planning_open_repairs_duplicate_full_year_blocks(self):
+        user, _, athlete = self._user_plan_and_athlete()
+        AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 1",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=1,
+        )
+        AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 2",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=2,
+        )
+
+        response = self.client.get(f"/planning/base/?athlete={athlete.id}&kind={AthleteBasePlanningBlock.KIND_BASE}")
+
+        self.assertEqual(response.status_code, 200)
+        blocks = list(AthleteBasePlanningBlock.objects.filter(athlete=athlete).order_by("sort_order"))
+        self.assertEqual((blocks[0].start_month, blocks[0].start_day, blocks[0].end_month, blocks[0].end_day), (1, 1, 6, 30))
+        self.assertEqual((blocks[1].start_month, blocks[1].start_day, blocks[1].end_month, blocks[1].end_day), (7, 1, 12, 31))
+
+    def test_base_planning_manual_save_keeps_block_dates(self):
+        user, _, athlete = self._user_plan_and_athlete()
+        block1 = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 1",
+            start_month=1,
+            start_day=1,
+            end_month=6,
+            end_day=30,
+            sort_order=1,
+        )
+        block2 = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Block 2",
+            start_month=7,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=2,
+        )
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "save",
+                "block_id": [str(block1.id), str(block2.id)],
+                f"block_{block1.id}_label": "Early",
+                f"block_{block1.id}_start": "01-01",
+                f"block_{block1.id}_end": "31-05",
+                f"block_{block2.id}_label": "Late",
+                f"block_{block2.id}_start": "01-06",
+                f"block_{block2.id}_end": "31-12",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        block1.refresh_from_db()
+        block2.refresh_from_db()
+        self.assertEqual((block1.start_month, block1.start_day, block1.end_month, block1.end_day), (1, 1, 5, 31))
+        self.assertEqual((block2.start_month, block2.start_day, block2.end_month, block2.end_day), (6, 1, 12, 31))
+
     def test_cd_is_saved_after_all_split_core_segments(self):
         user = get_user_model().objects.create_user(
             username="coach",

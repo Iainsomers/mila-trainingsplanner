@@ -20,7 +20,7 @@ from django.contrib.auth import get_user_model
 from django.db.models.functions import Lower
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch, Q
+from django.db.models import F, Prefetch, Q
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, is_coach_tools_only_user
@@ -5558,6 +5558,11 @@ def _month_day_index(month: int, day: int) -> int:
     return date(2024, int(month), int(day)).timetuple().tm_yday
 
 
+def _month_day_from_index(day_index: int):
+    day = date(2024, 1, 1) + timedelta(days=int(day_index) - 1)
+    return day.month, day.day
+
+
 def _block_covered_days(start_month: int, start_day: int, end_month: int, end_day: int):
     start_idx = _month_day_index(start_month, start_day)
     end_idx = _month_day_index(end_month, end_day)
@@ -5587,6 +5592,86 @@ def _validate_base_planning_coverage(block_values):
     if overlap:
         errors.append("Er zijn overlappende datumranges.")
     return errors
+
+
+def _base_block_days(block):
+    days = sorted(_block_covered_days(block.start_month, block.start_day, block.end_month, block.end_day))
+    start_idx = _month_day_index(block.start_month, block.start_day)
+    if days and days[0] != start_idx:
+        return [day for day in days if day >= start_idx] + [day for day in days if day < start_idx]
+    return days
+
+
+def _copy_base_block_slots(source_block, target_block):
+    for source_slot in source_block.slots.all():
+        AthleteBasePlanningSlot.objects.create(
+            block=target_block,
+            weekday=source_slot.weekday,
+            slot_index=source_slot.slot_index,
+            mode=source_slot.mode,
+            trainer_plan=source_slot.trainer_plan,
+            training_text=source_slot.training_text,
+        )
+    _ensure_base_block_slots(target_block)
+
+
+def _split_base_planning_block(source_block, sort_order):
+    source_days = _base_block_days(source_block)
+    if len(source_days) < 2:
+        return None
+
+    split_at = 182 if len(source_days) == 366 else len(source_days) // 2
+    old_end_month, old_end_day = source_block.end_month, source_block.end_day
+    source_end_month, source_end_day = _month_day_from_index(source_days[split_at - 1])
+    target_start_month, target_start_day = _month_day_from_index(source_days[split_at])
+
+    source_block.end_month = source_end_month
+    source_block.end_day = source_end_day
+    source_block.save(update_fields=["end_month", "end_day", "updated_at"])
+
+    target_block = AthleteBasePlanningBlock.objects.create(
+        athlete=source_block.athlete,
+        planning_kind=source_block.planning_kind,
+        label=f"Block {sort_order}",
+        start_month=target_start_month,
+        start_day=target_start_day,
+        end_month=old_end_month,
+        end_day=old_end_day,
+        sort_order=sort_order,
+    )
+    _copy_base_block_slots(source_block, target_block)
+    return target_block
+
+
+def _repair_duplicate_full_year_base_blocks(athlete, planning_kind):
+    blocks = list(
+        AthleteBasePlanningBlock.objects
+        .filter(athlete=athlete, planning_kind=planning_kind)
+        .order_by("sort_order", "id")
+    )
+    if len(blocks) < 2:
+        return False
+    if any(
+        (block.start_month, block.start_day, block.end_month, block.end_day) != (1, 1, 12, 31)
+        for block in blocks
+    ):
+        return False
+
+    total_days = 365
+    block_count = len(blocks)
+    with transaction.atomic():
+        for index, block in enumerate(blocks):
+            start_idx = (index * total_days // block_count) + 1
+            end_idx = 366 if index == block_count - 1 else ((index + 1) * total_days // block_count)
+            start_month, start_day = _month_day_from_index(start_idx)
+            end_month, end_day = _month_day_from_index(end_idx)
+            block.start_month = start_month
+            block.start_day = start_day
+            block.end_month = end_month
+            block.end_day = end_day
+            block.sort_order = index + 1
+            block.save(update_fields=["start_month", "start_day", "end_month", "end_day", "sort_order", "updated_at"])
+    return True
 
 
 def _ensure_base_block_slots(block):
@@ -5742,18 +5827,33 @@ def athlete_base_planning_view(request):
             action = "copy_block"
 
         if action == "add_block":
-            sort_order = selected_athlete.base_planning_blocks.filter(planning_kind=planning_kind).count() + 1
-            block = AthleteBasePlanningBlock.objects.create(
-                athlete=selected_athlete,
-                planning_kind=planning_kind,
-                label=f"Block {sort_order}",
-                start_month=1,
-                start_day=1,
-                end_month=12,
-                end_day=31,
-                sort_order=sort_order,
+            existing_blocks = list(
+                selected_athlete.base_planning_blocks
+                .filter(planning_kind=planning_kind)
+                .prefetch_related("slots")
+                .order_by("sort_order", "start_month", "start_day", "id")
             )
-            _ensure_base_block_slots(block)
+            if existing_blocks:
+                source_block = max(existing_blocks, key=lambda block: len(_base_block_days(block)))
+                with transaction.atomic():
+                    AthleteBasePlanningBlock.objects.filter(
+                        athlete=selected_athlete,
+                        planning_kind=planning_kind,
+                        sort_order__gt=source_block.sort_order,
+                    ).update(sort_order=F("sort_order") + 1)
+                    _split_base_planning_block(source_block, source_block.sort_order + 1)
+            else:
+                block = AthleteBasePlanningBlock.objects.create(
+                    athlete=selected_athlete,
+                    planning_kind=planning_kind,
+                    label="Block 1",
+                    start_month=1,
+                    start_day=1,
+                    end_month=12,
+                    end_day=31,
+                    sort_order=1,
+                )
+                _ensure_base_block_slots(block)
             return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
 
         if action == "copy_from":
@@ -5786,15 +5886,7 @@ def athlete_base_planning_view(request):
                             end_day=source_block.end_day,
                             sort_order=source_block.sort_order,
                         )
-                        for source_slot in source_block.slots.all():
-                            AthleteBasePlanningSlot.objects.create(
-                                block=target_block,
-                                weekday=source_slot.weekday,
-                                slot_index=source_slot.slot_index,
-                                mode=source_slot.mode,
-                                trainer_plan=source_slot.trainer_plan,
-                                training_text=source_slot.training_text,
-                        )
+                        _copy_base_block_slots(source_block, target_block)
                 return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
 
         if action == "copy_block":
@@ -5826,16 +5918,7 @@ def athlete_base_planning_view(request):
                         end_day=source_block.end_day,
                         sort_order=sort_order,
                     )
-                    for source_slot in source_block.slots.all():
-                        AthleteBasePlanningSlot.objects.create(
-                            block=target_block,
-                            weekday=source_slot.weekday,
-                            slot_index=source_slot.slot_index,
-                            mode=source_slot.mode,
-                            trainer_plan=source_slot.trainer_plan,
-                            training_text=source_slot.training_text,
-                        )
-                    _ensure_base_block_slots(target_block)
+                    _copy_base_block_slots(source_block, target_block)
                 return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
 
         if action == "autosave_slot":
@@ -5970,6 +6053,8 @@ def athlete_base_planning_view(request):
 
     blocks = []
     if selected_athlete:
+        if not read_only:
+            _repair_duplicate_full_year_base_blocks(selected_athlete, planning_kind)
         block_qs = (
             AthleteBasePlanningBlock.objects
             .filter(athlete=selected_athlete, planning_kind=planning_kind)
