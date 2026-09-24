@@ -9310,8 +9310,6 @@ def daily_overview_view(request):
                     slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
                 elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
                     slot = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, d, slot_index))
-                    if _slot_is_visually_empty(slot) and base_planning_slot.trainer_plan:
-                        slot = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
 
         slot = _clone_slot_for_display(slot)
         _annotate_slot_segment_display_times(slot, athlete)

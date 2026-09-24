@@ -342,8 +342,6 @@ def _fallback_slot_after_flex_reset(athlete, day, slot_index):
         )
         if trainer_slot and trainer_slot.segments.exists():
             return trainer_slot
-        if base_planning_slot.trainer_plan:
-            return _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
         return None
 
     if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:

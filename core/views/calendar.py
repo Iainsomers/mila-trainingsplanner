@@ -1286,8 +1286,6 @@ def flex_planner_view(request):
                                 slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
                             elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
                                 slot = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, slot_index))
-                                if _slot_is_visually_empty(slot) and base_planning_slot.trainer_plan:
-                                    slot = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
                             if slot and flex_plan:
                                 plan = flex_plan
                                 no_plan = False
@@ -3109,8 +3107,6 @@ def athlete_year_calendar_view(request):
                         slot1 = _virtual_slot_from_base_training(base_planning_slot.training_text)
                     elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
                         slot1 = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, 1))
-                        if _slot_is_visually_empty(slot1) and base_planning_slot.trainer_plan:
-                            slot1 = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
                     if slot1 and flex_plan:
                         plan1 = flex_plan
                         try:
@@ -3125,8 +3121,6 @@ def athlete_year_calendar_view(request):
                         slot2 = _virtual_slot_from_base_training(base_planning_slot.training_text)
                     elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
                         slot2 = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, 2))
-                        if _slot_is_visually_empty(slot2) and base_planning_slot.trainer_plan:
-                            slot2 = _VirtualSlot([_VirtualSegment(text=base_planning_slot.trainer_plan.name, type="GROUP")])
                     if slot2 and flex_plan:
                         plan2 = flex_plan
                         try:

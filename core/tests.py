@@ -1876,6 +1876,87 @@ class SlotModalSaveTests(TestCase):
             ["1000m z1", "6*400m z4", "1000m z1"],
         )
 
+    def test_flex_modal_prefills_base_individual_training(self):
+        user = get_user_model().objects.create_user(
+            username="base-modal-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Base Modal Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        flex_plan = TrainingPlan.objects.create(owner=user, name=f"Flex Planner {user.id}")
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=3,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINING,
+            training_text="WU=1000m z1\nCORE=6*400m z4\nCD=1000m z1",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            f"/slot-modal/2026/09/24/1/?plan={flex_plan.id}&athlete={athlete.id}&source=flex"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1000m z1")
+        self.assertContains(response, "6*400m z4")
+
+    def test_flex_hides_empty_trainer_plan_from_base_planning(self):
+        user = get_user_model().objects.create_user(
+            username="empty-trainer-base-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Empty Trainer Base Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        trainer_plan = TrainingPlan.objects.create(
+            owner=user,
+            name="Empty trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        block = AthleteBasePlanningBlock.objects.get(athlete=athlete)
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=3,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=trainer_plan,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            f"/flex-planner/?start=2026-09-21&weeks=1&athletes={athlete.id}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        target_cell = response.context["week_rows"][0]["athlete_rows"][0]["am_cells"][3]
+        self.assertIsNone(target_cell["slot"])
+
     def test_group_auto_wucd_is_applied_for_base_plan_training(self):
         user = get_user_model().objects.create_user(
             username="groupcoach",
