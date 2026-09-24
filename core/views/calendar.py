@@ -3049,6 +3049,9 @@ def athlete_year_calendar_view(request):
             daily_vitals_map[v.date] = v
 
     week_rows = []
+    pending_evaluation_reminders = []
+    reminder_start = today - timedelta(days=7)
+    reminder_end = today - timedelta(days=1)
     d = start
 
     for _ in range(weeks):
@@ -3176,6 +3179,21 @@ def athlete_year_calendar_view(request):
                 "plan_text1": _slot_watch_plan_text(slot1),
                 "plan_text2": _slot_watch_plan_text(slot2),
             })
+            if athlete_self_view and show_training_reports and reminder_start <= day <= reminder_end:
+                for reminder_slot_index, reminder_slot, reminder_check, reminder_label in (
+                    (1, slot1, check1, "AM"),
+                    (2, slot2, check2, "PM"),
+                ):
+                    if not reminder_slot:
+                        continue
+                    if reminder_check and reminder_check.effective_status:
+                        continue
+                    pending_evaluation_reminders.append({
+                        "date": day,
+                        "slot_index": reminder_slot_index,
+                        "label": reminder_label,
+                        "plan_text": _slot_watch_plan_text(reminder_slot) or "Training",
+                    })
             cells4.append({
                 "day": day,
                 "vitals": daily_vitals_map.get(day),
@@ -3379,5 +3397,6 @@ def athlete_year_calendar_view(request):
             "ayc_rowspan": ayc_rowspan,
             "is_coach_user": is_coach_user,
             "zones_times_rows": _build_zones_times_rows(selected_athlete),
+            "pending_evaluation_reminders": pending_evaluation_reminders,
         },
     )

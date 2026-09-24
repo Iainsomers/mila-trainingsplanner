@@ -2263,6 +2263,63 @@ class SlotModalSaveTests(TestCase):
         self.assertIsNotNone(target_cell)
         self.assertIsNone(target_cell["slot"])
 
+    def test_athlete_year_shows_pending_evaluation_reminders_for_past_week(self):
+        coach = get_user_model().objects.create_user(
+            username="ayc-reminder-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="Reminder Athlete",
+            password="secret",
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Reminder Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        plan = TrainingPlan.objects.create(owner=coach, name="Reminder plan")
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        yesterday = date.today() - timedelta(days=1)
+        today = date.today()
+        old_day = date.today() - timedelta(days=8)
+        completed_day = date.today() - timedelta(days=2)
+
+        for day, text in (
+            (yesterday, "Yesterday reminder training"),
+            (today, "Today should wait"),
+            (old_day, "Old should be ignored"),
+            (completed_day, "Completed should be ignored"),
+        ):
+            slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=1)
+            slot.segments.create(type="CORE", text=text, zone="2", order=1)
+
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=completed_day,
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+            rpe=5,
+            comment="Done already",
+            updated_by=athlete_user,
+        )
+
+        self.client.force_login(athlete_user)
+        response = self.client.get(f"/athlete/year/?year={today.year}")
+
+        reminders = response.context["pending_evaluation_reminders"]
+        self.assertEqual(len(reminders), 1)
+        self.assertEqual(reminders[0]["date"], yesterday)
+        self.assertEqual(reminders[0]["slot_index"], 1)
+        self.assertEqual(reminders[0]["plan_text"], "Yesterday reminder training")
+        self.assertContains(response, "Open evaluations")
+        self.assertContains(response, "Yesterday reminder training")
+        self.assertContains(response, f'data-evaluation-date="{yesterday:%Y-%m-%d}"', html=False)
+        self.assertNotContains(response, f'data-evaluation-date="{today:%Y-%m-%d}"', html=False)
+        self.assertNotContains(response, f'data-evaluation-date="{old_day:%Y-%m-%d}"', html=False)
+        self.assertNotContains(response, f'data-evaluation-date="{completed_day:%Y-%m-%d}"', html=False)
+
     def test_mobile_pm_training_contains_modal_prefill_values(self):
         template_path = get_template("core/athlete_year_calendar.html").origin.name
         template_source = Path(template_path).read_text(encoding="utf-8")

@@ -494,6 +494,49 @@
     margin-bottom: 8px;
   }
 
+  .pending-evaluation-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.28);
+  }
+
+  .pending-evaluation-modal.is-visible {
+    display: flex;
+  }
+
+  .pending-evaluation-card {
+    width: min(560px, 96vw);
+    max-height: 88vh;
+    overflow: auto;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  }
+
+  .pending-evaluation-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 0;
+    border-top: 1px solid #e9ecef;
+  }
+
+  .pending-evaluation-item:first-child {
+    border-top: 0;
+  }
+
+  .pending-evaluation-training {
+    color: #555555;
+    font-size: .85rem;
+    line-height: 1.25;
+  }
+
   .report-comment-label {
     display: flex;
     align-items: center;
@@ -1729,6 +1772,35 @@
 </script>
 
 
+{% if pending_evaluation_reminders %}
+<div id="pendingEvaluationModal" class="pending-evaluation-modal" aria-modal="true" role="dialog" aria-labelledby="pendingEvaluationTitle">
+  <div class="pending-evaluation-card">
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-start gap-3">
+      <div>
+        <h5 id="pendingEvaluationTitle" class="mb-1">Open evaluations</h5>
+        <div class="text-muted small">Please complete the training evaluations from the past week.</div>
+      </div>
+      <button type="button" class="btn-close" id="pendingEvaluationClose" aria-label="Later"></button>
+    </div>
+    <div class="p-3">
+      {% for reminder in pending_evaluation_reminders %}
+        <div class="pending-evaluation-item">
+          <div>
+            <div class="fw-bold">{{ reminder.date|date:"D d-m" }} · {{ reminder.label }}</div>
+            <div class="pending-evaluation-training">{{ reminder.plan_text|truncatechars:140 }}</div>
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm btn-primary pending-evaluation-open"
+            data-evaluation-date="{{ reminder.date|date:'Y-m-d' }}"
+          >Evaluate</button>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div id="commentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
   <div style="background:#ffffff; width:720px; max-width:95vw; max-height:92vh; overflow:auto; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
     <h5>Evaluation</h5>
@@ -2275,6 +2347,28 @@
       validate();
     }, true);
   });
+  var pendingEvaluationModal = document.getElementById("pendingEvaluationModal");
+  if (pendingEvaluationModal) {
+    pendingEvaluationModal.classList.add("is-visible");
+    document.getElementById("pendingEvaluationClose")?.addEventListener("click", function() {
+      pendingEvaluationModal.classList.remove("is-visible");
+    });
+    document.querySelectorAll(".pending-evaluation-open").forEach(function(button) {
+      button.addEventListener("click", function() {
+        var date = button.getAttribute("data-evaluation-date") || "";
+        var target = null;
+        document.querySelectorAll(".comment-display").forEach(function(candidate) {
+          if (!target && candidate.getAttribute("data-date") === date) {
+            target = candidate;
+          }
+        });
+        pendingEvaluationModal.classList.remove("is-visible");
+        if (target) {
+          target.click();
+        }
+      });
+    });
+  }
   document.querySelectorAll(".report-field").forEach(function(el){ el.addEventListener("input", validate); el.addEventListener("change", validate); });
   document.querySelectorAll("[data-voice-comment-target]").forEach(function(btn) {
     if (!SpeechRecognitionApi) {
