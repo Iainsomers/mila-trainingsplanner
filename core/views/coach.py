@@ -5737,6 +5737,9 @@ def athlete_base_planning_view(request):
 
     if request.method == "POST" and selected_athlete:
         action = (request.POST.get("action") or "").strip()
+        copy_block_id = (request.POST.get("copy_block_id") or "").strip()
+        if copy_block_id.isdigit():
+            action = "copy_block"
 
         if action == "add_block":
             sort_order = selected_athlete.base_planning_blocks.filter(planning_kind=planning_kind).count() + 1
@@ -5791,7 +5794,48 @@ def athlete_base_planning_view(request):
                                 mode=source_slot.mode,
                                 trainer_plan=source_slot.trainer_plan,
                                 training_text=source_slot.training_text,
-                            )
+                        )
+                return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
+
+        if action == "copy_block":
+            source_block = None
+            if copy_block_id.isdigit():
+                source_block = (
+                    AthleteBasePlanningBlock.objects
+                    .filter(
+                        id=int(copy_block_id),
+                        athlete=selected_athlete,
+                        planning_kind=planning_kind,
+                    )
+                    .prefetch_related("slots")
+                    .first()
+                )
+
+            if not source_block:
+                errors.append("Choose a valid block to copy.")
+            else:
+                sort_order = selected_athlete.base_planning_blocks.filter(planning_kind=planning_kind).count() + 1
+                with transaction.atomic():
+                    target_block = AthleteBasePlanningBlock.objects.create(
+                        athlete=selected_athlete,
+                        planning_kind=planning_kind,
+                        label=f"{source_block.label or 'Block'} copy",
+                        start_month=source_block.start_month,
+                        start_day=source_block.start_day,
+                        end_month=source_block.end_month,
+                        end_day=source_block.end_day,
+                        sort_order=sort_order,
+                    )
+                    for source_slot in source_block.slots.all():
+                        AthleteBasePlanningSlot.objects.create(
+                            block=target_block,
+                            weekday=source_slot.weekday,
+                            slot_index=source_slot.slot_index,
+                            mode=source_slot.mode,
+                            trainer_plan=source_slot.trainer_plan,
+                            training_text=source_slot.training_text,
+                        )
+                    _ensure_base_block_slots(target_block)
                 return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
 
         if action == "autosave_slot":
@@ -7985,7 +8029,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
 
     errors = []
     saved_notice = "Opgeslagen." if request.GET.get("saved") == "1" else None
-    active_tab = (request.GET.get("tab") or "general").strip()
+    active_tab = (request.POST.get("active_tab") or request.GET.get("tab") or "general").strip()
     allowed_tabs = {"general", "zones", "base-planning", "ideal-week"}
     if active_tab not in allowed_tabs:
         active_tab = "general"
@@ -8269,7 +8313,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.save()
 
             target_url = reverse("athlete_settings") if self_view else reverse("coach_athlete_edit", args=[athlete.id])
-            return redirect(f"{target_url}?tab=zones&saved=1")
+            return redirect(f"{target_url}?tab={active_tab}&saved=1")
 
     return render(
         request,

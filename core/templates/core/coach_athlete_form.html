@@ -106,6 +106,7 @@
       <form method="post" id="athleteForm">
         {% csrf_token %}
         <input type="hidden" name="zone_method" value="manual">
+        <input type="hidden" name="active_tab" id="athleteActiveTabInput" value="{{ active_tab|default:'general' }}">
 
         <script>
           // Prevent Enter in inputs from submitting the form
@@ -118,6 +119,15 @@
               if (e.key === "Enter" && tag === "input") {
                 e.preventDefault();
               }
+            });
+
+            const activeTabInput = document.getElementById("athleteActiveTabInput");
+            document.querySelectorAll('#athleteInputTabs [data-bs-toggle="tab"]').forEach(function (tabButton) {
+              tabButton.addEventListener("shown.bs.tab", function (event) {
+                const target = event.target ? (event.target.getAttribute("data-bs-target") || "") : "";
+                if (!activeTabInput || !target) return;
+                activeTabInput.value = target.replace(/^#/, "").replace(/-pane$/, "") || "general";
+              });
             });
 
             function parsePrToSeconds(value) {

@@ -1473,6 +1473,54 @@ class SlotModalSaveTests(TestCase):
         block2.refresh_from_db()
         self.assertEqual((block2.start_month, block2.start_day, block2.end_month, block2.end_day), (7, 1, 12, 31))
 
+    def test_base_planning_block_copy_keeps_slots(self):
+        user, plan, athlete = self._user_plan_and_athlete()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Winter",
+            start_month=1,
+            start_day=1,
+            end_month=3,
+            end_day=31,
+            sort_order=1,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=plan,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=1,
+            slot_index=2,
+            mode=AthleteBasePlanningSlot.MODE_TRAINING,
+            training_text="CORE=5 km z2",
+        )
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "copy_block_id": str(block.id),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        copied = AthleteBasePlanningBlock.objects.get(athlete=athlete, label="Winter copy")
+        self.assertEqual((copied.start_month, copied.start_day, copied.end_month, copied.end_day), (1, 1, 3, 31))
+        copied_slots = {
+            (slot.weekday, slot.slot_index): slot
+            for slot in copied.slots.all()
+        }
+        self.assertEqual(copied_slots[(0, 1)].mode, AthleteBasePlanningSlot.MODE_TRAINER)
+        self.assertEqual(copied_slots[(0, 1)].trainer_plan, plan)
+        self.assertEqual(copied_slots[(1, 2)].mode, AthleteBasePlanningSlot.MODE_TRAINING)
+        self.assertEqual(copied_slots[(1, 2)].training_text, "CORE=5 km z2")
+
     def test_cd_is_saved_after_all_split_core_segments(self):
         user = get_user_model().objects.create_user(
             username="coach",

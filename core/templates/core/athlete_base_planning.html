@@ -217,9 +217,12 @@
                     <input name="block_{{ block.id }}_end" class="form-control form-control-sm" value="{{ block.end_md }}" placeholder="DD-MM">
                   </div>
                   <div class="col-md-4">
-                    <div class="form-check">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                      <button type="submit" name="copy_block_id" value="{{ block.id }}" class="btn btn-outline-secondary btn-sm">Copy block</button>
+                      <div class="form-check">
                       <input class="form-check-input" type="checkbox" name="delete_block" value="{{ block.id }}" id="delete_block_{{ block.id }}">
                       <label class="form-check-label" for="delete_block_{{ block.id }}">Delete this block on save</label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -277,7 +280,7 @@
           <div class="mb-3">
             <select id="baseSlotMode" class="form-select form-select-sm">
               <option value="rest">Rest</option>
-              <option value="training">Individuele training</option>
+              <option value="training">Individual training</option>
               <option value="trainer">Group</option>
             </select>
           </div>
@@ -464,7 +467,7 @@
 
       const parts = visibleTrainingParts(trainingInput.value);
       if (!parts.length) {
-        valueEl.innerHTML = '<span class="base-pill base-pill-z1">Individuele training</span>';
+        valueEl.innerHTML = '<span class="base-pill base-pill-z1">Individual training</span>';
         return;
       }
 
@@ -542,28 +545,30 @@
       submitSlotAutosave(slotId, modeInput.value || "rest", trainingInput.value || "", trainerInput.value || "");
     }
 
-    function upsertHidden(name, value) {
-      if (!planningForm) return;
-      let input = planningForm.querySelector('input[name="' + name + '"][data-slot-autosave="1"]');
-      if (!input) {
-        input = document.createElement("input");
-        input.type = "hidden";
-        input.name = name;
-        input.setAttribute("data-slot-autosave", "1");
-        planningForm.appendChild(input);
-      }
-      input.value = value;
-    }
-
     function submitSlotAutosave(slotId, mode, trainingText, trainerPlan) {
       if (!planningForm) return;
-      upsertHidden("action", "autosave_slot");
-      upsertHidden("autosave", "1");
-      upsertHidden("slot_id", slotId);
-      upsertHidden("mode", mode);
-      upsertHidden("training_text", trainingText);
-      upsertHidden("trainer_plan", trainerPlan);
-      planningForm.submit();
+      const data = new FormData();
+      const athleteInput = planningForm.querySelector('input[name="athlete_id"]');
+      const kindInput = planningForm.querySelector('input[name="kind"]');
+      const embeddedInput = planningForm.querySelector('input[name="embedded"]');
+      if (athleteInput) data.set("athlete_id", athleteInput.value || "");
+      if (kindInput) data.set("kind", kindInput.value || "");
+      if (embeddedInput) data.set("embedded", embeddedInput.value || "1");
+      data.set("action", "autosave_slot");
+      data.set("autosave", "1");
+      data.set("slot_id", slotId);
+      data.set("mode", mode);
+      data.set("training_text", trainingText);
+      data.set("trainer_plan", trainerPlan);
+      postAutosave(data)
+        .then((payload) => {
+          if (!payload.ok) throw new Error("slot save failed");
+          setAutosaveStatus("Saved", false);
+        })
+        .catch((error) => {
+          console.error("Base planning slot autosave failed", error);
+          setAutosaveStatus("Save failed", true);
+        });
     }
 
     function scheduleAutosave() {
@@ -686,9 +691,13 @@
     });
 
     if (planningForm) {
-      planningForm.querySelectorAll('input[name$="_label"], input[name$="_start"], input[name$="_end"], input[name="delete_block"]').forEach((input) => {
+      planningForm.querySelectorAll('input[name$="_label"], input[name$="_start"], input[name$="_end"]').forEach((input) => {
+        input.addEventListener("input", scheduleAutosave);
         input.addEventListener("change", scheduleAutosave);
         input.addEventListener("blur", scheduleAutosave);
+      });
+      planningForm.querySelectorAll('input[name="delete_block"]').forEach((input) => {
+        input.addEventListener("change", scheduleAutosave);
       });
     }
   })();
