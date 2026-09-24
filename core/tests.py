@@ -1566,7 +1566,7 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(AthleteBasePlanningBlock.objects.filter(id=block2.id).exists())
 
-    def test_base_planning_add_block_splits_existing_block(self):
+    def test_base_planning_add_block_starts_after_previous_block(self):
         user, plan, athlete = self._user_plan_and_athlete()
         block = AthleteBasePlanningBlock.objects.create(
             athlete=athlete,
@@ -1574,8 +1574,8 @@ class SlotModalSaveTests(TestCase):
             label="Block 1",
             start_month=1,
             start_day=1,
-            end_month=12,
-            end_day=31,
+            end_month=6,
+            end_day=30,
             sort_order=1,
         )
         AthleteBasePlanningSlot.objects.create(
@@ -1600,9 +1600,8 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(len(blocks), 2)
         self.assertEqual((blocks[0].start_month, blocks[0].start_day, blocks[0].end_month, blocks[0].end_day), (1, 1, 6, 30))
         self.assertEqual((blocks[1].start_month, blocks[1].start_day, blocks[1].end_month, blocks[1].end_day), (7, 1, 12, 31))
-        self.assertEqual(blocks[1].slots.get(weekday=0, slot_index=1).trainer_plan, plan)
 
-    def test_base_planning_open_repairs_duplicate_full_year_blocks(self):
+    def test_base_planning_add_block_rejects_after_year_end(self):
         user, _, athlete = self._user_plan_and_athlete()
         AthleteBasePlanningBlock.objects.create(
             athlete=athlete,
@@ -1614,23 +1613,19 @@ class SlotModalSaveTests(TestCase):
             end_day=31,
             sort_order=1,
         )
-        AthleteBasePlanningBlock.objects.create(
-            athlete=athlete,
-            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
-            label="Block 2",
-            start_month=1,
-            start_day=1,
-            end_month=12,
-            end_day=31,
-            sort_order=2,
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "add_block",
+            },
         )
 
-        response = self.client.get(f"/planning/base/?athlete={athlete.id}&kind={AthleteBasePlanningBlock.KIND_BASE}")
-
         self.assertEqual(response.status_code, 200)
-        blocks = list(AthleteBasePlanningBlock.objects.filter(athlete=athlete).order_by("sort_order"))
-        self.assertEqual((blocks[0].start_month, blocks[0].start_day, blocks[0].end_month, blocks[0].end_day), (1, 1, 6, 30))
-        self.assertEqual((blocks[1].start_month, blocks[1].start_day, blocks[1].end_month, blocks[1].end_day), (7, 1, 12, 31))
+        self.assertContains(response, "Cannot add a block")
+        self.assertEqual(AthleteBasePlanningBlock.objects.filter(athlete=athlete).count(), 1)
 
     def test_base_planning_manual_save_keeps_block_dates(self):
         user, _, athlete = self._user_plan_and_athlete()
