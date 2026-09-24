@@ -1108,6 +1108,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 selected_plan = plan
                 break
 
+    display_plan = selected_plan
     selected_plan = _flex_edit_plan_for_request(request, selected_plan, athlete)
     forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
     if forbid_owner:
@@ -1130,6 +1131,17 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     eff = _get_effective_slot(selected_plan, athlete, d, slot_index, prefetch_segments=True)
     visible_slot = eff["visible_slot"]
     has_fix = eff["has_fix"]
+    if (
+        request.method == "GET"
+        and (_is_flex_source(request) or is_athlete_year_calendar)
+        and _is_flex_planner_plan(selected_plan)
+        and display_plan
+        and display_plan.id != selected_plan.id
+        and not visible_slot
+    ):
+        source_eff = _get_effective_slot(display_plan, athlete, d, slot_index, prefetch_segments=True)
+        visible_slot = source_eff["visible_slot"]
+        has_fix = source_eff["has_fix"]
     if (_is_flex_source(request) or is_athlete_year_calendar) and _is_flex_planner_plan(selected_plan) and not visible_slot:
         visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
         has_fix = False

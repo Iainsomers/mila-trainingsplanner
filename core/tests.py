@@ -1914,6 +1914,43 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, "1000m z1")
         self.assertContains(response, "6*400m z4")
 
+    def test_flex_modal_prefills_training_from_source_plan_before_override(self):
+        user = get_user_model().objects.create_user(
+            username="source-plan-modal-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Source Plan Modal Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        source_plan = TrainingPlan.objects.create(owner=user, name="Visible source plan")
+        PlanMembership.objects.create(plan=source_plan, athlete=athlete)
+        TrainingPlan.objects.create(owner=user, name=f"Flex Planner {user.id}")
+        slot = TrainingSlot.objects.create(
+            plan=source_plan,
+            date=date(2026, 9, 24),
+            slot_index=1,
+        )
+        TrainingSegment.objects.create(
+            slot=slot,
+            type="CORE",
+            text="8 km z2",
+            zone="2",
+            distance_m=8000,
+            norm_distance_m=8000,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            f"/slot-modal/2026/09/24/1/?plan={source_plan.id}&athlete={athlete.id}&source=flex"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "8 km z2")
+
     def test_flex_hides_empty_trainer_plan_from_base_planning(self):
         user = get_user_model().objects.create_user(
             username="empty-trainer-base-coach",
