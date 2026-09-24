@@ -72,41 +72,46 @@
             {% endif %}
             <div class="list-group list-group-flush">
               {% for questionnaire in questionnaires %}
-                <a class="list-group-item list-group-item-action px-0 {% if selected_questionnaire and selected_questionnaire.id == questionnaire.id %}active{% endif %}" href="{% url 'evaluations' %}?questionnaire={{ questionnaire.id }}">
-                  <div class="d-flex justify-content-between gap-2">
-                    <div>
-                      <strong>{{ questionnaire.title }}</strong>
-                      {% if questionnaire.description %}<div class="{% if selected_questionnaire and selected_questionnaire.id == questionnaire.id %}text-white-50{% else %}text-muted{% endif %} small">{{ questionnaire.description }}</div>{% endif %}
-                      <div class="{% if selected_questionnaire and selected_questionnaire.id == questionnaire.id %}text-white-50{% else %}text-muted{% endif %} small">{{ questionnaire.questions.count }} questions</div>
+                <div class="list-group-item px-0">
+                  <button
+                    class="btn btn-link text-start text-decoration-none w-100 p-0 text-body"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#questionnaireCollapse{{ questionnaire.id }}"
+                    aria-expanded="false"
+                    aria-controls="questionnaireCollapse{{ questionnaire.id }}"
+                  >
+                    <div class="d-flex justify-content-between gap-2">
+                      <div>
+                        <strong>{{ questionnaire.title }}</strong>
+                        {% if questionnaire.description %}<div class="text-muted small">{{ questionnaire.description }}</div>{% endif %}
+                        <div class="text-muted small">{{ questionnaire.questions.count }} questions</div>
+                      </div>
+                      <div class="d-flex align-items-start gap-2">
+                        <span class="badge {% if questionnaire.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+                          {% if questionnaire.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                        <span class="text-muted small">open</span>
+                      </div>
                     </div>
-                    <span class="badge {% if questionnaire.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %} align-self-start">
-                      {% if questionnaire.is_active %}Active{% else %}Inactive{% endif %}
-                    </span>
+                  </button>
+                  <div class="collapse mt-3" id="questionnaireCollapse{{ questionnaire.id }}">
+                    <div class="small text-muted mb-2">Read only</div>
+                    <div class="border rounded">
+                      {% for question in questionnaire.questions.all %}
+                        <div class="p-2 {% if not forloop.first %}border-top{% endif %}">
+                          <strong>{{ forloop.counter }}.</strong> {{ question.text }}
+                        </div>
+                      {% endfor %}
+                    </div>
                   </div>
-                </a>
+                </div>
               {% empty %}
                 <div class="text-muted">No questionnaires yet.</div>
               {% endfor %}
             </div>
           </div>
         </div>
-
-        {% if selected_questionnaire %}
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">{{ selected_questionnaire.title }}</h5>
-              {% if selected_questionnaire.description %}
-                <p class="text-muted">{{ selected_questionnaire.description }}</p>
-              {% endif %}
-              <div class="small text-muted mb-2">Read only</div>
-              {% for question in selected_questionnaire.questions.all %}
-                <div class="py-2 {% if not forloop.first %}border-top{% endif %}">
-                  <strong>{{ forloop.counter }}.</strong> {{ question.text }}
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
       </div>
 
       <div class="col-lg-7">
@@ -145,49 +150,66 @@
         <div class="card">
           <div class="card-body">
             <h5 class="card-title">Filled forms</h5>
-            <div class="list-group list-group-flush mb-3">
+            <div class="list-group list-group-flush">
               {% for questionnaire in questionnaires %}
-                <a class="list-group-item list-group-item-action px-0 d-flex justify-content-between {% if selected_filled_questionnaire and selected_filled_questionnaire.id == questionnaire.id %}active{% endif %}" href="{% url 'evaluations' %}?filled={{ questionnaire.id }}">
-                  <span>{{ questionnaire.title }}</span>
-                  <span class="badge {% if selected_filled_questionnaire and selected_filled_questionnaire.id == questionnaire.id %}text-bg-light{% else %}text-bg-secondary{% endif %}">
-                    {{ questionnaire.response_count }} filled
-                  </span>
-                </a>
+                <div class="list-group-item px-0">
+                  <button
+                    class="btn btn-link text-start text-decoration-none w-100 p-0 text-body"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#filledQuestionnaireCollapse{{ questionnaire.id }}"
+                    aria-expanded="{% if selected_filled_questionnaire and selected_filled_questionnaire.id == questionnaire.id %}true{% else %}false{% endif %}"
+                    aria-controls="filledQuestionnaireCollapse{{ questionnaire.id }}"
+                  >
+                    <div class="d-flex justify-content-between gap-2">
+                      <span>{{ questionnaire.title }}</span>
+                      <span class="badge text-bg-secondary">{{ questionnaire.response_count }} filled</span>
+                    </div>
+                  </button>
+                  <div
+                    class="collapse mt-3 {% if selected_filled_questionnaire and selected_filled_questionnaire.id == questionnaire.id %}show{% endif %}"
+                    id="filledQuestionnaireCollapse{{ questionnaire.id }}"
+                  >
+                    {% if questionnaire.filled_responses %}
+                      <div class="list-group list-group-flush">
+                        {% for response in questionnaire.filled_responses %}
+                          <div class="list-group-item px-0">
+                            <button
+                              class="btn btn-link text-start text-decoration-none w-100 p-0 text-body"
+                              type="button"
+                              data-bs-toggle="collapse"
+                              data-bs-target="#responseCollapse{{ response.id }}"
+                              aria-expanded="{% if selected_response and selected_response.id == response.id %}true{% else %}false{% endif %}"
+                              aria-controls="responseCollapse{{ response.id }}"
+                            >
+                              <div class="d-flex justify-content-between gap-2">
+                                <strong>{{ response.athlete.name }}</strong>
+                                <span class="text-muted small">{{ response.submitted_at|date:"d-m-Y H:i" }}</span>
+                              </div>
+                            </button>
+                            <div
+                              class="collapse mt-2 {% if selected_response and selected_response.id == response.id %}show{% endif %}"
+                              id="responseCollapse{{ response.id }}"
+                            >
+                              <dl class="row small mb-0 border rounded">
+                                {% for row in response.answer_rows %}
+                                  <dt class="col-sm-5 p-2 {% if not forloop.first %}border-top{% endif %}">{{ row.question.text }}</dt>
+                                  <dd class="col-sm-7 p-2 mb-0 {% if not forloop.first %}border-top{% endif %}">{{ row.answer|default:"-" }}</dd>
+                                {% endfor %}
+                              </dl>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <div class="text-muted small">No athletes filled this questionnaire yet.</div>
+                    {% endif %}
+                  </div>
+                </div>
               {% empty %}
                 <div class="text-muted">No questionnaires yet.</div>
               {% endfor %}
             </div>
-
-            {% if selected_filled_questionnaire %}
-              <h6 class="mb-2">{{ selected_filled_questionnaire.title }}</h6>
-              <div class="list-group list-group-flush mb-3">
-                {% for response in filled_responses %}
-                  <a class="list-group-item list-group-item-action px-0 d-flex justify-content-between {% if selected_response and selected_response.id == response.id %}active{% endif %}" href="{% url 'evaluations' %}?filled={{ selected_filled_questionnaire.id }}&response={{ response.id }}">
-                    <span>{{ response.athlete.name }}</span>
-                    <span class="{% if selected_response and selected_response.id == response.id %}text-white-50{% else %}text-muted{% endif %} small">{{ response.submitted_at|date:"d-m-Y H:i" }}</span>
-                  </a>
-                {% empty %}
-                  <div class="text-muted">No athletes filled this questionnaire yet.</div>
-                {% endfor %}
-              </div>
-            {% endif %}
-
-            {% if selected_response %}
-              <div class="border-top pt-3">
-                <div class="d-flex justify-content-between gap-3 mb-2">
-                  <strong>{{ selected_response.athlete.name }}</strong>
-                  <span class="text-muted small">{{ selected_response.submitted_at|date:"d-m-Y H:i" }}</span>
-                </div>
-                <dl class="row small mb-0">
-                  {% for row in selected_response.answer_rows %}
-                    <dt class="col-sm-5 py-2 {% if not forloop.first %}border-top{% endif %}">{{ row.question.text }}</dt>
-                    <dd class="col-sm-7 py-2 {% if not forloop.first %}border-top{% endif %}">{{ row.answer|default:"-" }}</dd>
-                  {% endfor %}
-                </dl>
-              </div>
-            {% elif not selected_filled_questionnaire %}
-              <div class="text-muted">Select a questionnaire to view filled forms.</div>
-            {% endif %}
           </div>
         </div>
       </div>

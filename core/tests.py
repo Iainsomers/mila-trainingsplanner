@@ -140,12 +140,14 @@ class TrackTimerTests(TestCase):
         self.client.force_login(coach)
         coach_list = self.client.get("/evaluations/")
         self.assertContains(coach_list, "1 filled")
-        self.assertNotContains(coach_list, "eval athlete")
-        self.assertNotContains(coach_list, "No pain")
+        self.assertContains(coach_list, f"questionnaireCollapse{questionnaire.id}")
+        self.assertContains(coach_list, f"filledQuestionnaireCollapse{questionnaire.id}")
+        self.assertContains(coach_list, "eval athlete")
+        self.assertContains(coach_list, "No pain")
 
         filled_list = self.client.get(f"/evaluations/?filled={questionnaire.id}")
         self.assertContains(filled_list, "eval athlete")
-        self.assertNotContains(filled_list, "No pain")
+        self.assertContains(filled_list, "No pain")
 
         coach_detail = self.client.get(f"/evaluations/?filled={questionnaire.id}&response={response.id}")
         self.assertContains(coach_detail, "eval athlete")
