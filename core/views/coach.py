@@ -5763,17 +5763,124 @@ def athlete_base_planning_view(request):
     if request.method == "POST" and selected_athlete:
         action = (request.POST.get("action") or "").strip()
         copy_block_id = (request.POST.get("copy_block_id") or "").strip()
+        delete_block_id = (request.POST.get("delete_block_id") or "").strip()
         if copy_block_id.isdigit():
             action = "copy_block"
+        if delete_block_id.isdigit():
+            action = "delete_block"
+
+        def save_posted_block_fields(validate_coverage=True, allow_delete=False):
+            block_ids = [
+                int(value)
+                for value in request.POST.getlist("block_id")
+                if str(value).isdigit()
+            ]
+            blocks = {
+                block.id: block
+                for block in AthleteBasePlanningBlock.objects.filter(
+                    athlete=selected_athlete,
+                    planning_kind=planning_kind,
+                    id__in=block_ids,
+                )
+            }
+            delete_ids = set()
+            if allow_delete:
+                delete_ids = {
+                    int(value)
+                    for value in request.POST.getlist("delete_block")
+                    if str(value).isdigit()
+                }
+
+            values = []
+            save_errors = []
+            for index, block_id in enumerate(block_ids, start=1):
+                if block_id in delete_ids:
+                    continue
+                block = blocks.get(block_id)
+                if not block:
+                    continue
+                prefix = f"block_{block_id}"
+                try:
+                    start_month, start_day = _parse_month_day(request.POST.get(f"{prefix}_start"))
+                    end_month, end_day = _parse_month_day(request.POST.get(f"{prefix}_end"))
+                except (TypeError, ValueError):
+                    save_errors.append("Use date format DD-MM, for example 01-03.")
+                    continue
+                values.append({
+                    "id": block_id,
+                    "label": (request.POST.get(f"{prefix}_label") or "").strip(),
+                    "start_month": start_month,
+                    "start_day": start_day,
+                    "end_month": end_month,
+                    "end_day": end_day,
+                    "sort_order": index,
+                })
+
+            if not values:
+                save_errors.append("Er moet minimaal een datumblok zijn.")
+            if validate_coverage:
+                save_errors.extend(_validate_base_planning_coverage(values))
+            if save_errors:
+                return False, save_errors
+
+            trainer_plans = {
+                plan.id: plan
+                for plan in _trainer_planning_qs(request)
+            }
+            with transaction.atomic():
+                if allow_delete and delete_ids:
+                    AthleteBasePlanningBlock.objects.filter(
+                        athlete=selected_athlete,
+                        planning_kind=planning_kind,
+                        id__in=delete_ids,
+                    ).delete()
+                for value in values:
+                    block = blocks[value["id"]]
+                    block.label = value["label"]
+                    block.start_month = value["start_month"]
+                    block.start_day = value["start_day"]
+                    block.end_month = value["end_month"]
+                    block.end_day = value["end_day"]
+                    block.sort_order = value["sort_order"]
+                    block.save()
+                    _ensure_base_block_slots(block)
+
+                    for slot in block.slots.all():
+                        prefix = f"slot_{slot.id}"
+                        mode = (request.POST.get(f"{prefix}_mode") or AthleteBasePlanningSlot.MODE_REST).strip()
+                        if mode not in {
+                            AthleteBasePlanningSlot.MODE_REST,
+                            AthleteBasePlanningSlot.MODE_TRAINING,
+                            AthleteBasePlanningSlot.MODE_TRAINER,
+                        }:
+                            mode = AthleteBasePlanningSlot.MODE_REST
+
+                        slot.mode = mode
+                        slot.training_text = (request.POST.get(f"{prefix}_training_text") or "").strip() if mode == AthleteBasePlanningSlot.MODE_TRAINING else ""
+
+                        trainer_plan_id = (request.POST.get(f"{prefix}_trainer_plan") or "").strip()
+                        if mode == AthleteBasePlanningSlot.MODE_TRAINER and trainer_plan_id.isdigit():
+                            slot.trainer_plan = trainer_plans.get(int(trainer_plan_id))
+                        else:
+                            slot.trainer_plan = None
+                        slot.save()
+            return True, []
 
         if action == "add_block":
+            if request.POST.getlist("block_id"):
+                saved_current, save_errors = save_posted_block_fields(validate_coverage=False, allow_delete=False)
+                if not saved_current:
+                    errors.extend(save_errors)
+
             existing_blocks = list(
                 selected_athlete.base_planning_blocks
                 .filter(planning_kind=planning_kind)
                 .prefetch_related("slots")
                 .order_by("sort_order", "start_month", "start_day", "id")
             )
-            if existing_blocks:
+            if errors:
+                pass
+            elif existing_blocks:
                 previous_block = existing_blocks[-1]
                 next_start = _next_month_day_after(previous_block.end_month, previous_block.end_day)
                 if not next_start:
@@ -5872,6 +5979,16 @@ def athlete_base_planning_view(request):
                     _copy_base_block_slots(source_block, target_block)
                 return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
 
+        if action == "delete_block":
+            if delete_block_id.isdigit():
+                AthleteBasePlanningBlock.objects.filter(
+                    id=int(delete_block_id),
+                    athlete=selected_athlete,
+                    planning_kind=planning_kind,
+                ).delete()
+                return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
+            errors.append("Choose a valid block to delete.")
+
         if action == "autosave_slot":
             slot_id = (request.POST.get("slot_id") or "").strip()
             if not slot_id.isdigit():
@@ -5909,97 +6026,17 @@ def athlete_base_planning_view(request):
 
         if action == "save":
             is_autosave = request.POST.get("autosave") == "1"
-            block_ids = [
-                int(value)
-                for value in request.POST.getlist("block_id")
-                if str(value).isdigit()
-            ]
-            blocks = {
-                block.id: block
-                for block in AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, planning_kind=planning_kind, id__in=block_ids)
-            }
-
-            block_values = []
-            delete_ids = {
-                int(value)
-                for value in request.POST.getlist("delete_block")
-                if str(value).isdigit()
-            }
-            if is_autosave:
-                delete_ids = set()
-
-            for index, block_id in enumerate(block_ids, start=1):
-                if block_id in delete_ids:
-                    continue
-                block = blocks.get(block_id)
-                if not block:
-                    continue
-                prefix = f"block_{block_id}"
-                label = (request.POST.get(f"{prefix}_label") or "").strip()
-                try:
-                    start_month, start_day = _parse_month_day(request.POST.get(f"{prefix}_start"))
-                    end_month, end_day = _parse_month_day(request.POST.get(f"{prefix}_end"))
-                except (TypeError, ValueError):
-                    errors.append("Use date format DD-MM, for example 01-03.")
-                    continue
-
-                block_values.append({
-                    "id": block_id,
-                    "label": label,
-                    "start_month": start_month,
-                    "start_day": start_day,
-                    "end_month": end_month,
-                    "end_day": end_day,
-                    "sort_order": index,
-                })
-
-            if not block_values:
-                errors.append("Er moet minimaal een datumblok zijn.")
-
-            if not is_autosave:
-                errors.extend(_validate_base_planning_coverage(block_values))
-
-            if not errors:
-                trainer_plans = {
-                    plan.id: plan
-                    for plan in _trainer_planning_qs(request)
-                }
-                with transaction.atomic():
-                    AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, planning_kind=planning_kind, id__in=delete_ids).delete()
-                    for value in block_values:
-                        block = blocks[value["id"]]
-                        block.label = value["label"]
-                        block.start_month = value["start_month"]
-                        block.start_day = value["start_day"]
-                        block.end_month = value["end_month"]
-                        block.end_day = value["end_day"]
-                        block.sort_order = value["sort_order"]
-                        block.save()
-                        _ensure_base_block_slots(block)
-
-                        for slot in block.slots.all():
-                            prefix = f"slot_{slot.id}"
-                            mode = (request.POST.get(f"{prefix}_mode") or AthleteBasePlanningSlot.MODE_REST).strip()
-                            if mode not in {
-                                AthleteBasePlanningSlot.MODE_REST,
-                                AthleteBasePlanningSlot.MODE_TRAINING,
-                                AthleteBasePlanningSlot.MODE_TRAINER,
-                            }:
-                                mode = AthleteBasePlanningSlot.MODE_REST
-
-                            slot.mode = mode
-                            slot.training_text = (request.POST.get(f"{prefix}_training_text") or "").strip() if mode == AthleteBasePlanningSlot.MODE_TRAINING else ""
-
-                            trainer_plan_id = (request.POST.get(f"{prefix}_trainer_plan") or "").strip()
-                            if mode == AthleteBasePlanningSlot.MODE_TRAINER and trainer_plan_id.isdigit():
-                                slot.trainer_plan = trainer_plans.get(int(trainer_plan_id))
-                            else:
-                                slot.trainer_plan = None
-                            slot.save()
+            saved_current, save_errors = save_posted_block_fields(
+                validate_coverage=not is_autosave,
+                allow_delete=False,
+            )
+            if saved_current:
                 saved = True
                 if is_autosave:
                     return JsonResponse({"ok": True})
-            elif is_autosave:
+            else:
+                errors.extend(save_errors)
+            if is_autosave:
                 return JsonResponse({"ok": False, "errors": errors}, status=400)
 
     blocks = []

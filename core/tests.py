@@ -1566,7 +1566,7 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(AthleteBasePlanningBlock.objects.filter(id=block2.id).exists())
 
-    def test_base_planning_add_block_starts_after_previous_block(self):
+    def test_base_planning_add_block_uses_posted_previous_end_date(self):
         user, plan, athlete = self._user_plan_and_athlete()
         block = AthleteBasePlanningBlock.objects.create(
             athlete=athlete,
@@ -1574,8 +1574,8 @@ class SlotModalSaveTests(TestCase):
             label="Block 1",
             start_month=1,
             start_day=1,
-            end_month=6,
-            end_day=30,
+            end_month=12,
+            end_day=31,
             sort_order=1,
         )
         AthleteBasePlanningSlot.objects.create(
@@ -1592,6 +1592,10 @@ class SlotModalSaveTests(TestCase):
                 "athlete_id": str(athlete.id),
                 "kind": AthleteBasePlanningBlock.KIND_BASE,
                 "action": "add_block",
+                "block_id": [str(block.id)],
+                f"block_{block.id}_label": "Block 1",
+                f"block_{block.id}_start": "01-01",
+                f"block_{block.id}_end": "30-06",
             },
         )
 
@@ -1600,6 +1604,31 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(len(blocks), 2)
         self.assertEqual((blocks[0].start_month, blocks[0].start_day, blocks[0].end_month, blocks[0].end_day), (1, 1, 6, 30))
         self.assertEqual((blocks[1].start_month, blocks[1].start_day, blocks[1].end_month, blocks[1].end_day), (7, 1, 12, 31))
+
+    def test_base_planning_delete_block_button_deletes_immediately(self):
+        user, _, athlete = self._user_plan_and_athlete()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Delete me",
+            start_month=1,
+            start_day=1,
+            end_month=6,
+            end_day=30,
+            sort_order=1,
+        )
+
+        response = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "delete_block_id": str(block.id),
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(AthleteBasePlanningBlock.objects.filter(id=block.id).exists())
 
     def test_base_planning_add_block_rejects_after_year_end(self):
         user, _, athlete = self._user_plan_and_athlete()
