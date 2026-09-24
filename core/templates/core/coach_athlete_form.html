@@ -122,11 +122,19 @@
             });
 
             const activeTabInput = document.getElementById("athleteActiveTabInput");
+            const athleteFormActions = document.getElementById("athleteFormActions");
+            function updateAthleteFormActions(tabName) {
+              if (!athleteFormActions) return;
+              athleteFormActions.classList.toggle("d-none", tabName === "base-planning" || tabName === "ideal-week");
+            }
+            updateAthleteFormActions(activeTabInput ? activeTabInput.value : "general");
             document.querySelectorAll('#athleteInputTabs [data-bs-toggle="tab"]').forEach(function (tabButton) {
               tabButton.addEventListener("shown.bs.tab", function (event) {
                 const target = event.target ? (event.target.getAttribute("data-bs-target") || "") : "";
-                if (!activeTabInput || !target) return;
-                activeTabInput.value = target.replace(/^#/, "").replace(/-pane$/, "") || "general";
+                if (!target) return;
+                const tabName = target.replace(/^#/, "").replace(/-pane$/, "") || "general";
+                if (activeTabInput) activeTabInput.value = tabName;
+                updateAthleteFormActions(tabName);
               });
             });
 
@@ -675,7 +683,7 @@
           {% endif %}
         </div>
 
-        <div class="mt-4 d-flex gap-2">
+        <div class="mt-4 d-flex gap-2 {% if active_tab == 'base-planning' or active_tab == 'ideal-week' %}d-none{% endif %}" id="athleteFormActions">
           <button type="submit" class="btn btn-primary">Save</button>
           <a href="{% if self_view %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
         </div>
