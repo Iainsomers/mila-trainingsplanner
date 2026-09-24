@@ -543,6 +543,9 @@ def evaluations_view(request):
 
     owner = _active_coach_user(request)
     can_edit = _active_coach_access_label(request) != "view"
+    show_new = (request.GET.get("new") or "") == "1"
+    copy_id = (request.GET.get("copy") or "").strip()
+    copy_source = None
     if request.method == "POST":
         if not can_edit:
             return HttpResponse("Forbidden", status=403)
@@ -579,6 +582,15 @@ def evaluations_view(request):
         .prefetch_related("questions")
         .order_by("-updated_at", "-id")
     )
+    if copy_id.isdigit():
+        copy_source = next((q for q in questionnaires if q.id == int(copy_id)), None)
+        show_new = bool(copy_source)
+
+    selected_questionnaire = None
+    selected_questionnaire_id = (request.GET.get("questionnaire") or "").strip()
+    if selected_questionnaire_id.isdigit():
+        selected_questionnaire = next((q for q in questionnaires if q.id == int(selected_questionnaire_id)), None)
+
     responses = list(
         EvaluationResponse.objects
         .filter(questionnaire__owner=owner)
@@ -586,6 +598,9 @@ def evaluations_view(request):
         .prefetch_related("questionnaire__questions")
         .order_by("-submitted_at", "athlete__name")
     )
+    response_counts = {}
+    for response in responses:
+        response_counts[response.questionnaire_id] = response_counts.get(response.questionnaire_id, 0) + 1
     for response in responses:
         response.answer_rows = [
             {
@@ -594,11 +609,36 @@ def evaluations_view(request):
             }
             for question in response.questionnaire.questions.all()
         ]
+    filled_questionnaire_id = (request.GET.get("filled") or "").strip()
+    selected_filled_questionnaire = None
+    filled_responses = []
+    if filled_questionnaire_id.isdigit():
+        selected_filled_questionnaire = next((q for q in questionnaires if q.id == int(filled_questionnaire_id)), None)
+        if selected_filled_questionnaire:
+            filled_responses = [
+                response for response in responses
+                if response.questionnaire_id == selected_filled_questionnaire.id
+            ]
+
+    selected_response = None
+    selected_response_id = (request.GET.get("response") or "").strip()
+    if selected_response_id.isdigit() and filled_responses:
+        selected_response = next((response for response in filled_responses if response.id == int(selected_response_id)), None)
+
+    for questionnaire in questionnaires:
+        questionnaire.response_count = response_counts.get(questionnaire.id, 0)
+
     return render(request, "core/evaluations.html", {
         "is_athlete_user": False,
         "questionnaires": questionnaires,
         "responses": responses,
         "can_edit": can_edit,
+        "show_new": show_new,
+        "copy_source": copy_source,
+        "selected_questionnaire": selected_questionnaire,
+        "selected_filled_questionnaire": selected_filled_questionnaire,
+        "filled_responses": filled_responses,
+        "selected_response": selected_response,
     })
 
 

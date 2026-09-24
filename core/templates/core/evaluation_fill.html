@@ -18,7 +18,7 @@
     {% csrf_token %}
     <div class="card-body">
       {% for question in questionnaire.questions.all %}
-        <div class="mb-3">
+        <div class="py-3 {% if not forloop.first %}border-top{% endif %}">
           <label class="form-label">{{ question.text }}</label>
           <textarea
             name="question_{{ question.id }}"
