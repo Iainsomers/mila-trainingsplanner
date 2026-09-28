@@ -8,7 +8,6 @@ from django.utils import timezone
 from django.utils.html import escape
 from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
-from django.db import transaction
 from django.db.models import Q
 
 from core.models import (
@@ -701,93 +700,6 @@ def _serialize_slot_template_text(wu_text, mob_text, sprint_text, core_text, cor
 # -----------------------------
 # Week copy/paste (BASE only)
 # -----------------------------
-def _week_copy_payload(plan, week_start):
-    payload = {"source_plan_id": plan.id, "source_week_start": week_start.isoformat(), "days": {}}
-    for offset, day in enumerate(_week_days(week_start)):
-        day_payload = {}
-        for slot_index in (1, 2):
-            base_slot = (
-                TrainingSlot.objects.filter(
-                    plan=plan, athlete__isnull=True, date=day, slot_index=slot_index
-                ).prefetch_related("segments").first()
-            )
-            day_payload[str(slot_index)] = [
-                {
-                    "type": seg.type,
-                    "order": int(seg.order or 0),
-                    "text": seg.text or "",
-                    "zone": seg.zone or "",
-                    "reps": int(seg.reps or 1),
-                    "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
-                    "duration_s": int(seg.duration_s) if seg.duration_s is not None else None,
-                    "norm_distance_m": int(seg.norm_distance_m) if seg.norm_distance_m is not None else None,
-                    "parse_ok": bool(seg.parse_ok),
-                    "parse_message": seg.parse_message or "",
-                    "special": getattr(seg, "special", "") or "",
-                    "t_type": getattr(seg, "t_type", "") or "",
-                }
-                for seg in (base_slot.segments.order_by("order", "id") if base_slot else [])
-            ]
-        payload["days"][str(offset)] = day_payload
-    return payload
-
-
-def _copy_week_payload_to_plan(payload, target_plan, target_week_start, mode="overwrite"):
-    for offset, day in enumerate(_week_days(target_week_start)):
-        day_slots = (payload.get("days") or {}).get(str(offset), {})
-        for slot_index in (1, 2):
-            target_slot, _ = TrainingSlot.objects.get_or_create(
-                plan=target_plan, athlete=None, date=day, slot_index=slot_index
-            )
-            if mode == "empty" and target_slot.segments.exists():
-                continue
-            target_slot.segments.all().delete()
-            now = timezone.now()
-            for item in day_slots.get(str(slot_index), []) or []:
-                seg = target_slot.segments.create(
-                    type=item.get("type") or "CORE",
-                    text=item.get("text") or "",
-                    order=int(item.get("order") or 0),
-                    zone=item.get("zone") or "",
-                    reps=int(item.get("reps") or 1),
-                    distance_m=item.get("distance_m"),
-                    duration_s=item.get("duration_s"),
-                    norm_distance_m=item.get("norm_distance_m"),
-                    parse_ok=bool(item.get("parse_ok")),
-                    parse_message=item.get("parse_message") or "",
-                    special=item.get("special") or "",
-                    parsed_at=now,
-                )
-                if hasattr(seg, "t_type"):
-                    seg.t_type = item.get("t_type") or ""
-                    seg.save(update_fields=["t_type"])
-
-
-@require_http_methods(["POST"])
-def trainer_planning_copy_weeks(request):
-    source_id = (request.POST.get("source_plan_id") or "").strip()
-    target_id = (request.POST.get("target_plan_id") or "").strip()
-    try:
-        source_plan = _filter_owned(TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER), request).get(id=int(source_id))
-        target_plan = _filter_owned(TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER), request).get(id=int(target_id))
-        source_start = _week_start(date_cls.fromisoformat(request.POST.get("source_start")))
-        target_start = _week_start(date_cls.fromisoformat(request.POST.get("target_start")))
-        weeks = max(1, min(12, int(request.POST.get("weeks") or 4)))
-    except (TypeError, ValueError, TrainingPlan.DoesNotExist):
-        return HttpResponse("Invalid copy request", status=400)
-
-    forbid_owner = _forbid_if_not_plan_owner(request, target_plan)
-    if forbid_owner:
-        return forbid_owner
-    mode = request.POST.get("mode") if request.POST.get("mode") in {"overwrite", "empty"} else "overwrite"
-    with transaction.atomic():
-        for offset in range(weeks):
-            payload = _week_copy_payload(source_plan, source_start + timedelta(days=offset * 7))
-            _copy_week_payload_to_plan(payload, target_plan, target_start + timedelta(days=offset * 7), mode)
-    _bump_stats_version()
-    return redirect(f"/planning/trainer/{target_plan.id}/?date={target_start.isoformat()}&weeks={weeks}")
-
-
 @require_http_methods(["POST"])
 def week_copy(request, yyyy, mm, dd):
     selected_plan = _get_selected_plan(request)

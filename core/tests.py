@@ -1186,68 +1186,6 @@ class TrainerPlanningListTests(TestCase):
         self.assertEqual(delete_response.status_code, 200)
         self.assertFalse(TrainingSlot.objects.filter(id=slot.id).exists())
 
-    def test_trainer_planner_copies_multiple_weeks_between_plans(self):
-        coach = get_user_model().objects.create_user(
-            username="trainer-copy-weeks",
-            password="secret",
-            is_staff=True,
-        )
-        source = TrainingPlan.objects.create(
-            owner=coach,
-            name="Source plan",
-            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
-        )
-        target = TrainingPlan.objects.create(
-            owner=coach,
-            name="Target plan",
-            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
-        )
-        source_start = date(2026, 9, 28)
-        source_slot = TrainingSlot.objects.create(
-            plan=source,
-            athlete=None,
-            date=source_start + timedelta(days=1),
-            slot_index=1,
-        )
-        TrainingSegment.objects.create(slot=source_slot, type="CORE", text="Source week 1", order=1)
-        second_slot = TrainingSlot.objects.create(
-            plan=source,
-            athlete=None,
-            date=source_start + timedelta(days=8),
-            slot_index=2,
-        )
-        TrainingSegment.objects.create(slot=second_slot, type="CORE", text="Source week 2", order=1)
-        self.client.force_login(coach)
-
-        response = self.client.post(
-            "/planning/trainer/copy-weeks/",
-            {
-                "source_plan_id": source.id,
-                "source_start": source_start.isoformat(),
-                "weeks": "2",
-                "target_plan_id": target.id,
-                "target_start": (date(2026, 10, 26)).isoformat(),
-                "mode": "overwrite",
-            },
-        )
-
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(
-            TrainingSlot.objects.filter(
-                plan=target,
-                date=date(2026, 10, 27),
-                slot_index=1,
-                segments__text="Source week 1",
-            ).exists()
-        )
-        self.assertTrue(
-            TrainingSlot.objects.filter(
-                plan=target,
-                date=date(2026, 11, 3),
-                slot_index=2,
-                segments__text="Source week 2",
-            ).exists()
-        )
 
 
 class YearPlannerTests(TestCase):
