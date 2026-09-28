@@ -5,51 +5,6 @@ from django.conf import settings
 from django.db import migrations, models
 
 
-def copy_legacy_basis_to_trainer_plans(apps, schema_editor):
-    TrainingPlan = apps.get_model('core', 'TrainingPlan')
-    YearPlannerEntry = apps.get_model('core', 'YearPlannerEntry')
-    YearPlannerWhereabout = apps.get_model('core', 'YearPlannerWhereabout')
-
-    legacy_entries = list(YearPlannerEntry.objects.filter(athlete__isnull=True, basis_plan__isnull=True))
-    legacy_whereabouts = list(YearPlannerWhereabout.objects.filter(athlete__isnull=True, basis_plan__isnull=True))
-    owner_ids = {entry.owner_id for entry in legacy_entries} | {item.owner_id for item in legacy_whereabouts}
-
-    for owner_id in owner_ids:
-        plans = list(TrainingPlan.objects.filter(owner_id=owner_id, plan_kind='trainer'))
-        if not plans:
-            continue
-        owner_entries = [entry for entry in legacy_entries if entry.owner_id == owner_id]
-        owner_whereabouts = [item for item in legacy_whereabouts if item.owner_id == owner_id]
-        YearPlannerEntry.objects.bulk_create([
-            YearPlannerEntry(
-                owner_id=owner_id,
-                athlete_id=None,
-                basis_plan_id=plan.id,
-                date=entry.date,
-                training_type=entry.training_type,
-                whereabouts_type=entry.whereabouts_type,
-                note=entry.note,
-            )
-            for plan in plans
-            for entry in owner_entries
-        ], ignore_conflicts=True)
-        YearPlannerWhereabout.objects.bulk_create([
-            YearPlannerWhereabout(
-                owner_id=owner_id,
-                athlete_id=None,
-                basis_plan_id=plan.id,
-                start_date=item.start_date,
-                end_date=item.end_date,
-                whereabouts_type=item.whereabouts_type,
-                note=item.note,
-            )
-            for plan in plans
-            for item in owner_whereabouts
-        ])
-        YearPlannerEntry.objects.filter(owner_id=owner_id, athlete__isnull=True, basis_plan__isnull=True).delete()
-        YearPlannerWhereabout.objects.filter(owner_id=owner_id, athlete__isnull=True, basis_plan__isnull=True).delete()
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -72,7 +27,6 @@ class Migration(migrations.Migration):
             name='basis_plan',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='year_planner_basis_whereabouts', to='core.trainingplan'),
         ),
-        migrations.RunPython(copy_legacy_basis_to_trainer_plans, migrations.RunPython.noop),
         migrations.AddConstraint(
             model_name='yearplannerentry',
             constraint=models.UniqueConstraint(condition=models.Q(('athlete__isnull', True), ('basis_plan__isnull', False)), fields=('owner', 'basis_plan', 'date'), name='unique_year_planner_base_entry_per_plan_date'),
