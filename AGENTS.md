@@ -2,6 +2,7 @@
 
 Lees vóór een wijziging de relevante documenten in `docs/project/`:
 
+- `START_HERE.md` voor de actuele korte overdracht en werkroutine.
 - `PROJECT_OVERVIEW.md` voor architectuur en begrippen.
 - `USER_ROLES.md` voor rechten en zichtbaarheid.
 - `FEATURES.md` voor bestaand gedrag.

@@ -2,6 +2,22 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-09-28 — Eén actuele overdracht
+
+`AGENTS.md` en `docs/project/START_HERE.md` zijn de startpunten voor een nieuwe Mila-chat. `CODEX_CONTEXT.md` is alleen nog een korte verwijzing; oude operationele inhoud is verwijderd om verkeerde aannames te voorkomen.
+
+## 2026-09-24 — Evaluaties als twee afzonderlijke stromen
+
+Trainingsevaluaties blijven in AYC per AM/PM. Losse coachvragenlijsten leven onder Evaluations en zijn voor atleten alleen zichtbaar wanneer ze actief zijn. Openstaande AYC-evaluaties van de afgelopen week krijgen een verplichte herinneringspopup; de huidige dag en oudere trainingen niet.
+
+## 2026-09-20 — Year Planner als bron voor weekfases
+
+Training phases worden uitsluitend in Year Planner beheerd en bepalen de weekkleuren in Flex Planner, AYC en Trainer Planning. Meerdere fases in één week worden als gecombineerde kleur weergegeven.
+
+## 2026-09-12 — Scheiding van PAC en MiLa
+
+Track Timer blijft een MiLa Coach Tool. Match Overview en PR-database ontwikkelen verder in het zelfstandige PAC-project, met een eigen deployment en toegangsmodel.
+
 ## 2026-08-16 — Race Calendar als gezamenlijke basis
 
 Trainer en atleet beheren wedstrijddeelname vanuit dezelfde Race Calendar-popup. Trainer- en atleetakkoord blijven gescheiden; een wedstrijdpil wordt pas gevuld als beiden akkoord zijn. Target bepaalt of de status oranje of rood is.

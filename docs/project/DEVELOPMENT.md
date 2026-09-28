@@ -1,21 +1,21 @@
 # Ontwikkelen, testen en documenteren
 
-Laatst inhoudelijk gecontroleerd: 12 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 28 september 2026.
 
 ## Lokaal
 
-Projectmap:
+Projectmap op de huidige Windows-machine:
 
 ```powershell
-C:\Users\iains\mila-trainingsplanner
+C:\Users\iains\mila_app\mila
 ```
 
 Gebruik de lokale virtual environment:
 
 ```powershell
-.\.venv\Scripts\python.exe manage.py runserver
-.\.venv\Scripts\python.exe manage.py check
-.\.venv\Scripts\python.exe manage.py test core
+& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py runserver
+& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py check
+& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py test core
 ```
 
 Voor COROS workout-pushes moeten na goedkeuring door COROS de Render-omgevingsvariabelen `COROS_PUSH_CLIENT` en `COROS_PUSH_SECRET` worden ingesteld. De publieke statuscheck heeft geen geheim nodig; de ontvangstroute weigert pushes zolang beide waarden ontbreken.
@@ -46,6 +46,12 @@ Bij modelwijzigingen:
 - Stage alleen taakrelevante bestanden; de werkmap kan ongerelateerde gebruikersbestanden bevatten.
 - Commit en push voltooide wijzigingen standaard naar `main`, zodat Render ze kan uitrollen. Sla de push over wanneer de gebruiker expliciet zegt dat de wijziging lokaal moet blijven.
 - Gebruik korte, beschrijvende commits.
+
+De aparte PAC-app heeft een eigen repository en Render-service. Wijzigingen voor PAC horen nooit in deze MiLa-repository, behalve wanneer expliciet een migratie of koppeling wordt gevraagd.
+
+## Eenmalige accountimport
+
+`create_athlete_accounts` maakt of actualiseert atleetlogins voor één coach op basis van een JSON-lijst met naam en wachtwoord. Het commando is bewust generiek; plaats wachtwoorden nooit in een management command, commit, document of omgeving die naar Git wordt gepusht. Voer credentials alleen tijdelijk in de Render Web Shell of via een beveiligde omgevingsvariabele in.
 
 Nooit committen zonder expliciet verzoek:
 

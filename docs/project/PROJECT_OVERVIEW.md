@@ -1,6 +1,6 @@
 # MiLa Training Planner — projectoverzicht
 
-Laatst inhoudelijk gecontroleerd: 12 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 28 september 2026.
 
 ## Doel
 
@@ -25,13 +25,20 @@ De centrale gegevens zijn:
 - `TrainingSlot`: training op datum en AM/PM-slot, eventueel specifiek voor één atleet.
 - `TrainingSegment`: onderdeel van een training, zoals WU, MOB, SPR, CORE, CORE2, ALT of CD.
 - Wedstrijden en geselecteerde afstanden.
-- Evaluaties, weekrapporten en dagelijkse waarden.
+- Trainingsevaluaties, losse evaluatievragenlijsten, weekrapporten en dagelijkse waarden.
+- Year Planner-dagfases en datumranges voor whereabouts.
 - Standaard krachtprogramma's en Polar-koppelingen.
 - COROS-aanvraaginfrastructuur: publieke statuscheck, beveiligde/idempotente workout-pushontvangst en ruwe pushes die op latere OAuth-verwerking wachten.
 
 ## Planningsstroom
 
 Trainerplanning levert de basis. Flex Planner toont en personaliseert de effectieve planning per atleet. De AYC is de uiteindelijke atletenweergave en bevat zowel basistrainingen als persoonlijke overrides.
+
+De Year Planner legt de langetermijnlaag per atleet vast. De training phases uit die planner bepalen de weekkleur in Flex Planner, AYC en Trainer Planning. Whereabouts zijn onafhankelijke ranges en staan los van de trainingsinhoud.
+
+## Aparte PAC-app
+
+PAC (Pro Athletic Coach) is een zelfstandig Django-project voor coachhulpmiddelen. Match Overview en de PR-database horen daar en niet meer bij MiLa. MiLa behoudt alleen Track Timer onder Coach Tools.
 
 ## Terminologie
 

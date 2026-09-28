@@ -1,14 +1,16 @@
 # Functionele onderdelen
 
-Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 28 september 2026.
 
 ## Dashboard en Planning
 
 Het coachdashboard toont Planning bovenaan. Onder `Coach dashboard` staat voor trainers met gedeelde toegang een `View as coach`-keuze. Standaard kijkt een trainer als zichzelf; na selectie van een andere toegestane coach tonen plannings- en beheerschermen alleen de gegevens van die coach. De dropdown toont of die toegang view-only of edit is; bij view-only worden schrijfacties server-side geblokkeerd. Admin, Stats, Polar en Settings (under development) staan onderaan. De Settings-tegel doet voorlopig niets.
 
-Planning is voor coaches gegroepeerd in Coach plannings, Views en Standards. Coach plannings bevat Athletes, Trainer planning, Flex Planner, Races en Year Planner. Views bevat AYP en Daily Coach Overview. Standards bevat Saved Trainings en Standard Strength. Atleten gebruiken Planning voor Athlete Year Planning, Athlete settings en Races.
+Planning is voor coaches gegroepeerd in Coach plannings, Views en Standards. Coach plannings bevat Athletes, Trainer planning, Flex Planner, Races en Year Planner. Views bevat Athlete Year Calendar en Daily Coach Overview Training; de toekomstige Daily Coach Overview Vitals-tab is bewust nog niet aanklikbaar. Standards bevat Saved Trainings en Standard Strength. Atleten gebruiken Planning voor Athlete Year Calendar, Athlete settings, Races en, wanneer toegestaan, Year Planner.
 
-Het dashboard bevat daarnaast een Track Timer voor baantrainingen. De timer toont een getekende atletiekbaan met 100m-punten, een afstandskeuze van 100m tot 1600m en een single/multiple-modus voor één of vijf atleten. De start/finishknop kan naar een van de vier meetpunten worden gesleept, waarna de andere meetpunten meedraaien. Bij afstanden boven 400m moeten 400m-doorkomsten worden vastgelegd voordat de eindtijd kan worden gestopt.
+Het dashboard bevat daarnaast Coach Tools. MiLa bevat daar alleen de Track Timer; Match Overview en de PR-database zijn verplaatst naar het aparte PAC-project. De timer toont een getekende atletiekbaan met 100m-punten, een afstandskeuze van 100m tot 1600m, een optionele doeltijd en een single/multiple-modus voor één of drie atleten. In multiple staan drie gekleurde atleetknoppen en een zwarte knop voor alle drie. De start/finishknop kan naar een van de vier meetpunten worden gesleept, waarna de andere meetpunten meedraaien. Bij afstanden boven 400m moeten 400m-doorkomsten worden vastgelegd voordat de eindtijd kan worden gestopt. De resultaten tonen tussentijd, tempo per 100 m, min/km en eventueel afwijking van de doeltijd; een lijn op de baan visualiseert het doeltempo.
+
+Het dashboard bevat ook Evaluations. Trainers maken vragenlijsten, kunnen een eerdere lijst als basis kopiëren en zien ingevulde formulieren per vragenlijst en daarna per atleet. Actieve vragenlijsten zijn voor alle eigen atleten beschikbaar; atleten zien alleen beschikbare lijsten en hun eigen ingevulde antwoord.
 
 Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA-icoon. Een snelkoppeling die vanaf een telefoon op het beginscherm wordt gezet, gebruikt daardoor standaard het MiLa-logo.
 
@@ -24,21 +26,22 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 
 ## Year Planner
 
-- Coach-only overzicht onder Planning voor training phases en whereabouts over een flexibele periode.
+- Overzicht onder Planning voor training phases en whereabouts over een flexibele periode. Trainers beheren eigen atleten; atleten kunnen uitsluitend hun eigen, door de trainer toegestane lagen lezen.
 - De periode gebruikt current/next month, outdoor, indoor, full year en een seizoensperiode zoals 2026/2027.
 - Trainers kunnen Training, Whereabouts of beide lagen tonen.
 - De weergave kan worden geschaald naar ongeveer 1, 3 of 12 maanden per schermbreedte en kan horizontaal scrollend of in schermbrede stukken onder elkaar worden getoond; stacked is de standaardweergave.
-- Meerdere atleten kunnen tegelijk worden getoond, maar er worden standaard geen atleten voorgeselecteerd. De atletenlijst kan eerst op `All` of op een Trainer Planning-verwijzing worden gefilterd. Daarnaast bestaat een virtuele, selecteerbare `Basis`-rij die geen echte atleet in de database is.
+- Meerdere atleten kunnen tegelijk worden getoond, maar er worden standaard geen atleten voorgeselecteerd. De atletenlijst kan op `All` of op een Trainer Planning-verwijzing worden gefilterd. `All` selecteert alle zichtbare atleten. Atleten zonder ingeschakelde Year Planner-laag zijn rood gemarkeerd in de selector. De oude Basis-rij wordt niet meer aangeboden.
 - Training phases gebruiken dezelfde keuzes als de Flex Planner: Recovery, Aerobe, Specific, Intense en Taper.
-- Whereabouts-keuzes zijn Camp, Travel, Test, Race, Medical en Brinec met vaste kleuren. Ze worden als echte datumranges opgeslagen, zodat een kamp of reis als één doorlopende pil met gecentreerde naam verschijnt en naar een andere atleet kan worden gekopieerd. Overlappende whereabouts, zoals een testdag binnen een kamp, blijven naast elkaar bestaan en delen de dagcel diagonaal.
-- Trainingcellen slaan direct op. Gekozen trainingswaarden kunnen over een datumrange worden gesleept en hele atletrijen kunnen met `c`/`p` worden gekopieerd.
+- Whereabouts-keuzes zijn Camp, Travel, Test, Championship, Diamond L, Race Gold, Race Silver, Race Bronze, Race Other, Expermeetings, Medical en Brinec, elk met een vaste kleur. Ze worden als echte datumranges opgeslagen, zodat een kamp of reis als één doorlopende pil met gecentreerde naam verschijnt, kan worden verkleind/verlengd en naar een andere atleet kan worden gesleept. Overlappende whereabouts, zoals een testdag binnen een kamp, blijven naast elkaar bestaan en delen de dagcel diagonaal.
+- Trainingcellen slaan direct op. Gekozen trainingswaarden kunnen over een datumrange worden gesleept. Hele atletrijen kunnen per zichtbare periode met `c`/`p` worden gekopieerd voor Training en afzonderlijk voor Whereabouts. Een nieuwe of bewerkte whereabout kan in één keer op alle geselecteerde atleten worden toegepast.
+- Per atleet bepaalt de trainer in Athlete settings > General afzonderlijk of de Training-calendar en/of Whereabouts-calendar in de Year Planner zichtbaar zijn. De legenda volgt die zichtbaarheid.
 
 ## Flex Planner
 
 - Toont de effectieve planning per geselecteerde atleet.
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
-- Behoudt de weektypekleur naast de markering van de huidige week.
+- Haalt weekphase-kleuren uit de Year Planner. Meerdere fases in één week worden diagonaal gecombineerd; de oude weektype-dropdown bestaat niet meer.
 
 ## Athlete Year Calendar (AYC)
 
@@ -53,6 +56,8 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Trainingen openen in een op mobiel beeldvullende popup, maar niet groter dan het scherm.
 - Bestaande AM- én PM-trainingen worden vooraf ingevuld in de popup.
 - Een groen vinkje toont dat alle evaluaties van die dag zijn voltooid.
+- Bij een atleet verschijnt voor niet-geëvalueerde trainingen van gisteren tot maximaal zes dagen geleden automatisch een popup. De huidige dag en oudere trainingen worden genegeerd.
+- Op mobiele AYC kan een atleet bij Comment op de microfoon drukken om Nederlands commentaar in te spreken. Nogmaals drukken stopt de opname; tussenresultaten mogen bestaande woorden niet dupliceren.
 - Planner, zones/times, Dashboard en Logout blijven bereikbaar.
 - Bij ingeschakelde Week reports staan onder iedere mobiele week vier gekleurde rapportvakken, gelijk aan desktop.
 - Bij ingeschakelde Daily vitals staat naast iedere datum een hartknop die een mobiele invoerpopup opent.
@@ -71,6 +76,8 @@ Per training kan de atleet vastleggen:
 - commentaar;
 - voorgestelde invoer uit horlogedata;
 - afzonderlijke AM/PM-evaluaties wanneer er twee trainingen zijn.
+
+Naast trainingsevaluaties bestaat Evaluations voor losse coachvragenlijsten. Trainers publiceren actieve vragenlijsten voor hun atleten. Trainers kunnen de vragen en antwoorden alleen lezen; atleten kunnen alleen hun eigen antwoorden invullen en later terugzien.
 
 ## Rapportages
 
@@ -106,9 +113,9 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 
 ## Athlete settings
 
-Tabs voor atleten: General, Zone/PR's, Base Planning, Ideal week en WU settings. Base Planning is voor atleten alleen-lezen. `Fill missing PB's` kan ontbrekende prestaties afleiden uit beschikbare PR's.
+Tabs voor atleten: General, Zone/PR's, Base Planning en Ideal week. WU/CD-instellingen staan op General; de oude WU settings-tab bestaat niet meer. Base Planning is voor atleten alleen-lezen. `Fill missing PB's` kan ontbrekende prestaties afleiden uit beschikbare PR's. De atletenlijst is sorteerbaar op naam en leeftijd, in beide richtingen.
 
-## Daily Coach Overview
+## Daily Coach Overview Training
 
 Selectie op datum, AM/PM, alle atleten, selectie, trains, geplande training en opgeslagen selecties. De resultaatpagina behoudt de selectie en toont atleet-specifieke tempo's, RPE en opmerkingen.
 

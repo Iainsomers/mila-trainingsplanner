@@ -1,46 +1,38 @@
 # Actuele status
 
-Bijgewerkt: 5 september 2026.
+Bijgewerkt: 28 september 2026.
 
 ## Productiestatus
 
-- Productiebranch: `main`.
-- Mobiele PM-trainingen vullen bestaande waarden weer vooraf in.
-- Logout is op ingelogde pagina's beschikbaar en leidt naar `/login/`.
-- Het MiLa-logo wordt standaard aangeboden als browser- en mobiel beginschermicoon voor iOS en Android.
+- Productiebranch: `main`; pushes deployen automatisch op Render.
+- MiLa is de planner voor trainers en atleten. PAC is een aparte Render-service en repository voor Match Overview en de PR-database.
+- Het MiLa-logo wordt als browser- en beginschermicoon aangeboden op iOS en Android.
 
 ## Belangrijk werkend gedrag
 
-- AYC heeft een mobiele weekweergave met Open-knoppen, evaluaties, weekkleuren en voltooiingsvinkje.
-- Trainer kan in AYC tussen atleten schakelen; atleet ziet alleen zichzelf.
-- PR-invoer gebruikt afstandspecifieke tijdformaten, inclusief 400 m boven 60 seconden.
-- Tijdgebaseerde trainingsonderdelen tonen tempo in min/km.
-- Flex Planner houdt Alternative Z1–Z3 als aparte ALT-minuten buiten de gewone loopkilometers.
-- Meerdere Alternative-blokken met `//` blijven afzonderlijke Z1/Z2/Z3-minuten in Flex, AYC en Base Planning.
-- Trainerstats toont huidige en vorige weekkilometers.
-- Trainerstats deelt nu de volledige atleetselectie met de DCO, inclusief opgeslagen en standaardselecties, `Trains` en `Planned training`.
-- Vanuit Trainerstats opent iedere atleet een eigen grafiek met de effectieve weekkilometers over een vrij in te vullen aantal maanden, periodepijlen en een samenvatting met gemiddelde, hoogste en laagste week.
-- Year Planner staat onder Planning en legt per coach, virtuele Basis-rij en geselecteerde atleten training phases en whereabouts vast over dezelfde periodekeuzes als de Race Calendar.
-- Standard Strength is vanuit Mob/Tech beschikbaar.
-- Atleten kunnen hun Base Planning alleen-lezen bekijken.
-- Mobiele AYC ondersteunt gekleurde Week reports, Daily vitals via een hartpopup en compacte weekgemiddelden.
-- De mobiele vitals-popup bewaart de vier dagwaarden in één gezamenlijke database-update, sluit na succes expliciet en vult opgeslagen waarden bij opnieuw openen weer correct in.
-- Trainers kunnen vitals en training reports voor de geselecteerde atleet ook op toekomstige planningsdagen opslaan; voor atleten zelf blijft toekomstige invoer geblokkeerd.
-- Desktop-vitals worden per gewijzigd veld opgeslagen zonder volledige paginaherlading, zodat het kalenderbeeld niet verspringt en de invoer niet terugvalt.
-- Een trainer met gedeelde toegang gebruikt bij AYC-opslag dezelfde toegangsregel als bij het bekijken van de atleet; vitals en reports worden daardoor niet meer stil genegeerd voor niet-eigen atleten.
-- Race Calendar combineert wedstrijd- en afstandsbeheer met de selectie per atleet. Trainer en atleet hebben eigen vinkjes, Target is gedeeld en de wedstrijdpil toont omlijnd of gevuld of er wederzijds akkoord is.
-- Polar markeert een duidelijke mismatch tussen plan en horlogedata met een rood kruis. Op verzoek kan een alternatief trainingsconcept uit laps, splits of activiteitstotaal worden gereconstrueerd, zonder de planning automatisch te overschrijven.
-- Polar-patroonherkenning wordt bewaakt met een synthetische horlogetestbank van positieve en misleidende scenario's; dit is de basis voor verdere tuning en eventueel een later model dat van trainercorrecties leert.
-- Voor de COROS-partneraanvraag zijn een publieke statuscheck, een beveiligde en idempotente workout-pushontvanger en vier aanvraaglogo's gereed. De OAuth-koppeling en inhoudelijke verwerking wachten op officiële COROS-credentials.
+- Trainers kunnen eigen gegevens bekijken of expliciet als een toegankelijke coach kijken. Die toegang is niet transitief; view-only blijft server-side read-only.
+- Atleten zien uitsluitend zichzelf in AYC, settings, races, evaluaties en, waar ingesteld, Year Planner.
+- Flex Planner toont de effectieve, gepersonaliseerde planning. Het verwijderen van een flex-override onderdrukt een basistraining correct.
+- Weekphase-kleuren komen uit Year Planner en verschijnen ook in Flex Planner, AYC en Trainer Planning. Bij meerdere fases krijgt de week een gecombineerde kleur.
+- Year Planner ondersteunt één, drie of twaalf maanden, stacked of scrollend. Whereabouts zijn verplaatsbare en schaalbare datumranges met benoemde pills, diagonale overlapweergave, rij-kopiëren en bulktoepassing op de geselecteerde atleten.
+- Per atleet zijn Year Planner Training en Whereabouts afzonderlijk zichtbaar te maken. De atleetweergave is alleen-lezen en de legenda volgt de toegestane lagen.
+- Base Planning gebruikt handmatig instelbare, aaneengesloten datumblokken. De oude onderliggende Save/Cancel-knoppen zijn verwijderd; wijzigingen blijven op de actieve tab na opslaan.
+- Mobiele AYC heeft Open-knoppen, AM/PM-evaluaties, week reports, daily vitals en een popup voor niet-ingevulde evaluaties van de afgelopen zes dagen. De huidige dag en oudere trainingen tellen niet mee.
+- Mobiele evaluatiecommentaren ondersteunen Nederlandse spraak-naar-tekst. Herkenningsresultaten worden per resultaatindex verwerkt om dubbele of drievoudige tekst te voorkomen.
+- Evaluations ondersteunt actieve coachvragenlijsten, kopiëren vanuit bestaande lijsten, inklapbare lijsten en ingevulde antwoorden per atleet.
+- Coach Tools in MiLa bevat Track Timer voor 100–1600 m, doeltijdvisualisatie, drie-atletenmodus en tussentijden.
+- Parser ondersteunt T1 en T6, progressieve Z/T-ranges met tussenliggende labels, compoundblokken en pauzenotatie `p`/`sp`.
+- Polar v3/v4-integratie en reconstructies bestaan; watch matching blijft een actief ontwikkelgebied.
+
+## Recente onderhoudsafspraken
+
+- Nieuwe Mila-chats starten met `AGENTS.md` en `docs/project/START_HERE.md`; `CODEX_CONTEXT.md` is alleen nog een verwijzing.
+- Voor eenmalige accountimports bestaan generieke Django-management commands. Passwords en database-URLs horen nooit in Git.
 
 ## Bekende aandachtspunten
 
 - Settings (under development) is bewust niet functioneel.
+- Daily Coach Overview Vitals is zichtbaar als toekomstige, niet-aanklikbare tab.
 - Stats is bewust eenvoudig en nog in ontwikkeling.
-- Polar/watch suggestions blijven een ontwikkelgebied; matching en compacte lapinterpretatie kunnen verder worden verbeterd.
-
-## Documentatie
-
-- `docs/project/` is vanaf nu de primaire overdracht.
-- `CODEX_CONTEXT.md` bevat nuttige historie maar ook verouderde paden en oudere status; gebruik het alleen als naslag.
-- De Word-handleiding voor atleten staat los in `docs/Handleiding_MiLa_Planner_voor_atleten.docx` en moet bij zichtbare atletenfuncties periodiek worden bijgewerkt.
+- Polar/watch suggestions, vooral automatische workoutmatching zonder handmatige laps, hebben verdere testgevallen en verfijning nodig.
+- E-mail-, WhatsApp- of pushreminders voor openstaande evaluaties zijn nog niet gebouwd; de huidige herinnering is alleen de AYC-popup.

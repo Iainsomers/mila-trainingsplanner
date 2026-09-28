@@ -1,6 +1,6 @@
 # Gebruikersrollen en toegang
 
-Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 28 september 2026.
 
 ## Trainer
 
@@ -15,6 +15,8 @@ Een trainer is doorgaans staff- of superuser en kan:
 - rapportages en zichtbaarheid per atleet instellen;
 - voor een geselecteerde atleet vitals en training reports vastleggen, ook wanneer een trainer vooruit werkt;
 - in de AYC tussen toegankelijke atleten schakelen;
+- Year Planner-training phases en whereabouts beheren, inclusief bulktoepassing op geselecteerde atleten;
+- evaluatievragenlijsten maken en ingevulde antwoorden bekijken;
 - stats, Polar en Django Admin openen waar beschikbaar.
 
 Een trainer ziet standaard alleen de eigen gegevens. Als via `CoachAccess` toegang tot een andere trainer is gegeven, kiest de trainer op het dashboard expliciet als welke coach hij kijkt. Die keuze toont uitsluitend gegevens van die gekozen coach en mengt ze niet met de eigen atleten, plannen, wedstrijden of templates. Gedeelde toegang is standaard view-only; alleen wanneer `can_edit` aan staat mag de meekijkende trainer wijzigingen opslaan. Deze toegang is niet transitief: als trainer A trainer B mag zien en B trainer C mag zien, dan ziet A trainer C niet. Historische atleten zonder owner horen via datamigratie aan de juiste trainer te worden gekoppeld, niet via een brede zichtbaarheidsexceptie.
@@ -28,6 +30,8 @@ Een atleetaccount is aan één `Athlete` gekoppeld. Een atleet kan uitsluitend z
 - de eigen wedstrijdselectie;
 - de Race Calendar, waarin de atleet wedstrijden en nieuwe afstanden voor de kalender van de eigen trainer kan toevoegen en uitsluitend de eigen wedstrijdvinkjes en het gedeelde doelwedstrijdvinkje kan aanpassen; bestaande afstanden verwijderen blijft trainer-only;
 - het eigen dashboard en Planning-overzicht als toegangspunten;
+- beschikbare evaluatievragenlijsten invullen en uitsluitend de eigen antwoorden terugzien;
+- de eigen Year Planner alleen lezen wanneer de trainer Training en/of Whereabouts daarvoor heeft ingeschakeld;
 - een logoutknop die naar de loginpagina terugkeert.
 
 Een atleet mag niet:
@@ -36,6 +40,7 @@ Een atleet mag niet:
 - trainer-, flex- of basisplanning beheren;
 - andere atleten bekijken;
 - coachinstellingen, Admin, stats of beheerfuncties openen.
+- Year Planner, evaluatievragenlijsten of antwoorden van andere atleten zien of wijzigen.
 
 ## Atleteninstellingen
 
@@ -44,6 +49,7 @@ Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-inst
 - hoeveel toekomstige weken zichtbaar zijn;
 - rapportage- en zichtbaarheidsschakelaars;
 - trainer- en groepstoewijzingen.
+- de twee Year Planner-zichtbaarheidsschakelaars en overige rapportage-/zichtbaarheidsinstellingen.
 
 ## AYC-zichtbaarheid
 
@@ -52,6 +58,7 @@ Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-inst
 - De trainer bepaalt hoeveel toekomstige trainingsweken voor de atleet zichtbaar zijn.
 - Wedstrijden mogen verder vooruit zichtbaar blijven dan trainingen.
 - Rapporten en Daily vitals zijn alleen zichtbaar wanneer ze voor die atleet zijn ingeschakeld.
+- Year Planner Training en Whereabouts hebben afzonderlijke trainerinstellingen per atleet. Een atleet kan nooit de selectie van andere atleten zien.
 
 ## Beveiligingsregel
 

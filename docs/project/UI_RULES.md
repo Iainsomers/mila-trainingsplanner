@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
+Laatst inhoudelijk gecontroleerd: 28 september 2026.
 
 ## Stijl
 
@@ -25,6 +25,7 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 - Huidige dag binnen die week: donkerder geel.
 - Weektype is een gekleurde pil: Recovery, Aerobe, Specific, Intense of Taper.
 - Race is oranje; belangrijke `Race!` is rood met witte tekst waar die markering wordt gebruikt.
+- Year Planner whereabouts gebruiken vaste onderscheidende kleuren: Camp groen, Travel lichtgroen, Test paars, Championship rood, Diamond L roze, Race Gold goud, Race Silver zilver, Race Bronze brons, Race Other oranje, Expermeetings blauw, Medical geel en Brinec oranje.
 - Evaluatie voltooid: groen vinkje.
 - Weektypekleur moet zichtbaar blijven naast huidige-weekmarkering.
 
@@ -35,6 +36,8 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 - Iedere trainingsdag toont AM en/of PM; lege dagen blijven compact.
 - Gebruik expliciete `Open`-knoppen; dubbelklikken mag nooit nodig zijn.
 - Training- en evaluatiepopups zijn maximaal schermvullend en intern scrollbaar.
+- Toon de microfoonknop alleen op mobiel bij het Comment-label. Tijdens opname heeft de knop een duidelijke actieve toestand; één opname mag herkenningstekst nooit verdubbelen.
+- De popup voor openstaande evaluaties toont uitsluitend trainingen van de afgelopen zes kalenderdagen, nooit de huidige dag.
 - Bestaande waarden moeten direct bij openen zichtbaar zijn.
 - Planner, Dashboard en Logout moeten bereikbaar blijven zonder Admin.
 - Toon Week reports onderaan de week als een 2×2-grid met dezelfde vier kleuren als desktop.
@@ -46,6 +49,14 @@ Laatst inhoudelijk gecontroleerd: 15 augustus 2026.
 - Behoud de brede tabel en volledige trainingsinformatie.
 - Trainerselectie blijft beschikbaar voor trainers.
 - Toon alle trainingsonderdelen, zones en tijden.
+
+## Year Planner
+
+- Stacked layout is standaard; één, drie of twaalf maanden bepalen de breedte van een stuk.
+- Houd atleetnamen klein en rijen stabiel van hoogte. Gebruik geen lege placeholder-strepen.
+- Whereabouts zijn doorlopende, benoemde ranges. Overlap wordt visueel als diagonale kleurverdeling getoond; de belangrijkste zichtbare naam blijft leesbaar.
+- Toon alleen rij-kopieeracties voor de actieve laag: Training of Whereabouts. Plakken werkt alleen binnen het zichtbare periodeblok.
+- De atleetweergave is alleen-lezen en toont alleen de legenda van toegestane lagen.
 
 ## Stats en DCO
 
