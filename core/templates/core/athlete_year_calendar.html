@@ -1885,6 +1885,7 @@
   var activeVoiceButton = null;
   var activeVoiceTextarea = null;
   var activeVoiceBaseText = "";
+  var activeVoiceFinalResults = {};
   function getCookie(name) {
     var v = null;
     if (document.cookie) document.cookie.split(";").forEach(function(c){ c=c.trim(); if(c.substring(0,name.length+1)===(name+"=")) v=decodeURIComponent(c.substring(name.length+1)); });
@@ -1935,6 +1936,7 @@
     activeVoiceButton = null;
     activeVoiceTextarea = null;
     activeVoiceBaseText = "";
+    activeVoiceFinalResults = {};
   }
   function startVoiceComment(button) {
     if (!SpeechRecognitionApi) return;
@@ -1953,18 +1955,27 @@
     activeVoiceButton = button;
     activeVoiceTextarea = target;
     activeVoiceBaseText = (target.value || "").trim();
+    activeVoiceFinalResults = {};
     button.classList.add("is-recording");
     button.setAttribute("aria-pressed", "true");
     button.title = "Stop speaking";
     recognition.onresult = function(event) {
-      var finalText = "";
-      var interimText = "";
+      if (activeVoiceRecognition !== recognition || activeVoiceTextarea !== target) return;
+      var interimParts = [];
       for (var i = 0; i < event.results.length; i += 1) {
         var transcript = event.results[i][0]?.transcript || "";
-        if (event.results[i].isFinal) finalText += transcript + " ";
-        else interimText += transcript + " ";
+        if (event.results[i].isFinal) {
+          activeVoiceFinalResults[i] = transcript.trim();
+        } else {
+          interimParts.push(transcript.trim());
+        }
       }
-      var addition = (finalText + interimText).trim();
+      var finalText = Object.keys(activeVoiceFinalResults)
+        .sort(function(a, b) { return Number(a) - Number(b); })
+        .map(function(index) { return activeVoiceFinalResults[index]; })
+        .filter(Boolean)
+        .join(" ");
+      var addition = [finalText, interimParts.filter(Boolean).join(" ")].filter(Boolean).join(" ");
       target.value = [activeVoiceBaseText, addition].filter(Boolean).join(activeVoiceBaseText && addition ? " " : "");
       target.dispatchEvent(new Event("input", { bubbles: true }));
     };
