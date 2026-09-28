@@ -272,11 +272,20 @@
       });
     }
 
+    function cleanupTrainerModalBackdrop() {
+      document.querySelectorAll(".modal-backdrop").forEach(function(backdrop) {
+        backdrop.remove();
+      });
+      document.body.classList.remove("modal-open");
+      document.body.style.removeProperty("overflow");
+      document.body.style.removeProperty("padding-right");
+    }
+
     document.addEventListener("htmx:afterSwap", function(evt) {
       if (evt.detail && evt.detail.target && evt.detail.target.id === "modal-container") {
         const modalEl = document.getElementById("slotModal");
         if (modalEl && window.bootstrap) {
-          window.currentSlotModal = new bootstrap.Modal(modalEl);
+          window.currentSlotModal = bootstrap.Modal.getOrCreateInstance(modalEl);
           window.currentSlotModal.show();
         }
       }
@@ -289,6 +298,16 @@
       if (window.currentSlotModal) {
         window.currentSlotModal.hide();
       }
+      cleanupTrainerModalBackdrop();
+      window.currentSlotModal = null;
+    });
+
+    document.addEventListener("hidden.bs.modal", function(event) {
+      if (!event.target || event.target.id !== "slotModal") return;
+      cleanupTrainerModalBackdrop();
+      const container = document.getElementById("modal-container");
+      if (container) container.innerHTML = "";
+      window.currentSlotModal = null;
     });
 
     document.addEventListener("DOMContentLoaded", function() {

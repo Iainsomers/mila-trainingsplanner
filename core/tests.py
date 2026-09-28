@@ -1176,6 +1176,8 @@ class TrainerPlanningListTests(TestCase):
         self.assertEqual(detail.status_code, 200)
         self.assertContains(detail, "data-trainer-delete-btn", html=False)
         self.assertContains(detail, "Delete training")
+        self.assertContains(detail, "cleanupTrainerModalBackdrop", html=False)
+        self.assertContains(detail, 'document.body.classList.remove("modal-open")', html=False)
 
         delete_response = self.client.post(
             f"/slot-modal/{training_day:%Y/%m/%d}/1/?plan={plan.id}",
