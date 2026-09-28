@@ -101,9 +101,23 @@
                       {% for question in questionnaire.questions.all %}
                         <div class="p-2 {% if not forloop.first %}border-top{% endif %}">
                           <strong>{{ forloop.counter }}.</strong> {{ question.text }}
+                          {% if question.question_type == "matrix" %}
+                            <div class="table-responsive mt-2">
+                              <table class="table table-bordered table-sm mb-0">
+                                <thead class="table-light"><tr><th>Question</th>{% for column in question.matrix_columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+                                <tbody>{% for matrix_row in question.matrix_rows %}<tr><th class="fw-normal">{{ matrix_row }}</th>{% for column in question.matrix_columns %}<td></td>{% endfor %}</tr>{% endfor %}</tbody>
+                              </table>
+                            </div>
+                          {% endif %}
                         </div>
                       {% endfor %}
                     </div>
+                    {% if can_edit %}
+                      <form method="post" class="mt-3" onsubmit="return confirm('Delete this questionnaire and all filled answers?');">
+                        {% csrf_token %}
+                        <button type="submit" name="delete_questionnaire" value="{{ questionnaire.id }}" class="btn btn-outline-danger btn-sm">Delete questionnaire</button>
+                      </form>
+                    {% endif %}
                   </div>
                 </div>
               {% empty %}
@@ -130,9 +144,38 @@
                   <textarea name="description" class="form-control" rows="2">{% if copy_source %}{{ copy_source.description }}{% endif %}</textarea>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">Questions</label>
-                  <textarea name="questions" class="form-control" rows="8" placeholder="One question per line" required>{% if copy_source %}{% for question in copy_source.questions.all %}{{ question.text }}{% if not forloop.last %}
+                  <label class="form-label">Normal questions</label>
+                  <div class="form-text mb-2">Type every question on a new line. Press Enter after each question.</div>
+                  <textarea name="questions" class="form-control" rows="8" placeholder="How do you feel?&#10;What went well?&#10;What can improve?">{% if copy_source %}{% for question in copy_source.questions.all %}{% if question.question_type == "text" %}{{ question.text }}
 {% endif %}{% endfor %}{% endif %}</textarea>
+                </div>
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                    <div>
+                      <label class="form-label mb-0">Matrix questions</label>
+                      <div class="form-text">A matrix is one question in the form. Put every column heading and every row question on its own line.</div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="add-matrix-question">Add matrix</button>
+                  </div>
+                  <div id="matrix-questions">
+                    {% if copy_source %}
+                      {% for question in copy_source.questions.all %}
+                        {% if question.question_type == "matrix" %}
+                          <div class="matrix-question border rounded p-3 mb-3">
+                            <div class="d-flex justify-content-between gap-2 mb-2"><strong>Matrix</strong><button type="button" class="btn btn-outline-danger btn-sm remove-matrix">Remove</button></div>
+                            <label class="form-label small">Matrix title/header</label>
+                            <input type="text" name="matrix_title" class="form-control mb-2" value="{{ question.text }}">
+                            <label class="form-label small">Column headings — one per line</label>
+                            <textarea name="matrix_columns" class="form-control mb-2" rows="3">{% for column in question.matrix_columns %}{{ column }}{% if not forloop.last %}
+{% endif %}{% endfor %}</textarea>
+                            <label class="form-label small">Questions in column 1 — one per line</label>
+                            <textarea name="matrix_rows" class="form-control" rows="4">{% for matrix_row in question.matrix_rows %}{{ matrix_row }}{% if not forloop.last %}
+{% endif %}{% endfor %}</textarea>
+                          </div>
+                        {% endif %}
+                      {% endfor %}
+                    {% endif %}
+                  </div>
                 </div>
                 <div class="form-check mb-3">
                   <input class="form-check-input" type="checkbox" name="is_active" id="evaluation-active" checked>
@@ -193,8 +236,20 @@
                             >
                               <dl class="row small mb-0 border rounded">
                                 {% for row in response.answer_rows %}
-                                  <dt class="col-sm-5 p-2 {% if not forloop.first %}border-top{% endif %}">{{ row.question.text }}</dt>
-                                  <dd class="col-sm-7 p-2 mb-0 {% if not forloop.first %}border-top{% endif %}">{{ row.answer|default:"-" }}</dd>
+                                  {% if row.question.question_type == "matrix" %}
+                                    <dt class="col-12 p-2 {% if not forloop.first %}border-top{% endif %}">{{ row.question.text }}</dt>
+                                    <dd class="col-12 px-2 pb-2 mb-0">
+                                      <div class="table-responsive">
+                                        <table class="table table-bordered table-sm mb-0">
+                                          <thead class="table-light"><tr><th>Question</th>{% for column in row.question.matrix_columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+                                          <tbody>{% for matrix_row in row.matrix_rows %}<tr><th class="fw-normal">{{ matrix_row.label }}</th>{% for cell in matrix_row.cells %}<td>{{ cell|default:"-" }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+                                        </table>
+                                      </div>
+                                    </dd>
+                                  {% else %}
+                                    <dt class="col-sm-5 p-2 {% if not forloop.first %}border-top{% endif %}">{{ row.question.text }}</dt>
+                                    <dd class="col-sm-7 p-2 mb-0 {% if not forloop.first %}border-top{% endif %}">{{ row.answer|default:"-" }}</dd>
+                                  {% endif %}
                                 {% endfor %}
                               </dl>
                             </div>
@@ -216,4 +271,32 @@
     </div>
   {% endif %}
 </div>
+{% if not is_athlete_user %}
+<template id="matrix-question-template">
+  <div class="matrix-question border rounded p-3 mb-3">
+    <div class="d-flex justify-content-between gap-2 mb-2"><strong>Matrix</strong><button type="button" class="btn btn-outline-danger btn-sm remove-matrix">Remove</button></div>
+    <label class="form-label small">Matrix title/header</label>
+    <input type="text" name="matrix_title" class="form-control mb-2" placeholder="Development over time">
+    <label class="form-label small">Column headings — one per line</label>
+    <textarea name="matrix_columns" class="form-control mb-2" rows="3" placeholder="2025&#10;2026"></textarea>
+    <label class="form-label small">Questions in column 1 — one per line</label>
+    <textarea name="matrix_rows" class="form-control" rows="4" placeholder="What went well?&#10;What do you want to improve?"></textarea>
+  </div>
+</template>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const container = document.getElementById("matrix-questions");
+  const addButton = document.getElementById("add-matrix-question");
+  const template = document.getElementById("matrix-question-template");
+  if (!container || !addButton || !template) return;
+  addButton.addEventListener("click", function () {
+    container.appendChild(template.content.cloneNode(true));
+  });
+  container.addEventListener("click", function (event) {
+    const button = event.target.closest(".remove-matrix");
+    if (button) button.closest(".matrix-question").remove();
+  });
+});
+</script>
+{% endif %}
 {% endblock %}

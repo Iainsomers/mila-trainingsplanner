@@ -549,31 +549,55 @@ def evaluations_view(request):
     if request.method == "POST":
         if not can_edit:
             return HttpResponse("Forbidden", status=403)
+        delete_id = (request.POST.get("delete_questionnaire") or "").strip()
+        if delete_id.isdigit():
+            questionnaire = get_object_or_404(EvaluationQuestionnaire, id=delete_id, owner=owner)
+            questionnaire.delete()
+            return redirect("evaluations")
         title = (request.POST.get("title") or "").strip()
         description = (request.POST.get("description") or "").strip()
         questions_text = (request.POST.get("questions") or "").strip()
+        matrix_titles = request.POST.getlist("matrix_title")
+        matrix_columns = request.POST.getlist("matrix_columns")
+        matrix_rows = request.POST.getlist("matrix_rows")
         is_active = bool(request.POST.get("is_active"))
-        if title and questions_text:
+        text_questions = [line.strip() for line in questions_text.splitlines() if line.strip()]
+        matrix_questions = []
+        for matrix_title, columns_text, rows_text in zip(matrix_titles, matrix_columns, matrix_rows):
+            columns = [line.strip() for line in columns_text.splitlines() if line.strip()]
+            rows = [line.strip() for line in rows_text.splitlines() if line.strip()]
+            if matrix_title.strip() and columns and rows:
+                matrix_questions.append((matrix_title.strip(), columns, rows))
+        if title and (text_questions or matrix_questions):
             questionnaire = EvaluationQuestionnaire.objects.create(
                 owner=owner,
                 title=title,
                 description=description,
                 is_active=is_active,
             )
-            questions = [
-                line.strip()
-                for line in questions_text.splitlines()
-                if line.strip()
-            ]
-            EvaluationQuestion.objects.bulk_create([
+            questions_to_create = [
                 EvaluationQuestion(
                     questionnaire=questionnaire,
                     text=text,
                     order=index,
                     required=False,
                 )
-                for index, text in enumerate(questions, start=1)
-            ])
+                for index, text in enumerate(text_questions, start=1)
+            ]
+            next_order = len(questions_to_create) + 1
+            questions_to_create.extend(
+                EvaluationQuestion(
+                    questionnaire=questionnaire,
+                    text=matrix_title,
+                    order=next_order + index,
+                    required=False,
+                    question_type=EvaluationQuestion.TYPE_MATRIX,
+                    matrix_columns=columns,
+                    matrix_rows=rows,
+                )
+                for index, (matrix_title, columns, rows) in enumerate(matrix_questions)
+            )
+            EvaluationQuestion.objects.bulk_create(questions_to_create)
             return redirect("evaluations")
 
     questionnaires = list(
@@ -597,13 +621,20 @@ def evaluations_view(request):
     for response in responses:
         response_counts[response.questionnaire_id] = response_counts.get(response.questionnaire_id, 0) + 1
     for response in responses:
-        response.answer_rows = [
-            {
-                "question": question,
-                "answer": (response.answers or {}).get(str(question.id), ""),
-            }
-            for question in response.questionnaire.questions.all()
-        ]
+        response.answer_rows = []
+        for question in response.questionnaire.questions.all():
+            answer = (response.answers or {}).get(str(question.id), "")
+            row = {"question": question, "answer": answer}
+            if question.question_type == EvaluationQuestion.TYPE_MATRIX:
+                answer = answer if isinstance(answer, dict) else {}
+                row["matrix_rows"] = [
+                    {
+                        "label": label,
+                        "cells": [answer.get(f"{row_index}:{column_index}", "") for column_index, _ in enumerate(question.matrix_columns)],
+                    }
+                    for row_index, label in enumerate(question.matrix_rows)
+                ]
+            response.answer_rows.append(row)
     responses_by_questionnaire = {}
     for response in responses:
         responses_by_questionnaire.setdefault(response.questionnaire_id, []).append(response)
@@ -662,7 +693,16 @@ def evaluation_fill_view(request, questionnaire_id):
     if request.method == "POST":
         answers = {}
         for question in questionnaire.questions.all():
-            answers[str(question.id)] = (request.POST.get(f"question_{question.id}") or "").strip()
+            if question.question_type == EvaluationQuestion.TYPE_MATRIX:
+                matrix_answer = {}
+                for row_index, _ in enumerate(question.matrix_rows):
+                    for column_index, _ in enumerate(question.matrix_columns):
+                        value = (request.POST.get(f"question_{question.id}_{row_index}_{column_index}") or "").strip()
+                        if value:
+                            matrix_answer[f"{row_index}:{column_index}"] = value
+                answers[str(question.id)] = matrix_answer
+            else:
+                answers[str(question.id)] = (request.POST.get(f"question_{question.id}") or "").strip()
         EvaluationResponse.objects.update_or_create(
             questionnaire=questionnaire,
             athlete=athlete,
@@ -672,7 +712,25 @@ def evaluation_fill_view(request, questionnaire_id):
 
     answers = response.answers if response else {}
     for question in questionnaire.questions.all():
-        question.current_answer = answers.get(str(question.id), "")
+        current_answer = answers.get(str(question.id), "")
+        if question.question_type == EvaluationQuestion.TYPE_MATRIX:
+            current_answer = current_answer if isinstance(current_answer, dict) else {}
+            question.current_matrix_rows = [
+                {
+                    "label": label,
+                    "cells": [
+                        {
+                            "row_index": row_index,
+                            "column_index": column_index,
+                            "value": current_answer.get(f"{row_index}:{column_index}", ""),
+                        }
+                        for column_index, _ in enumerate(question.matrix_columns)
+                    ],
+                }
+                for row_index, label in enumerate(question.matrix_rows)
+            ]
+        else:
+            question.current_answer = current_answer
 
     return render(request, "core/evaluation_fill.html", {
         "questionnaire": questionnaire,

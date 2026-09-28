@@ -129,6 +129,13 @@ class EvaluationQuestionnaire(models.Model):
 
 
 class EvaluationQuestion(models.Model):
+    TYPE_TEXT = "text"
+    TYPE_MATRIX = "matrix"
+    TYPE_CHOICES = [
+        (TYPE_TEXT, "Text"),
+        (TYPE_MATRIX, "Matrix"),
+    ]
+
     questionnaire = models.ForeignKey(
         EvaluationQuestionnaire,
         on_delete=models.CASCADE,
@@ -137,6 +144,9 @@ class EvaluationQuestion(models.Model):
     text = models.CharField(max_length=240)
     order = models.PositiveIntegerField(default=0)
     required = models.BooleanField(default=False)
+    question_type = models.CharField(max_length=16, choices=TYPE_CHOICES, default=TYPE_TEXT)
+    matrix_columns = models.JSONField(default=list, blank=True)
+    matrix_rows = models.JSONField(default=list, blank=True)
 
     class Meta:
         ordering = ["order", "id"]

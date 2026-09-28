@@ -19,7 +19,7 @@ Bijgewerkt: 28 september 2026.
 - Base Planning gebruikt handmatig instelbare, aaneengesloten datumblokken. De oude onderliggende Save/Cancel-knoppen zijn verwijderd; wijzigingen blijven op de actieve tab na opslaan.
 - Mobiele AYC heeft Open-knoppen, AM/PM-evaluaties, week reports, daily vitals en een popup voor niet-ingevulde evaluaties van de afgelopen zes dagen. De huidige dag en oudere trainingen tellen niet mee.
 - Mobiele evaluatiecommentaren ondersteunen Nederlandse spraak-naar-tekst. Herkenningsresultaten worden per resultaatindex verwerkt om dubbele of drievoudige tekst te voorkomen.
-- Evaluations ondersteunt actieve coachvragenlijsten, kopiëren vanuit bestaande lijsten, inklapbare lijsten en ingevulde antwoorden per atleet.
+- Evaluations ondersteunt actieve coachvragenlijsten, gewone en matrixvragen, kopiëren vanuit bestaande lijsten, verwijderen, inklapbare lijsten en ingevulde antwoorden per atleet.
 - Coach Tools in MiLa bevat Track Timer voor 100–1600 m, doeltijdvisualisatie, drie-atletenmodus en tussentijden.
 - Parser ondersteunt T1 en T6, progressieve Z/T-ranges met tussenliggende labels, compoundblokken en pauzenotatie `p`/`sp`.
 - Polar v3/v4-integratie en reconstructies bestaan; watch matching blijft een actief ontwikkelgebied.

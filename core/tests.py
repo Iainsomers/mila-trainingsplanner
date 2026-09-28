@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -113,13 +113,19 @@ class TrackTimerTests(TestCase):
                 "title": "Wellbeing",
                 "description": "Short check",
                 "questions": "How do you feel?\nAny pain?",
+                "matrix_title": "Development",
+                "matrix_columns": "2025\n2026",
+                "matrix_rows": "Strength\nEndurance",
                 "is_active": "on",
             },
         )
 
         self.assertEqual(create_response.status_code, 302)
         questionnaire = EvaluationQuestionnaire.objects.get(title="Wellbeing")
-        self.assertEqual(questionnaire.questions.count(), 2)
+        self.assertEqual(questionnaire.questions.count(), 3)
+        matrix_question = questionnaire.questions.get(question_type=EvaluationQuestion.TYPE_MATRIX)
+        self.assertEqual(matrix_question.matrix_columns, ["2025", "2026"])
+        self.assertEqual(matrix_question.matrix_rows, ["Strength", "Endurance"])
 
         self.client.force_login(athlete_user)
         athlete_list = self.client.get("/evaluations/")
@@ -129,13 +135,17 @@ class TrackTimerTests(TestCase):
             f"/evaluations/{questionnaire.id}/",
             {
                 f"question_{questionnaire.questions.first().id}": "Good",
-                f"question_{questionnaire.questions.last().id}": "No pain",
+                f"question_{questionnaire.questions.filter(question_type='text').last().id}": "No pain",
+                f"question_{matrix_question.id}_0_0": "Solid",
+                f"question_{matrix_question.id}_0_1": "Improved",
+                f"question_{matrix_question.id}_1_1": "Strong",
             },
         )
 
         self.assertEqual(fill_response.status_code, 302)
         response = EvaluationResponse.objects.get(questionnaire=questionnaire, athlete=athlete)
         self.assertIn("Good", response.answers.values())
+        self.assertEqual(response.answers[str(matrix_question.id)]["0:1"], "Improved")
 
         self.client.force_login(coach)
         coach_list = self.client.get("/evaluations/")
@@ -153,6 +163,16 @@ class TrackTimerTests(TestCase):
         self.assertContains(coach_detail, "eval athlete")
         self.assertContains(coach_detail, "Good")
         self.assertContains(coach_detail, "No pain")
+        self.assertContains(coach_detail, "Development")
+        self.assertContains(coach_detail, "Improved")
+
+        delete_response = self.client.post(
+            "/evaluations/",
+            {"delete_questionnaire": str(questionnaire.id)},
+        )
+        self.assertEqual(delete_response.status_code, 302)
+        self.assertFalse(EvaluationQuestionnaire.objects.filter(id=questionnaire.id).exists())
+        self.assertFalse(EvaluationResponse.objects.filter(id=response.id).exists())
 
     def test_pr_database_lists_records_with_freshness_colors(self):
         user = get_user_model().objects.create_user(username="pr-db-coach", password="secret", is_staff=True)
