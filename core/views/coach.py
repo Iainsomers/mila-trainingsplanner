@@ -7957,14 +7957,38 @@ def coach_plan_delete_view(request, plan_id: int):
 @login_required
 @require_GET
 def coach_athletes_view(request):
-    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
+    sort_mode = request.GET.get("sort", "name_asc")
+    sort_options = [
+        ("name_asc", "Name A-Z"),
+        ("name_desc", "Name Z-A"),
+        ("age_asc", "Age low-high"),
+        ("age_desc", "Age high-low"),
+    ]
+    ordering_by_sort = {
+        "name_asc": [Lower("name"), "id"],
+        "name_desc": [Lower("name").desc(), "id"],
+        "age_asc": ["-birth_year", Lower("name"), "id"],
+        "age_desc": ["birth_year", Lower("name"), "id"],
+    }
+    if sort_mode not in ordering_by_sort:
+        sort_mode = "name_asc"
+
+    athletes = list(_filter_owned(Athlete.objects.order_by(*ordering_by_sort[sort_mode]), request))
     current_year = date.today().year
     for athlete in athletes:
         try:
             athlete.age = current_year - int(athlete.birth_year)
         except (TypeError, ValueError):
             athlete.age = None
-    return render(request, "core/coach_athletes.html", {"athletes": athletes})
+    return render(
+        request,
+        "core/coach_athletes.html",
+        {
+            "athletes": athletes,
+            "sort_mode": sort_mode,
+            "sort_options": sort_options,
+        },
+    )
 
 
 @login_required

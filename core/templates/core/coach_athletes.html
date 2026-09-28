@@ -19,6 +19,14 @@
   <div class="card">
     <div class="card-body">
       {% if athletes %}
+        <form method="get" class="d-flex justify-content-end align-items-center gap-2 mb-3">
+          <label for="athleteSort" class="form-label mb-0 small text-muted">Sort</label>
+          <select id="athleteSort" name="sort" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+            {% for value, label in sort_options %}
+              <option value="{{ value }}" {% if sort_mode == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </form>
         <div class="table-responsive">
           <table class="table table-sm align-middle">
             <thead>
