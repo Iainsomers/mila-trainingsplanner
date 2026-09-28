@@ -4,6 +4,15 @@
   {% if slot %}
     <button
       type="button"
+      class="trainer-action-btn trainer-delete-btn"
+      data-trainer-delete-btn
+      data-trainer-delete-url="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}"
+      onclick="event.preventDefault(); event.stopPropagation();"
+      title="Delete training"
+      aria-label="Delete training"
+    >×</button>
+    <button
+      type="button"
       class="trainer-action-btn trainer-copy-btn"
       data-trainer-copy-btn
       hx-post="/slot-copy/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/?plan={{ selected_plan.id }}"

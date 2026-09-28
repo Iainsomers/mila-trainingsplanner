@@ -22,6 +22,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Huidige week wordt geel gemarkeerd.
 - Vorige/volgende verschuift één week.
 - Dag- en weekkopiëren werkt tussen trainerplannen.
+- Een gevulde AM- of PM-training kan rechtstreeks uit de Trainer Planner worden verwijderd met de compacte `×` in de cel.
 - Trainingsonderdelen worden uiteindelijk in Flex Planner en AYC gebruikt.
 
 ## Year Planner

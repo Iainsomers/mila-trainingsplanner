@@ -1149,6 +1149,41 @@ class TrainerPlanningListTests(TestCase):
             html=False,
         )
 
+    def test_trainer_planner_shows_x_and_can_delete_training(self):
+        coach = get_user_model().objects.create_user(
+            username="trainer-delete-coach",
+            password="secret",
+            is_staff=True,
+        )
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Delete training plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        training_day = date(2026, 9, 28)
+        slot = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=None,
+            date=training_day,
+            slot_index=1,
+        )
+        TrainingSegment.objects.create(slot=slot, type="CORE", text="40' z1", order=1)
+        self.client.force_login(coach)
+
+        detail = self.client.get(
+            f"/planning/trainer/{plan.id}/?date={training_day:%Y-%m-%d}&weeks=1"
+        )
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, "data-trainer-delete-btn", html=False)
+        self.assertContains(detail, "Delete training")
+
+        delete_response = self.client.post(
+            f"/slot-modal/{training_day:%Y/%m/%d}/1/?plan={plan.id}",
+            {"action": "delete"},
+        )
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertFalse(TrainingSlot.objects.filter(id=slot.id).exists())
+
 
 class YearPlannerTests(TestCase):
     def _coach_and_athlete(self):

@@ -50,6 +50,10 @@ Laatst inhoudelijk gecontroleerd: 28 september 2026.
 - Trainerselectie blijft beschikbaar voor trainers.
 - Toon alle trainingsonderdelen, zones en tijden.
 
+## Trainer Planner
+
+- Toon bij een gevulde trainingscel rechtsboven een compacte rode `×` om die specifieke AM- of PM-training direct te verwijderen, gelijk aan de Flex Planner.
+
 ## Year Planner
 
 - Stacked layout is standaard; één, drie of twaalf maanden bepalen de breedte van een stuk.

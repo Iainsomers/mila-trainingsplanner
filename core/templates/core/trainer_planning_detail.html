@@ -95,6 +95,21 @@
       color: #0d6efd;
     }
 
+    .trainer-delete-btn {
+      top: 3px;
+      right: 3px;
+      bottom: auto;
+      width: 17px;
+      height: 17px;
+      padding: 0;
+      border-radius: 50%;
+      color: #a00000;
+      font-size: 0.72rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .trainer-day-cell:hover .trainer-action-btn,
     .trainer-day-cell:focus-within .trainer-action-btn {
       opacity: 1;
@@ -349,6 +364,31 @@
           .catch(function() {
             alert("Copy failed.");
           });
+      });
+
+      document.querySelectorAll("[data-trainer-delete-btn]").forEach(function(button) {
+        button.addEventListener("click", function(event) {
+          event.preventDefault();
+          event.stopPropagation();
+          const url = button.getAttribute("data-trainer-delete-url") || "";
+          if (!url) return;
+          const body = new URLSearchParams();
+          body.set("action", "delete");
+          fetch(url, {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": getCookie("csrftoken") || "",
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            credentials: "same-origin",
+            body: body.toString()
+          }).then(function(response) {
+            if (!response.ok) throw new Error("Delete failed");
+            window.location.reload();
+          }).catch(function() {
+            alert("Delete failed.");
+          });
+        });
       });
 
       function clearClipboard(url) {
