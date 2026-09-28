@@ -5782,6 +5782,7 @@ def trainer_planning_detail_view(request, plan_id: int):
         "core/trainer_planning_detail.html",
         {
             "plan": plan,
+            "trainer_plans": list(_trainer_planning_qs(request).order_by("name")),
             "week_start": week_start,
             "week_end": week_end,
             "prev_week": prev_week,

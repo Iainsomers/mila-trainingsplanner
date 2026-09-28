@@ -53,6 +53,7 @@ Laatst inhoudelijk gecontroleerd: 28 september 2026.
 ## Trainer Planner
 
 - Toon bij een gevulde trainingscel rechtsboven een compacte rode `×` om die specifieke AM- of PM-training direct te verwijderen, gelijk aan de Flex Planner.
+- Plaats `Copy weeks` naast de weeknavigatie. De popup toont bronweek, aantal weken, doelschema, doelweek en de keuze voor overschrijven of alleen lege slots vullen.
 
 ## Year Planner
 
