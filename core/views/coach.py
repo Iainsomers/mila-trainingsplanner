@@ -8215,10 +8215,10 @@ def coach_athlete_create_view(request):
             errors.append("T600 invalid format.")
 
         try:
-            pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
+            pr_800_s = _parse_pr_time_to_seconds(form["pr_800"]) if form["pr_800"] else None
         except ValueError:
             pr_800_s = None
-            errors.append("T800 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T800 invalid format.")
 
         try:
             pr_1000_s = _parse_pr_time_to_seconds(form["pr_1000"]) if form["pr_1000"] else None
@@ -8227,28 +8227,28 @@ def coach_athlete_create_view(request):
             errors.append("T1000 invalid format.")
 
         try:
-            pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
+            pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"]) if form["pr_1500"] else None
         except ValueError:
             pr_1500_s = None
-            errors.append("T1500 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T1500 invalid format.")
 
         try:
-            pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"])
+            pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"]) if form["pr_3000"] else None
         except ValueError:
             pr_3000_s = None
-            errors.append("T3000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T3000 invalid format.")
 
         try:
-            pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"])
+            pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"]) if form["pr_5000"] else None
         except ValueError:
             pr_5000_s = None
-            errors.append("T5000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T5000 invalid format.")
 
         try:
-            pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"])
+            pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"]) if form["pr_10000"] else None
         except ValueError:
             pr_10000_s = None
-            errors.append("T10000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T10000 invalid format.")
 
         try:
             tm_s = _parse_pr_time_to_seconds(form["tm"]) if form["tm"] else None
@@ -8527,10 +8527,10 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             errors.append("T600 invalid format.")
 
         try:
-            pr_800_s = _parse_pr_time_to_seconds(form["pr_800"])
+            pr_800_s = _parse_pr_time_to_seconds(form["pr_800"]) if form["pr_800"] else None
         except ValueError:
             pr_800_s = None
-            errors.append("T800 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T800 invalid format.")
 
         try:
             pr_1000_s = _parse_pr_time_to_seconds(form["pr_1000"]) if form["pr_1000"] else None
@@ -8539,28 +8539,28 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             errors.append("T1000 invalid format.")
 
         try:
-            pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"])
+            pr_1500_s = _parse_pr_time_to_seconds(form["pr_1500"]) if form["pr_1500"] else None
         except ValueError:
             pr_1500_s = None
-            errors.append("T1500 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T1500 invalid format.")
 
         try:
-            pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"])
+            pr_3000_s = _parse_pr_time_to_seconds(form["pr_3000"]) if form["pr_3000"] else None
         except ValueError:
             pr_3000_s = None
-            errors.append("T3000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T3000 invalid format.")
 
         try:
-            pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"])
+            pr_5000_s = _parse_pr_time_to_seconds(form["pr_5000"]) if form["pr_5000"] else None
         except ValueError:
             pr_5000_s = None
-            errors.append("T5000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T5000 invalid format.")
 
         try:
-            pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"])
+            pr_10000_s = _parse_pr_time_to_seconds(form["pr_10000"]) if form["pr_10000"] else None
         except ValueError:
             pr_10000_s = None
-            errors.append("T10000 is required and must use format m:ss(.ms), h:mm:ss(.ms), or mm.ss.ms.")
+            errors.append("T10000 invalid format.")
 
         try:
             tm_s = _parse_pr_time_to_seconds(form["tm"]) if form["tm"] else None

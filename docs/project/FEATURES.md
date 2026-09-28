@@ -116,6 +116,7 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 ## Athlete settings
 
 Tabs voor atleten: General, Zone/PR's, Base Planning en Ideal week. WU/CD-instellingen staan op General; de oude WU settings-tab bestaat niet meer. Base Planning is voor atleten alleen-lezen. `Fill missing PB's` kan ontbrekende prestaties afleiden uit beschikbare PR's. De atletenlijst is sorteerbaar op naam en leeftijd, in beide richtingen.
+General-settings kunnen worden opgeslagen zonder dat alle PR's al zijn ingevuld; alleen ingevulde PR-waarden worden gevalideerd en bewaard.
 
 ## Daily Coach Overview Training
 

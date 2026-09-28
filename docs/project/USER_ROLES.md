@@ -44,7 +44,7 @@ Een atleet mag niet:
 
 ## Atleteninstellingen
 
-Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-instellingen zien en waar toegestaan wijzigen. Base Planning is zichtbaar als alleen-lezen overzicht en kan uitsluitend door de trainer worden aangepast. De volgende trainerinstellingen blijven verborgen:
+Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-instellingen zien en waar toegestaan wijzigen. Algemene gegevens en zones kunnen worden opgeslagen terwijl PR's nog gedeeltelijk leeg zijn. Base Planning is zichtbaar als alleen-lezen overzicht en kan uitsluitend door de trainer worden aangepast. De volgende trainerinstellingen blijven verborgen:
 
 - hoeveel toekomstige weken zichtbaar zijn;
 - rapportage- en zichtbaarheidsschakelaars;
