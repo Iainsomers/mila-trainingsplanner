@@ -37,6 +37,7 @@ from .common import (
     _get_effective_slot,
     _active_coach_user,
     _active_coach_can_edit,
+    _is_coach_user,
 )
 
 
@@ -1087,7 +1088,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     if not athlete:
         athlete = _get_selected_athlete_from_request(request)
-    if not athlete and not request.user.is_staff:
+    if not athlete and not _is_coach_user(request.user):
         username = (request.user.username or "").strip()
         inferred_name = username.replace("_", " ")
         athlete = Athlete.objects.filter(name__iexact=inferred_name).first()
@@ -1121,7 +1122,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     athlete_year_can_edit_training = not (
         is_athlete_year_calendar
-        and not (request.user.is_staff or request.user.is_superuser)
+        and not _is_coach_user(request.user)
         and d > date_cls.today()
     )
 

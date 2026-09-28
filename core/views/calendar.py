@@ -41,6 +41,7 @@ from .common import (
     _apply_parse_to_segment,
     _compute_norm_distance_m,
     _active_coach_user,
+    _is_coach_user,
 )
 
 from core.views.slots import (
@@ -2575,7 +2576,7 @@ def athlete_year_calendar_view(request):
         slot_index_raw = request.POST.get("slot_index")
         athlete = None
 
-        if request.user.is_staff:
+        if _is_coach_user(request.user):
             athlete_id = request.POST.get("athlete") or request.GET.get("athlete")
             if athlete_id:
                 try:
@@ -2596,7 +2597,7 @@ def athlete_year_calendar_view(request):
                 slot_text = request.POST.get("slot_text")
 
                 if slot_text is not None:
-                    if d > today and not (request.user.is_staff or request.user.is_superuser):
+                    if d > today and not _is_coach_user(request.user):
                         return HttpResponse("", status=204)
 
                     try:
@@ -2615,7 +2616,7 @@ def athlete_year_calendar_view(request):
 
                     field = (request.POST.get("field") or "").strip()
                     value = request.POST.get("value") or ""
-                    is_coach_user = bool(request.user.is_staff or request.user.is_superuser)
+                    is_coach_user = _is_coach_user(request.user)
                     allowed_fields = {"match_report", "injuries"}
                     if is_coach_user:
                         allowed_fields.add("comm_trainer")
@@ -2633,7 +2634,7 @@ def athlete_year_calendar_view(request):
                         report.save()
 
                 elif daily_vitals_submit is not None:
-                    if d > today and not (request.user.is_staff or request.user.is_superuser):
+                    if d > today and not _is_coach_user(request.user):
                         return HttpResponse("", status=204)
 
                     def _parse_vital_value(field_name, raw_value):
@@ -2689,7 +2690,7 @@ def athlete_year_calendar_view(request):
                             return HttpResponse("", status=204)
 
                 elif check_status is not None or toggle_check is not None or report_submit is not None:
-                    if d > today and not (request.user.is_staff or request.user.is_superuser):
+                    if d > today and not _is_coach_user(request.user):
                         return HttpResponse("", status=204)
                     try:
                         slot_index = int(slot_index_raw)
@@ -2781,7 +2782,7 @@ def athlete_year_calendar_view(request):
     selected_athlete_id = request.GET.get("athlete", "")
     selected_athlete = None
 
-    if request.user.is_staff:
+    if _is_coach_user(request.user):
         athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request))
         if selected_athlete_id:
             try:
@@ -2802,12 +2803,12 @@ def athlete_year_calendar_view(request):
             athletes = []
             selected_athlete_id = ""
 
-    athlete_self_view = bool(selected_athlete and not request.user.is_staff)
+    athlete_self_view = bool(selected_athlete and not _is_coach_user(request.user))
     show_training_reports = bool(selected_athlete and getattr(selected_athlete, "training_reports_enabled", True))
     show_week_reports = bool(selected_athlete and getattr(selected_athlete, "week_report_enabled", False))
     show_daily_vitals = bool(selected_athlete and getattr(selected_athlete, "daily_vitals_enabled", False))
     ayc_rowspan = 2 + (1 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
-    is_coach_user = bool(request.user.is_staff or request.user.is_superuser)
+    is_coach_user = _is_coach_user(request.user)
     visible_until_date = None
     if athlete_self_view:
         try:
@@ -2854,7 +2855,7 @@ def athlete_year_calendar_view(request):
     trainer_slot_lookup = {}
 
     if selected_athlete:
-        if request.user.is_staff:
+        if _is_coach_user(request.user):
             owned_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request))
         else:
             owned_plans = list(TrainingPlan.objects.order_by("name"))

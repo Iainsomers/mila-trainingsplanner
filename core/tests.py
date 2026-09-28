@@ -2922,7 +2922,7 @@ class SlotModalSaveTests(TestCase):
 
     def test_athlete_cannot_edit_future_training_in_ayc_slot_modal(self):
         coach = get_user_model().objects.create_user(
-            username="future-ayc-coach", password="secret", is_staff=True
+            username="future-ayc-coach", password="secret"
         )
         athlete_user = get_user_model().objects.create_user(
             username="Future AYC Athlete", password="secret"

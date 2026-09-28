@@ -229,6 +229,24 @@ def _coach_view_owner_ids(user):
     return list(dict.fromkeys(owner_ids))
 
 
+def _is_coach_user(user):
+    """Return whether a login should receive coach-level AYC controls.
+
+    Production coach accounts are normally staff users, but older coach
+    logins can be regular users that own athletes/plans. Treat those owners
+    as coaches too; athlete logins do not own either object.
+    """
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+        return True
+    return (
+        Athlete.objects.filter(owner=user).exists()
+        or TrainingPlan.objects.filter(owner=user).exists()
+        or CoachAccess.objects.filter(grantee=user).exists()
+    )
+
+
 def _active_coach_user(request):
     user = request.user
     if not getattr(user, "is_authenticated", False):
