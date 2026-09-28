@@ -1187,14 +1187,29 @@ class YearPlannerTests(TestCase):
         self.assertNotContains(response, f'value="{athlete.id}"\n                checked')
         self.assertContains(response, "year-layout-stack")
 
-    def test_year_planner_ignores_legacy_basis_query(self):
-        _, athlete = self._coach_and_athlete()
+    def test_year_planner_can_show_basis_below_all_choice(self):
+        coach, athlete = self._coach_and_athlete()
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Basis group",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
 
-        response = self.client.get(f"/planning/year/?period=current_next&basis=1&athletes={athlete.id}")
+        response = self.client.get(
+            f"/planning/year/?period=current_next&athlete_group=plan-{plan.id}&basis=1"
+        )
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(any(row["scope"] == "basis" for row in response.context["rows"]))
-        self.assertContains(response, "Year Athlete")
+        self.assertTrue(response.context["show_basis"])
+        self.assertTrue(any(row["scope"] == f"basis-plan-{plan.id}" for row in response.context["rows"]))
+        self.assertContains(response, "Basis - Basis group")
+        html = response.content.decode()
+        selector = html.split('<div class="year-athlete-list">', 1)[1].split("</div>", 1)[0]
+        self.assertLess(selector.index("All"), selector.index("Basis - Basis group"))
+
+        all_groups = self.client.get("/planning/year/?period=current_next&basis=1")
+        self.assertFalse(all_groups.context["show_basis"])
+        self.assertNotContains(all_groups, "Basis - Basis group")
 
     def test_year_planner_stacked_layout_renders_chunks(self):
         _, athlete = self._coach_and_athlete()
@@ -1245,11 +1260,16 @@ class YearPlannerTests(TestCase):
 
     def test_year_planner_saves_base_and_athlete_entries(self):
         coach, athlete = self._coach_and_athlete()
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Basis save group",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
 
         base_response = self.client.post(
             "/planning/year/entry/",
             data=json.dumps({
-                "scope": "basis",
+                "scope": f"basis-plan-{plan.id}",
                 "date": "2026-09-07",
                 "training": "aerobe",
             }),
@@ -1267,8 +1287,49 @@ class YearPlannerTests(TestCase):
 
         self.assertEqual(base_response.status_code, 200)
         self.assertEqual(athlete_response.status_code, 200)
-        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete__isnull=True, training_type="aerobe").exists())
+        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete__isnull=True, basis_plan=plan, training_type="aerobe").exists())
         self.assertTrue(YearPlannerEntry.objects.filter(owner=coach, athlete=athlete, training_type="taper").exists())
+
+    def test_year_planner_keeps_basis_data_separate_per_trainer_group(self):
+        coach, _ = self._coach_and_athlete()
+        first_plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="First group",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        second_plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Second group",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+
+        for plan, training in ((first_plan, "aerobe"), (second_plan, "taper")):
+            response = self.client.post(
+                "/planning/year/entry/",
+                data=json.dumps({
+                    "scope": f"basis-plan-{plan.id}",
+                    "date": "2026-09-07",
+                    "training": training,
+                }),
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            YearPlannerEntry.objects.get(owner=coach, basis_plan=first_plan, date=date(2026, 9, 7)).training_type,
+            "aerobe",
+        )
+        self.assertEqual(
+            YearPlannerEntry.objects.get(owner=coach, basis_plan=second_plan, date=date(2026, 9, 7)).training_type,
+            "taper",
+        )
+
+        first_view = self.client.get(
+            f"/planning/year/?year=2026&period=season&athlete_group=plan-{first_plan.id}&basis=1"
+        )
+        self.assertContains(first_view, "Basis - First group")
+        self.assertContains(first_view, "year-training-aerobe")
+        self.assertNotContains(first_view, "Basis - Second group")
 
     def test_year_planner_saves_whereabout_range(self):
         coach, athlete = self._coach_and_athlete()

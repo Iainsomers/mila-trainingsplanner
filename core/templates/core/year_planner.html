@@ -727,6 +727,18 @@
             >
             <span class="form-check-label">All</span>
           </label>
+          {% if selected_filter_plan %}
+            <label class="form-check mb-0">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                name="basis"
+                value="1"
+                {% if show_basis %}checked{% endif %}
+              >
+              <span class="form-check-label">Basis - {{ selected_filter_plan.name }}</span>
+            </label>
+          {% endif %}
           {% for athlete in athletes %}
             <label class="form-check mb-0 {% if not athlete.year_planner_training_enabled and not athlete.year_planner_whereabouts_enabled %}year-athlete-disabled{% endif %}">
               <input
@@ -795,7 +807,7 @@
           </thead>
           <tbody>
             {% for row in chunk.rows %}
-              <tr data-year-row data-year-row-scope="{{ row.scope }}" data-year-row-chunk="{{ forloop.parentloop.counter0 }}" {% if row.scope == "basis" %}class="year-basis-row"{% endif %}>
+              <tr data-year-row data-year-row-scope="{{ row.scope }}" data-year-row-chunk="{{ forloop.parentloop.counter0 }}" {% if not row.athlete %}class="year-basis-row"{% endif %}>
                 <td class="year-name-cell">
                   <div class="year-name-main">{{ row.label }}</div>
                   {% if not year_planner_read_only %}

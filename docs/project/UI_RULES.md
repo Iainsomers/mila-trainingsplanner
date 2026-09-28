@@ -53,6 +53,7 @@ Laatst inhoudelijk gecontroleerd: 28 september 2026.
 ## Year Planner
 
 - Stacked layout is standaard; één, drie of twaalf maanden bepalen de breedte van een stuk.
+- Toon na keuze van een Trainer Planning-groep de aparte `Basis - groepsnaam`-planningsrij direct onder `All`; deze keuze is alleen voor trainers zichtbaar. Toon bij de algemene groepskeuze `All` geen gedeelde Basis.
 - Houd atleetnamen klein en rijen stabiel van hoogte. Gebruik geen lege placeholder-strepen.
 - Whereabouts zijn doorlopende, benoemde ranges. Overlap wordt visueel als diagonale kleurverdeling getoond; de belangrijkste zichtbare naam blijft leesbaar.
 - Toon alleen rij-kopieeracties voor de actieve laag: Training of Whereabouts. Plakken werkt alleen binnen het zichtbare periodeblok.

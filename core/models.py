@@ -457,6 +457,13 @@ class YearPlannerEntry(models.Model):
         on_delete=models.CASCADE,
         related_name="year_planner_entries",
     )
+    basis_plan = models.ForeignKey(
+        TrainingPlan,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="year_planner_basis_entries",
+    )
     date = models.DateField()
     training_type = models.CharField(max_length=20, choices=TRAINING_CHOICES, blank=True, default="")
     whereabouts_type = models.CharField(max_length=20, choices=WHEREABOUTS_CHOICES, blank=True, default="")
@@ -471,15 +478,15 @@ class YearPlannerEntry(models.Model):
                 name="unique_year_planner_entry_per_owner_athlete_date",
             ),
             models.UniqueConstraint(
-                fields=["owner", "date"],
-                condition=Q(athlete__isnull=True),
-                name="unique_year_planner_base_entry_per_owner_date",
+                fields=["owner", "basis_plan", "date"],
+                condition=Q(athlete__isnull=True, basis_plan__isnull=False),
+                name="unique_year_planner_base_entry_per_plan_date",
             ),
         ]
         ordering = ["owner_id", "athlete__name", "date"]
 
     def __str__(self) -> str:
-        label = self.athlete.name if self.athlete_id else "Basis"
+        label = self.athlete.name if self.athlete_id else f"Basis - {self.basis_plan or 'legacy'}"
         return f"{label} · {self.date}"
 
 
@@ -497,6 +504,13 @@ class YearPlannerWhereabout(models.Model):
         blank=True,
         on_delete=models.CASCADE,
         related_name="year_planner_whereabouts",
+    )
+    basis_plan = models.ForeignKey(
+        TrainingPlan,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="year_planner_basis_whereabouts",
     )
     start_date = models.DateField()
     end_date = models.DateField()
@@ -517,7 +531,7 @@ class YearPlannerWhereabout(models.Model):
             raise ValidationError("End date cannot be before start date.")
 
     def __str__(self) -> str:
-        label = self.athlete.name if self.athlete_id else "Basis"
+        label = self.athlete.name if self.athlete_id else f"Basis - {self.basis_plan or 'legacy'}"
         return f"{label} · {self.whereabouts_type} · {self.start_date} - {self.end_date}"
 
 
