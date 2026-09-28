@@ -49,6 +49,7 @@ Laatst inhoudelijk gecontroleerd: 28 september 2026.
 - Behoud de brede tabel en volledige trainingsinformatie.
 - Trainerselectie blijft beschikbaar voor trainers.
 - Toon alle trainingsonderdelen, zones en tijden.
+- Maak toekomstige AYC-trainingen voor atleten visueel niet-bewerkbaar; de coach behoudt de bewerkactie.
 
 ## Trainer Planner
 

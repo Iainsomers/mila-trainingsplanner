@@ -56,6 +56,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Training en Evaluation hebben beide een zichtbare knop `Open`.
 - Trainingen openen in een op mobiel beeldvullende popup, maar niet groter dan het scherm.
 - Bestaande AM- én PM-trainingen worden vooraf ingevuld in de popup.
+- In de AYC zijn toekomstige trainingen voor atleten alleen-lezen; coaches kunnen ook vooruit trainingen aanpassen.
 - Een groen vinkje toont dat alle evaluaties van die dag zijn voltooid.
 - Bij een atleet verschijnt voor niet-geëvalueerde trainingen van gisteren tot maximaal zes dagen geleden automatisch een popup. De huidige dag en oudere trainingen worden genegeerd.
 - Op mobiele AYC kan een atleet bij Comment op de microfoon drukken om Nederlands commentaar in te spreken. Nogmaals drukken stopt de opname; tussenresultaten mogen bestaande woorden niet dupliceren.

@@ -883,7 +883,6 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
 
     d = date_cls(int(yyyy), int(mm), int(dd))
     slot_index = int(slot_index)
-
     athlete = _get_selected_athlete_from_request(request)
     if not athlete:
         athlete = _get_flex_athlete_from_request(request, selected_plan)
@@ -950,7 +949,6 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
 
     d = date_cls(int(yyyy), int(mm), int(dd))
     slot_index = int(slot_index)
-
     athlete = _get_selected_athlete_from_request(request)
     if not athlete:
         athlete = _get_flex_athlete_from_request(request, selected_plan)
@@ -1121,6 +1119,17 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     d = date_cls(int(yyyy), int(mm), int(dd))
     slot_index = int(slot_index)
 
+    athlete_year_can_edit_training = not (
+        is_athlete_year_calendar
+        and not (request.user.is_staff or request.user.is_superuser)
+        and d > date_cls.today()
+    )
+
+    # Athletes may only change today's or earlier training in the AYC. Keep
+    # this server-side guard even when a client calls the endpoint directly.
+    if is_athlete_year_calendar and not athlete_year_can_edit_training and request.method == "POST":
+        return HttpResponse("Future training can only be edited by a coach.", status=403)
+
     # Trainingsbuilder toggles (uit session)
     tb_show_wu = _tb_flag(request, "tb_show_wu", True)
     tb_show_mob = _tb_flag(request, "tb_show_mob", True)
@@ -1193,6 +1202,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "selected_athlete": athlete,
                 "is_override": bool(has_fix),
                 "is_athlete_year_calendar": is_athlete_year_calendar,
+                "athlete_year_can_edit_training": athlete_year_can_edit_training,
                 "saved_templates": _saved_templates_for_user(request),
                 "selected_template_id": "",
                 "template_name": "",

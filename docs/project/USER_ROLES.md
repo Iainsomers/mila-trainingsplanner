@@ -55,6 +55,7 @@ Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-inst
 
 - De trainer kan een atleet selecteren.
 - De atleet ziet automatisch uitsluitend zichzelf.
+- In de AYC kan een atleet alleen trainingen van vandaag en eerdere dagen aanpassen; toekomstige trainingen zijn alleen door de coach te wijzigen.
 - De trainer bepaalt hoeveel toekomstige trainingsweken voor de atleet zichtbaar zijn.
 - Wedstrijden mogen verder vooruit zichtbaar blijven dan trainingen.
 - Rapporten en Daily vitals zijn alleen zichtbaar wanneer ze voor die atleet zijn ingeschakeld.

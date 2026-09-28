@@ -2920,6 +2920,51 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(open_response.status_code, 200)
         self.assertContains(open_response, f'value="{flex_plan.id}"')
 
+    def test_athlete_cannot_edit_future_training_in_ayc_slot_modal(self):
+        coach = get_user_model().objects.create_user(
+            username="future-ayc-coach", password="secret", is_staff=True
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="Future AYC Athlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="Future AYC Athlete", birth_year=2000, gender="X"
+        )
+        plan = TrainingPlan.objects.create(owner=coach, name="Future AYC plan")
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        future_day = date.today() + timedelta(days=1)
+
+        self.client.force_login(athlete_user)
+        response = self.client.post(
+            f"/slot-modal/{future_day:%Y/%m/%d}/1/?athlete={athlete.id}&plan={plan.id}&source=athlete_year",
+            {
+                "athlete": str(athlete.id),
+                "plan": str(plan.id),
+                "source": "athlete_year",
+                "core_text": "1000m z3",
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(
+            TrainingSlot.objects.filter(athlete=athlete, date=future_day, slot_index=1).exists()
+        )
+
+        self.client.force_login(coach)
+        coach_response = self.client.post(
+            f"/slot-modal/{future_day:%Y/%m/%d}/1/?athlete={athlete.id}&plan={plan.id}&source=athlete_year",
+            {
+                "athlete": str(athlete.id),
+                "plan": str(plan.id),
+                "source": "athlete_year",
+                "core_text": "1000m z3",
+            },
+        )
+        self.assertEqual(coach_response.status_code, 200)
+        self.assertTrue(
+            TrainingSlot.objects.filter(athlete=athlete, date=future_day, slot_index=1).exists()
+        )
+
     def test_athlete_year_pm_training_contains_modal_prefill_values(self):
         template_path = get_template("core/athlete_year_calendar.html").origin.name
         template_source = Path(template_path).read_text(encoding="utf-8")

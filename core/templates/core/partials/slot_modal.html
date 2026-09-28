@@ -100,7 +100,7 @@
               <div class="mb-2 compact-field">
                 <label class="form-label"><b>WU</b></label>
                 <textarea name="wu_text" class="form-control" rows="2"
-                  placeholder="">{{ wu_text }}</textarea>
+                  placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ wu_text }}</textarea>
 
                 {% if wu_feedback %}
                   <div class="small compact-feedback {% if wu_ok %}text-success{% else %}text-danger{% endif %}">
@@ -114,7 +114,7 @@
               {% if tb_show_mob %}
               <div class="mb-2 compact-field">
                 <label class="form-label"><b>Mob / Tech</b></label>
-                <select name="standard_strength_id" class="form-select form-select-sm mb-1">
+                <select name="standard_strength_id" class="form-select form-select-sm mb-1"{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} disabled{% endif %}>
                   <option value="">Free text</option>
                   {% for program in standard_strength_programs %}
                     <option value="{{ program.id }}" {% if selected_standard_strength_id|stringformat:"s" == program.id|stringformat:"s" %}selected{% endif %}>
@@ -123,7 +123,7 @@
                   {% endfor %}
                 </select>
                 <textarea name="mob_text" class="form-control" rows="2"
-                  placeholder="">{{ mob_text }}</textarea>
+                  placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ mob_text }}</textarea>
               </div>
               {% endif %}
 
@@ -131,8 +131,8 @@
               {% if tb_show_sprint %}
               <div class="mb-2 compact-field">
                 <label class="form-label"><b>Sprint Z6</b></label>
-                <textarea name="sprint_text" class="form-control" rows="2"
-                  placeholder="">{{ sprint_text }}</textarea>
+                  <textarea name="sprint_text" class="form-control" rows="2"
+                    placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ sprint_text }}</textarea>
 
                 {% if sprint_feedback %}
                   <div class="small compact-feedback {% if sprint_ok %}text-success{% else %}text-danger{% endif %}">
@@ -151,7 +151,7 @@
                 <div class="mb-2 compact-field">
                   <label class="form-label"><b>Main 2</b></label>
                   <textarea name="core2_text" class="form-control" rows="2"
-                    placeholder="">{{ core2_text }}</textarea>
+                    placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ core2_text }}</textarea>
 
                   {% if core2_feedback %}
                     <div class="small compact-feedback {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
@@ -177,7 +177,7 @@
               <div class="mb-2 compact-field compact-field-wide">
                 <label class="form-label"><b>Main</b></label>
                 <textarea name="core_text" class="form-control compact-tall" rows="3"
-                  placeholder="">{{ core_text }}</textarea>
+                  placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ core_text }}</textarea>
 
                 {% if core_feedback %}
                   <div class="small compact-feedback {% if core_ok %}text-success{% else %}text-danger{% endif %}">
@@ -190,7 +190,7 @@
               <div class="mb-2 compact-field">
                 <label class="form-label"><b>Alternative</b></label>
                 <textarea name="alt_text" class="form-control compact-tall" rows="3"
-                  placeholder="">{{ alt_text }}</textarea>
+                  placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ alt_text }}</textarea>
 
                 {% if alt_feedback %}
                   <div class="small compact-feedback {% if alt_ok %}text-success{% else %}text-danger{% endif %}">
@@ -204,7 +204,7 @@
               <div class="mb-2 compact-field">
                 <label class="form-label"><b>CD</b></label>
                 <textarea name="cd_text" class="form-control" rows="2"
-                  placeholder="">{{ cd_text }}</textarea>
+                  placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ cd_text }}</textarea>
 
                 {% if cd_feedback %}
                   <div class="small compact-feedback {% if cd_ok %}text-success{% else %}text-danger{% endif %}">
@@ -267,6 +267,9 @@
               {% endif %}
 
               <div class="d-flex justify-content-end gap-2 compact-actions">
+                {% if is_athlete_year_calendar and not athlete_year_can_edit_training %}
+                  <span class="small text-secondary me-auto align-self-center">Future training can only be edited by your coach.</span>
+                {% endif %}
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
                   Cancel
                 </button>
@@ -298,9 +301,11 @@
                 </button>
                 {% endif %}
 
-                <button type="submit" class="btn btn-sm btn-primary">
-                  Save
-                </button>
+                {% if not is_athlete_year_calendar or athlete_year_can_edit_training %}
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    Save
+                  </button>
+                {% endif %}
               </div>
             </form>
       </div>

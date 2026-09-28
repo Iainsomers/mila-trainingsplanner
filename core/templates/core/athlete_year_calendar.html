@@ -2587,6 +2587,12 @@
   var activeSlotDate = "";
   var activeSlotIndex = "";
   var activePlanId = "";
+  var aycCoachUser = {{ is_coach_user|yesno:"true,false" }};
+  var aycToday = "{{ today|date:'Y-m-d' }}";
+
+  function aycTrainingIsEditable(dateValue) {
+    return aycCoachUser || !dateValue || dateValue <= aycToday;
+  }
 
   function getCookie(name) {
     var value = null;
@@ -2657,7 +2663,7 @@
     var plan = el.getAttribute("data-plan-id") || "";
     var athlete = "{{ selected_athlete_id }}";
 
-    if (!date || !slotIndex) return;
+    if (!date || !slotIndex || !aycTrainingIsEditable(date)) return;
 
     activeSlotDate = date;
     activeSlotIndex = slotIndex;
@@ -2699,6 +2705,12 @@
   }
 
   window.openAycSlotModal = openSlotModal;
+
+  document.querySelectorAll(".slotbox[data-date]").forEach(function(box) {
+    if (!aycTrainingIsEditable(box.getAttribute("data-date"))) {
+      box.classList.add("disabled");
+    }
+  });
 
   document.addEventListener("click", function(event) {
     var strengthLink = event.target.closest("[data-strength-href]");
