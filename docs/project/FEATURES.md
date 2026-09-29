@@ -42,6 +42,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Toont de effectieve planning per geselecteerde atleet.
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
+- Toont bij zoneonderdelen waarvoor een handmatige Z1/Z2/Z3-HR is ingevuld ook de toepasselijke HR naast de richttijd.
 - Haalt weekphase-kleuren uit de Year Planner. Meerdere fases in één week worden diagonaal gecombineerd; de oude weektype-dropdown bestaat niet meer.
 
 ## Athlete Year Calendar (AYC)
@@ -52,6 +53,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - De huidige week is geel en de huidige dag donkerder geel.
 - Weektype staat als gekleurde pil.
 - `Total` en de zoneverdeling tonen het berekende weektotaal.
+- Zoneonderdelen tonen naast de indicatieve tijd de handmatige HR-grens wanneer die voor de atleet is ingevuld.
 - AM en PM worden afzonderlijk getoond.
 - Training en Evaluation hebben beide een zichtbare knop `Open`.
 - Trainingen openen in een op mobiel beeldvullende popup, maar niet groter dan het scherm.

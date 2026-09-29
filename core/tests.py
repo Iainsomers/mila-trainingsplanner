@@ -11,7 +11,7 @@ from django.template.loader import get_template
 from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
-from core.views.calendar import _ayc_slot_loads_for_totals, _segment_rep_time_label, _virtual_slot_from_base_training
+from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _planned_interval_structure,
@@ -2978,6 +2978,53 @@ class SlotModalSaveTests(TestCase):
 
 
 class SegmentRepTimeDisplayTests(TestCase):
+    def test_zone_hr_label_uses_manual_zone_heart_rate(self):
+        athlete = Athlete.objects.create(
+            name="HR Runner",
+            birth_year=2000,
+            gender="X",
+            zone_hr_bpm={"1": 145, "2": 160, "3": 172},
+        )
+        segment = TrainingSegment(type="CORE", text="20' z2", zone="2", duration_s=1200)
+
+        self.assertEqual(_segment_hr_label(athlete, segment), "HR160")
+
+    def test_zone_hr_label_lists_distinct_zones_for_compound_segment(self):
+        athlete = Athlete.objects.create(
+            name="Compound HR Runner",
+            birth_year=2000,
+            gender="X",
+            zone_hr_bpm={"1": 145, "2": 160, "3": 172},
+        )
+        segment = TrainingSegment(
+            type="CORE",
+            text="4*(300m z2-100m z1)",
+            zone="2",
+        )
+
+        self.assertEqual(_segment_hr_label(athlete, segment), "HR160/HR145")
+
+    def test_display_text_includes_hr_next_to_indicative_time(self):
+        athlete = Athlete.objects.create(
+            name="Displayed HR Runner",
+            birth_year=2000,
+            gender="X",
+            zone_speed_mps={"2": 1000 / 300},
+            zone_hr_bpm={"2": 160},
+        )
+        segment = TrainingSegment(type="CORE", text="20' z2", zone="2", duration_s=1200)
+
+        class Segments:
+            def all(self):
+                return [segment]
+
+        class Slot:
+            segments = Segments()
+
+        _annotate_slot_segment_display_times(Slot(), athlete)
+
+        self.assertEqual(segment.display_text, "20' z2 (5:00 min/km; HR160)")
+
     def test_compound_reps_show_split_times_for_current_and_goal_pr(self):
         athlete = Athlete.objects.create(
             name="Runner",

@@ -2039,6 +2039,39 @@ def _segment_rep_time_label(athlete, seg):
     return ""
 
 
+def _segment_hr_label(athlete, seg):
+    """Return the configured heart-rate labels for the segment's Z1-Z3 zones."""
+    if not athlete or not seg:
+        return ""
+
+    zone_labels = _segment_zone_labels(seg)
+    if not zone_labels:
+        fallback_zone = _zone_from_text(getattr(seg, "text", "") or "", "")
+        if fallback_zone:
+            zone_labels.append(fallback_zone)
+
+    configured = getattr(athlete, "zone_hr_bpm", {})
+    if not isinstance(configured, dict):
+        return ""
+
+    labels = []
+    for zone in zone_labels:
+        zone = str(zone).strip()
+        if zone not in {"1", "2", "3"}:
+            continue
+        raw_value = configured.get(zone, configured.get(f"Z{zone}"))
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            continue
+        if value <= 0:
+            continue
+        label = f"HR{value}"
+        if label not in labels:
+            labels.append(label)
+    return "/".join(labels)
+
+
 def _annotate_slot_segment_display_times(slot, athlete):
     if not slot:
         return slot
@@ -2051,7 +2084,9 @@ def _annotate_slot_segment_display_times(slot, athlete):
     for seg in segments:
         text = getattr(seg, "text", "") or ""
         label = _segment_rep_time_label(athlete, seg)
-        seg.display_text = f"{text} ({label})" if text and label else text
+        hr_label = _segment_hr_label(athlete, seg)
+        display_labels = "; ".join(part for part in (label, hr_label) if part)
+        seg.display_text = f"{text} ({display_labels})" if text and display_labels else text
     return slot
 
 

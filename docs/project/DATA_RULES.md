@@ -26,6 +26,7 @@ Laatst inhoudelijk gecontroleerd: 8 september 2026.
 - Een looponderdeel in minuten of seconden toont richttempo in min/km.
 - Omrekening en afronding moeten voor Flex Planner, AYC en DCO hetzelfde zijn.
 - Afgeleide trainingen moeten per atleet worden gekloond/geannoteerd zodat tempo's niet van een andere atleet worden hergebruikt.
+- Als voor Z1, Z2 of Z3 een handmatige HR-grens is ingevuld, tonen Flex Planner en AYC die naast de indicatieve tijd als `HR...` (bijvoorbeeld `HR160`).
 
 ## Trainingsonderdelen
 
