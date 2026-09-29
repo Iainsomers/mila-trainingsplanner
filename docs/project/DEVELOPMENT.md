@@ -22,6 +22,9 @@ De productie-instellingen zijn bewust strenger dan lokaal: op Render moet
 `SECRET_KEY` zijn ingesteld en wordt `DEBUG` standaard uitgeschakeld. Voor
 een extra domein kan `ALLOWED_HOSTS` als komma-gescheiden environment variable
 worden gezet. Lokaal vallen deze waarden terug op veilige ontwikkelwaarden.
+In productie herkent Django de Render-proxy als HTTPS, stuurt HTTP door naar
+HTTPS en markeert sessie- en CSRF-cookies als secure. HSTS blijft bewust uit
+totdat de domeinconfiguratie definitief is gecontroleerd.
 
 Voor COROS workout-pushes moeten na goedkeuring door COROS de Render-omgevingsvariabelen `COROS_PUSH_CLIENT` en `COROS_PUSH_SECRET` worden ingesteld. De publieke statuscheck heeft geen geheim nodig; de ontvangstroute weigert pushes zolang beide waarden ontbreken.
 

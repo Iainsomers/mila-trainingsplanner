@@ -25,6 +25,24 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# Render terminates TLS at its proxy.  Trust that forwarded scheme and only
+# enforce HTTPS/cookie security in production; local HTTP development remains
+# usable without extra certificates.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = _is_production
+SESSION_COOKIE_SECURE = _is_production
+CSRF_COOKIE_SECURE = _is_production
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
+_default_csrf_origins = "https://mila-trainingsplanner.onrender.com"
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", _default_csrf_origins).split(",")
+    if origin.strip()
+]
+
 
 # ========================
 # APPLICATIONS
