@@ -14,6 +14,7 @@ from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSl
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
+    _build_polar_v4_lap_suggestion,
     _planned_interval_structure,
     _parse_match_athlete_records,
     _parse_match_participants,
@@ -942,6 +943,47 @@ class PlanningOverviewTests(TestCase):
 
 
 class PolarPlanMismatchTests(TestCase):
+    def test_v4_auto_laps_are_used_when_manual_laps_are_absent(self):
+        session = {
+            "id": "auto-session",
+            "distanceMeters": 3200,
+            "durationMillis": 1200000,
+            "exercises": [{
+                "laps": {
+                    "autoLaps": [
+                        {"distanceMeters": 1000, "durationMillis": 360000},
+                        {"distanceMeters": 1000, "durationMillis": 370000},
+                        {"distanceMeters": 1000, "durationMillis": 380000},
+                    ]
+                }
+            }],
+        }
+
+        suggestion = _build_polar_v4_lap_suggestion("3km z2", [session])
+
+        self.assertIsNotNone(suggestion)
+        self.assertEqual(suggestion["mode"], "polar_v4_auto_laps")
+        self.assertEqual(suggestion["lap_source"], "automatic")
+        self.assertEqual(len(suggestion["splits"]), 3)
+        self.assertEqual(suggestion["confidence"], 0.65)
+
+    def test_v4_manual_laps_remain_preferred_over_auto_laps(self):
+        session = {
+            "id": "mixed-session",
+            "exercises": [{
+                "laps": {
+                    "laps": [{"distanceMeters": 400, "durationMillis": 90000}],
+                    "autoLaps": [{"distanceMeters": 1000, "durationMillis": 360000}],
+                }
+            }],
+        }
+
+        suggestion = _build_polar_v4_lap_suggestion("400m z3", [session])
+
+        self.assertEqual(suggestion["mode"], "polar_v4_laps")
+        self.assertEqual(suggestion["lap_source"], "manual")
+        self.assertEqual(len(suggestion["splits"]), 1)
+
     def test_planned_interval_structure_keeps_multiple_simple_repeat_blocks(self):
         structure = _planned_interval_structure("7*1000m z3 // 3*500m z3")
 

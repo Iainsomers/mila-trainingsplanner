@@ -2146,7 +2146,13 @@
     if (suggestion.zone_totals) {
       box.appendChild(renderWatchTotals(suggestion.zone_totals));
     }
-    if (suggestion.mode === "structured_unmatched" && !suggestion.zone_totals) {
+    if (suggestion.mode === "structured_unmatched" || suggestion.mode === "polar_v4_auto_laps") {
+      if (suggestion.mode === "polar_v4_auto_laps") {
+        var note = document.createElement("div");
+        note.className = "small text-muted";
+        note.textContent = "Automatic laps are shown as pace data only; they are not treated as confirmed workout blocks.";
+        box.appendChild(note);
+      }
       return box;
     }
     var use = document.createElement("button");

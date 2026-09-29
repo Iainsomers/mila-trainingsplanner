@@ -4161,6 +4161,7 @@ def polar_v4_laps_test_view(request):
             manual_laps = 0
             auto_laps = 0
             lap_preview = []
+            lap_preview_source = ""
             for session in sessions:
                 if not isinstance(session, dict):
                     continue
@@ -4168,7 +4169,10 @@ def polar_v4_laps_test_view(request):
                 manual_laps += len(laps or []) if isinstance(laps, list) else 0
                 auto_laps += len(auto or []) if isinstance(auto, list) else 0
                 if len(lap_preview) < 30:
-                    lap_preview.extend(_polar_v4_lap_preview_rows(laps, limit=30 - len(lap_preview)))
+                    preview_laps = laps if laps else auto
+                    if preview_laps:
+                        lap_preview_source = "manual" if laps else "automatic"
+                        lap_preview.extend(_polar_v4_lap_preview_rows(preview_laps, limit=30 - len(lap_preview)))
 
             polar_message = ""
             if isinstance(payload, dict):
@@ -4209,6 +4213,7 @@ def polar_v4_laps_test_view(request):
                     "session_count": len(sessions),
                     "manual_laps": manual_laps,
                     "auto_laps": auto_laps,
+                    "lap_preview_source": lap_preview_source,
                     "lap_preview": lap_preview,
                     "session_debug": "\n\n".join(_polar_v4_session_debug(session) for session in sessions[:3]),
                     "payload": pretty_payload,
@@ -4369,10 +4374,12 @@ def _build_polar_v4_lap_suggestion(plan_text, sessions, athlete=None):
         if not isinstance(session, dict):
             continue
         manual_laps, auto_laps = _polar_v4_laps_from_session(session)
-        if not manual_laps:
+        lap_source = "manual" if manual_laps else "automatic"
+        source_laps = manual_laps or auto_laps
+        if not source_laps:
             continue
         splits = []
-        for index, lap in enumerate(manual_laps, start=1):
+        for index, lap in enumerate(source_laps, start=1):
             split = _polar_v4_split_from_lap(lap, index)
             if split:
                 splits.append(split)
@@ -4384,6 +4391,7 @@ def _build_polar_v4_lap_suggestion(plan_text, sessions, athlete=None):
                 "score": score,
                 "session": session,
                 "splits": splits,
+                "lap_source": lap_source,
                 "manual_count": len(manual_laps),
                 "auto_count": len(auto_laps or []),
             }
@@ -4398,24 +4406,31 @@ def _build_polar_v4_lap_suggestion(plan_text, sessions, athlete=None):
     summary_bits = []
     if plan_text:
         summary_bits.append(f"Planned: {plan_text}")
-    summary_bits.append(
-        f"V4 manual laps: {best['manual_count']} laps"
-        + (f", {best['auto_count']} auto laps available" if best["auto_count"] else "")
-    )
+    if best["lap_source"] == "manual":
+        lap_summary = f"V4 manual laps: {best['manual_count']} laps"
+        if best["auto_count"]:
+            lap_summary += f", {best['auto_count']} auto laps available"
+    else:
+        lap_summary = (
+            f"V4 automatic laps: {best['auto_count']} laps;"
+            " automatic laps are used as a pace-based suggestion"
+        )
+    summary_bits.append(lap_summary)
     if total_distance_m > 0 and total_duration_s > 0:
         summary_bits.append(
             f"Total from laps: {total_distance_m / 1000.0:.2f} km in {_format_seconds_hms(round(total_duration_s))}"
         )
     summary_bits.append(_polar_v4_activity_label(session))
     return {
-        "mode": "polar_v4_laps",
+        "mode": "polar_v4_laps" if best["lap_source"] == "manual" else "polar_v4_auto_laps",
         "activity_id": f"polar-v4:{activity_id}",
-        "title": "V4 lap suggestion",
+        "title": "V4 lap suggestion" if best["lap_source"] == "manual" else "V4 automatic-lap suggestion",
         "summary": " | ".join(summary_bits),
         "splits": best["splits"],
         "zone_totals": _watch_zone_totals_summary(athlete, best["splits"]) if athlete else "",
-        "confidence": 0.98,
+        "confidence": 0.98 if best["lap_source"] == "manual" else 0.65,
         "ai": False,
+        "lap_source": best["lap_source"],
     }
 
 
