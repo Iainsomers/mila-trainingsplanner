@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -9,11 +10,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # ========================
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
+_is_production = bool(os.environ.get("RENDER") or os.environ.get("DATABASE_URL"))
+DEBUG = os.environ.get("DEBUG", "False").strip().lower() in {"1", "true", "yes", "on"}
 
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+_configured_secret = os.environ.get("SECRET_KEY", "").strip()
+if _is_production and not _configured_secret:
+    raise ImproperlyConfigured("SECRET_KEY must be configured in production.")
+SECRET_KEY = _configured_secret or "dev-only-secret-key"
 
-ALLOWED_HOSTS = ["*", ".onrender.com"]
+_default_hosts = "mila-trainingsplanner.onrender.com,.onrender.com,localhost,127.0.0.1,testserver"
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", _default_hosts).split(",")
+    if host.strip()
+]
 
 
 # ========================

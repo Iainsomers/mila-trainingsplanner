@@ -18,6 +18,11 @@ Gebruik de lokale virtual environment:
 & 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py test core
 ```
 
+De productie-instellingen zijn bewust strenger dan lokaal: op Render moet
+`SECRET_KEY` zijn ingesteld en wordt `DEBUG` standaard uitgeschakeld. Voor
+een extra domein kan `ALLOWED_HOSTS` als komma-gescheiden environment variable
+worden gezet. Lokaal vallen deze waarden terug op veilige ontwikkelwaarden.
+
 Voor COROS workout-pushes moeten na goedkeuring door COROS de Render-omgevingsvariabelen `COROS_PUSH_CLIENT` en `COROS_PUSH_SECRET` worden ingesteld. De publieke statuscheck heeft geen geheim nodig; de ontvangstroute weigert pushes zolang beide waarden ontbreken.
 
 De afgeleide MiLa-logo's voor COROS en de mobiele beginschermiconen worden gegenereerd met `tools/generate_mila_coros_logos.py`. Commit de gegenereerde PNG-bestanden samen met een wijziging aan deze generator.
