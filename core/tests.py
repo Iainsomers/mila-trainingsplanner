@@ -4145,3 +4145,46 @@ class HomeScreenIconTests(TestCase):
         self.assertIn('"short_name": "MiLa"', manifest)
         self.assertIn("mila-app-192x192.png", manifest)
         self.assertIn("mila-app-512x512.png", manifest)
+
+
+class AthleteZoneHeartRateTests(TestCase):
+    def test_zone_heart_rates_are_saved_and_shown_for_zones_one_to_three(self):
+        coach = get_user_model().objects.create_user(
+            username="zone-hr-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="Zone HR Athlete", birth_year=2000, gender="X"
+        )
+        self.client.force_login(coach)
+
+        response = self.client.post(
+            f"/coach/athletes/{athlete.id}/edit/",
+            {
+                "active_tab": "zones",
+                "name": athlete.name,
+                "birth_year": "2000",
+                "gender": "X",
+                "zone_method": "manual",
+                "z1_pace": "5:30",
+                "z2_pace": "5:00",
+                "z3_pace": "4:30",
+                "z4_pace": "4:00",
+                "z5_pace": "3:30",
+                "z1_hr": "130",
+                "z2_hr": "145",
+                "z3_hr": "160",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            f"/coach/athletes/{athlete.id}/edit/?tab=zones&saved=1",
+        )
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.zone_hr_bpm, {"1": 130, "2": 145, "3": 160})
+
+        page = self.client.get(f"/coach/athletes/{athlete.id}/edit/?tab=zones")
+        self.assertContains(page, 'name="z1_hr"', html=False)
+        self.assertContains(page, 'value="130"', html=False)
+        self.assertContains(page, 'value="145"', html=False)
+        self.assertContains(page, 'value="160"', html=False)

@@ -237,6 +237,10 @@ class Athlete(models.Model):
         default=default_zone_speed_mps,
         blank=True,
     )
+    zone_hr_bpm = models.JSONField(
+        default=dict,
+        blank=True,
+    )
 
     pr_800_s = models.FloatField(null=True, blank=True)
     pr_1000_s = models.FloatField(null=True, blank=True)

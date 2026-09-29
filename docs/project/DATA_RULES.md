@@ -8,6 +8,7 @@ Laatst inhoudelijk gecontroleerd: 8 september 2026.
 - Zones lopen op in snelheid: Z1 is het rustigst, Z5 het snelst.
 - De applicatie bewaart zones als snelheid in meter per seconde.
 - Z6 wordt gebruikt voor snelle/sprintonderdelen en kan uit standaardlogica komen.
+- Per atleet kunnen voor Z1, Z2 en Z3 handmatig hartslaggrenzen in bpm worden opgeslagen; lege waarden blijven leeg.
 
 ## PR- en doel-PR-formaten
 

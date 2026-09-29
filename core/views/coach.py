@@ -8127,6 +8127,9 @@ def coach_athlete_create_view(request):
         "auto_wucd_enabled": False,
         "auto_wu_m": 0,
         "auto_cd_m": 0,
+        "z1_hr": "",
+        "z2_hr": "",
+        "z3_hr": "",
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -8168,6 +8171,8 @@ def coach_athlete_create_view(request):
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
+        for z in ("1", "2", "3"):
+            form[f"z{z}_hr"] = (request.POST.get(f"z{z}_hr") or "").strip()
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -8207,6 +8212,19 @@ def coach_athlete_create_view(request):
 
         auto_wu_m = _clean_non_negative_int(form["auto_wu_m"])
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
+
+        zone_hr_bpm = {}
+        for z in ("1", "2", "3"):
+            raw_hr = form[f"z{z}_hr"]
+            if not raw_hr:
+                continue
+            try:
+                value_hr = int(raw_hr)
+                if value_hr < 0:
+                    raise ValueError
+                zone_hr_bpm[z] = value_hr
+            except (TypeError, ValueError):
+                errors.append(f"Z{z} HR must be a non-negative whole number.")
 
         try:
             pr_600_s = _parse_pr_time_to_seconds(form["pr_600"]) if form["pr_600"] else None
@@ -8331,6 +8349,7 @@ def coach_athlete_create_view(request):
                 vdot=vdot,
                 zone_method=form["zone_method"],
                 zone_speed_mps=zone_speed_mps,
+                zone_hr_bpm=zone_hr_bpm,
                 view_weeks_ahead=view_weeks_ahead,
                 training_reports_enabled=form["training_reports_enabled"],
                 week_report_enabled=form["week_report_enabled"],
@@ -8431,6 +8450,9 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "auto_wucd_enabled": getattr(athlete, "auto_wucd_enabled", False),
         "auto_wu_m": getattr(athlete, "auto_wu_m", 0),
         "auto_cd_m": getattr(athlete, "auto_cd_m", 0),
+        "z1_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("1", ""),
+        "z2_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("2", ""),
+        "z3_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("3", ""),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -8480,6 +8502,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
+        for z in ("1", "2", "3"):
+            form[f"z{z}_hr"] = (request.POST.get(f"z{z}_hr") or "").strip()
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -8519,6 +8543,19 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
 
         auto_wu_m = _clean_non_negative_int(form["auto_wu_m"])
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
+
+        zone_hr_bpm = {}
+        for z in ("1", "2", "3"):
+            raw_hr = form[f"z{z}_hr"]
+            if not raw_hr:
+                continue
+            try:
+                value_hr = int(raw_hr)
+                if value_hr < 0:
+                    raise ValueError
+                zone_hr_bpm[z] = value_hr
+            except (TypeError, ValueError):
+                errors.append(f"Z{z} HR must be a non-negative whole number.")
 
         try:
             pr_600_s = _parse_pr_time_to_seconds(form["pr_600"]) if form["pr_600"] else None
@@ -8641,6 +8678,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.vdot = vdot
             athlete.zone_method = form["zone_method"]
             athlete.zone_speed_mps = zone_speed_mps
+            athlete.zone_hr_bpm = zone_hr_bpm
             athlete.view_weeks_ahead = view_weeks_ahead
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.week_report_enabled = form["week_report_enabled"]
