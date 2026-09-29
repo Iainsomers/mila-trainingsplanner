@@ -1,5 +1,6 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
+from core.auth import ThrottledAuthenticationForm
 
 # Import views explicitly to avoid any name collisions via views/__init__.py
 from core.views.coach import (
@@ -102,7 +103,14 @@ from core.views.coros import coros_status_view, coros_workout_push_view
 
 urlpatterns = [
     # Login / Logout
-    path("login/", auth_views.LoginView.as_view(template_name="core/login.html"), name="login"),
+    path(
+        "login/",
+        auth_views.LoginView.as_view(
+            template_name="core/login.html",
+            authentication_form=ThrottledAuthenticationForm,
+        ),
+        name="login",
+    ),
     path("logout/", auth_views.LogoutView.as_view(next_page="/login/"), name="logout"),
 
     # Dashboard / settings

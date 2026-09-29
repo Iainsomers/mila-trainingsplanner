@@ -1,5 +1,8 @@
 from django.contrib import admin
 from core.models import Athlete, CoachAccess
+from core.auth import ThrottledAdminAuthenticationForm
+
+admin.site.login_form = ThrottledAdminAuthenticationForm
 
 
 @admin.register(CoachAccess)

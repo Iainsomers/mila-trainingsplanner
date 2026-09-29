@@ -25,6 +25,9 @@ worden gezet. Lokaal vallen deze waarden terug op veilige ontwikkelwaarden.
 In productie herkent Django de Render-proxy als HTTPS, stuurt HTTP door naar
 HTTPS en markeert sessie- en CSRF-cookies als secure. HSTS blijft bewust uit
 totdat de domeinconfiguratie definitief is gecontroleerd.
+De gewone en Admin-login tellen mislukte pogingen kortstondig per IP en
+gebruikersnaam. Na vijf fouten volgt tijdelijk een algemene melding; er is
+geen permanente account-lockout.
 
 Voor COROS workout-pushes moeten na goedkeuring door COROS de Render-omgevingsvariabelen `COROS_PUSH_CLIENT` en `COROS_PUSH_SECRET` worden ingesteld. De publieke statuscheck heeft geen geheim nodig; de ontvangstroute weigert pushes zolang beide waarden ontbreken.
 

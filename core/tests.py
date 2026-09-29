@@ -1306,6 +1306,8 @@ class YearPlannerTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+
         self.assertTrue(response.context["show_basis"])
         self.assertTrue(any(row["scope"] == f"basis-plan-{plan.id}" for row in response.context["rows"]))
         self.assertContains(response, "Basis - Basis group")
@@ -1624,6 +1626,64 @@ class YearPlannerTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Year Athlete")
         self.assertNotContains(response, "Other Athlete")
+
+
+class LoginThrottleTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = get_user_model().objects.create_user(
+            username="login-user",
+            password="correct-password-123",
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_valid_login_still_works(self):
+        response = self.client.post(
+            "/login/",
+            {"username": "login-user", "password": "correct-password-123"},
+        )
+        self.assertRedirects(response, "/", fetch_redirect_response=False)
+
+    def test_repeated_failures_are_temporarily_throttled(self):
+        request_kwargs = {"HTTP_X_FORWARDED_FOR": "198.51.100.20"}
+        for _ in range(5):
+            response = self.client.post(
+                "/login/",
+                {"username": "login-user", "password": "wrong-password"},
+                **request_kwargs,
+            )
+            self.assertEqual(response.status_code, 200)
+        response = self.client.post(
+            "/login/",
+            {"username": "login-user", "password": "correct-password-123"},
+            **request_kwargs,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(any(
+            "Too many unsuccessful login attempts" in error
+            for error in response.context["form"].non_field_errors()
+        ))
+
+    def test_admin_login_uses_the_same_throttle(self):
+        request_kwargs = {"HTTP_X_FORWARDED_FOR": "198.51.100.21"}
+        for _ in range(5):
+            self.client.post(
+                "/admin/login/",
+                {"username": "login-user", "password": "wrong-password", "next": "/admin/"},
+                **request_kwargs,
+            )
+        response = self.client.post(
+            "/admin/login/",
+            {"username": "login-user", "password": "correct-password-123", "next": "/admin/"},
+            **request_kwargs,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(any(
+            "Too many unsuccessful login attempts" in error
+            for error in response.context["form"].non_field_errors()
+        ))
 
 
 class SlotModalSaveTests(TestCase):
