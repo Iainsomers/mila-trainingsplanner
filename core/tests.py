@@ -2850,6 +2850,56 @@ class SlotModalSaveTests(TestCase):
         slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date=day, slot_index=1)
         self.assertEqual(slot.core_text(), "1000m z2")
 
+    def test_edit_access_coach_can_save_shared_ayc_training(self):
+        owner = get_user_model().objects.create_user(
+            username="ayc-shared-owner", password="secret", is_staff=True
+        )
+        shared_coach = get_user_model().objects.create_user(
+            username="ayc-shared-edit-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="Shared AYC Athlete",
+            birth_year=2000,
+            gender="X",
+            is_private=False,
+        )
+        plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="Shared AYC plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        day = date.today()
+        TrainingSlot.objects.create(plan=plan, date=day, slot_index=1)
+        CoachAccess.objects.create(owner=owner, grantee=shared_coach, can_edit=True)
+
+        self.client.force_login(shared_coach)
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
+        page = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}"
+        )
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Shared AYC Athlete")
+        self.assertContains(page, 'var aycCoachUser = true;', html=False)
+
+        response = self.client.post(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "plan": str(plan.id),
+                "slot_text": "1000m z2",
+                "core_text": "1000m z2",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        saved = TrainingSlot.objects.get(
+            plan=plan, athlete=athlete, date=day, slot_index=1
+        )
+        self.assertEqual(saved.core_text(), "1000m z2")
+
     def test_flex_modal_uses_flex_plan_when_source_plan_is_trainer_planning(self):
         owner = get_user_model().objects.create_user(
             username="flex-source-owner", password="secret", is_staff=True

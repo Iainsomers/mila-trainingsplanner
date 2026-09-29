@@ -2588,10 +2588,11 @@
   var activeSlotIndex = "";
   var activePlanId = "";
   var aycCoachUser = {{ is_coach_user|yesno:"true,false" }};
+  var aycCoachCanEdit = {{ coach_can_edit_training|yesno:"true,false" }};
   var aycToday = "{{ today|date:'Y-m-d' }}";
 
   function aycTrainingIsEditable(dateValue) {
-    return aycCoachUser || !dateValue || dateValue <= aycToday;
+    return aycCoachCanEdit || (!aycCoachUser && (!dateValue || dateValue <= aycToday));
   }
 
   function getCookie(name) {
@@ -2707,7 +2708,7 @@
   window.openAycSlotModal = openSlotModal;
 
   document.querySelectorAll(".slotbox[data-date]").forEach(function(box) {
-    if (aycCoachUser) {
+    if (aycCoachCanEdit) {
       box.classList.remove("disabled");
     } else if (!aycTrainingIsEditable(box.getAttribute("data-date"))) {
       box.classList.add("disabled");

@@ -41,6 +41,7 @@ from .common import (
     _apply_parse_to_segment,
     _compute_norm_distance_m,
     _active_coach_user,
+    _active_coach_can_edit,
     _is_coach_user,
 )
 
@@ -2629,6 +2630,16 @@ def athlete_year_calendar_view(request):
                 d = date.fromisoformat(date_str)
                 today = date.today()
 
+                # Shared coaches retain the AYC editing rules of their
+                # selected coach: view-only access must never write, while
+                # edit access may change past, current, and future training.
+                coach_can_edit_training = bool(
+                    _is_coach_user(request.user)
+                    and _active_coach_can_edit(request)
+                )
+                if _is_coach_user(request.user) and not coach_can_edit_training:
+                    return HttpResponse("", status=403)
+
                 slot_text = request.POST.get("slot_text")
 
                 if slot_text is not None:
@@ -2844,6 +2855,9 @@ def athlete_year_calendar_view(request):
     show_daily_vitals = bool(selected_athlete and getattr(selected_athlete, "daily_vitals_enabled", False))
     ayc_rowspan = 2 + (1 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
     is_coach_user = _is_coach_user(request.user)
+    coach_can_edit_training = bool(
+        is_coach_user and _active_coach_can_edit(request)
+    )
     visible_until_date = None
     if athlete_self_view:
         try:
@@ -3432,6 +3446,7 @@ def athlete_year_calendar_view(request):
             "show_daily_vitals": show_daily_vitals,
             "ayc_rowspan": ayc_rowspan,
             "is_coach_user": is_coach_user,
+            "coach_can_edit_training": coach_can_edit_training,
             "zones_times_rows": _build_zones_times_rows(selected_athlete),
             "pending_evaluation_reminders": pending_evaluation_reminders,
         },

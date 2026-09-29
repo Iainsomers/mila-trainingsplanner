@@ -1120,10 +1120,12 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     d = date_cls(int(yyyy), int(mm), int(dd))
     slot_index = int(slot_index)
 
-    athlete_year_can_edit_training = not (
-        is_athlete_year_calendar
-        and not _is_coach_user(request.user)
-        and d > date_cls.today()
+    is_coach_user = _is_coach_user(request.user)
+    coach_can_edit_training = bool(is_coach_user and _active_coach_can_edit(request))
+    athlete_year_can_edit_training = (
+        coach_can_edit_training
+        if is_athlete_year_calendar and is_coach_user
+        else (d <= date_cls.today() if is_athlete_year_calendar else True)
     )
 
     # Athletes may only change today's or earlier training in the AYC. Keep
