@@ -325,6 +325,20 @@ def _active_coach_can_edit(request):
     return bool(access and access.can_edit)
 
 
+def _can_edit_coach_owner(request, owner_id):
+    """Return whether the logged-in coach may write data owned by owner_id."""
+    user = request.user
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if owner_id == getattr(user, "id", None):
+        return True
+    return CoachAccess.objects.filter(
+        owner_id=owner_id,
+        grantee=user,
+        can_edit=True,
+    ).exists()
+
+
 def _active_coach_access_label(request):
     active_owner = _active_coach_user(request)
     if active_owner.id == request.user.id:

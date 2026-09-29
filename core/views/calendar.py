@@ -42,6 +42,7 @@ from .common import (
     _compute_norm_distance_m,
     _active_coach_user,
     _active_coach_can_edit,
+    _can_edit_coach_owner,
     _is_coach_user,
 )
 
@@ -2045,9 +2046,21 @@ def _segment_hr_label(athlete, seg):
     if not athlete or not seg:
         return ""
 
+    text = getattr(seg, "text", "") or ""
     zone_labels = _segment_zone_labels(seg)
+    progressive_match = re.search(
+        r"\bz\s*([1-6])\s*>\s*z?\s*([1-6])\b",
+        text,
+        re.IGNORECASE,
+    )
+    is_progressive = bool(progressive_match)
+    if progressive_match:
+        start_zone = int(progressive_match.group(1))
+        end_zone = int(progressive_match.group(2))
+        step = 1 if end_zone >= start_zone else -1
+        zone_labels = [str(zone) for zone in range(start_zone, end_zone + step, step)]
     if not zone_labels:
-        fallback_zone = _zone_from_text(getattr(seg, "text", "") or "", "")
+        fallback_zone = _zone_from_text(text, "")
         if fallback_zone:
             zone_labels.append(fallback_zone)
 
@@ -2070,7 +2083,7 @@ def _segment_hr_label(athlete, seg):
         label = f"HR{value}"
         if label not in labels:
             labels.append(label)
-    return "/".join(labels)
+    return "-->".join(labels) if is_progressive else "/".join(labels)
 
 
 def _annotate_slot_segment_display_times(slot, athlete):
@@ -2381,6 +2394,17 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if request.user.is_staff:
         owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request))
+        # A shared edit grant is tied to the selected athlete's owner, not
+        # necessarily to the currently selected dashboard owner.
+        requested_plan_id = (request.POST.get("plan") or request.GET.get("plan") or "").strip()
+        if requested_plan_id.isdigit():
+            requested_plan = TrainingPlan.objects.filter(id=int(requested_plan_id)).first()
+            if (
+                requested_plan
+                and _can_edit_coach_owner(request, requested_plan.owner_id)
+                and requested_plan not in owned_plans
+            ):
+                owned_plans.append(requested_plan)
     else:
         owned_plans = list(TrainingPlan.objects.order_by("name"))
 
@@ -2635,7 +2659,7 @@ def athlete_year_calendar_view(request):
                 # edit access may change past, current, and future training.
                 coach_can_edit_training = bool(
                     _is_coach_user(request.user)
-                    and _active_coach_can_edit(request)
+                    and _can_edit_coach_owner(request, athlete.owner_id)
                 )
                 if _is_coach_user(request.user) and not coach_can_edit_training:
                     return HttpResponse("", status=403)
@@ -2856,7 +2880,9 @@ def athlete_year_calendar_view(request):
     ayc_rowspan = 2 + (1 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
     is_coach_user = _is_coach_user(request.user)
     coach_can_edit_training = bool(
-        is_coach_user and _active_coach_can_edit(request)
+        is_coach_user
+        and selected_athlete
+        and _can_edit_coach_owner(request, selected_athlete.owner_id)
     )
     visible_until_date = None
     if athlete_self_view:

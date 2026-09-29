@@ -37,6 +37,7 @@ from .common import (
     _get_effective_slot,
     _active_coach_user,
     _active_coach_can_edit,
+    _can_edit_coach_owner,
     _is_coach_user,
 )
 
@@ -52,6 +53,8 @@ def _forbid_if_not_plan_owner(request, plan):
             and owner_id == getattr(active_owner, "id", None)
             and _active_coach_can_edit(request)
         ):
+            return None
+        if _can_edit_coach_owner(request, owner_id):
             return None
         return HttpResponse("Forbidden", status=403)
     return None
@@ -84,7 +87,14 @@ def _flex_edit_plan_for_request(request, selected_plan, athlete):
 
     owner = None
     if request.user.is_staff or request.user.is_superuser:
-        owner = _active_coach_user(request)
+        if selected_plan and _can_edit_coach_owner(request, getattr(selected_plan, "owner_id", None)):
+            owner = getattr(selected_plan, "owner", None)
+        if owner is None and athlete is not None and _can_edit_coach_owner(
+            request, getattr(athlete, "owner_id", None)
+        ):
+            owner = getattr(athlete, "owner", None)
+        if owner is None:
+            owner = _active_coach_user(request)
     if owner is None and athlete is not None:
         owner = getattr(athlete, "owner", None)
     if owner is None:
@@ -1073,6 +1083,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
     if requested_plan_id.isdigit() and (_is_flex_source(request) or is_athlete_year_calendar):
         requested_plan = _filter_owned(TrainingPlan.objects.all(), request).filter(id=int(requested_plan_id)).first()
+        if not requested_plan:
+            candidate_plan = TrainingPlan.objects.filter(id=int(requested_plan_id)).first()
+            if candidate_plan and _can_edit_coach_owner(request, candidate_plan.owner_id):
+                requested_plan = candidate_plan
         if requested_plan:
             selected_plan = requested_plan
 
@@ -1121,7 +1135,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     slot_index = int(slot_index)
 
     is_coach_user = _is_coach_user(request.user)
-    coach_can_edit_training = bool(is_coach_user and _active_coach_can_edit(request))
+    coach_can_edit_training = bool(
+        is_coach_user
+        and athlete
+        and _can_edit_coach_owner(request, getattr(athlete, "owner_id", None))
+    )
     athlete_year_can_edit_training = (
         coach_can_edit_training
         if is_athlete_year_calendar and is_coach_user

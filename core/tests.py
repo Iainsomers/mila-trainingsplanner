@@ -2884,6 +2884,13 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(page, "Shared AYC Athlete")
         self.assertContains(page, 'var aycCoachUser = true;', html=False)
 
+        future_day = day + timedelta(days=2)
+        modal = self.client.get(
+            f"/slot-modal/{future_day.year}/{future_day.month}/{future_day.day}/1/?plan={plan.id}&athlete={athlete.id}&source=athlete_year"
+        )
+        self.assertEqual(modal.status_code, 200)
+        self.assertTrue(modal.context["athlete_year_can_edit_training"])
+
         response = self.client.post(
             f"/athlete/year/?year={day.year}&athlete={athlete.id}",
             {
@@ -3053,6 +3060,28 @@ class SegmentRepTimeDisplayTests(TestCase):
         )
 
         self.assertEqual(_segment_hr_label(athlete, segment), "HR160/HR145")
+
+    def test_progressive_zone_hr_label_uses_arrow(self):
+        athlete = Athlete.objects.create(
+            name="Progressive HR Runner",
+            birth_year=2000,
+            gender="X",
+            zone_hr_bpm={"1": 145, "2": 155, "3": 165},
+        )
+        segment = TrainingSegment(type="CORE", text="1000m z2>z3")
+
+        self.assertEqual(_segment_hr_label(athlete, segment), "HR155-->HR165")
+
+    def test_progressive_zone_hr_label_includes_intermediate_configured_zones(self):
+        athlete = Athlete.objects.create(
+            name="Long Progressive HR Runner",
+            birth_year=2000,
+            gender="X",
+            zone_hr_bpm={"1": 145, "2": 155, "3": 165},
+        )
+        segment = TrainingSegment(type="CORE", text="1000m z1>z4")
+
+        self.assertEqual(_segment_hr_label(athlete, segment), "HR145-->HR155-->HR165")
 
     def test_display_text_includes_hr_next_to_indicative_time(self):
         athlete = Athlete.objects.create(

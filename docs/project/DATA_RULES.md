@@ -27,6 +27,7 @@ Laatst inhoudelijk gecontroleerd: 8 september 2026.
 - Omrekening en afronding moeten voor Flex Planner, AYC en DCO hetzelfde zijn.
 - Afgeleide trainingen moeten per atleet worden gekloond/geannoteerd zodat tempo's niet van een andere atleet worden hergebruikt.
 - Als voor Z1, Z2 of Z3 een handmatige HR-grens is ingevuld, tonen Flex Planner en AYC die naast de indicatieve tijd als `HR...` (bijvoorbeeld `HR160`).
+- Bij progressieve zones gebruikt de HR-weergave dezelfde pijlnotatie als de richttijd en neemt zij tussenliggende Z1-Z3-grenzen mee; zones zonder HR, zoals Z4, worden overgeslagen.
 
 ## Trainingsonderdelen
 
