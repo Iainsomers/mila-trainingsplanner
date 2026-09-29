@@ -15,6 +15,8 @@ from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
+    _polar_v4_normalize_exercise_samples,
+    _polar_v4_sample_activities,
     _planned_interval_structure,
     _parse_match_athlete_records,
     _parse_match_participants,
@@ -943,6 +945,30 @@ class PlanningOverviewTests(TestCase):
 
 
 class PolarPlanMismatchTests(TestCase):
+    def test_v4_samples_are_normalized_for_matching(self):
+        exercise = _polar_v4_normalize_exercise_samples({
+            "distanceMeters": 1200,
+            "durationMillis": 120000,
+            "samples": {
+                "samples": [
+                    {"type": "SPEED", "intervalMillis": 1000, "values": [10, 12]},
+                    {"type": "HEART_RATE", "intervalMillis": 1000, "values": [145, 150]},
+                ],
+            },
+        })
+
+        self.assertEqual([sample["sample_type"] for sample in exercise["samples"]], ["1", "0"])
+        self.assertEqual(exercise["samples"][0]["recording_rate"], 1.0)
+        activities = _polar_v4_sample_activities([{
+            "identifier": {"id": "session-1"},
+            "sport": "RUNNING",
+            "exercises": [exercise],
+        }])
+        self.assertEqual(len(activities), 1)
+        self.assertEqual(activities[0]["distance_m"], 1200)
+        self.assertEqual(activities[0]["duration_seconds"], 120)
+        self.assertIn("samples", activities[0]["raw"])
+
     def test_v4_auto_laps_are_used_when_manual_laps_are_absent(self):
         session = {
             "id": "auto-session",

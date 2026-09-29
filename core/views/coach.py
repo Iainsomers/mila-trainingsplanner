@@ -4101,7 +4101,9 @@ def polar_v4_laps_test_view(request):
         "Accept": "application/json",
         "Authorization": f"Bearer {connection.v4_access_token}",
     }
-    features = ["laps", "pause-times", "statistics", "zones"]
+    # Samples provide the fine-grained speed/distance curve needed to detect
+    # short efforts that are not represented by Polar's automatic laps.
+    features = ["laps", "pause-times", "statistics", "zones", "samples"]
     today = date.today()
     checks = []
     found_sessions = []
@@ -4291,6 +4293,88 @@ def _polar_v4_laps_from_session(session):
     return manual, auto
 
 
+def _polar_v4_normalize_exercise_samples(exercise):
+    """Convert v4 interval samples to the legacy sample shape used by Mila.
+
+    Polar v4 returns ``samples`` as a dictionary containing typed arrays and
+    an ``intervalMillis`` value.  The existing matching code accepts the
+    older AccessLink shape (numeric sample type, recording rate and data), so
+    normalize only the in-memory copy used for analysis.
+    """
+    if not isinstance(exercise, dict):
+        return {}
+    normalized = dict(exercise)
+    source = exercise.get("samples")
+    if not isinstance(source, dict):
+        return normalized
+    converted = []
+    for sample in source.get("samples") or []:
+        if not isinstance(sample, dict):
+            continue
+        sample_type = str(sample.get("type") or "").upper()
+        if "DISTANCE" in sample_type:
+            legacy_type = "10"
+        elif "SPEED" in sample_type:
+            legacy_type = "1"
+        elif "HEART_RATE" in sample_type or sample_type in {"HR", "HEARTRATE"}:
+            legacy_type = "0"
+        else:
+            continue
+        try:
+            interval_seconds = float(sample.get("intervalMillis") or 1000) / 1000.0
+        except (TypeError, ValueError):
+            interval_seconds = 1.0
+        converted.append({
+            "sample_type": legacy_type,
+            "recording_rate": interval_seconds,
+            "data": sample.get("values") or [],
+            "source_type": sample_type,
+        })
+    normalized["samples"] = converted
+    return normalized
+
+
+def _polar_v4_sample_activities(sessions):
+    """Expose v4 exercises as watch activities for the existing matcher."""
+    activities = []
+    for session in sessions or []:
+        if not isinstance(session, dict):
+            continue
+        identifier = session.get("identifier") if isinstance(session.get("identifier"), dict) else {}
+        session_id = identifier.get("id") or session.get("id") or "polar-v4"
+        for index, raw_exercise in enumerate(session.get("exercises") or []):
+            if not isinstance(raw_exercise, dict):
+                continue
+            exercise = _polar_v4_normalize_exercise_samples(raw_exercise)
+            distance_m = exercise.get("distanceMeters", exercise.get("distance"))
+            duration_ms = exercise.get("durationMillis") or exercise.get("duration")
+            try:
+                distance_m = float(distance_m) if distance_m is not None else None
+            except (TypeError, ValueError):
+                distance_m = None
+            try:
+                duration_s = float(duration_ms) / 1000.0 if duration_ms is not None else None
+            except (TypeError, ValueError):
+                duration_s = None
+            if distance_m is None and duration_s is None:
+                continue
+            exercise["distance"] = distance_m
+            if duration_s is not None:
+                exercise["duration"] = f"PT{duration_s:g}S"
+            activities.append({
+                "id": f"polar-v4:{session_id}:{index}",
+                "start_time": exercise.get("startTime") or session.get("startTime") or "",
+                "sport": exercise.get("sport") or session.get("sport") or "",
+                "duration_seconds": duration_s,
+                "distance_m": distance_m,
+                "distance_km": round(distance_m / 1000.0, 2) if distance_m is not None else None,
+                "avg_hr": session.get("hrAvg"),
+                "max_hr": session.get("hrMax"),
+                "raw": exercise,
+            })
+    return activities
+
+
 def _polar_v4_duration_label_from_millis(value):
     try:
         millis = float(value)
@@ -4446,7 +4530,7 @@ def _polar_v4_sessions_for_day(connection, target_date):
         ("from", f"{target_date.isoformat()}T00:00:00"),
         ("to", f"{next_day.isoformat()}T00:00:00"),
     ]
-    for feature in ["laps", "pause-times", "statistics", "zones"]:
+    for feature in ["laps", "pause-times", "statistics", "zones", "samples"]:
         params.append(("features", feature))
     url = f"{POLAR_V4_TRAINING_SESSIONS_URL}?{urlencode(params)}"
     try:
@@ -4890,6 +4974,14 @@ def polar_activity_suggestions_view(request):
     analysis_activities = _watch_activities_for_plan(planned_text, activities)
     v4_sessions, v4_status = _polar_v4_sessions_for_day(connection, target_date)
     analysis_v4_sessions = _watch_v4_sessions_for_plan(planned_text, v4_sessions)
+    # v4 samples use a different response shape.  Normalize them into the
+    # same activity format as the older AccessLink endpoint so the existing
+    # structured matcher and AI prompt can use the higher-resolution curve.
+    v4_sample_activities = _polar_v4_sample_activities(analysis_v4_sessions)
+    if v4_sample_activities:
+        # Prefer the v4 representation when available; combining it with the
+        # older endpoint would analyze the same workout twice.
+        analysis_activities = _watch_activities_for_plan(planned_text, v4_sample_activities)
     v4_plan_suggestion = _build_polar_v4_lap_suggestion(planned_text, analysis_v4_sessions, athlete=athlete)
     if alternative_requested:
         alternative_suggestion = _build_alternative_watch_suggestion(
@@ -4901,7 +4993,7 @@ def polar_activity_suggestions_view(request):
             "alternative_suggestion": alternative_suggestion,
             "activities": [],
         })
-    if not activities and not v4_plan_suggestion:
+    if not activities and not v4_plan_suggestion and not v4_sample_activities:
         return JsonResponse({
             "ok": True,
             "message": v4_status or "No watch activities found for this day.",

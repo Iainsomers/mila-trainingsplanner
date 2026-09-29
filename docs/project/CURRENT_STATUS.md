@@ -23,7 +23,7 @@ Bijgewerkt: 28 september 2026.
 - Evaluations ondersteunt actieve coachvragenlijsten, gewone en matrixvragen, kopiëren vanuit bestaande lijsten, verwijderen, inklapbare lijsten en ingevulde antwoorden per atleet.
 - Coach Tools in MiLa bevat Track Timer voor 100–1600 m, doeltijdvisualisatie, drie-atletenmodus en tussentijden.
 - Parser ondersteunt T1 en T6, progressieve Z/T-ranges met tussenliggende labels, compoundblokken en pauzenotatie `p`/`sp`.
-- Polar v3/v4-integratie en reconstructies bestaan; watch matching blijft een actief ontwikkelgebied.
+- Polar v3/v4-integratie en reconstructies bestaan. Polar v4-samples worden nu naast laps opgehaald en aan de tijd/afstand-matcher doorgegeven; complexe workoutmatching blijft een actief ontwikkelgebied.
 
 ## Recente onderhoudsafspraken
 
