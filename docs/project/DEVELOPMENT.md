@@ -28,6 +28,9 @@ totdat de domeinconfiguratie definitief is gecontroleerd.
 De gewone en Admin-login tellen mislukte pogingen kortstondig per IP en
 gebruikersnaam. Na vijf fouten volgt tijdelijk een algemene melding; er is
 geen permanente account-lockout.
+Rechten voor persoonlijke atleetpagina's worden met directe-URL-regressietests
+gecontroleerd: een atleet kan niet naar de persoonlijke pagina's van een andere
+atleet overschakelen.
 
 Voor COROS workout-pushes moeten na goedkeuring door COROS de Render-omgevingsvariabelen `COROS_PUSH_CLIENT` en `COROS_PUSH_SECRET` worden ingesteld. De publieke statuscheck heeft geen geheim nodig; de ontvangstroute weigert pushes zolang beide waarden ontbreken.
 

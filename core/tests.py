@@ -4442,3 +4442,37 @@ class AthleteZoneHeartRateTests(TestCase):
         self.assertContains(page, 'value="130"', html=False)
         self.assertContains(page, 'value="145"', html=False)
         self.assertContains(page, 'value="160"', html=False)
+
+
+class SecurityAccessRegressionTests(TestCase):
+    def setUp(self):
+        self.coach = get_user_model().objects.create_user(
+            username="security-coach", password="secret", is_staff=True
+        )
+        self.alice_user = get_user_model().objects.create_user(
+            username="alice", password="secret"
+        )
+        self.bob_user = get_user_model().objects.create_user(
+            username="bob", password="secret"
+        )
+        self.alice = Athlete.objects.create(
+            owner=self.coach, name="Alice", birth_year=2000, gender="X"
+        )
+        self.bob = Athlete.objects.create(
+            owner=self.coach, name="Bob", birth_year=2001, gender="X"
+        )
+
+    def test_athlete_cannot_switch_to_another_athlete_in_personal_views(self):
+        self.client.force_login(self.alice_user)
+
+        settings_response = self.client.get("/athlete/settings/")
+        year_response = self.client.get(
+            f"/athlete/year/?year=2026&athlete={self.bob.id}"
+        )
+
+        self.assertEqual(settings_response.status_code, 200)
+        self.assertContains(settings_response, "Alice")
+        self.assertNotContains(settings_response, "Bob")
+        self.assertEqual(year_response.status_code, 200)
+        self.assertContains(year_response, "Alice")
+        self.assertNotContains(year_response, "Bob")
