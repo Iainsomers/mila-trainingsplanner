@@ -3743,6 +3743,18 @@ def _polar_v4_callback(request, code, config):
     return redirect(f"{reverse('polar_integration')}?connected=1")
 
 
+def _polar_token_metadata(token_payload):
+    """Keep diagnostic OAuth metadata, never bearer or refresh secrets."""
+    if not isinstance(token_payload, dict):
+        return {}
+    secret_keys = {"access_token", "refresh_token", "client_secret", "id_token"}
+    return {
+        str(key): value
+        for key, value in token_payload.items()
+        if str(key).lower() not in secret_keys
+    }
+
+
 def _save_polar_v4_token(connection, token_payload):
     connection.v4_access_token = token_payload.get("access_token", "")
     refresh_token = token_payload.get("refresh_token", "")
@@ -3751,7 +3763,7 @@ def _save_polar_v4_token(connection, token_payload):
     connection.v4_token_type = token_payload.get("token_type", "")
     connection.v4_expires_in = token_payload.get("expires_in")
     connection.v4_scope = token_payload.get("scope", "")
-    connection.raw_v4_token_response = token_payload if isinstance(token_payload, dict) else {}
+    connection.raw_v4_token_response = _polar_token_metadata(token_payload)
     connection.v4_connected_at = timezone.now()
     connection.status = PolarConnection.STATUS_CONNECTED
     connection.last_error = ""
@@ -3886,7 +3898,7 @@ def polar_callback_view(request):
             "scope": token_payload.get("scope", ""),
             "status": PolarConnection.STATUS_ERROR if last_error else PolarConnection.STATUS_CONNECTED,
             "last_error": last_error,
-            "raw_token_response": token_payload,
+            "raw_token_response": _polar_token_metadata(token_payload),
             "raw_user_response": register_payload if isinstance(register_payload, dict) else {},
             "connected_at": timezone.now(),
         },

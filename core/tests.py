@@ -1063,6 +1063,7 @@ class PolarPlanMismatchTests(TestCase):
         connection = PolarConnection.objects.get(user=user)
         self.assertEqual(connection.status, PolarConnection.STATUS_CONNECTED)
         self.assertEqual(connection.last_error, "")
+        self.assertNotIn("access_token", connection.raw_token_response)
 
     def test_running_plan_ignores_cycling_activity_on_same_day(self):
         activities = [
