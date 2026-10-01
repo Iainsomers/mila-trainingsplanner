@@ -25,6 +25,10 @@ worden gezet. Lokaal vallen deze waarden terug op veilige ontwikkelwaarden.
 In productie herkent Django de Render-proxy als HTTPS, stuurt HTTP door naar
 HTTPS en markeert sessie- en CSRF-cookies als secure. HSTS staat in productie
 voorzichtig aan met een termijn van één dag, zonder subdomeinen of preload.
+Aanvullend zet Django op iedere response `Referrer-Policy: same-origin`,
+`X-Content-Type-Options: nosniff` en
+`Cross-Origin-Opener-Policy: same-origin-allow-popups`. Die laatste variant
+behoudt de werking van OAuth-popups, waaronder Polar.
 De gewone en Admin-login tellen mislukte pogingen kortstondig per IP en
 gebruikersnaam. Na vijf fouten volgt tijdelijk een algemene melding; er is
 geen permanente account-lockout.

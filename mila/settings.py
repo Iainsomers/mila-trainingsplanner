@@ -33,6 +33,11 @@ SECURE_SSL_REDIRECT = _is_production
 SECURE_HSTS_SECONDS = 86400 if _is_production else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 SECURE_HSTS_PRELOAD = False
+# Keep referrers on the same origin and prevent MIME sniffing. Allowing
+# popups keeps OAuth flows (such as Polar login) compatible with the app.
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 SESSION_COOKIE_SECURE = _is_production
 CSRF_COOKIE_SECURE = _is_production
 SESSION_COOKIE_HTTPONLY = True

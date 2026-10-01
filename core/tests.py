@@ -30,6 +30,19 @@ from core.views.coach import (
 )
 
 
+class SecurityHeadersTests(TestCase):
+    def test_security_headers_are_present(self):
+        response = self.client.get("/login/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
+        self.assertEqual(response["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(
+            response["Cross-Origin-Opener-Policy"],
+            "same-origin-allow-popups",
+        )
+
+
 class TrackTimerTests(TestCase):
     def test_timer_page_is_available_from_dashboard(self):
         user = get_user_model().objects.create_user(username="timer-user", password="secret")
