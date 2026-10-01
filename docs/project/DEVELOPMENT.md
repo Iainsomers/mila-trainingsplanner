@@ -35,6 +35,10 @@ Polar OAuth bewaart tokens alleen in de daarvoor bestemde verbindingvelden;
 diagnostische tokenpayloads worden ontdaan van access- en refresh-tokens. De
 migratie ruimt die velden ook op voor bestaande verbindingen.
 
+Voer voor een dependencycontrole `pip-audit -r requirements.txt` uit. De
+productierequirements zijn op 1 oktober 2026 bijgewerkt naar versies zonder
+bekende kwetsbaarheden volgens de scan.
+
 Voor COROS workout-pushes moeten na goedkeuring door COROS de Render-omgevingsvariabelen `COROS_PUSH_CLIENT` en `COROS_PUSH_SECRET` worden ingesteld. De publieke statuscheck heeft geen geheim nodig; de ontvangstroute weigert pushes zolang beide waarden ontbreken.
 
 De afgeleide MiLa-logo's voor COROS en de mobiele beginschermiconen worden gegenereerd met `tools/generate_mila_coros_logos.py`. Commit de gegenereerde PNG-bestanden samen met een wijziging aan deze generator.
