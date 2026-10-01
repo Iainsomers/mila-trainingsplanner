@@ -30,6 +30,9 @@ ALLOWED_HOSTS = [
 # usable without extra certificates.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = _is_production
+SECURE_HSTS_SECONDS = 86400 if _is_production else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
 SESSION_COOKIE_SECURE = _is_production
 CSRF_COOKIE_SECURE = _is_production
 SESSION_COOKIE_HTTPONLY = True

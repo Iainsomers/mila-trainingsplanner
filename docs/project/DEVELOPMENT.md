@@ -23,8 +23,8 @@ De productie-instellingen zijn bewust strenger dan lokaal: op Render moet
 een extra domein kan `ALLOWED_HOSTS` als komma-gescheiden environment variable
 worden gezet. Lokaal vallen deze waarden terug op veilige ontwikkelwaarden.
 In productie herkent Django de Render-proxy als HTTPS, stuurt HTTP door naar
-HTTPS en markeert sessie- en CSRF-cookies als secure. HSTS blijft bewust uit
-totdat de domeinconfiguratie definitief is gecontroleerd.
+HTTPS en markeert sessie- en CSRF-cookies als secure. HSTS staat in productie
+voorzichtig aan met een termijn van één dag, zonder subdomeinen of preload.
 De gewone en Admin-login tellen mislukte pogingen kortstondig per IP en
 gebruikersnaam. Na vijf fouten volgt tijdelijk een algemene melding; er is
 geen permanente account-lockout.
