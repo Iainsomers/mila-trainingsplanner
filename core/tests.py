@@ -982,6 +982,76 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(planning_after, "Details Camps")
         self.assertEqual(self.client.get("/planning/detailed-camps/").status_code, 200)
 
+    def test_detailed_camps_group_athletes_and_coaches_by_name(self):
+        coach = get_user_model().objects.create_user(
+            username="camp-overview-coach",
+            password="secret",
+            is_staff=True,
+        )
+        accessible_coach = get_user_model().objects.create_user(
+            username="camp-accessible-coach",
+            password="secret",
+            is_staff=True,
+        )
+        CoachAccess.objects.create(owner=accessible_coach, grantee=coach, can_edit=True)
+        CoachSettings.objects.create(user=coach, detailed_camps_enabled=True)
+        first_athlete = Athlete.objects.create(
+            owner=coach,
+            name="Camp Athlete One",
+            birth_year=2000,
+            gender="X",
+        )
+        second_athlete = Athlete.objects.create(
+            owner=coach,
+            name="Camp Athlete Two",
+            birth_year=2000,
+            gender="X",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=first_athlete,
+            start_date=date(2026, 10, 7),
+            end_date=date(2026, 11, 4),
+            whereabouts_type="camp",
+            note="Font R",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=second_athlete,
+            start_date=date(2026, 10, 7),
+            end_date=date(2026, 11, 5),
+            whereabouts_type="camp",
+            note=" font   r ",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=coach,
+            start_date=date(2026, 10, 6),
+            end_date=date(2026, 11, 5),
+            whereabouts_type="camp",
+            note="FONT R",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=accessible_coach,
+            start_date=date(2026, 10, 8),
+            end_date=date(2026, 11, 3),
+            whereabouts_type="camp",
+            note="Font R",
+        )
+        self.client.force_login(coach)
+
+        overview = self.client.get("/planning/detailed-camps/")
+        self.assertEqual(overview.status_code, 200)
+        self.assertEqual(overview.context["camps"][0]["participant_count"], 4)
+        self.assertContains(overview, "Font R")
+
+        detail = self.client.get("/planning/detailed-camps/camp/?camp=font+r")
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, "Camp Athlete One")
+        self.assertContains(detail, "Camp Athlete Two")
+        self.assertContains(detail, "camp-overview-coach")
+        self.assertContains(detail, "camp-accessible-coach")
+        self.assertContains(detail, "05 Nov 2026")
+
 
 class PolarPlanMismatchTests(TestCase):
     def test_v4_samples_are_normalized_for_matching(self):

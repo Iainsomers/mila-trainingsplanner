@@ -1,0 +1,43 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ camp.name }} - Details Camps{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">{{ camp.name }}</h1>
+      <p class="text-muted mb-0">{{ camp.start_date|date:"d M Y" }} - {{ camp.end_date|date:"d M Y" }}</p>
+    </div>
+    <a href="{% url 'detailed_camps' %}" class="btn btn-outline-secondary">Back to camps</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Participant</th>
+          <th>Role</th>
+          <th>Arrival</th>
+          <th>Departure</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for participant in camp.participants %}
+          <tr>
+            <td class="fw-semibold">
+              {% if participant.person_type == "Athlete" %}
+                {{ participant.person.name }}
+              {% else %}
+                {{ participant.person.get_full_name|default:participant.person.username }}
+              {% endif %}
+            </td>
+            <td>{{ participant.person_type }}</td>
+            <td>{{ participant.arrival_date|date:"d M Y" }}</td>
+            <td>{{ participant.departure_date|date:"d M Y" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

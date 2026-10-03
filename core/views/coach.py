@@ -8030,7 +8030,101 @@ def detailed_camps_view(request):
     enabled = CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
     if not enabled:
         return redirect("planning_overview")
-    return render(request, "core/detailed_camps.html")
+
+    camps = _detailed_camps_for_owner(owner, _coach_view_owner_ids(request.user))
+    return render(request, "core/detailed_camps.html", {"camps": camps})
+
+
+def _camp_identity(name):
+    return re.sub(r"\s+", " ", (name or "").strip()).casefold()
+
+
+def _detailed_camps_for_owner(owner, coach_ids):
+    athlete_ranges = (
+        YearPlannerWhereabout.objects
+        .filter(owner=owner, athlete__isnull=False, whereabouts_type="camp")
+        .exclude(note="")
+        .select_related("athlete")
+        .order_by("note", "start_date", "athlete__name")
+    )
+    coach_ranges = (
+        YearPlannerWhereabout.objects
+        .filter(
+            owner_id__in=coach_ids,
+            athlete__isnull=True,
+            basis_plan__isnull=True,
+            whereabouts_type="camp",
+        )
+        .exclude(note="")
+        .select_related("owner")
+        .order_by("note", "start_date", "owner__username")
+    )
+    camps_by_key = {}
+
+    def add_range(range_obj, person, person_type):
+        key = _camp_identity(range_obj.note)
+        if not key:
+            return
+        display_name = re.sub(r"\s+", " ", range_obj.note.strip())
+        camp = camps_by_key.setdefault(key, {
+            "key": key,
+            "name": display_name,
+            "start_date": range_obj.start_date,
+            "end_date": range_obj.end_date,
+            "participants_by_key": {},
+        })
+        if display_name[:1].isupper() and not camp["name"][:1].isupper():
+            camp["name"] = display_name
+        camp["start_date"] = min(camp["start_date"], range_obj.start_date)
+        camp["end_date"] = max(camp["end_date"], range_obj.end_date)
+        participant_key = (person_type, person.id)
+        participant_data = camp["participants_by_key"].setdefault(participant_key, {
+            "person": person,
+            "person_type": person_type,
+            "arrival_date": range_obj.start_date,
+            "departure_date": range_obj.end_date,
+        })
+        participant_data["arrival_date"] = min(participant_data["arrival_date"], range_obj.start_date)
+        participant_data["departure_date"] = max(participant_data["departure_date"], range_obj.end_date)
+
+    for range_obj in athlete_ranges:
+        add_range(range_obj, range_obj.athlete, "Athlete")
+    for range_obj in coach_ranges:
+        add_range(range_obj, range_obj.owner, "Coach")
+
+    camps = []
+    for camp in camps_by_key.values():
+        camp["participants"] = sorted(
+            camp.pop("participants_by_key").values(),
+            key=lambda item: (item["person_type"], (getattr(item["person"], "name", "") or item["person"].get_username()).casefold()),
+        )
+        camp["participant_count"] = len(camp["participants"])
+        camps.append(camp)
+    return sorted(camps, key=lambda camp: (camp["start_date"], camp["name"].casefold()))
+
+
+@login_required
+@require_GET
+def detailed_camp_detail_view(request):
+    athlete = _athlete_for_user(request.user)
+    if is_coach_tools_only_user(request.user) or (
+        athlete and not request.user.is_staff and not request.user.is_superuser
+    ):
+        return HttpResponse("Forbidden", status=403)
+
+    owner = _active_coach_user(request)
+    enabled = CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
+    if not enabled:
+        return redirect("planning_overview")
+
+    camp_key = _camp_identity(request.GET.get("camp"))
+    camp = next(
+        (item for item in _detailed_camps_for_owner(owner, _coach_view_owner_ids(request.user)) if item["key"] == camp_key),
+        None,
+    )
+    if not camp:
+        return redirect("detailed_camps")
+    return render(request, "core/detailed_camp_detail.html", {"camp": camp})
 
 
 # -----------------------------
