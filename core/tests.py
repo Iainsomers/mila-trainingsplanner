@@ -1421,7 +1421,15 @@ class YearPlannerTests(TestCase):
         self.assertContains(page, "view-only-coach")
         self.assertContains(page, "View camp")
         self.assertContains(page, f"coach-{editable_coach.id}")
-        self.assertContains(page, "(view only)")
+        self.assertContains(page, "(whereabouts only)")
+        rendered_coach_rows = [
+            row
+            for chunk in page.context["chunks"]
+            for row in chunk["rows"]
+            if row["scope"] == f"coach-{view_only_coach.id}"
+        ]
+        self.assertTrue(rendered_coach_rows[0]["is_coach"])
+        self.assertFalse(rendered_coach_rows[0]["read_only"])
 
         saved = self.client.post(
             "/planning/year/whereabout/",
@@ -1442,7 +1450,7 @@ class YearPlannerTests(TestCase):
             note="Travel",
         ).exists())
 
-        rejected = self.client.post(
+        saved_view_only = self.client.post(
             "/planning/year/whereabout/",
             data=json.dumps({
                 "scope": f"coach-{view_only_coach.id}",
@@ -1453,7 +1461,13 @@ class YearPlannerTests(TestCase):
             }),
             content_type="application/json",
         )
-        self.assertEqual(rejected.status_code, 403)
+        self.assertEqual(saved_view_only.status_code, 200)
+        self.assertTrue(YearPlannerWhereabout.objects.filter(
+            owner=view_only_coach,
+            athlete__isnull=True,
+            basis_plan__isnull=True,
+            note="Not allowed",
+        ).exists())
 
     def test_year_planner_does_not_preselect_athletes(self):
         _, athlete = self._coach_and_athlete()

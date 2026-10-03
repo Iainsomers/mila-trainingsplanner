@@ -5167,13 +5167,12 @@ def _year_planner_coach_target(request, scope):
     return get_user_model().objects.filter(id=coach_id).first()
 
 
-def _can_edit_year_planner_coach(request, coach):
+def _can_manage_year_planner_coach_whereabouts(request, coach):
     if coach.id == request.user.id:
         return True
     return CoachAccess.objects.filter(
         owner=coach,
         grantee=request.user,
-        can_edit=True,
     ).exists()
 
 
@@ -5483,7 +5482,7 @@ def year_planner_view(request):
             "scope": _year_planner_coach_scope_key(coach.id),
             "athlete": None,
             "is_coach": True,
-            "read_only": option["access_label"] == "view",
+            "read_only": False,
             "cells": cells,
         })
 
@@ -5530,6 +5529,8 @@ def year_planner_view(request):
                     "label": row["label"],
                     "scope": row["scope"],
                     "athlete": row["athlete"],
+                    "is_coach": row.get("is_coach", False),
+                    "read_only": row.get("read_only", False),
                     "cells": row["cells"][start_index:end_index],
                 }
                 for row in rows
@@ -5644,8 +5645,8 @@ def year_planner_whereabout_save_view(request):
     except LookupError:
         return JsonResponse({"ok": False, "error": "Target not found"}, status=404)
 
-    if coach and not _can_edit_year_planner_coach(request, coach):
-        return JsonResponse({"ok": False, "error": "Coach is view only"}, status=403)
+    if coach and not _can_manage_year_planner_coach_whereabouts(request, coach):
+        return JsonResponse({"ok": False, "error": "Coach not found"}, status=403)
     target_owner = coach or _active_coach_user(request)
 
     def range_payload(range_obj):
@@ -5751,8 +5752,8 @@ def year_planner_whereabout_save_view(request):
                 return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
             if target_basis_plan or target_scope in seen_scopes:
                 continue
-            if target_coach and not _can_edit_year_planner_coach(request, target_coach):
-                return JsonResponse({"ok": False, "error": "Coach is view only"}, status=403)
+            if target_coach and not _can_manage_year_planner_coach_whereabouts(request, target_coach):
+                return JsonResponse({"ok": False, "error": "Coach not found"}, status=403)
             seen_scopes.add(target_scope)
             targets.append((target_athlete, target_coach, target_coach or _active_coach_user(request)))
         if not targets:

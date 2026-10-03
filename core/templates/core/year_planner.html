@@ -795,7 +795,7 @@
                 value="{{ coach.id }}"
                 {% if coach.id in selected_coach_ids %}checked{% endif %}
               >
-              <span class="form-check-label">{{ coach.get_full_name|default:coach.username }}{% if option.access_label == "view" %} (view only){% endif %}</span>
+              <span class="form-check-label">{{ coach.get_full_name|default:coach.username }}{% if option.access_label == "view" %} (whereabouts only){% endif %}</span>
             </label>
             {% endwith %}
           {% empty %}
