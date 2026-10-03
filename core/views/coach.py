@@ -7901,7 +7901,10 @@ def settings_view(request):
     ):
         return HttpResponse("Forbidden", status=403)
 
-    coach_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
+    # Settings follow the currently selected coach view, just like planning data.
+    # This matters for an admin who is working in another coach's account.
+    settings_owner = _active_coach_user(request)
+    coach_settings, _ = CoachSettings.objects.get_or_create(user=settings_owner)
 
     if request.method == "POST":
         coach_settings.detailed_camps_enabled = (request.POST.get("detailed_camps_enabled") == "on")
