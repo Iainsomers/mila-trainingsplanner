@@ -21,6 +21,7 @@ from django.db.models.functions import Lower
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Q
+from django.utils.dateparse import parse_time
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, is_coach_tools_only_user
@@ -8082,11 +8083,26 @@ def _detailed_camps_for_owner(owner, coach_ids):
         participant_data = camp["participants_by_key"].setdefault(participant_key, {
             "person": person,
             "person_type": person_type,
+            "owner_id": range_obj.owner_id,
+            "range_ids": [],
             "arrival_date": range_obj.start_date,
             "departure_date": range_obj.end_date,
+            "arrival_flight_number": range_obj.arrival_flight_number,
+            "arrival_flight_time": range_obj.arrival_flight_time,
+            "departure_flight_number": range_obj.departure_flight_number,
+            "departure_flight_time": range_obj.departure_flight_time,
         })
+        participant_data["range_ids"].append(range_obj.id)
         participant_data["arrival_date"] = min(participant_data["arrival_date"], range_obj.start_date)
         participant_data["departure_date"] = max(participant_data["departure_date"], range_obj.end_date)
+        for field_name in (
+            "arrival_flight_number",
+            "arrival_flight_time",
+            "departure_flight_number",
+            "departure_flight_time",
+        ):
+            if not participant_data[field_name] and getattr(range_obj, field_name):
+                participant_data[field_name] = getattr(range_obj, field_name)
 
     for range_obj in athlete_ranges:
         add_range(range_obj, range_obj.athlete, "Athlete")
@@ -8105,7 +8121,7 @@ def _detailed_camps_for_owner(owner, coach_ids):
 
 
 @login_required
-@require_GET
+@require_http_methods(["GET", "POST"])
 def detailed_camp_detail_view(request):
     athlete = _athlete_for_user(request.user)
     if is_coach_tools_only_user(request.user) or (
@@ -8125,7 +8141,82 @@ def detailed_camp_detail_view(request):
     )
     if not camp:
         return redirect("detailed_camps")
-    return render(request, "core/detailed_camp_detail.html", {"camp": camp})
+
+    if request.method == "POST":
+        participant_type = (request.POST.get("participant_type") or "").strip()
+        try:
+            participant_id = _parse_int(request.POST.get("participant_id"))
+        except (TypeError, ValueError):
+            participant_id = None
+        participant = next(
+            (
+                item for item in camp["participants"]
+                if item["person_type"] == participant_type and item["person"].id == participant_id
+            ),
+            None,
+        )
+        if not participant:
+            return HttpResponse("Participant not found", status=404)
+
+        if participant_type == "Coach":
+            can_edit = _can_manage_year_planner_coach_whereabouts(request, participant["person"])
+        else:
+            can_edit = participant["owner_id"] == request.user.id or CoachAccess.objects.filter(
+                owner_id=participant["owner_id"],
+                grantee=request.user,
+                can_edit=True,
+            ).exists()
+        if not can_edit:
+            return HttpResponse("Forbidden", status=403)
+
+        try:
+            arrival_date = _parse_iso_date(request.POST.get("arrival_date"))
+            departure_date = _parse_iso_date(request.POST.get("departure_date"))
+        except (TypeError, ValueError):
+            arrival_date = departure_date = None
+        if not arrival_date or not departure_date or departure_date < arrival_date:
+            return render(request, "core/detailed_camp_detail.html", {
+                "camp": camp,
+                "error": "Arrival and departure dates are required, with departure on or after arrival.",
+            }, status=400)
+
+        def optional_time(field_name):
+            value = (request.POST.get(field_name) or "").strip()
+            return parse_time(value) if value else None
+
+        arrival_flight_time = optional_time("arrival_flight_time")
+        departure_flight_time = optional_time("departure_flight_time")
+        if ((request.POST.get("arrival_flight_time") or "").strip() and not arrival_flight_time) or (
+            (request.POST.get("departure_flight_time") or "").strip() and not departure_flight_time
+        ):
+            return render(request, "core/detailed_camp_detail.html", {
+                "camp": camp,
+                "error": "Flight times must be valid times.",
+            }, status=400)
+
+        YearPlannerWhereabout.objects.filter(id__in=participant["range_ids"]).update(
+            start_date=arrival_date,
+            end_date=departure_date,
+            arrival_flight_number=(request.POST.get("arrival_flight_number") or "").strip()[:40],
+            arrival_flight_time=arrival_flight_time,
+            departure_flight_number=(request.POST.get("departure_flight_number") or "").strip()[:40],
+            departure_flight_time=departure_flight_time,
+        )
+        return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': camp_key, 'saved': '1'})}")
+
+    for participant in camp["participants"]:
+        if participant["person_type"] == "Coach":
+            participant["can_edit"] = _can_manage_year_planner_coach_whereabouts(request, participant["person"])
+        else:
+            participant["can_edit"] = participant["owner_id"] == request.user.id or CoachAccess.objects.filter(
+                owner_id=participant["owner_id"],
+                grantee=request.user,
+                can_edit=True,
+            ).exists()
+    return render(request, "core/detailed_camp_detail.html", {
+        "camp": camp,
+        "saved": request.GET.get("saved") == "1",
+    })
 
 
 # -----------------------------

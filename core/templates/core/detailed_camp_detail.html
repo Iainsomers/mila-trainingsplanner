@@ -11,14 +11,25 @@
     </div>
     <a href="{% url 'detailed_camps' %}" class="btn btn-outline-secondary">Back to camps</a>
   </div>
+  {% if saved %}
+    <div class="alert alert-success py-2" role="status">Saved</div>
+  {% endif %}
+  {% if error %}
+    <div class="alert alert-danger py-2" role="alert">{{ error }}</div>
+  {% endif %}
   <div class="table-responsive">
-    <table class="table table-hover align-middle">
+    <table class="table table-hover align-middle" data-camp-participants>
       <thead>
         <tr>
-          <th>Participant</th>
-          <th>Role</th>
-          <th>Arrival</th>
-          <th>Departure</th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Participant &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Role &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="date">Arrival &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="date">Departure &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Flight # in &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="time">Flight time in &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Flight # out &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="time">Flight time out &#8597;</button></th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -32,12 +43,72 @@
               {% endif %}
             </td>
             <td>{{ participant.person_type }}</td>
-            <td>{{ participant.arrival_date|date:"d M Y" }}</td>
-            <td>{{ participant.departure_date|date:"d M Y" }}</td>
+            {% if participant.can_edit %}
+              <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="date" name="arrival_date" value="{{ participant.arrival_date|date:'Y-m-d' }}" required></td>
+              <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="date" name="departure_date" value="{{ participant.departure_date|date:'Y-m-d' }}" required></td>
+              <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="arrival_flight_number" value="{{ participant.arrival_flight_number }}" maxlength="40"></td>
+              <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="time" name="arrival_flight_time" value="{{ participant.arrival_flight_time|time:'H:i' }}"></td>
+              <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="departure_flight_number" value="{{ participant.departure_flight_number }}" maxlength="40"></td>
+              <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="time" name="departure_flight_time" value="{{ participant.departure_flight_time|time:'H:i' }}"></td>
+              <td>
+                <form id="camp-participant-{{ forloop.counter }}" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="participant_type" value="{{ participant.person_type }}">
+                  <input type="hidden" name="participant_id" value="{{ participant.person.id }}">
+                  <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                </form>
+              </td>
+            {% else %}
+              <td>{{ participant.arrival_date|date:"d M Y" }}</td>
+              <td>{{ participant.departure_date|date:"d M Y" }}</td>
+              <td>{{ participant.arrival_flight_number }}</td>
+              <td>{{ participant.arrival_flight_time|time:"H:i" }}</td>
+              <td>{{ participant.departure_flight_number }}</td>
+              <td>{{ participant.departure_flight_time|time:"H:i" }}</td>
+              <td></td>
+            {% endif %}
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const campParticipantTable = document.querySelector("[data-camp-participants]");
+  if (campParticipantTable) {
+    let activeColumn = null;
+    let ascending = true;
+    campParticipantTable.querySelectorAll("[data-camp-sort]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const column = button.closest("th").cellIndex;
+        const sortType = button.dataset.campSort;
+        ascending = activeColumn === column ? !ascending : true;
+        activeColumn = column;
+        const rows = Array.from(campParticipantTable.tBodies[0].rows);
+        rows.sort((left, right) => {
+          const cellValue = (row) => {
+            const cell = row.cells[column];
+            const input = cell.querySelector("input");
+            return (input ? input.value : cell.textContent).trim();
+          };
+          let leftValue = cellValue(left);
+          let rightValue = cellValue(right);
+          if (sortType === "date" || sortType === "time") {
+            leftValue = leftValue || "9999-99-99";
+            rightValue = rightValue || "9999-99-99";
+          }
+          const comparison = leftValue.localeCompare(rightValue, undefined, {
+            numeric: sortType === "text",
+            sensitivity: "base",
+          });
+          return ascending ? comparison : -comparison;
+        });
+        rows.forEach((row) => campParticipantTable.tBodies[0].appendChild(row));
+      });
+    });
+  }
+</script>
 {% endblock %}

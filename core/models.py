@@ -523,6 +523,10 @@ class YearPlannerWhereabout(models.Model):
     end_date = models.DateField()
     whereabouts_type = models.CharField(max_length=20, choices=WHEREABOUTS_CHOICES)
     note = models.CharField(max_length=120, blank=True, default="")
+    arrival_flight_number = models.CharField(max_length=40, blank=True, default="")
+    arrival_flight_time = models.TimeField(null=True, blank=True)
+    departure_flight_number = models.CharField(max_length=40, blank=True, default="")
+    departure_flight_time = models.TimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

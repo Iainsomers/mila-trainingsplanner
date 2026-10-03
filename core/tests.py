@@ -1007,7 +1007,7 @@ class PlanningOverviewTests(TestCase):
             birth_year=2000,
             gender="X",
         )
-        YearPlannerWhereabout.objects.create(
+        first_range = YearPlannerWhereabout.objects.create(
             owner=coach,
             athlete=first_athlete,
             start_date=date(2026, 10, 7),
@@ -1051,6 +1051,25 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(detail, "camp-overview-coach")
         self.assertContains(detail, "camp-accessible-coach")
         self.assertContains(detail, "05 Nov 2026")
+
+        saved = self.client.post("/planning/detailed-camps/camp/?camp=font+r", {
+            "participant_type": "Athlete",
+            "participant_id": first_athlete.id,
+            "arrival_date": "2026-10-08",
+            "departure_date": "2026-11-06",
+            "arrival_flight_number": "KL1234",
+            "arrival_flight_time": "10:25",
+            "departure_flight_number": "KL4321",
+            "departure_flight_time": "18:45",
+        })
+        self.assertRedirects(saved, "/planning/detailed-camps/camp/?camp=font+r&saved=1")
+        first_range.refresh_from_db()
+        self.assertEqual(first_range.start_date, date(2026, 10, 8))
+        self.assertEqual(first_range.end_date, date(2026, 11, 6))
+        self.assertEqual(first_range.arrival_flight_number, "KL1234")
+        self.assertEqual(first_range.arrival_flight_time.isoformat(), "10:25:00")
+        self.assertEqual(first_range.departure_flight_number, "KL4321")
+        self.assertEqual(first_range.departure_flight_time.isoformat(), "18:45:00")
 
 
 class PolarPlanMismatchTests(TestCase):
