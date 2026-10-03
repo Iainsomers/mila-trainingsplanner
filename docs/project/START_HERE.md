@@ -1,6 +1,6 @@
 # Start Here
 
-Bijgewerkt: 28 september 2026.
+Bijgewerkt: 3 oktober 2026.
 
 ## Project in één minuut
 
@@ -27,6 +27,13 @@ MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers m
 - Mobiele AYC heeft evaluatiepopups, een openstaande-evaluaties-prompt en spraak-naar-tekst voor commentaar.
 - Evaluations is een apart vragenlijstonderdeel voor trainers en atleten.
 - Coach Tools in MiLa bevat alleen Track Timer. Match Overview en PR-database horen bij het aparte PAC-project.
+
+## Eerstvolgende wijziging
+
+- Voeg onder Coach Settings een opgeslagen aan/uitknop toe met het zichtbare label `Planning Camps`.
+- De schakelaar krijgt voorlopig geen functioneel gevolg; vervolgfunctionaliteit wordt later bepaald.
+- De wijziging is nog niet geïmplementeerd. Werk model, migratie, settings-view, compacte desktop/mobiele template, gerichte tests en relevante documentatie samen bij.
+- De bestaande Settings-pagina en `CoachSettings`-velden in `core/models.py`, `core/views/coach.py` en `core/templates/core/settings.html` zijn het startpunt. Controleer de actuele code voordat je wijzigt.
 
 ## Belangrijke grenzen
 

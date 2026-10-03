@@ -1,12 +1,19 @@
 # Actuele status
 
-Bijgewerkt: 28 september 2026.
+Bijgewerkt: 3 oktober 2026.
 
 ## Productiestatus
 
 - Productiebranch: `main`; pushes deployen automatisch op Render.
 - MiLa is de planner voor trainers en atleten. PAC is een aparte Render-service en repository voor Match Overview en de PR-database.
 - Het MiLa-logo wordt als browser- en beginschermicoon aangeboden op iOS en Android.
+- De recent aangevraagde atleetaccounts zijn rechtstreeks in productie aangemaakt en aan de bestaande coach-atleetstructuur gekoppeld. Wachtwoorden staan niet in Git of projectdocumentatie.
+
+## Actieve vervolgstap
+
+- Coach Settings moet als eerste echte instelling een aan/uitknop `Planning Camps` krijgen.
+- Deze instelling moet per coach worden opgeslagen, maar heeft voorlopig nog geen effect elders in de applicatie.
+- Dit werk is nog niet uitgevoerd en vereist een modelmigratie, settings-view/template, gerichte tests, `manage.py check` en een mobiele layoutcontrole.
 
 ## Belangrijk werkend gedrag
 
@@ -32,7 +39,7 @@ Bijgewerkt: 28 september 2026.
 
 ## Bekende aandachtspunten
 
-- Settings (under development) is bewust niet functioneel.
+- Settings bevat bestaande technische voorkeuren, maar de dashboardtegel wordt nog als `under development` gepresenteerd. `Planning Camps` wordt de eerste expliciet aangevraagde coachinstelling.
 - Daily Coach Overview Vitals is zichtbaar als toekomstige, niet-aanklikbare tab.
 - Stats is bewust eenvoudig en nog in ontwikkeling.
 - Polar/watch suggestions, vooral automatische workoutmatching zonder handmatige laps, hebben verdere testgevallen en verfijning nodig.
