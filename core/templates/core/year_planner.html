@@ -17,12 +17,12 @@
     font-size: 0.82rem;
   }
 
-  .year-athlete-panel.is-collapsed .year-athlete-list,
-  .year-athlete-panel.is-collapsed .year-athlete-group {
+  .year-selector-panel.is-collapsed .year-athlete-list,
+  .year-selector-panel.is-collapsed .year-athlete-group {
     display: none !important;
   }
 
-  .year-athlete-panel {
+  .year-selector-panel {
     border: 1px solid #dee2e6;
     border-radius: 6px;
     padding: 8px;
@@ -182,6 +182,20 @@
   .year-basis-row .year-name-cell,
   .year-basis-row .year-cell {
     background: #fff9d8;
+  }
+
+  .year-coach-row .year-name-cell,
+  .year-coach-row .year-cell {
+    background: #f6f8fb;
+  }
+
+  .year-coach-row .year-cell {
+    grid-template-rows: 1fr;
+  }
+
+  .year-row-read-only .year-where-wrap,
+  .year-row-read-only .year-range-pill {
+    cursor: default;
   }
 
   .year-planner-page.year-hide-training .year-layer-training,
@@ -646,7 +660,7 @@
     <div class="d-flex flex-wrap align-items-end year-toolbar">
       <div class="btn-group" role="group" aria-label="Period">
         {% for option in period_options %}
-          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}"
+          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}"
              class="btn btn-sm {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
             {{ option.label }}
           </a>
@@ -654,8 +668,8 @@
       </div>
 
       {% if period_mode != "current_next" %}
-        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
-        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
+        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
+        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
       {% endif %}
 
       <input type="hidden" name="year" value="{{ year }}">
@@ -700,7 +714,7 @@
 
     {% if not is_athlete_user %}
     <div class="mt-2 row g-2 align-items-end">
-      <div class="col-md-5 col-lg-4 year-athlete-panel" data-year-athlete-panel>
+      <div class="col-md-5 col-lg-4 year-selector-panel" data-year-athlete-panel>
         <div class="d-flex align-items-center justify-content-between mb-1">
           <label class="form-label mb-0">Athletes</label>
           <button type="button" class="btn btn-sm btn-outline-secondary" data-year-athlete-toggle>Hide</button>
@@ -755,6 +769,40 @@
           {% endfor %}
         </div>
       </div>
+      <div class="col-md-5 col-lg-4 year-selector-panel" data-year-coach-panel>
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <label class="form-label mb-0">Coaches</label>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-year-coach-toggle>Hide</button>
+        </div>
+        <div class="year-athlete-list">
+          <label class="form-check mb-0">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              data-year-coach-all
+              value="1"
+              {% if all_visible_coaches_selected %}checked{% endif %}
+            >
+            <span class="form-check-label">All</span>
+          </label>
+          {% for option in coaches %}
+            {% with coach=option.user %}
+            <label class="form-check mb-0">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                name="coaches"
+                value="{{ coach.id }}"
+                {% if coach.id in selected_coach_ids %}checked{% endif %}
+              >
+              <span class="form-check-label">{{ coach.get_full_name|default:coach.username }}{% if option.access_label == "view" %} (view only){% endif %}</span>
+            </label>
+            {% endwith %}
+          {% empty %}
+            <span class="text-muted">No coaches found.</span>
+          {% endfor %}
+        </div>
+      </div>
     </div>
     {% endif %}
   </form>
@@ -783,7 +831,7 @@
     </div>
     <label class="form-check year-active-check">
       <input class="form-check-input" type="checkbox" data-active-where-all>
-      <span class="form-check-label small">Use for all selected athletes</span>
+      <span class="form-check-label small">Use for all selected rows</span>
     </label>
     <button type="button" class="btn btn-sm btn-outline-danger" data-active-where-delete>Delete</button>
     <button type="button" class="btn btn-sm btn-primary" data-active-where-close>Done</button>
@@ -799,7 +847,7 @@
         <table class="year-table">
           <thead>
             <tr>
-              <th class="year-name-cell">Athlete</th>
+              <th class="year-name-cell">Athlete / coach</th>
               {% for day in chunk.days %}
                 <th class="year-day-head" title="{{ day|date:'D d-m-Y' }}">{{ day|date:"d-m" }}</th>
               {% endfor %}
@@ -807,12 +855,12 @@
           </thead>
           <tbody>
             {% for row in chunk.rows %}
-              <tr data-year-row data-year-row-scope="{{ row.scope }}" data-year-row-chunk="{{ forloop.parentloop.counter0 }}" {% if not row.athlete %}class="year-basis-row"{% endif %}>
+              <tr data-year-row data-year-row-scope="{{ row.scope }}" data-year-row-chunk="{{ forloop.parentloop.counter0 }}" class="{% if not row.athlete and not row.is_coach %}year-basis-row{% endif %}{% if row.is_coach %} year-coach-row{% endif %}{% if row.read_only %} year-row-read-only{% endif %}">
                 <td class="year-name-cell">
                   <div class="year-name-main">{{ row.label }}</div>
-                  {% if not year_planner_read_only %}
+                  {% if not year_planner_read_only and not row.read_only %}
                   <div class="year-row-actions">
-                    {% if show_training %}
+                    {% if show_training and not row.is_coach %}
                     <div class="year-row-action-line year-row-action-training">
                       <button type="button" class="year-row-copy" data-year-row-copy title="Copy training row">c</button>
                       <button type="button" class="year-row-paste year-row-training-paste" data-year-row-paste title="Paste training row">p</button>
@@ -833,7 +881,7 @@
                          data-year-cell
                          data-scope="{{ row.scope }}"
                          data-date="{{ cell.date|date:'Y-m-d' }}">
-                      {% if show_training %}
+                      {% if show_training and not row.is_coach %}
                         <div class="year-layer-wrap year-layer-training"
                              data-year-training-wrap
                              data-year-training-value="{{ cell.payload.training }}">
@@ -859,7 +907,7 @@
                              data-year-date="{{ cell.date|date:'Y-m-d' }}">
                           {% if cell.where_ranges %}
                             {% for range in cell.where_ranges %}
-                            <button type="button"
+                            <button type="button" {% if row.read_only %}disabled{% endif %}
                                     class="year-range-pill year-where-{{ range.whereabouts }} {% if range.is_start %}year-range-start{% endif %} {% if range.is_end %}year-range-end{% endif %} {% if range.overlap_count > 1 %}{% if range.overlap_index == 0 %}year-range-overlap-0{% elif range.overlap_index == 1 %}year-range-overlap-1{% else %}year-range-overlap-extra{% endif %}{% endif %}"
                                     data-year-range-id="{{ range.id }}"
                                     data-year-range-type="{{ range.whereabouts }}"
@@ -916,6 +964,8 @@
   const activeWhereAll = document.querySelector("[data-active-where-all]");
   const athletePanel = document.querySelector("[data-year-athlete-panel]");
   const athleteToggle = document.querySelector("[data-year-athlete-toggle]");
+  const coachPanel = document.querySelector("[data-year-coach-panel]");
+  const coachToggle = document.querySelector("[data-year-coach-toggle]");
   let rowClipboard = null;
   let whereRowClipboard = null;
   let paint = null;
@@ -1079,6 +1129,7 @@
   }
 
   function openWhereEditorForCell(cell) {
+    if (cell?.closest(".year-row-read-only")) return;
     activeWhereRange = {
       id: "",
       scope: cell.dataset.scope,
@@ -1098,6 +1149,7 @@
   }
 
   function openWhereEditorForRange(pill) {
+    if (pill?.closest(".year-row-read-only")) return;
     activeWhereRange = {
       id: pill.dataset.yearRangeId || "",
       scope: pill.dataset.yearRangeScope || "",
@@ -1332,11 +1384,12 @@
     updateWhereOverlapClasses(range.scope, range.start_date, range.end_date);
   }
 
-  function selectedAthleteScopes() {
+  function selectedWhereaboutScopes() {
     return Array.from(new Set(
       Array.from(document.querySelectorAll("[data-year-row-scope]"))
+        .filter((row) => !row.classList.contains("year-row-read-only"))
         .map((row) => row.dataset.yearRowScope || "")
-        .filter((scope) => scope.startsWith("athlete-"))
+        .filter((scope) => scope.startsWith("athlete-") || scope.startsWith("coach-"))
     ));
   }
 
@@ -1351,7 +1404,7 @@
       note: activeWhereName?.value || "",
     };
     if (activeWhereAll?.checked) {
-      const scopes = selectedAthleteScopes();
+      const scopes = selectedWhereaboutScopes();
       if (scopes.length) payload.scopes = scopes;
     }
     const data = await saveWhereRange(payload);
@@ -1393,6 +1446,10 @@
     const collapsed = athletePanel?.classList.toggle("is-collapsed");
     athleteToggle.textContent = collapsed ? "Show" : "Hide";
   });
+  coachToggle?.addEventListener("click", () => {
+    const collapsed = coachPanel?.classList.toggle("is-collapsed");
+    coachToggle.textContent = collapsed ? "Show" : "Hide";
+  });
   document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
   document.getElementById("layoutMode")?.addEventListener("change", () => form.submit());
   document.getElementById("yearAthleteGroup")?.addEventListener("change", () => {
@@ -1409,6 +1466,16 @@
     form.submit();
   });
   document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
+    input.addEventListener("change", () => form.submit());
+  });
+  document.querySelector("[data-year-coach-all]")?.addEventListener("change", (event) => {
+    const checked = event.target.checked;
+    document.querySelectorAll(".year-athlete-list input[name='coaches']").forEach((input) => {
+      input.checked = checked;
+    });
+    form.submit();
+  });
+  document.querySelectorAll(".year-athlete-list input[name='coaches']").forEach((input) => {
     input.addEventListener("change", () => form.submit());
   });
 

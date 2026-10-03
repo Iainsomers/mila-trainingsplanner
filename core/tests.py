@@ -972,14 +972,14 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(settings_page, "Planning Camps")
 
         planning_before = self.client.get("/planning/")
-        self.assertNotContains(planning_before, "Detailed Camps")
+        self.assertNotContains(planning_before, "Details Camps")
 
         response = self.client.post("/settings/", {"detailed_camps_enabled": "on"})
         self.assertRedirects(response, "/settings/")
         self.assertTrue(CoachSettings.objects.get(user=user).detailed_camps_enabled)
 
         planning_after = self.client.get("/planning/")
-        self.assertContains(planning_after, "Detailed Camps")
+        self.assertContains(planning_after, "Details Camps")
         self.assertEqual(self.client.get("/planning/detailed-camps/").status_code, 200)
 
 
@@ -1321,6 +1321,69 @@ class YearPlannerTests(TestCase):
         self.assertFalse(any(row["scope"] == "basis" for row in response.context["rows"]))
         self.assertContains(response, "Year Athlete")
         self.assertContains(response, "Whereabouts")
+
+    def test_year_planner_shows_and_saves_coach_whereabouts_by_access(self):
+        coach, _ = self._coach_and_athlete()
+        editable_coach = get_user_model().objects.create_user(
+            username="editable-coach",
+            password="secret",
+            is_staff=True,
+        )
+        view_only_coach = get_user_model().objects.create_user(
+            username="view-only-coach",
+            password="secret",
+            is_staff=True,
+        )
+        CoachAccess.objects.create(owner=editable_coach, grantee=coach, can_edit=True)
+        CoachAccess.objects.create(owner=view_only_coach, grantee=coach, can_edit=False)
+        YearPlannerWhereabout.objects.create(
+            owner=view_only_coach,
+            start_date=date(2026, 9, 7),
+            end_date=date(2026, 9, 10),
+            whereabouts_type="camp",
+            note="View camp",
+        )
+
+        page = self.client.get(
+            f"/planning/year/?year=2026&period=season&coaches={editable_coach.id}&coaches={view_only_coach.id}"
+        )
+        self.assertContains(page, "editable-coach")
+        self.assertContains(page, "view-only-coach")
+        self.assertContains(page, "View camp")
+        self.assertContains(page, f"coach-{editable_coach.id}")
+        self.assertContains(page, "(view only)")
+
+        saved = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"coach-{editable_coach.id}",
+                "start_date": "2026-09-12",
+                "end_date": "2026-09-15",
+                "whereabouts": "travel",
+                "note": "Travel",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(saved.status_code, 200)
+        self.assertTrue(YearPlannerWhereabout.objects.filter(
+            owner=editable_coach,
+            athlete__isnull=True,
+            basis_plan__isnull=True,
+            note="Travel",
+        ).exists())
+
+        rejected = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"coach-{view_only_coach.id}",
+                "start_date": "2026-09-12",
+                "end_date": "2026-09-15",
+                "whereabouts": "travel",
+                "note": "Not allowed",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(rejected.status_code, 403)
 
     def test_year_planner_does_not_preselect_athletes(self):
         _, athlete = self._coach_and_athlete()

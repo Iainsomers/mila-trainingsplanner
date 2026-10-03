@@ -24,7 +24,7 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, is_coach_tools_only_user
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachSettings, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachAccess, CoachSettings, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -38,6 +38,7 @@ from .common import (
     _filter_owned,
     _active_coach_user,
     _coach_view_options,
+    _coach_view_owner_ids,
     _set_active_coach_user,
     _active_coach_access_label,
 )
@@ -5152,6 +5153,30 @@ def _year_planner_scope_key(athlete_id, basis_plan_id=None):
     return ""
 
 
+def _year_planner_coach_scope_key(coach_id):
+    return f"coach-{coach_id}"
+
+
+def _year_planner_coach_target(request, scope):
+    match = re.fullmatch(r"coach-(\d+)", (scope or "").strip())
+    if not match:
+        raise ValueError("Invalid coach scope")
+    coach_id = int(match.group(1))
+    if coach_id not in _coach_view_owner_ids(request.user):
+        raise LookupError("Coach not found")
+    return get_user_model().objects.filter(id=coach_id).first()
+
+
+def _can_edit_year_planner_coach(request, coach):
+    if coach.id == request.user.id:
+        return True
+    return CoachAccess.objects.filter(
+        owner=coach,
+        grantee=request.user,
+        can_edit=True,
+    ).exists()
+
+
 def _year_planner_scope_target(request, scope):
     scope = (scope or "").strip()
     match = re.fullmatch(r"athlete-(\d+)", scope)
@@ -5167,6 +5192,17 @@ def _year_planner_scope_target(request, scope):
             raise LookupError("Trainer planning not found")
         return None, basis_plan
     raise ValueError("Invalid scope")
+
+
+def _year_planner_whereabout_scope_target(request, scope):
+    try:
+        athlete_obj, basis_plan = _year_planner_scope_target(request, scope)
+        return athlete_obj, basis_plan, None
+    except ValueError:
+        coach = _year_planner_coach_target(request, scope)
+        if not coach:
+            raise LookupError("Coach not found")
+        return None, None, coach
 
 
 def _year_planner_scope_athlete(request, scope):
@@ -5241,9 +5277,11 @@ def year_planner_view(request):
     if is_athlete_user:
         athletes = [athlete]
         trainer_plans = []
+        coach_options = []
     else:
         athletes = list(_filter_owned(Athlete.objects.order_by(Lower("name")), request))
         trainer_plans = list(_trainer_planning_qs(request).order_by(Lower("name")))
+        coach_options = _coach_view_options(request.user)
     for plan in trainer_plans:
         plan.year_planner_filter_key = f"plan-{plan.id}"
     group_filter = (request.GET.get("athlete_group") or "all").strip()
@@ -5279,12 +5317,23 @@ def year_planner_view(request):
     visible_athletes = [athlete_obj for athlete_obj in athletes if athlete_obj.id in group_filtered_athlete_ids]
     if is_athlete_user:
         selected_ids = [athlete.id]
+        selected_coach_ids = []
     else:
         athlete_ids = _clean_int_list(request.GET.getlist("athletes"))
         selected_ids = [athlete_id for athlete_id in athlete_ids if athlete_id in group_filtered_athlete_ids]
+        available_coach_ids = {option["user"].id for option in coach_options}
+        coach_ids = _clean_int_list(request.GET.getlist("coaches"))
+        selected_coach_ids = [coach_id for coach_id in coach_ids if coach_id in available_coach_ids]
 
     selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
     all_visible_athletes_selected = bool(visible_athletes) and set(selected_ids) == {a.id for a in visible_athletes}
+    selected_coaches = [
+        option for option in coach_options
+        if option["user"].id in selected_coach_ids
+    ]
+    all_visible_coaches_selected = bool(coach_options) and set(selected_coach_ids) == {
+        option["user"].id for option in coach_options
+    }
     owner = athlete.owner if is_athlete_user and athlete.owner_id else _active_coach_user(request)
     entry_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
@@ -5308,15 +5357,33 @@ def year_planner_view(request):
         .filter(where_scope_filter)
         .select_related("athlete")
     )
+    coach_whereabout_ranges = list(
+        YearPlannerWhereabout.objects
+        .filter(
+            owner_id__in=selected_coach_ids,
+            athlete__isnull=True,
+            basis_plan__isnull=True,
+            start_date__lte=end_date,
+            end_date__gte=start_date,
+        )
+    )
     ranges_by_scope = {}
     for range_obj in whereabout_ranges:
         ranges_by_scope.setdefault((range_obj.athlete_id, range_obj.basis_plan_id), []).append(range_obj)
+    coach_ranges_by_id = {}
+    for range_obj in coach_whereabout_ranges:
+        coach_ranges_by_id.setdefault(range_obj.owner_id, []).append(range_obj)
     day_index = {day: index for index, day in enumerate(days)}
 
-    def row_ranges(athlete_id, basis_plan_id=None):
+    def row_ranges(athlete_id, basis_plan_id=None, coach_id=None):
         rendered = []
         seen_ranges = set()
-        for range_obj in ranges_by_scope.get((athlete_id, basis_plan_id), []):
+        source_ranges = (
+            coach_ranges_by_id.get(coach_id, [])
+            if coach_id is not None
+            else ranges_by_scope.get((athlete_id, basis_plan_id), [])
+        )
+        for range_obj in source_ranges:
             range_key = (
                 range_obj.start_date,
                 range_obj.end_date,
@@ -5345,9 +5412,9 @@ def year_planner_view(request):
             })
         return rendered
 
-    def row_range_cells(athlete_id, basis_plan_id=None):
+    def row_range_cells(athlete_id, basis_plan_id=None, coach_id=None):
         cell_ranges = {}
-        for item in row_ranges(athlete_id, basis_plan_id):
+        for item in row_ranges(athlete_id, basis_plan_id, coach_id):
             label_index = item["start_index"] + (item["span"] - 1) // 2
             for offset in range(item["span"]):
                 index = item["start_index"] + offset
@@ -5396,6 +5463,27 @@ def year_planner_view(request):
             "label": athlete_obj.name,
             "scope": _year_planner_scope_key(athlete_obj.id),
             "athlete": athlete_obj,
+            "is_coach": False,
+            "read_only": False,
+            "cells": cells,
+        })
+
+    for option in selected_coaches:
+        coach = option["user"]
+        cells = []
+        coach_range_cells = row_range_cells(None, coach_id=coach.id)
+        for day in days:
+            cells.append({
+                "date": day,
+                "payload": {"training": ""},
+                "where_ranges": coach_range_cells.get(day, []),
+            })
+        rows.append({
+            "label": coach.get_full_name() or coach.username,
+            "scope": _year_planner_coach_scope_key(coach.id),
+            "athlete": None,
+            "is_coach": True,
+            "read_only": option["access_label"] == "view",
             "cells": cells,
         })
 
@@ -5455,6 +5543,9 @@ def year_planner_view(request):
         "selected_filter_plan": selected_filter_plan,
         "selected_ids": selected_ids,
         "all_visible_athletes_selected": all_visible_athletes_selected,
+        "coaches": coach_options,
+        "selected_coach_ids": selected_coach_ids,
+        "all_visible_coaches_selected": all_visible_coaches_selected,
         "rows": rows,
         "days": days,
         "chunks": chunks,
@@ -5547,16 +5638,24 @@ def year_planner_whereabout_save_view(request):
 
     scope = (payload.get("scope") or "").strip()
     try:
-        athlete_obj, basis_plan = _year_planner_scope_target(request, scope)
+        athlete_obj, basis_plan, coach = _year_planner_whereabout_scope_target(request, scope)
     except ValueError:
         return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
     except LookupError:
-        return JsonResponse({"ok": False, "error": "Athlete not found"}, status=404)
+        return JsonResponse({"ok": False, "error": "Target not found"}, status=404)
+
+    if coach and not _can_edit_year_planner_coach(request, coach):
+        return JsonResponse({"ok": False, "error": "Coach is view only"}, status=403)
+    target_owner = coach or _active_coach_user(request)
 
     def range_payload(range_obj):
+        if range_obj.athlete_id is None and range_obj.basis_plan_id is None:
+            range_scope = _year_planner_coach_scope_key(range_obj.owner_id)
+        else:
+            range_scope = _year_planner_scope_key(range_obj.athlete_id, range_obj.basis_plan_id)
         return {
             "id": range_obj.id,
-            "scope": _year_planner_scope_key(range_obj.athlete_id, range_obj.basis_plan_id),
+            "scope": range_scope,
             "start_date": range_obj.start_date.isoformat(),
             "end_date": range_obj.end_date.isoformat(),
             "whereabouts": range_obj.whereabouts_type,
@@ -5566,7 +5665,6 @@ def year_planner_whereabout_save_view(request):
     allowed_whereabouts = {choice[0] for choice in YearPlannerWhereabout.WHEREABOUTS_CHOICES}
     ranges_payload = payload.get("ranges")
     if isinstance(ranges_payload, list):
-        owner = _active_coach_user(request)
         validated_ranges = []
         for item in ranges_payload:
             if not isinstance(item, dict):
@@ -5605,7 +5703,7 @@ def year_planner_whereabout_save_view(request):
             if replace_end < replace_start:
                 replace_start, replace_end = replace_end, replace_start
             YearPlannerWhereabout.objects.filter(
-                owner=owner,
+                owner=target_owner,
                 athlete=athlete_obj,
                 basis_plan=basis_plan,
                 start_date__lte=replace_end,
@@ -5613,7 +5711,7 @@ def year_planner_whereabout_save_view(request):
             ).delete()
         created_ranges = [
             YearPlannerWhereabout(
-                owner=owner,
+                owner=target_owner,
                 athlete=athlete_obj,
                 basis_plan=basis_plan,
                 start_date=item["start_date"],
@@ -5643,32 +5741,35 @@ def year_planner_whereabout_save_view(request):
         if whereabouts_type not in allowed_whereabouts:
             return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
 
-        target_athletes = []
-        seen_athlete_ids = set()
+        targets = []
+        seen_scopes = set()
         for target_scope in scopes_payload:
             target_scope = (target_scope or "").strip()
-            if not target_scope.startswith("athlete-"):
-                continue
             try:
-                target_athlete, target_basis_plan = _year_planner_scope_target(request, target_scope)
+                target_athlete, target_basis_plan, target_coach = _year_planner_whereabout_scope_target(request, target_scope)
             except (ValueError, LookupError):
                 return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
-            if target_basis_plan or not target_athlete or target_athlete.id in seen_athlete_ids:
+            if target_basis_plan or target_scope in seen_scopes:
                 continue
-            seen_athlete_ids.add(target_athlete.id)
-            target_athletes.append(target_athlete)
-        if not target_athletes:
-            return JsonResponse({"ok": False, "error": "No selected athletes"}, status=400)
+            if target_coach and not _can_edit_year_planner_coach(request, target_coach):
+                return JsonResponse({"ok": False, "error": "Coach is view only"}, status=403)
+            seen_scopes.add(target_scope)
+            targets.append((target_athlete, target_coach, target_coach or _active_coach_user(request)))
+        if not targets:
+            return JsonResponse({"ok": False, "error": "No selected rows"}, status=400)
 
-        owner = _active_coach_user(request)
         range_id = payload.get("id")
         existing = None
         if range_id:
-            existing = YearPlannerWhereabout.objects.filter(owner=owner, id=range_id).first()
+            existing = YearPlannerWhereabout.objects.filter(id=range_id).first()
 
         saved_ranges = []
-        for target_athlete in target_athletes:
-            if existing and existing.athlete_id == target_athlete.id:
+        for target_athlete, target_coach, target_owner in targets:
+            if existing and (
+                existing.owner_id == target_owner.id
+                and existing.athlete_id == (target_athlete.id if target_athlete else None)
+                and existing.basis_plan_id is None
+            ):
                 existing.start_date = start_date
                 existing.end_date = end_date
                 existing.whereabouts_type = whereabouts_type
@@ -5677,15 +5778,16 @@ def year_planner_whereabout_save_view(request):
                 saved_ranges.append(existing)
                 continue
             YearPlannerWhereabout.objects.filter(
-                owner=owner,
+                owner=target_owner,
                 athlete=target_athlete,
+                basis_plan=None,
                 start_date=start_date,
                 end_date=end_date,
                 whereabouts_type=whereabouts_type,
                 note=note,
             ).delete()
             saved_ranges.append(YearPlannerWhereabout.objects.create(
-                owner=owner,
+                owner=target_owner,
                 athlete=target_athlete,
                 start_date=start_date,
                 end_date=end_date,
@@ -5709,10 +5811,9 @@ def year_planner_whereabout_save_view(request):
     if whereabouts_type not in allowed_whereabouts:
         return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
 
-    owner = _active_coach_user(request)
     range_id = payload.get("id")
     if range_id:
-        existing = YearPlannerWhereabout.objects.filter(owner=owner, id=range_id).first()
+        existing = YearPlannerWhereabout.objects.filter(owner=target_owner, id=range_id).first()
         if existing and (
             existing.athlete_id != (athlete_obj.id if athlete_obj else None)
             or existing.basis_plan_id != (basis_plan.id if basis_plan else None)
@@ -5721,12 +5822,12 @@ def year_planner_whereabout_save_view(request):
 
     if not whereabouts_type:
         if range_id:
-            YearPlannerWhereabout.objects.filter(owner=owner, id=range_id).delete()
+            YearPlannerWhereabout.objects.filter(owner=target_owner, id=range_id).delete()
         return JsonResponse({"ok": True, "deleted": True})
 
     if range_id:
         range_obj, _ = YearPlannerWhereabout.objects.update_or_create(
-            owner=owner,
+            owner=target_owner,
             id=range_id,
             defaults={
                 "athlete": athlete_obj,
@@ -5739,7 +5840,7 @@ def year_planner_whereabout_save_view(request):
         )
     else:
         range_obj = YearPlannerWhereabout.objects.create(
-            owner=owner,
+            owner=target_owner,
             athlete=athlete_obj,
             basis_plan=basis_plan,
             start_date=start_date,

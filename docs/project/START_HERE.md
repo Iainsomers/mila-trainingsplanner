@@ -31,7 +31,7 @@ MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers m
 ## Nieuwe campbasis
 
 - Coach Settings bevat een per coach opgeslagen `Planning Camps`-schakelaar, standaard uit.
-- Bij inschakeling verschijnt Detailed Camps in de Coach plannings-sectie. Dit is het startpunt voor de gedetailleerde kampplanning; er zijn nog geen kampdetails of invoervelden gebouwd.
+- Bij inschakeling verschijnt Details Camps in de Coach plannings-sectie. Dit is het startpunt voor de gedetailleerde kampplanning; er zijn nog geen kampdetails of invoervelden gebouwd.
 
 ## Belangrijke grenzen
 
