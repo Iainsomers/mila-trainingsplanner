@@ -5066,11 +5066,19 @@ def planning_overview_view(request):
         )
     )
     groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.order_by("name"), request)
+    active_coach = _active_coach_user(request) if not is_athlete_user else None
+    detailed_camps_enabled = False
+    if active_coach:
+        detailed_camps_enabled = CoachSettings.objects.filter(
+            user=active_coach,
+            detailed_camps_enabled=True,
+        ).exists()
     return render(request, "core/planning.html", {
         "groups": groups,
         "today": date.today(),
         "is_athlete_user": is_athlete_user,
         "athlete_can_view_year_planner": athlete_can_view_year_planner,
+        "detailed_camps_enabled": detailed_camps_enabled,
     })
 
 
@@ -7887,81 +7895,38 @@ def race_select_view(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def settings_view(request):
+    athlete = _athlete_for_user(request.user)
+    if is_coach_tools_only_user(request.user) or (
+        athlete and not request.user.is_staff and not request.user.is_superuser
+    ):
+        return HttpResponse("Forbidden", status=403)
+
     coach_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
 
     if request.method == "POST":
-        coach_settings.show_all_zones = (request.POST.get("show_all_zones") == "on")
-        coach_settings.highlight_current_week = (request.POST.get("highlight_current_week") == "on")
-        coach_settings.calendar_show_only_core = (request.POST.get("calendar_show_only_core") == "on")
-
-        # ✅ NEW: Weekcolors Y/N
-        coach_settings.weekcolors_enabled = (request.POST.get("weekcolors_enabled") == "on")
-
-        unit = (request.POST.get("zone_input_unit") or "").strip().lower()
-        if unit in ("pace", "kmh"):
-            coach_settings.zone_input_unit = unit
-
-        coach_settings.tb_show_wu = (request.POST.get("tb_show_wu") == "on")
-        coach_settings.tb_show_mob = (request.POST.get("tb_show_mob") == "on")
-        coach_settings.tb_show_sprint = (request.POST.get("tb_show_sprint") == "on")
-        coach_settings.tb_show_core2 = (request.POST.get("tb_show_core2") == "on")
-        coach_settings.tb_show_cd = (request.POST.get("tb_show_cd") == "on")
-
-        coach_settings.save()
-
-        # Sync to session
-        request.session["show_all_zones"] = coach_settings.show_all_zones
-        request.session["highlight_current_week"] = coach_settings.highlight_current_week
-        request.session["calendar_show_only_core"] = coach_settings.calendar_show_only_core
-        request.session["zone_input_unit"] = coach_settings.zone_input_unit
-
-        # ✅ NEW: Weekcolors Y/N
-        request.session["weekcolors_enabled"] = coach_settings.weekcolors_enabled
-
-        request.session["tb_show_wu"] = coach_settings.tb_show_wu
-        request.session["tb_show_mob"] = coach_settings.tb_show_mob
-        request.session["tb_show_sprint"] = coach_settings.tb_show_sprint
-        request.session["tb_show_core2"] = coach_settings.tb_show_core2
-        request.session["tb_show_cd"] = coach_settings.tb_show_cd
-
-        request.session.modified = True
+        coach_settings.detailed_camps_enabled = (request.POST.get("detailed_camps_enabled") == "on")
+        coach_settings.save(update_fields=["detailed_camps_enabled", "updated_at"])
         return redirect("/settings/")
 
-    ctx = {
-        "show_all_zones": coach_settings.show_all_zones,
-        "highlight_current_week": coach_settings.highlight_current_week,
-        "calendar_show_only_core": coach_settings.calendar_show_only_core,
+    return render(request, "core/settings.html", {
+        "detailed_camps_enabled": coach_settings.detailed_camps_enabled,
+    })
 
-        # ✅ NEW: Weekcolors Y/N
-        "weekcolors_enabled": getattr(coach_settings, "weekcolors_enabled", True),
 
-        "zone_input_unit": coach_settings.zone_input_unit or "pace",
+@login_required
+@require_GET
+def detailed_camps_view(request):
+    athlete = _athlete_for_user(request.user)
+    if is_coach_tools_only_user(request.user) or (
+        athlete and not request.user.is_staff and not request.user.is_superuser
+    ):
+        return HttpResponse("Forbidden", status=403)
 
-        "tb_show_wu": coach_settings.tb_show_wu,
-        "tb_show_mob": coach_settings.tb_show_mob,
-        "tb_show_sprint": coach_settings.tb_show_sprint,
-        "tb_show_core2": coach_settings.tb_show_core2,
-        "tb_show_cd": coach_settings.tb_show_cd,
-    }
-
-    # Sync to session
-    request.session["show_all_zones"] = ctx["show_all_zones"]
-    request.session["highlight_current_week"] = ctx["highlight_current_week"]
-    request.session["calendar_show_only_core"] = ctx["calendar_show_only_core"]
-    request.session["zone_input_unit"] = ctx["zone_input_unit"]
-
-    # ✅ NEW: Weekcolors Y/N
-    request.session["weekcolors_enabled"] = ctx["weekcolors_enabled"]
-
-    request.session["tb_show_wu"] = ctx["tb_show_wu"]
-    request.session["tb_show_mob"] = ctx["tb_show_mob"]
-    request.session["tb_show_sprint"] = ctx["tb_show_sprint"]
-    request.session["tb_show_core2"] = ctx["tb_show_core2"]
-    request.session["tb_show_cd"] = ctx["tb_show_cd"]
-
-    request.session.modified = True
-
-    return render(request, "core/settings.html", ctx)
+    owner = _active_coach_user(request)
+    enabled = CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
+    if not enabled:
+        return redirect("planning_overview")
+    return render(request, "core/detailed_camps.html")
 
 
 # -----------------------------

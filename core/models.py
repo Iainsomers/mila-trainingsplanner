@@ -40,6 +40,9 @@ class CoachSettings(models.Model):
     # Coach Console
     zone_input_unit = models.CharField(max_length=10, default="pace")
 
+    # Optional long-term planning modules.
+    detailed_camps_enabled = models.BooleanField(default=False)
+
     # Trainingsbuilder (Core + Alternative zijn altijd zichtbaar)
     tb_show_wu = models.BooleanField(default=True)
     tb_show_mob = models.BooleanField(default=True)

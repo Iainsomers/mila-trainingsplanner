@@ -11,9 +11,8 @@ Bijgewerkt: 3 oktober 2026.
 
 ## Actieve vervolgstap
 
-- Coach Settings moet als eerste echte instelling een aan/uitknop `Planning Camps` krijgen.
-- Deze instelling moet per coach worden opgeslagen, maar heeft voorlopig nog geen effect elders in de applicatie.
-- Dit werk is nog niet uitgevoerd en vereist een modelmigratie, settings-view/template, gerichte tests, `manage.py check` en een mobiele layoutcontrole.
+- Coach Settings bevat als eerste instelling een opgeslagen aan/uitknop `Planning Camps`, standaard uit.
+- Bij inschakeling verschijnt `Detailed Camps` in de Coach plannings-sectie. De detailinhoud wordt in de volgende ontwikkelstap opgebouwd.
 
 ## Belangrijk werkend gedrag
 

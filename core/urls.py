@@ -6,6 +6,8 @@ from core.auth import ThrottledAuthenticationForm
 from core.views.coach import (
     daily_overview_view,
     dashboard_view,
+    settings_view,
+    detailed_camps_view,
     track_timer_view,
     coach_tools_view,
     evaluations_view,
@@ -115,6 +117,7 @@ urlpatterns = [
 
     # Dashboard / settings
     path("", dashboard_view, name="dashboard"),
+    path("settings/", settings_view, name="settings"),
     path("timer/", track_timer_view, name="track_timer"),
     path("coach-tools/", coach_tools_view, name="coach_tools"),
     path("evaluations/", evaluations_view, name="evaluations"),
@@ -141,6 +144,7 @@ urlpatterns = [
     # Coach console
     path("coach/", coach_console_view, name="coach_console"),
     path("planning/", planning_overview_view, name="planning_overview"),
+    path("planning/detailed-camps/", detailed_camps_view, name="detailed_camps"),
     path("planning/year/", year_planner_view, name="year_planner"),
     path("planning/year/entry/", year_planner_entry_save_view, name="year_planner_entry_save"),
     path("planning/year/whereabout/", year_planner_whereabout_save_view, name="year_planner_whereabout_save"),

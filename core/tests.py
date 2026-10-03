@@ -956,6 +956,32 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Year Planner")
         self.assertContains(response, "Standard Strength")
 
+    def test_detailed_camps_are_coach_configurable(self):
+        user = get_user_model().objects.create_user(
+            username="camp-settings-coach",
+            password="secret",
+            is_staff=True,
+        )
+        self.client.force_login(user)
+
+        dashboard = self.client.get("/")
+        self.assertContains(dashboard, "Settings")
+
+        settings_page = self.client.get("/settings/")
+        self.assertEqual(settings_page.status_code, 200)
+        self.assertContains(settings_page, "Planning Camps")
+
+        planning_before = self.client.get("/planning/")
+        self.assertNotContains(planning_before, "Detailed Camps")
+
+        response = self.client.post("/settings/", {"detailed_camps_enabled": "on"})
+        self.assertRedirects(response, "/settings/")
+        self.assertTrue(CoachSettings.objects.get(user=user).detailed_camps_enabled)
+
+        planning_after = self.client.get("/planning/")
+        self.assertContains(planning_after, "Detailed Camps")
+        self.assertEqual(self.client.get("/planning/detailed-camps/").status_code, 200)
+
 
 class PolarPlanMismatchTests(TestCase):
     def test_v4_samples_are_normalized_for_matching(self):
