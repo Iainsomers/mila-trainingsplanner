@@ -3,7 +3,7 @@
 {% block title %}{{ camp.name }} - Details Camps{% endblock %}
 
 {% block content %}
-<div class="container py-3">
+<div class="container-fluid py-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h1 class="h3 mb-1">{{ camp.name }}</h1>
@@ -34,7 +34,7 @@
       </thead>
       <tbody>
         {% for participant in camp.participants %}
-          <tr>
+          <tr {% if participant.person_type == "Coach" %}class="table-warning"{% endif %}>
             <td class="fw-semibold">
               {% if participant.person_type == "Athlete" %}
                 {{ participant.person.name }}
@@ -51,11 +51,11 @@
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="departure_flight_number" value="{{ participant.departure_flight_number }}" maxlength="40"></td>
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="time" name="departure_flight_time" value="{{ participant.departure_flight_time|time:'H:i' }}"></td>
               <td>
-                <form id="camp-participant-{{ forloop.counter }}" method="post">
+                <form id="camp-participant-{{ forloop.counter }}" method="post" data-camp-edit-form>
                   {% csrf_token %}
                   <input type="hidden" name="participant_type" value="{{ participant.person_type }}">
                   <input type="hidden" name="participant_id" value="{{ participant.person.id }}">
-                  <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                  <button class="btn btn-sm btn-outline-primary" type="button" data-camp-copy>Copy</button>
                 </form>
               </td>
             {% else %}
@@ -77,6 +77,12 @@
 
 {% block extra_js %}
 <script>
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    return parts.length === 2 ? parts.pop().split(";").shift() : "";
+  }
+
   const campParticipantTable = document.querySelector("[data-camp-participants]");
   if (campParticipantTable) {
     let activeColumn = null;
@@ -107,6 +113,76 @@
           return ascending ? comparison : -comparison;
         });
         rows.forEach((row) => campParticipantTable.tBodies[0].appendChild(row));
+      });
+    });
+
+    const campForms = Array.from(campParticipantTable.querySelectorAll("[data-camp-edit-form]"));
+    const saveTimers = new WeakMap();
+    let campClipboard = null;
+
+    function editableInputs(form) {
+      return Array.from(document.querySelectorAll(`[form="${form.id}"]`));
+    }
+
+    async function saveCampForm(form) {
+      if (!form.reportValidity()) return;
+      form.dataset.saveState = "saving";
+      try {
+        const response = await fetch(window.location.href, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: new FormData(form),
+        });
+        if (!response.ok) throw new Error("Save failed");
+        form.dataset.saveState = "saved";
+      } catch (error) {
+        form.dataset.saveState = "failed";
+      }
+    }
+
+    function queueCampSave(form, delay) {
+      const existingTimer = saveTimers.get(form);
+      if (existingTimer) window.clearTimeout(existingTimer);
+      saveTimers.set(form, window.setTimeout(() => saveCampForm(form), delay));
+    }
+
+    function updateCopyButtons(sourceForm) {
+      campForms.forEach((form) => {
+        const button = form.querySelector("[data-camp-copy]");
+        if (!button) return;
+        button.textContent = form === sourceForm ? "Copy" : "Paste";
+        button.dataset.campAction = form === sourceForm ? "copy" : "paste";
+      });
+    }
+
+    campForms.forEach((form) => {
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        queueCampSave(form, 0);
+      });
+      editableInputs(form).forEach((input) => {
+        input.addEventListener("change", () => queueCampSave(form, 0));
+        input.addEventListener("input", () => queueCampSave(form, 550));
+      });
+      form.querySelector("[data-camp-copy]").addEventListener("click", () => {
+        const button = form.querySelector("[data-camp-copy]");
+        if (button.dataset.campAction === "paste" && campClipboard) {
+          Object.entries(campClipboard).forEach(([name, value]) => {
+            const input = editableInputs(form).find((item) => item.name === name);
+            if (input) input.value = value;
+          });
+          updateCopyButtons(form);
+          queueCampSave(form, 0);
+          return;
+        }
+        campClipboard = {};
+        editableInputs(form).forEach((input) => {
+          campClipboard[input.name] = input.value;
+        });
+        updateCopyButtons(form);
       });
     });
   }

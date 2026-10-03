@@ -1051,6 +1051,8 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(detail, "camp-overview-coach")
         self.assertContains(detail, "camp-accessible-coach")
         self.assertContains(detail, "05 Nov 2026")
+        self.assertContains(detail, "data-camp-copy")
+        self.assertContains(detail, "data-camp-sort")
 
         saved = self.client.post("/planning/detailed-camps/camp/?camp=font+r", {
             "participant_type": "Athlete",
@@ -1061,8 +1063,9 @@ class PlanningOverviewTests(TestCase):
             "arrival_flight_time": "10:25",
             "departure_flight_number": "KL4321",
             "departure_flight_time": "18:45",
-        })
-        self.assertRedirects(saved, "/planning/detailed-camps/camp/?camp=font+r&saved=1")
+        }, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.json(), {"ok": True})
         first_range.refresh_from_db()
         self.assertEqual(first_range.start_date, date(2026, 10, 8))
         self.assertEqual(first_range.end_date, date(2026, 11, 6))

@@ -26,7 +26,7 @@
               <td>{{ camp.start_date|date:"d M Y" }} - {{ camp.end_date|date:"d M Y" }}</td>
               <td>{{ camp.participant_count }}</td>
               <td class="text-end">
-                <a class="btn btn-sm btn-primary" href="{% url 'detailed_camp_detail' %}?camp={{ camp.key|urlencode }}" target="_blank" rel="noopener">Open</a>
+                <a class="btn btn-sm btn-primary" href="{% url 'detailed_camp_detail' %}?camp={{ camp.key|urlencode }}">Open</a>
               </td>
             </tr>
           {% endfor %}

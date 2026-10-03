@@ -8202,6 +8202,8 @@ def detailed_camp_detail_view(request):
             departure_flight_number=(request.POST.get("departure_flight_number") or "").strip()[:40],
             departure_flight_time=departure_flight_time,
         )
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"ok": True})
         return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': camp_key, 'saved': '1'})}")
 
     for participant in camp["participants"]:
