@@ -8318,23 +8318,35 @@ def detailed_camp_detail_view(request):
         return redirect("detailed_camps")
 
     if request.method == "POST":
-        if request.POST.get("action") == "add_athletes":
+        if request.POST.get("action") == "add_participants":
             existing_athlete_ids = {
                 item["person"].id for item in camp["participants"] if item["person_type"] == "Athlete"
+            }
+            existing_coach_ids = {
+                item["person"].id for item in camp["participants"] if item["person_type"] == "Coach"
             }
             athlete_ids = {
                 int(value) for value in request.POST.getlist("athlete_ids") if str(value).isdigit()
             } - existing_athlete_ids
-            can_add = owner.id == request.user.id or CoachAccess.objects.filter(
-                owner=owner, grantee=request.user, can_edit=True,
-            ).exists()
-            if not can_add:
-                return HttpResponse("Forbidden", status=403)
+            coach_ids = {
+                int(value) for value in request.POST.getlist("coach_ids") if str(value).isdigit()
+            } - existing_coach_ids
             athletes = Athlete.objects.filter(owner=owner, id__in=athlete_ids)
             for athlete_obj in athletes:
                 YearPlannerWhereabout.objects.create(
                     owner=owner,
                     athlete=athlete_obj,
+                    start_date=camp["start_date"],
+                    end_date=camp["end_date"],
+                    whereabouts_type="camp",
+                    note=camp["name"],
+                )
+            coaches = get_user_model().objects.filter(id__in=coach_ids)
+            for coach_obj in coaches:
+                if not _can_manage_year_planner_coach_whereabouts(request, coach_obj):
+                    continue
+                YearPlannerWhereabout.objects.create(
+                    owner=coach_obj,
                     start_date=camp["start_date"],
                     end_date=camp["end_date"],
                     whereabouts_type="camp",
@@ -8415,6 +8427,9 @@ def _detailed_camp_detail_context(camp, request, error="", saved=False):
     existing_athlete_ids = {
         item["person"].id for item in camp["participants"] if item["person_type"] == "Athlete"
     }
+    existing_coach_ids = {
+        item["person"].id for item in camp["participants"] if item["person_type"] == "Coach"
+    }
     owner = _active_coach_user(request)
     return {
         "camp": camp,
@@ -8426,6 +8441,9 @@ def _detailed_camp_detail_context(camp, request, error="", saved=False):
         "available_athletes": Athlete.objects.filter(owner=owner).exclude(
             id__in=existing_athlete_ids,
         ).order_by("name"),
+        "available_coaches": get_user_model().objects.filter(
+            id__in=_coach_view_owner_ids(request.user),
+        ).exclude(id__in=existing_coach_ids).order_by("username"),
     }
 
 

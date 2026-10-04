@@ -1208,13 +1208,20 @@ class PlanningOverviewTests(TestCase):
         self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=first, note="Training Camp").exists())
 
         added = self.client.post("/planning/detailed-camps/camp/?camp=training+camp", {
-            "action": "add_athletes",
+            "action": "add_participants",
             "athlete_ids": [str(second.id)],
+            "coach_ids": [str(coach.id)],
         })
         self.assertRedirects(added, "/planning/detailed-camps/camp/?camp=training+camp")
         second_range = YearPlannerWhereabout.objects.get(owner=coach, athlete=second, note="Training Camp")
         self.assertEqual(second_range.start_date, date(2026, 10, 7))
         self.assertEqual(second_range.end_date, date(2026, 11, 4))
+        self.assertTrue(YearPlannerWhereabout.objects.filter(
+            owner=coach,
+            athlete__isnull=True,
+            whereabouts_type="camp",
+            note="Training Camp",
+        ).exists())
 
 
 class PolarPlanMismatchTests(TestCase):

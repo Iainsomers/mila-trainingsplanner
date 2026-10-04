@@ -74,11 +74,12 @@
   </div>
   {% if can_add_athletes %}
   <details class="mt-4">
-    <summary class="btn btn-primary">Add athlete</summary>
+    <summary class="btn btn-primary">Add participant</summary>
     <form method="post" class="border rounded p-3 mt-3">
-      {% csrf_token %}<input type="hidden" name="action" value="add_athletes">
-      <div class="row g-2">{% for athlete in available_athletes %}<div class="col-md-4 col-lg-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="athlete_ids" value="{{ athlete.id }}"><span class="form-check-label">{{ athlete.name }}</span></label></div>{% empty %}<p class="text-muted mb-0">All available athletes are already in this camp.</p>{% endfor %}</div>
-      {% if available_athletes %}<button class="btn btn-primary mt-3">Add selected athletes</button>{% endif %}
+      {% csrf_token %}<input type="hidden" name="action" value="add_participants">
+      <p class="fw-semibold mb-2">Athletes</p><div class="row g-2 mb-3">{% for athlete in available_athletes %}<div class="col-md-4 col-lg-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="athlete_ids" value="{{ athlete.id }}"><span class="form-check-label">{{ athlete.name }}</span></label></div>{% empty %}<p class="text-muted mb-0">All available athletes are already in this camp.</p>{% endfor %}</div>
+      <p class="fw-semibold mb-2">Coaches</p><div class="row g-2">{% for coach in available_coaches %}<div class="col-md-4 col-lg-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="coach_ids" value="{{ coach.id }}"><span class="form-check-label">{{ coach.get_full_name|default:coach.username }}</span></label></div>{% empty %}<p class="text-muted mb-0">All available coaches are already in this camp.</p>{% endfor %}</div>
+      {% if available_athletes or available_coaches %}<button class="btn btn-primary mt-3">Add selected participants</button>{% endif %}
     </form>
   </details>
   {% endif %}
