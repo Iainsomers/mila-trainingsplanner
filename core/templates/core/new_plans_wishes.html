@@ -19,6 +19,7 @@
       </h2>
       <div id="new-panel" class="accordion-collapse collapse show" aria-labelledby="heading-new">
         <div class="accordion-body">
+          <p class="text-muted">If you like a plan, click on like and it will get more priority.</p>
           {% if is_product_admin %}
           <details class="mb-3">
             <summary class="btn btn-sm btn-outline-primary">Add new feature</summary>
@@ -60,9 +61,10 @@
           </details>
           {% endif %}
           {% for plan in planned_changes %}
-          <article class="border-top pt-3 mt-3 d-flex gap-2">
+          <article class="border-top pt-3 mt-3 d-flex justify-content-between gap-3">
             {% if plan.urgency == "gold" %}<span aria-label="Gold priority" title="Gold priority">&#129351;</span>{% elif plan.urgency == "silver" %}<span aria-label="Silver priority" title="Silver priority">&#129352;</span>{% elif plan.urgency == "bronze" %}<span aria-label="Bronze priority" title="Bronze priority">&#129353;</span>{% endif %}
-            <div><strong>{{ plan.title }}</strong>{% if plan.description %}<div class="mt-1">{{ plan.description|linebreaksbr }}</div>{% endif %}</div>
+            <div class="flex-grow-1"><strong>{{ plan.title }}</strong>{% if plan.description %}<div class="mt-1">{{ plan.description|linebreaksbr }}</div>{% endif %}{% if is_product_admin and plan.likes.all %}<div class="small text-muted mt-2">Liked by: {% for like in plan.likes.all %}{{ like.user.get_full_name|default:like.user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}</div>
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle_plan_like"><input type="hidden" name="plan_id" value="{{ plan.id }}"><button class="btn btn-sm {% if plan.id in liked_plan_ids %}btn-primary{% else %}btn-outline-primary{% endif %}">Like{% if plan.likes.count %} ({{ plan.likes.count }}){% endif %}</button></form>
           </article>
           {% empty %}<p class="text-muted mb-0">No plans have been added yet.</p>{% endfor %}
         </div>
@@ -96,7 +98,7 @@
               {% if is_product_admin and wish.likes.all %}<div class="small text-muted mt-2">Liked by: {% for like in wish.likes.all %}{{ like.user.get_full_name|default:like.user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
             </div>
             <div class="d-flex gap-2 align-items-start">
-              <form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle_like"><input type="hidden" name="wish_id" value="{{ wish.id }}"><button class="btn btn-sm {% if wish.id in liked_wish_ids %}btn-primary{% else %}btn-outline-primary{% endif %}">Like{% if wish.likes.count %} ({{ wish.likes.count }}){% endif %}</button></form>
+              {% if wish.author_id != request.user.id %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle_like"><input type="hidden" name="wish_id" value="{{ wish.id }}"><button class="btn btn-sm {% if wish.id in liked_wish_ids %}btn-primary{% else %}btn-outline-primary{% endif %}">Like{% if wish.likes.count %} ({{ wish.likes.count }}){% endif %}</button></form>{% else %}<span class="text-muted small pt-1">Your wish</span>{% endif %}
               {% if is_product_admin %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="cancel_wish"><input type="hidden" name="wish_id" value="{{ wish.id }}"><button class="btn btn-sm btn-outline-danger">Cancel</button></form>{% endif %}
             </div>
           </article>

@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -112,6 +112,14 @@ class NewPlansWishesTests(TestCase):
         self.assertContains(admin_response, "Wish Owner")
         self.assertContains(admin_response, "Like Person")
 
+        self.client.force_login(self.user)
+        own_wish_response = self.client.post(
+            "/new-plans-wishes/",
+            {"action": "toggle_like", "wish_id": wish.id},
+        )
+        self.assertEqual(own_wish_response.status_code, 302)
+        self.assertFalse(WishLike.objects.filter(wish=wish, user=self.user).exists())
+
     def test_admin_can_turn_a_wish_into_a_prioritised_plan(self):
         wish = UserWish.objects.create(author=self.user, title="Weekly progress chart", description="Show a simple trend.")
         self.client.force_login(self.admin)
@@ -127,6 +135,14 @@ class NewPlansWishesTests(TestCase):
         plan = PlannedChange.objects.get(source_wish=wish)
         self.assertEqual(plan.title, "Weekly progress chart")
         self.assertEqual(plan.urgency, PlannedChange.URGENCY_GOLD)
+
+        self.client.force_login(self.user)
+        like_response = self.client.post(
+            "/new-plans-wishes/",
+            {"action": "toggle_plan_like", "plan_id": plan.id},
+        )
+        self.assertEqual(like_response.status_code, 302)
+        self.assertTrue(PlanLike.objects.filter(plan=plan, user=self.user).exists())
 
 
 class TrackTimerTests(TestCase):

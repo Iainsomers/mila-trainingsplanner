@@ -25,7 +25,7 @@ from django.utils.dateparse import parse_time
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, is_coach_tools_only_user
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachAccess, CoachSettings, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, NewFeature, PlannedChange, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachAccess, CoachSettings, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -529,7 +529,15 @@ def new_plans_wishes_view(request):
 
         if action == "toggle_like":
             wish = get_object_or_404(UserWish, id=request.POST.get("wish_id"), status=UserWish.STATUS_ACTIVE)
-            like, created = WishLike.objects.get_or_create(wish=wish, user=request.user)
+            if wish.author_id != request.user.id:
+                like, created = WishLike.objects.get_or_create(wish=wish, user=request.user)
+                if not created:
+                    like.delete()
+            return redirect("new_plans_wishes")
+
+        if action == "toggle_plan_like":
+            plan = get_object_or_404(PlannedChange, id=request.POST.get("plan_id"))
+            like, created = PlanLike.objects.get_or_create(plan=plan, user=request.user)
             if not created:
                 like.delete()
             return redirect("new_plans_wishes")
@@ -597,12 +605,14 @@ def new_plans_wishes_view(request):
 
 def _new_plans_wishes_context(user, is_admin, error=""):
     active_wishes = UserWish.objects.filter(status=UserWish.STATUS_ACTIVE).select_related("author").prefetch_related("likes__user")
+    planned_changes = PlannedChange.objects.all().select_related("source_wish").prefetch_related("likes__user")
     return {
         "new_features": NewFeature.objects.all(),
-        "planned_changes": PlannedChange.objects.all().select_related("source_wish"),
+        "planned_changes": planned_changes,
         "active_wishes": active_wishes,
         "active_wish_count": active_wishes.filter(author=user).count(),
         "liked_wish_ids": set(WishLike.objects.filter(user=user, wish__status=UserWish.STATUS_ACTIVE).values_list("wish_id", flat=True)),
+        "liked_plan_ids": set(PlanLike.objects.filter(user=user).values_list("plan_id", flat=True)),
         "is_product_admin": is_admin,
         "error": error,
         "urgency_choices": PlannedChange.URGENCY_CHOICES,

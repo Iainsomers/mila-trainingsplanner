@@ -274,6 +274,24 @@ class PlannedChange(models.Model):
         return self.title
 
 
+class PlanLike(models.Model):
+    plan = models.ForeignKey(PlannedChange, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="plan_likes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["plan", "user"], name="unique_plan_like_per_user"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} likes {self.plan}"
+
+
 class Athlete(models.Model):
     """
     Minimal Athlete model for coach-only phase.
