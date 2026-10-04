@@ -151,7 +151,7 @@ class NewPlansWishesTests(TestCase):
         )
         self.assertEqual(delete_response.status_code, 302)
         wish.refresh_from_db()
-        self.assertEqual(wish.status, UserWish.STATUS_ACTIVE)
+        self.assertEqual(wish.status, UserWish.STATUS_PLANNED)
         self.assertFalse(PlannedChange.objects.filter(id=plan.id).exists())
 
 

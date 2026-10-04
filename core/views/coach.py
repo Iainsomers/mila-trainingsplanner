@@ -600,11 +600,7 @@ def new_plans_wishes_view(request):
 
         if action == "delete_plan":
             plan = get_object_or_404(PlannedChange.objects.select_related("source_wish"), id=request.POST.get("plan_id"))
-            with transaction.atomic():
-                if plan.source_wish:
-                    plan.source_wish.status = UserWish.STATUS_ACTIVE
-                    plan.source_wish.save(update_fields=["status", "updated_at"])
-                plan.delete()
+            plan.delete()
             return redirect("new_plans_wishes")
 
         return HttpResponseForbidden("Unknown action.")
@@ -615,11 +611,21 @@ def new_plans_wishes_view(request):
 def _new_plans_wishes_context(user, is_admin, error=""):
     active_wishes = UserWish.objects.filter(status=UserWish.STATUS_ACTIVE).select_related("author").prefetch_related("likes__user")
     planned_changes = PlannedChange.objects.all().select_related("source_wish").prefetch_related("likes__user")
+    recent_feature_count = NewFeature.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=14),
+    ).count()
+    recent_features = NewFeature.objects.filter(
+        created_at__gte=timezone.now() - timedelta(days=14),
+    )
     return {
         "new_features": NewFeature.objects.all(),
+        "recent_features": recent_features,
         "planned_changes": planned_changes,
         "active_wishes": active_wishes,
         "active_wish_count": active_wishes.filter(author=user).count(),
+        "recent_feature_count": recent_feature_count,
+        "plan_count": planned_changes.count(),
+        "wish_total_count": active_wishes.count(),
         "liked_wish_ids": set(WishLike.objects.filter(user=user, wish__status=UserWish.STATUS_ACTIVE).values_list("wish_id", flat=True)),
         "liked_plan_ids": set(PlanLike.objects.filter(user=user).values_list("plan_id", flat=True)),
         "is_product_admin": is_admin,

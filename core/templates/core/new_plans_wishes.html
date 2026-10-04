@@ -12,6 +12,12 @@
 
   {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><a href="{% url 'new_plans_wishes' %}?section=new" class="card h-100 text-decoration-none"><div class="card-body d-flex justify-content-between align-items-center"><span class="h5 text-body mb-0">New</span><span class="badge bg-primary rounded-pill">{{ recent_feature_count }}</span></div></a></div>
+    <div class="col-md-4"><a href="{% url 'new_plans_wishes' %}?section=plans" class="card h-100 text-decoration-none"><div class="card-body d-flex justify-content-between align-items-center"><span class="h5 text-body mb-0">Plans</span><span class="badge bg-primary rounded-pill">{{ plan_count }}</span></div></a></div>
+    <div class="col-md-4"><a href="{% url 'new_plans_wishes' %}?section=wishes" class="card h-100 text-decoration-none"><div class="card-body d-flex justify-content-between align-items-center"><span class="h5 text-body mb-0">Wishes</span><span class="badge bg-primary rounded-pill">{{ wish_total_count }}</span></div></a></div>
+  </div>
+
   <div class="accordion" id="newPlansWishesAccordion">
     <div class="accordion-item">
       <h2 class="accordion-header" id="heading-new">
@@ -19,7 +25,6 @@
       </h2>
       <div id="new-panel" class="accordion-collapse collapse show" aria-labelledby="heading-new">
         <div class="accordion-body">
-          <p class="text-muted">If you like a plan, click on like and it will get more priority.</p>
           {% if is_product_admin %}
           <details class="mb-3">
             <summary class="btn btn-sm btn-outline-primary">Add new feature</summary>
@@ -31,12 +36,12 @@
             </form>
           </details>
           {% endif %}
-          {% for feature in new_features %}
+          {% for feature in recent_features %}
           <article class="border-top pt-3 mt-3">
             <strong>{{ feature.title }}</strong><span class="text-muted small ms-2">{{ feature.created_at|date:"j M Y" }}</span>
             {% if feature.description %}<div class="mt-1">{{ feature.description|linebreaksbr }}</div>{% endif %}
           </article>
-          {% empty %}<p class="text-muted mb-0">No new features have been added yet.</p>{% endfor %}
+          {% empty %}<p class="text-muted mb-0">No new features from the last 2 weeks.</p>{% endfor %}
         </div>
       </div>
     </div>
@@ -47,6 +52,7 @@
       </h2>
       <div id="plans-panel" class="accordion-collapse collapse" aria-labelledby="heading-plans">
         <div class="accordion-body">
+          <p class="text-muted">If you like a plan, click on like and it will get more priority.</p>
           {% if is_product_admin %}
           <details class="mb-3">
             <summary class="btn btn-sm btn-outline-primary">Add plan</summary>
@@ -108,4 +114,19 @@
     </div>
   </div>
 </div>
+{% if request.GET.section %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const section = new URLSearchParams(window.location.search).get("section");
+    const panels = {new: "new-panel", plans: "plans-panel", wishes: "wishes-panel"};
+    const selectedPanel = panels[section];
+    if (!selectedPanel) return;
+    document.querySelectorAll("#newPlansWishesAccordion > .accordion-item").forEach(function (item) {
+      item.hidden = item.querySelector("#" + selectedPanel) === null;
+    });
+    const panel = document.getElementById(selectedPanel);
+    if (panel) panel.classList.add("show");
+  });
+</script>
+{% endif %}
 {% endblock %}
