@@ -147,6 +147,10 @@ class TrackTimerTests(TestCase):
         athlete_list = self.client.get("/evaluations/")
         self.assertContains(athlete_list, "Wellbeing")
 
+        fill_page = self.client.get(f"/evaluations/{questionnaire.id}/")
+        self.assertContains(fill_page, "evaluation-matrix-answer")
+        self.assertContains(fill_page, "resizeMatrixAnswer")
+
         fill_response = self.client.post(
             f"/evaluations/{questionnaire.id}/",
             {
