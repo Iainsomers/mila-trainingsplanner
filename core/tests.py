@@ -167,6 +167,26 @@ class NewPlansWishesTests(TestCase):
         ordered_titles = [plan.title for plan in response.context["planned_changes"]]
         self.assertEqual(ordered_titles, ["Older gold", "Newer gold", "Silver", "No medal"])
 
+    def test_admin_can_edit_a_plan(self):
+        plan = PlannedChange.objects.create(title="Old title", description="Old details", urgency=PlannedChange.URGENCY_BRONZE)
+        self.client.force_login(self.admin)
+
+        edit_page = self.client.get(f"/new-plans-wishes/?section=plans&edit={plan.id}")
+        self.assertContains(edit_page, "Old title")
+        self.assertContains(edit_page, "Save")
+
+        response = self.client.post("/new-plans-wishes/", {
+            "action": "update_plan",
+            "plan_id": plan.id,
+            "title": "Updated title",
+            "description": "Updated details",
+            "urgency": PlannedChange.URGENCY_GOLD,
+        })
+        self.assertEqual(response.status_code, 302)
+        plan.refresh_from_db()
+        self.assertEqual(plan.title, "Updated title")
+        self.assertEqual(plan.urgency, PlannedChange.URGENCY_GOLD)
+
 
 class TrackTimerTests(TestCase):
     def test_timer_page_is_available_from_dashboard(self):

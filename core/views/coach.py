@@ -603,12 +603,39 @@ def new_plans_wishes_view(request):
             plan.delete()
             return redirect("new_plans_wishes")
 
+        if action == "update_plan":
+            plan = get_object_or_404(PlannedChange, id=request.POST.get("plan_id"))
+            title = request.POST.get("title", "").strip()
+            if not title:
+                return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(
+                    request.user,
+                    is_admin,
+                    error="A plan title is required.",
+                    edit_plan=plan,
+                ))
+            urgency = request.POST.get("urgency", PlannedChange.URGENCY_NONE)
+            valid_urgencies = {value for value, _label in PlannedChange.URGENCY_CHOICES}
+            if urgency not in valid_urgencies:
+                urgency = PlannedChange.URGENCY_NONE
+            plan.title = title
+            plan.description = request.POST.get("description", "").strip()
+            plan.urgency = urgency
+            plan.save(update_fields=["title", "description", "urgency"])
+            return redirect("new_plans_wishes")
+
         return HttpResponseForbidden("Unknown action.")
 
-    return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(request.user, is_admin))
+    edit_plan = None
+    if is_admin and str(request.GET.get("edit", "")).isdigit():
+        edit_plan = PlannedChange.objects.filter(id=int(request.GET["edit"])).first()
+    return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(
+        request.user,
+        is_admin,
+        edit_plan=edit_plan,
+    ))
 
 
-def _new_plans_wishes_context(user, is_admin, error=""):
+def _new_plans_wishes_context(user, is_admin, error="", edit_plan=None):
     active_wishes = UserWish.objects.filter(status=UserWish.STATUS_ACTIVE).select_related("author").prefetch_related("likes__user")
     planned_changes = (
         PlannedChange.objects
@@ -645,6 +672,7 @@ def _new_plans_wishes_context(user, is_admin, error=""):
         "liked_plan_ids": set(PlanLike.objects.filter(user=user).values_list("plan_id", flat=True)),
         "is_product_admin": is_admin,
         "error": error,
+        "edit_plan": edit_plan,
         "urgency_choices": PlannedChange.URGENCY_CHOICES,
     }
 
