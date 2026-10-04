@@ -1188,6 +1188,16 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if prefill_slot:
             visible_slot = prefill_slot
 
+    # Without the explicit extension, an athlete can only adjust a training
+    # that is already present. Empty AM/PM slots remain coach-only.
+    if (
+        is_athlete_year_calendar
+        and not is_coach_user
+        and not getattr(athlete, "extended_edit_rights", False)
+        and (not visible_slot or not visible_slot.segments.exists())
+    ):
+        return HttpResponse("Only existing training can be edited.", status=403)
+
     if request.method == "GET":
         wu_seg = visible_slot.segments.filter(type="WU").order_by("order", "id").first() if visible_slot else None
         mob_seg = visible_slot.segments.filter(type="MOB").order_by("order", "id").first() if visible_slot else None

@@ -3348,6 +3348,21 @@ class SlotModalSaveTests(TestCase):
             TrainingSlot.objects.filter(athlete=athlete, date=future_day, slot_index=1).exists()
         )
 
+        past_day = date.today() - timedelta(days=1)
+        empty_slot_response = self.client.post(
+            f"/slot-modal/{past_day:%Y/%m/%d}/2/?athlete={athlete.id}&plan={plan.id}&source=athlete_year",
+            {
+                "athlete": str(athlete.id),
+                "plan": str(plan.id),
+                "source": "athlete_year",
+                "core_text": "1000m z3",
+            },
+        )
+        self.assertEqual(empty_slot_response.status_code, 403)
+        self.assertFalse(
+            TrainingSlot.objects.filter(athlete=athlete, date=past_day, slot_index=2).exists()
+        )
+
         self.client.force_login(coach)
         coach_response = self.client.post(
             f"/slot-modal/{future_day:%Y/%m/%d}/1/?athlete={athlete.id}&plan={plan.id}&source=athlete_year",
