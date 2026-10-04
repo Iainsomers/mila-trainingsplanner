@@ -3359,6 +3359,39 @@ class SlotModalSaveTests(TestCase):
             TrainingSlot.objects.filter(athlete=athlete, date=future_day, slot_index=1).exists()
         )
 
+    def test_athlete_with_extended_edit_rights_can_add_future_ayc_training(self):
+        coach = get_user_model().objects.create_user(
+            username="extended-rights-coach", password="secret"
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="Extended Rights Athlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Extended Rights Athlete",
+            birth_year=2000,
+            gender="X",
+            extended_edit_rights=True,
+        )
+        plan = TrainingPlan.objects.create(owner=coach, name="Extended rights plan")
+        future_day = date.today() + timedelta(days=1)
+
+        self.client.force_login(athlete_user)
+        response = self.client.post(
+            f"/slot-modal/{future_day:%Y/%m/%d}/2/?athlete={athlete.id}&plan={plan.id}&source=athlete_year",
+            {
+                "athlete": str(athlete.id),
+                "plan": str(plan.id),
+                "source": "athlete_year",
+                "core_text": "1000m z3",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.content.decode())
+        self.assertTrue(
+            TrainingSlot.objects.filter(athlete=athlete, date=future_day, slot_index=2).exists()
+        )
+
     def test_athlete_year_pm_training_contains_modal_prefill_values(self):
         template_path = get_template("core/athlete_year_calendar.html").origin.name
         template_source = Path(template_path).read_text(encoding="utf-8")

@@ -8500,6 +8500,7 @@ def coach_athlete_create_view(request):
         "daily_vitals_enabled": False,
         "year_planner_training_enabled": False,
         "year_planner_whereabouts_enabled": False,
+        "extended_edit_rights": False,
         "auto_wucd_enabled": False,
         "auto_wu_m": 0,
         "auto_cd_m": 0,
@@ -8544,6 +8545,7 @@ def coach_athlete_create_view(request):
         form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
         form["year_planner_training_enabled"] = (request.POST.get("year_planner_training_enabled") == "on")
         form["year_planner_whereabouts_enabled"] = (request.POST.get("year_planner_whereabouts_enabled") == "on")
+        form["extended_edit_rights"] = (request.POST.get("extended_edit_rights") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
@@ -8732,6 +8734,7 @@ def coach_athlete_create_view(request):
                 daily_vitals_enabled=form["daily_vitals_enabled"],
                 year_planner_training_enabled=form["year_planner_training_enabled"],
                 year_planner_whereabouts_enabled=form["year_planner_whereabouts_enabled"],
+                extended_edit_rights=form["extended_edit_rights"],
                 auto_wucd_enabled=form["auto_wucd_enabled"],
                 auto_wu_m=auto_wu_m,
                 auto_cd_m=auto_cd_m,
@@ -8823,6 +8826,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
         "year_planner_training_enabled": getattr(athlete, "year_planner_training_enabled", False),
         "year_planner_whereabouts_enabled": getattr(athlete, "year_planner_whereabouts_enabled", False),
+        "extended_edit_rights": getattr(athlete, "extended_edit_rights", False),
         "auto_wucd_enabled": getattr(athlete, "auto_wucd_enabled", False),
         "auto_wu_m": getattr(athlete, "auto_wu_m", 0),
         "auto_cd_m": getattr(athlete, "auto_cd_m", 0),
@@ -8868,6 +8872,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["daily_vitals_enabled"] = getattr(athlete, "daily_vitals_enabled", False)
             form["year_planner_training_enabled"] = getattr(athlete, "year_planner_training_enabled", False)
             form["year_planner_whereabouts_enabled"] = getattr(athlete, "year_planner_whereabouts_enabled", False)
+            form["extended_edit_rights"] = getattr(athlete, "extended_edit_rights", False)
         else:
             form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
             form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
@@ -8875,6 +8880,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
             form["year_planner_training_enabled"] = (request.POST.get("year_planner_training_enabled") == "on")
             form["year_planner_whereabouts_enabled"] = (request.POST.get("year_planner_whereabouts_enabled") == "on")
+            form["extended_edit_rights"] = (request.POST.get("extended_edit_rights") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
@@ -9061,6 +9067,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
             athlete.year_planner_training_enabled = form["year_planner_training_enabled"]
             athlete.year_planner_whereabouts_enabled = form["year_planner_whereabouts_enabled"]
+            athlete.extended_edit_rights = form["extended_edit_rights"]
             athlete.auto_wucd_enabled = form["auto_wucd_enabled"]
             athlete.auto_wu_m = auto_wu_m
             athlete.auto_cd_m = auto_cd_m

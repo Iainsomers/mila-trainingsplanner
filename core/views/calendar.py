@@ -2667,7 +2667,11 @@ def athlete_year_calendar_view(request):
                 slot_text = request.POST.get("slot_text")
 
                 if slot_text is not None:
-                    if d > today and not _is_coach_user(request.user):
+                    if (
+                        d > today
+                        and not _is_coach_user(request.user)
+                        and not getattr(athlete, "extended_edit_rights", False)
+                    ):
                         return HttpResponse("", status=204)
 
                     try:
@@ -3473,6 +3477,9 @@ def athlete_year_calendar_view(request):
             "ayc_rowspan": ayc_rowspan,
             "is_coach_user": is_coach_user,
             "coach_can_edit_training": coach_can_edit_training,
+            "athlete_extended_edit_rights": bool(
+                selected_athlete and getattr(selected_athlete, "extended_edit_rights", False)
+            ),
             "zones_times_rows": _build_zones_times_rows(selected_athlete),
             "pending_evaluation_reminders": pending_evaluation_reminders,
         },

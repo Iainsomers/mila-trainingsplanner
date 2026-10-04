@@ -1090,7 +1090,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if requested_plan:
             selected_plan = requested_plan
 
-    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    forbid_owner = None if (
+        is_athlete_year_calendar and not _is_coach_user(request.user)
+    ) else _forbid_if_not_plan_owner(request, selected_plan)
     if forbid_owner:
         return forbid_owner
 
@@ -1123,7 +1125,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     display_plan = selected_plan
     selected_plan = _flex_edit_plan_for_request(request, selected_plan, athlete)
-    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    forbid_owner = None if (
+        is_athlete_year_calendar and not _is_coach_user(request.user)
+    ) else _forbid_if_not_plan_owner(request, selected_plan)
     if forbid_owner:
         return forbid_owner
 
@@ -1143,7 +1147,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     athlete_year_can_edit_training = (
         coach_can_edit_training
         if is_athlete_year_calendar and is_coach_user
-        else (d <= date_cls.today() if is_athlete_year_calendar else True)
+        else (
+            d <= date_cls.today() or bool(getattr(athlete, "extended_edit_rights", False))
+            if is_athlete_year_calendar
+            else True
+        )
     )
 
     # Athletes may only change today's or earlier training in the AYC. Keep
