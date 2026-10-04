@@ -2725,9 +2725,9 @@
   window.openAycSlotModal = openSlotModal;
 
   document.querySelectorAll(".slotbox[data-date]").forEach(function(box) {
-    if (aycCoachCanEdit) {
+    if (aycTrainingIsEditable(box.getAttribute("data-date"))) {
       box.classList.remove("disabled");
-    } else if (!aycTrainingIsEditable(box.getAttribute("data-date"))) {
+    } else {
       box.classList.add("disabled");
     }
   });

@@ -3414,6 +3414,7 @@ class SlotModalSaveTests(TestCase):
     def test_athlete_year_pm_training_contains_modal_prefill_values(self):
         template_path = get_template("core/athlete_year_calendar.html").origin.name
         template_source = Path(template_path).read_text(encoding="utf-8")
+        self.assertIn('if (aycTrainingIsEditable(box.getAttribute("data-date")))', template_source)
         pm_desktop_block = template_source.split(
             '<tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">',
             1,
