@@ -144,6 +144,16 @@ class NewPlansWishesTests(TestCase):
         self.assertEqual(like_response.status_code, 302)
         self.assertTrue(PlanLike.objects.filter(plan=plan, user=self.user).exists())
 
+        self.client.force_login(self.admin)
+        delete_response = self.client.post(
+            "/new-plans-wishes/",
+            {"action": "delete_plan", "plan_id": plan.id},
+        )
+        self.assertEqual(delete_response.status_code, 302)
+        wish.refresh_from_db()
+        self.assertEqual(wish.status, UserWish.STATUS_ACTIVE)
+        self.assertFalse(PlannedChange.objects.filter(id=plan.id).exists())
+
 
 class TrackTimerTests(TestCase):
     def test_timer_page_is_available_from_dashboard(self):

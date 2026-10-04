@@ -598,6 +598,15 @@ def new_plans_wishes_view(request):
             wish.save(update_fields=["status", "updated_at"])
             return redirect("new_plans_wishes")
 
+        if action == "delete_plan":
+            plan = get_object_or_404(PlannedChange.objects.select_related("source_wish"), id=request.POST.get("plan_id"))
+            with transaction.atomic():
+                if plan.source_wish:
+                    plan.source_wish.status = UserWish.STATUS_ACTIVE
+                    plan.source_wish.save(update_fields=["status", "updated_at"])
+                plan.delete()
+            return redirect("new_plans_wishes")
+
         return HttpResponseForbidden("Unknown action.")
 
     return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(request.user, is_admin))
