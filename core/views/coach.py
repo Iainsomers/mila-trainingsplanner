@@ -20,7 +20,7 @@ from django.contrib.auth import get_user_model
 from django.db.models.functions import Lower
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Case, IntegerField, Prefetch, Q, When
 from django.utils.dateparse import parse_time
 from django.utils import timezone
 
@@ -610,7 +610,22 @@ def new_plans_wishes_view(request):
 
 def _new_plans_wishes_context(user, is_admin, error=""):
     active_wishes = UserWish.objects.filter(status=UserWish.STATUS_ACTIVE).select_related("author").prefetch_related("likes__user")
-    planned_changes = PlannedChange.objects.all().select_related("source_wish").prefetch_related("likes__user")
+    planned_changes = (
+        PlannedChange.objects
+        .all()
+        .select_related("source_wish")
+        .prefetch_related("likes__user")
+        .annotate(
+            urgency_order=Case(
+                When(urgency=PlannedChange.URGENCY_GOLD, then=0),
+                When(urgency=PlannedChange.URGENCY_SILVER, then=1),
+                When(urgency=PlannedChange.URGENCY_BRONZE, then=2),
+                default=3,
+                output_field=IntegerField(),
+            ),
+        )
+        .order_by("urgency_order", "created_at", "id")
+    )
     recent_feature_count = NewFeature.objects.filter(
         created_at__gte=timezone.now() - timedelta(days=14),
     ).count()

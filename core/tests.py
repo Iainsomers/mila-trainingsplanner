@@ -154,6 +154,19 @@ class NewPlansWishesTests(TestCase):
         self.assertEqual(wish.status, UserWish.STATUS_PLANNED)
         self.assertFalse(PlannedChange.objects.filter(id=plan.id).exists())
 
+    def test_plans_are_sorted_by_medal_then_oldest_first(self):
+        older_gold = PlannedChange.objects.create(title="Older gold", urgency=PlannedChange.URGENCY_GOLD)
+        newer_gold = PlannedChange.objects.create(title="Newer gold", urgency=PlannedChange.URGENCY_GOLD)
+        silver = PlannedChange.objects.create(title="Silver", urgency=PlannedChange.URGENCY_SILVER)
+        no_medal = PlannedChange.objects.create(title="No medal")
+        PlannedChange.objects.filter(id=older_gold.id).update(created_at=timezone.now() - timedelta(days=4))
+        PlannedChange.objects.filter(id=newer_gold.id).update(created_at=timezone.now() - timedelta(days=2))
+        self.client.force_login(self.user)
+
+        response = self.client.get("/new-plans-wishes/")
+        ordered_titles = [plan.title for plan in response.context["planned_changes"]]
+        self.assertEqual(ordered_titles, ["Older gold", "Newer gold", "Silver", "No medal"])
+
 
 class TrackTimerTests(TestCase):
     def test_timer_page_is_available_from_dashboard(self):
