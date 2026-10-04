@@ -1179,6 +1179,8 @@ class PlanningOverviewTests(TestCase):
             "arrival_flight_time": "10:25",
             "departure_flight_number": "KL4321",
             "departure_flight_time": "18:45",
+            "rental_car_info": "Hertz 123",
+            "accommodation": "Hotel Font",
         }, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
         self.assertEqual(saved.status_code, 200)
         self.assertEqual(saved.json(), {"ok": True})
@@ -1189,6 +1191,8 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(first_range.arrival_flight_time.isoformat(), "10:25:00")
         self.assertEqual(first_range.departure_flight_number, "KL4321")
         self.assertEqual(first_range.departure_flight_time.isoformat(), "18:45:00")
+        self.assertEqual(first_range.rental_car_info, "Hertz 123")
+        self.assertEqual(first_range.accommodation, "Hotel Font")
 
     def test_create_camp_and_add_athletes_writes_year_planner_whereabouts(self):
         coach = get_user_model().objects.create_user(username="camp-create-coach", password="secret", is_staff=True)

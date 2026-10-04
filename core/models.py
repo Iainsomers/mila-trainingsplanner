@@ -635,6 +635,8 @@ class YearPlannerWhereabout(models.Model):
     arrival_flight_time = models.TimeField(null=True, blank=True)
     departure_flight_number = models.CharField(max_length=40, blank=True, default="")
     departure_flight_time = models.TimeField(null=True, blank=True)
+    rental_car_info = models.CharField(max_length=160, blank=True, default="")
+    accommodation = models.CharField(max_length=160, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

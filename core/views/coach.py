@@ -8266,6 +8266,8 @@ def _detailed_camps_for_owner(owner, coach_ids):
             "arrival_flight_time": range_obj.arrival_flight_time,
             "departure_flight_number": range_obj.departure_flight_number,
             "departure_flight_time": range_obj.departure_flight_time,
+            "rental_car_info": range_obj.rental_car_info,
+            "accommodation": range_obj.accommodation,
         })
         participant_data["range_ids"].append(range_obj.id)
         participant_data["arrival_date"] = min(participant_data["arrival_date"], range_obj.start_date)
@@ -8275,6 +8277,8 @@ def _detailed_camps_for_owner(owner, coach_ids):
             "arrival_flight_time",
             "departure_flight_number",
             "departure_flight_time",
+            "rental_car_info",
+            "accommodation",
         ):
             if not participant_data[field_name] and getattr(range_obj, field_name):
                 participant_data[field_name] = getattr(range_obj, field_name)
@@ -8406,6 +8410,8 @@ def detailed_camp_detail_view(request):
             arrival_flight_time=arrival_flight_time,
             departure_flight_number=(request.POST.get("departure_flight_number") or "").strip()[:40],
             departure_flight_time=departure_flight_time,
+            rental_car_info=(request.POST.get("rental_car_info") or "").strip()[:160],
+            accommodation=(request.POST.get("accommodation") or "").strip()[:160],
         )
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return JsonResponse({"ok": True})

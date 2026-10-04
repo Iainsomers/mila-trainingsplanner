@@ -3,6 +3,14 @@
 {% block title %}{{ camp.name }} - Details Camps{% endblock %}
 
 {% block content %}
+<style>
+  [data-camp-participants] th:nth-child(5), [data-camp-participants] td:nth-child(5),
+  [data-camp-participants] th:nth-child(6), [data-camp-participants] td:nth-child(6),
+  [data-camp-participants] th:nth-child(7), [data-camp-participants] td:nth-child(7),
+  [data-camp-participants] th:nth-child(8), [data-camp-participants] td:nth-child(8) { min-width: 82px; width: 82px; }
+  [data-camp-participants] th:nth-child(9), [data-camp-participants] td:nth-child(9),
+  [data-camp-participants] th:nth-child(10), [data-camp-participants] td:nth-child(10) { min-width: 180px; }
+</style>
 <div class="container-fluid py-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
@@ -29,6 +37,8 @@
           <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="time">Flight time in &#8597;</button></th>
           <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Flight # out &#8597;</button></th>
           <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="time">Flight time out &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Rental Car Info &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Accommodation &#8597;</button></th>
           <th></th>
         </tr>
       </thead>
@@ -50,6 +60,8 @@
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="time" name="arrival_flight_time" value="{{ participant.arrival_flight_time|time:'H:i' }}"></td>
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="departure_flight_number" value="{{ participant.departure_flight_number }}" maxlength="40"></td>
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="time" name="departure_flight_time" value="{{ participant.departure_flight_time|time:'H:i' }}"></td>
+              <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="rental_car_info" value="{{ participant.rental_car_info }}" maxlength="160"></td>
+              <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="accommodation" value="{{ participant.accommodation }}" maxlength="160"></td>
               <td>
                 <form id="camp-participant-{{ forloop.counter }}" method="post" data-camp-edit-form>
                   {% csrf_token %}
@@ -65,6 +77,8 @@
               <td>{{ participant.arrival_flight_time|time:"H:i" }}</td>
               <td>{{ participant.departure_flight_number }}</td>
               <td>{{ participant.departure_flight_time|time:"H:i" }}</td>
+              <td>{{ participant.rental_car_info }}</td>
+              <td>{{ participant.accommodation }}</td>
               <td></td>
             {% endif %}
           </tr>
