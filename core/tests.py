@@ -68,7 +68,7 @@ class NewPlansWishesTests(TestCase):
         self.client.force_login(self.user)
 
         dashboard = self.client.get("/")
-        self.assertContains(dashboard, "New, plans, wishes")
+        self.assertContains(dashboard, "New, Plans, Wishes")
 
         response = self.client.get("/new-plans-wishes/")
         self.assertEqual(response.status_code, 200)
