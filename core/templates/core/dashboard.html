@@ -82,6 +82,17 @@
     </div>
     {% endif %}
     {% endif %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">New, plans, wishes</h5>
+          <p class="card-text">See new features, planned changes, and share your wishes.</p>
+          <div class="mt-auto">
+            <a href="{% url 'new_plans_wishes' %}" class="btn btn-outline-primary">Open</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   {% if not is_athlete_user and not coach_tools_only %}

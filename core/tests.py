@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, PlanMembership, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -41,6 +41,92 @@ class SecurityHeadersTests(TestCase):
             response["Cross-Origin-Opener-Policy"],
             "same-origin-allow-popups",
         )
+
+
+class NewPlansWishesTests(TestCase):
+    def setUp(self):
+        self.admin = get_user_model().objects.create_user(
+            username="admin",
+            password="secret",
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.user = get_user_model().objects.create_user(
+            username="wish-user",
+            password="secret",
+            first_name="Wish",
+            last_name="Owner",
+        )
+        self.other_user = get_user_model().objects.create_user(
+            username="wish-liker",
+            password="secret",
+            first_name="Like",
+            last_name="Person",
+        )
+
+    def test_dashboard_and_wishes_page_are_available_to_every_user(self):
+        self.client.force_login(self.user)
+
+        dashboard = self.client.get("/")
+        self.assertContains(dashboard, "New, plans, wishes")
+
+        response = self.client.get("/new-plans-wishes/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Here you can see what new features")
+        self.assertNotContains(response, "Add new feature")
+
+    def test_user_can_only_have_three_active_wishes(self):
+        self.client.force_login(self.user)
+        for number in range(3):
+            response = self.client.post(
+                "/new-plans-wishes/",
+                {"action": "add_wish", "title": f"Wish {number}"},
+            )
+            self.assertEqual(response.status_code, 302)
+
+        response = self.client.post(
+            "/new-plans-wishes/",
+            {"action": "add_wish", "title": "Fourth wish"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "up to 3 active wishes")
+        self.assertEqual(UserWish.objects.filter(author=self.user, status=UserWish.STATUS_ACTIVE).count(), 3)
+
+    def test_wishes_are_anonymous_except_for_admin_and_can_be_liked(self):
+        wish = UserWish.objects.create(author=self.user, title="Dark mode")
+        self.client.force_login(self.other_user)
+
+        response = self.client.get("/new-plans-wishes/")
+        self.assertContains(response, "Dark mode")
+        self.assertNotContains(response, "Wish Owner")
+
+        like_response = self.client.post(
+            "/new-plans-wishes/",
+            {"action": "toggle_like", "wish_id": wish.id},
+        )
+        self.assertEqual(like_response.status_code, 302)
+        self.assertTrue(WishLike.objects.filter(wish=wish, user=self.other_user).exists())
+
+        self.client.force_login(self.admin)
+        admin_response = self.client.get("/new-plans-wishes/")
+        self.assertContains(admin_response, "Wish Owner")
+        self.assertContains(admin_response, "Like Person")
+
+    def test_admin_can_turn_a_wish_into_a_prioritised_plan(self):
+        wish = UserWish.objects.create(author=self.user, title="Weekly progress chart", description="Show a simple trend.")
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            "/new-plans-wishes/",
+            {"action": "add_plan", "source_wish": wish.id, "urgency": "gold"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        wish.refresh_from_db()
+        self.assertEqual(wish.status, UserWish.STATUS_PLANNED)
+        plan = PlannedChange.objects.get(source_wish=wish)
+        self.assertEqual(plan.title, "Weekly progress chart")
+        self.assertEqual(plan.urgency, PlannedChange.URGENCY_GOLD)
 
 
 class TrackTimerTests(TestCase):

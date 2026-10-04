@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
@@ -25,7 +25,7 @@ from django.utils.dateparse import parse_time
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, is_coach_tools_only_user
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachAccess, CoachSettings, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, TrainingSlot, PlanWeekPhase, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachAccess, CoachSettings, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, NewFeature, PlannedChange, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -491,6 +491,122 @@ def dashboard_view(request):
         "active_coach_access_label": _active_coach_access_label(request) if is_trainer_user else "own",
         "coach_tools_only": coach_tools_only,
     })
+
+
+def _is_product_admin(user):
+    return bool(user.is_authenticated and user.username.casefold() == "admin")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def new_plans_wishes_view(request):
+    is_admin = _is_product_admin(request.user)
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+
+        if action == "add_wish":
+            title = request.POST.get("title", "").strip()
+            description = request.POST.get("description", "").strip()
+            active_wish_count = UserWish.objects.filter(
+                author=request.user,
+                status=UserWish.STATUS_ACTIVE,
+            ).count()
+            if not title:
+                return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(
+                    request.user,
+                    is_admin,
+                    error="Please add a title for your wish.",
+                ))
+            if active_wish_count >= 3:
+                return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(
+                    request.user,
+                    is_admin,
+                    error="You can have up to 3 active wishes.",
+                ))
+            UserWish.objects.create(author=request.user, title=title, description=description)
+            return redirect("new_plans_wishes")
+
+        if action == "toggle_like":
+            wish = get_object_or_404(UserWish, id=request.POST.get("wish_id"), status=UserWish.STATUS_ACTIVE)
+            like, created = WishLike.objects.get_or_create(wish=wish, user=request.user)
+            if not created:
+                like.delete()
+            return redirect("new_plans_wishes")
+
+        if not is_admin:
+            return HttpResponseForbidden("Only the admin account can manage new features and plans.")
+
+        if action == "add_feature":
+            title = request.POST.get("title", "").strip()
+            if title:
+                NewFeature.objects.create(
+                    title=title,
+                    description=request.POST.get("description", "").strip(),
+                )
+            return redirect("new_plans_wishes")
+
+        if action == "add_plan":
+            source_wish = None
+            source_wish_id = request.POST.get("source_wish")
+            if source_wish_id:
+                source_wish = get_object_or_404(
+                    UserWish,
+                    id=source_wish_id,
+                    status=UserWish.STATUS_ACTIVE,
+                )
+                title = source_wish.title
+                description = source_wish.description
+            else:
+                title = request.POST.get("title", "").strip()
+                description = request.POST.get("description", "").strip()
+
+            if not title:
+                return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(
+                    request.user,
+                    is_admin,
+                    error="Add a plan title or choose a wish.",
+                ))
+
+            urgency = request.POST.get("urgency", PlannedChange.URGENCY_NONE)
+            valid_urgencies = {value for value, _label in PlannedChange.URGENCY_CHOICES}
+            if urgency not in valid_urgencies:
+                urgency = PlannedChange.URGENCY_NONE
+            with transaction.atomic():
+                PlannedChange.objects.create(
+                    title=title,
+                    description=description,
+                    urgency=urgency,
+                    source_wish=source_wish,
+                )
+                if source_wish:
+                    source_wish.status = UserWish.STATUS_PLANNED
+                    source_wish.save(update_fields=["status", "updated_at"])
+            return redirect("new_plans_wishes")
+
+        if action == "cancel_wish":
+            wish = get_object_or_404(UserWish, id=request.POST.get("wish_id"), status=UserWish.STATUS_ACTIVE)
+            wish.status = UserWish.STATUS_CANCELLED
+            wish.save(update_fields=["status", "updated_at"])
+            return redirect("new_plans_wishes")
+
+        return HttpResponseForbidden("Unknown action.")
+
+    return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(request.user, is_admin))
+
+
+def _new_plans_wishes_context(user, is_admin, error=""):
+    active_wishes = UserWish.objects.filter(status=UserWish.STATUS_ACTIVE).select_related("author").prefetch_related("likes__user")
+    return {
+        "new_features": NewFeature.objects.all(),
+        "planned_changes": PlannedChange.objects.all().select_related("source_wish"),
+        "active_wishes": active_wishes,
+        "active_wish_count": active_wishes.filter(author=user).count(),
+        "liked_wish_ids": set(WishLike.objects.filter(user=user, wish__status=UserWish.STATUS_ACTIVE).values_list("wish_id", flat=True)),
+        "is_product_admin": is_admin,
+        "error": error,
+        "urgency_choices": PlannedChange.URGENCY_CHOICES,
+    }
 
 
 @login_required

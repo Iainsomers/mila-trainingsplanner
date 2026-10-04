@@ -6,6 +6,7 @@ from core.auth import ThrottledAuthenticationForm
 from core.views.coach import (
     daily_overview_view,
     dashboard_view,
+    new_plans_wishes_view,
     settings_view,
     detailed_camps_view,
     detailed_camp_detail_view,
@@ -118,6 +119,7 @@ urlpatterns = [
 
     # Dashboard / settings
     path("", dashboard_view, name="dashboard"),
+    path("new-plans-wishes/", new_plans_wishes_view, name="new_plans_wishes"),
     path("settings/", settings_view, name="settings"),
     path("timer/", track_timer_view, name="track_timer"),
     path("coach-tools/", coach_tools_view, name="coach_tools"),

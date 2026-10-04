@@ -1,0 +1,109 @@
+{% extends "core/base.html" %}
+
+{% block title %}New, plans, wishes{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 980px;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">New, plans, wishes</h1>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+  </div>
+  <p class="text-muted">Here you can see what new features there are, what changes are planned and you can add your own wishes.</p>
+
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+  <div class="accordion" id="newPlansWishesAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-new">
+        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#new-panel" aria-expanded="true" aria-controls="new-panel">New</button>
+      </h2>
+      <div id="new-panel" class="accordion-collapse collapse show" aria-labelledby="heading-new">
+        <div class="accordion-body">
+          {% if is_product_admin %}
+          <details class="mb-3">
+            <summary class="btn btn-sm btn-outline-primary">Add new feature</summary>
+            <form method="post" class="mt-3">
+              {% csrf_token %}<input type="hidden" name="action" value="add_feature">
+              <div class="mb-2"><label class="form-label" for="feature-title">Title</label><input id="feature-title" name="title" class="form-control" maxlength="160" required></div>
+              <div class="mb-2"><label class="form-label" for="feature-description">Description</label><textarea id="feature-description" name="description" class="form-control" rows="3"></textarea></div>
+              <button class="btn btn-primary">Add</button>
+            </form>
+          </details>
+          {% endif %}
+          {% for feature in new_features %}
+          <article class="border-top pt-3 mt-3">
+            <strong>{{ feature.title }}</strong><span class="text-muted small ms-2">{{ feature.created_at|date:"j M Y" }}</span>
+            {% if feature.description %}<div class="mt-1">{{ feature.description|linebreaksbr }}</div>{% endif %}
+          </article>
+          {% empty %}<p class="text-muted mb-0">No new features have been added yet.</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-plans">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#plans-panel" aria-expanded="false" aria-controls="plans-panel">Plans</button>
+      </h2>
+      <div id="plans-panel" class="accordion-collapse collapse" aria-labelledby="heading-plans">
+        <div class="accordion-body">
+          {% if is_product_admin %}
+          <details class="mb-3">
+            <summary class="btn btn-sm btn-outline-primary">Add plan</summary>
+            <form method="post" class="mt-3">
+              {% csrf_token %}<input type="hidden" name="action" value="add_plan">
+              <div class="mb-3"><label class="form-label" for="plan-wish">Create from a wish</label><select id="plan-wish" name="source_wish" class="form-select"><option value="">Create a new plan</option>{% for wish in active_wishes %}<option value="{{ wish.id }}">{{ wish.title }} - {{ wish.author.get_full_name|default:wish.author.username }}</option>{% endfor %}</select></div>
+              <div class="mb-2"><label class="form-label" for="plan-title">Plan title</label><input id="plan-title" name="title" class="form-control" maxlength="160"></div>
+              <div class="mb-2"><label class="form-label" for="plan-description">Description</label><textarea id="plan-description" name="description" class="form-control" rows="3"></textarea></div>
+              <div class="mb-2"><label class="form-label" for="plan-urgency">Urgency</label><select id="plan-urgency" name="urgency" class="form-select">{% for value, label in urgency_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+              <button class="btn btn-primary">Add</button>
+            </form>
+          </details>
+          {% endif %}
+          {% for plan in planned_changes %}
+          <article class="border-top pt-3 mt-3 d-flex gap-2">
+            {% if plan.urgency == "gold" %}<span aria-label="Gold priority" title="Gold priority">&#129351;</span>{% elif plan.urgency == "silver" %}<span aria-label="Silver priority" title="Silver priority">&#129352;</span>{% elif plan.urgency == "bronze" %}<span aria-label="Bronze priority" title="Bronze priority">&#129353;</span>{% endif %}
+            <div><strong>{{ plan.title }}</strong>{% if plan.description %}<div class="mt-1">{{ plan.description|linebreaksbr }}</div>{% endif %}</div>
+          </article>
+          {% empty %}<p class="text-muted mb-0">No plans have been added yet.</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="heading-wishes">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#wishes-panel" aria-expanded="false" aria-controls="wishes-panel">Wishes</button>
+      </h2>
+      <div id="wishes-panel" class="accordion-collapse collapse" aria-labelledby="heading-wishes">
+        <div class="accordion-body">
+          <p class="text-muted">Pls in English! You can like wishes as well!!</p>
+          {% if active_wish_count < 3 %}
+          <details class="mb-3">
+            <summary class="btn btn-sm btn-outline-primary">Add wish</summary>
+            <form method="post" class="mt-3">
+              {% csrf_token %}<input type="hidden" name="action" value="add_wish">
+              <div class="mb-2"><label class="form-label" for="wish-title">Wish</label><input id="wish-title" name="title" class="form-control" maxlength="160" required></div>
+              <div class="mb-2"><label class="form-label" for="wish-description">Details</label><textarea id="wish-description" name="description" class="form-control" rows="3"></textarea></div>
+              <button class="btn btn-primary">Add</button>
+            </form>
+          </details>
+          {% else %}<p class="text-muted">You have reached your limit of 3 active wishes.</p>{% endif %}
+          {% for wish in active_wishes %}
+          <article class="border-top pt-3 mt-3 d-flex justify-content-between gap-3">
+            <div>
+              <strong>{{ wish.title }}</strong>
+              {% if is_product_admin %}<span class="text-muted small ms-2">{{ wish.author.get_full_name|default:wish.author.username }}</span>{% endif %}
+              {% if wish.description %}<div class="mt-1">{{ wish.description|linebreaksbr }}</div>{% endif %}
+              {% if is_product_admin and wish.likes.all %}<div class="small text-muted mt-2">Liked by: {% for like in wish.likes.all %}{{ like.user.get_full_name|default:like.user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="d-flex gap-2 align-items-start">
+              <form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle_like"><input type="hidden" name="wish_id" value="{{ wish.id }}"><button class="btn btn-sm {% if wish.id in liked_wish_ids %}btn-primary{% else %}btn-outline-primary{% endif %}">Like{% if wish.likes.count %} ({{ wish.likes.count }}){% endif %}</button></form>
+              {% if is_product_admin %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="cancel_wish"><input type="hidden" name="wish_id" value="{{ wish.id }}"><button class="btn btn-sm btn-outline-danger">Cancel</button></form>{% endif %}
+            </div>
+          </article>
+          {% empty %}<p class="text-muted mb-0">No active wishes yet.</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

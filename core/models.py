@@ -185,6 +185,95 @@ class EvaluationResponse(models.Model):
         return f"{self.questionnaire} - {self.athlete}"
 
 
+class NewFeature(models.Model):
+    title = models.CharField(max_length=160)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class UserWish(models.Model):
+    STATUS_ACTIVE = "active"
+    STATUS_PLANNED = "planned"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_PLANNED, "Used for a plan"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="submitted_wishes",
+    )
+    title = models.CharField(max_length=160)
+    description = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class WishLike(models.Model):
+    wish = models.ForeignKey(UserWish, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="wish_likes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["wish", "user"], name="unique_wish_like_per_user"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} likes {self.wish}"
+
+
+class PlannedChange(models.Model):
+    URGENCY_NONE = ""
+    URGENCY_GOLD = "gold"
+    URGENCY_SILVER = "silver"
+    URGENCY_BRONZE = "bronze"
+    URGENCY_CHOICES = [
+        (URGENCY_NONE, "No medal"),
+        (URGENCY_GOLD, "Gold"),
+        (URGENCY_SILVER, "Silver"),
+        (URGENCY_BRONZE, "Bronze"),
+    ]
+
+    title = models.CharField(max_length=160)
+    description = models.TextField(blank=True, default="")
+    urgency = models.CharField(max_length=16, choices=URGENCY_CHOICES, blank=True, default=URGENCY_NONE)
+    source_wish = models.OneToOneField(
+        UserWish,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="resulting_plan",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
 class Athlete(models.Model):
     """
     Minimal Athlete model for coach-only phase.
