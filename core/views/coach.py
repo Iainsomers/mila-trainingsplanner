@@ -8161,7 +8161,7 @@ def settings_view(request):
 
 
 @login_required
-@require_GET
+@require_http_methods(["GET", "POST"])
 def detailed_camps_view(request):
     athlete = _athlete_for_user(request.user)
     if is_coach_tools_only_user(request.user) or (
@@ -8174,8 +8174,42 @@ def detailed_camps_view(request):
     if not enabled:
         return redirect("planning_overview")
 
+    if request.method == "POST":
+        if request.POST.get("action") != "create_camp":
+            return HttpResponse("Unknown action", status=400)
+        name = re.sub(r"\s+", " ", (request.POST.get("name") or "").strip())[:120]
+        try:
+            start_date = _parse_iso_date(request.POST.get("start_date"))
+            end_date = _parse_iso_date(request.POST.get("end_date"))
+        except (TypeError, ValueError):
+            start_date = end_date = None
+        athlete_ids = {
+            int(value) for value in request.POST.getlist("athlete_ids") if str(value).isdigit()
+        }
+        available_athletes = Athlete.objects.filter(owner=owner, id__in=athlete_ids)
+        if not name or not start_date or not end_date or end_date < start_date or not athlete_ids or not available_athletes.exists():
+            camps = _detailed_camps_for_owner(owner, _coach_view_owner_ids(request.user))
+            return render(request, "core/detailed_camps.html", {
+                "camps": camps,
+                "available_athletes": Athlete.objects.filter(owner=owner).order_by("name"),
+                "create_error": "Choose a name, valid dates and at least one athlete.",
+            }, status=400)
+        for athlete_obj in available_athletes:
+            YearPlannerWhereabout.objects.create(
+                owner=owner,
+                athlete=athlete_obj,
+                start_date=start_date,
+                end_date=end_date,
+                whereabouts_type="camp",
+                note=name,
+            )
+        return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': _camp_identity(name)})}")
+
     camps = _detailed_camps_for_owner(owner, _coach_view_owner_ids(request.user))
-    return render(request, "core/detailed_camps.html", {"camps": camps})
+    return render(request, "core/detailed_camps.html", {
+        "camps": camps,
+        "available_athletes": Athlete.objects.filter(owner=owner).order_by("name"),
+    })
 
 
 def _camp_identity(name):
@@ -8284,6 +8318,30 @@ def detailed_camp_detail_view(request):
         return redirect("detailed_camps")
 
     if request.method == "POST":
+        if request.POST.get("action") == "add_athletes":
+            existing_athlete_ids = {
+                item["person"].id for item in camp["participants"] if item["person_type"] == "Athlete"
+            }
+            athlete_ids = {
+                int(value) for value in request.POST.getlist("athlete_ids") if str(value).isdigit()
+            } - existing_athlete_ids
+            can_add = owner.id == request.user.id or CoachAccess.objects.filter(
+                owner=owner, grantee=request.user, can_edit=True,
+            ).exists()
+            if not can_add:
+                return HttpResponse("Forbidden", status=403)
+            athletes = Athlete.objects.filter(owner=owner, id__in=athlete_ids)
+            for athlete_obj in athletes:
+                YearPlannerWhereabout.objects.create(
+                    owner=owner,
+                    athlete=athlete_obj,
+                    start_date=camp["start_date"],
+                    end_date=camp["end_date"],
+                    whereabouts_type="camp",
+                    note=camp["name"],
+                )
+            return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': camp_key})}")
+
         participant_type = (request.POST.get("participant_type") or "").strip()
         try:
             participant_id = _parse_int(request.POST.get("participant_id"))
@@ -8316,10 +8374,7 @@ def detailed_camp_detail_view(request):
         except (TypeError, ValueError):
             arrival_date = departure_date = None
         if not arrival_date or not departure_date or departure_date < arrival_date:
-            return render(request, "core/detailed_camp_detail.html", {
-                "camp": camp,
-                "error": "Arrival and departure dates are required, with departure on or after arrival.",
-            }, status=400)
+            return render(request, "core/detailed_camp_detail.html", _detailed_camp_detail_context(camp, request, "Arrival and departure dates are required, with departure on or after arrival."), status=400)
 
         def optional_time(field_name):
             value = (request.POST.get(field_name) or "").strip()
@@ -8330,10 +8385,7 @@ def detailed_camp_detail_view(request):
         if ((request.POST.get("arrival_flight_time") or "").strip() and not arrival_flight_time) or (
             (request.POST.get("departure_flight_time") or "").strip() and not departure_flight_time
         ):
-            return render(request, "core/detailed_camp_detail.html", {
-                "camp": camp,
-                "error": "Flight times must be valid times.",
-            }, status=400)
+            return render(request, "core/detailed_camp_detail.html", _detailed_camp_detail_context(camp, request, "Flight times must be valid times."), status=400)
 
         YearPlannerWhereabout.objects.filter(id__in=participant["range_ids"]).update(
             start_date=arrival_date,
@@ -8356,10 +8408,25 @@ def detailed_camp_detail_view(request):
                 grantee=request.user,
                 can_edit=True,
             ).exists()
-    return render(request, "core/detailed_camp_detail.html", {
+    return render(request, "core/detailed_camp_detail.html", _detailed_camp_detail_context(camp, request, saved=request.GET.get("saved") == "1"))
+
+
+def _detailed_camp_detail_context(camp, request, error="", saved=False):
+    existing_athlete_ids = {
+        item["person"].id for item in camp["participants"] if item["person_type"] == "Athlete"
+    }
+    owner = _active_coach_user(request)
+    return {
         "camp": camp,
-        "saved": request.GET.get("saved") == "1",
-    })
+        "saved": saved,
+        "error": error,
+        "can_add_athletes": owner.id == request.user.id or CoachAccess.objects.filter(
+            owner=owner, grantee=request.user, can_edit=True,
+        ).exists(),
+        "available_athletes": Athlete.objects.filter(owner=owner).exclude(
+            id__in=existing_athlete_ids,
+        ).order_by("name"),
+    }
 
 
 # -----------------------------

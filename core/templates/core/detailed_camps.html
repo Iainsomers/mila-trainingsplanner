@@ -8,6 +8,20 @@
     <h1 class="h3 mb-0">Details Camps</h1>
     <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back to planning</a>
   </div>
+  <details class="mb-3">
+    <summary class="btn btn-primary">Create camp</summary>
+    {% if create_error %}<div class="alert alert-danger mt-3">{{ create_error }}</div>{% endif %}
+    <form method="post" class="border rounded p-3 mt-3">
+      {% csrf_token %}<input type="hidden" name="action" value="create_camp">
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label" for="camp-name">Camp name</label><input id="camp-name" name="name" class="form-control" maxlength="120" required></div>
+        <div class="col-md-3"><label class="form-label" for="camp-start">Start date</label><input id="camp-start" name="start_date" type="date" class="form-control" required></div>
+        <div class="col-md-3"><label class="form-label" for="camp-end">End date</label><input id="camp-end" name="end_date" type="date" class="form-control" required></div>
+        <div class="col-12"><label class="form-label">Initial athletes</label><div class="row g-2">{% for athlete in available_athletes %}<div class="col-md-4 col-lg-3"><label class="form-check"><input class="form-check-input" type="checkbox" name="athlete_ids" value="{{ athlete.id }}"><span class="form-check-label">{{ athlete.name }}</span></label></div>{% empty %}<p class="text-muted mb-0">No athletes available.</p>{% endfor %}</div></div>
+      </div>
+      <button class="btn btn-primary mt-3">Create camp</button>
+    </form>
+  </details>
   {% if camps %}
     <div class="table-responsive">
       <table class="table table-hover align-middle">
@@ -21,13 +35,11 @@
         </thead>
         <tbody>
           {% for camp in camps %}
-            <tr>
+            <tr role="link" tabindex="0" class="camp-link-row" data-camp-url="{% url 'detailed_camp_detail' %}?camp={{ camp.key|urlencode }}">
               <td class="fw-semibold">{{ camp.name }}</td>
               <td>{{ camp.start_date|date:"d M Y" }} - {{ camp.end_date|date:"d M Y" }}</td>
               <td>{{ camp.participant_count }}</td>
-              <td class="text-end">
-                <a class="btn btn-sm btn-primary" href="{% url 'detailed_camp_detail' %}?camp={{ camp.key|urlencode }}">Open</a>
-              </td>
+              <td class="text-end"></td>
             </tr>
           {% endfor %}
         </tbody>
@@ -37,4 +49,15 @@
     <p class="text-muted mb-0">No named camps in the selected coach planning.</p>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll(".camp-link-row").forEach((row) => {
+    row.addEventListener("click", () => { window.location.href = row.dataset.campUrl; });
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); window.location.href = row.dataset.campUrl; }
+    });
+  });
+</script>
 {% endblock %}

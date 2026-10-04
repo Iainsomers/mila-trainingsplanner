@@ -1190,6 +1190,32 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(first_range.departure_flight_number, "KL4321")
         self.assertEqual(first_range.departure_flight_time.isoformat(), "18:45:00")
 
+    def test_create_camp_and_add_athletes_writes_year_planner_whereabouts(self):
+        coach = get_user_model().objects.create_user(username="camp-create-coach", password="secret", is_staff=True)
+        CoachSettings.objects.create(user=coach, detailed_camps_enabled=True)
+        first = Athlete.objects.create(owner=coach, name="First Camp Athlete", birth_year=2000, gender="X")
+        second = Athlete.objects.create(owner=coach, name="Second Camp Athlete", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+
+        created = self.client.post("/planning/detailed-camps/", {
+            "action": "create_camp",
+            "name": "Training Camp",
+            "start_date": "2026-10-07",
+            "end_date": "2026-11-04",
+            "athlete_ids": [str(first.id)],
+        })
+        self.assertRedirects(created, "/planning/detailed-camps/camp/?camp=training+camp")
+        self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=first, note="Training Camp").exists())
+
+        added = self.client.post("/planning/detailed-camps/camp/?camp=training+camp", {
+            "action": "add_athletes",
+            "athlete_ids": [str(second.id)],
+        })
+        self.assertRedirects(added, "/planning/detailed-camps/camp/?camp=training+camp")
+        second_range = YearPlannerWhereabout.objects.get(owner=coach, athlete=second, note="Training Camp")
+        self.assertEqual(second_range.start_date, date(2026, 10, 7))
+        self.assertEqual(second_range.end_date, date(2026, 11, 4))
+
 
 class PolarPlanMismatchTests(TestCase):
     def test_v4_samples_are_normalized_for_matching(self):
