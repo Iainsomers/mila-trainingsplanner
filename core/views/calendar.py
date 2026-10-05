@@ -3007,9 +3007,15 @@ def athlete_year_calendar_view(request):
             .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
             .order_by("sort_order", "start_month", "start_day", "id")
         )
-        allowed_base_trainer_plan_ids = set(
-            _live_shared_trainer_plans_for_request(request).values_list("id", flat=True)
-        )
+        if _is_coach_user(request.user):
+            allowed_base_trainer_plan_ids = set(
+                _live_shared_trainer_plans_for_request(request).values_list("id", flat=True)
+            )
+        else:
+            # The coach has already assigned this schedule to the athlete.
+            # The trainer-to-trainer sharing rule must not hide it from the
+            # athlete's own AYC view.
+            allowed_base_trainer_plan_ids = None
         trainer_plan_ids = set()
         for block in base_blocks:
             base_blocks_by_athlete.setdefault(block.athlete_id, []).append(block)
@@ -3017,7 +3023,10 @@ def athlete_year_calendar_view(request):
                 if (
                     base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
                     and base_slot.trainer_plan_id
-                    and base_slot.trainer_plan_id in allowed_base_trainer_plan_ids
+                    and (
+                        allowed_base_trainer_plan_ids is None
+                        or base_slot.trainer_plan_id in allowed_base_trainer_plan_ids
+                    )
                 ):
                     trainer_plan_ids.add(base_slot.trainer_plan_id)
 

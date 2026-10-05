@@ -1195,6 +1195,60 @@ class PlanningOverviewTests(TestCase):
         hidden_after_opt_out = self.client.get(f"/planning/base/?athlete={athlete.id}")
         self.assertNotContains(hidden_after_opt_out, "Sender live schedule")
 
+    def test_athlete_ayc_still_shows_assigned_shared_trainer_schedule(self):
+        receiving_coach = get_user_model().objects.create_user(
+            username="ayc-sharing-receiver", password="secret", is_staff=True
+        )
+        sending_coach = get_user_model().objects.create_user(
+            username="ayc-sharing-sender", password="secret", is_staff=True
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="Assigned Shared Athlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=receiving_coach,
+            name="Assigned Shared Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        shared_plan = TrainingPlan.objects.create(
+            owner=sending_coach,
+            name="Assigned shared schedule",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=shared_plan, athlete=athlete)
+        day = date.today()
+        source_slot = TrainingSlot.objects.create(
+            plan=shared_plan,
+            date=day,
+            slot_index=1,
+        )
+        source_slot.segments.create(type="CORE", text="Assigned group session", order=0)
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=day.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=shared_plan,
+        )
+        CoachAccess.objects.create(owner=sending_coach, grantee=receiving_coach, can_edit=False)
+        CoachSettings.objects.create(user=receiving_coach, live_sharing_training_schedules=True)
+        CoachSettings.objects.create(user=sending_coach, live_sharing_training_schedules=True)
+
+        self.client.force_login(athlete_user)
+        response = self.client.get(f"/athlete/year/?year={day.year}&hide=none")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Assigned group session")
+
     def test_detailed_camps_group_athletes_and_coaches_by_name(self):
         coach = get_user_model().objects.create_user(
             username="camp-overview-coach",
