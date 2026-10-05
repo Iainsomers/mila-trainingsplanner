@@ -43,6 +43,7 @@ from .common import (
     _set_active_coach_user,
     _active_coach_access_label,
     _live_shared_trainer_plans_for_request,
+    _is_coach_user,
 )
 
 from core.zones import (
@@ -6722,8 +6723,10 @@ def athlete_base_planning_view(request):
             if is_autosave:
                 return JsonResponse({"ok": False, "errors": errors}, status=400)
 
-    available_trainer_plan_ids = set(
-        _live_shared_trainer_plans_for_request(request).values_list("id", flat=True)
+    available_trainer_plan_ids = (
+        set(_live_shared_trainer_plans_for_request(request).values_list("id", flat=True))
+        if _is_coach_user(request.user)
+        else None
     )
     blocks = []
     if selected_athlete:
@@ -6749,6 +6752,7 @@ def athlete_base_planning_view(request):
                         slot
                         and slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
                         and slot.trainer_plan_id
+                        and available_trainer_plan_ids is not None
                         and slot.trainer_plan_id not in available_trainer_plan_ids
                     ):
                         slot.shared_plan_unavailable = True

@@ -1249,6 +1249,11 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Assigned group session")
 
+        base_planning = self.client.get(f"/planning/base/?athlete={athlete.id}")
+        self.assertEqual(base_planning.status_code, 200)
+        self.assertContains(base_planning, "Assigned shared schedule")
+        self.assertNotContains(base_planning, "Shared schedule unavailable")
+
     def test_detailed_camps_group_athletes_and_coaches_by_name(self):
         coach = get_user_model().objects.create_user(
             username="camp-overview-coach",
