@@ -3927,6 +3927,29 @@ class SegmentRepTimeDisplayTests(TestCase):
 
         self.assertEqual(_segment_hr_label(athlete, segment), "HR160")
 
+    def test_zone_hr_label_accepts_text_ranges_and_z4_z5(self):
+        athlete = Athlete.objects.create(
+            name="Text HR Runner",
+            birth_year=2000,
+            gender="X",
+            zone_hr_bpm={"4": "160-170", "5": "max 170"},
+        )
+
+        self.assertEqual(
+            _segment_hr_label(
+                athlete,
+                TrainingSegment(type="CORE", text="400m z4", zone="4"),
+            ),
+            "HR160-170",
+        )
+        self.assertEqual(
+            _segment_hr_label(
+                athlete,
+                TrainingSegment(type="CORE", text="200m z5", zone="5"),
+            ),
+            "HRmax 170",
+        )
+
     def test_zone_hr_label_lists_distinct_zones_for_compound_segment(self):
         athlete = Athlete.objects.create(
             name="Compound HR Runner",
@@ -5180,6 +5203,8 @@ class AthleteZoneHeartRateTests(TestCase):
                 "z1_hr": "130",
                 "z2_hr": "145",
                 "z3_hr": "160",
+                "z4_hr": "160-170",
+                "z5_hr": "max 170",
             },
         )
 
@@ -5188,13 +5213,18 @@ class AthleteZoneHeartRateTests(TestCase):
             f"/coach/athletes/{athlete.id}/edit/?tab=zones&saved=1",
         )
         athlete.refresh_from_db()
-        self.assertEqual(athlete.zone_hr_bpm, {"1": 130, "2": 145, "3": 160})
+        self.assertEqual(
+            athlete.zone_hr_bpm,
+            {"1": "130", "2": "145", "3": "160", "4": "160-170", "5": "max 170"},
+        )
 
         page = self.client.get(f"/coach/athletes/{athlete.id}/edit/?tab=zones")
         self.assertContains(page, 'name="z1_hr"', html=False)
         self.assertContains(page, 'value="130"', html=False)
         self.assertContains(page, 'value="145"', html=False)
         self.assertContains(page, 'value="160"', html=False)
+        self.assertContains(page, 'value="160-170"', html=False)
+        self.assertContains(page, 'value="max 170"', html=False)
 
 
 class SecurityAccessRegressionTests(TestCase):

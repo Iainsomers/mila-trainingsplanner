@@ -8807,6 +8807,8 @@ def coach_athlete_create_view(request):
         "z1_hr": "",
         "z2_hr": "",
         "z3_hr": "",
+        "z4_hr": "",
+        "z5_hr": "",
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -8849,7 +8851,7 @@ def coach_athlete_create_view(request):
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
-        for z in ("1", "2", "3"):
+        for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_hr"] = (request.POST.get(f"z{z}_hr") or "").strip()
 
         for z in ("1", "2", "3", "4", "5"):
@@ -8892,17 +8894,10 @@ def coach_athlete_create_view(request):
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
 
         zone_hr_bpm = {}
-        for z in ("1", "2", "3"):
-            raw_hr = form[f"z{z}_hr"]
-            if not raw_hr:
-                continue
-            try:
-                value_hr = int(raw_hr)
-                if value_hr < 0:
-                    raise ValueError
-                zone_hr_bpm[z] = value_hr
-            except (TypeError, ValueError):
-                errors.append(f"Z{z} HR must be a non-negative whole number.")
+        for z in ("1", "2", "3", "4", "5"):
+            raw_hr = (form[f"z{z}_hr"] or "").strip()
+            if raw_hr:
+                zone_hr_bpm[z] = raw_hr
 
         try:
             pr_600_s = _parse_pr_time_to_seconds(form["pr_600"]) if form["pr_600"] else None
@@ -9133,6 +9128,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "z1_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("1", ""),
         "z2_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("2", ""),
         "z3_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("3", ""),
+        "z4_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("4", ""),
+        "z5_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("5", ""),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -9184,7 +9181,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
-        for z in ("1", "2", "3"):
+        for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_hr"] = (request.POST.get(f"z{z}_hr") or "").strip()
 
         for z in ("1", "2", "3", "4", "5"):
@@ -9227,17 +9224,10 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
 
         zone_hr_bpm = {}
-        for z in ("1", "2", "3"):
-            raw_hr = form[f"z{z}_hr"]
-            if not raw_hr:
-                continue
-            try:
-                value_hr = int(raw_hr)
-                if value_hr < 0:
-                    raise ValueError
-                zone_hr_bpm[z] = value_hr
-            except (TypeError, ValueError):
-                errors.append(f"Z{z} HR must be a non-negative whole number.")
+        for z in ("1", "2", "3", "4", "5"):
+            raw_hr = (form[f"z{z}_hr"] or "").strip()
+            if raw_hr:
+                zone_hr_bpm[z] = raw_hr
 
         try:
             pr_600_s = _parse_pr_time_to_seconds(form["pr_600"]) if form["pr_600"] else None

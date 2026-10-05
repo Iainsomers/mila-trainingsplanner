@@ -2043,7 +2043,7 @@ def _segment_rep_time_label(athlete, seg):
 
 
 def _segment_hr_label(athlete, seg):
-    """Return the configured heart-rate labels for the segment's Z1-Z3 zones."""
+    """Return configured heart-rate labels for the segment's Z1-Z5 zones."""
     if not athlete or not seg:
         return ""
 
@@ -2072,14 +2072,13 @@ def _segment_hr_label(athlete, seg):
     labels = []
     for zone in zone_labels:
         zone = str(zone).strip()
-        if zone not in {"1", "2", "3"}:
+        if zone not in {"1", "2", "3", "4", "5"}:
             continue
         raw_value = configured.get(zone, configured.get(f"Z{zone}"))
-        try:
-            value = int(raw_value)
-        except (TypeError, ValueError):
+        if raw_value is None:
             continue
-        if value <= 0:
+        value = str(raw_value).strip()
+        if not value:
             continue
         label = f"HR{value}"
         if label not in labels:
