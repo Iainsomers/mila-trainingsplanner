@@ -3373,6 +3373,68 @@ class SlotModalSaveTests(TestCase):
         slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date=day, slot_index=1)
         self.assertEqual(slot.core_text(), "1000m z2")
 
+    def test_edit_access_coach_can_copy_shared_flex_slot(self):
+        owner = get_user_model().objects.create_user(
+            username="flex-copy-owner", password="secret", is_staff=True
+        )
+        shared_coach = get_user_model().objects.create_user(
+            username="flex-copy-coach", password="secret", is_staff=True
+        )
+        source_athlete = Athlete.objects.create(
+            owner=owner,
+            name="Flex Copy Source",
+            birth_year=2000,
+            gender="X",
+            is_private=False,
+        )
+        target_athlete = Athlete.objects.create(
+            owner=owner,
+            name="Flex Copy Target",
+            birth_year=2000,
+            gender="X",
+            is_private=False,
+        )
+        plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="Shared flex copy source",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=source_athlete)
+        PlanMembership.objects.create(plan=plan, athlete=target_athlete)
+        source_day = date.today()
+        target_day = source_day + timedelta(days=1)
+        source_slot = TrainingSlot.objects.create(
+            plan=plan,
+            date=source_day,
+            slot_index=1,
+        )
+        source_slot.segments.create(type="CORE", text="1000m z2", order=0)
+        CoachAccess.objects.create(owner=owner, grantee=shared_coach, can_edit=True)
+
+        self.client.force_login(shared_coach)
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
+        copy_response = self.client.post(
+            f"/slot-copy/{source_day.year}/{source_day.month}/{source_day.day}/1/"
+            f"?plan={plan.id}&athlete={source_athlete.id}&source=flex"
+        )
+        self.assertEqual(copy_response.status_code, 200)
+
+        paste_response = self.client.post(
+            f"/slot-paste/{target_day.year}/{target_day.month}/{target_day.day}/1/"
+            f"?plan={plan.id}&athlete={target_athlete.id}&source=flex"
+        )
+        self.assertEqual(paste_response.status_code, 200)
+
+        flex_plan = TrainingPlan.objects.get(owner=owner, name__startswith="Flex Planner")
+        copied_slot = TrainingSlot.objects.get(
+            plan=flex_plan,
+            athlete=target_athlete,
+            date=target_day,
+            slot_index=1,
+        )
+        self.assertEqual(copied_slot.core_text(), "1000m z2")
+
     def test_edit_access_coach_can_save_shared_ayc_training(self):
         owner = get_user_model().objects.create_user(
             username="ayc-shared-owner", password="secret", is_staff=True

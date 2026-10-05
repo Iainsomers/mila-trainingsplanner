@@ -124,7 +124,9 @@ def _flex_edit_plan_for_request(request, selected_plan, athlete):
 
 
 def _get_flex_athlete_from_request(request, selected_plan):
-    if not (_is_flex_source(request) and _is_flex_planner_plan(selected_plan)):
+    # Flex cells can point at the underlying trainer plan while the actual
+    # athlete-specific write belongs in the owner's Flex Planner plan.
+    if not _is_flex_source(request):
         return None
 
     athlete_id = (request.GET.get("athlete") or request.POST.get("athlete") or "").strip()
@@ -946,9 +948,6 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
 @require_http_methods(["POST"])
 def slot_paste(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
-    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
-    if forbid_owner:
-        return forbid_owner
 
     clipboard = request.session.get("training_clipboard")
     if not clipboard or not isinstance(clipboard, dict):
@@ -963,6 +962,16 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
     athlete = _get_selected_athlete_from_request(request)
     if not athlete:
         athlete = _get_flex_athlete_from_request(request, selected_plan)
+
+    # Manual Flex edits already route to the owner's Flex Planner plan. Keep
+    # drag/copy consistent so a paste creates an athlete override there too,
+    # even when the visible source/target cell came from a trainer plan.
+    selected_plan = _flex_edit_plan_for_request(request, selected_plan, athlete)
+
+    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
+    if forbid_owner:
+        return forbid_owner
+
     forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
