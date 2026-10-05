@@ -17,6 +17,10 @@
         <input class="form-check-input" type="checkbox" role="switch" id="detailed-camps-enabled" name="detailed_camps_enabled" {% if detailed_camps_enabled %}checked{% endif %}>
         <label class="form-check-label" for="detailed-camps-enabled">Planning Camps</label>
       </div>
+      <div class="form-check form-switch mt-3">
+        <input class="form-check-input" type="checkbox" role="switch" id="live-sharing-training-schedules" name="live_sharing_training_schedules" {% if live_sharing_training_schedules %}checked{% endif %}>
+        <label class="form-check-label" for="live-sharing-training-schedules">Live Sharing Training Schedules</label>
+      </div>
     </div>
     <div class="card-footer bg-white d-flex justify-content-end">
       <button type="submit" class="btn btn-primary">Save settings</button>

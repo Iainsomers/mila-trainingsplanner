@@ -42,6 +42,7 @@ class CoachSettings(models.Model):
 
     # Optional long-term planning modules.
     detailed_camps_enabled = models.BooleanField(default=False)
+    live_sharing_training_schedules = models.BooleanField(default=False)
 
     # Trainingsbuilder (Core + Alternative zijn altijd zichtbaar)
     tb_show_wu = models.BooleanField(default=True)

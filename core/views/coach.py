@@ -42,6 +42,7 @@ from .common import (
     _coach_view_owner_ids,
     _set_active_coach_user,
     _active_coach_access_label,
+    _live_shared_trainer_plans_for_request,
 )
 
 from core.zones import (
@@ -6503,7 +6504,7 @@ def athlete_base_planning_view(request):
 
             trainer_plans = {
                 plan.id: plan
-                for plan in _trainer_planning_qs(request)
+                for plan in _live_shared_trainer_plans_for_request(request)
             }
             with transaction.atomic():
                 if allow_delete and delete_ids:
@@ -6538,8 +6539,12 @@ def athlete_base_planning_view(request):
 
                         trainer_plan_id = (request.POST.get(f"{prefix}_trainer_plan") or "").strip()
                         if mode == AthleteBasePlanningSlot.MODE_TRAINER and trainer_plan_id.isdigit():
-                            slot.trainer_plan = trainer_plans.get(int(trainer_plan_id))
-                        else:
+                            selected_trainer_plan = trainer_plans.get(int(trainer_plan_id))
+                            # Keep an existing shared reference intact while
+                            # one of the two opt-ins is temporarily off.
+                            if selected_trainer_plan:
+                                slot.trainer_plan = selected_trainer_plan
+                        elif mode != AthleteBasePlanningSlot.MODE_TRAINER:
                             slot.trainer_plan = None
                         slot.save()
             return True, []
@@ -6692,7 +6697,7 @@ def athlete_base_planning_view(request):
             trainer_plan = None
             trainer_plan_id = (request.POST.get("trainer_plan") or "").strip()
             if mode == AthleteBasePlanningSlot.MODE_TRAINER and trainer_plan_id.isdigit():
-                trainer_plan = _trainer_planning_qs(request).filter(id=int(trainer_plan_id)).first()
+                trainer_plan = _live_shared_trainer_plans_for_request(request).filter(id=int(trainer_plan_id)).first()
 
             slot.mode = mode
             slot.training_text = (request.POST.get("training_text") or "").strip() if mode == AthleteBasePlanningSlot.MODE_TRAINING else ""
@@ -6717,6 +6722,9 @@ def athlete_base_planning_view(request):
             if is_autosave:
                 return JsonResponse({"ok": False, "errors": errors}, status=400)
 
+    available_trainer_plan_ids = set(
+        _live_shared_trainer_plans_for_request(request).values_list("id", flat=True)
+    )
     blocks = []
     if selected_athlete:
         block_qs = (
@@ -6734,6 +6742,16 @@ def athlete_base_planning_view(request):
             .order_by("sort_order", "start_month", "start_day", "id")
         )
         blocks = [{"block": block, "rows": _base_planning_rows(block)} for block in block_qs]
+        for item in blocks:
+            for row in item["rows"]:
+                for slot in (row.get("am"), row.get("pm")):
+                    if (
+                        slot
+                        and slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
+                        and slot.trainer_plan_id
+                        and slot.trainer_plan_id not in available_trainer_plan_ids
+                    ):
+                        slot.shared_plan_unavailable = True
 
     return render(
         request,
@@ -6742,7 +6760,8 @@ def athlete_base_planning_view(request):
             "athletes": athletes,
             "selected_athlete": selected_athlete,
             "blocks": blocks,
-            "trainer_plans": _trainer_planning_qs(request).order_by(Lower("name")),
+            "trainer_plans": _live_shared_trainer_plans_for_request(request).order_by(Lower("name")),
+            "available_trainer_plan_ids": available_trainer_plan_ids,
             "errors": errors,
             "saved": saved,
             "mode_choices": AthleteBasePlanningSlot.MODE_CHOICES,
@@ -8195,11 +8214,13 @@ def settings_view(request):
 
     if request.method == "POST":
         coach_settings.detailed_camps_enabled = (request.POST.get("detailed_camps_enabled") == "on")
-        coach_settings.save(update_fields=["detailed_camps_enabled", "updated_at"])
+        coach_settings.live_sharing_training_schedules = (request.POST.get("live_sharing_training_schedules") == "on")
+        coach_settings.save(update_fields=["detailed_camps_enabled", "live_sharing_training_schedules", "updated_at"])
         return redirect("/settings/")
 
     return render(request, "core/settings.html", {
         "detailed_camps_enabled": coach_settings.detailed_camps_enabled,
+        "live_sharing_training_schedules": coach_settings.live_sharing_training_schedules,
     })
 
 

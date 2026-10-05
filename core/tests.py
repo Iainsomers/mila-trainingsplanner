@@ -1131,6 +1131,70 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(planning_after, "Details Camps")
         self.assertEqual(self.client.get("/planning/detailed-camps/").status_code, 200)
 
+    def test_live_training_schedule_sharing_requires_both_coaches(self):
+        receiving_coach = get_user_model().objects.create_user(
+            username="live-sharing-receiver", password="secret", is_staff=True
+        )
+        sending_coach = get_user_model().objects.create_user(
+            username="live-sharing-sender", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=receiving_coach,
+            name="Live Sharing Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        slot = AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_REST,
+        )
+        shared_plan = TrainingPlan.objects.create(
+            owner=sending_coach,
+            name="Sender live schedule",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        CoachAccess.objects.create(owner=sending_coach, grantee=receiving_coach, can_edit=False)
+        CoachSettings.objects.create(user=receiving_coach, live_sharing_training_schedules=True)
+        self.client.force_login(receiving_coach)
+
+        before_sender_opt_in = self.client.get(
+            f"/planning/base/?athlete={athlete.id}"
+        )
+        self.assertNotContains(before_sender_opt_in, "Sender live schedule")
+
+        CoachSettings.objects.create(user=sending_coach, live_sharing_training_schedules=True)
+        after_both_opt_in = self.client.get(f"/planning/base/?athlete={athlete.id}")
+        self.assertContains(after_both_opt_in, "Sender live schedule")
+
+        saved = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(athlete.id),
+                "action": "autosave_slot",
+                "slot_id": str(slot.id),
+                "mode": AthleteBasePlanningSlot.MODE_TRAINER,
+                "trainer_plan": str(shared_plan.id),
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(saved.status_code, 200)
+        slot.refresh_from_db()
+        self.assertEqual(slot.trainer_plan_id, shared_plan.id)
+
+        CoachSettings.objects.get(user=sending_coach).delete()
+        hidden_after_opt_out = self.client.get(f"/planning/base/?athlete={athlete.id}")
+        self.assertNotContains(hidden_after_opt_out, "Sender live schedule")
+
     def test_detailed_camps_group_athletes_and_coaches_by_name(self):
         coach = get_user_model().objects.create_user(
             username="camp-overview-coach",

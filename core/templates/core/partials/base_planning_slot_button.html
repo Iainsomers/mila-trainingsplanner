@@ -10,7 +10,9 @@
 >
   <span class="base-slot-time">{{ slot_label }}</span>
   <span class="base-slot-value">
-    {% if slot.mode == "trainer" and slot.trainer_plan %}
+    {% if slot.shared_plan_unavailable %}
+      <span class="base-pill base-pill-rest">Shared schedule unavailable</span>
+    {% elif slot.mode == "trainer" and slot.trainer_plan %}
       <span class="base-pill base-pill-group">{{ slot.trainer_plan.name }}</span>
     {% elif slot.mode == "training" and slot.training_text %}
       {% for part in slot.display_parts %}

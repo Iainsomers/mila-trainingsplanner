@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.contrib.auth import get_user_model
 
-from core.models import TrainingPlan, Athlete, TrainingSlot, CoachAccess
+from core.models import TrainingPlan, Athlete, TrainingSlot, CoachAccess, CoachSettings
 
 
 # Backwards-compatible constant (sommige views importeren dit nog)
@@ -227,6 +227,33 @@ def _coach_view_owner_ids(user):
     owner_ids = [user.id]
     owner_ids.extend(CoachAccess.objects.filter(grantee=user).values_list("owner_id", flat=True))
     return list(dict.fromkeys(owner_ids))
+
+
+def _live_shared_trainer_plans_for_request(request):
+    """Return trainer plans whose owner and receiving coach opted in."""
+    receiving_owner = _active_coach_user(request)
+    if not getattr(receiving_owner, "id", None):
+        return TrainingPlan.objects.none()
+
+    receiving_enabled = CoachSettings.objects.filter(
+        user_id=receiving_owner.id,
+        live_sharing_training_schedules=True,
+    ).exists()
+
+    owner_ids = set(_coach_view_owner_ids(request.user))
+    owner_ids.add(receiving_owner.id)
+    enabled_owner_ids = {receiving_owner.id}
+    if receiving_enabled:
+        enabled_owner_ids.update(
+            CoachSettings.objects.filter(
+                user_id__in=owner_ids,
+                live_sharing_training_schedules=True,
+            ).values_list("user_id", flat=True)
+        )
+    return TrainingPlan.objects.filter(
+        plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        owner_id__in=enabled_owner_ids,
+    ).select_related("owner")
 
 
 def _is_coach_user(user):
