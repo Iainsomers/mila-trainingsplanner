@@ -19,6 +19,7 @@ from core.models import (
     AthleteBasePlanningBlock,
     AthleteBasePlanningSlot,
     RaceEntry,
+    CoachAccess,
 )
 from core.parser import parse_segment_text
 from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
@@ -890,15 +891,37 @@ def slot_open(request, y, m, d, slot_index):
 @require_http_methods(["POST"])
 def slot_copy(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
-    forbid_owner = _forbid_if_not_plan_owner(request, selected_plan)
-    if forbid_owner:
-        return forbid_owner
+
+    # In Flex Planner the displayed source may belong to a shared trainer
+    # plan.  Copying only needs read access to that source; the write happens
+    # later through the athlete owner's Flex Planner plan.
+    if _is_flex_source(request):
+        requested_plan_id = (request.GET.get("plan") or request.POST.get("plan") or "").strip()
+        if requested_plan_id.isdigit():
+            candidate = TrainingPlan.objects.filter(id=int(requested_plan_id)).first()
+            if candidate:
+                active_owner = _active_coach_user(request)
+                can_read_source = (
+                    candidate.owner_id == getattr(request.user, "id", None)
+                    or candidate.owner_id == getattr(active_owner, "id", None)
+                    or CoachAccess.objects.filter(owner_id=candidate.owner_id, grantee=request.user).exists()
+                )
+                if can_read_source:
+                    selected_plan = candidate
 
     d = date_cls(int(yyyy), int(mm), int(dd))
     slot_index = int(slot_index)
-    athlete = _get_selected_athlete_from_request(request)
+    athlete = _get_flex_athlete_from_request(request, selected_plan) if _is_flex_source(request) else None
     if not athlete:
+        athlete = _get_selected_athlete_from_request(request)
+    if not athlete and _is_flex_source(request):
         athlete = _get_flex_athlete_from_request(request, selected_plan)
+
+    write_plan = _flex_edit_plan_for_request(request, selected_plan, athlete)
+    forbid_owner = _forbid_if_not_plan_owner(request, write_plan)
+    if forbid_owner:
+        return forbid_owner
+
     forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
