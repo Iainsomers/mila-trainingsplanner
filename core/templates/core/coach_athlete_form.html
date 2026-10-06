@@ -384,7 +384,7 @@
             <button class="nav-link {% if not active_tab or active_tab == 'general' %}active{% endif %}" id="general-tab" data-bs-toggle="tab" data-bs-target="#general-pane" type="button" role="tab">General</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link {% if active_tab == 'zones' %}active{% endif %}" id="zones-tab" data-bs-toggle="tab" data-bs-target="#zones-pane" type="button" role="tab">Zone/PR's</button>
+            <button class="nav-link {% if active_tab == 'zones' %}active{% endif %}" id="zones-tab" data-bs-toggle="tab" data-bs-target="#zones-pane" type="button" role="tab">Current times</button>
           </li>
           {% if mode == "edit" and athlete %}
             <li class="nav-item" role="presentation">
@@ -528,7 +528,9 @@
             Extended edit rights
           </label>
           <div class="form-text">Lets the athlete edit future training and add a training to an empty AM or PM slot.</div>
-          <div class="form-check mt-2">
+        </div>
+
+        <div class="mb-3 form-check">
             <input
               class="form-check-input"
               type="checkbox"
@@ -540,7 +542,6 @@
               Can change base planning
             </label>
             <div class="form-text">Lets the athlete edit their base planning, including individual training and groups from their own trainer.</div>
-          </div>
         </div>
         {% endif %}
 
@@ -636,8 +637,8 @@
 
         <div class="mt-4">
           <div class="d-flex align-items-center gap-2 mb-2">
-            <h6 class="mb-0">PR times</h6>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="fillMissingPbsBtn">Fill missing PB's</button>
+            <h6 class="mb-0">Current times</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="fillMissingPbsBtn">Fill missing times</button>
           </div>
 
           <div class="pr-time-grid">
