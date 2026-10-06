@@ -528,6 +528,19 @@
             Extended edit rights
           </label>
           <div class="form-text">Lets the athlete edit future training and add a training to an empty AM or PM slot.</div>
+          <div class="form-check mt-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="can_change_base_planning"
+              name="can_change_base_planning"
+              {% if form.can_change_base_planning %}checked{% endif %}
+            >
+            <label class="form-check-label" for="can_change_base_planning">
+              Can change base planning
+            </label>
+            <div class="form-text">Lets the athlete edit their base planning, including individual training and groups from their own trainer.</div>
+          </div>
         </div>
         {% endif %}
 
@@ -692,7 +705,7 @@
           {% if mode == "edit" and athlete %}
             <div class="tab-pane fade {% if active_tab == 'base-planning' %}show active{% endif %}" id="base-planning-pane" role="tabpanel" aria-labelledby="base-planning-tab">
               <iframe
-                src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=base{% if self_view %}&readonly=1{% endif %}"
+                src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=base{% if self_view and not form.can_change_base_planning %}&readonly=1{% endif %}"
                 style="width:100%; min-height:780px; border:1px solid #ddd; border-radius:6px;"
                 title="Athlete base planning"
               ></iframe>

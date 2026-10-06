@@ -342,6 +342,7 @@ class Athlete(models.Model):
     year_planner_training_enabled = models.BooleanField(default=False)
     year_planner_whereabouts_enabled = models.BooleanField(default=False)
     extended_edit_rights = models.BooleanField(default=False)
+    can_change_base_planning = models.BooleanField(default=False)
 
     auto_wucd_enabled = models.BooleanField(default=False)
     auto_wu_m = models.PositiveIntegerField(default=0)

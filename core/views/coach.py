@@ -6489,25 +6489,30 @@ def _base_planning_athlete_qs_for_user(user):
     return Athlete.objects.filter(id=athlete.id)
 
 
+def _base_planning_trainer_plans_for_request(request, athlete):
+    """Return groups an editor may assign in an athlete's base planning."""
+    linked_athlete = _athlete_for_user(request.user)
+    if athlete and linked_athlete and linked_athlete.id == athlete.id:
+        return (
+            TrainingPlan.objects
+            .filter(owner_id=athlete.owner_id, plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
+            .select_related("owner")
+        )
+    return _live_shared_trainer_plans_for_request(request)
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 @xframe_options_sameorigin
 def athlete_base_planning_view(request):
     embedded = (request.GET.get("embedded") == "1") or (request.POST.get("embedded") == "1")
-    read_only = (request.GET.get("readonly") == "1") or (request.POST.get("readonly") == "1")
+    requested_read_only = (request.GET.get("readonly") == "1") or (request.POST.get("readonly") == "1")
     redirect_suffix = "&embedded=1" if embedded else ""
     planning_kind = (request.POST.get("kind") or request.GET.get("kind") or AthleteBasePlanningBlock.KIND_BASE).strip()
     if planning_kind not in {AthleteBasePlanningBlock.KIND_BASE, AthleteBasePlanningBlock.KIND_IDEAL}:
         planning_kind = AthleteBasePlanningBlock.KIND_BASE
     redirect_suffix += f"&kind={planning_kind}"
     is_ideal_week = planning_kind == AthleteBasePlanningBlock.KIND_IDEAL
-    read_only = bool(
-        read_only
-        or (
-            not (request.user.is_staff or request.user.is_superuser)
-            and planning_kind == AthleteBasePlanningBlock.KIND_BASE
-        )
-    )
     athletes = list(_base_planning_athlete_qs_for_user(request.user))
     selected_athlete = None
     selected_id = (request.POST.get("athlete_id") or request.GET.get("athlete") or "").strip()
@@ -6515,6 +6520,23 @@ def athlete_base_planning_view(request):
         selected_athlete = _base_planning_athlete_qs_for_user(request.user).filter(id=int(selected_id)).first()
     if not selected_athlete and athletes:
         selected_athlete = athletes[0]
+
+    athlete_can_change_base_planning = bool(
+        selected_athlete
+        and planning_kind == AthleteBasePlanningBlock.KIND_BASE
+        and not (request.user.is_staff or request.user.is_superuser)
+        and _athlete_for_user(request.user) is not None
+        and _athlete_for_user(request.user).id == selected_athlete.id
+        and getattr(selected_athlete, "can_change_base_planning", False)
+    )
+    read_only = bool(
+        requested_read_only
+        or (
+            not (request.user.is_staff or request.user.is_superuser)
+            and planning_kind == AthleteBasePlanningBlock.KIND_BASE
+            and not athlete_can_change_base_planning
+        )
+    )
 
     errors = []
     saved = False
@@ -6623,7 +6645,7 @@ def athlete_base_planning_view(request):
 
             trainer_plans = {
                 plan.id: plan
-                for plan in _live_shared_trainer_plans_for_request(request)
+                for plan in _base_planning_trainer_plans_for_request(request, selected_athlete)
             }
             with transaction.atomic():
                 if allow_delete and delete_ids:
@@ -6837,7 +6859,7 @@ def athlete_base_planning_view(request):
             trainer_plan = None
             trainer_plan_id = (request.POST.get("trainer_plan") or "").strip()
             if mode == AthleteBasePlanningSlot.MODE_TRAINER and trainer_plan_id.isdigit():
-                trainer_plan = _live_shared_trainer_plans_for_request(request).filter(id=int(trainer_plan_id)).first()
+                trainer_plan = _base_planning_trainer_plans_for_request(request, selected_athlete).filter(id=int(trainer_plan_id)).first()
 
             slot.mode = mode
             slot.training_text = (request.POST.get("training_text") or "").strip() if mode == AthleteBasePlanningSlot.MODE_TRAINING else ""
@@ -6863,9 +6885,9 @@ def athlete_base_planning_view(request):
                 return JsonResponse({"ok": False, "errors": errors}, status=400)
 
     available_trainer_plan_ids = (
-        set(_live_shared_trainer_plans_for_request(request).values_list("id", flat=True))
-        if _is_coach_user(request.user)
-        else None
+        set(_base_planning_trainer_plans_for_request(request, selected_athlete).values_list("id", flat=True))
+        if selected_athlete
+        else set()
     )
     blocks = []
     if selected_athlete:
@@ -6873,6 +6895,18 @@ def athlete_base_planning_view(request):
         for block in block_qs:
             _ensure_base_block_slots(block)
         blocks = [{"block": block, "rows": _base_planning_rows(block)} for block in block_qs]
+        # An athlete may still have an already-assigned shared group from a
+        # different coach. Keep displaying that assignment, but do not add it
+        # to the selectable options; new choices remain limited to the own
+        # trainer's groups.
+        if not _is_coach_user(request.user):
+            existing_assigned_plan_ids = {
+                slot.trainer_plan_id
+                for block in block_qs
+                for slot in block.slots.all()
+                if slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and slot.trainer_plan_id
+            }
+            available_trainer_plan_ids.update(existing_assigned_plan_ids)
         for item in blocks:
             for row in item["rows"]:
                 for slot in (row.get("am"), row.get("pm")):
@@ -6892,7 +6926,7 @@ def athlete_base_planning_view(request):
             "athletes": athletes,
             "selected_athlete": selected_athlete,
             "blocks": blocks,
-            "trainer_plans": _live_shared_trainer_plans_for_request(request).order_by(Lower("name")),
+            "trainer_plans": _base_planning_trainer_plans_for_request(request, selected_athlete).order_by(Lower("name")),
             "available_trainer_plan_ids": available_trainer_plan_ids,
             "errors": errors,
             "saved": saved,
@@ -6901,6 +6935,7 @@ def athlete_base_planning_view(request):
             "planning_kind": planning_kind,
             "is_ideal_week": is_ideal_week,
             "read_only": read_only,
+            "athlete_can_change_base_planning": athlete_can_change_base_planning,
         },
     )
 
@@ -8929,6 +8964,7 @@ def coach_athlete_create_view(request):
         "year_planner_training_enabled": False,
         "year_planner_whereabouts_enabled": False,
         "extended_edit_rights": False,
+        "can_change_base_planning": False,
         "auto_wucd_enabled": False,
         "auto_wu_m": 0,
         "auto_cd_m": 0,
@@ -8976,6 +9012,7 @@ def coach_athlete_create_view(request):
         form["year_planner_training_enabled"] = (request.POST.get("year_planner_training_enabled") == "on")
         form["year_planner_whereabouts_enabled"] = (request.POST.get("year_planner_whereabouts_enabled") == "on")
         form["extended_edit_rights"] = (request.POST.get("extended_edit_rights") == "on")
+        form["can_change_base_planning"] = (request.POST.get("can_change_base_planning") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
@@ -9158,6 +9195,7 @@ def coach_athlete_create_view(request):
                 year_planner_training_enabled=form["year_planner_training_enabled"],
                 year_planner_whereabouts_enabled=form["year_planner_whereabouts_enabled"],
                 extended_edit_rights=form["extended_edit_rights"],
+                can_change_base_planning=form["can_change_base_planning"],
                 auto_wucd_enabled=form["auto_wucd_enabled"],
                 auto_wu_m=auto_wu_m,
                 auto_cd_m=auto_cd_m,
@@ -9250,6 +9288,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "year_planner_training_enabled": getattr(athlete, "year_planner_training_enabled", False),
         "year_planner_whereabouts_enabled": getattr(athlete, "year_planner_whereabouts_enabled", False),
         "extended_edit_rights": getattr(athlete, "extended_edit_rights", False),
+        "can_change_base_planning": getattr(athlete, "can_change_base_planning", False),
         "auto_wucd_enabled": getattr(athlete, "auto_wucd_enabled", False),
         "auto_wu_m": getattr(athlete, "auto_wu_m", 0),
         "auto_cd_m": getattr(athlete, "auto_cd_m", 0),
@@ -9298,6 +9337,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["year_planner_training_enabled"] = getattr(athlete, "year_planner_training_enabled", False)
             form["year_planner_whereabouts_enabled"] = getattr(athlete, "year_planner_whereabouts_enabled", False)
             form["extended_edit_rights"] = getattr(athlete, "extended_edit_rights", False)
+            form["can_change_base_planning"] = getattr(athlete, "can_change_base_planning", False)
         else:
             form["view_weeks_ahead"] = (request.POST.get("view_weeks_ahead") or "2").strip()
             form["training_reports_enabled"] = (request.POST.get("training_reports_enabled") == "on")
@@ -9306,6 +9346,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["year_planner_training_enabled"] = (request.POST.get("year_planner_training_enabled") == "on")
             form["year_planner_whereabouts_enabled"] = (request.POST.get("year_planner_whereabouts_enabled") == "on")
             form["extended_edit_rights"] = (request.POST.get("extended_edit_rights") == "on")
+            form["can_change_base_planning"] = (request.POST.get("can_change_base_planning") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
@@ -9486,6 +9527,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.year_planner_training_enabled = form["year_planner_training_enabled"]
             athlete.year_planner_whereabouts_enabled = form["year_planner_whereabouts_enabled"]
             athlete.extended_edit_rights = form["extended_edit_rights"]
+            athlete.can_change_base_planning = form["can_change_base_planning"]
             athlete.auto_wucd_enabled = form["auto_wucd_enabled"]
             athlete.auto_wu_m = auto_wu_m
             athlete.auto_cd_m = auto_cd_m

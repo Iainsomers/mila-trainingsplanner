@@ -3158,12 +3158,92 @@ class SlotModalSaveTests(TestCase):
         )
         self.assertEqual(base_response.status_code, 200)
         self.assertContains(base_response, "View only")
-        blocked_post = self.client.post(
-            "/planning/base/",
-            {"athlete_id": str(athlete.id), "kind": "base", "action": "add_block"},
-        )
-        self.assertEqual(blocked_post.status_code, 403)
 
+    def test_athlete_with_base_planning_rights_can_edit_and_only_use_own_trainers_groups(self):
+        coach = get_user_model().objects.create_user(
+            username="base-rights-coach", password="secret"
+        )
+        other_coach = get_user_model().objects.create_user(
+            username="other-base-rights-coach", password="secret"
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="base-rights-athlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="base-rights-athlete",
+            birth_year=2000,
+            gender="X",
+            can_change_base_planning=True,
+        )
+        own_plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Own athlete group",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        foreign_plan = TrainingPlan.objects.create(
+            owner=other_coach,
+            name="Foreign athlete group",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Year",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        slot = AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_REST,
+        )
+
+        self.client.force_login(athlete_user)
+        page = self.client.get(
+            f"/planning/base/?athlete={athlete.id}&embedded=1&kind=base"
+        )
+        self.assertEqual(page.status_code, 200)
+        self.assertNotContains(page, "View only")
+        self.assertContains(page, own_plan.name)
+        self.assertNotContains(page, foreign_plan.name)
+
+        response = self.client.post(
+            f"/planning/base/?athlete={athlete.id}&embedded=1&kind=base",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": "base",
+                "embedded": "1",
+                "action": "autosave_slot",
+                "slot_id": str(slot.id),
+                "mode": AthleteBasePlanningSlot.MODE_TRAINER,
+                "trainer_plan": str(own_plan.id),
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 200, response.content.decode())
+        edited_slot = AthleteBasePlanningSlot.objects.get(id=response.json()["slot_id"])
+        self.assertEqual(edited_slot.trainer_plan_id, own_plan.id)
+
+        response = self.client.post(
+            f"/planning/base/?athlete={athlete.id}&embedded=1&kind=base",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": "base",
+                "embedded": "1",
+                "action": "autosave_slot",
+                "slot_id": str(edited_slot.id),
+                "mode": AthleteBasePlanningSlot.MODE_TRAINER,
+                "trainer_plan": str(foreign_plan.id),
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 200, response.content.decode())
+        edited_slot.refresh_from_db()
+        self.assertIsNone(edited_slot.trainer_plan_id)
     def test_mobile_ayc_template_contains_week_reports_and_vitals_popup(self):
         _, _, athlete = self._user_plan_and_athlete()
         athlete.week_report_enabled = True
