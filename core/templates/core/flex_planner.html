@@ -460,8 +460,8 @@
     }
 
     function flexTKey(text) {
-      const s = (text || "").toUpperCase().replace(/\s+/g, "");
-      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))/);
+      const s = (text || "").toUpperCase();
+      const m = s.match(/(?:^|[^A-Z0-9])(TM|THM|T\s*4|T\s*(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?![A-Z0-9])/);
       return m ? flexNormalizeTKey(m[1]) : "";
     }
 
@@ -498,8 +498,8 @@
     }
 
     function flexProgressiveTKeys(text) {
-      const s = (text || "").toUpperCase().replace(/\s+/g, "");
-      const m = s.match(/(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?:>|-)(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))/);
+      const s = (text || "").toUpperCase();
+      const m = s.match(/(?:^|[^A-Z0-9])(TM|THM|T\s*4|T\s*(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?:>|-)\s*(TM|THM|T\s*4|T\s*(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?![A-Z0-9])/);
       if (!m) return null;
       const a = flexNormalizeTKey(m[1]);
       const b = flexNormalizeTKey(m[2]);

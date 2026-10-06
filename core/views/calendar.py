@@ -2150,8 +2150,11 @@ def _ayc_normalize_t_key(value):
 
 
 def _ayc_t_key(text):
-    s = re.sub(r"\s+", "", (text or "").upper())
-    m = re.search(r"(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))", s)
+    s = (text or "").upper()
+    m = re.search(
+        r"(?:^|[^A-Z0-9])(TM|THM|T\s*4|T\s*(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?![A-Z0-9])",
+        s,
+    )
     return _ayc_normalize_t_key(m.group(1)) if m else ""
 
 
@@ -2172,10 +2175,10 @@ def _ayc_zone_for_t_key(t_key):
 
 
 def _ayc_progressive_t_keys(text):
-    s = re.sub(r"\s+", "", (text or "").upper())
+    s = (text or "").upper()
     m = re.search(
-        r"(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?:>|-)"
-        r"(TM|THM|T4|T(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))",
+        r"(?:^|[^A-Z0-9])(TM|THM|T\s*4|T\s*(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?:>|-)\s*"
+        r"(TM|THM|T\s*4|T\s*(?:10000|5000|3000|1500|1000|800|600|10|5|3|15|1|8|6))(?![A-Z0-9])",
         s,
     )
     if not m:
