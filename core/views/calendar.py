@@ -955,7 +955,21 @@ def _base_block_covers_day(block, day):
 
 
 def _base_planning_slot_for_day(base_blocks_by_athlete, athlete_id, day, slot_index):
-    for block in base_blocks_by_athlete.get(athlete_id, []):
+    blocks = base_blocks_by_athlete.get(athlete_id, [])
+    applicable_blocks = [
+        block for block in blocks
+        if getattr(block, "effective_from", date(1900, 1, 1)) <= day
+    ]
+    if not applicable_blocks:
+        return None
+
+    latest_effective_from = max(
+        getattr(block, "effective_from", date(1900, 1, 1))
+        for block in applicable_blocks
+    )
+    for block in applicable_blocks:
+        if getattr(block, "effective_from", date(1900, 1, 1)) != latest_effective_from:
+            continue
         if not _base_block_covers_day(block, day):
             continue
         for base_slot in getattr(block, "_prefetched_base_slots", []):

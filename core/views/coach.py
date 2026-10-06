@@ -6278,6 +6278,91 @@ def _next_month_day_after(month: int, day: int):
     return _month_day_from_index(day_index + 1)
 
 
+def _base_planning_edit_blocks(athlete, planning_kind):
+    """Return the newest block revision used by the base-planning editor."""
+    blocks = list(
+        AthleteBasePlanningBlock.objects
+        .filter(athlete=athlete, planning_kind=planning_kind)
+        .prefetch_related("slots")
+        .order_by("effective_from", "sort_order", "start_month", "start_day", "id")
+    )
+    if not blocks:
+        return []
+    latest = max(block.effective_from for block in blocks)
+    return [block for block in blocks if block.effective_from == latest]
+
+
+def _ensure_future_base_planning_revision(athlete, planning_kind):
+    """Fork the editable base planning so changes start tomorrow."""
+    blocks = _base_planning_edit_blocks(athlete, planning_kind)
+    if not blocks:
+        return []
+
+    effective_from = date.today() + timedelta(days=1)
+    latest = max(block.effective_from for block in blocks)
+    if latest >= effective_from:
+        return blocks
+
+    source_blocks = sorted(blocks, key=lambda block: (block.sort_order, block.id))
+    with transaction.atomic():
+        copied_blocks = []
+        for source_block in source_blocks:
+            target_block = AthleteBasePlanningBlock.objects.create(
+                athlete=athlete,
+                planning_kind=planning_kind,
+                label=source_block.label,
+                start_month=source_block.start_month,
+                start_day=source_block.start_day,
+                end_month=source_block.end_month,
+                end_day=source_block.end_day,
+                effective_from=effective_from,
+                sort_order=source_block.sort_order,
+            )
+            _copy_base_block_slots(source_block, target_block)
+            copied_blocks.append(target_block)
+        return copied_blocks
+
+
+def _map_base_block_ids_to_edit_revision(athlete, planning_kind, block_ids):
+    """Map IDs from the rendered revision to tomorrow's editable revision."""
+    posted_blocks = list(
+        AthleteBasePlanningBlock.objects
+        .filter(athlete=athlete, planning_kind=planning_kind, id__in=block_ids)
+        .order_by("effective_from", "sort_order", "start_month", "start_day", "id")
+    )
+    editable_blocks = _ensure_future_base_planning_revision(athlete, planning_kind)
+    if not posted_blocks or not editable_blocks:
+        return {int(block_id): int(block_id) for block_id in block_ids if str(block_id).isdigit()}
+
+    editable_by_order = {
+        block.sort_order: block.id
+        for block in editable_blocks
+    }
+    return {
+        int(block.id): editable_by_order.get(block.sort_order, block.id)
+        for block in posted_blocks
+    }
+
+
+def _base_slot_id_map(source_blocks, target_blocks):
+    source_by_order = {block.sort_order: block for block in source_blocks}
+    target_by_order = {block.sort_order: block for block in target_blocks}
+    mapping = {}
+    for sort_order, source_block in source_by_order.items():
+        target_block = target_by_order.get(sort_order)
+        if not target_block:
+            continue
+        target_slots = {
+            (slot.weekday, slot.slot_index): slot
+            for slot in target_block.slots.all()
+        }
+        for source_slot in source_block.slots.all():
+            target_slot = target_slots.get((source_slot.weekday, source_slot.slot_index))
+            if target_slot:
+                mapping[str(source_slot.id)] = target_slot.id
+    return mapping
+
+
 def _copy_base_block_slots(source_block, target_block):
     for source_slot in source_block.slots.all():
         AthleteBasePlanningSlot.objects.create(
@@ -6450,11 +6535,21 @@ def athlete_base_planning_view(request):
             delete_block_id = raw_action.split(":", 1)[1].strip()
 
         def save_posted_block_fields(validate_coverage=True, allow_delete=False):
-            block_ids = [
+            posted_block_ids = [
                 int(value)
                 for value in request.POST.getlist("block_id")
                 if str(value).isdigit()
             ]
+            block_id_map = _map_base_block_ids_to_edit_revision(
+                selected_athlete,
+                planning_kind,
+                posted_block_ids,
+            )
+            block_id_pairs = [
+                (block_id, block_id_map.get(block_id, block_id))
+                for block_id in posted_block_ids
+            ]
+            block_ids = [target_id for _, target_id in block_id_pairs]
             blocks = {
                 block.id: block
                 for block in AthleteBasePlanningBlock.objects.filter(
@@ -6466,20 +6561,43 @@ def athlete_base_planning_view(request):
             delete_ids = set()
             if allow_delete:
                 delete_ids = {
-                    int(value)
+                    block_id_map.get(int(value), int(value))
                     for value in request.POST.getlist("delete_block")
                     if str(value).isdigit()
                 }
 
+            source_blocks = {
+                block.id: block
+                for block in AthleteBasePlanningBlock.objects.filter(
+                    athlete=selected_athlete,
+                    planning_kind=planning_kind,
+                    id__in=posted_block_ids,
+                ).prefetch_related("slots")
+            }
+            source_slot_ids = {}
+            for source_id, source_block in source_blocks.items():
+                target_id = block_id_map.get(source_id, source_id)
+                target_block = blocks.get(target_id)
+                if not target_block:
+                    continue
+                target_slots = {
+                    (slot.weekday, slot.slot_index): slot.id
+                    for slot in target_block.slots.all()
+                }
+                for source_slot in source_block.slots.all():
+                    target_slot_id = target_slots.get((source_slot.weekday, source_slot.slot_index))
+                    if target_slot_id:
+                        source_slot_ids[target_slot_id] = source_slot.id
+
             values = []
             save_errors = []
-            for index, block_id in enumerate(block_ids, start=1):
+            for index, (posted_block_id, block_id) in enumerate(block_id_pairs, start=1):
                 if block_id in delete_ids:
                     continue
                 block = blocks.get(block_id)
                 if not block:
                     continue
-                prefix = f"block_{block_id}"
+                prefix = f"block_{posted_block_id}"
                 try:
                     start_month, start_day = _parse_month_day(request.POST.get(f"{prefix}_start"))
                     end_month, end_day = _parse_month_day(request.POST.get(f"{prefix}_end"))
@@ -6526,7 +6644,7 @@ def athlete_base_planning_view(request):
                     _ensure_base_block_slots(block)
 
                     for slot in block.slots.all():
-                        prefix = f"slot_{slot.id}"
+                        prefix = f"slot_{source_slot_ids.get(slot.id, slot.id)}"
                         mode = (request.POST.get(f"{prefix}_mode") or AthleteBasePlanningSlot.MODE_REST).strip()
                         if mode not in {
                             AthleteBasePlanningSlot.MODE_REST,
@@ -6556,12 +6674,7 @@ def athlete_base_planning_view(request):
                 if not saved_current:
                     errors.extend(save_errors)
 
-            existing_blocks = list(
-                selected_athlete.base_planning_blocks
-                .filter(planning_kind=planning_kind)
-                .prefetch_related("slots")
-                .order_by("sort_order", "start_month", "start_day", "id")
-            )
+            existing_blocks = _base_planning_edit_blocks(selected_athlete, planning_kind)
             if errors:
                 pass
             elif existing_blocks:
@@ -6580,6 +6693,7 @@ def athlete_base_planning_view(request):
                         start_day=start_day,
                         end_month=12,
                         end_day=31,
+                        effective_from=date.today() + timedelta(days=1),
                         sort_order=sort_order,
                     )
                     _ensure_base_block_slots(block)
@@ -6609,14 +6723,11 @@ def athlete_base_planning_view(request):
             elif source_athlete.id == selected_athlete.id:
                 errors.append("Choose a different athlete to copy from.")
             else:
-                source_blocks = (
-                    AthleteBasePlanningBlock.objects
-                    .filter(athlete=source_athlete, planning_kind=planning_kind)
-                    .prefetch_related("slots")
-                    .order_by("sort_order", "start_month", "start_day", "id")
-                )
+                source_blocks = _base_planning_edit_blocks(source_athlete, planning_kind)
+                _ensure_future_base_planning_revision(selected_athlete, planning_kind)
+                target_blocks = _base_planning_edit_blocks(selected_athlete, planning_kind)
                 with transaction.atomic():
-                    AthleteBasePlanningBlock.objects.filter(athlete=selected_athlete, planning_kind=planning_kind).delete()
+                    AthleteBasePlanningBlock.objects.filter(id__in=[block.id for block in target_blocks]).delete()
                     for source_block in source_blocks:
                         target_block = AthleteBasePlanningBlock.objects.create(
                             athlete=selected_athlete,
@@ -6626,6 +6737,7 @@ def athlete_base_planning_view(request):
                             start_day=source_block.start_day,
                             end_month=source_block.end_month,
                             end_day=source_block.end_day,
+                            effective_from=date.today() + timedelta(days=1),
                             sort_order=source_block.sort_order,
                         )
                         _copy_base_block_slots(source_block, target_block)
@@ -6658,6 +6770,7 @@ def athlete_base_planning_view(request):
                         start_day=source_block.start_day,
                         end_month=source_block.end_month,
                         end_day=source_block.end_day,
+                        effective_from=date.today() + timedelta(days=1),
                         sort_order=sort_order,
                     )
                     _copy_base_block_slots(source_block, target_block)
@@ -6665,8 +6778,11 @@ def athlete_base_planning_view(request):
 
         if action == "delete_block":
             if delete_block_id.isdigit():
+                block_id_map = _map_base_block_ids_to_edit_revision(
+                    selected_athlete, planning_kind, [int(delete_block_id)]
+                )
                 AthleteBasePlanningBlock.objects.filter(
-                    id=int(delete_block_id),
+                    id=block_id_map.get(int(delete_block_id), int(delete_block_id)),
                     athlete=selected_athlete,
                     planning_kind=planning_kind,
                 ).delete()
@@ -6687,6 +6803,29 @@ def athlete_base_planning_view(request):
             if not slot:
                 return JsonResponse({"ok": False, "errors": ["Slot not found."]}, status=404)
 
+            # Slot edits are also future-only. If the browser still carries an
+            # ID from the historical revision, redirect the edit to tomorrow's
+            # fork before saving it.
+            slot_id_map = {}
+            if slot.block.effective_from < date.today() + timedelta(days=1):
+                source_blocks = _base_planning_edit_blocks(selected_athlete, planning_kind)
+                editable_blocks = _ensure_future_base_planning_revision(
+                    selected_athlete, planning_kind
+                )
+                slot_id_map = _base_slot_id_map(source_blocks, editable_blocks)
+                target_block = next(
+                    (
+                        block for block in editable_blocks
+                        if block.sort_order == slot.block.sort_order
+                    ),
+                    None,
+                )
+                if target_block:
+                    slot = target_block.slots.filter(
+                        weekday=slot.weekday,
+                        slot_index=slot.slot_index,
+                    ).first()
+
             mode = (request.POST.get("mode") or AthleteBasePlanningSlot.MODE_REST).strip()
             if mode not in {
                 AthleteBasePlanningSlot.MODE_REST,
@@ -6706,7 +6845,7 @@ def athlete_base_planning_view(request):
             slot.save(update_fields=["mode", "training_text", "trainer_plan"])
             if request.headers.get("X-Requested-With") != "XMLHttpRequest":
                 return redirect(f"{reverse('athlete_base_planning')}?athlete={selected_athlete.id}{redirect_suffix}")
-            return JsonResponse({"ok": True})
+            return JsonResponse({"ok": True, "slot_id": slot.id, "slot_map": slot_id_map})
 
         if action == "save":
             is_autosave = request.POST.get("autosave") == "1"
@@ -6730,20 +6869,9 @@ def athlete_base_planning_view(request):
     )
     blocks = []
     if selected_athlete:
-        block_qs = (
-            AthleteBasePlanningBlock.objects
-            .filter(athlete=selected_athlete, planning_kind=planning_kind)
-            .prefetch_related("slots", "slots__trainer_plan")
-            .order_by("sort_order", "start_month", "start_day", "id")
-        )
+        block_qs = _base_planning_edit_blocks(selected_athlete, planning_kind)
         for block in block_qs:
             _ensure_base_block_slots(block)
-        block_qs = (
-            AthleteBasePlanningBlock.objects
-            .filter(athlete=selected_athlete, planning_kind=planning_kind)
-            .prefetch_related("slots", "slots__trainer_plan")
-            .order_by("sort_order", "start_month", "start_day", "id")
-        )
         blocks = [{"block": block, "rows": _base_planning_rows(block)} for block in block_qs]
         for item in blocks:
             for row in item["rows"]:

@@ -1188,8 +1188,14 @@ class PlanningOverviewTests(TestCase):
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
         self.assertEqual(saved.status_code, 200)
+        future_block = AthleteBasePlanningBlock.objects.get(
+            athlete=athlete,
+            effective_from=date.today() + timedelta(days=1),
+        )
+        future_slot = future_block.slots.get(weekday=0, slot_index=1)
+        self.assertEqual(future_slot.trainer_plan_id, shared_plan.id)
         slot.refresh_from_db()
-        self.assertEqual(slot.trainer_plan_id, shared_plan.id)
+        self.assertIsNone(slot.trainer_plan_id)
 
         CoachSettings.objects.get(user=sending_coach).delete()
         hidden_after_opt_out = self.client.get(f"/planning/base/?athlete={athlete.id}")
@@ -2267,10 +2273,13 @@ class SlotModalSaveTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        block1.refresh_from_db()
-        block2.refresh_from_db()
-        self.assertEqual((block1.start_month, block1.start_day, block1.end_month, block1.end_day), (1, 1, 6, 30))
-        self.assertEqual((block2.start_month, block2.start_day, block2.end_month, block2.end_day), (1, 1, 12, 31))
+        future_blocks = list(AthleteBasePlanningBlock.objects.filter(
+            athlete=athlete,
+            effective_from=date.today() + timedelta(days=1),
+        ).order_by("sort_order"))
+        self.assertEqual(len(future_blocks), 2)
+        self.assertEqual((future_blocks[0].start_month, future_blocks[0].start_day, future_blocks[0].end_month, future_blocks[0].end_day), (1, 1, 6, 30))
+        self.assertEqual((future_blocks[1].start_month, future_blocks[1].start_day, future_blocks[1].end_month, future_blocks[1].end_day), (1, 1, 12, 31))
 
         response = self.client.post(
             "/planning/base/",
@@ -2291,8 +2300,12 @@ class SlotModalSaveTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        block2.refresh_from_db()
-        self.assertEqual((block2.start_month, block2.start_day, block2.end_month, block2.end_day), (7, 1, 12, 31))
+        future_block2 = AthleteBasePlanningBlock.objects.get(
+            athlete=athlete,
+            effective_from=date.today() + timedelta(days=1),
+            sort_order=2,
+        )
+        self.assertEqual((future_block2.start_month, future_block2.start_day, future_block2.end_month, future_block2.end_day), (7, 1, 12, 31))
 
     def test_base_planning_block_copy_keeps_slots(self):
         user, plan, athlete = self._user_plan_and_athlete()
@@ -2421,7 +2434,10 @@ class SlotModalSaveTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        blocks = list(AthleteBasePlanningBlock.objects.filter(athlete=athlete).order_by("sort_order"))
+        blocks = list(AthleteBasePlanningBlock.objects.filter(
+            athlete=athlete,
+            effective_from=date.today() + timedelta(days=1),
+        ).order_by("sort_order"))
         self.assertEqual(len(blocks), 2)
         self.assertEqual((blocks[0].start_month, blocks[0].start_day, blocks[0].end_month, blocks[0].end_day), (1, 1, 6, 30))
         self.assertEqual((blocks[1].start_month, blocks[1].start_day, blocks[1].end_month, blocks[1].end_day), (7, 1, 12, 31))
@@ -2449,7 +2465,11 @@ class SlotModalSaveTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(AthleteBasePlanningBlock.objects.filter(id=block.id).exists())
+        self.assertTrue(AthleteBasePlanningBlock.objects.filter(id=block.id).exists())
+        self.assertFalse(AthleteBasePlanningBlock.objects.filter(
+            athlete=athlete,
+            effective_from=date.today() + timedelta(days=1),
+        ).exists())
 
     def test_base_planning_save_does_not_copy_even_with_copy_id_present(self):
         user, _, athlete = self._user_plan_and_athlete()
@@ -2479,9 +2499,14 @@ class SlotModalSaveTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(AthleteBasePlanningBlock.objects.filter(athlete=athlete).count(), 1)
+        self.assertEqual(AthleteBasePlanningBlock.objects.filter(athlete=athlete).count(), 2)
+        future_block = AthleteBasePlanningBlock.objects.get(
+            athlete=athlete,
+            effective_from=date.today() + timedelta(days=1),
+        )
+        self.assertEqual(future_block.label, "Saved label")
         block.refresh_from_db()
-        self.assertEqual(block.label, "Saved label")
+        self.assertEqual(block.label, "Block 1")
 
     def test_base_planning_add_block_rejects_after_year_end(self):
         user, _, athlete = self._user_plan_and_athlete()
@@ -2549,10 +2574,12 @@ class SlotModalSaveTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        block1.refresh_from_db()
-        block2.refresh_from_db()
-        self.assertEqual((block1.start_month, block1.start_day, block1.end_month, block1.end_day), (1, 1, 5, 31))
-        self.assertEqual((block2.start_month, block2.start_day, block2.end_month, block2.end_day), (6, 1, 12, 31))
+        future_blocks = list(AthleteBasePlanningBlock.objects.filter(
+            athlete=athlete,
+            effective_from=date.today() + timedelta(days=1),
+        ).order_by("sort_order"))
+        self.assertEqual((future_blocks[0].start_month, future_blocks[0].start_day, future_blocks[0].end_month, future_blocks[0].end_day), (1, 1, 5, 31))
+        self.assertEqual((future_blocks[1].start_month, future_blocks[1].start_day, future_blocks[1].end_month, future_blocks[1].end_day), (6, 1, 12, 31))
 
     def test_cd_is_saved_after_all_split_core_segments(self):
         user = get_user_model().objects.create_user(

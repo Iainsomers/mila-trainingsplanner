@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -712,6 +714,9 @@ class AthleteBasePlanningBlock(models.Model):
     start_day = models.PositiveSmallIntegerField()
     end_month = models.PositiveSmallIntegerField()
     end_day = models.PositiveSmallIntegerField()
+    # A block is a recurring rule. Keep old rules available so changing the
+    # base planning does not rewrite already elapsed calendar days.
+    effective_from = models.DateField(default=date(1900, 1, 1), db_index=True)
     sort_order = models.PositiveIntegerField(default=1)
 
     created_at = models.DateTimeField(auto_now_add=True)

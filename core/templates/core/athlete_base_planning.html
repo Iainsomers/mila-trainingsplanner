@@ -546,12 +546,28 @@
       postAutosave(data)
         .then((payload) => {
           if (!payload.ok) throw new Error("slot save failed");
+          remapSlotIds(payload.slot_map || {});
           setAutosaveStatus("Saved", false);
         })
         .catch((error) => {
           console.error("Base planning slot autosave failed", error);
           setAutosaveStatus("Save failed", true);
         });
+    }
+
+    function remapSlotIds(slotMap) {
+      Object.keys(slotMap || {}).forEach((oldId) => {
+        const newId = String(slotMap[oldId]);
+        ["mode", "training_text", "trainer_plan"].forEach((suffix) => {
+          const field = document.getElementById("slot_" + oldId + "_" + suffix);
+          if (field) {
+            field.id = "slot_" + newId + "_" + suffix;
+            field.name = "slot_" + newId + "_" + suffix;
+          }
+        });
+        const button = document.querySelector('[data-base-slot-id="' + oldId + '"]');
+        if (button) button.dataset.baseSlotId = newId;
+      });
     }
 
     function copySlot(sourceId, targetId) {
