@@ -341,6 +341,7 @@ class Athlete(models.Model):
     daily_vitals_enabled = models.BooleanField(default=False)
     year_planner_training_enabled = models.BooleanField(default=False)
     year_planner_whereabouts_enabled = models.BooleanField(default=False)
+    year_planner_shared_whereabouts_enabled = models.BooleanField(default=False)
     extended_edit_rights = models.BooleanField(default=False)
     can_change_base_planning = models.BooleanField(default=False)
 

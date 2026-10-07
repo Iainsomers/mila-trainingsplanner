@@ -5410,11 +5410,16 @@ def year_planner_view(request):
     if is_athlete_user:
         athlete_can_view_training = bool(getattr(athlete, "year_planner_training_enabled", False))
         athlete_can_view_whereabouts = bool(getattr(athlete, "year_planner_whereabouts_enabled", False))
+        athlete_can_view_shared_whereabouts = bool(
+            athlete_can_view_whereabouts
+            and getattr(athlete, "year_planner_shared_whereabouts_enabled", False)
+        )
         if not athlete_can_view_training and not athlete_can_view_whereabouts:
             return redirect("planning_overview")
     else:
         athlete_can_view_training = True
         athlete_can_view_whereabouts = True
+        athlete_can_view_shared_whereabouts = False
 
     today = date.today()
     try:
@@ -5512,6 +5517,24 @@ def year_planner_view(request):
         selected_coach_ids = [coach_id for coach_id in coach_ids if coach_id in available_coach_ids]
 
     selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
+    shared_whereabout_athletes = [athlete]
+    shared_whereabout_coach_ids = []
+    if is_athlete_user and athlete_can_view_shared_whereabouts and athlete.owner_id:
+        shared_whereabout_athletes = list(
+            Athlete.objects.filter(owner_id=athlete.owner_id).order_by(Lower("name"))
+        )
+        shared_whereabout_coach_ids = list(
+            CoachAccess.objects.filter(grantee_id=athlete.owner_id)
+            .values_list("owner_id", flat=True)
+        )
+        shared_whereabout_coach_ids = list(dict.fromkeys([athlete.owner_id, *shared_whereabout_coach_ids]))
+        coach_users = get_user_model().objects.filter(id__in=shared_whereabout_coach_ids)
+        coach_options = [
+            {"user": coach_user, "access_label": "related"}
+            for coach_user in coach_users
+        ]
+        selected_athletes = shared_whereabout_athletes
+        selected_coach_ids = shared_whereabout_coach_ids
     all_visible_athletes_selected = bool(visible_athletes) and set(selected_ids) == {a.id for a in visible_athletes}
     selected_coaches = [
         option for option in coach_options
@@ -5534,7 +5557,12 @@ def year_planner_view(request):
         (entry.athlete_id, entry.basis_plan_id, entry.date): entry
         for entry in entries
     }
-    where_scope_filter = Q(athlete_id__in=selected_ids)
+    whereabout_athlete_ids = (
+        [shared_athlete.id for shared_athlete in shared_whereabout_athletes]
+        if is_athlete_user and athlete_can_view_shared_whereabouts
+        else selected_ids
+    )
+    where_scope_filter = Q(athlete_id__in=whereabout_athlete_ids)
     if show_basis:
         where_scope_filter |= Q(athlete__isnull=True, basis_plan=selected_filter_plan)
     whereabout_ranges = list(
@@ -5546,7 +5574,11 @@ def year_planner_view(request):
     coach_whereabout_ranges = list(
         YearPlannerWhereabout.objects
         .filter(
-            owner_id__in=selected_coach_ids,
+            owner_id__in=(
+                shared_whereabout_coach_ids
+                if is_athlete_user and athlete_can_view_shared_whereabouts
+                else selected_coach_ids
+            ),
             athlete__isnull=True,
             basis_plan__isnull=True,
             start_date__lte=end_date,
@@ -5754,6 +5786,7 @@ def year_planner_view(request):
         "year_planner_read_only": is_athlete_user,
         "athlete_can_view_year_planner_training": athlete_can_view_training,
         "athlete_can_view_year_planner_whereabouts": athlete_can_view_whereabouts,
+        "athlete_can_view_shared_whereabouts": athlete_can_view_shared_whereabouts,
     })
 
 
@@ -8963,6 +8996,7 @@ def coach_athlete_create_view(request):
         "daily_vitals_enabled": False,
         "year_planner_training_enabled": False,
         "year_planner_whereabouts_enabled": False,
+        "year_planner_shared_whereabouts_enabled": False,
         "extended_edit_rights": False,
         "can_change_base_planning": False,
         "auto_wucd_enabled": False,
@@ -9011,6 +9045,7 @@ def coach_athlete_create_view(request):
         form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
         form["year_planner_training_enabled"] = (request.POST.get("year_planner_training_enabled") == "on")
         form["year_planner_whereabouts_enabled"] = (request.POST.get("year_planner_whereabouts_enabled") == "on")
+        form["year_planner_shared_whereabouts_enabled"] = (request.POST.get("year_planner_shared_whereabouts_enabled") == "on")
         form["extended_edit_rights"] = (request.POST.get("extended_edit_rights") == "on")
         form["can_change_base_planning"] = (request.POST.get("can_change_base_planning") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
@@ -9194,6 +9229,7 @@ def coach_athlete_create_view(request):
                 daily_vitals_enabled=form["daily_vitals_enabled"],
                 year_planner_training_enabled=form["year_planner_training_enabled"],
                 year_planner_whereabouts_enabled=form["year_planner_whereabouts_enabled"],
+                year_planner_shared_whereabouts_enabled=form["year_planner_shared_whereabouts_enabled"],
                 extended_edit_rights=form["extended_edit_rights"],
                 can_change_base_planning=form["can_change_base_planning"],
                 auto_wucd_enabled=form["auto_wucd_enabled"],
@@ -9287,6 +9323,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
         "year_planner_training_enabled": getattr(athlete, "year_planner_training_enabled", False),
         "year_planner_whereabouts_enabled": getattr(athlete, "year_planner_whereabouts_enabled", False),
+        "year_planner_shared_whereabouts_enabled": getattr(athlete, "year_planner_shared_whereabouts_enabled", False),
         "extended_edit_rights": getattr(athlete, "extended_edit_rights", False),
         "can_change_base_planning": getattr(athlete, "can_change_base_planning", False),
         "auto_wucd_enabled": getattr(athlete, "auto_wucd_enabled", False),
@@ -9336,6 +9373,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["daily_vitals_enabled"] = getattr(athlete, "daily_vitals_enabled", False)
             form["year_planner_training_enabled"] = getattr(athlete, "year_planner_training_enabled", False)
             form["year_planner_whereabouts_enabled"] = getattr(athlete, "year_planner_whereabouts_enabled", False)
+            form["year_planner_shared_whereabouts_enabled"] = getattr(athlete, "year_planner_shared_whereabouts_enabled", False)
             form["extended_edit_rights"] = getattr(athlete, "extended_edit_rights", False)
             form["can_change_base_planning"] = getattr(athlete, "can_change_base_planning", False)
         else:
@@ -9345,6 +9383,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["daily_vitals_enabled"] = (request.POST.get("daily_vitals_enabled") == "on")
             form["year_planner_training_enabled"] = (request.POST.get("year_planner_training_enabled") == "on")
             form["year_planner_whereabouts_enabled"] = (request.POST.get("year_planner_whereabouts_enabled") == "on")
+            form["year_planner_shared_whereabouts_enabled"] = (request.POST.get("year_planner_shared_whereabouts_enabled") == "on")
             form["extended_edit_rights"] = (request.POST.get("extended_edit_rights") == "on")
             form["can_change_base_planning"] = (request.POST.get("can_change_base_planning") == "on")
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
@@ -9526,6 +9565,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
             athlete.year_planner_training_enabled = form["year_planner_training_enabled"]
             athlete.year_planner_whereabouts_enabled = form["year_planner_whereabouts_enabled"]
+            athlete.year_planner_shared_whereabouts_enabled = form["year_planner_shared_whereabouts_enabled"]
             athlete.extended_edit_rights = form["extended_edit_rights"]
             athlete.can_change_base_planning = form["can_change_base_planning"]
             athlete.auto_wucd_enabled = form["auto_wucd_enabled"]

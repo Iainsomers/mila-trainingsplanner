@@ -37,6 +37,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Whereabouts-keuzes zijn Camp, Travel, Test, Championship, Diamond L, Race Gold, Race Silver, Race Bronze, Race Other, Expermeetings, Medical en Brinec, elk met een vaste kleur. Ze worden als echte datumranges opgeslagen, zodat een kamp of reis als één doorlopende pil met gecentreerde naam verschijnt, kan worden verkleind/verlengd en naar een andere atleet kan worden gesleept. Overlappende whereabouts, zoals een testdag binnen een kamp, blijven naast elkaar bestaan en delen de dagcel diagonaal.
 - Trainingcellen slaan direct op. Gekozen trainingswaarden kunnen over een datumrange worden gesleept. Hele atletrijen kunnen per zichtbare periode met `c`/`p` worden gekopieerd voor Training en afzonderlijk voor Whereabouts. Een nieuwe of bewerkte whereabout kan in één keer op alle geselecteerde atleten worden toegepast.
 - Per atleet bepaalt de trainer in Athlete settings > General afzonderlijk of de Training-calendar en/of Whereabouts-calendar in de Year Planner zichtbaar zijn. De legenda volgt die zichtbaarheid.
+- Met `Shared whereabouts calendar` kan de trainer aanvullend instellen dat een atleet de whereabouts-rijen van andere atleten van dezelfde coach en van gerelateerde coaches mag zien. Deze schakelaar staat standaard uit en deelt nooit trainingsplanning of bewerkingsrechten.
 
 ## Flex Planner
 

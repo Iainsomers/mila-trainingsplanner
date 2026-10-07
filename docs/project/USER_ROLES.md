@@ -61,6 +61,7 @@ Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-inst
 - Wedstrijden mogen verder vooruit zichtbaar blijven dan trainingen.
 - Rapporten en Daily vitals zijn alleen zichtbaar wanneer ze voor die atleet zijn ingeschakeld.
 - Year Planner Training en Whereabouts hebben afzonderlijke trainerinstellingen per atleet. Een atleet kan nooit de selectie van andere atleten zien.
+- Met `Shared whereabouts calendar` kan de trainer per atleet de read-only whereabouts van andere atleten van dezelfde coach en van gerelateerde coaches zichtbaar maken. Dit staat standaard uit en geeft geen toegang tot hun trainingen of mutaties.
 
 ## Beveiligingsregel
 

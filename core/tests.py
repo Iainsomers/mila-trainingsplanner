@@ -1890,6 +1890,46 @@ class YearPlannerTests(TestCase):
         self.assertContains(response, "year-read-only")
         self.assertContains(response, "year-training-aerobe")
 
+    def test_athlete_can_view_shared_whereabouts_when_enabled(self):
+        coach, athlete = self._coach_and_athlete()
+        athlete.year_planner_whereabouts_enabled = True
+        athlete.year_planner_shared_whereabouts_enabled = True
+        athlete.save(update_fields=["year_planner_whereabouts_enabled", "year_planner_shared_whereabouts_enabled"])
+        other = Athlete.objects.create(owner=coach, name="Shared Year Athlete", birth_year=2002, gender="X")
+        related_coach = get_user_model().objects.create_user(
+            username="related-year-coach",
+            password="secret",
+            is_staff=True,
+        )
+        CoachAccess.objects.create(owner=related_coach, grantee=coach, can_edit=False)
+        YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=other,
+            start_date=date(2026, 9, 7),
+            end_date=date(2026, 9, 9),
+            whereabouts_type="camp",
+            note="Shared athlete camp",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=related_coach,
+            start_date=date(2026, 9, 10),
+            end_date=date(2026, 9, 12),
+            whereabouts_type="travel",
+            note="Related coach travel",
+        )
+        athlete_user = get_user_model().objects.create_user(username="Year_Athlete", password="secret")
+        self.client.force_login(athlete_user)
+
+        response = self.client.get("/planning/year/?year=2026&period=season")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_ids"], [athlete.id])
+        self.assertContains(response, "Shared Year Athlete")
+        self.assertContains(response, "Shared athlete camp")
+        self.assertContains(response, "Related coach travel")
+        self.assertTrue(any(row["scope"] == f"athlete-{other.id}" for row in response.context["rows"]))
+        self.assertTrue(any(row["scope"] == f"coach-{related_coach.id}" for row in response.context["rows"]))
+
     def test_year_planner_saves_base_and_athlete_entries(self):
         coach, athlete = self._coach_and_athlete()
         plan = TrainingPlan.objects.create(

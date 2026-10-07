@@ -6,6 +6,10 @@ Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen.
 
 `Extended edit rights` bepaalt of een atleet toekomstige AYC-trainingen en lege dagdelen mag wijzigen. `Can change base planning` is een afzonderlijk trainerrecht voor de eigen Base Planning. Het ene recht activeert het andere niet.
 
+## 2026-10-07 — Gedeelde whereabouts zijn read-only
+
+De trainer kan per atleet `Shared whereabouts calendar` inschakelen. De atleet ziet dan whereabouts van andere atleten van dezelfde coach en van gerelateerde coaches, maar nooit hun trainingen of mutaties. Standaard staat deze zichtbaarheid uit.
+
 ## 2026-10-07 — Tempoherkenning vereist een los label
 
 Flex Planner en AYC tellen alleen expliciete, losstaande tempo-aanduidingen mee als TM/T-label. Vrije tekst zoals `ritme` mag nooit door een toevallige lettercombinatie als TM worden geïnterpreteerd.
