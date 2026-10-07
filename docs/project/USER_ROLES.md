@@ -1,6 +1,6 @@
 # Gebruikersrollen en toegang
 
-Laatst inhoudelijk gecontroleerd: 28 september 2026.
+Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
 
 ## Trainer
 
@@ -45,7 +45,7 @@ Een atleet mag niet:
 
 ## Atleteninstellingen
 
-Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-instellingen zien en waar toegestaan wijzigen. Algemene gegevens en zones kunnen worden opgeslagen terwijl PR's nog gedeeltelijk leeg zijn. Base Planning is zichtbaar als alleen-lezen overzicht en kan uitsluitend door de trainer worden aangepast. De volgende trainerinstellingen blijven verborgen:
+Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-instellingen zien en waar toegestaan wijzigen. Algemene gegevens en zones kunnen worden opgeslagen terwijl PR's nog gedeeltelijk leeg zijn. Base Planning is standaard alleen-lezen. Als de trainer `Can change base planning` inschakelt, mag de atleet de eigen Base Planning wijzigen, inclusief een individuele training; groepskeuzes blijven beperkt tot groepen van de eigen trainer. De volgende trainerinstellingen blijven verborgen:
 
 - hoeveel toekomstige weken zichtbaar zijn;
 - rapportage- en zichtbaarheidsschakelaars;
@@ -56,7 +56,7 @@ Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-inst
 
 - De trainer kan een atleet selecteren.
 - De atleet ziet automatisch uitsluitend zichzelf.
-- In de AYC kan een atleet alleen trainingen van vandaag en eerdere dagen aanpassen; toekomstige trainingen zijn alleen door de coach te wijzigen.
+- In de AYC kan een atleet standaard alleen trainingen van vandaag en eerdere dagen aanpassen; toekomstige trainingen en lege dagdelen zijn alleen door de coach te wijzigen. Met `Extended edit rights` mag de atleet ook toekomstige trainingen aanpassen en lege AM/PM-dagdelen vullen.
 - De trainer bepaalt hoeveel toekomstige trainingsweken voor de atleet zichtbaar zijn.
 - Wedstrijden mogen verder vooruit zichtbaar blijven dan trainingen.
 - Rapporten en Daily vitals zijn alleen zichtbaar wanneer ze voor die atleet zijn ingeschakeld.

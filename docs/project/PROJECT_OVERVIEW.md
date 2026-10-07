@@ -1,6 +1,6 @@
 # MiLa Training Planner — projectoverzicht
 
-Laatst inhoudelijk gecontroleerd: 28 september 2026.
+Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
 
 ## Doel
 

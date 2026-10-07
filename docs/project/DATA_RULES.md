@@ -1,6 +1,6 @@
 # Data-, invoer- en rekenregels
 
-Laatst inhoudelijk gecontroleerd: 8 september 2026.
+Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
 
 ## Zones
 
@@ -47,6 +47,8 @@ Onder meer ondersteund:
 - Bij `p` en `sp` zijn waarden vanaf 15 seconden; waarden van 14 of lager zijn minuten. Een expliciete `'` of `"` blijft leidend.
 
 Compound onderdelen moeten afstand, zone en T-label per deel correct optellen.
+
+Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, `T4`, `T1500`, enzovoort), eventueel met spaties binnen het label. Vrije tekst mag geen tempo-label opleveren: `ritme` bevat bijvoorbeeld de letters `tm`, maar telt niet als TM. Deze regel geldt identiek voor Flex Planner en AYC.
 
 ## Automatische WU/CD
 

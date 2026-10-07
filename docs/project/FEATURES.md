@@ -1,6 +1,6 @@
 # Functionele onderdelen
 
-Laatst inhoudelijk gecontroleerd: 28 september 2026.
+Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
 
 ## Dashboard en Planning
 
@@ -118,9 +118,14 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 
 ## Athlete settings
 
-Tabs voor atleten: General, Zone/PR's, Base Planning en Ideal week. WU/CD-instellingen staan op General; de oude WU settings-tab bestaat niet meer. Base Planning is voor atleten alleen-lezen. `Fill missing PB's` kan ontbrekende prestaties afleiden uit beschikbare PR's. De atletenlijst is sorteerbaar op naam en leeftijd, in beide richtingen.
+Tabs voor atleten: General, Zones. HR, Speed, Base Planning en Ideal week. WU/CD-instellingen staan op General; de oude WU settings-tab bestaat niet meer. `Fill missing PB's` kan ontbrekende prestaties afleiden uit beschikbare PR's. De atletenlijst is sorteerbaar op naam en leeftijd, in beide richtingen.
 General-settings kunnen worden opgeslagen zonder dat alle PR's al zijn ingevuld; alleen ingevulde PR-waarden worden gevalideerd en bewaard.
-Onder Z1, Z2 en Z3 kan de trainer handmatig een HR-grens in bpm invullen.
+Onder Z1 t/m Z5 kan de trainer handmatig een HR-waarde of tekstuele HR-zone invullen, bijvoorbeeld `160-170` of `max 170`. Die tekst wordt ongewijzigd bij de trainingen getoond. De zone/snelheidsweergave toont de km/h-omrekening naast min/km.
+De trainer kan per atleet `Extended edit rights` aanzetten. Daarmee mag de atleet toekomstige AYC-trainingen aanpassen en lege dagdelen vullen. `Can change base planning` is een afzonderlijk standaard uitgeschakeld vinkje waarmee de atleet ook de eigen Base Planning mag wijzigen; groepskeuzes blijven beperkt tot groepen van de eigen trainer.
+
+## Tempoherkenning en totalen
+
+Flex Planner en AYC herkennen tempo's zoals `TM`, `THM`, `T4` en `T1500` alleen als losse labels. De tekstzoeker verwijdert geen spaties meer voordat hij zoekt, zodat woorden als `ritme` niet langer onterecht als `TM` worden geteld. Afstanden blijven wel meetellen in hun normale zone.
 
 ## Daily Coach Overview Training
 

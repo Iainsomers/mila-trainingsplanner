@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-Laatst inhoudelijk gecontroleerd: 28 september 2026.
+Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
 
 ## Stijl
 
@@ -89,6 +89,7 @@ Laatst inhoudelijk gecontroleerd: 28 september 2026.
 - Toon invoerformaten bij complexe PR-velden.
 - Behoud ingevoerde waarden na validatiefouten.
 - Een popup mag niet groter worden dan het viewport en de opslaanknop moet bereikbaar blijven.
+- In Athlete Input heet de zone-tab `Zones. HR, Speed`; binnen die tab staat de sectie `Current times`.
 
 ## Responsiviteit controleren
 
