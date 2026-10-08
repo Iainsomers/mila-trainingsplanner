@@ -1365,6 +1365,15 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(first_range.rental_car_info, "Hertz 123")
         self.assertEqual(first_range.accommodation, "Hotel Font")
 
+        deleted = self.client.post("/planning/detailed-camps/camp/?camp=font+r", {
+            "action": "delete_participant",
+            "participant_type": "Athlete",
+            "participant_id": first_athlete.id,
+        })
+        self.assertRedirects(deleted, "/planning/detailed-camps/camp/?camp=font+r")
+        self.assertFalse(YearPlannerWhereabout.objects.filter(id=first_range.id).exists())
+        self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=second_athlete, note=" font   r ").exists())
+
     def test_create_camp_and_add_athletes_writes_year_planner_whereabouts(self):
         coach = get_user_model().objects.create_user(username="camp-create-coach", password="secret", is_staff=True)
         CoachSettings.objects.create(user=coach, detailed_camps_enabled=True)

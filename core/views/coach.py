@@ -8661,6 +8661,10 @@ def detailed_camp_detail_view(request):
         if not can_edit:
             return HttpResponse("Forbidden", status=403)
 
+        if request.POST.get("action") == "delete_participant":
+            YearPlannerWhereabout.objects.filter(id__in=participant["range_ids"]).delete()
+            return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': camp_key})}")
+
         try:
             arrival_date = _parse_iso_date(request.POST.get("arrival_date"))
             departure_date = _parse_iso_date(request.POST.get("departure_date"))

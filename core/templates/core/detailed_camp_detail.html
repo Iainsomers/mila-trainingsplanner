@@ -69,6 +69,13 @@
                   <input type="hidden" name="participant_id" value="{{ participant.person.id }}">
                   <button class="btn btn-sm btn-outline-primary" type="button" data-camp-copy>Copy</button>
                 </form>
+                <form method="post" class="d-inline" onsubmit="return confirm('Remove this participant from the camp?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_participant">
+                  <input type="hidden" name="participant_type" value="{{ participant.person_type }}">
+                  <input type="hidden" name="participant_id" value="{{ participant.person.id }}">
+                  <button class="btn btn-sm btn-outline-danger ms-1" type="submit" title="Remove participant" aria-label="Remove participant">&times;</button>
+                </form>
               </td>
             {% else %}
               <td>{{ participant.arrival_date|date:"d M Y" }}</td>

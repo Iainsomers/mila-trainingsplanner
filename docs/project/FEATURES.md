@@ -38,6 +38,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Trainingcellen slaan direct op. Gekozen trainingswaarden kunnen over een datumrange worden gesleept. Hele atletrijen kunnen per zichtbare periode met `c`/`p` worden gekopieerd voor Training en afzonderlijk voor Whereabouts. Een nieuwe of bewerkte whereabout kan in één keer op alle geselecteerde atleten worden toegepast.
 - Per atleet bepaalt de trainer in Athlete settings > General afzonderlijk of de Training-calendar en/of Whereabouts-calendar in de Year Planner zichtbaar zijn. De legenda volgt die zichtbaarheid.
 - Met `Shared athlete whereabouts in Year Planner` kan de coachinstelling aanvullend instellen dat atleten met Whereabouts-toegang de whereabouts-rijen van andere atleten van dezelfde coach en van gerelateerde coaches mogen zien. Deze schakelaar staat standaard uit en deelt nooit trainingsplanning of bewerkingsrechten.
+- In Details Camps kan een bevoegde coach een deelnemer met een kleine delete-knop uit het kamp verwijderen. Alleen de camp-whereaboutregels van die deelnemer worden verwijderd; de persoon en overige planning blijven bestaan.
 
 ## Flex Planner
 
