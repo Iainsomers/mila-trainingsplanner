@@ -5253,6 +5253,11 @@ def planning_overview_view(request):
             or getattr(athlete, "year_planner_whereabouts_enabled", False)
         )
     )
+    athlete_can_view_detailed_camps = bool(
+        is_athlete_user
+        and athlete
+        and getattr(athlete, "year_planner_whereabouts_enabled", False)
+    )
     groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.order_by("name"), request)
     active_coach = _active_coach_user(request) if not is_athlete_user else None
     detailed_camps_enabled = False
@@ -5266,6 +5271,7 @@ def planning_overview_view(request):
         "today": date.today(),
         "is_athlete_user": is_athlete_user,
         "athlete_can_view_year_planner": athlete_can_view_year_planner,
+        "athlete_can_view_detailed_camps": athlete_can_view_detailed_camps,
         "detailed_camps_enabled": detailed_camps_enabled,
     })
 
@@ -8441,17 +8447,22 @@ def settings_view(request):
 @require_http_methods(["GET", "POST"])
 def detailed_camps_view(request):
     athlete = _athlete_for_user(request.user)
-    if is_coach_tools_only_user(request.user) or (
-        athlete and not request.user.is_staff and not request.user.is_superuser
-    ):
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    if is_coach_tools_only_user(request.user):
         return HttpResponse("Forbidden", status=403)
 
-    owner = _active_coach_user(request)
-    enabled = CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
+    owner = athlete.owner if is_athlete_user else _active_coach_user(request)
+    enabled = (
+        bool(getattr(athlete, "year_planner_whereabouts_enabled", False))
+        if is_athlete_user
+        else CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
+    )
     if not enabled:
         return redirect("planning_overview")
 
     if request.method == "POST":
+        if is_athlete_user:
+            return HttpResponse("Forbidden", status=403)
         if request.POST.get("action") != "create_camp":
             return HttpResponse("Unknown action", status=400)
         name = re.sub(r"\s+", " ", (request.POST.get("name") or "").strip())[:120]
@@ -8470,6 +8481,7 @@ def detailed_camps_view(request):
                 "camps": camps,
                 "available_athletes": Athlete.objects.filter(owner=owner).order_by("name"),
                 "create_error": "Choose a name, valid dates and at least one athlete.",
+                "is_athlete_user": is_athlete_user,
             }, status=400)
         for athlete_obj in available_athletes:
             YearPlannerWhereabout.objects.create(
@@ -8482,10 +8494,16 @@ def detailed_camps_view(request):
             )
         return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': _camp_identity(name)})}")
 
-    camps = _detailed_camps_for_owner(owner, _coach_view_owner_ids(request.user))
+    camps = _detailed_camps_for_owner(
+        owner,
+        _coach_view_owner_ids(request.user),
+        athlete_id=athlete.id if is_athlete_user else None,
+        include_all_coaches=is_athlete_user,
+    )
     return render(request, "core/detailed_camps.html", {
         "camps": camps,
-        "available_athletes": Athlete.objects.filter(owner=owner).order_by("name"),
+        "available_athletes": Athlete.objects.filter(owner=owner).order_by("name") if not is_athlete_user else Athlete.objects.none(),
+        "is_athlete_user": is_athlete_user,
     })
 
 
@@ -8493,7 +8511,20 @@ def _camp_identity(name):
     return re.sub(r"\s+", " ", (name or "").strip()).casefold()
 
 
-def _detailed_camps_for_owner(owner, coach_ids):
+def _detailed_camps_for_owner(owner, coach_ids, athlete_id=None, include_all_coaches=False):
+    target_camp_keys = None
+    if athlete_id is not None:
+        target_camp_keys = {
+            _camp_identity(note)
+            for note in YearPlannerWhereabout.objects.filter(
+                owner=owner,
+                athlete_id=athlete_id,
+                whereabouts_type="camp",
+            ).exclude(note="").values_list("note", flat=True)
+        }
+        if not target_camp_keys:
+            return []
+
     athlete_ranges = (
         YearPlannerWhereabout.objects
         .filter(owner=owner, athlete__isnull=False, whereabouts_type="camp")
@@ -8501,14 +8532,15 @@ def _detailed_camps_for_owner(owner, coach_ids):
         .select_related("athlete")
         .order_by("note", "start_date", "athlete__name")
     )
+    coach_ranges_qs = YearPlannerWhereabout.objects.filter(
+        athlete__isnull=True,
+        basis_plan__isnull=True,
+        whereabouts_type="camp",
+    )
+    if not include_all_coaches:
+        coach_ranges_qs = coach_ranges_qs.filter(owner_id__in=coach_ids)
     coach_ranges = (
-        YearPlannerWhereabout.objects
-        .filter(
-            owner_id__in=coach_ids,
-            athlete__isnull=True,
-            basis_plan__isnull=True,
-            whereabouts_type="camp",
-        )
+        coach_ranges_qs
         .exclude(note="")
         .select_related("owner")
         .order_by("note", "start_date", "owner__username")
@@ -8567,6 +8599,8 @@ def _detailed_camps_for_owner(owner, coach_ids):
 
     camps = []
     for camp in camps_by_key.values():
+        if target_camp_keys is not None and camp["key"] not in target_camp_keys:
+            continue
         camp["participants"] = sorted(
             camp.pop("participants_by_key").values(),
             key=lambda item: (item["person_type"], (getattr(item["person"], "name", "") or item["person"].get_username()).casefold()),
@@ -8580,25 +8614,35 @@ def _detailed_camps_for_owner(owner, coach_ids):
 @require_http_methods(["GET", "POST"])
 def detailed_camp_detail_view(request):
     athlete = _athlete_for_user(request.user)
-    if is_coach_tools_only_user(request.user) or (
-        athlete and not request.user.is_staff and not request.user.is_superuser
-    ):
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    if is_coach_tools_only_user(request.user):
         return HttpResponse("Forbidden", status=403)
 
-    owner = _active_coach_user(request)
-    enabled = CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
+    owner = athlete.owner if is_athlete_user else _active_coach_user(request)
+    enabled = (
+        bool(getattr(athlete, "year_planner_whereabouts_enabled", False))
+        if is_athlete_user
+        else CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
+    )
     if not enabled:
         return redirect("planning_overview")
 
     camp_key = _camp_identity(request.GET.get("camp"))
     camp = next(
-        (item for item in _detailed_camps_for_owner(owner, _coach_view_owner_ids(request.user)) if item["key"] == camp_key),
+        (item for item in _detailed_camps_for_owner(
+            owner,
+            _coach_view_owner_ids(request.user),
+            athlete_id=athlete.id if is_athlete_user else None,
+            include_all_coaches=is_athlete_user,
+        ) if item["key"] == camp_key),
         None,
     )
     if not camp:
         return redirect("detailed_camps")
 
     if request.method == "POST":
+        if is_athlete_user:
+            return HttpResponse("Forbidden", status=403)
         if request.POST.get("action") == "add_participants":
             existing_athlete_ids = {
                 item["person"].id for item in camp["participants"] if item["person_type"] == "Athlete"
@@ -8707,7 +8751,9 @@ def detailed_camp_detail_view(request):
                 grantee=request.user,
                 can_edit=True,
             ).exists()
-    return render(request, "core/detailed_camp_detail.html", _detailed_camp_detail_context(camp, request, saved=request.GET.get("saved") == "1"))
+    context = _detailed_camp_detail_context(camp, request, saved=request.GET.get("saved") == "1")
+    context["is_athlete_user"] = is_athlete_user
+    return render(request, "core/detailed_camp_detail.html", context)
 
 
 def _detailed_camp_detail_context(camp, request, error="", saved=False):

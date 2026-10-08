@@ -8,7 +8,7 @@
     <h1 class="h3 mb-0">Details Camps</h1>
     <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back to planning</a>
   </div>
-  <details class="mb-3">
+  {% if not is_athlete_user %}<details class="mb-3">
     <summary class="btn btn-primary">Create camp</summary>
     {% if create_error %}<div class="alert alert-danger mt-3">{{ create_error }}</div>{% endif %}
     <form method="post" class="border rounded p-3 mt-3">
@@ -21,7 +21,7 @@
       </div>
       <button class="btn btn-primary mt-3">Create camp</button>
     </form>
-  </details>
+  </details>{% endif %}
   {% if camps %}
     <div class="table-responsive">
       <table class="table table-hover align-middle">

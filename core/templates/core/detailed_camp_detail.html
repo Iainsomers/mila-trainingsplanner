@@ -99,7 +99,7 @@
       </tbody>
     </table>
   </div>
-  {% if can_add_athletes %}
+  {% if can_add_athletes and not is_athlete_user %}
   <details class="mt-4">
     <summary class="btn btn-primary">Add participant</summary>
     <form method="post" class="border rounded p-3 mt-3">
