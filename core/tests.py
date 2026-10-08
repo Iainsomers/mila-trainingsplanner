@@ -1119,13 +1119,22 @@ class PlanningOverviewTests(TestCase):
         settings_page = self.client.get("/settings/")
         self.assertEqual(settings_page.status_code, 200)
         self.assertContains(settings_page, "Planning Camps")
+        self.assertContains(settings_page, "Shared athlete whereabouts in Year Planner")
 
         planning_before = self.client.get("/planning/")
         self.assertNotContains(planning_before, "Details Camps")
 
-        response = self.client.post("/settings/", {"detailed_camps_enabled": "on"})
+        response = self.client.post(
+            "/settings/",
+            {
+                "detailed_camps_enabled": "on",
+                "year_planner_shared_whereabouts_enabled": "on",
+            },
+        )
         self.assertRedirects(response, "/settings/")
-        self.assertTrue(CoachSettings.objects.get(user=user).detailed_camps_enabled)
+        saved_settings = CoachSettings.objects.get(user=user)
+        self.assertTrue(saved_settings.detailed_camps_enabled)
+        self.assertTrue(saved_settings.year_planner_shared_whereabouts_enabled)
 
         planning_after = self.client.get("/planning/")
         self.assertContains(planning_after, "Details Camps")
@@ -1893,8 +1902,8 @@ class YearPlannerTests(TestCase):
     def test_athlete_can_view_shared_whereabouts_when_enabled(self):
         coach, athlete = self._coach_and_athlete()
         athlete.year_planner_whereabouts_enabled = True
-        athlete.year_planner_shared_whereabouts_enabled = True
-        athlete.save(update_fields=["year_planner_whereabouts_enabled", "year_planner_shared_whereabouts_enabled"])
+        athlete.save(update_fields=["year_planner_whereabouts_enabled"])
+        CoachSettings.objects.create(user=coach, year_planner_shared_whereabouts_enabled=True)
         other = Athlete.objects.create(owner=coach, name="Shared Year Athlete", birth_year=2002, gender="X")
         related_coach = get_user_model().objects.create_user(
             username="related-year-coach",

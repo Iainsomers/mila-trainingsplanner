@@ -8,7 +8,7 @@ Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen.
 
 ## 2026-10-07 — Gedeelde whereabouts zijn read-only
 
-De trainer kan per atleet `Shared whereabouts calendar` inschakelen. De atleet ziet dan whereabouts van andere atleten van dezelfde coach en van gerelateerde coaches, maar nooit hun trainingen of mutaties. Standaard staat deze zichtbaarheid uit.
+De coach kan in Coach Settings `Shared athlete whereabouts in Year Planner` inschakelen. Atleten met Whereabouts-toegang zien dan whereabouts van andere atleten van dezelfde coach en van gerelateerde coaches, maar nooit hun trainingen of mutaties. Standaard staat deze zichtbaarheid uit.
 
 ## 2026-10-07 — Tempoherkenning vereist een los label
 

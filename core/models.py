@@ -45,6 +45,7 @@ class CoachSettings(models.Model):
     # Optional long-term planning modules.
     detailed_camps_enabled = models.BooleanField(default=False)
     live_sharing_training_schedules = models.BooleanField(default=False)
+    year_planner_shared_whereabouts_enabled = models.BooleanField(default=False)
 
     # Trainingsbuilder (Core + Alternative zijn altijd zichtbaar)
     tb_show_wu = models.BooleanField(default=True)
@@ -341,7 +342,6 @@ class Athlete(models.Model):
     daily_vitals_enabled = models.BooleanField(default=False)
     year_planner_training_enabled = models.BooleanField(default=False)
     year_planner_whereabouts_enabled = models.BooleanField(default=False)
-    year_planner_shared_whereabouts_enabled = models.BooleanField(default=False)
     extended_edit_rights = models.BooleanField(default=False)
     can_change_base_planning = models.BooleanField(default=False)
 
