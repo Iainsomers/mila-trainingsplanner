@@ -4054,6 +4054,67 @@ class SlotModalSaveTests(TestCase):
         slot = TrainingSlot.objects.get(plan=flex_plan, athlete=athlete, date=day, slot_index=1)
         self.assertEqual(slot.core_text(), "1000m z3")
 
+    def test_edit_access_coach_can_add_wucd_to_shared_base_trainer_training_in_ayc(self):
+        owner = get_user_model().objects.create_user(
+            username="ayc-base-shared-owner", password="secret", is_staff=True
+        )
+        shared_coach = get_user_model().objects.create_user(
+            username="ayc-base-shared-edit-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="Shared Base AYC Athlete",
+            birth_year=2000,
+            gender="X",
+            is_private=False,
+        )
+        plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="Shared base trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        day = date.today()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=day.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=plan,
+        )
+        source_slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=1)
+        source_slot.segments.create(type="CORE", text="1000m z2", order=0)
+        CoachAccess.objects.create(owner=owner, grantee=shared_coach, can_edit=True)
+
+        self.client.force_login(shared_coach)
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
+        response = self.client.post(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "plan": str(plan.id),
+                "slot_text": "1000m z2",
+                "wu_text": "800m",
+                "core_text": "1000m z2",
+                "cd_text": "600m",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        saved = TrainingSlot.objects.get(plan=plan, athlete=athlete, date=day, slot_index=1)
+        segments = list(saved.segments.order_by("order", "id"))
+        self.assertEqual([segment.type for segment in segments], ["WU", "CORE", "CD"])
+        self.assertEqual(segments[0].zone, "1")
+        self.assertEqual(segments[-1].zone, "1")
+
     def test_athlete_year_modal_uses_flex_plan_when_source_plan_is_trainer_planning(self):
         owner = get_user_model().objects.create_user(
             username="ayc-source-owner", password="secret", is_staff=True

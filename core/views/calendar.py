@@ -2416,6 +2416,27 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
 
 
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
+    def base_trainer_plan_assigned_for_day(plan):
+        if not plan:
+            return False
+        candidate_slots = (
+            AthleteBasePlanningSlot.objects
+            .filter(
+                block__athlete=athlete,
+                block__planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+                mode=AthleteBasePlanningSlot.MODE_TRAINER,
+                trainer_plan=plan,
+                weekday=d.weekday(),
+                slot_index=slot_index,
+            )
+            .select_related("block")
+        )
+        return any(
+            getattr(slot.block, "effective_from", date(1900, 1, 1)) <= d
+            and _base_block_covers_day(slot.block, d)
+            for slot in candidate_slots
+        )
+
     if request.user.is_staff:
         owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request))
         # A shared edit grant is tied to the selected athlete's owner, not
@@ -2443,7 +2464,10 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
                 continue
             if not _is_flex_planner_plan(plan):
                 try:
-                    if athlete.id not in plan.targeted_athlete_ids():
+                    if (
+                        athlete.id not in plan.targeted_athlete_ids()
+                        and not base_trainer_plan_assigned_for_day(plan)
+                    ):
                         continue
                 except Exception:
                     continue
@@ -2456,7 +2480,10 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
     if not selected_plan:
         for plan in owned_plans:
-            if athlete.id not in plan.targeted_athlete_ids():
+            if (
+                athlete.id not in plan.targeted_athlete_ids()
+                and not base_trainer_plan_assigned_for_day(plan)
+            ):
                 continue
 
             existing_override = TrainingSlot.objects.filter(
