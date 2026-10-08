@@ -10,6 +10,10 @@
   [data-camp-participants] th:nth-child(8), [data-camp-participants] td:nth-child(8) { min-width: 82px; width: 82px; }
   [data-camp-participants] th:nth-child(9), [data-camp-participants] td:nth-child(9),
   [data-camp-participants] th:nth-child(10), [data-camp-participants] td:nth-child(10) { min-width: 180px; }
+  [data-camp-participants] th:last-child, [data-camp-participants] td:last-child { white-space: nowrap; width: 1%; }
+  .camp-actions { display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; }
+  .camp-actions form { display: inline-flex; margin: 0; }
+  .camp-actions .btn { line-height: 1; }
 </style>
 <div class="container-fluid py-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -63,19 +67,21 @@
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="rental_car_info" value="{{ participant.rental_car_info }}" maxlength="160"></td>
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="accommodation" value="{{ participant.accommodation }}" maxlength="160"></td>
               <td>
-                <form id="camp-participant-{{ forloop.counter }}" method="post" data-camp-edit-form>
-                  {% csrf_token %}
-                  <input type="hidden" name="participant_type" value="{{ participant.person_type }}">
-                  <input type="hidden" name="participant_id" value="{{ participant.person.id }}">
-                  <button class="btn btn-sm btn-outline-primary" type="button" data-camp-copy>Copy</button>
-                </form>
-                <form method="post" class="d-inline" onsubmit="return confirm('Remove this participant from the camp?');">
-                  {% csrf_token %}
-                  <input type="hidden" name="action" value="delete_participant">
-                  <input type="hidden" name="participant_type" value="{{ participant.person_type }}">
-                  <input type="hidden" name="participant_id" value="{{ participant.person.id }}">
-                  <button class="btn btn-sm btn-outline-danger ms-1" type="submit" title="Remove participant" aria-label="Remove participant">&times;</button>
-                </form>
+                <span class="camp-actions">
+                  <form id="camp-participant-{{ forloop.counter }}" method="post" data-camp-edit-form>
+                    {% csrf_token %}
+                    <input type="hidden" name="participant_type" value="{{ participant.person_type }}">
+                    <input type="hidden" name="participant_id" value="{{ participant.person.id }}">
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-camp-copy>Copy</button>
+                  </form>
+                  <form method="post" onsubmit="return confirm('Remove this participant from the camp?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_participant">
+                    <input type="hidden" name="participant_type" value="{{ participant.person_type }}">
+                    <input type="hidden" name="participant_id" value="{{ participant.person.id }}">
+                    <button class="btn btn-sm btn-outline-danger px-2" type="submit" title="Remove participant" aria-label="Remove participant">&times;</button>
+                  </form>
+                </span>
               </td>
             {% else %}
               <td>{{ participant.arrival_date|date:"d M Y" }}</td>
