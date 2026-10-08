@@ -1315,7 +1315,14 @@ def flex_planner_view(request):
                         "day": day,
                         "slot_index": slot_index,
                         "plan": plan,
-                        "plan_id": plan.id if plan else "",
+                        # A trainer-plan slot can be displayed through the
+                        # athlete's Flex plan. Keep the real slot plan in the
+                        # action URLs so copying reads the correct source.
+                        "plan_id": (
+                            slot.plan_id
+                            if slot and getattr(slot, "plan_id", None)
+                            else (plan.id if plan else "")
+                        ),
                         "slot": None if _slot_is_visually_empty(slot) else slot,
                         "has_race": _slot_has_race(slot),
                         "is_override": is_override,
@@ -3224,11 +3231,11 @@ def athlete_year_calendar_view(request):
                     elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
                         slot1 = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, 1))
                     if slot1 and flex_plan:
+                        # Keep the underlying trainer plan on the rendered slot.
+                        # Flex edits are routed to the athlete owner's Flex plan
+                        # by the slot endpoints, but copy actions must still
+                        # identify the real source plan.
                         plan1 = flex_plan
-                        try:
-                            slot1.plan_id = flex_plan.id
-                        except Exception:
-                            pass
 
             if selected_athlete and not slot2 and not flex_blocks_slot2:
                 base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, selected_athlete.id, day, 2)
@@ -3239,10 +3246,6 @@ def athlete_year_calendar_view(request):
                         slot2 = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, 2))
                     if slot2 and flex_plan:
                         plan2 = flex_plan
-                        try:
-                            slot2.plan_id = flex_plan.id
-                        except Exception:
-                            pass
 
             if athlete_self_view and visible_until_date and day > visible_until_date:
                 if not _slot_has_race(slot1):

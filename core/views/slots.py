@@ -142,6 +142,16 @@ def _get_flex_athlete_from_request(request, selected_plan):
     return qs.first()
 
 
+def _athlete_uses_trainer_plan_in_base_planning(athlete, plan) -> bool:
+    if not athlete or not plan:
+        return False
+    return AthleteBasePlanningSlot.objects.filter(
+        block__athlete=athlete,
+        mode=AthleteBasePlanningSlot.MODE_TRAINER,
+        trainer_plan=plan,
+    ).exists()
+
+
 class _VirtualSegmentList:
     def __init__(self, segments):
         self._segments = segments
@@ -922,7 +932,14 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
     if forbid_owner:
         return forbid_owner
 
-    forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
+    source_is_base_trainer_plan = (
+        _is_flex_source(request)
+        and _athlete_uses_trainer_plan_in_base_planning(athlete, selected_plan)
+    )
+    forbid = None if (
+        _is_flex_planner_plan(selected_plan)
+        or source_is_base_trainer_plan
+    ) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
 

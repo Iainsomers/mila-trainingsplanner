@@ -2900,6 +2900,61 @@ class SlotModalSaveTests(TestCase):
         target_cell = response.context["week_rows"][0]["athlete_rows"][0]["am_cells"][3]
         self.assertIsNone(target_cell["slot"])
 
+    def test_flex_keeps_trainer_plan_id_for_copying_source_training(self):
+        user = get_user_model().objects.create_user(
+            username="trainer-source-copy-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Trainer Source Copy Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        trainer_plan = TrainingPlan.objects.create(
+            owner=user,
+            name="Trainer source plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=trainer_plan,
+        )
+        source_slot = TrainingSlot.objects.create(
+            plan=trainer_plan,
+            date=date(2026, 10, 12),
+            slot_index=1,
+        )
+        source_slot.segments.create(type="CORE", text="1200m z2", order=0)
+        self.client.force_login(user)
+
+        response = self.client.get(
+            f"/flex-planner/?start=2026-10-12&weeks=1&athletes={athlete.id}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        target_cell = response.context["week_rows"][0]["athlete_rows"][0]["am_cells"][0]
+        self.assertEqual(target_cell["plan_id"], trainer_plan.id)
+
+        copy_response = self.client.post(
+            f"/slot-copy/2026/10/12/1/?plan={trainer_plan.id}&athlete={athlete.id}&source=flex"
+        )
+        self.assertEqual(copy_response.status_code, 200)
+        clipboard = self.client.session.get("training_clipboard")
+        self.assertEqual(clipboard["segments"][0]["text"], "1200m z2")
+
     def test_group_auto_wucd_is_applied_for_base_plan_training(self):
         user = get_user_model().objects.create_user(
             username="groupcoach",
