@@ -1,0 +1,83 @@
+{% extends "core/base.html" %}
+
+{% block title %}Daily Coach Overview Other{% endblock %}
+
+{% block extra_head %}
+<style>
+  .other-overview {
+    max-width: 980px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+  .overview-block {
+    border: 1px solid #d9e0e7;
+    border-radius: 8px;
+    background: #fff;
+    margin-top: 1rem;
+    overflow: hidden;
+  }
+  .overview-block summary {
+    cursor: pointer;
+    padding: 1rem 1.15rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .overview-block[open] summary {
+    border-bottom: 1px solid #d9e0e7;
+  }
+  .overview-content { padding: 1rem 1.15rem; }
+  .info-quality-table th, .info-quality-table td { vertical-align: middle; }
+  .pending-badge {
+    display: inline-block;
+    min-width: 2rem;
+    padding: .25rem .5rem;
+    border-radius: 999px;
+    color: #1f2933;
+    text-align: center;
+    font-weight: 700;
+  }
+  .pending-green { background: #b7e4c7; }
+  .pending-yellow { background: #ffe69c; }
+  .pending-orange { background: #f7b267; }
+  .pending-red { background: #f28b82; color: #5b1111; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="other-overview">
+  <div class="d-flex justify-content-between align-items-center gap-3">
+    <div>
+      <h1 class="h3 mb-1">Daily Coach Overview Other</h1>
+      <p class="text-muted mb-0">Recent information quality for your athletes.</p>
+    </div>
+    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+  </div>
+
+  <details class="overview-block">
+    <summary>Info Quality</summary>
+    <div class="overview-content">
+      <p class="text-muted small">Open evaluations from {{ window_start|date:"d-m-Y" }} through {{ window_end|date:"d-m-Y" }}. Today is not included.</p>
+      <div class="table-responsive">
+        <table class="table table-sm info-quality-table mb-0">
+          <thead><tr><th>Athlete</th><th class="text-end">Open evaluations</th></tr></thead>
+          <tbody>
+            {% for row in athlete_rows %}
+              <tr>
+                <td>{{ row.athlete.name }}</td>
+                <td class="text-end"><span class="pending-badge pending-{{ row.color }}">{{ row.pending_count }}</span></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="2" class="text-muted">No athletes found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <details class="overview-block">
+    <summary>Vitals</summary>
+    <div class="overview-content text-muted">Coming soon.</div>
+  </details>
+</main>
+{% endblock %}

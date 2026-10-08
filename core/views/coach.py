@@ -10595,3 +10595,126 @@ def daily_overview_view(request):
         "previous_day_url": f"{reverse('daily_overview')}?{urlencode(previous_day_query, doseq=True)}",
         "next_day_url": f"{reverse('daily_overview')}?{urlencode(next_day_query, doseq=True)}",
     })
+
+
+@login_required
+def daily_overview_other_view(request):
+    """Show coach-facing quality indicators for recent AYC evaluations."""
+    today = date.today()
+    window_start = today - timedelta(days=7)
+    window_end = today - timedelta(days=1)
+    athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
+    athlete_ids = [athlete.id for athlete in athletes]
+
+    plans = list(
+        _filter_owned(TrainingPlan.objects.order_by("name"), request)
+        .exclude(name__startswith="Flex Planner")
+    )
+    plan_targets = {}
+    for plan in plans:
+        try:
+            plan_targets[plan.id] = set(plan.targeted_athlete_ids())
+        except Exception:
+            plan_targets[plan.id] = set()
+
+    slot_lookup = {}
+    if athlete_ids and plans:
+        for slot in (
+            TrainingSlot.objects
+            .filter(
+                plan_id__in=[plan.id for plan in plans],
+                date__range=(window_start, window_end),
+                slot_index__in=(1, 2),
+            )
+            .filter(Q(athlete__isnull=True) | Q(athlete_id__in=athlete_ids))
+            .prefetch_related("segments")
+        ):
+            slot_lookup[(slot.plan_id, slot.athlete_id, slot.date, int(slot.slot_index))] = slot
+
+    base_blocks_by_athlete = {}
+    trainer_plan_ids = set()
+    if athlete_ids:
+        base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
+        for block in (
+            AthleteBasePlanningBlock.objects
+            .filter(athlete_id__in=athlete_ids, planning_kind=AthleteBasePlanningBlock.KIND_BASE)
+            .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
+            .order_by("athlete_id", "sort_order", "start_month", "start_day", "id")
+        ):
+            base_blocks_by_athlete.setdefault(block.athlete_id, []).append(block)
+            for base_slot in getattr(block, "_prefetched_base_slots", []):
+                if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_slot.trainer_plan_id:
+                    trainer_plan_ids.add(base_slot.trainer_plan_id)
+
+    trainer_slot_lookup = {}
+    if trainer_plan_ids:
+        for slot in (
+            TrainingSlot.objects
+            .filter(
+                plan_id__in=trainer_plan_ids,
+                athlete__isnull=True,
+                date__range=(window_start, window_end),
+                slot_index__in=(1, 2),
+            )
+            .prefetch_related("segments")
+        ):
+            trainer_slot_lookup[(slot.plan_id, slot.date, int(slot.slot_index))] = slot
+
+    check_lookup = {
+        (check.athlete_id, check.date, int(check.slot_index or 1)): check
+        for check in AthleteDayCheck.objects.filter(
+            athlete_id__in=athlete_ids,
+            date__range=(window_start, window_end),
+        )
+    }
+
+    def direct_slot_for(athlete, day, slot_index):
+        for plan in plans:
+            if athlete.id not in plan_targets.get(plan.id, set()):
+                continue
+            if plan.start_date and plan.start_date > day:
+                continue
+            if plan.end_date and plan.end_date < day:
+                continue
+            return (
+                slot_lookup.get((plan.id, athlete.id, day, slot_index))
+                or slot_lookup.get((plan.id, None, day, slot_index))
+            )
+        return None
+
+    counts = []
+    for athlete in athletes:
+        pending = 0
+        for offset in range((window_end - window_start).days + 1):
+            day = window_start + timedelta(days=offset)
+            for slot_index in (1, 2):
+                slot = direct_slot_for(athlete, day, slot_index)
+                if not slot:
+                    base_slot = _base_planning_slot_for_day(
+                        base_blocks_by_athlete, athlete.id, day, slot_index
+                    )
+                    if base_slot:
+                        if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                            slot = _virtual_slot_from_base_training(base_slot.training_text)
+                        elif base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER:
+                            slot = trainer_slot_lookup.get((base_slot.trainer_plan_id, day, slot_index))
+                if slot and not _slot_is_visually_empty(slot):
+                    check = check_lookup.get((athlete.id, day, slot_index))
+                    if not check or not check.effective_status:
+                        pending += 1
+
+        if pending == 0:
+            color = "green"
+        elif pending == 1:
+            color = "yellow"
+        elif pending <= 3:
+            color = "orange"
+        else:
+            color = "red"
+        counts.append({"athlete": athlete, "pending_count": pending, "color": color})
+
+    return render(request, "core/daily_overview_other.html", {
+        "athlete_rows": counts,
+        "window_start": window_start,
+        "window_end": window_end,
+    })

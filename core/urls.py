@@ -5,6 +5,7 @@ from core.auth import ThrottledAuthenticationForm
 # Import views explicitly to avoid any name collisions via views/__init__.py
 from core.views.coach import (
     daily_overview_view,
+    daily_overview_other_view,
     dashboard_view,
     new_plans_wishes_view,
     settings_view,
@@ -238,4 +239,5 @@ urlpatterns = [
     # Stats debug
     path("stats-debug/", stats_debug_view, name="stats_debug"),
     path("coach/daily-overview/", daily_overview_view, name="daily_overview"),
+    path("coach/daily-overview-other/", daily_overview_other_view, name="daily_overview_other"),
 ]

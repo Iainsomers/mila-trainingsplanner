@@ -45,7 +45,7 @@ Bijgewerkt: 7 oktober 2026.
 ## Bekende aandachtspunten
 
 - Settings bevat bestaande technische voorkeuren, maar de dashboardtegel wordt nog als `under development` gepresenteerd. `Planning Camps` wordt de eerste expliciet aangevraagde coachinstelling.
-- Daily Coach Overview Vitals is zichtbaar als toekomstige, niet-aanklikbare tab.
+- Daily Coach Overview Other is beschikbaar met de inklapbare blokken Info Quality en Vitals. Info Quality toont per eigen atleet openstaande AYC-evaluaties van de afgelopen zeven dagen, exclusief vandaag; Vitals is nog leeg.
 - Stats is bewust eenvoudig en nog in ontwikkeling.
 - Polar/watch suggestions, vooral automatische workoutmatching zonder handmatige laps, hebben verdere testgevallen en verfijning nodig.
 - E-mail-, WhatsApp- of pushreminders voor openstaande evaluaties zijn nog niet gebouwd; de huidige herinnering is alleen de AYC-popup.
