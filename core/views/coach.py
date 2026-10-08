@@ -10610,6 +10610,11 @@ def daily_overview_other_view(request):
         _filter_owned(TrainingPlan.objects.order_by("name"), request)
         .exclude(name__startswith="Flex Planner")
     )
+    flex_plan_by_athlete = {
+        athlete.id: _get_athlete_year_flex_plan(request.user, athlete, window_start, window_end)
+        for athlete in athletes
+    }
+    flex_plan_ids = {plan.id for plan in flex_plan_by_athlete.values() if plan}
     plan_targets = {}
     for plan in plans:
         try:
@@ -10618,11 +10623,11 @@ def daily_overview_other_view(request):
             plan_targets[plan.id] = set()
 
     slot_lookup = {}
-    if athlete_ids and plans:
+    if athlete_ids and (plans or flex_plan_ids):
         for slot in (
             TrainingSlot.objects
             .filter(
-                plan_id__in=[plan.id for plan in plans],
+                plan_id__in=[plan.id for plan in plans] + list(flex_plan_ids),
                 date__range=(window_start, window_end),
                 slot_index__in=(1, 2),
             )
@@ -10668,6 +10673,19 @@ def daily_overview_other_view(request):
         )
     }
 
+    def effective_slot_for(athlete, day, slot_index):
+        """Match AYC precedence, including an empty Flex override hiding a plan."""
+        slot = direct_slot_for(athlete, day, slot_index)
+        flex_plan = flex_plan_by_athlete.get(athlete.id)
+        flex_override = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index)) if flex_plan else None
+        if flex_override is not None:
+            if _slot_is_visually_empty(flex_override):
+                if not _slot_has_race(slot):
+                    return None, True
+            else:
+                return flex_override, False
+        return slot, False
+
     def direct_slot_for(athlete, day, slot_index):
         for plan in plans:
             if athlete.id not in plan_targets.get(plan.id, set()):
@@ -10688,8 +10706,8 @@ def daily_overview_other_view(request):
         for offset in range((window_end - window_start).days + 1):
             day = window_start + timedelta(days=offset)
             for slot_index in (1, 2):
-                slot = direct_slot_for(athlete, day, slot_index)
-                if not slot:
+                slot, flex_blocks_base = effective_slot_for(athlete, day, slot_index)
+                if not slot and not flex_blocks_base:
                     base_slot = _base_planning_slot_for_day(
                         base_blocks_by_athlete, athlete.id, day, slot_index
                     )
