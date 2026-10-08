@@ -3068,6 +3068,56 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual([seg.type for seg in segments], ["WU", "CORE", "CD"])
         self.assertEqual(segments[1].text, "1000m z3")
 
+    def test_athlete_year_wucd_distance_without_zone_defaults_to_z1(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+
+        response = self.client.post(
+            f"/athlete/year/?year=2026&athlete={athlete.id}",
+            {
+                "date": "2026-01-08",
+                "slot_index": "1",
+                "plan": str(plan.id),
+                "wu_text": "1000m",
+                "slot_text": "1000m z3",
+                "core_text": "1000m z3",
+                "cd_text": "800m",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date="2026-01-08", slot_index=1)
+        segments = list(slot.segments.order_by("order", "id"))
+        self.assertEqual([seg.type for seg in segments], ["WU", "CORE", "CD"])
+        self.assertEqual(segments[0].text, "1000m")
+        self.assertEqual(segments[0].zone, "1")
+        self.assertEqual(segments[0].distance_m, 1000)
+        self.assertEqual(segments[-1].text, "800m")
+        self.assertEqual(segments[-1].zone, "1")
+        self.assertEqual(segments[-1].distance_m, 800)
+
+    def test_slot_modal_wucd_distance_without_zone_defaults_to_z1(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+
+        response = self.client.post(
+            f"/slot-modal/2026/01/08/1/?plan={plan.id}&athlete={athlete.id}",
+            {
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "wu_text": "1000m",
+                "core_text": "1000m z3",
+                "cd_text": "800m",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date="2026-01-08", slot_index=1)
+        segments = list(slot.segments.order_by("order", "id"))
+        self.assertEqual([seg.type for seg in segments], ["WU", "CORE", "CD"])
+        self.assertEqual(segments[0].zone, "1")
+        self.assertEqual(segments[0].distance_m, 1000)
+        self.assertEqual(segments[-1].zone, "1")
+        self.assertEqual(segments[-1].distance_m, 800)
+
     def test_athlete_year_can_save_flex_override_outside_flex_plan_date_range(self):
         user = get_user_model().objects.create_user(
             username="ayc-flex-range-coach",

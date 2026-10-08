@@ -2618,7 +2618,10 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         if segment_type == "SPR":
             parse_text = f"{raw_text} Z6" if not re.search(r"\bz\s*[1-6]\b", raw_text, re.IGNORECASE) else raw_text
 
-        parsed = parse_segment_text(parse_text)
+        parsed = parse_segment_text(
+            parse_text,
+            zone_required=segment_type not in {"WU", "CD"},
+        )
 
         seg = TrainingSegment.objects.create(
             slot=override_slot,
@@ -2631,6 +2634,8 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
         if parsed and parsed.ok:
             _apply_parse_to_segment(seg, parsed)
+            if segment_type in {"WU", "CD"} and not seg.zone:
+                seg.zone = default_zone
             if segment_type == "SPR":
                 seg.zone = "6"
                 seg.norm_distance_m = None if seg.duration_s is not None else _compute_norm_distance_m(seg)

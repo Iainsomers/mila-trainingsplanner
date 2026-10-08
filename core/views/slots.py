@@ -1634,7 +1634,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # parsing
     sprint_text_for_parse = _ensure_zone_in_text(sprint_text, "6")
 
-    wu_parse = parse_segment_text(wu_text) if wu_text else None
+    wu_parse = parse_segment_text(wu_text, zone_required=False) if wu_text else None
     sprint_parse = parse_segment_text(sprint_text_for_parse) if sprint_text else None
     if core_text:
         core_parse = None
@@ -1651,7 +1651,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     alt_parts = [part.strip() for part in alt_text.split("//") if part.strip()]
     alt_parses = [parse_segment_text(part, zone_required=False) for part in alt_parts]
     alt_parse = next((parsed for parsed in alt_parses if not parsed.ok), alt_parses[-1] if alt_parses else None)
-    cd_parse = parse_segment_text(cd_text) if cd_text else None
+    cd_parse = parse_segment_text(cd_text, zone_required=False) if cd_text else None
 
     parse_block = False
     if core_parse is not None and not core_parse.ok:
@@ -1720,6 +1720,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         else:
             wu_seg = slot.segments.create(type="WU", text=wu_text, order=0)
         _apply_parse_to_segment(wu_seg, wu_parse)
+        if not wu_seg.zone:
+            wu_seg.zone = "1"
         wu_seg.parsed_at = now
         wu_seg.save()
     else:
@@ -1860,6 +1862,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         else:
             cd_seg = slot.segments.create(type="CD", text=cd_text, order=next_followup_order + 1)
         _apply_parse_to_segment(cd_seg, cd_parse)
+        if not cd_seg.zone:
+            cd_seg.zone = "1"
         cd_seg.parsed_at = now
         cd_seg.save()
     else:
