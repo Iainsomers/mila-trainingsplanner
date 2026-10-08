@@ -10703,23 +10703,24 @@ def daily_overview_other_view(request):
     counts = []
     for athlete in athletes:
         pending = 0
-        for offset in range((window_end - window_start).days + 1):
-            day = window_start + timedelta(days=offset)
-            for slot_index in (1, 2):
-                slot, flex_blocks_base = effective_slot_for(athlete, day, slot_index)
-                if not slot and not flex_blocks_base:
-                    base_slot = _base_planning_slot_for_day(
-                        base_blocks_by_athlete, athlete.id, day, slot_index
-                    )
-                    if base_slot:
-                        if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
-                            slot = _virtual_slot_from_base_training(base_slot.training_text)
-                        elif base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER:
-                            slot = trainer_slot_lookup.get((base_slot.trainer_plan_id, day, slot_index))
-                if slot and not _slot_is_visually_empty(slot):
-                    check = check_lookup.get((athlete.id, day, slot_index))
-                    if not check or not check.effective_status:
-                        pending += 1
+        if getattr(athlete, "training_reports_enabled", True):
+            for offset in range((window_end - window_start).days + 1):
+                day = window_start + timedelta(days=offset)
+                for slot_index in (1, 2):
+                    slot, flex_blocks_base = effective_slot_for(athlete, day, slot_index)
+                    if not slot and not flex_blocks_base:
+                        base_slot = _base_planning_slot_for_day(
+                            base_blocks_by_athlete, athlete.id, day, slot_index
+                        )
+                        if base_slot:
+                            if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                                slot = _virtual_slot_from_base_training(base_slot.training_text)
+                            elif base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER:
+                                slot = trainer_slot_lookup.get((base_slot.trainer_plan_id, day, slot_index))
+                    if slot and not _slot_is_visually_empty(slot):
+                        check = check_lookup.get((athlete.id, day, slot_index))
+                        if not check or not check.effective_status:
+                            pending += 1
 
         if pending == 0:
             color = "green"
