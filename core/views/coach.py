@@ -495,6 +495,7 @@ def dashboard_view(request):
         "active_coach_access_label": _active_coach_access_label(request) if is_trainer_user else "own",
         "coach_tools_only": coach_tools_only,
         "evaluations_enabled": getattr(evaluation_settings, "evaluations_enabled", True),
+        "is_product_admin": _is_product_admin(request.user),
     })
 
 

@@ -69,11 +69,18 @@ class NewPlansWishesTests(TestCase):
 
         dashboard = self.client.get("/")
         self.assertContains(dashboard, "New, Plans, Wishes")
+        self.assertNotContains(dashboard, "Go to admin")
 
         response = self.client.get("/new-plans-wishes/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Here you can see what new features")
         self.assertNotContains(response, "Add new feature")
+
+    def test_only_admin_account_sees_admin_dashboard_card(self):
+        self.client.force_login(self.admin)
+        admin_dashboard = self.client.get("/")
+        self.assertContains(admin_dashboard, "Go to admin")
+        self.assertContains(admin_dashboard, 'class="btn btn-primary"')
 
     def test_user_can_only_have_three_active_wishes(self):
         self.client.force_login(self.user)
