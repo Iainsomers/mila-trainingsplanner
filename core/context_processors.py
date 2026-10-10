@@ -1,3 +1,4 @@
+from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.utils.text import slugify
 
@@ -64,7 +65,7 @@ def team_branding(request):
         (
             candidate
             for candidate in (f"{logo_base}.jpg", f"{logo_base}.png")
-            if staticfiles_storage.exists(candidate)
+            if finders.find(candidate) is not None
         ),
         "",
     )
