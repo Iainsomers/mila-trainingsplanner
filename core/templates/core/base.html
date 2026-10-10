@@ -18,7 +18,14 @@
     {% block extra_head %}{% endblock %}
     <style>
       .mila-page-content {
-        padding-top: 3.25rem;
+        padding-top: 0;
+      }
+
+      .mila-page-content > .container > .d-flex:first-child,
+      .mila-page-content > .container-fluid > .d-flex:first-child,
+      .mila-page-content > main > .d-flex:first-child,
+      .mila-page-content > .d-flex:first-child {
+        padding-right: 92px;
       }
 
       .mila-logout {
