@@ -8432,6 +8432,7 @@ def settings_view(request):
     # Settings follow the currently selected coach view, just like planning data.
     # This matters for an admin who is working in another coach's account.
     settings_owner = _active_coach_user(request)
+    can_edit_settings = request.user.id == settings_owner.id
     coach_settings, _ = CoachSettings.objects.get_or_create(user=settings_owner)
     shared_coaches = list(
         CoachAccess.objects
@@ -8442,6 +8443,8 @@ def settings_view(request):
     )
 
     if request.method == "POST":
+        if not can_edit_settings:
+            return HttpResponse("Only the coach can change these settings.", status=403)
         coach_settings.detailed_camps_enabled = (request.POST.get("detailed_camps_enabled") == "on")
         coach_settings.live_sharing_training_schedules = (request.POST.get("live_sharing_training_schedules") == "on")
         coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
@@ -8498,6 +8501,7 @@ def settings_view(request):
         "detailed_camps_enabled": coach_settings.detailed_camps_enabled,
         "live_sharing_training_schedules": coach_settings.live_sharing_training_schedules,
         "year_planner_shared_whereabouts_enabled": coach_settings.year_planner_shared_whereabouts_enabled,
+        "can_edit_settings": can_edit_settings,
     })
 
 

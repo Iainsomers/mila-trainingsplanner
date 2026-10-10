@@ -1175,6 +1175,31 @@ class PlanningOverviewTests(TestCase):
         self.assertTrue(CoachSettings.objects.get(user=coach).evaluations_enabled)
         self.assertContains(self.client.get("/"), "Open evaluations")
 
+    def test_other_coach_cannot_change_owner_settings(self):
+        owner = get_user_model().objects.create_user(
+            username="settings-owner", password="secret", is_staff=True
+        )
+        grantee = get_user_model().objects.create_user(
+            username="settings-grantee", password="secret", is_staff=True
+        )
+        CoachAccess.objects.create(owner=owner, grantee=grantee, can_edit=True)
+        CoachSettings.objects.create(user=owner, evaluations_enabled=True)
+
+        self.client.force_login(grantee)
+        session = self.client.session
+        session["active_coach_owner_id"] = owner.id
+        session.save()
+
+        settings_page = self.client.get("/settings/")
+        self.assertEqual(settings_page.status_code, 200)
+        self.assertContains(settings_page, "evaluation-sharing-matrix")
+        self.assertContains(settings_page, "settings-grantee")
+        self.assertNotContains(settings_page, "Save settings")
+
+        response = self.client.post("/settings/", {"evaluations_enabled": "off"})
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(CoachSettings.objects.get(user=owner).evaluations_enabled)
+
     def test_evaluation_sharing_matrix_limits_shared_coach_views(self):
         owner = get_user_model().objects.create_user(
             username="evaluation-sharing-owner", password="secret", is_staff=True
