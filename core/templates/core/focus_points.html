@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+
+{% block title %}Focus Points and Desired Improvements{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="max-width: 760px;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Focus Points and Desired Improvements <span class="text-muted">(under construction)</span></h1>
+    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back to planning</a>
+  </div>
+
+  <div class="list-group">
+    {% for athlete in athletes %}
+      <div class="list-group-item">{{ athlete.name }}</div>
+    {% empty %}
+      <div class="list-group-item text-muted">No athletes yet.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

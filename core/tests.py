@@ -1112,6 +1112,22 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Year Planner")
         self.assertContains(response, "Standard Strength")
 
+    def test_focus_points_page_lists_active_coach_athletes(self):
+        coach = get_user_model().objects.create_user(
+            username="focus-points-coach", password="secret", is_staff=True
+        )
+        Athlete.objects.create(owner=coach, name="Zoe Athlete", birth_year=2000, gender="X")
+        Athlete.objects.create(owner=coach, name="Anna Athlete", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+
+        planning = self.client.get("/planning/")
+        self.assertContains(planning, "Focus Points and Desired Improvements")
+
+        response = self.client.get("/planning/focus-points/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Anna Athlete")
+        self.assertContains(response, "Zoe Athlete")
+
     def test_detailed_camps_are_coach_configurable(self):
         user = get_user_model().objects.create_user(
             username="camp-settings-coach",

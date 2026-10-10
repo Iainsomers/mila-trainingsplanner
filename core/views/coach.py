@@ -5289,6 +5289,21 @@ def planning_overview_view(request):
     })
 
 
+@login_required
+@require_GET
+def focus_points_view(request):
+    athlete = _athlete_for_user(request.user)
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    if is_athlete_user or is_coach_tools_only_user(request.user):
+        return redirect("planning_overview")
+
+    athletes = _filter_owned(
+        Athlete.objects.all(),
+        request,
+    ).order_by(Lower("name"), "id")
+    return render(request, "core/focus_points.html", {"athletes": athletes})
+
+
 def _trainer_planning_qs(user_or_request):
     return _filter_owned(
         TrainingPlan.objects.filter(
