@@ -56,13 +56,13 @@
             <tr>
               <th scope="row" class="fw-normal">{{ row.access.grantee.get_full_name|default:row.access.grantee.username }}</th>
               <td class="text-center">
-                <input class="form-check-input" type="checkbox" name="evaluation-share-{{ row.access.grantee_id }}-training" aria-label="Training for {{ row.access.grantee.username }}" {% if row.share and row.share.training %}checked{% endif %}>
+                <input class="form-check-input" type="checkbox" name="evaluation-share-{{ row.access.grantee_id }}-training" aria-label="Training for {{ row.access.grantee.username }}" {% if row.share and row.share.training %}checked{% endif %} {% if not can_edit_settings %}disabled{% endif %}>
               </td>
               <td class="text-center">
-                <input class="form-check-input" type="checkbox" name="evaluation-share-{{ row.access.grantee_id }}-week" aria-label="Week for {{ row.access.grantee.username }}" {% if row.share and row.share.week %}checked{% endif %}>
+                <input class="form-check-input" type="checkbox" name="evaluation-share-{{ row.access.grantee_id }}-week" aria-label="Week for {{ row.access.grantee.username }}" {% if row.share and row.share.week %}checked{% endif %} {% if not can_edit_settings %}disabled{% endif %}>
               </td>
               <td class="text-center">
-                <input class="form-check-input" type="checkbox" name="evaluation-share-{{ row.access.grantee_id }}-vitals" aria-label="Vitals for {{ row.access.grantee.username }}" {% if row.share and row.share.vitals %}checked{% endif %}>
+                <input class="form-check-input" type="checkbox" name="evaluation-share-{{ row.access.grantee_id }}-vitals" aria-label="Vitals for {{ row.access.grantee.username }}" {% if row.share and row.share.vitals %}checked{% endif %} {% if not can_edit_settings %}disabled{% endif %}>
               </td>
             </tr>
             {% endfor %}

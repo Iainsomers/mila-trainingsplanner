@@ -1218,6 +1218,8 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(settings_page, "evaluation-sharing-matrix")
         self.assertContains(settings_page, "settings-grantee")
         self.assertNotContains(settings_page, "Save settings")
+        self.assertContains(settings_page, "evaluation-share-")
+        self.assertContains(settings_page, "disabled")
 
         response = self.client.post("/settings/", {"evaluations_enabled": "off"})
         self.assertEqual(response.status_code, 403)
