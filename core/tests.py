@@ -266,7 +266,7 @@ class TrackTimerTests(TestCase):
         self.client.force_login(coach)
 
         dashboard = self.client.get("/")
-        self.assertContains(dashboard, "Evaluaties")
+        self.assertContains(dashboard, "Evaluations")
 
         create_response = self.client.post(
             "/evaluations/",
@@ -1139,6 +1139,41 @@ class PlanningOverviewTests(TestCase):
         planning_after = self.client.get("/planning/")
         self.assertContains(planning_after, "Details Camps")
         self.assertEqual(self.client.get("/planning/detailed-camps/").status_code, 200)
+
+    def test_evaluations_module_can_be_disabled_for_coach_and_athletes(self):
+        coach = get_user_model().objects.create_user(
+            username="evaluation-toggle-coach", password="secret", is_staff=True
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="evaltoggleathlete", password="secret"
+        )
+        Athlete.objects.create(
+            owner=coach,
+            name="Eval Toggle Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+
+        self.client.force_login(coach)
+        settings_page = self.client.get("/settings/")
+        self.assertContains(settings_page, "Evaluations")
+        self.assertContains(settings_page, "evaluations-enabled")
+
+        response = self.client.post("/settings/", {})
+        self.assertRedirects(response, "/settings/")
+        self.assertFalse(CoachSettings.objects.get(user=coach).evaluations_enabled)
+        self.assertNotContains(self.client.get("/"), "Open evaluations")
+        self.assertRedirects(self.client.get("/evaluations/"), "/")
+
+        self.client.force_login(athlete_user)
+        self.assertNotContains(self.client.get("/"), "Open evaluations")
+        self.assertRedirects(self.client.get("/evaluations/"), "/")
+
+        self.client.force_login(coach)
+        response = self.client.post("/settings/", {"evaluations_enabled": "on"})
+        self.assertRedirects(response, "/settings/")
+        self.assertTrue(CoachSettings.objects.get(user=coach).evaluations_enabled)
+        self.assertContains(self.client.get("/"), "Open evaluations")
 
     def test_live_training_schedule_sharing_requires_both_coaches(self):
         receiving_coach = get_user_model().objects.create_user(

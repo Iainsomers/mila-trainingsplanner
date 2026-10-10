@@ -483,6 +483,8 @@ def dashboard_view(request):
         return redirect("dashboard")
 
     active_coach = _active_coach_user(request) if is_trainer_user else request.user
+    evaluation_owner = athlete.owner if is_athlete_user else active_coach
+    evaluation_settings = CoachSettings.objects.filter(user=evaluation_owner).first()
 
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
@@ -492,6 +494,7 @@ def dashboard_view(request):
         "active_coach": active_coach,
         "active_coach_access_label": _active_coach_access_label(request) if is_trainer_user else "own",
         "coach_tools_only": coach_tools_only,
+        "evaluations_enabled": getattr(evaluation_settings, "evaluations_enabled", True),
     })
 
 
@@ -705,6 +708,11 @@ def evaluations_view(request):
     if is_coach_tools_only_user(request.user):
         return redirect("dashboard")
 
+    evaluation_owner = athlete.owner if is_athlete_user else _active_coach_user(request)
+    evaluation_settings = CoachSettings.objects.filter(user=evaluation_owner).first()
+    if evaluation_settings is not None and not evaluation_settings.evaluations_enabled:
+        return redirect("dashboard")
+
     if is_athlete_user:
         questionnaires = list(
             EvaluationQuestionnaire.objects
@@ -866,6 +874,10 @@ def evaluation_fill_view(request, questionnaire_id):
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
     if not is_athlete_user:
         return redirect("evaluations")
+
+    evaluation_settings = CoachSettings.objects.filter(user=athlete.owner).first()
+    if evaluation_settings is not None and not evaluation_settings.evaluations_enabled:
+        return redirect("dashboard")
 
     questionnaire = get_object_or_404(
         EvaluationQuestionnaire.objects.prefetch_related("questions"),
@@ -8425,10 +8437,12 @@ def settings_view(request):
     if request.method == "POST":
         coach_settings.detailed_camps_enabled = (request.POST.get("detailed_camps_enabled") == "on")
         coach_settings.live_sharing_training_schedules = (request.POST.get("live_sharing_training_schedules") == "on")
+        coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
         coach_settings.year_planner_shared_whereabouts_enabled = (
             request.POST.get("year_planner_shared_whereabouts_enabled") == "on"
         )
         coach_settings.save(update_fields=[
+            "evaluations_enabled",
             "detailed_camps_enabled",
             "live_sharing_training_schedules",
             "year_planner_shared_whereabouts_enabled",
@@ -8437,6 +8451,7 @@ def settings_view(request):
         return redirect("/settings/")
 
     return render(request, "core/settings.html", {
+        "evaluations_enabled": coach_settings.evaluations_enabled,
         "detailed_camps_enabled": coach_settings.detailed_camps_enabled,
         "live_sharing_training_schedules": coach_settings.live_sharing_training_schedules,
         "year_planner_shared_whereabouts_enabled": coach_settings.year_planner_shared_whereabouts_enabled,

@@ -43,6 +43,7 @@ class CoachSettings(models.Model):
     zone_input_unit = models.CharField(max_length=10, default="pace")
 
     # Optional long-term planning modules.
+    evaluations_enabled = models.BooleanField(default=True)
     detailed_camps_enabled = models.BooleanField(default=False)
     live_sharing_training_schedules = models.BooleanField(default=False)
     year_planner_shared_whereabouts_enabled = models.BooleanField(default=False)
