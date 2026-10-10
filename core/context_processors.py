@@ -59,12 +59,20 @@ def team_branding(request):
     if team is None:
         return {}
 
-    logo_path = f"core/brand/team-{slugify(team.name)}.jpg"
+    logo_base = f"core/brand/team-{slugify(team.name)}"
+    logo_path = next(
+        (
+            candidate
+            for candidate in (f"{logo_base}.jpg", f"{logo_base}.png")
+            if staticfiles_storage.exists(candidate)
+        ),
+        "",
+    )
     return {
         "team_branding": {
             "name": team.name,
             "color_1": team.color_1,
             "color_2": team.color_2,
-            "logo_url": staticfiles_storage.url(logo_path) if staticfiles_storage.exists(logo_path) else "",
+            "logo_url": staticfiles_storage.url(logo_path) if logo_path else "",
         }
     }
