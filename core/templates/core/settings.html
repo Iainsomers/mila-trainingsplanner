@@ -33,6 +33,14 @@
         <label class="form-check-label" for="evaluations-enabled">Evaluations</label>
         <div class="form-text">Show Evaluations on the dashboard for this coach and all athletes of this coach.</div>
       </div>
+
+      <div class="form-check form-switch mt-3">
+        <input class="form-check-input" type="checkbox" role="switch" id="focus-points-enabled" name="focus_points_enabled" {% if focus_points_enabled %}checked{% endif %} {% if not can_edit_settings %}disabled{% endif %}>
+        <label class="form-check-label" for="focus-points-enabled">Focus Points and Desired Improvements</label>
+        <div class="form-text">Show the Focus Points and Desired Improvements page under Planning.</div>
+      </div>
+
+      <h2 class="h5 mt-4 mb-3">Privacy settings</h2>
       <div class="form-check form-switch mt-3">
         <input class="form-check-input" type="checkbox" role="switch" id="evaluation-sharing-enabled" name="evaluation_sharing_enabled" {% if evaluation_sharing_enabled %}checked{% endif %} {% if not can_edit_settings %}disabled{% endif %}>
         <label class="form-check-label" for="evaluation-sharing-enabled">Evaluation sharing</label>

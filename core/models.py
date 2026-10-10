@@ -44,6 +44,7 @@ class CoachSettings(models.Model):
 
     # Optional long-term planning modules.
     evaluations_enabled = models.BooleanField(default=True)
+    focus_points_enabled = models.BooleanField(default=False)
     evaluation_sharing_enabled = models.BooleanField(default=False)
     detailed_camps_enabled = models.BooleanField(default=False)
     live_sharing_training_schedules = models.BooleanField(default=False)

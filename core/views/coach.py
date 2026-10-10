@@ -5274,11 +5274,13 @@ def planning_overview_view(request):
     groups = Group.objects.none() if is_athlete_user else _filter_owned(Group.objects.order_by("name"), request)
     active_coach = _active_coach_user(request) if not is_athlete_user else None
     detailed_camps_enabled = False
+    focus_points_enabled = False
     if active_coach:
-        detailed_camps_enabled = CoachSettings.objects.filter(
+        coach_settings = CoachSettings.objects.filter(
             user=active_coach,
-            detailed_camps_enabled=True,
-        ).exists()
+        ).first()
+        detailed_camps_enabled = bool(coach_settings and coach_settings.detailed_camps_enabled)
+        focus_points_enabled = bool(coach_settings and coach_settings.focus_points_enabled)
     return render(request, "core/planning.html", {
         "groups": groups,
         "today": date.today(),
@@ -5286,6 +5288,7 @@ def planning_overview_view(request):
         "athlete_can_view_year_planner": athlete_can_view_year_planner,
         "athlete_can_view_detailed_camps": athlete_can_view_detailed_camps,
         "detailed_camps_enabled": detailed_camps_enabled,
+        "focus_points_enabled": focus_points_enabled,
     })
 
 
@@ -5295,6 +5298,10 @@ def focus_points_view(request):
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
     if is_athlete_user or is_coach_tools_only_user(request.user):
+        return redirect("planning_overview")
+
+    active_coach = _active_coach_user(request)
+    if not CoachSettings.objects.filter(user=active_coach, focus_points_enabled=True).exists():
         return redirect("planning_overview")
 
     athletes = _filter_owned(
@@ -8462,6 +8469,7 @@ def settings_view(request):
         if not can_edit_settings:
             return HttpResponse("Only the coach can change these settings.", status=403)
         coach_settings.detailed_camps_enabled = (request.POST.get("detailed_camps_enabled") == "on")
+        coach_settings.focus_points_enabled = (request.POST.get("focus_points_enabled") == "on")
         coach_settings.live_sharing_training_schedules = (request.POST.get("live_sharing_training_schedules") == "on")
         coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
         coach_settings.evaluation_sharing_enabled = (request.POST.get("evaluation_sharing_enabled") == "on")
@@ -8472,6 +8480,7 @@ def settings_view(request):
             "evaluations_enabled",
             "evaluation_sharing_enabled",
             "detailed_camps_enabled",
+            "focus_points_enabled",
             "live_sharing_training_schedules",
             "year_planner_shared_whereabouts_enabled",
             "updated_at",
@@ -8515,6 +8524,7 @@ def settings_view(request):
         "evaluation_sharing_enabled": coach_settings.evaluation_sharing_enabled,
         "evaluation_share_rows": evaluation_share_rows,
         "detailed_camps_enabled": coach_settings.detailed_camps_enabled,
+        "focus_points_enabled": coach_settings.focus_points_enabled,
         "live_sharing_training_schedules": coach_settings.live_sharing_training_schedules,
         "year_planner_shared_whereabouts_enabled": coach_settings.year_planner_shared_whereabouts_enabled,
         "can_edit_settings": can_edit_settings,

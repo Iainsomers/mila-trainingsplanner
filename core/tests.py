@@ -1116,6 +1116,7 @@ class PlanningOverviewTests(TestCase):
         coach = get_user_model().objects.create_user(
             username="focus-points-coach", password="secret", is_staff=True
         )
+        CoachSettings.objects.create(user=coach, focus_points_enabled=True)
         Athlete.objects.create(owner=coach, name="Zoe Athlete", birth_year=2000, gender="X")
         Athlete.objects.create(owner=coach, name="Anna Athlete", birth_year=2000, gender="X")
         self.client.force_login(coach)
