@@ -79,8 +79,8 @@ class NewPlansWishesTests(TestCase):
     def test_only_admin_account_sees_admin_dashboard_card(self):
         self.client.force_login(self.admin)
         admin_dashboard = self.client.get("/")
-        self.assertContains(admin_dashboard, "Go to admin")
-        self.assertContains(admin_dashboard, 'class="btn btn-primary"')
+        self.assertContains(admin_dashboard, 'href="/admin/"')
+        self.assertContains(admin_dashboard, 'class="card h-100 dashboard-tile"')
 
     def test_user_can_only_have_three_active_wishes(self):
         self.client.force_login(self.user)
@@ -1197,7 +1197,7 @@ class PlanningOverviewTests(TestCase):
         response = self.client.post("/settings/", {"evaluations_enabled": "on"})
         self.assertRedirects(response, "/settings/")
         self.assertTrue(CoachSettings.objects.get(user=coach).evaluations_enabled)
-        self.assertContains(self.client.get("/"), "Open evaluations")
+        self.assertContains(self.client.get("/"), 'href="/evaluations/"')
 
     def test_other_coach_cannot_change_owner_settings(self):
         owner = get_user_model().objects.create_user(
