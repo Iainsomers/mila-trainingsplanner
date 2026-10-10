@@ -35,12 +35,28 @@
         z-index: 1080;
       }
 
-      {% if team_branding.logo_url %}
+      {% if team_branding %}
       .mila-team-branded {
         position: relative;
         isolation: isolate;
+        --mila-team-color-1: {{ team_branding.color_1|default:"#000000" }};
+        --mila-team-color-2: {{ team_branding.color_2|default:"#000000" }};
       }
 
+      .mila-team-branded h1,
+      .mila-team-branded h2,
+      .mila-team-branded h3,
+      .mila-team-branded h4,
+      .mila-team-branded h5,
+      .mila-team-branded h6 {
+        color: var(--mila-team-color-1);
+      }
+
+      .mila-team-branded .btn {
+        color: var(--mila-team-color-2) !important;
+      }
+
+      {% if team_branding.logo_url %}
       .mila-team-branded::before {
         content: "";
         position: fixed;
@@ -56,6 +72,7 @@
         z-index: 1;
       }
       {% endif %}
+      {% endif %}
     </style>
   </head>
 
@@ -66,7 +83,7 @@
         <button type="submit" class="btn btn-sm btn-outline-secondary bg-white">Logout</button>
       </form>
     {% endif %}
-    <div class="mila-page-content{% if team_branding.logo_url %} mila-team-branded{% endif %}">
+    <div class="mila-page-content{% if team_branding %} mila-team-branded{% endif %}">
       {% block content %}{% endblock %}
     </div>
     {% block extra_js %}{% endblock %}

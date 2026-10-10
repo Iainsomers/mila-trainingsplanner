@@ -23,6 +23,8 @@ def default_zone_speed_mps():
 
 class Team(models.Model):
     name = models.CharField(max_length=80, unique=True)
+    color_1 = models.CharField(max_length=7, blank=True, default="")
+    color_2 = models.CharField(max_length=7, blank=True, default="")
 
     class Meta:
         ordering = ["name"]

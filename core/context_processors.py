@@ -57,12 +57,14 @@ def team_branding(request):
         team = settings.team if settings else None
 
     if team is None:
-        return {"team_branding": None}
+        return {}
 
     logo_path = f"core/brand/team-{slugify(team.name)}.jpg"
     return {
         "team_branding": {
             "name": team.name,
+            "color_1": team.color_1,
+            "color_2": team.color_2,
             "logo_url": staticfiles_storage.url(logo_path) if staticfiles_storage.exists(logo_path) else "",
         }
     }

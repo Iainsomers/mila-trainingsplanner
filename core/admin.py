@@ -32,5 +32,5 @@ class CoachSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
-    list_display = ("name",)
+    list_display = ("name", "color_1", "color_2")
     search_fields = ("name",)
