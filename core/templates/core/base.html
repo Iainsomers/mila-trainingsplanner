@@ -17,6 +17,10 @@
 
     {% block extra_head %}{% endblock %}
     <style>
+      .mila-page-content {
+        padding-top: 3.25rem;
+      }
+
       .mila-logout {
         position: fixed;
         top: 10px;
@@ -33,7 +37,9 @@
         <button type="submit" class="btn btn-sm btn-outline-secondary bg-white">Logout</button>
       </form>
     {% endif %}
-    {% block content %}{% endblock %}
+    <div class="mila-page-content">
+      {% block content %}{% endblock %}
+    </div>
     {% block extra_js %}{% endblock %}
   </body>
 </html>
