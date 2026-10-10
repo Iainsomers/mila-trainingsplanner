@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -1095,6 +1095,28 @@ Vortex	16,36	30/05/2026
 
 
 class PlanningOverviewTests(TestCase):
+    def test_athlete_team_follows_coach_team(self):
+        coach = get_user_model().objects.create_user(
+            username="team-coach", password="secret", is_staff=True
+        )
+        atverni, _ = Team.objects.get_or_create(name="Atverni")
+        llg, _ = Team.objects.get_or_create(name="LLG")
+        CoachSettings.objects.create(user=coach, team=atverni)
+
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Team Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        self.assertEqual(athlete.team_id, atverni.id)
+
+        settings = CoachSettings.objects.get(user=coach)
+        settings.team = llg
+        settings.save()
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.team_id, llg.id)
+
     def test_coach_planning_overview_is_grouped(self):
         user = get_user_model().objects.create_user(
             username="planning-coach",

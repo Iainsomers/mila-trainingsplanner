@@ -15,7 +15,7 @@ class CoachAccessAdmin(admin.ModelAdmin):
 @admin.register(Athlete)
 class AthleteAdmin(admin.ModelAdmin):
     list_display = ("name", "owner", "team", "birth_year", "gender")
-    list_editable = ("team",)
+    readonly_fields = ("team",)
     list_filter = ("owner", "team", "gender")
     search_fields = ("name", "owner__username", "owner__first_name", "owner__last_name")
     autocomplete_fields = ("owner", "team")

@@ -90,6 +90,14 @@ class CoachSettings(models.Model):
     def __str__(self) -> str:
         return f"CoachSettings({self.user_id})"
 
+    def save(self, *args, **kwargs):
+        previous_team_id = None
+        if self.pk:
+            previous_team_id = type(self).objects.filter(pk=self.pk).values_list("team_id", flat=True).first()
+        super().save(*args, **kwargs)
+        if previous_team_id != self.team_id:
+            Athlete.objects.filter(owner_id=self.user_id).update(team_id=self.team_id)
+
 
 class MatchOverview(models.Model):
     owner = models.ForeignKey(
@@ -409,6 +417,13 @@ class Athlete(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs):
+        if self.owner_id:
+            coach_settings = CoachSettings.objects.filter(user_id=self.owner_id).first()
+            if coach_settings is not None:
+                self.team_id = coach_settings.team_id
+        super().save(*args, **kwargs)
 
     def get_zone_speed_mps(self) -> dict:
         data = self.zone_speed_mps if isinstance(self.zone_speed_mps, dict) else {}
