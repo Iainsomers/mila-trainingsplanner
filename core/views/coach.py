@@ -485,6 +485,8 @@ def dashboard_view(request):
     active_coach = _active_coach_user(request) if is_trainer_user else request.user
     evaluation_owner = athlete.owner if is_athlete_user else active_coach
     evaluation_settings = CoachSettings.objects.filter(user=evaluation_owner).first()
+    dashboard_team = athlete.team if is_athlete_user else getattr(active_coach, "team", None)
+    is_llg_team = bool(dashboard_team and dashboard_team.name.casefold() == "llg")
 
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
@@ -496,6 +498,7 @@ def dashboard_view(request):
         "coach_tools_only": coach_tools_only,
         "evaluations_enabled": getattr(evaluation_settings, "evaluations_enabled", True),
         "is_product_admin": _is_product_admin(request.user),
+        "is_llg_team": is_llg_team,
     })
 
 
