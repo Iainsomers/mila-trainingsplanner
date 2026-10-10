@@ -24,8 +24,8 @@ from django.db.models import Case, IntegerField, Prefetch, Q, When
 from django.utils.dateparse import parse_time
 from django.utils import timezone
 
-from core.access import coach_tools_data_owner, is_coach_tools_only_user
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachAccess, CoachSettings, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.access import coach_tools_data_owner, evaluation_visibility_for_request, is_coach_tools_only_user
+from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -8433,25 +8433,68 @@ def settings_view(request):
     # This matters for an admin who is working in another coach's account.
     settings_owner = _active_coach_user(request)
     coach_settings, _ = CoachSettings.objects.get_or_create(user=settings_owner)
+    shared_coaches = list(
+        CoachAccess.objects
+        .filter(owner=settings_owner)
+        .exclude(grantee=settings_owner)
+        .select_related("grantee")
+        .order_by("grantee__username", "grantee_id")
+    )
 
     if request.method == "POST":
         coach_settings.detailed_camps_enabled = (request.POST.get("detailed_camps_enabled") == "on")
         coach_settings.live_sharing_training_schedules = (request.POST.get("live_sharing_training_schedules") == "on")
         coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
+        coach_settings.evaluation_sharing_enabled = (request.POST.get("evaluation_sharing_enabled") == "on")
         coach_settings.year_planner_shared_whereabouts_enabled = (
             request.POST.get("year_planner_shared_whereabouts_enabled") == "on"
         )
         coach_settings.save(update_fields=[
             "evaluations_enabled",
+            "evaluation_sharing_enabled",
             "detailed_camps_enabled",
             "live_sharing_training_schedules",
             "year_planner_shared_whereabouts_enabled",
             "updated_at",
         ])
+        for access in shared_coaches:
+            values = {
+                "training": request.POST.get(f"evaluation-share-{access.grantee_id}-training") == "on",
+                "week": request.POST.get(f"evaluation-share-{access.grantee_id}-week") == "on",
+                "vitals": request.POST.get(f"evaluation-share-{access.grantee_id}-vitals") == "on",
+            }
+            if any(values.values()):
+                CoachEvaluationSharing.objects.update_or_create(
+                    owner=settings_owner,
+                    grantee=access.grantee,
+                    defaults=values,
+                )
+            else:
+                CoachEvaluationSharing.objects.filter(
+                    owner=settings_owner,
+                    grantee=access.grantee,
+                ).delete()
         return redirect("/settings/")
+
+    share_map = {
+        share.grantee_id: share
+        for share in CoachEvaluationSharing.objects.filter(
+            owner=settings_owner,
+            grantee_id__in=[access.grantee_id for access in shared_coaches],
+        )
+    }
+    evaluation_share_rows = [
+        {
+            "access": access,
+            "share": share_map.get(access.grantee_id),
+        }
+        for access in shared_coaches
+    ]
 
     return render(request, "core/settings.html", {
         "evaluations_enabled": coach_settings.evaluations_enabled,
+        "evaluation_sharing_enabled": coach_settings.evaluation_sharing_enabled,
+        "evaluation_share_rows": evaluation_share_rows,
         "detailed_camps_enabled": coach_settings.detailed_camps_enabled,
         "live_sharing_training_schedules": coach_settings.live_sharing_training_schedules,
         "year_planner_shared_whereabouts_enabled": coach_settings.year_planner_shared_whereabouts_enabled,
@@ -10451,14 +10494,21 @@ def daily_overview_view(request):
 
     show_results = request.GET.get("ok") == "1"
     athlete_ids = [a.id for a in athletes]
+    training_visible_athlete_ids = {
+        athlete.id
+        for athlete in athletes
+        if evaluation_visibility_for_request(request, athlete.owner)["training"]
+    }
 
     check_map = {}
     for check in AthleteDayCheck.objects.filter(date=d, athlete_id__in=athlete_ids):
-        check_map[(check.athlete_id, int(check.slot_index or 1))] = check
+        if check.athlete_id in training_visible_athlete_ids:
+            check_map[(check.athlete_id, int(check.slot_index or 1))] = check
 
     comment_map = {}
     for comment in AthleteDayComment.objects.filter(date=d, athlete_id__in=athlete_ids):
-        comment_map[comment.athlete_id] = comment
+        if comment.athlete_id in training_visible_athlete_ids:
+            comment_map[comment.athlete_id] = comment
 
     accessible_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request).exclude(name__startswith="Flex Planner"))
     flex_plan = _get_athlete_year_flex_plan(_active_coach_user(request), athletes[0] if athletes else None, d, d + timedelta(days=1))
@@ -10666,6 +10716,11 @@ def daily_overview_other_view(request):
     window_end = today - timedelta(days=1)
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     athlete_ids = [athlete.id for athlete in athletes]
+    training_visible_athlete_ids = {
+        athlete.id
+        for athlete in athletes
+        if evaluation_visibility_for_request(request, athlete.owner)["training"]
+    }
 
     plans = list(
         _filter_owned(TrainingPlan.objects.order_by("name"), request)
@@ -10732,6 +10787,7 @@ def daily_overview_other_view(request):
             athlete_id__in=athlete_ids,
             date__range=(window_start, window_end),
         )
+        if check.athlete_id in training_visible_athlete_ids
     }
 
     def effective_slot_for(athlete, day, slot_index):

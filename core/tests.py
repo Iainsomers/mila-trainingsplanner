@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, CoachAccess, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -1174,6 +1174,85 @@ class PlanningOverviewTests(TestCase):
         self.assertRedirects(response, "/settings/")
         self.assertTrue(CoachSettings.objects.get(user=coach).evaluations_enabled)
         self.assertContains(self.client.get("/"), "Open evaluations")
+
+    def test_evaluation_sharing_matrix_limits_shared_coach_views(self):
+        owner = get_user_model().objects.create_user(
+            username="evaluation-sharing-owner", password="secret", is_staff=True
+        )
+        grantee = get_user_model().objects.create_user(
+            username="evaluation-sharing-grantee", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="Evaluation Sharing Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        CoachAccess.objects.create(owner=owner, grantee=grantee, can_edit=False)
+        CoachSettings.objects.create(user=owner, evaluation_sharing_enabled=True)
+        plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="Evaluation sharing plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        today = date.today()
+        slot = TrainingSlot.objects.create(plan=plan, date=today, slot_index=1)
+        slot.segments.create(type="CORE", text="Easy run", order=0)
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=today,
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+            checked=True,
+            rpe=6,
+            comment="Good",
+            updated_by=athlete.owner,
+        )
+        AthleteWeekReport.objects.create(athlete=athlete, week_start=today - timedelta(days=today.weekday()))
+        AthleteDailyVital.objects.create(athlete=athlete, date=today, sleep_hours=8)
+
+        self.client.force_login(owner)
+        settings_page = self.client.get("/settings/")
+        self.assertContains(settings_page, "Evaluation sharing")
+        self.assertContains(settings_page, "evaluation-sharing-grantee")
+        saved = self.client.post(
+            "/settings/",
+            {
+                "evaluations_enabled": "on",
+                "evaluation_sharing_enabled": "on",
+                f"evaluation-share-{grantee.id}-training": "on",
+            },
+        )
+        self.assertRedirects(saved, "/settings/")
+        share = CoachEvaluationSharing.objects.get(owner=owner, grantee=grantee)
+        self.assertTrue(share.training)
+        self.assertFalse(share.week)
+        self.assertFalse(share.vitals)
+
+        self.client.force_login(grantee)
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
+        ayc = self.client.get(f"/athlete/year/?athlete={athlete.id}&year={today.year}&hide=none")
+        self.assertTrue(ayc.context["show_training_reports"])
+        self.assertFalse(ayc.context["show_week_reports"])
+        self.assertFalse(ayc.context["show_daily_vitals"])
+
+        dco = self.client.get(f"/coach/daily-overview/?date={today.isoformat()}&ok=1")
+        self.assertIsNotNone(dco.context["rows"][0]["check1"])
+        dco_other = self.client.get("/coach/daily-overview-other/")
+        self.assertEqual(dco_other.context["athlete_rows"][0]["pending_count"], 0)
+
+        flex = self.client.get(
+            f"/flex-planner/?start={today.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        flex_checks = [
+            cell.get("check")
+            for week in flex.context["week_rows"]
+            for row in week["athlete_rows"]
+            for cell in row["am_cells"] + row["pm_cells"]
+        ]
+        self.assertTrue(any(flex_checks))
 
     def test_live_training_schedule_sharing_requires_both_coaches(self):
         receiving_coach = get_user_model().objects.create_user(

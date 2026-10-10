@@ -10,6 +10,8 @@ from django.db.models import Q, Prefetch
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 
+from core.access import evaluation_visibility_for_request
+
 from core.models import (
     AthleteDayCheck,
     AthleteDayComment,
@@ -1141,13 +1143,24 @@ def flex_planner_view(request):
                 has_fix_keys.add((slot.plan_id, slot.athlete_id, slot.date, slot.slot_index))
 
     check_lookup = {}
+    athlete_by_id = {athlete.id: athlete for athlete in selected_athletes}
+    training_visible_athlete_ids = {
+        athlete_id
+        for athlete_id, athlete in athlete_by_id.items()
+        if evaluation_visibility_for_request(
+            request,
+            athlete.owner,
+            athlete_self=not _is_coach_user(request.user),
+        )["training"]
+    }
     if selected_athlete_ids:
         for check in AthleteDayCheck.objects.filter(
             athlete_id__in=selected_athlete_ids,
             date__gte=start,
             date__lt=end,
         ):
-            check_lookup[(check.athlete_id, check.date, check.slot_index)] = check
+            if check.athlete_id in training_visible_athlete_ids:
+                check_lookup[(check.athlete_id, check.date, check.slot_index)] = check
 
     year_training_by_athlete_day = {}
     if selected_athlete_ids:
@@ -2709,6 +2722,21 @@ def athlete_year_calendar_view(request):
             try:
                 d = date.fromisoformat(date_str)
                 today = date.today()
+                slot_text = request.POST.get("slot_text")
+                evaluation_visibility = evaluation_visibility_for_request(
+                    request,
+                    athlete.owner,
+                    athlete_self=not _is_coach_user(request.user),
+                )
+
+                if week_report_submit is not None and not evaluation_visibility["week"]:
+                    return HttpResponse("", status=403)
+                if daily_vitals_submit is not None and not evaluation_visibility["vitals"]:
+                    return HttpResponse("", status=403)
+                if (check_status is not None or toggle_check is not None or report_submit is not None) and not evaluation_visibility["training"]:
+                    return HttpResponse("", status=403)
+                if slot_text is None and week_report_submit is None and daily_vitals_submit is None and check_status is None and toggle_check is None and report_submit is None and not evaluation_visibility["training"]:
+                    return HttpResponse("", status=403)
 
                 # Shared coaches retain the AYC editing rules of their
                 # selected coach: view-only access must never write, while
@@ -2719,8 +2747,6 @@ def athlete_year_calendar_view(request):
                 )
                 if _is_coach_user(request.user) and not coach_can_edit_training:
                     return HttpResponse("", status=403)
-
-                slot_text = request.POST.get("slot_text")
 
                 if slot_text is not None:
                     if (
@@ -2934,9 +2960,26 @@ def athlete_year_calendar_view(request):
             selected_athlete_id = ""
 
     athlete_self_view = bool(selected_athlete and not _is_coach_user(request.user))
-    show_training_reports = bool(selected_athlete and getattr(selected_athlete, "training_reports_enabled", True))
-    show_week_reports = bool(selected_athlete and getattr(selected_athlete, "week_report_enabled", False))
-    show_daily_vitals = bool(selected_athlete and getattr(selected_athlete, "daily_vitals_enabled", False))
+    evaluation_visibility = evaluation_visibility_for_request(
+        request,
+        selected_athlete.owner if selected_athlete else None,
+        athlete_self=athlete_self_view,
+    )
+    show_training_reports = bool(
+        selected_athlete
+        and getattr(selected_athlete, "training_reports_enabled", True)
+        and evaluation_visibility["training"]
+    )
+    show_week_reports = bool(
+        selected_athlete
+        and getattr(selected_athlete, "week_report_enabled", False)
+        and evaluation_visibility["week"]
+    )
+    show_daily_vitals = bool(
+        selected_athlete
+        and getattr(selected_athlete, "daily_vitals_enabled", False)
+        and evaluation_visibility["vitals"]
+    )
     ayc_rowspan = 2 + (1 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
     is_coach_user = _is_coach_user(request.user)
     coach_can_edit_training = bool(
@@ -3164,7 +3207,7 @@ def athlete_year_calendar_view(request):
     # BULK FETCH checks & comments (performance)
     check_map = {}
     comment_map = {}
-    if selected_athlete:
+    if selected_athlete and evaluation_visibility["training"]:
         checks = AthleteDayCheck.objects.filter(
             athlete=selected_athlete,
             date__gte=start,
@@ -3182,7 +3225,7 @@ def athlete_year_calendar_view(request):
             comment_map[c.date] = c
 
     week_report_map = {}
-    if selected_athlete:
+    if selected_athlete and evaluation_visibility["week"]:
         reports = AthleteWeekReport.objects.filter(
             athlete=selected_athlete,
             week_start__in=week_starts,
@@ -3191,7 +3234,7 @@ def athlete_year_calendar_view(request):
             week_report_map[r.week_start] = r
 
     daily_vitals_map = {}
-    if selected_athlete:
+    if selected_athlete and evaluation_visibility["vitals"]:
         vitals = AthleteDailyVital.objects.filter(
             athlete=selected_athlete,
             date__gte=start,

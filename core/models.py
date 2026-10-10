@@ -44,6 +44,7 @@ class CoachSettings(models.Model):
 
     # Optional long-term planning modules.
     evaluations_enabled = models.BooleanField(default=True)
+    evaluation_sharing_enabled = models.BooleanField(default=False)
     detailed_camps_enabled = models.BooleanField(default=False)
     live_sharing_training_schedules = models.BooleanField(default=False)
     year_planner_shared_whereabouts_enabled = models.BooleanField(default=False)
@@ -1196,6 +1197,35 @@ class CoachAccess(models.Model):
     def __str__(self):
         mode = "edit" if self.can_edit else "view"
         return f"{self.grantee} can {mode} {self.owner}"
+
+
+class CoachEvaluationSharing(models.Model):
+    """Per-evaluation-type visibility granted by one coach to another."""
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="evaluation_shares_given",
+    )
+    grantee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="evaluation_shares_received",
+    )
+    training = models.BooleanField(default=False)
+    week = models.BooleanField(default=False)
+    vitals = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "grantee"],
+                name="unique_coach_evaluation_sharing",
+            )
+        ]
+
+    def __str__(self):
+        return f"Evaluation sharing from {self.owner} to {self.grantee}"
 
 class AthleteWeekReport(models.Model):
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="week_reports")

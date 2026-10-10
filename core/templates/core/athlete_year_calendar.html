@@ -954,7 +954,7 @@
             <div class="ayc-mobile-rest">Rest day</div>
           {% endif %}
 
-          {% if mobile_day.report.has_slot1 or mobile_day.report.has_slot2 %}
+          {% if show_training_reports and mobile_day.report.has_slot1 or show_training_reports and mobile_day.report.has_slot2 %}
           {% with d=mobile_day.report %}
           <div class="{% if mobile_day.day <= today %}comment-display {% endif %}ayc-mobile-evaluation"
                data-date="{{ d.day|date:'Y-m-d' }}"
