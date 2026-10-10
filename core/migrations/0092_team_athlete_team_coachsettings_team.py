@@ -4,18 +4,6 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
-def seed_teams_and_coach_settings(apps, schema_editor):
-    Team = apps.get_model("core", "Team")
-    CoachSettings = apps.get_model("core", "CoachSettings")
-    User = apps.get_model("auth", "User")
-
-    for name in ("Atverni", "LLG", "Pace"):
-        Team.objects.get_or_create(name=name)
-
-    for user in User.objects.filter(is_staff=True):
-        CoachSettings.objects.get_or_create(user_id=user.id)
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -43,5 +31,4 @@ class Migration(migrations.Migration):
             name='team',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='coach_settings', to='core.team'),
         ),
-        migrations.RunPython(seed_teams_and_coach_settings, migrations.RunPython.noop),
     ]
