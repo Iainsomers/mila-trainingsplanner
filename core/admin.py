@@ -1,5 +1,5 @@
 from django.contrib import admin
-from core.models import Athlete, CoachAccess
+from core.models import Athlete, CoachAccess, CoachSettings, Team
 from core.auth import ThrottledAdminAuthenticationForm
 
 admin.site.login_form = ThrottledAdminAuthenticationForm
@@ -14,7 +14,23 @@ class CoachAccessAdmin(admin.ModelAdmin):
 
 @admin.register(Athlete)
 class AthleteAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "birth_year", "gender")
-    list_filter = ("owner", "gender")
+    list_display = ("name", "owner", "team", "birth_year", "gender")
+    list_editable = ("team",)
+    list_filter = ("owner", "team", "gender")
     search_fields = ("name", "owner__username", "owner__first_name", "owner__last_name")
-    autocomplete_fields = ("owner",)
+    autocomplete_fields = ("owner", "team")
+
+
+@admin.register(CoachSettings)
+class CoachSettingsAdmin(admin.ModelAdmin):
+    list_display = ("user", "team")
+    list_editable = ("team",)
+    list_filter = ("team",)
+    search_fields = ("user__username", "user__first_name", "user__last_name")
+    autocomplete_fields = ("user", "team")
+
+
+@admin.register(Team)
+class TeamAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)

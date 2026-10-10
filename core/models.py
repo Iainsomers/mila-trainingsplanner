@@ -21,6 +21,16 @@ def default_zone_speed_mps():
     return dict(DEFAULT_ZONE_SPEED_MPS)
 
 
+class Team(models.Model):
+    name = models.CharField(max_length=80, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class CoachSettings(models.Model):
     """
     Persistente coach-voorkeuren (per ingelogde User).
@@ -28,6 +38,13 @@ class CoachSettings(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        related_name="coach_settings",
+    )
+    team = models.ForeignKey(
+        Team,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name="coach_settings",
     )
 
@@ -323,6 +340,14 @@ class Athlete(models.Model):
         blank=True,
         on_delete=models.CASCADE,
         related_name="owned_athletes",
+    )
+
+    team = models.ForeignKey(
+        Team,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="athletes",
     )
 
     is_private = models.BooleanField(default=False)
