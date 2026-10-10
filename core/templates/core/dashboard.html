@@ -1,5 +1,4 @@
 {% extends "core/base.html" %}
-{% load static %}
 
 {% block title %}Dashboard{% endblock %}
 
@@ -17,32 +16,11 @@
     box-shadow: 0 .35rem .9rem rgba(0, 0, 0, .12);
   }
 
-  {% if is_llg_team %}
-  .dashboard-llg {
-    position: relative;
-    isolation: isolate;
-  }
-
-  .dashboard-llg::before {
-    content: "";
-    position: fixed;
-    inset: 3.5rem 0 0;
-    z-index: 0;
-    pointer-events: none;
-    background: url("{% static 'core/brand/llg-logo.jpg' %}") center center / auto 86% no-repeat;
-    opacity: 0.075;
-  }
-
-  .dashboard-llg > * {
-    position: relative;
-    z-index: 1;
-  }
-  {% endif %}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4 d-flex flex-column{% if is_llg_team %} dashboard-llg{% endif %}" style="min-height: calc(100vh - 3rem);">
+<div class="container py-4 d-flex flex-column" style="min-height: calc(100vh - 3rem);">
 
   <h1 class="mb-4">MiLa Training Planner</h1>
   <p class="text-muted">{% if coach_tools_only %}Coach tools dashboard{% elif is_athlete_user %}Athlete dashboard{% else %}Coach dashboard{% endif %}</p>

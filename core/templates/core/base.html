@@ -34,6 +34,28 @@
         right: 10px;
         z-index: 1080;
       }
+
+      {% if team_branding.logo_url %}
+      .mila-team-branded {
+        position: relative;
+        isolation: isolate;
+      }
+
+      .mila-team-branded::before {
+        content: "";
+        position: fixed;
+        inset: 3.5rem 0 0;
+        z-index: 0;
+        pointer-events: none;
+        background: url("{{ team_branding.logo_url }}") center center / auto 86% no-repeat;
+        opacity: 0.075;
+      }
+
+      .mila-team-branded > * {
+        position: relative;
+        z-index: 1;
+      }
+      {% endif %}
     </style>
   </head>
 
@@ -44,7 +66,7 @@
         <button type="submit" class="btn btn-sm btn-outline-secondary bg-white">Logout</button>
       </form>
     {% endif %}
-    <div class="mila-page-content">
+    <div class="mila-page-content{% if team_branding.logo_url %} mila-team-branded{% endif %}">
       {% block content %}{% endblock %}
     </div>
     {% block extra_js %}{% endblock %}
