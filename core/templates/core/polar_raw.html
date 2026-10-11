@@ -16,17 +16,17 @@
   {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
   {% if fetched %}
     <p>NA means Polar did not supply a value. Times below are elapsed recording times; pause data remains available in the raw JSON.</p>
-    {% if mode == 'B' %}<p>Only measured distance and heart rate are shown at exact timestamps, starting at 0 seconds. No interpolation, speed conversion or carry-forward is applied. If a stream records less frequently than the selected interval, unmatched times show NA.</p>{% endif %}
+    {% if mode == 'B' %}<p>Only measured distance and heart rate are shown at exact timestamps, starting at 0 seconds. No interpolation, speed conversion or carry-forward is applied. If a stream records less frequently than the selected interval, unmatched times show NA. Pace (min/km) is calculated from the distance increase since the preceding displayed row and the selected time interval. The first row, missing distances and non-positive distance increases show NA.</p>{% endif %}
     {% for session in results %}
       <div class="card mb-3"><div class="card-body"><h2 class="h5">{{ session.name }} — {{ session.start }}</h2><p>Distance: {{ session.distance }} m · Duration: {{ session.duration }}</p>
       {% for part in session.parts %}<h3 class="h6">Recording {{ part.index }} {{ part.sport }}</h3>
         {% if mode == 'A' %}<p>Distance: {{ part.distance }} m · Duration: {{ part.duration }}</p>
-          <h4 class="h6">Manual laps</h4>{% include "core/polar_raw_laps.html" with rows=part.manual %}
+          <p class="small text-muted">Pace (min/km) uses the duration and distance of each individual lap.</p><h4 class="h6">Manual laps</h4>{% include "core/polar_raw_laps.html" with rows=part.manual %}
           <h4 class="h6">Automatic laps</h4>{% include "core/polar_raw_laps.html" with rows=part.auto %}
         {% else %}
           {% for item in part.metadata %}<div class="small text-muted">{{ item }}</div>{% endfor %}
           {% if part.truncated %}<div class="alert alert-warning">Display limited to the first 24 recording hours. Full data is available below.</div>{% endif %}
-          <div class="table-responsive" style="max-height: 32rem"><table class="table table-sm"><thead><tr><th>Elapsed seconds</th><th>Cumulative distance (m)</th><th>Heart rate (bpm)</th></tr></thead><tbody>{% for row in part.samples %}<tr><td>{{ row.time }}</td><td>{{ row.distance }}</td><td>{{ row.hr }}</td></tr>{% empty %}<tr><td colspan="3">No distance or heart rate samples supplied.</td></tr>{% endfor %}</tbody></table></div>
+          <div class="table-responsive" style="max-height: 32rem"><table class="table table-sm"><thead><tr><th>Elapsed seconds</th><th>Cumulative distance (m)</th><th>Heart rate (bpm)</th><th>min/km</th></tr></thead><tbody>{% for row in part.samples %}<tr><td>{{ row.time }}</td><td>{{ row.distance }}</td><td>{{ row.hr }}</td><td>{{ row.pace }}</td></tr>{% empty %}<tr><td colspan="4">No distance or heart rate samples supplied.</td></tr>{% endfor %}</tbody></table></div>
         {% endif %}
       {% endfor %}</div></div>
     {% empty %}<div class="alert alert-info">No training sessions found on this date.</div>{% endfor %}

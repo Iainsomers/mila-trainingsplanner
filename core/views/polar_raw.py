@@ -38,9 +38,21 @@ def duration(value):
     return f"{int(hours):02}:{int(minutes):02}:{seconds:06.3f}"
 
 
+def pace(seconds, meters):
+    seconds, meters = number(seconds), number(meters)
+    if seconds is None or meters is None or seconds <= 0 or meters <= 0:
+        return "NA"
+    seconds_per_km = seconds * 1000 / meters
+    if not math.isfinite(seconds_per_km):
+        return "NA"
+    rounded = round(seconds_per_km)
+    return f"{rounded // 60}:{rounded % 60:02}"
+
+
 def lap_rows(laps):
     return [{"index": i, "distance": display(lap.get("distanceMeters")),
              "duration": duration(lap.get("durationMillis")),
+             "pace": pace(number(lap.get("durationMillis")) / 1000 if number(lap.get("durationMillis")) is not None else None, lap.get("distanceMeters")),
              "elapsed": duration(lap.get("splitTimeMillis"))}
             for i, lap in enumerate(laps if isinstance(laps, list) else [], 1)
             if isinstance(lap, dict)]
@@ -75,10 +87,18 @@ def sample_rows(exercise, interval):
         rounded = round(index)
         if abs(index - rounded) > 1e-8 or rounded < 0 or rounded >= len(values):
             return "NA"
-        return display(values[rounded])
-    rows = [{"time": display(t / 1000), "distance": at("DISTANCE", t),
-             "hr": at("HEART_RATE", t)}
-            for t in range(0, min(int(end), 86400000) + 1, interval * 1000)] if selected else []
+        return number(values[rounded])
+    rows = []
+    previous_distance = None
+    if selected:
+        for t in range(0, min(int(end), 86400000) + 1, interval * 1000):
+            distance = number(at("DISTANCE", t))
+            delta = distance - previous_distance if distance is not None and previous_distance is not None else None
+            rows.append({"time": display(t / 1000), "distance": display(distance),
+                         "hr": display(at("HEART_RATE", t)),
+                         "pace": pace(interval, delta) if t > 0 else "NA"})
+            # Missing rows break the segment: never bridge an unknown distance.
+            previous_distance = distance
     return rows, metadata, end > 86400000
 
 

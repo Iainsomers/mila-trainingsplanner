@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from django.test import SimpleTestCase, RequestFactory
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-from core.views.polar_raw import sample_rows, translate, polar_raw_view
+from core.views.polar_raw import sample_rows, translate, polar_raw_view, pace
 
 
 class RawPolarTests(SimpleTestCase):
@@ -18,7 +18,7 @@ class RawPolarTests(SimpleTestCase):
             {"type": "DISTANCE", "intervalMillis": 2000, "values": [0, None, 12]},
             {"type": "HEART_RATE", "intervalMillis": 1000, "values": [100, 101, 102, 103, 104, 105]}]}}
         rows, metadata, truncated = sample_rows(exercise, 1)
-        self.assertEqual(rows[1], {"time": "1", "distance": "NA", "hr": "101"})
+        self.assertEqual(rows[1], {"time": "1", "distance": "NA", "hr": "101", "pace": "NA"})
         self.assertEqual(rows[2]["distance"], "NA")
         self.assertEqual(rows[4]["distance"], "12")
         self.assertEqual(rows[5]["distance"], "NA")
@@ -98,3 +98,14 @@ class RawPolarTests(SimpleTestCase):
         response = polar_raw_view(request)
         self.assertIn(b"Unsupported feature", response.content)
         self.assertNotIn(b"Reconnect Polar v4 if authorization", response.content)
+
+
+    def test_pace_is_per_lap_and_per_displayed_segment(self):
+        result = translate([{"laps": {"laps": [{"distanceMeters": 400, "durationMillis": 90000}]}}], 5)
+        self.assertEqual(result[0]["parts"][0]["manual"][0]["pace"], "3:45")
+        rows, _, _ = sample_rows({"samples": {"samples": [
+            {"type": "DISTANCE", "intervalMillis": 5000, "values": [0, 20, 30, None, 50, 50, 45, 65]}]}}, 5)
+        self.assertEqual([row["pace"] for row in rows], ["NA", "4:10", "8:20", "NA", "NA", "NA", "NA", "4:10"])
+        self.assertEqual(pace(359.6, 1000), "6:00")
+        self.assertEqual(pace(0, 1000), "NA")
+        self.assertEqual(pace(60, 0), "NA")
