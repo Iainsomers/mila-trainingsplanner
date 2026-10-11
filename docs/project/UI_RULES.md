@@ -104,3 +104,7 @@ Controleer bij relevante UI-wijzigingen minimaal:
 ## AYC-popup en teambekleding
 
 - De dynamische trainingspopup wordt onder `document.body` geplaatst, buiten de stacking context van de teambekleding. Daardoor blijft hij boven de Bootstrap-backdrop klikbaar op desktop en mobiel.
+
+## Polar-knoppen
+
+Polar Integration en de Type A/B/C/D-dataweergave gebruiken witte knoptekst op gevulde primaire/secundaire knoppen. Teamkleur 2 overschrijft deze tekstkleur niet.

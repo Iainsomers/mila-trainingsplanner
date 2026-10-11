@@ -2,16 +2,23 @@
 
 {% block title %}Polar Integration{% endblock %}
 
+{% block extra_head %}
+<style>
+  .polar-data-page .btn,
+  .mila-team-branded .polar-data-page .btn { color: #ffffff !important; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
+<div class="container py-4 polar-data-page">
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
       <h1 class="mb-1">Polar Integration</h1>
       <p class="text-muted mb-0">Temporary setup page for Polar AccessLink.</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Dashboard</a>
-      <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-secondary">Dashboard</a>
+      <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-secondary">Planner</a>
     </div>
   </div>
 
@@ -71,28 +78,28 @@
 
         {% if not is_coach_polar_view %}
           <a href="{% url 'polar_connect' %}" class="btn btn-primary">Connect Polar</a>
-          <a href="{% url 'polar_v4_connect' %}" class="btn btn-outline-primary ms-2">Connect Polar v4</a>
+          <a href="{% url 'polar_v4_connect' %}" class="btn btn-primary ms-2">Connect Polar v4</a>
         {% endif %}
         {% if connection and connection.access_token %}
           <form method="post" action="{% url 'polar_sync_test' %}" class="d-inline ms-2">
             {% csrf_token %}
             {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
-            <button type="submit" class="btn btn-outline-primary">Sync test</button>
+            <button type="submit" class="btn btn-primary">Sync test</button>
           </form>
           <form method="post" action="{% url 'polar_steps' %}" class="d-inline ms-2">
             {% csrf_token %}
             {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
-            <button type="submit" class="btn btn-outline-primary">Get Steps</button>
+            <button type="submit" class="btn btn-primary">Get Steps</button>
           </form>
           <form method="post" action="{% url 'polar_splits' %}" class="d-inline ms-2">
             {% csrf_token %}
             {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
-            <button type="submit" class="btn btn-outline-primary">Get Splits</button>
+            <button type="submit" class="btn btn-primary">Get Splits</button>
           </form>
           <form method="post" action="{% url 'polar_v4_laps_test' %}" class="d-inline ms-2">
             {% csrf_token %}
             {% if selected_target %}<input type="hidden" name="polar_target" value="{{ selected_target.key }}">{% endif %}
-            <button type="submit" class="btn btn-outline-primary" {% if not connection.v4_access_token %}disabled{% endif %}>V4 laps test</button>
+            <button type="submit" class="btn btn-primary" {% if not connection.v4_access_token %}disabled{% endif %}>V4 laps test</button>
           </form>
           {% if not connection.v4_access_token %}
             <span class="text-muted small ms-2">Connect Polar v4 first.</span>
@@ -105,9 +112,9 @@
   <div class="card mt-3"><div class="card-body">
     <h5 class="card-title">Read raw Polar data</h5>
     <p>Read recorded values using the existing Polar v4 connection.</p>
-    <a class="btn btn-outline-primary" href="{% url 'polar_raw' %}?mode=A&amp;polar_target={{ selected_target.key|urlencode }}">Type A: distance, time and laps</a>
-    <a class="btn btn-outline-primary" href="{% url 'polar_raw' %}?mode=B&amp;polar_target={{ selected_target.key|urlencode }}">Type B: distance and heart rate</a>
-    <a class="btn btn-outline-primary" href="{% url 'polar_raw' %}?mode=C&amp;polar_target={{ selected_target.key|urlencode }}">Type C: processed pace</a>
+    <a class="btn btn-primary" href="{% url 'polar_raw' %}?mode=A&amp;polar_target={{ selected_target.key|urlencode }}">Type A: distance, time and laps</a>
+    <a class="btn btn-primary" href="{% url 'polar_raw' %}?mode=B&amp;polar_target={{ selected_target.key|urlencode }}">Type B: distance and heart rate</a>
+    <a class="btn btn-primary" href="{% url 'polar_raw' %}?mode=C&amp;polar_target={{ selected_target.key|urlencode }}">Type C: processed pace</a>
     <a class="btn btn-primary" href="{% url 'polar_raw' %}?mode=D&amp;polar_target={{ selected_target.key|urlencode }}">Type D: Training analysis</a>
   </div></div>
 

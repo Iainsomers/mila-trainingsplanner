@@ -1,7 +1,14 @@
 {% extends "core/base.html" %}
 {% block title %}Polar raw data{% endblock %}
+{% block extra_head %}
+<style>
+  .polar-data-page .btn,
+  .mila-team-branded .polar-data-page .btn { color: #ffffff !important; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
+<div class="container py-4 polar-data-page">
   <a href="{% url 'polar_integration' %}">Back to Polar Integration</a>
   <h1 class="mt-3">Polar raw data</h1>
   <p>The app reads Polar using your existing connection. You do not need to open an API link or enter a password. This page does not change planned workouts.</p>
