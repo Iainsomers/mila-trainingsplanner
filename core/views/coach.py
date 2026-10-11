@@ -10898,6 +10898,7 @@ def daily_overview_other_view(request):
         {"key": "hrv", "label": "HRV", "field": "hrv", "suffix": "", "decimals": 1},
     ]
     selected_vital_key = request.GET.get("vital", "sleep_hours")
+    vitals_open = bool(request.GET.get("vital"))
     selected_vital = next(
         (option for option in vital_options if option["key"] == selected_vital_key),
         vital_options[0],
@@ -10935,6 +10936,7 @@ def daily_overview_other_view(request):
         "vital_rows": vital_rows,
         "vital_options": vital_options,
         "selected_vital": selected_vital,
+        "vitals_open": vitals_open,
         "vitals_window_start": vitals_window_start,
         "vitals_window_end": today,
     })
