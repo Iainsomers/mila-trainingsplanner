@@ -77,3 +77,24 @@ class RawPolarTests(SimpleTestCase):
         self.assertEqual(fetch.call_count, 2)
         refresh.assert_called_once_with(connection)
         self.assertEqual(fetch.call_args.kwargs["headers"]["Authorization"], "Bearer new")
+
+
+    @patch("core.views.polar_raw._polar_targets_for_user")
+    @patch("core.views.polar_raw._polar_json_request")
+    def test_date_format_fallback_and_400_message(self, fetch, targets):
+        from urllib.parse import parse_qs, urlsplit
+        user = SimpleNamespace(is_authenticated=True)
+        connection = SimpleNamespace(v4_access_token="secret")
+        targets.return_value = [{"key": "self", "user": user, "connection": connection, "label": "Runner"}]
+        request = RequestFactory().post("/", {"date": "2026-10-10", "interval": "5"})
+        request.user, request.session = user, {}
+        fetch.side_effect = [(400, {"message": "Cannot parse from datetime"}), (200, [])]
+        self.assertEqual(polar_raw_view(request).status_code, 200)
+        first = parse_qs(urlsplit(fetch.call_args_list[0].args[0]).query)
+        second = parse_qs(urlsplit(fetch.call_args_list[1].args[0]).query)
+        self.assertEqual(first["from"], ["2026-10-10T00:00:00"])
+        self.assertEqual(second["from"], ["2026-10-10T00:00:00.000"])
+        fetch.side_effect = [(400, {"message": "Unsupported feature"})]
+        response = polar_raw_view(request)
+        self.assertIn(b"Unsupported feature", response.content)
+        self.assertNotIn(b"Reconnect Polar v4 if authorization", response.content)

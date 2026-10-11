@@ -136,20 +136,40 @@ def polar_raw_view(request):
             connection = target.get("connection") if target else None
             if not connection or not connection.v4_access_token:
                 raise ValueError("Connect Polar v4 for this athlete first.")
-            params = [("from", f"{day}T00:00:00.000"),
-                      ("to", f"{day + timedelta(days=1)}T00:00:00.000")]
-            params.extend(("features", feature) for feature in ["laps", "samples", "pause-times", "statistics"])
-            url = POLAR_V4_TRAINING_SESSIONS_URL + "?" + urlencode(params)
             headers = {"Accept": "application/json", "Authorization": "Bearer " + connection.v4_access_token}
-            status, payload = _polar_json_request(url, headers=headers)
-            if status == 401:
-                refreshed, error = _refresh_polar_v4_token(connection)
-                if not refreshed:
-                    raise ValueError(error)
-                headers["Authorization"] = "Bearer " + connection.v4_access_token
+            refreshed_once = False
+            # Start with the date format accepted by the existing v4 laps test.
+            formats = ["{day}T00:00:00", "{day}T00:00:00.000",
+                       "{day}T00:00:00Z", "{day}T00:00:00.000Z",
+                       "{day}T00:00:00+00:00", "{day}T00:00:00.000+00:00",
+                       "{day}T00:00:00+0000", "{day}"]
+            for date_format in formats:
+                params = [("from", date_format.format(day=day.isoformat())),
+                          ("to", date_format.format(day=(day + timedelta(days=1)).isoformat()))]
+                params.extend(("features", feature) for feature in ["laps", "samples", "pause-times", "statistics"])
+                url = POLAR_V4_TRAINING_SESSIONS_URL + "?" + urlencode(params)
                 status, payload = _polar_json_request(url, headers=headers)
+                if status == 401 and not refreshed_once:
+                    refreshed_once = True
+                    refreshed, error = _refresh_polar_v4_token(connection)
+                    if not refreshed:
+                        raise ValueError(error)
+                    headers["Authorization"] = "Bearer " + connection.v4_access_token
+                    status, payload = _polar_json_request(url, headers=headers)
+                detail = ""
+                if isinstance(payload, dict):
+                    detail = str(payload.get("error_description") or payload.get("message") or payload.get("error") or "")
+                date_error = status == 400 and any(key in detail.lower() for key in ["from", "to", "date", "time"])
+                if not date_error:
+                    break
             if status != 200:
-                raise ValueError(f"Polar returned HTTP {status}. Reconnect Polar v4 if authorization has expired.")
+                detail = detail.replace(connection.v4_access_token, "[redacted]")[:600]
+                message = f"Polar returned HTTP {status}."
+                if detail:
+                    message += " " + detail
+                if status in {401, 403}:
+                    message += " Reconnect Polar v4 if authorization has expired."
+                raise ValueError(message)
             context.update(results=translate(payload, interval), fetched=True,
                            raw=json.dumps(payload, ensure_ascii=False, indent=2))
         except (ValueError, RuntimeError) as exc:
