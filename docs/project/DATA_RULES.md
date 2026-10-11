@@ -91,3 +91,7 @@ Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, 
 - Ochtendhartslag en HRV zijn numeriek.
 - Weekgemiddelde pas tonen bij minimaal drie bruikbare waarden.
 - Mobiel worden dezelfde vier gemiddelden gebruikt als desktop; er bestaat geen aparte mobiele berekening.
+
+
+### Polar Type C (2026-10-11)
+Read-only processed pace alongside unchanged raw values. Native distance increments are time-weighted over a centered 15-second window clipped to valid stretches. Manual lap boundaries, missing/negative distance, explicit Polar pauses and possible stops split stretches. A possible stop requires <=0.5 m/s for >=5 seconds. Isolated high/low bursts <=5 seconds require >=5 seconds of stable running on both sides before replacing speed with the neighboring median; flags and reasons remain visible. These provisional thresholds can confuse very short sprints with measurement errors. Pause clock mapping is checked against stop-start and sample duration; omitted paused seconds produce boundaries, uncertain clocks show a warning. No zones or workout mutations. Actual window duration is displayed, with a compact mobile layout.

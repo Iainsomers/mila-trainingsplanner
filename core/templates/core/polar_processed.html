@@ -1,0 +1,9 @@
+{% for note in part.processing_notes %}<div class="alert alert-info py-2">{{ note }}</div>{% endfor %}
+<div class="table-responsive polar-processed" style="max-height: 32rem">
+  <table class="table table-sm align-middle"><thead><tr><th>Seconds</th><th>Distance (m)</th><th>HR (bpm)</th><th>Raw min/km</th><th>Processed min/km</th><th>Window (s)</th><th>Status / reason</th></tr></thead>
+  <tbody>{% for row in part.processed %}<tr>
+    <td data-label="Seconds">{{ row.time }}</td><td data-label="Distance (m)">{{ row.distance }}</td><td data-label="HR (bpm)">{{ row.hr }}</td>
+    <td data-label="Raw min/km">{{ row.pace }}</td><td data-label="Processed min/km"><strong>{{ row.processed }}</strong></td><td data-label="Window (s)">{{ row.window }}</td>
+    <td class="processing-reason" data-label="Status"><span class="badge {% if row.status == 'Running' %}bg-success{% elif row.status == 'Polar pause' or row.status == 'Possible stop' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">{{ row.status }}</span><div class="small text-muted">{{ row.reason }}</div></td>
+  </tr>{% empty %}<tr><td colspan="7">No distance samples supplied.</td></tr>{% endfor %}</tbody></table>
+</div>

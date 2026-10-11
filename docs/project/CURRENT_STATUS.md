@@ -57,3 +57,7 @@ Polar Integration links to a read-only v4 data inspector. Type A shows recorded 
 Polar raw-data requests start with the known working seconds-only date format and retry alternate formats on Polar date parsing errors. HTTP errors include the Polar error detail; reconnect advice is restricted to 401/403.
 
 Polar raw data includes min/km: Type A uses each individual lap duration/distance; Type B uses the selected interval and the cumulative distance difference between consecutive displayed rows. Pace is rounded to whole seconds per km. Missing, zero or negative distance increments and the initial sample show NA. Missing samples break the segment; no interpolation is applied.
+
+
+### Polar Type C (2026-10-11)
+Read-only processed pace alongside unchanged raw values. Native distance increments are time-weighted over a centered 15-second window clipped to valid stretches. Manual lap boundaries, missing/negative distance, explicit Polar pauses and possible stops split stretches. A possible stop requires <=0.5 m/s for >=5 seconds. Isolated high/low bursts <=5 seconds require >=5 seconds of stable running on both sides before replacing speed with the neighboring median; flags and reasons remain visible. These provisional thresholds can confuse very short sprints with measurement errors. Pause clock mapping is checked against stop-start and sample duration; omitted paused seconds produce boundaries, uncertain clocks show a warning. No zones or workout mutations. Actual window duration is displayed, with a compact mobile layout.

@@ -102,7 +102,7 @@ def sample_rows(exercise, interval):
     return rows, metadata, end > 86400000
 
 
-def translate(payload, interval):
+def translate(payload, interval, mode="A"):
     sessions = payload if isinstance(payload, list) else next(
         (payload[key] for key in ("trainingSessions", "training-sessions", "sessions")
          if isinstance(payload, dict) and isinstance(payload.get(key), list)), [])
@@ -119,12 +119,17 @@ def translate(payload, interval):
             laps = item.get("laps") or {}
             laps = laps if isinstance(laps, dict) else {}
             rows, metadata, truncated = sample_rows(item, interval)
+            processed, processing_notes = [], []
+            if mode == "C":
+                from .polar_processing import processed_rows
+                processed, processing_notes = processed_rows(item, rows)
             parts.append({"index": index, "sport": item.get("sport", ""),
                           "distance": display(item.get("distanceMeters")),
                           "duration": duration(item.get("durationMillis")),
                           "manual": lap_rows(laps.get("laps") or laps.get("manualLaps") or laps.get("manual-laps")),
                           "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps")),
-                          "samples": rows, "metadata": metadata, "truncated": truncated})
+                          "samples": rows, "metadata": metadata, "truncated": truncated,
+                          "processed": processed, "processing_notes": processing_notes})
         result.append({"name": session.get("name") or "Training session",
                        "start": session.get("startTime", ""),
                        "distance": display(session.get("distanceMeters")),
@@ -143,7 +148,7 @@ def polar_raw_view(request):
     context = {"targets": targets, "selected": target, "mode": data.get("mode", "A"),
                "date": data.get("date", (timezone.localdate() - timedelta(days=1)).isoformat()),
                "interval": data.get("interval", "5")}
-    if context["mode"] not in {"A", "B"}:
+    if context["mode"] not in {"A", "B", "C"}:
         context["mode"] = "A"
     if request.method == "POST":
         try:
@@ -190,7 +195,7 @@ def polar_raw_view(request):
                 if status in {401, 403}:
                     message += " Reconnect Polar v4 if authorization has expired."
                 raise ValueError(message)
-            context.update(results=translate(payload, interval), fetched=True,
+            context.update(results=translate(payload, interval, context["mode"]), fetched=True,
                            raw=json.dumps(payload, ensure_ascii=False, indent=2))
         except (ValueError, RuntimeError) as exc:
             context["error"] = str(exc) or "Choose a valid date and an interval between 1 and 3600 seconds."

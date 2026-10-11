@@ -9,7 +9,7 @@
     <div class="row g-3">
       <div class="col-md-4"><label class="form-label" for="target">Athlete</label><select class="form-select" id="target" name="polar_target">{% for target in targets %}<option value="{{ target.key }}" {% if target.key == selected.key %}selected{% endif %}>{{ target.label }}</option>{% endfor %}</select></div>
       <div class="col-md-3"><label class="form-label" for="day">Date (Polar local time)</label><input class="form-control" id="day" type="date" name="date" value="{{ date }}" required></div>
-      <div class="col-md-3"><label class="form-label" for="mode">Data type</label><select class="form-select" id="mode" name="mode"><option value="A" {% if mode == 'A' %}selected{% endif %}>Type A: distance, time, laps</option><option value="B" {% if mode == 'B' %}selected{% endif %}>Type B: distance and heart rate</option></select></div>
+      <div class="col-md-3"><label class="form-label" for="mode">Data type</label><select class="form-select" id="mode" name="mode"><option value="A" {% if mode == 'A' %}selected{% endif %}>Type A: distance, time, laps</option><option value="B" {% if mode == 'B' %}selected{% endif %}>Type B: distance and heart rate</option><option value="C" {% if mode == 'C' %}selected{% endif %}>Type C: processed pace</option></select></div>
       <div class="col-md-2"><label class="form-label" for="interval">Interval (seconds)</label><input class="form-control" id="interval" name="interval" type="number" min="1" max="3600" value="{{ interval }}" required></div>
     </div><button class="btn btn-primary mt-3 align-self-start" type="submit">Read Polar data</button>
   </form>
@@ -17,6 +17,22 @@
   {% if fetched %}
     <p>NA means Polar did not supply a value. Times below are elapsed recording times; pause data remains available in the raw JSON.</p>
     {% if mode == 'B' %}<p>Only measured distance and heart rate are shown at exact timestamps, starting at 0 seconds. No interpolation, speed conversion or carry-forward is applied. If a stream records less frequently than the selected interval, unmatched times show NA. Pace (min/km) is calculated from the distance increase since the preceding displayed row and the selected time interval. The first row, missing distances and non-positive distance increases show NA.</p>{% endif %}
+    {% if mode == 'C' %}
+      <div class="card card-body mb-3"><h2 class="h6">Type C — processed pace (first version)</h2>
+        <p class="small mb-1">Raw distance, heart rate and raw pace remain visible. Processed pace uses a centered 15-second window, shortened at manual lap boundaries, pauses or missing data. The Window column shows the actual duration used.</p>
+        <p class="small mb-0">An isolated speed burst lasting at most 5 seconds is corrected only with stable running for at least 5 seconds on both sides. At most 0.5 m/s for at least 5 seconds is labeled Possible stop. Short sprints and GPS errors can look alike: review flagged rows. No zones or training changes are applied.</p>
+      </div>
+      <style>
+        .polar-processed thead { position: sticky; top: 0; background: var(--bs-body-bg, white); z-index: 1; }
+        @media (max-width: 575px) {
+          .polar-processed thead { display: none; }
+          .polar-processed tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid #ddd; padding: .4rem 0; }
+          .polar-processed td { display: block; border: 0; overflow-wrap: anywhere; }
+          .polar-processed td::before { content: attr(data-label); display: block; font-size: .7rem; color: #777; }
+          .polar-processed .processing-reason { grid-column: 1 / -1; }
+        }
+      </style>
+    {% endif %}
     {% for session in results %}
       <div class="card mb-3"><div class="card-body"><h2 class="h5">{{ session.name }} — {{ session.start }}</h2><p>Distance: {{ session.distance }} m · Duration: {{ session.duration }}</p>
       {% for part in session.parts %}<h3 class="h6">Recording {{ part.index }} {{ part.sport }}</h3>
@@ -26,7 +42,9 @@
         {% else %}
           {% for item in part.metadata %}<div class="small text-muted">{{ item }}</div>{% endfor %}
           {% if part.truncated %}<div class="alert alert-warning">Display limited to the first 24 recording hours. Full data is available below.</div>{% endif %}
+          {% if mode == 'C' %}{% include "core/polar_processed.html" %}{% else %}
           <div class="table-responsive" style="max-height: 32rem"><table class="table table-sm"><thead><tr><th>Elapsed seconds</th><th>Cumulative distance (m)</th><th>Heart rate (bpm)</th><th>min/km</th></tr></thead><tbody>{% for row in part.samples %}<tr><td>{{ row.time }}</td><td>{{ row.distance }}</td><td>{{ row.hr }}</td><td>{{ row.pace }}</td></tr>{% empty %}<tr><td colspan="4">No distance or heart rate samples supplied.</td></tr>{% endfor %}</tbody></table></div>
+          {% endif %}
         {% endif %}
       {% endfor %}</div></div>
     {% empty %}<div class="alert alert-info">No training sessions found on this date.</div>{% endfor %}
