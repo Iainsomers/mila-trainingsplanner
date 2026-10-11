@@ -10899,6 +10899,7 @@ def daily_overview_other_view(request):
     ]
     selected_vital_key = request.GET.get("vital", "sleep_hours")
     vitals_open = bool(request.GET.get("vital"))
+    show_na = request.GET.get("show_na") == "1"
     selected_vital = next(
         (option for option in vital_options if option["key"] == selected_vital_key),
         vital_options[0],
@@ -10927,7 +10928,8 @@ def daily_overview_other_view(request):
         else:
             average = sum(values) / len(values)
             display_value = f"{average:.{selected_vital['decimals']}f}{selected_vital['suffix']}"
-        vital_rows.append({"athlete": athlete, "value": display_value, "sample_count": len(values)})
+        if show_na or len(values) >= 3:
+            vital_rows.append({"athlete": athlete, "value": display_value, "sample_count": len(values)})
 
     return render(request, "core/daily_overview_other.html", {
         "athlete_rows": counts,
@@ -10937,6 +10939,7 @@ def daily_overview_other_view(request):
         "vital_options": vital_options,
         "selected_vital": selected_vital,
         "vitals_open": vitals_open,
+        "show_na": show_na,
         "vitals_window_start": vitals_window_start,
         "vitals_window_end": today,
     })

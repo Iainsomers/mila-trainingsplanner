@@ -1179,7 +1179,7 @@ class PlanningOverviewTests(TestCase):
             )
 
         self.client.force_login(coach)
-        response = self.client.get("/coach/daily-overview-other/?vital=sleep_hours")
+        response = self.client.get("/coach/daily-overview-other/?vital=sleep_hours&show_na=1")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Sleep length")
@@ -1189,6 +1189,18 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "NA")
         for key in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
             self.assertContains(response, f"vital={key}")
+
+        filtered = self.client.get("/coach/daily-overview-other/?vital=sleep_hours")
+        self.assertEqual([row["athlete"].id for row in filtered.context["vital_rows"]], [athlete.id])
+        self.assertFalse(filtered.context["show_na"])
+        self.assertTrue(response.context["show_na"])
+        for key in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
+            self.assertContains(response, f'vital={key}&amp;show_na=1')
+        no_values = self.client.get("/coach/daily-overview-other/?vital=hrv")
+        self.assertEqual(no_values.context["vital_rows"], [])
+        shown_na = self.client.get("/coach/daily-overview-other/?vital=hrv&show_na=1")
+        self.assertEqual(len(shown_na.context["vital_rows"]), 2)
+        self.assertTrue(all(row["value"] == "NA" for row in shown_na.context["vital_rows"]))
 
     def test_focus_points_page_lists_active_coach_athletes(self):
         coach = get_user_model().objects.create_user(

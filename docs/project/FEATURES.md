@@ -150,3 +150,7 @@ Meerdere sporten op dezelfde dag blijven als losse activiteiten zichtbaar, maar 
 De voorbereidende partnerinfrastructuur bestaat uit een publieke statuscheck en een workout-pushendpoint volgens sectie 5.3 van de COROS API Reference. Pushes worden alleen geaccepteerd met de door COROS verstrekte `client`- en `secret`-headers, dubbele payloads leveren opnieuw succes op zonder dubbele opslag. OAuth-koppeling en verwerking naar atleettrainingen worden pas toegevoegd nadat COROS API-credentials heeft verstrekt.
 
 De vier voor de aanvraag vereiste MiLa-logo's staan in `core/static/core/brand/coros/`.
+
+## DCO Other — Vitals-filter
+
+- `Show NA` staat standaard uit: alleen atleten met minimaal drie ingevulde waarden voor de gekozen vital worden getoond. Met het vinkje aan verschijnen ook de NA-regels. De keuze blijft behouden bij wisselen van vital; Vitals blijft open.

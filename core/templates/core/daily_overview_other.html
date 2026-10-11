@@ -83,9 +83,16 @@
     <div class="overview-content">
       <div class="vital-selector" role="group" aria-label="Vital">
         {% for option in vital_options %}
-          <a class="btn btn-sm {% if selected_vital.key == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?vital={{ option.key }}">{{ option.label }}</a>
+          <a class="btn btn-sm {% if selected_vital.key == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?vital={{ option.key }}{% if show_na %}&amp;show_na=1{% endif %}">{{ option.label }}</a>
         {% endfor %}
       </div>
+      <form method="get" class="mb-3">
+        <input type="hidden" name="vital" value="{{ selected_vital.key }}">
+        <label class="form-check">
+          <input class="form-check-input" type="checkbox" name="show_na" value="1"{% if show_na %} checked{% endif %} onchange="this.form.requestSubmit()">
+          <span class="form-check-label">Show NA</span>
+        </label>
+      </form>
       <p class="text-muted small">Average from {{ vitals_window_start|date:"d-m-Y" }} through {{ vitals_window_end|date:"d-m-Y" }}. At least three entries are required.</p>
       <div class="table-responsive">
         <table class="table table-sm vital-table mb-0">
