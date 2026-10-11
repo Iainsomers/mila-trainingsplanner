@@ -1095,6 +1095,18 @@ Vortex	16,36	30/05/2026
 
 
 class PlanningOverviewTests(TestCase):
+    def test_vital_switch_keeps_vitals_open_instead_of_info_quality(self):
+        coach = get_user_model().objects.create_user(
+            username="vital-switch-coach", password="secret", is_staff=True
+        )
+        self.client.force_login(coach)
+        for vital in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
+            with self.subTest(vital=vital):
+                response = self.client.get("/coach/daily-overview-other/", {"vital": vital})
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, '<details class="overview-block" open>\n    <summary>Vitals')
+                self.assertContains(response, '<details class="overview-block">\n    <summary>Info Quality')
+
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(
             username="team-coach", password="secret", is_staff=True

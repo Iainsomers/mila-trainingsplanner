@@ -56,7 +56,7 @@
     <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
   </div>
 
-  <details class="overview-block"{% if vitals_open %} open{% endif %}>
+  <details class="overview-block">
     <summary>Info Quality</summary>
     <div class="overview-content">
       <p class="text-muted small">Open evaluations from {{ window_start|date:"d-m-Y" }} through {{ window_end|date:"d-m-Y" }}. Today is not included.</p>
@@ -78,7 +78,7 @@
     </div>
   </details>
 
-  <details class="overview-block">
+  <details class="overview-block"{% if vitals_open %} open{% endif %}>
     <summary>Vitals</summary>
     <div class="overview-content">
       <div class="vital-selector" role="group" aria-label="Vital">
