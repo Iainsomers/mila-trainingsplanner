@@ -9,9 +9,26 @@
     <div class="row g-3">
       <div class="col-md-4"><label class="form-label" for="target">Athlete</label><select class="form-select" id="target" name="polar_target">{% for target in targets %}<option value="{{ target.key }}" {% if target.key == selected.key %}selected{% endif %}>{{ target.label }}</option>{% endfor %}</select></div>
       <div class="col-md-3"><label class="form-label" for="day">Date (Polar local time)</label><input class="form-control" id="day" type="date" name="date" value="{{ date }}" required></div>
-      <div class="col-md-3"><label class="form-label" for="mode">Data type</label><select class="form-select" id="mode" name="mode"><option value="A" {% if mode == 'A' %}selected{% endif %}>Type A: distance, time, laps</option><option value="B" {% if mode == 'B' %}selected{% endif %}>Type B: distance and heart rate</option><option value="C" {% if mode == 'C' %}selected{% endif %}>Type C: processed pace</option></select></div>
+      <div class="col-md-3"><label class="form-label" for="mode">Data type</label><select class="form-select" id="mode" name="mode"><option value="A" {% if mode == 'A' %}selected{% endif %}>Type A: distance, time, laps</option><option value="B" {% if mode == 'B' %}selected{% endif %}>Type B: distance and heart rate</option><option value="C" {% if mode == 'C' %}selected{% endif %}>Type C: processed pace</option><option value="D" {% if mode == 'D' %}selected{% endif %}>Type D: Training analysis</option></select></div>
       <div class="col-md-2"><label class="form-label" for="interval">Interval (seconds)</label><input class="form-control" id="interval" name="interval" type="number" min="1" max="3600" value="{{ interval }}" required></div>
-    </div><button class="btn btn-primary mt-3 align-self-start" type="submit">Read Polar data</button>
+    </div>
+    {% if mode == 'D' %}
+      <input type="hidden" name="hr_target" value="{{ selected.key }}">
+      <fieldset class="mt-3"><legend class="h6">HR upper limits — {{ hr_source }}</legend><div class="row g-2">
+      {% for field in hr_fields %}<div class="col-6 col-md-3"><label class="form-label small" for="hr{{ field.index }}">{{ field.zone }} max bpm</label><input id="hr{{ field.index }}" name="hr_upper_{{ field.index }}" type="number" class="form-control" min="40" max="240" value="{{ field.value }}" required></div>{% endfor %}
+      </div><div class="form-check mt-2"><input class="form-check-input" id="estimated" type="checkbox" name="hr_estimated" {% if hr_estimated %}checked{% endif %}><label class="form-check-label" for="estimated">Estimated HR limits</label></div>
+      {% if can_save_hr %}<div class="form-check"><input class="form-check-input" id="remember" type="checkbox" name="save_hr_limits" checked><label class="form-check-label" for="remember">Remember these HR limits for this athlete</label></div>{% endif %}
+      <div class="form-check"><input class="form-check-input" id="ai" type="checkbox" name="ai_interpretation" checked><label class="form-check-label" for="ai">Include AI interpretation of recorded training structure</label></div>
+      <p class="small text-muted mb-0">Z1 includes lower heart rates; Z5 starts above the Z4 maximum. Speed zones come from Athlete settings. The display interval does not affect Type D calculations.</p>
+      </fieldset>
+    {% endif %}
+    {% if mode == 'D' %}<script>
+      document.getElementById('target').addEventListener('change', function () {
+        const params = new URLSearchParams({mode: 'D', polar_target: this.value, date: document.getElementById('day').value});
+        window.location.search = params.toString();
+      });
+    </script>{% endif %}
+    <button class="btn btn-primary mt-3 align-self-start" type="submit">{% if mode == 'D' %}Analyse training{% else %}Read Polar data{% endif %}</button>
   </form>
   {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
   {% if fetched %}
@@ -33,6 +50,7 @@
         }
       </style>
     {% endif %}
+    {% if mode == 'D' %}{% include "core/polar_analysis.html" %}{% else %}
     {% for session in results %}
       <div class="card mb-3"><div class="card-body"><h2 class="h5">{{ session.name }} — {{ session.start }}</h2><p>Distance: {{ session.distance }} m · Duration: {{ session.duration }}</p>
       {% for part in session.parts %}<h3 class="h6">Recording {{ part.index }} {{ part.sport }}</h3>
@@ -48,6 +66,7 @@
         {% endif %}
       {% endfor %}</div></div>
     {% empty %}<div class="alert alert-info">No training sessions found on this date.</div>{% endfor %}
+    {% endif %}
     <details class="card card-body"><summary>Original Polar JSON</summary><pre class="mt-3 mb-0" style="max-height: 35rem; overflow: auto">{{ raw }}</pre></details>
   {% endif %}
 </div>

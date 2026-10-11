@@ -1,0 +1,21 @@
+<div class="card card-body mb-3">
+  <h2 class="h5">Type D — Training analysis</h2>
+  <p class="small mb-1">Speed zones use the nearest configured Z1–Z5 speed. HR zones use the four upper limits below; Z1 has no lower limit and Z5 is open-ended.</p>
+  <p class="small mb-0">Distances are rounded independently to 100 m; rounded rows can differ from the rounded total. Missing or unreliable coverage stays Unclassified. HR can lag behind changes in pace.</p>
+</div>
+{% if hr_estimated %}<div class="alert alert-warning py-2">Estimated HR limits — review these for the selected athlete. These are not measured thresholds.</div>{% endif %}
+{% if ai_text %}<div class="card card-body mb-3"><h2 class="h6">AI interpretation — inferred training structure</h2><p class="mb-0">{{ ai_text }}</p></div>{% endif %}
+{% if ai_error %}<p class="small text-muted">{{ ai_error }}</p>{% endif %}
+{% for analysis in analyses %}
+  <div class="card card-body mb-3"><h2 class="h5">Recording {{ analysis.recording }} — {{ analysis.start }}</h2>
+    <p>{{ analysis.summary }}</p>
+    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Zone</th><th>Speed km</th><th>HR km</th></tr></thead><tbody>
+    {% for row in analysis.rows %}<tr><th>{{ row.zone }}</th><td>{{ row.speed }}</td><td>{{ row.hr }}</td></tr>{% endfor %}
+    <tr><th>Unclassified</th><td>{{ analysis.speed_unknown }}</td><td>{{ analysis.hr_unknown }}</td></tr>
+    <tr class="fw-bold"><th>Total</th><td>{{ analysis.total }}</td><td>{{ analysis.total }}</td></tr>
+    </tbody></table></div>
+    <p class="small">Speed method: <strong>{{ analysis.method }}</strong>. HR method: measured distance increments with average endpoint HR, rounded to whole bpm.</p>
+    {% for note in analysis.notes %}<p class="small text-muted mb-1">{{ note }}</p>{% endfor %}
+    <details class="mt-2"><summary>Zone references and HR limits</summary><table class="table table-sm mt-2"><thead><tr><th>Zone</th><th>Speed reference</th><th>HR range</th></tr></thead><tbody>{% for row in analysis.rows %}<tr><td>{{ row.zone }}</td><td>{{ row.speed_label }}</td><td>{{ row.hr_label }}</td></tr>{% endfor %}</tbody></table></details>
+  </div>
+{% empty %}<div class="alert alert-info">No running recordings available for analysis on this date.</div>{% endfor %}

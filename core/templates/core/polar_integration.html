@@ -108,6 +108,7 @@
     <a class="btn btn-outline-primary" href="{% url 'polar_raw' %}?mode=A&amp;polar_target={{ selected_target.key|urlencode }}">Type A: distance, time and laps</a>
     <a class="btn btn-outline-primary" href="{% url 'polar_raw' %}?mode=B&amp;polar_target={{ selected_target.key|urlencode }}">Type B: distance and heart rate</a>
     <a class="btn btn-outline-primary" href="{% url 'polar_raw' %}?mode=C&amp;polar_target={{ selected_target.key|urlencode }}">Type C: processed pace</a>
+    <a class="btn btn-primary" href="{% url 'polar_raw' %}?mode=D&amp;polar_target={{ selected_target.key|urlencode }}">Type D: Training analysis</a>
   </div></div>
 
   {% if v4_result %}

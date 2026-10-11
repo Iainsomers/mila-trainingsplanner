@@ -1478,3 +1478,11 @@ class CorosWorkoutPush(models.Model):
 
     def __str__(self):
         return f"COROS push {self.payload_hash[:12]}"
+
+
+class PolarAnalysisSettings(models.Model):
+    """Explicit HR analysis limits, separate from athlete-facing zone labels."""
+    athlete = models.OneToOneField(Athlete, on_delete=models.CASCADE, related_name="polar_analysis_settings")
+    hr_upper_bpm = models.JSONField(default=list)
+    estimated = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)

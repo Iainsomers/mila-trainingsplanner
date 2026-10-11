@@ -148,8 +148,22 @@ def polar_raw_view(request):
     context = {"targets": targets, "selected": target, "mode": data.get("mode", "A"),
                "date": data.get("date", (timezone.localdate() - timedelta(days=1)).isoformat()),
                "interval": data.get("interval", "5")}
-    if context["mode"] not in {"A", "B", "C"}:
+    if context["mode"] not in {"A", "B", "C", "D"}:
         context["mode"] = "A"
+    if context["mode"] == "D" and request.method == "POST" and key and not any(item["key"] == key for item in targets):
+        context["error"] = "Unknown athlete"
+        return render(request, "core/polar_raw.html", context)
+    if context["mode"] == "D":
+        from .polar_analysis_settings import analysis_configuration
+        context.update(analysis_configuration(request, target, {}, submitting=False))
+        if request.method == "POST":
+            for field in context["hr_fields"]:
+                field["value"] = data.get(f"hr_upper_{field['index']}", field["value"])
+        try:
+            context.update(analysis_configuration(request, target, data))
+        except ValueError as exc:
+            context["error"] = str(exc)
+            return render(request, "core/polar_raw.html", context)
     if request.method == "POST":
         try:
             day = date.fromisoformat(context["date"])
@@ -195,7 +209,12 @@ def polar_raw_view(request):
                 if status in {401, 403}:
                     message += " Reconnect Polar v4 if authorization has expired."
                 raise ValueError(message)
-            context.update(results=translate(payload, interval, context["mode"]), fetched=True,
+            if context["mode"] == "D":
+                from .polar_analysis import analyze_payload, ai_interpretation
+                context["analyses"] = analyze_payload(payload, target.get("athlete") if target else None, context["hr_bounds"])
+                if data.get("ai_interpretation") == "on" and context["analyses"]:
+                    context["ai_text"], context["ai_error"] = ai_interpretation(context["analyses"])
+            context.update(results=translate(payload, interval, context["mode"]) if context["mode"] != "D" else [], fetched=True,
                            raw=json.dumps(payload, ensure_ascii=False, indent=2))
         except (ValueError, RuntimeError) as exc:
             context["error"] = str(exc) or "Choose a valid date and an interval between 1 and 3600 seconds."
