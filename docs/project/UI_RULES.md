@@ -101,9 +101,9 @@ Controleer bij relevante UI-wijzigingen minimaal:
 - AM en PM afzonderlijk;
 - trainer- en atleetrol.
 
-## AYC-popup en teambekleding
+## Trainingspopups en teambekleding
 
-- De dynamische trainingspopup wordt onder `document.body` geplaatst, buiten de stacking context van de teambekleding. Daardoor blijft hij boven de Bootstrap-backdrop klikbaar op desktop en mobiel.
+- De dynamische trainingspopups in AYC, Flex Planner en Trainer Planning worden onder `document.body` geplaatst, buiten de stacking context van de teambekleding. Daardoor blijft hij boven de Bootstrap-backdrop klikbaar op desktop en mobiel.
 
 ## Polar-knoppen
 

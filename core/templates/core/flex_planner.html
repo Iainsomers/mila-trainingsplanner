@@ -337,6 +337,8 @@
     document.addEventListener("htmx:afterSwap", (e) => {
       const target = e.detail && e.detail.target ? e.detail.target : e.target;
       if (target && target.id === "modal-container") {
+        // Keep the modal above the backdrop, outside the branding stacking context.
+        document.body.appendChild(target);
         const el = document.getElementById("slotModal");
         if (el && window.bootstrap) bootstrap.Modal.getOrCreateInstance(el).show();
       }
@@ -364,6 +366,8 @@
         .then((html) => {
           const container = document.getElementById("modal-container");
           if (!container) return;
+          // Keep the modal above the backdrop, outside the branding stacking context.
+          document.body.appendChild(container);
           container.innerHTML = html;
           if (window.htmx && typeof window.htmx.process === "function") {
             window.htmx.process(container);

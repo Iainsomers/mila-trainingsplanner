@@ -283,6 +283,8 @@
 
     document.addEventListener("htmx:afterSwap", function(evt) {
       if (evt.detail && evt.detail.target && evt.detail.target.id === "modal-container") {
+        // Keep the modal above the backdrop, outside the branding stacking context.
+        document.body.appendChild(evt.detail.target);
         const modalEl = document.getElementById("slotModal");
         if (modalEl && window.bootstrap) {
           window.currentSlotModal = bootstrap.Modal.getOrCreateInstance(modalEl);
