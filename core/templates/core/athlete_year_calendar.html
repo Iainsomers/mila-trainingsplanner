@@ -2705,6 +2705,9 @@
       })
       .then(function(html) {
         var container = document.getElementById("modal-container");
+        // Bootstrap adds its backdrop to body. Keep the training dialog outside
+        // the team-branding stacking context so the backdrop cannot cover it.
+        document.body.appendChild(container);
         container.innerHTML = html;
         prepareSlotForm(container, activeSlotDate, activeSlotIndex);
         applyVisibleTrainingPrefill(container, el);

@@ -100,3 +100,7 @@ Controleer bij relevante UI-wijzigingen minimaal:
 - openen, sluiten en opslaan van popups;
 - AM en PM afzonderlijk;
 - trainer- en atleetrol.
+
+## AYC-popup en teambekleding
+
+- De dynamische trainingspopup wordt onder `document.body` geplaatst, buiten de stacking context van de teambekleding. Daardoor blijft hij boven de Bootstrap-backdrop klikbaar op desktop en mobiel.
