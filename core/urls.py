@@ -1,3 +1,4 @@
+from core.views.polar_raw import polar_raw_view
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from core.auth import ThrottledAuthenticationForm
@@ -108,6 +109,7 @@ from core.views.coros import coros_status_view, coros_workout_push_view
 
 
 urlpatterns = [
+    path("integrations/polar/raw-data/", polar_raw_view, name="polar_raw"),
     # Login / Logout
     path(
         "login/",

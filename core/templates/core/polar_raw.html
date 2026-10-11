@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+{% block title %}Polar raw data{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <a href="{% url 'polar_integration' %}">Back to Polar Integration</a>
+  <h1 class="mt-3">Polar raw data</h1>
+  <p>The app reads Polar using your existing connection. You do not need to open an API link or enter a password. This page does not change planned workouts.</p>
+  <form method="post" class="card card-body mb-3">{% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-4"><label class="form-label" for="target">Athlete</label><select class="form-select" id="target" name="polar_target">{% for target in targets %}<option value="{{ target.key }}" {% if target.key == selected.key %}selected{% endif %}>{{ target.label }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label" for="day">Date (Polar local time)</label><input class="form-control" id="day" type="date" name="date" value="{{ date }}" required></div>
+      <div class="col-md-3"><label class="form-label" for="mode">Data type</label><select class="form-select" id="mode" name="mode"><option value="A" {% if mode == 'A' %}selected{% endif %}>Type A: distance, time, laps</option><option value="B" {% if mode == 'B' %}selected{% endif %}>Type B: distance and heart rate</option></select></div>
+      <div class="col-md-2"><label class="form-label" for="interval">Interval (seconds)</label><input class="form-control" id="interval" name="interval" type="number" min="1" max="3600" value="{{ interval }}" required></div>
+    </div><button class="btn btn-primary mt-3 align-self-start" type="submit">Read Polar data</button>
+  </form>
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  {% if fetched %}
+    <p>NA means Polar did not supply a value. Times below are elapsed recording times; pause data remains available in the raw JSON.</p>
+    {% if mode == 'B' %}<p>Only measured distance and heart rate are shown at exact timestamps, starting at 0 seconds. No interpolation, speed conversion or carry-forward is applied. If a stream records less frequently than the selected interval, unmatched times show NA.</p>{% endif %}
+    {% for session in results %}
+      <div class="card mb-3"><div class="card-body"><h2 class="h5">{{ session.name }} — {{ session.start }}</h2><p>Distance: {{ session.distance }} m · Duration: {{ session.duration }}</p>
+      {% for part in session.parts %}<h3 class="h6">Recording {{ part.index }} {{ part.sport }}</h3>
+        {% if mode == 'A' %}<p>Distance: {{ part.distance }} m · Duration: {{ part.duration }}</p>
+          <h4 class="h6">Manual laps</h4>{% include "core/polar_raw_laps.html" with rows=part.manual %}
+          <h4 class="h6">Automatic laps</h4>{% include "core/polar_raw_laps.html" with rows=part.auto %}
+        {% else %}
+          {% for item in part.metadata %}<div class="small text-muted">{{ item }}</div>{% endfor %}
+          {% if part.truncated %}<div class="alert alert-warning">Display limited to the first 24 recording hours. Full data is available below.</div>{% endif %}
+          <div class="table-responsive" style="max-height: 32rem"><table class="table table-sm"><thead><tr><th>Elapsed seconds</th><th>Cumulative distance (m)</th><th>Heart rate (bpm)</th></tr></thead><tbody>{% for row in part.samples %}<tr><td>{{ row.time }}</td><td>{{ row.distance }}</td><td>{{ row.hr }}</td></tr>{% empty %}<tr><td colspan="3">No distance or heart rate samples supplied.</td></tr>{% endfor %}</tbody></table></div>
+        {% endif %}
+      {% endfor %}</div></div>
+    {% empty %}<div class="alert alert-info">No training sessions found on this date.</div>{% endfor %}
+    <details class="card card-body"><summary>Original Polar JSON</summary><pre class="mt-3 mb-0" style="max-height: 35rem; overflow: auto">{{ raw }}</pre></details>
+  {% endif %}
+</div>
+{% endblock %}

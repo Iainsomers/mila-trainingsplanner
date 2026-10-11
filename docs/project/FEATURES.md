@@ -154,3 +154,7 @@ De vier voor de aanvraag vereiste MiLa-logo's staan in `core/static/core/brand/c
 ## DCO Other — Vitals-filter
 
 - `Show NA` staat standaard uit: alleen atleten met minimaal drie ingevulde waarden voor de gekozen vital worden getoond. Met het vinkje aan verschijnen ook de NA-regels. De keuze blijft behouden bij wisselen van vital; Vitals blijft open.
+
+
+### Polar raw data (2026-10-11)
+Polar Integration links to a read-only v4 data inspector. Type A shows recorded totals and separate manual/automatic laps with millisecond durations. Type B shows cumulative DISTANCE and HEART_RATE samples at a configurable 1–3600 second interval; unmatched timestamps and missing values are NA, without interpolation or speed estimates. One selected local calendar day is fetched server-side with Bearer authentication and one token refresh on 401. Original JSON is available for inspection. No training matching or import is performed. Athlete selection excludes unrelated Polar-user connections. Display is capped at 24 recording hours; original JSON is retained.
