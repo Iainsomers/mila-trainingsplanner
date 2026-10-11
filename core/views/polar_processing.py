@@ -18,6 +18,37 @@ def _seconds(value, origin):
         return None
 
 
+def _merge_pauses(pauses):
+    merged = []
+    for start, end in sorted(pauses):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _pause_movement(values, rate, start, end):
+    """Require five consecutive measured moving seconds, not one GPS jump.
+
+    Missing or negative increments break the evidence chain. Intervals only
+    partly inside the proposed pause contribute their overlapping duration.
+    """
+    seconds = 0.0
+    first = max(1, int(start / rate) + 1)
+    last = min(len(values) - 1, ceil(end / rate))
+    for index in range(first, last + 1):
+        previous, current = number(values[index - 1]), number(values[index])
+        overlap = max(0.0, min(end, index * rate) - max(start, (index - 1) * rate))
+        if previous is not None and current is not None and previous >= 0 and current >= previous and (current - previous) / rate > STOP_SPEED:
+            seconds += overlap
+            if seconds >= STOP_SECONDS - 1e-8:
+                return True
+        else:
+            seconds = 0.0
+    return False
+
+
 def _boundaries(exercise, sample_end, rate):
     cuts, pauses, notes = set(), [], []
     laps = exercise.get("laps")
@@ -40,21 +71,30 @@ def _boundaries(exercise, sample_end, rate):
         start, end = _seconds(pause.get("startTime"), origin), _seconds(pause.get("endTime"), origin)
         if start is not None and end is not None and 0 <= start < end:
             pauses.append((start, end))
-    pauses.sort()
-    # Merge overlaps before comparing elapsed and active recording clocks.
-    merged = []
-    for start, end in pauses:
-        if merged and start <= merged[-1][1]:
-            merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
-        else:
-            merged.append((start, end))
+    merged = _merge_pauses(pauses)
     if merged:
         wall_end = _seconds(exercise.get("stopTime"), origin)
         pause_duration = sum(end - start for start, end in merged)
         tolerance = max(2.0, 2 * rate)
         if wall_end is not None and abs(sample_end - wall_end) <= tolerance:
-            pauses = merged
-            notes.append("Polar pauses aligned to elapsed time, including paused seconds.")
+            source = exercise.get("samples")
+            streams = source.get("samples", []) if isinstance(source, dict) else []
+            streams = streams if isinstance(streams, list) else []
+            distance_stream = next((stream for stream in streams if isinstance(stream, dict) and str(stream.get("type", "")).upper() == "DISTANCE"), {})
+            values = distance_stream.get("values", [])
+            accepted = []
+            for start, end in pauses:
+                clipped_start, clipped_end = max(0.0, start), min(sample_end, end)
+                label = f"{display(start)}–{display(end)} s"
+                if clipped_start >= clipped_end:
+                    notes.append(f"Ignored Polar pause {label}: outside the available distance samples.")
+                elif _pause_movement(values, rate, clipped_start, clipped_end):
+                    notes.append(f"Ignored conflicting Polar pause {label}: distance samples show sustained movement. Sample-based possible stops remain visible.")
+                else:
+                    accepted.append((clipped_start, clipped_end))
+            pauses = _merge_pauses(accepted)
+            if pauses:
+                notes.append("Polar pauses aligned to elapsed time and checked against distance samples.")
             for start, end in pauses:
                 cuts.update((start, end))
         elif wall_end is not None and abs(sample_end - (wall_end - pause_duration)) <= tolerance:

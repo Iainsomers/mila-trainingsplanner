@@ -97,7 +97,7 @@ class PolarProcessingTests(SimpleTestCase):
 
     def test_explicit_pause_elapsed_and_active_clocks(self):
         for active in [False, True]:
-            exercise = recording([3] * 60)
+            exercise = recording([3] * 60 if active else [3] * 20 + [0] * 10 + [3] * 30)
             exercise.update(startTime="2026-10-10T10:00:00", stopTime="2026-10-10T10:01:10" if active else "2026-10-10T10:01:00",
                             pauseTimes=[{"startTime": "2026-10-10T10:00:20", "endTime": "2026-10-10T10:00:30"}])
             rows, notes = process(exercise)
@@ -146,3 +146,52 @@ class PolarProcessingTests(SimpleTestCase):
         parts = translate(payload, 5, "C")[0]["parts"]
         self.assertEqual(parts[0]["processed"][1]["processed"], "5:33")
         self.assertEqual(parts[1]["processed"][1]["processed"], "2:47")
+
+
+    def test_real_case_overlapping_pause_spans_do_not_hide_running(self):
+        # The reported Polar metadata covers 36 minutes of measured running,
+        # including two nested pauses. Keep this shape without personal data.
+        speeds = [3] * 4258
+        speeds[3280:3495] = [0] * 215
+        exercise = recording(speeds)
+        exercise.update(startTime="2026-01-01T10:00:00", stopTime="2026-01-01T11:10:59",
+                        pauseTimes=[
+                            {"startTime": "2026-01-01T10:17:21.384", "endTime": "2026-01-01T10:53:59.200"},
+                            {"startTime": "2026-01-01T10:26:25.385", "endTime": "2026-01-01T10:35:05.399"},
+                            {"startTime": "2026-01-01T10:30:54.386", "endTime": "2026-01-01T10:32:06.277"},
+                            {"startTime": "2026-01-01T11:10:59.137", "endTime": "2026-01-01T11:11:03.559"}])
+        rows, notes = process(exercise)
+        lookup = {row["time"]: row for row in rows}
+        self.assertEqual(lookup["2000"]["status"], "Running")
+        self.assertEqual(lookup["2000"]["processed"], "5:33")
+        self.assertEqual(lookup["3300"]["status"], "Possible stop")
+        self.assertFalse(any(row["status"] == "Polar pause" for row in rows))
+        self.assertEqual(sum("conflicting Polar pause" in note for note in notes), 3)
+        self.assertTrue(any("outside" in note for note in notes))
+
+    def test_valid_nested_pause_is_checked_before_merging(self):
+        exercise = recording([3] * 20 + [0] * 10 + [3] * 30)
+        exercise.update(startTime="2026-01-01T10:00:00", stopTime="2026-01-01T10:01:00",
+                        pauseTimes=[{"startTime": "2026-01-01T10:00:10", "endTime": "2026-01-01T10:00:40"},
+                                    {"startTime": "2026-01-01T10:00:20", "endTime": "2026-01-01T10:00:30"}])
+        rows, notes = process(exercise)
+        lookup = {row["time"]: row for row in rows}
+        self.assertEqual(lookup["15"]["status"], "Running")
+        self.assertEqual(lookup["25"]["status"], "Polar pause")
+        self.assertTrue(any("conflicting" in note for note in notes))
+
+    def test_single_gps_jump_during_pause_is_not_sustained_movement(self):
+        exercise = recording([3] * 20 + [0] * 10 + [3] * 30)
+        values = exercise["samples"]["samples"][0]["values"]
+        values[25] += 10
+        exercise.update(startTime="2026-01-01T10:00:00", stopTime="2026-01-01T10:01:00",
+                        pauseTimes=[{"startTime": "2026-01-01T10:00:20", "endTime": "2026-01-01T10:00:30"}])
+        rows, _ = process(exercise)
+        self.assertEqual(next(row for row in rows if row["time"] == "25")["status"], "Polar pause")
+
+    def test_slow_gps_drift_during_pause_remains_a_pause(self):
+        exercise = recording([3] * 20 + [0.2] * 10 + [3] * 30)
+        exercise.update(startTime="2026-01-01T10:00:00", stopTime="2026-01-01T10:01:00",
+                        pauseTimes=[{"startTime": "2026-01-01T10:00:20", "endTime": "2026-01-01T10:00:30"}])
+        rows, _ = process(exercise)
+        self.assertEqual(next(row for row in rows if row["time"] == "25")["status"], "Polar pause")
