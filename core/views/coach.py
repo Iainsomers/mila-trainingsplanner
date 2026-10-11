@@ -25,7 +25,7 @@ from django.utils.dateparse import parse_time
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, evaluation_visibility_for_request, is_coach_tools_only_user
-from core.models import TrainingPlan, Athlete, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -10891,8 +10891,50 @@ def daily_overview_other_view(request):
             color = "red"
         counts.append({"athlete": athlete, "pending_count": pending, "color": color})
 
+    vital_options = [
+        {"key": "sleep_hours", "label": "Sleep length", "field": "sleep_hours", "suffix": " h", "decimals": 1},
+        {"key": "sleep_quality", "label": "Sleep quality", "field": "sleep_quality", "suffix": "", "decimals": 1},
+        {"key": "morning_hr", "label": "Morning HR", "field": "morning_hr", "suffix": "", "decimals": 1},
+        {"key": "hrv", "label": "HRV", "field": "hrv", "suffix": "", "decimals": 1},
+    ]
+    selected_vital_key = request.GET.get("vital", "sleep_hours")
+    selected_vital = next(
+        (option for option in vital_options if option["key"] == selected_vital_key),
+        vital_options[0],
+    )
+    vitals_window_start = today - timedelta(days=13)
+    visible_vital_athlete_ids = {
+        athlete.id
+        for athlete in athletes
+        if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
+    }
+    vital_values = {}
+    if visible_vital_athlete_ids:
+        for vital in AthleteDailyVital.objects.filter(
+            athlete_id__in=visible_vital_athlete_ids,
+            date__range=(vitals_window_start, today),
+        ).only("athlete_id", selected_vital["field"]):
+            value = getattr(vital, selected_vital["field"], None)
+            if value is not None:
+                vital_values.setdefault(vital.athlete_id, []).append(float(value))
+
+    vital_rows = []
+    for athlete in athletes:
+        values = vital_values.get(athlete.id, [])
+        if len(values) < 3:
+            display_value = "NA"
+        else:
+            average = sum(values) / len(values)
+            display_value = f"{average:.{selected_vital['decimals']}f}{selected_vital['suffix']}"
+        vital_rows.append({"athlete": athlete, "value": display_value, "sample_count": len(values)})
+
     return render(request, "core/daily_overview_other.html", {
         "athlete_rows": counts,
         "window_start": window_start,
         "window_end": window_end,
+        "vital_rows": vital_rows,
+        "vital_options": vital_options,
+        "selected_vital": selected_vital,
+        "vitals_window_start": vitals_window_start,
+        "vitals_window_end": today,
     })

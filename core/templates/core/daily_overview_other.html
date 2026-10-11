@@ -40,6 +40,9 @@
   .pending-yellow { background: #ffe69c; }
   .pending-orange { background: #f7b267; }
   .pending-red { background: #f28b82; color: #5b1111; }
+  .vital-selector { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+  .vital-selector .btn { min-width: 9rem; }
+  .vital-table th, .vital-table td { vertical-align: middle; }
 </style>
 {% endblock %}
 
@@ -77,7 +80,26 @@
 
   <details class="overview-block">
     <summary>Vitals</summary>
-    <div class="overview-content text-muted">Coming soon.</div>
+    <div class="overview-content">
+      <div class="vital-selector" role="group" aria-label="Vital">
+        {% for option in vital_options %}
+          <a class="btn btn-sm {% if selected_vital.key == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?vital={{ option.key }}">{{ option.label }}</a>
+        {% endfor %}
+      </div>
+      <p class="text-muted small">Average from {{ vitals_window_start|date:"d-m-Y" }} through {{ vitals_window_end|date:"d-m-Y" }}. At least three entries are required.</p>
+      <div class="table-responsive">
+        <table class="table table-sm vital-table mb-0">
+          <thead><tr><th>Athlete</th><th class="text-end">{{ selected_vital.label }}</th></tr></thead>
+          <tbody>
+            {% for row in vital_rows %}
+              <tr><td>{{ row.athlete.name }}</td><td class="text-end">{{ row.value }}</td></tr>
+            {% empty %}
+              <tr><td colspan="2" class="text-muted">No athletes found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </details>
 </main>
 {% endblock %}

@@ -1134,6 +1134,50 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Year Planner")
         self.assertContains(response, "Standard Strength")
 
+    def test_daily_overview_other_shows_selected_vital_average(self):
+        coach = get_user_model().objects.create_user(
+            username="vitals-overview-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Vital Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        second_athlete = Athlete.objects.create(
+            owner=coach,
+            name="Not Enough Vital Athlete",
+            birth_year=2001,
+            gender="X",
+        )
+        today = date.today()
+        for offset, value in enumerate((7, 8, 9)):
+            AthleteDailyVital.objects.create(
+                athlete=athlete,
+                date=today - timedelta(days=offset),
+                sleep_hours=value,
+            )
+        for offset, value in enumerate((7, 8)):
+            AthleteDailyVital.objects.create(
+                athlete=second_athlete,
+                date=today - timedelta(days=offset),
+                sleep_hours=value,
+            )
+
+        self.client.force_login(coach)
+        response = self.client.get("/coach/daily-overview-other/?vital=sleep_hours")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sleep length")
+        self.assertContains(response, "Vital Athlete")
+        self.assertContains(response, "Not Enough Vital Athlete")
+        self.assertContains(response, "8.0 h")
+        self.assertContains(response, "NA")
+        for key in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
+            self.assertContains(response, f"vital={key}")
+
     def test_focus_points_page_lists_active_coach_athletes(self):
         coach = get_user_model().objects.create_user(
             username="focus-points-coach", password="secret", is_staff=True
