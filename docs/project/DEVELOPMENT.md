@@ -1,6 +1,6 @@
 # Ontwikkelen, testen en documenteren
 
-Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
+Bijgewerkt: 12 oktober 2026.
 
 ## Lokaal
 
@@ -108,3 +108,21 @@ Doe ongeveer maandelijks of na een grotere feature een korte documentatiecontrol
 - controleer verouderde termen en routes;
 - vat Decisions niet opnieuw samen in alle andere bestanden;
 - houd elk document doelgericht en bij voorkeur onder circa 200 regels.
+
+## Polar en trainingspopups: gerichte validatie
+
+```powershell
+& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py test core.tests_polar_raw core.tests_polar_processing core.tests_polar_analysis core.tests_polar_reconstruction --noinput
+& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py check
+& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py makemigrations --check --dry-run
+```
+
+- Neem `0096_polar_analysis_settings` mee in de bestaande Render-migratiestap. Type D gebruikt deze tabel; alleen templates deployen is onvoldoende.
+- De optionele AI-toelichting gebruikt `OPENAI_API_KEY` en optioneel `OPENAI_MODEL`; zonder sleutel of bij netwerkfouten blijven de vaste resultaten beschikbaar. Commit nooit configuratiewaarden of tokens.
+- Voor nieuwe pauzeregels: test tegenstrijdige/geneste pauzes, geldige stops, GPS-drift en één losse GPS-sprong. Gebruik synthetische fixtures; zet geen volledige persoonsgebonden JSON in Git.
+- Voor popups: reproduceer teambranding met isolation/stacking context en een echte Bootstrap-backdrop. Controleer Flex via fetch én HTMX en Trainer Planning via HTMX, op 390 en 1440 px, voor AM/PM en lege/bestaande trainingen. Test invoer, Save en Close; wacht op de popupanimatie vóór sluiten.
+- De volledige core-suite is niet opnieuw gedraaid voor de recente Polar/popupfixes; gerichte controles staan in `CURRENT_STATUS.md`.
+
+## Documentatie op Render
+
+De projectdocumentatie is bronmateriaal in `docs/project/` en wordt met main naar dezelfde Render-checkout uitgerold. Er bestaat geen aparte publieke documentatiepagina in deze app. Een Git-push bevestigt de repositorywijziging, niet zelfstandig de voltooiing van de Render-deploy.

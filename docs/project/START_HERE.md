@@ -1,6 +1,6 @@
 # Start Here
 
-Bijgewerkt: 7 oktober 2026.
+Bijgewerkt: 12 oktober 2026.
 
 ## Project in één minuut
 
@@ -28,6 +28,15 @@ MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers m
 - Evaluations is een apart vragenlijstonderdeel voor trainers en atleten.
 - Coach Tools in MiLa bevat alleen Track Timer. Match Overview en PR-database horen bij het aparte PAC-project.
 - Athlete settings bevat `Extended edit rights` voor toekomstige AYC-trainingen en lege dagdelen. `Can change base planning` is een afzonderlijk recht waarmee een atleet de eigen Base Planning mag aanpassen.
+
+## Polar-analyse en recente fixes
+
+- Polar Integration biedt Type A (totalen/rondes), B (ruwe samples), C (verwerkt tempo) en D (één overzicht met km per tempozone en hartslagzone).
+- Type D rekent vaste totalen uit code; AI geeft alleen een optionele toelichting. HR-grenzen worden per atleet apart opgeslagen met een Estimated-vlag. Zie `FEATURES.md` en `DATA_RULES.md` voor methoden en onzekerheden.
+- Polar-pauzemarkeringen worden tegen afstandssamples gecontroleerd; tegenstrijdige markeringen mogen loopgegevens niet verbergen.
+- Trainingspopups in AYC, Flex Planner en Trainer Planning staan buiten de stacking context van de teambekleding en blijven boven de backdrop klikbaar.
+- DCO Other toont dagelijkse vitals-gemiddelden. `Show NA` staat standaard uit; de keuze en het geopende Vitals-blok blijven behouden bij wisselen van vital.
+- Migratie `0096_polar_analysis_settings` hoort bij Type D. Nieuwe deploys moeten deze meenemen via de bestaande Render-migratiestap.
 
 ## Nieuwe campbasis
 

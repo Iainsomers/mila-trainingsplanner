@@ -1,6 +1,6 @@
 # Gebruikersrollen en toegang
 
-Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
+Bijgewerkt: 12 oktober 2026.
 
 ## Trainer
 
@@ -66,3 +66,10 @@ Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-inst
 ## Beveiligingsregel
 
 Vertrouw niet alleen op verborgen knoppen. Iedere view en mutatie moet server-side controleren of de gebruiker de betreffende atleet, planning of training mag zien of wijzigen.
+
+## Polar-uitlezen en analysegrenzen
+
+- Een atleet gebruikt de eigen koppeling; een trainer kiest een toegankelijke atleet. De A/B/C/D-uitleespagina sluit losse, ongerelateerde Polar-userkoppelingen uit de selectie uit.
+- Een eigenaar/bevoegde trainer of de betreffende atleet mag de eigen Type D-HR-grenzen en Estimated-vlag opslaan. View-only coachtoegang geeft wel inzage/analyse maar geen recht om grenzen te bewaren.
+- Een ongeldig atleetdoel wordt vóór opslag geweigerd. Een formulier met HR-waarden voor de vorige atleet wordt niet op de nieuw gekozen atleet toegepast.
+- Het lezen of analyseren van Polar-data wijzigt geen planning of trainingsevaluatie.

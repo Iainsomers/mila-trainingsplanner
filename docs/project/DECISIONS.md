@@ -2,6 +2,18 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-10-12 — Vaste zoneberekening, afzonderlijke AI-interpretatie
+
+Polar Type D berekent kilometers deterministisch op basis van tempo en HR. AI beschrijft uitsluitend een mogelijke trainingsstructuur en verandert geen totalen of planning. Ontbrekende dekking blijft Unclassified; geen geforceerde zone op basis van het geplande trainingstype.
+
+## 2026-10-12 — Analyse-HR blijft apart en herkenbaar geschat
+
+Type D bewaart vier HR-bovengrenzen per atleet in PolarAnalysisSettings, met Estimated-vlag. Deze opslag overschrijft geen HR-tekst in Athlete settings. Z1 heeft geen ondergrens; Z5 is open naar boven. De preset 145/160/175/185 is geen algemeen vastgesteld profiel.
+
+## 2026-10-12 — Pauzemetadata vereist consistentie
+
+Een Polar-pauzemarkering die aanhoudende afstandstoename tegenspreekt mag gemeten loopdata niet verbergen. Ruwe waarden blijven intact; genegeerde markeringen en correcties krijgen een zichtbare reden.
+
 ## 2026-10-07 — Atletenrechten blijven gescheiden
 
 `Extended edit rights` bepaalt of een atleet toekomstige AYC-trainingen en lege dagdelen mag wijzigen. `Can change base planning` is een afzonderlijk trainerrecht voor de eigen Base Planning. Het ene recht activeert het andere niet.

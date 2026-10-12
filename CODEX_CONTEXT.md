@@ -1,6 +1,6 @@
 # MiLa Codex Context — archived pointer
 
-Bijgewerkt: 28 september 2026.
+Bijgewerkt: 12 oktober 2026.
 
 Dit bestand bevat bewust geen operationele overdracht meer. De oude inhoud was
 achterhaald en kon een nieuwe Codex-chat richting verkeerde paden, tabs en

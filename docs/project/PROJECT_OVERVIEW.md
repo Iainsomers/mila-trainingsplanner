@@ -1,6 +1,6 @@
 # MiLa Training Planner — projectoverzicht
 
-Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
+Bijgewerkt: 12 oktober 2026.
 
 ## Doel
 
@@ -28,6 +28,7 @@ De centrale gegevens zijn:
 - Trainingsevaluaties, losse evaluatievragenlijsten, weekrapporten en dagelijkse waarden.
 - Year Planner-dagfases en datumranges voor whereabouts.
 - Standaard krachtprogramma's en Polar-koppelingen.
+- `PolarAnalysisSettings`: één set numerieke HR-analysegrenzen en Estimated-vlag per atleet, afzonderlijk van de HR-tekst in Athlete settings.
 - COROS-aanvraaginfrastructuur: publieke statuscheck, beveiligde/idempotente workout-pushontvangst en ruwe pushes die op latere OAuth-verwerking wachten.
 
 ## Planningsstroom
@@ -54,3 +55,12 @@ PAC (Pro Athletic Coach) is een zelfstandig Django-project voor coachhulpmiddele
 1. De actuele code en tests bepalen wat werkelijk draait.
 2. `docs/project/` beschrijft de bedoelde werking en productkeuzes.
 3. `CODEX_CONTEXT.md` en oudere Mila4-documenten zijn alleen historische naslag.
+
+## Polar-analysearchitectuur
+
+- `core/views/polar_raw.py`: ingelogde uitleespagina A/B/C/D, atleetselectie, v4-aanvragen, tokenrefresh en presentatie. Route: `/integrations/polar/raw-data/`.
+- `core/views/polar_processing.py`: controleerbare C-tempoverwerking, pauzeconsistentie en begrenzing van vensters.
+- `core/views/polar_analysis.py`: vaste kilometerberekening voor tempo/HR en afzonderlijke optionele AI-toelichting.
+- `core/views/polar_analysis_settings.py`: laden, valideren en bevoegd opslaan van HR-analysegrenzen; wisselen van atleet mag geen oude formulierwaarden naar de nieuwe atleet schrijven.
+- Migratie `0096_polar_analysis_settings` maakt de afzonderlijke instellingentabel. Berekeningen blijven beschikbaar zonder AI-configuratie; ontbrekende of onbetrouwbare dekking blijft zichtbaar.
+- De analyse is op aanvraag en schrijft geen trainingsslots of evaluaties. API-tokens en volledige persoonsgebonden sampledata gaan niet mee naar de AI; alleen compacte numerieke rondegegevens voor de toelichting.

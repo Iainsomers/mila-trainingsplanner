@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
+Bijgewerkt: 12 oktober 2026.
 
 ## Stijl
 
@@ -103,8 +103,15 @@ Controleer bij relevante UI-wijzigingen minimaal:
 
 ## Trainingspopups en teambekleding
 
-- De dynamische trainingspopups in AYC, Flex Planner en Trainer Planning worden onder `document.body` geplaatst, buiten de stacking context van de teambekleding. Daardoor blijft hij boven de Bootstrap-backdrop klikbaar op desktop en mobiel.
+- De dynamische trainingspopups in AYC, Flex Planner en Trainer Planning worden onder `document.body` geplaatst, buiten de stacking context van de teambekleding. Daardoor blijven zij boven de Bootstrap-backdrop klikbaar op desktop en mobiel.
 
 ## Polar-knoppen
 
 Polar Integration en de Type A/B/C/D-dataweergave gebruiken witte knoptekst op gevulde primaire/secundaire knoppen. Teamkleur 2 overschrijft deze tekstkleur niet.
+
+## Polar en DCO Other
+
+- Type C toont ruw/verwerkt min/km, werkelijk venster, status en reden naast elkaar; op smalle schermen staan meetregels als compacte vakken met eigen labels.
+- Type D toont tempo-km en HR-km in één compacte tabel, inclusief Unclassified en totaal. HR-invoer heeft vier bovengrenzen en zichtbare Estimated/Remember-keuzes. Bij wisselen van atleet worden diens grenzen opnieuw geladen.
+- De optionele AI-toelichting staat los van de vaste tabel. Een niet-beschikbare AI blokkeert het kilometeroverzicht niet. Original Polar JSON staat ingeklapt.
+- DCO Other behoudt Vitals als geopende sectie bij vitalkeuze. Show NA is standaard uit en blijft behouden bij wisselen; zonder vinkje worden alleen gemiddelden met minimaal drie bruikbare waarden getoond.

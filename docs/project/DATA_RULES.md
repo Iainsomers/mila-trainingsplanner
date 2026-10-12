@@ -1,6 +1,6 @@
 # Data-, invoer- en rekenregels
 
-Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
+Bijgewerkt: 12 oktober 2026.
 
 ## Zones
 
@@ -8,7 +8,7 @@ Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
 - Zones lopen op in snelheid: Z1 is het rustigst, Z5 het snelst.
 - De applicatie bewaart zones als snelheid in meter per seconde.
 - Z6 wordt gebruikt voor snelle/sprintonderdelen en kan uit standaardlogica komen.
-- Per atleet kunnen voor Z1, Z2 en Z3 handmatig hartslaggrenzen in bpm worden opgeslagen; lege waarden blijven leeg.
+- Per atleet kan voor Z1–Z5 HR-tekst worden opgeslagen, bijvoorbeeld `160-170` of `max 170`; lege waarden blijven leeg. Type D bewaart eigen numerieke analysegrenzen apart.
 
 ## PR- en doel-PR-formaten
 
@@ -26,8 +26,8 @@ Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
 - Een looponderdeel in minuten of seconden toont richttempo in min/km.
 - Omrekening en afronding moeten voor Flex Planner, AYC en DCO hetzelfde zijn.
 - Afgeleide trainingen moeten per atleet worden gekloond/geannoteerd zodat tempo's niet van een andere atleet worden hergebruikt.
-- Als voor Z1, Z2 of Z3 een handmatige HR-grens is ingevuld, tonen Flex Planner en AYC die naast de indicatieve tijd als `HR...` (bijvoorbeeld `HR160`).
-- Bij progressieve zones gebruikt de HR-weergave dezelfde pijlnotatie als de richttijd en neemt zij tussenliggende Z1-Z3-grenzen mee; zones zonder HR, zoals Z4, worden overgeslagen.
+- Als voor een zone Z1–Z5 HR-tekst is ingevuld, tonen Flex Planner en AYC die naast de indicatieve tijd als `HR...` (bijvoorbeeld `HR160`).
+- Bij progressieve zones gebruikt de HR-weergave dezelfde pijlnotatie als de richttijd en neemt zij de ingevulde tussenliggende zones mee; zones zonder HR-tekst worden overgeslagen.
 
 ## Trainingsonderdelen
 
@@ -86,18 +86,32 @@ Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, 
 
 ## Daily vitals
 
+- DCO Other gebruikt de laatste veertien kalenderdagen, inclusief vandaag, voor de gekozen vital. Dit staat los van het weekgemiddelde in AYC.
+
 - Slaapuren kunnen decimalen bevatten.
 - Slaapkwaliteit gebruikt schaal 1–10.
 - Ochtendhartslag en HRV zijn numeriek.
 - Weekgemiddelde pas tonen bij minimaal drie bruikbare waarden.
 - Mobiel worden dezelfde vier gemiddelden gebruikt als desktop; er bestaat geen aparte mobiele berekening.
 
+## Polar: ruwe samples en tempoverwerking
 
-### Polar Type C (2026-10-11)
-Read-only processed pace alongside unchanged raw values. Native distance increments are time-weighted over a centered 15-second window clipped to valid stretches. Manual lap boundaries, missing/negative distance, explicit Polar pauses and possible stops split stretches. A possible stop requires <=0.5 m/s for >=5 seconds. Isolated high/low bursts <=5 seconds require >=5 seconds of stable running on both sides before replacing speed with the neighboring median; flags and reasons remain visible. These provisional thresholds can confuse very short sprints with measurement errors. Pause clock mapping is checked against stop-start and sample duration; omitted paused seconds produce boundaries, uncertain clocks show a warning. No zones or workout mutations. Actual window duration is displayed, with a compact mobile layout.
+- A berekent min/km uit afstand en duur van iedere afzonderlijke ronde; duur blijft tot milliseconden zichtbaar.
+- B berekent tempo uit het verschil in cumulatieve afstand en de tijd sinds de vorige getoonde regel. Eerste regel, ontbrekende afstand en niet-positieve afstandstoename geven NA. Alleen exacte sampletijdstippen worden gekoppeld; geen interpolatie of carry-forward.
+- C berekent native afstandstoenames als snelheid en gebruikt een tijdgewogen, gecentreerd venster van maximaal 15 seconden. Rondegrenzen, ontbrekende/negatieve afstand en pauzes begrenzen het venster. De daadwerkelijke duur staat in de tabel.
+- Mogelijke stilstand: maximaal 0,5 m/s gedurende minimaal 5 seconden. Zonder aanvullende bevestiging blijft dit Possible stop.
+- Een losse hoge/lage snelheidspiek van maximaal 5 seconden wordt alleen vervangen bij minimaal 5 seconden stabiel lopen aan beide kanten. Een losse afstandspiek met negatieve terugval kan samen worden hersteld als de intacte eindpunten en omliggende samples dit ondersteunen. De ruwe data blijft gelijk.
+- Polar-pauzes worden op de elapsed- of active-tijdlijn uitgelijnd. Bij onzekere uitlijning verschijnt een melding. Elapsed-pauzes worden vóór samenvoegen afzonderlijk gecontroleerd: minstens 5 opeenvolgende seconden boven 0,5 m/s spreekt een pauze tegen. Tegenstrijdige en buiten de samples gelegen markeringen worden genegeerd met uitleg; geldige geneste pauzes blijven behouden.
+- Deze eerste verwerkingsregels kunnen zeer korte sprints en meetfouten verwarren. Ook langere pieken rond stoppen/hervatten kunnen blijven staan. Het gecentreerde venster kan een versnelling in voorafgaande regels zichtbaar maken. Gebruik C niet als bewijs van exact gemeten zones.
 
-Type C checks elapsed-time Polar pause intervals individually before merging: >=5 consecutive seconds of measured movement above 0.5 m/s contradicts a pause. Conflicting and out-of-sample pause markers are ignored with visible diagnostics; legitimate nested pauses survive. Single GPS jumps, missing samples and slow drift do not alone establish contradictory movement. Sample-based stop detection remains active; raw values are unchanged. A synthetic regression reproduces the reported overlapping 36-minute pause metadata without storing athlete data.
+## Polar Type D: twee onafhankelijke zoneverdelingen
 
-
-### Polar Type D training analysis (2026-10-11)
-One action returns kilometres by speed zone and HR zone, independently rounded to 100 m. Speed uses nearest configured Z1–Z5 reference and manual lap averages when usable; otherwise only unflagged Type C samples are assigned. HR uses measured distance increments and rounded average endpoint HR, without carrying missing HR forward. Unclassified coverage is explicit. HR upper limits are stored separately per athlete in PolarAnalysisSettings, with an Estimated flag; the initial 145/160/175/185 preset must be reviewed. Z1 has no lower bound, Z5 no upper bound. Profile HR settings are used when all four upper limits can be read. Owned/authorized athletes only; shared view-only coaches cannot save limits. Optional AI uses existing OPENAI_API_KEY/OPENAI_MODEL, receives compact numerical lap facts without identifiers and cannot change deterministic tables. When unavailable, fixed calculations and a structural summary remain visible. Cycling and other known non-running recordings are excluded. No planned workout or evaluation is changed.
+- Tempo: kies de dichtstbijzijnde ingestelde Z1–Z5-snelheid; grenzen liggen op de middelpunten in snelheid, niet in min/km. Onder Z1 valt bij Z1, boven Z5 bij Z5.
+- Bruikbare handmatige rondes krijgen één zone op basis van afstand/duur; binnen een lange ronde wordt tempovariatie niet apart geteld. Onvolledige rondeafdekking blijft Unclassified. Automatische kilometerrondes worden niet als handmatige intervalstructuur gebruikt.
+- Zonder bruikbare handmatige rondes gebruikt D alleen C-regels met status Running, op een vaste 1-secondegrid. Stops, correcties, ontbrekende data en niet-gedekte samples blijven Unclassified. De gekozen A/B/C-weergaveinterval verandert D niet.
+- HR: koppel gemeten afstandstoenames aan het gemiddelde van de twee HR-eindpunten, afgerond naar de dichtstbijzijnde hele bpm. Ontbrekende HR wordt niet doorgetrokken. Verschillende samplefrequenties kunnen de dekking beperken.
+- Vier strikt oplopende HR-bovengrenzen, 40–240 bpm, bepalen Z1–Z4. Z1 heeft geen ondergrens en Z5 begint één bpm boven Z4. Voor de preset 145/160/175/185 zijn de zones ≤145, 146–160, 161–175, 176–185 en ≥186 bpm.
+- Unclassified is niet betrouwbaar toe te wijzen afstand en blijft in het activiteitstotaal. Lage snelheid of lage HR is op zichzelf geen reden voor Unclassified. Kleine stukken na de laatste sample kunnen oningedeeld blijven.
+- Km worden per rij en per totaal afzonderlijk op 100 meter afgerond; de som van afgeronde rijen kan daardoor afwijken van het afgeronde totaal. Reken intern met de ongeronde meters. Bij duidelijke overschatting door afstandsdiscontinuïteiten wordt geen geforceerde normalisatie toegepast.
+- Tempo en HR meten verschillende aspecten. HR reageert vertraagd op versnellen en herstellen; de twee zoneverdelingen hoeven niet gelijk te zijn.
+- AI beschrijft een vermoedelijke trainingsstructuur, bepaalt geen zonegrenzen en verandert de vaste kilometerberekening niet.

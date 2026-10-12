@@ -1,12 +1,12 @@
 # Functionele onderdelen
 
-Laatst inhoudelijk gecontroleerd: 7 oktober 2026.
+Bijgewerkt: 12 oktober 2026.
 
 ## Dashboard en Planning
 
-Het coachdashboard toont Planning bovenaan. Onder `Coach dashboard` staat voor trainers met gedeelde toegang een `View as coach`-keuze. Standaard kijkt een trainer als zichzelf; na selectie van een andere toegestane coach tonen plannings- en beheerschermen alleen de gegevens van die coach. De dropdown toont of die toegang view-only of edit is; bij view-only worden schrijfacties server-side geblokkeerd. Admin, Stats, Polar en Settings (under development) staan onderaan. De Settings-tegel doet voorlopig niets.
+Het coachdashboard toont Planning bovenaan. Onder `Coach dashboard` staat voor trainers met gedeelde toegang een `View as coach`-keuze. Standaard kijkt een trainer als zichzelf; na selectie van een andere toegestane coach tonen plannings- en beheerschermen alleen de gegevens van die coach. De dropdown toont of die toegang view-only of edit is; bij view-only worden schrijfacties server-side geblokkeerd. Settings is een werkende dashboardtegel voor coachinstellingen, waaronder Planning Camps. Stats en Polar houden hun under-development-aanduiding.
 
-Planning is voor coaches gegroepeerd in Coach plannings, Views en Standards. Coach plannings bevat Athletes, Trainer planning, Flex Planner, Races en Year Planner. Na inschakeling van `Planning Camps` in de eigen Settings verschijnt hier ook Details Camps. Views bevat Athlete Year Calendar, Daily Coach Overview Training en Daily Coach Overview Other. Daily Coach Overview Other heeft de inklapbare blokken Info Quality en Vitals; Info Quality toont per eigen atleet het aantal openstaande AYC-evaluaties van de afgelopen zeven dagen, exclusief vandaag. Vitals is voorbereid maar nog leeg. Standards bevat Saved Trainings en Standard Strength. Atleten gebruiken Planning voor Athlete Year Calendar, Athlete settings, Races en, wanneer toegestaan, Year Planner.
+Planning is voor coaches gegroepeerd in Coach plannings, Views en Standards. Coach plannings bevat Athletes, Trainer planning, Flex Planner, Races en Year Planner. Na inschakeling van `Planning Camps` in de eigen Settings verschijnt hier ook Details Camps. Views bevat Athlete Year Calendar, Daily Coach Overview Training en Daily Coach Overview Other. Daily Coach Overview Other heeft de inklapbare blokken Info Quality en Vitals; Info Quality toont per eigen atleet het aantal openstaande AYC-evaluaties van de afgelopen zeven dagen, exclusief vandaag. Vitals toont per atleet het gemiddelde van de gekozen vital over de laatste veertien kalenderdagen, inclusief vandaag, bij minimaal drie bruikbare dagwaarden. Zie het Vitals-filter hieronder. Standards bevat Saved Trainings en Standard Strength. Atleten gebruiken Planning voor Athlete Year Calendar, Athlete settings, Races en, wanneer toegestaan, Year Planner.
 
 Het dashboard bevat daarnaast Coach Tools. MiLa bevat daar alleen de Track Timer; Match Overview en de PR-database zijn verplaatst naar het aparte PAC-project. De timer toont een getekende atletiekbaan met 100m-punten, een afstandskeuze van 100m tot 1600m, een optionele doeltijd en een single/multiple-modus voor één of drie atleten. In multiple staan drie gekleurde atleetknoppen en een zwarte knop voor alle drie. De start/finishknop kan naar een van de vier meetpunten worden gesleept, waarna de andere meetpunten meedraaien. Bij afstanden boven 400m moeten 400m-doorkomsten worden vastgelegd voordat de eindtijd kan worden gestopt. De resultaten tonen tussentijd, tempo per 100 m, min/km en eventueel afwijking van de doeltijd; een lijn op de baan visualiseert het doeltempo.
 
@@ -155,16 +155,26 @@ De vier voor de aanvraag vereiste MiLa-logo's staan in `core/static/core/brand/c
 
 - `Show NA` staat standaard uit: alleen atleten met minimaal drie ingevulde waarden voor de gekozen vital worden getoond. Met het vinkje aan verschijnen ook de NA-regels. De keuze blijft behouden bij wisselen van vital; Vitals blijft open.
 
+## Polar Integration — Type A/B/C/D
 
-### Polar raw data (2026-10-11)
-Polar Integration links to a read-only v4 data inspector. Type A shows recorded totals and separate manual/automatic laps with millisecond durations. Type B shows cumulative DISTANCE and HEART_RATE samples at a configurable 1–3600 second interval; unmatched timestamps and missing values are NA, without interpolation or speed estimates. One selected local calendar day is fetched server-side with Bearer authentication and one token refresh on 401. Original JSON is available for inspection. No training matching or import is performed. Athlete selection excludes unrelated Polar-user connections. Display is capped at 24 recording hours; original JSON is retained.
+De aparte uitleespagina haalt één gekozen kalenderdag via de bestaande Polar v4-koppeling op. De app gebruikt het Bearer-token; een API-link in de browser vraagt niet om de juiste koppeling. Bij HTTP 401 probeert de app één tokenvernieuwing; datumparsefouten krijgen alternatieve datumformaten. Andere fouten tonen de Polar-foutreden.
 
-Polar raw data includes min/km: Type A uses each individual lap duration/distance; Type B uses the selected interval and the cumulative distance difference between consecutive displayed rows. Pace is rounded to whole seconds per km. Missing, zero or negative distance increments and the initial sample show NA. Missing samples break the segment; no interpolation is applied.
+| Type | Uitkomst |
+| --- | --- |
+| A | Afstand, duur, aparte handmatige/automatische rondes en min/km per ronde. |
+| B | Cumulatieve afstand, hartslag en tempo over het vorige getoonde interval; interval 1–3600 seconden. |
+| C | Ruw en verwerkt tempo naast elkaar, met werkelijke vensterduur, status en reden. |
+| D | Km per tempozone en HR-zone in één overzicht, plus een vaste trainingssamenvatting en optionele AI-toelichting. |
 
+- Original Polar JSON blijft beschikbaar. A/B veranderen of schatten geen ontbrekende samples; NA betekent ontbrekend of niet berekenbaar.
+- C gebruikt een gecentreerd venster van maximaal 15 seconden binnen rondegrenzen, pauzes en geldige data. Mogelijke stops en meetpieken blijven zichtbaar. De criteria staan in `DATA_RULES.md`.
+- D gebruikt handmatige rondegemiddelden wanneer bruikbaar; anders alleen ongeflagde C-tempo's. De tempozones komen uit Athlete settings. Bekende niet-hardloopsporten worden uitgesloten en recordings worden afzonderlijk geanalyseerd.
+- HR gebruikt afstandstoenames en gemiddelde hartslag van de eindpunten. De vier bovengrenzen voor Z1–Z4 zijn invoerbaar; Z1 heeft geen ondergrens, Z5 is open naar boven.
+- Eerder opgeslagen Type D-grenzen gaan voor. Anders vult de app leesbare HR-grenzen uit Athlete settings aan met de geschatte preset 145/160/175/185 bpm. Deze preset moet voor de atleet worden beoordeeld. `Remember these HR limits for this athlete` bewaart grenzen en Estimated-vlag apart van Athlete settings.
+- Unclassified blijft onderdeel van het totaal en toont niet betrouwbaar in te delen afstand. Alle km-weergaven zijn onafhankelijk afgerond op 100 meter.
+- AI kan alleen de trainingsstructuur toelichten en wijzigt geen berekende tabel. Bij ontbrekende API-configuratie of een fout blijven de vaste berekeningen en samenvatting beschikbaar.
+- Deze pagina's veranderen geen training, planning of evaluatie. De sampleweergave/verwerking is begrensd tot 24 recordinguren; ontbrekende dekking wordt niet aangevuld.
 
-### Polar Type C (2026-10-11)
-Read-only processed pace alongside unchanged raw values. Native distance increments are time-weighted over a centered 15-second window clipped to valid stretches. Manual lap boundaries, missing/negative distance, explicit Polar pauses and possible stops split stretches. A possible stop requires <=0.5 m/s for >=5 seconds. Isolated high/low bursts <=5 seconds require >=5 seconds of stable running on both sides before replacing speed with the neighboring median; flags and reasons remain visible. These provisional thresholds can confuse very short sprints with measurement errors. Pause clock mapping is checked against stop-start and sample duration; omitted paused seconds produce boundaries, uncertain clocks show a warning. No zones or workout mutations. Actual window duration is displayed, with a compact mobile layout.
+## Trainingspopups en knopcontrast
 
-
-### Polar Type D training analysis (2026-10-11)
-One action returns kilometres by speed zone and HR zone, independently rounded to 100 m. Speed uses nearest configured Z1–Z5 reference and manual lap averages when usable; otherwise only unflagged Type C samples are assigned. HR uses measured distance increments and rounded average endpoint HR, without carrying missing HR forward. Unclassified coverage is explicit. HR upper limits are stored separately per athlete in PolarAnalysisSettings, with an Estimated flag; the initial 145/160/175/185 preset must be reviewed. Z1 has no lower bound, Z5 no upper bound. Profile HR settings are used when all four upper limits can be read. Owned/authorized athletes only; shared view-only coaches cannot save limits. Optional AI uses existing OPENAI_API_KEY/OPENAI_MODEL, receives compact numerical lap facts without identifiers and cannot change deterministic tables. When unavailable, fixed calculations and a structural summary remain visible. Cycling and other known non-running recordings are excluded. No planned workout or evaluation is changed.
+AYC, Flex Planner en Trainer Planning plaatsen de trainingspopup onder `document.body`, boven de Bootstrap-backdrop en buiten de teambekleding. Flex ondersteunt dit bij zowel fetch als HTMX; Trainer Planning bij HTMX. Polar-knoppen gebruiken witte tekst op gevulde achtergronden, onafhankelijk van teamkleur 2.

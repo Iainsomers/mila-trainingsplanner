@@ -1,6 +1,6 @@
 # Actuele status
 
-Bijgewerkt: 7 oktober 2026.
+Bijgewerkt: 12 oktober 2026.
 
 ## Productiestatus
 
@@ -9,7 +9,7 @@ Bijgewerkt: 7 oktober 2026.
 - Het MiLa-logo wordt als browser- en beginschermicoon aangeboden op iOS en Android.
 - De recent aangevraagde atleetaccounts zijn rechtstreeks in productie aangemaakt en aan de bestaande coach-atleetstructuur gekoppeld. Wachtwoorden staan niet in Git of projectdocumentatie.
 
-## Actieve vervolgstap
+## Campplanning
 
 - Coach Settings bevat als eerste instelling een opgeslagen aan/uitknop `Planning Camps`, standaard uit.
 - Bij inschakeling verschijnt `Details Camps` in de Coach plannings-sectie. Genoemde Camp-whereabouts worden per kampnaam samengevoegd; het overzicht bevat atleten en toegankelijke coaches met ieder hun eigen aankomst- en vertrekdatum. Per deelnemer zijn die datums en in-/uitvluchtgegevens automatisch opgeslagen; datums werken rechtstreeks de Year Planner-range bij. De campdetailtabel sorteert op alle inhoudelijke kolommen, heeft Copy/Paste en een delete-knop per bewerkbare deelnemersregel en markeert coachregels lichtgeel.
@@ -44,26 +44,26 @@ Bijgewerkt: 7 oktober 2026.
 
 ## Bekende aandachtspunten
 
-- Settings bevat bestaande technische voorkeuren, maar de dashboardtegel wordt nog als `under development` gepresenteerd. `Planning Camps` wordt de eerste expliciet aangevraagde coachinstelling.
-- Daily Coach Overview Other is beschikbaar met de inklapbare blokken Info Quality en Vitals. Info Quality toont per eigen atleet openstaande AYC-evaluaties van de afgelopen zeven dagen, exclusief vandaag; Vitals is nog leeg.
+- Settings is een werkende coachdashboardtegel met onder meer Planning Camps; Stats en Polar houden hun under-development-label.
+- Daily Coach Overview Other is beschikbaar met de inklapbare blokken Info Quality en Vitals. Info Quality toont per eigen atleet openstaande AYC-evaluaties van de afgelopen zeven dagen, exclusief vandaag. Vitals toont gemiddelden over de laatste veertien kalenderdagen bij minimaal drie waarden; Show NA staat uit en de vitalkeuze houdt Vitals open.
 - Stats is bewust eenvoudig en nog in ontwikkeling.
 - Polar/watch suggestions, vooral automatische workoutmatching zonder handmatige laps, hebben verdere testgevallen en verfijning nodig.
 - E-mail-, WhatsApp- of pushreminders voor openstaande evaluaties zijn nog niet gebouwd; de huidige herinnering is alleen de AYC-popup.
 
+## Afgerond in main, 11–12 oktober 2026
 
-### Polar raw data (2026-10-11)
-Polar Integration links to a read-only v4 data inspector. Type A shows recorded totals and separate manual/automatic laps with millisecond durations. Type B shows cumulative DISTANCE and HEART_RATE samples at a configurable 1–3600 second interval; unmatched timestamps and missing values are NA, without interpolation or speed estimates. One selected local calendar day is fetched server-side with Bearer authentication and one token refresh on 401. Original JSON is available for inspection. No training matching or import is performed. Athlete selection excludes unrelated Polar-user connections. Display is capped at 24 recording hours; original JSON is retained.
+- Polar Integration bevat A/B/C/D: ruwe rondes, samples, tempoverwerking en één overzicht met kilometers per tempozone en HR-zone.
+- Type D reproduceert de gecontroleerde voorbeeldtraining: tempo Z1 7,6 km / Z3 5,4 km; HR met de besproken geschatte grenzen 3,8 / 3,9 / 3,6 / 1,7 / 0,0 km. Dit voorbeeld is een rekentest, geen algemeen aanbevolen HR-profiel.
+- Overlappende Polar-pauzemarkeringen tijdens aantoonbare beweging verbergen de loopdata niet meer. Regels uit de aangeleverde JSON zijn lokaal gecontroleerd; persoonsgegevens zijn niet als testfixture gecommit.
+- Type D heeft eigen opgeslagen HR-grenzen per atleet en migratie `0096_polar_analysis_settings`. AI-toelichting gebruikt de bestaande API-configuratie en heeft een zichtbare terugval als die ontbreekt.
+- Polar-knoppen hebben witte tekst op gevulde achtergronden. AYC-, Flex- en Trainer Planning-popups zijn buiten de teambekleding geplaatst zodat invoer, Save en Close boven de backdrop blijven.
+- DCO Other heeft werkende Vitals, behoud van het geopende blok en Show NA-filter.
+- Laatste applicatiecommit vóór deze documentatieronde: `9198f0c`. Pushes staan op main; de daadwerkelijke Render-deploystatus is bij deze documentatieronde niet apart bevestigd.
 
-Polar raw-data requests start with the known working seconds-only date format and retry alternate formats on Polar date parsing errors. HTTP errors include the Polar error detail; reconnect advice is restricted to 401/403.
+## Validatie en resterende beperkingen
 
-Polar raw data includes min/km: Type A uses each individual lap duration/distance; Type B uses the selected interval and the cumulative distance difference between consecutive displayed rows. Pace is rounded to whole seconds per km. Missing, zero or negative distance increments and the initial sample show NA. Missing samples break the segment; no interpolation is applied.
-
-
-### Polar Type C (2026-10-11)
-Read-only processed pace alongside unchanged raw values. Native distance increments are time-weighted over a centered 15-second window clipped to valid stretches. Manual lap boundaries, missing/negative distance, explicit Polar pauses and possible stops split stretches. A possible stop requires <=0.5 m/s for >=5 seconds. Isolated high/low bursts <=5 seconds require >=5 seconds of stable running on both sides before replacing speed with the neighboring median; flags and reasons remain visible. These provisional thresholds can confuse very short sprints with measurement errors. Pause clock mapping is checked against stop-start and sample duration; omitted paused seconds produce boundaries, uncertain clocks show a warning. No zones or workout mutations. Actual window duration is displayed, with a compact mobile layout.
-
-Type C checks elapsed-time Polar pause intervals individually before merging: >=5 consecutive seconds of measured movement above 0.5 m/s contradicts a pause. Conflicting and out-of-sample pause markers are ignored with visible diagnostics; legitimate nested pauses survive. Single GPS jumps, missing samples and slow drift do not alone establish contradictory movement. Sample-based stop detection remains active; raw values are unchanged. A synthetic regression reproduces the reported overlapping 36-minute pause metadata without storing athlete data.
-
-
-### Polar Type D training analysis (2026-10-11)
-One action returns kilometres by speed zone and HR zone, independently rounded to 100 m. Speed uses nearest configured Z1–Z5 reference and manual lap averages when usable; otherwise only unflagged Type C samples are assigned. HR uses measured distance increments and rounded average endpoint HR, without carrying missing HR forward. Unclassified coverage is explicit. HR upper limits are stored separately per athlete in PolarAnalysisSettings, with an Estimated flag; the initial 145/160/175/185 preset must be reviewed. Z1 has no lower bound, Z5 no upper bound. Profile HR settings are used when all four upper limits can be read. Owned/authorized athletes only; shared view-only coaches cannot save limits. Optional AI uses existing OPENAI_API_KEY/OPENAI_MODEL, receives compact numerical lap facts without identifiers and cannot change deterministic tables. When unavailable, fixed calculations and a structural summary remain visible. Cycling and other known non-running recordings are excluded. No planned workout or evaluation is changed.
+- De 46 gerichte Polar-tests slaagden, inclusief Type D-berekening, HR-opslag en rechten. Django-check en migratiecontrole slaagden; beide zoneverdelingen zijn tegen de aangeleverde JSON gecontroleerd.
+- Witte Polar-knoptekst en Type D zijn op 390/1440 px gecontroleerd. De popupblokkade is met de echte Flex/Trainer-openers gereproduceerd en opgelost voor AM/PM, lege/bestaande invoer en klikbaarheid van Save/Close. Vier gerichte Django-modaltests slaagden.
+- C blijft een eerste versie: tempopieken rond stops en hervatten zijn niet altijd betrouwbaar te corrigeren. Type D gebruikt daarom bij voorkeur rondegemiddelden; zonder bruikbare rondes blijft de sampleanalyse conservatief.
+- De HR-preset is geschat en moet per atleet beoordeeld worden. Een hoogste gemeten trainingshartslag is niet automatisch HRmax.
+- Type D staat los van planning en evaluatie: automatische overname naar AYC is niet gebouwd. AI-uitvoer is een interpretatie, geen vastgestelde uitvoering of medische drempelmeting.
