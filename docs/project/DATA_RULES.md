@@ -87,6 +87,7 @@ Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, 
 ## Daily vitals
 
 - DCO Other gebruikt de laatste veertien kalenderdagen, inclusief vandaag, voor de gekozen vital. Dit staat los van het weekgemiddelde in AYC.
+- DCO Other HR-zones lezen `Athlete.zone_hr_bpm`. Een enkel getal is de bovengrens: Z1 wordt `0-max`, Z2–Z4 krijgen de volgende aaneengesloten ondergrens en Z5 toont voorlopig de ingevoerde waarde. Expliciete bereiken worden ongewijzigd getoond; een ondergrens die niet aansluit op de vorige bovengrens wordt als afwijkend gemarkeerd.
 
 - Slaapuren kunnen decimalen bevatten.
 - Slaapkwaliteit gebruikt schaal 1–10.

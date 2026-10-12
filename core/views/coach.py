@@ -10896,6 +10896,7 @@ def daily_overview_other_view(request):
         {"key": "sleep_quality", "label": "Sleep quality", "field": "sleep_quality", "suffix": "", "decimals": 1},
         {"key": "morning_hr", "label": "Morning HR", "field": "morning_hr", "suffix": "", "decimals": 1},
         {"key": "hrv", "label": "HRV", "field": "hrv", "suffix": "", "decimals": 1},
+        {"key": "hr_zones", "label": "HR zones", "field": None, "suffix": "", "decimals": 0},
     ]
     selected_vital_key = request.GET.get("vital", "sleep_hours")
     vitals_open = bool(request.GET.get("vital"))
@@ -10911,7 +10912,7 @@ def daily_overview_other_view(request):
         if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
     }
     vital_values = {}
-    if visible_vital_athlete_ids:
+    if visible_vital_athlete_ids and selected_vital["field"]:
         for vital in AthleteDailyVital.objects.filter(
             athlete_id__in=visible_vital_athlete_ids,
             date__range=(vitals_window_start, today),
@@ -10921,15 +10922,76 @@ def daily_overview_other_view(request):
                 vital_values.setdefault(vital.athlete_id, []).append(float(value))
 
     vital_rows = []
-    for athlete in athletes:
-        values = vital_values.get(athlete.id, [])
-        if len(values) < 3:
-            display_value = "NA"
-        else:
-            average = sum(values) / len(values)
-            display_value = f"{average:.{selected_vital['decimals']}f}{selected_vital['suffix']}"
-        if show_na or len(values) >= 3:
-            vital_rows.append({"athlete": athlete, "value": display_value, "sample_count": len(values)})
+    hr_zone_rows = []
+    if selected_vital["key"] == "hr_zones":
+        def parse_hr_input(raw):
+            text = str(raw or "").strip()
+            if not text:
+                return None
+            numbers = [int(value) for value in re.findall(r"\d{2,3}", text)]
+            if not numbers:
+                return None
+            if len(numbers) >= 2:
+                return {"raw": text, "low": numbers[0], "high": numbers[1], "explicit": True}
+            return {"raw": text, "low": None, "high": numbers[0], "explicit": False}
+
+        def make_hr_zones(athlete):
+            raw_zones = getattr(athlete, "zone_hr_bpm", {}) or {}
+            parsed = {str(zone): parse_hr_input(raw_zones.get(str(zone), "")) for zone in range(1, 6)}
+            if not any(parsed.values()):
+                return None
+
+            zones = []
+            previous_high = None
+            for zone in range(1, 6):
+                item = parsed[str(zone)]
+                if not item:
+                    zones.append({"text": "NA", "misaligned": False})
+                    continue
+                if item["explicit"]:
+                    low, high = item["low"], item["high"]
+                    if zone == 1:
+                        aligned = low in (0, 1)
+                    elif previous_high is None:
+                        aligned = True
+                    else:
+                        aligned = low in (previous_high, previous_high + 1)
+                    if high < low:
+                        aligned = False
+                    display = item["raw"]
+                else:
+                    high = item["high"]
+                    low = 0 if zone == 1 else (previous_high + 1 if previous_high is not None else None)
+                    aligned = previous_high is None or high > previous_high
+                    if zone == 5:
+                        display = item["raw"]
+                    elif low is None:
+                        display = str(high)
+                    else:
+                        display = f"{low}-{high}"
+                zones.append({"text": display, "misaligned": not aligned})
+                previous_high = high
+            return zones
+
+        for athlete in athletes:
+            if athlete.id not in visible_vital_athlete_ids:
+                continue
+            zones = make_hr_zones(athlete)
+            if zones is not None or show_na:
+                hr_zone_rows.append({
+                    "athlete": athlete,
+                    "zones": zones or [{"text": "NA", "misaligned": False} for _ in range(5)],
+                })
+    else:
+        for athlete in athletes:
+            values = vital_values.get(athlete.id, [])
+            if len(values) < 3:
+                display_value = "NA"
+            else:
+                average = sum(values) / len(values)
+                display_value = f"{average:.{selected_vital['decimals']}f}{selected_vital['suffix']}"
+            if show_na or len(values) >= 3:
+                vital_rows.append({"athlete": athlete, "value": display_value, "sample_count": len(values)})
 
     return render(request, "core/daily_overview_other.html", {
         "athlete_rows": counts,
@@ -10942,4 +11004,5 @@ def daily_overview_other_view(request):
         "show_na": show_na,
         "vitals_window_start": vitals_window_start,
         "vitals_window_end": today,
+        "hr_zone_rows": hr_zone_rows,
     })

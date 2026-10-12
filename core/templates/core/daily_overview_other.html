@@ -43,6 +43,9 @@
   .vital-selector { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
   .vital-selector .btn { min-width: 9rem; }
   .vital-table th, .vital-table td { vertical-align: middle; }
+  .hr-zone-table th, .hr-zone-table td { vertical-align: middle; text-align: center; }
+  .hr-zone-table th:first-child, .hr-zone-table td:first-child { text-align: left; }
+  .hr-zone-misaligned { color: #c00000; font-weight: 700; }
 </style>
 {% endblock %}
 
@@ -93,6 +96,26 @@
           <span class="form-check-label">Show NA</span>
         </label>
       </form>
+      {% if selected_vital.key == "hr_zones" %}
+      <p class="text-muted small">HR zones from Athlete settings. Single values are shown as zone maximums; zone 5 keeps the entered value.</p>
+      <div class="table-responsive">
+        <table class="table table-sm hr-zone-table mb-0">
+          <thead><tr><th>Athlete</th><th>Z1</th><th>Z2</th><th>Z3</th><th>Z4</th><th>Z5</th></tr></thead>
+          <tbody>
+            {% for row in hr_zone_rows %}
+              <tr>
+                <td>{{ row.athlete.name }}</td>
+                {% for zone in row.zones %}
+                  <td{% if zone.misaligned %} class="hr-zone-misaligned" title="Zone boundaries do not connect cleanly"{% endif %}>{{ zone.text }}</td>
+                {% endfor %}
+              </tr>
+            {% empty %}
+              <tr><td colspan="6" class="text-muted">No athletes found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
       <p class="text-muted small">Average from {{ vitals_window_start|date:"d-m-Y" }} through {{ vitals_window_end|date:"d-m-Y" }}. At least three entries are required.</p>
       <div class="table-responsive">
         <table class="table table-sm vital-table mb-0">
@@ -106,6 +129,7 @@
           </tbody>
         </table>
       </div>
+      {% endif %}
     </div>
   </details>
 </main>

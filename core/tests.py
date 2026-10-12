@@ -1202,6 +1202,60 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(len(shown_na.context["vital_rows"]), 2)
         self.assertTrue(all(row["value"] == "NA" for row in shown_na.context["vital_rows"]))
 
+    def test_daily_overview_other_shows_hr_zone_matrix_and_hides_empty_athletes(self):
+        coach = get_user_model().objects.create_user(
+            username="hr-zones-overview-coach",
+            password="secret",
+            is_staff=True,
+        )
+        Athlete.objects.create(
+            owner=coach,
+            name="Single HR Athlete",
+            birth_year=2000,
+            gender="X",
+            zone_hr_bpm={"1": "145", "2": "160", "3": "175", "4": "185", "5": "190"},
+        )
+        Athlete.objects.create(
+            owner=coach,
+            name="Aligned HR Athlete",
+            birth_year=2000,
+            gender="X",
+            zone_hr_bpm={"1": "0-145", "2": "146-160", "3": "161-175", "4": "176-185", "5": "186-190"},
+        )
+        Athlete.objects.create(
+            owner=coach,
+            name="Misaligned HR Athlete",
+            birth_year=2000,
+            gender="X",
+            zone_hr_bpm={"1": "0-145", "2": "150-160"},
+        )
+        Athlete.objects.create(
+            owner=coach,
+            name="No HR Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+
+        self.client.force_login(coach)
+        response = self.client.get("/coach/daily-overview-other/?vital=hr_zones")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "HR zones")
+        self.assertContains(response, "0-145")
+        self.assertContains(response, "146-160")
+        self.assertContains(response, "Single HR Athlete")
+        self.assertContains(response, "hr-zone-misaligned", html=False)
+        self.assertEqual(len(response.context["hr_zone_rows"]), 3)
+        self.assertNotIn(
+            "No HR Athlete",
+            [row["athlete"].name for row in response.context["hr_zone_rows"]],
+        )
+
+        shown_na = self.client.get("/coach/daily-overview-other/?vital=hr_zones&show_na=1")
+        self.assertEqual(len(shown_na.context["hr_zone_rows"]), 4)
+        self.assertContains(shown_na, "No HR Athlete")
+        self.assertContains(shown_na, ">NA<", html=False)
+
     def test_focus_points_page_lists_active_coach_athletes(self):
         coach = get_user_model().objects.create_user(
             username="focus-points-coach", password="secret", is_staff=True

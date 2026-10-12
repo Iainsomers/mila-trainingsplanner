@@ -154,6 +154,7 @@ De vier voor de aanvraag vereiste MiLa-logo's staan in `core/static/core/brand/c
 ## DCO Other — Vitals-filter
 
 - `Show NA` staat standaard uit: alleen atleten met minimaal drie ingevulde waarden voor de gekozen vital worden getoond. Met het vinkje aan verschijnen ook de NA-regels. De keuze blijft behouden bij wisselen van vital; Vitals blijft open.
+- `HR zones` is de vijfde vitalkeuze. De matrix toont Z1–Z5 horizontaal en atleten verticaal. Atleten zonder HR-invoer worden standaard verborgen; `Show NA` toont ook hen. Losse HR-getallen worden als zone-maxima weergegeven (Z1 vanaf 0, Z5 blijft de ingevoerde waarde). Zelf ingevoerde bereiken blijven staan; niet-aansluitende grenzen worden rood gemarkeerd.
 
 ## Polar Integration — Type A/B/C/D
 

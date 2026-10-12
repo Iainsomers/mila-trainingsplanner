@@ -115,3 +115,4 @@ Polar Integration en de Type A/B/C/D-dataweergave gebruiken witte knoptekst op g
 - Type D toont tempo-km en HR-km in één compacte tabel, inclusief Unclassified en totaal. HR-invoer heeft vier bovengrenzen en zichtbare Estimated/Remember-keuzes. Bij wisselen van atleet worden diens grenzen opnieuw geladen.
 - De optionele AI-toelichting staat los van de vaste tabel. Een niet-beschikbare AI blokkeert het kilometeroverzicht niet. Original Polar JSON staat ingeklapt.
 - DCO Other behoudt Vitals als geopende sectie bij vitalkeuze. Show NA is standaard uit en blijft behouden bij wisselen; zonder vinkje worden alleen gemiddelden met minimaal drie bruikbare waarden getoond.
+- DCO Other toont naast de vier gemiddelden een `HR zones`-knop met een compacte tabel: atleten verticaal, Z1–Z5 horizontaal. Niet-aansluitende, zelf ingevoerde grenzen krijgen rode tekst; `Show NA` werkt ook voor deze tabel.
