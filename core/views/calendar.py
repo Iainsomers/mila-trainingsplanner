@@ -3025,7 +3025,7 @@ def athlete_year_calendar_view(request):
     weeks = max(0, ((end - start).days // 7) + 1)
 
     owner = _active_coach_user(request)
-    slot_map = {}
+    slot_lookup = {}
     has_fix_keys = set()
     flex_plan = None
     flex_override_map = {}
@@ -3081,7 +3081,9 @@ def athlete_year_calendar_view(request):
                 .select_related("plan", "athlete")
             )
 
-            slot_map, has_fix_keys = _build_effective_slot_maps(slot_q)
+            for slot in slot_q:
+                athlete_key = slot.athlete_id or None
+                slot_lookup[(slot.plan_id, athlete_key, slot.date, slot.slot_index)] = slot
 
         if flex_plan:
             flex_override_qs = (
@@ -3247,6 +3249,16 @@ def athlete_year_calendar_view(request):
     pending_evaluation_reminders = []
     reminder_start = today - timedelta(days=7)
     reminder_end = today - timedelta(days=1)
+    active_source_plans = []
+    if selected_athlete:
+        for plan in athlete_plans:
+            if _is_flex_planner_plan(plan):
+                continue
+            try:
+                if selected_athlete.id in plan.targeted_athlete_ids():
+                    active_source_plans.append(plan)
+            except Exception:
+                continue
     d = start
 
     for _ in range(weeks):
@@ -3270,9 +3282,22 @@ def athlete_year_calendar_view(request):
                 check1 = check_map.get((day, 1))
                 check2 = check_map.get((day, 2))
 
-            slot1 = _visible_year_slot(slot_map, has_fix_keys, k1)
-            slot2 = _visible_year_slot(slot_map, has_fix_keys, k2)
-            day_plan = _athlete_plan_for_day(athlete_plans, day) if selected_athlete else None
+            day_plan = _athlete_plan_for_day(active_source_plans, day) if selected_athlete else None
+            slot1 = None
+            slot2 = None
+            if day_plan and selected_athlete:
+                override1 = slot_lookup.get((day_plan.id, selected_athlete.id, day, 1))
+                override2 = slot_lookup.get((day_plan.id, selected_athlete.id, day, 2))
+                slot1 = override1 or slot_lookup.get((day_plan.id, None, day, 1))
+                slot2 = override2 or slot_lookup.get((day_plan.id, None, day, 2))
+                if override1 is not None:
+                    has_fix_keys.add(k1)
+                    if _slot_is_visually_empty(override1):
+                        slot1 = None
+                if override2 is not None:
+                    has_fix_keys.add(k2)
+                    if _slot_is_visually_empty(override2):
+                        slot2 = None
             plan1 = slot1.plan if slot1 else day_plan
             plan2 = slot2.plan if slot2 else day_plan
             flex_blocks_slot1 = False
@@ -3280,6 +3305,7 @@ def athlete_year_calendar_view(request):
 
             flex_override1 = flex_override_map.get(k1)
             if flex_override1 is not None:
+                has_fix_keys.add(k1)
                 plan1 = flex_plan
                 if _slot_is_visually_empty(flex_override1):
                     if not _slot_has_race(slot1):
@@ -3290,6 +3316,7 @@ def athlete_year_calendar_view(request):
 
             flex_override2 = flex_override_map.get(k2)
             if flex_override2 is not None:
+                has_fix_keys.add(k2)
                 plan2 = flex_plan
                 if _slot_is_visually_empty(flex_override2):
                     if not _slot_has_race(slot2):

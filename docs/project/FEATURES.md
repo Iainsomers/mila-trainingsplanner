@@ -129,6 +129,8 @@ De trainer kan per atleet `Extended edit rights` aanzetten. Daarmee mag de atlee
 
 Flex Planner en AYC herkennen tempo's zoals `TM`, `THM`, `T4` en `T1500` alleen als losse labels. De tekstzoeker verwijdert geen spaties meer voordat hij zoekt, zodat woorden als `ritme` niet langer onterecht als `TM` worden geteld. Afstanden blijven wel meetellen in hun normale zone.
 
+Flex Planner en AYC kiezen voor een atleet op een datum dezelfde actieve bronplanning. Persoonlijke slots uit oude of niet meer toegewezen plannen mogen de actuele training niet overschrijven of verbergen; een Flex-override behoudt wel altijd voorrang.
+
 ## Daily Coach Overview Training
 
 Selectie op datum, AM/PM, alle atleten, selectie, trains, geplande training en opgeslagen selecties. De resultaatpagina behoudt de selectie en toont atleet-specifieke tempo's, RPE en opmerkingen.

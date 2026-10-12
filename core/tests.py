@@ -3527,6 +3527,62 @@ class SlotModalSaveTests(TestCase):
         self.assertIsNotNone(target_cell)
         self.assertIsNone(target_cell["slot"])
 
+    def test_athlete_year_uses_same_active_plan_as_flex_for_standard_strength(self):
+        user = get_user_model().objects.create_user(
+            username="ayc-strength-plan-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="AYC Strength Plan Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        active_plan = TrainingPlan.objects.create(owner=user, name="Active athlete plan")
+        PlanMembership.objects.create(plan=active_plan, athlete=athlete)
+        TrainingPlan.objects.create(owner=user, name=f"Flex Planner {user.id}")
+        program = StandardStrengthProgram.objects.create(owner=user, name="Monday strength")
+        day = date(2026, 10, 12)
+        active_slot = TrainingSlot.objects.create(plan=active_plan, date=day, slot_index=1)
+        active_slot.segments.create(
+            type="MOB",
+            text=program.name,
+            standard_strength_program=program,
+            order=1,
+        )
+
+        old_plan = TrainingPlan.objects.create(owner=user, name="Old unrelated plan")
+        TrainingSlot.objects.create(
+            plan=old_plan,
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+        )
+        self.client.force_login(user)
+
+        flex_page = self.client.get(
+            f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        flex_cell = flex_page.context["week_rows"][0]["athlete_rows"][0]["am_cells"][0]
+        self.assertEqual(flex_cell["slot"].plan_id, active_plan.id)
+        self.assertEqual(
+            flex_cell["slot"].segments.all()[0].standard_strength_program,
+            program,
+        )
+
+        ayc_page = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}&hide=none"
+        )
+        ayc_cell = next(
+            cell
+            for week in ayc_page.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        self.assertEqual(ayc_cell["slot"].id, active_slot.id)
+        self.assertContains(ayc_page, "Monday strength")
+
     def test_athlete_year_shows_pending_evaluation_reminders_for_past_week(self):
         coach = get_user_model().objects.create_user(
             username="ayc-reminder-coach",
