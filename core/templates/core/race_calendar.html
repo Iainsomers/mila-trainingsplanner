@@ -382,6 +382,13 @@
 
 <script>
 (function() {
+  // Team branding wraps the calendar in its own stacking context. Keep all
+  // Bootstrap race dialogs at document level so their backdrop cannot cover
+  // the dialog and block every control behind it.
+  document.querySelectorAll(".race-calendar-page > .modal").forEach(function(modal) {
+    if (modal.parentElement !== document.body) document.body.appendChild(modal);
+  });
+
   var addRaceModal = document.getElementById("addRaceDateModal");
   if (addRaceModal) {
     addRaceModal.addEventListener("show.bs.modal", function(event) {
