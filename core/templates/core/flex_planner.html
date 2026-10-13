@@ -921,7 +921,15 @@
           if (commentEl) commentEl.textContent = comment || "—";
 
           const modalEl = document.getElementById("flexReportModal");
-          if (modalEl && window.bootstrap) new bootstrap.Modal(modalEl).show();
+          if (modalEl && window.bootstrap) {
+            // Team branding creates a stacking context around the page. Keep
+            // the report modal at document level so Bootstrap can center it
+            // and its backdrop cannot lock the planner underneath it.
+            if (modalEl.parentElement !== document.body) {
+              document.body.appendChild(modalEl);
+            }
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+          }
         });
       });
 
