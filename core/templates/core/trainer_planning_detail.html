@@ -179,6 +179,10 @@
       box-shadow: none;
       background: #fff;
     }
+
+    .trainer-planning-go {
+      color: #fff !important;
+    }
   </style>
 
   <script>
@@ -581,7 +585,7 @@
           {% endfor %}
         </select>
       </div>
-      <button type="submit" class="btn btn-primary">Go</button>
+      <button type="submit" class="btn btn-primary trainer-planning-go">Go</button>
     </form>
 
     <a class="btn btn-outline-secondary" href="{% url 'trainer_planning_detail' plan.id %}?date={{ next_week|date:'Y-m-d' }}&weeks={{ visible_weeks }}">Next week</a>
