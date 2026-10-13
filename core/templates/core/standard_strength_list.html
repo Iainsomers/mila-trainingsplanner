@@ -2,6 +2,14 @@
 
 {% block title %}Standard Strength{% endblock %}
 
+{% block extra_head %}
+  <style>
+    .standard-strength-add {
+      color: #fff !important;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -15,7 +23,7 @@
   </div>
 
   <div class="mb-3">
-    <a href="{% url 'standard_strength_create' %}" class="btn btn-primary">Add training</a>
+    <a href="{% url 'standard_strength_create' %}" class="btn btn-primary standard-strength-add">Add training</a>
   </div>
 
   {% if programs %}
