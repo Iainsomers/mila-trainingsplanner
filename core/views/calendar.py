@@ -1349,8 +1349,22 @@ def flex_planner_view(request):
                                 plan = flex_plan
                                 no_plan = False
 
+                    base_planning_slot = _base_planning_slot_for_day(
+                        base_blocks_by_athlete, athlete.id, day, slot_index
+                    )
+                    if (
+                        base_planning_slot
+                        and base_planning_slot.mode == AthleteBasePlanningSlot.MODE_REST
+                        and not _slot_has_race(slot)
+                    ):
+                        # Rest is an explicit base-planning choice. It must
+                        # hide the trainer-plan slot instead of falling back
+                        # to that slot in Flex Planner.
+                        slot = None
+                        flex_blocks_base = True
+                        no_plan = False
+
                     if not slot and not flex_blocks_base:
-                        base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, athlete.id, day, slot_index)
                         if base_planning_slot:
                             if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
                                 slot = _virtual_slot_from_base_training(base_planning_slot.training_text)

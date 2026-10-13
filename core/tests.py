@@ -3724,6 +3724,50 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(flex_cell["slot"].plan_id, trainer_plan.id)
         self.assertEqual(flex_cell["slot"].core_text(), "1200m z3")
 
+    def test_flex_hides_trainer_slot_when_base_planning_is_rest(self):
+        user = get_user_model().objects.create_user(
+            username="flex-rest-base-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Rest Base Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        trainer_plan = TrainingPlan.objects.create(owner=user, name="Rest override plan")
+        PlanMembership.objects.create(plan=trainer_plan, athlete=athlete)
+        day = date.today()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=day.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_REST,
+        )
+        slot = TrainingSlot.objects.create(plan=trainer_plan, date=day, slot_index=1)
+        slot.segments.create(type="CORE", text="1000m z2", zone="2", order=1)
+
+        self.client.force_login(user)
+        flex_page = self.client.get(
+            f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        flex_cell = next(
+            cell
+            for week in flex_page.context["week_rows"]
+            for cell in week["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
+        self.assertIsNone(flex_cell["slot"])
+
     def test_athlete_year_shows_pending_evaluation_reminders_for_past_week(self):
         coach = get_user_model().objects.create_user(
             username="ayc-reminder-coach",
