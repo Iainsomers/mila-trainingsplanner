@@ -343,6 +343,11 @@
     {% endif %}
     const modalEl = document.getElementById("baseSlotModal");
     if (!modalEl) return;
+    // Keep the Bootstrap dialog outside the team-branding stacking context;
+    // otherwise the backdrop can sit above the modal and block all controls.
+    if (modalEl.parentElement !== document.body) {
+      document.body.appendChild(modalEl);
+    }
 
     const modalContent = document.getElementById("baseSlotModalContent");
     const activeIdInput = document.getElementById("baseSlotActiveId");
