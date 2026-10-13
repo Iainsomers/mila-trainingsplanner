@@ -2657,6 +2657,12 @@
     });
   }
 
+  function refreshAycAfterTrainingSave() {
+    var url = new URL(window.location.href);
+    url.searchParams.set("_ayc_refresh", String(Date.now()));
+    window.location.replace(url.toString());
+  }
+
   function applyVisibleTrainingPrefill(container, slotBox) {
     var form = container.querySelector("form");
     if (!form || !slotBox) return;
@@ -2829,15 +2835,20 @@
       },
       credentials: "same-origin"
     }).then(function(response) {
-      if (!response.ok) return;
+      if (!response.ok) throw new Error("Training could not be saved.");
 
       var modalEl = document.getElementById("slotModal");
-      if (modalEl) {
-        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+      try {
+        if (modalEl && window.bootstrap && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        }
+      } finally {
+        refreshAycAfterTrainingSave();
       }
-
-      window.location.reload();
-    }).catch(function() {});
+    }).catch(function(error) {
+      if (window.console) console.error(error);
+      window.alert("Training could not be saved. Please try again.");
+    });
   }, true);
 })();
 </script>
