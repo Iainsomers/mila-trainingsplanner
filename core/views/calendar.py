@@ -1091,6 +1091,17 @@ def flex_planner_view(request):
         if target_ids:
             plan_targets[plan.id] = target_ids
 
+    base_plan_ids_by_athlete = {}
+    if selected_athlete_ids:
+        for athlete_id, trainer_plan_id in AthleteBasePlanningSlot.objects.filter(
+            block__athlete_id__in=selected_athlete_ids,
+            block__planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+        ).exclude(
+            trainer_plan_id__isnull=True,
+        ).values_list("block__athlete_id", "trainer_plan_id"):
+            base_plan_ids_by_athlete.setdefault(athlete_id, set()).add(trainer_plan_id)
+
     # A personal override is the most specific source for that athlete/day.
     # Remember those plan ids before choosing the default plan so an older
     # alphabetically-first plan cannot hide a newly edited training.
@@ -1117,7 +1128,10 @@ def flex_planner_view(request):
                 plan for plan in accessible_plans
                 if (
                     plan.id in override_plan_ids_by_athlete_day.get((athlete.id, day), set())
-                    and athlete.id in plan_targets.get(plan.id, set())
+                    and (
+                        athlete.id in plan_targets.get(plan.id, set())
+                        or plan.id in base_plan_ids_by_athlete.get(athlete.id, set())
+                    )
                 )
             ]
             candidate_plan_ids = {plan.id for plan in candidate_plans}
@@ -1127,7 +1141,8 @@ def flex_planner_view(request):
             for plan in ordered_plans:
                 target_ids = plan_targets.get(plan.id, set())
                 has_targeted_override = plan.id in candidate_plan_ids
-                if athlete.id not in target_ids and not has_targeted_override:
+                has_base_assignment = plan.id in base_plan_ids_by_athlete.get(athlete.id, set())
+                if athlete.id not in target_ids and not has_base_assignment and not has_targeted_override:
                     continue
                 if plan.start_date and plan.start_date > day:
                     continue
@@ -3275,14 +3290,24 @@ def athlete_year_calendar_view(request):
     reminder_end = today - timedelta(days=1)
     active_source_plans = []
     if selected_athlete:
+        targeted_source_plans = []
+        assigned_override_source_plans = []
         for plan in athlete_plans:
             if _is_flex_planner_plan(plan):
                 continue
             try:
-                if selected_athlete.id in plan.targeted_athlete_ids():
-                    active_source_plans.append(plan)
+                is_targeted = selected_athlete.id in plan.targeted_athlete_ids()
             except Exception:
-                continue
+                is_targeted = False
+            if is_targeted:
+                targeted_source_plans.append(plan)
+            elif plan.id in override_plan_ids and plan.id in trainer_plan_ids:
+                # A trainer-plan slot can be assigned through the athlete's
+                # base planning without directly targeting the athlete.
+                # Keep its personal override visible, but after directly
+                # targeted plans so stale unrelated overrides cannot win.
+                assigned_override_source_plans.append(plan)
+        active_source_plans = targeted_source_plans + assigned_override_source_plans
     d = start
 
     for _ in range(weeks):
@@ -3364,7 +3389,14 @@ def athlete_year_calendar_view(request):
                     if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
                         slot1 = _virtual_slot_from_base_training(base_planning_slot.training_text)
                     elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
-                        slot1 = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, 1))
+                        trainer_override = slot_lookup.get(
+                            (base_planning_slot.trainer_plan_id, selected_athlete.id, day, 1)
+                        )
+                        slot1 = trainer_override or trainer_slot_lookup.get(
+                            (base_planning_slot.trainer_plan_id, day, 1)
+                        )
+                        if trainer_override is not None:
+                            has_fix_keys.add(k1)
                     if slot1 and flex_plan:
                         # Keep the underlying trainer plan on the rendered slot.
                         # Flex edits are routed to the athlete owner's Flex plan
@@ -3378,7 +3410,14 @@ def athlete_year_calendar_view(request):
                     if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
                         slot2 = _virtual_slot_from_base_training(base_planning_slot.training_text)
                     elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
-                        slot2 = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, 2))
+                        trainer_override = slot_lookup.get(
+                            (base_planning_slot.trainer_plan_id, selected_athlete.id, day, 2)
+                        )
+                        slot2 = trainer_override or trainer_slot_lookup.get(
+                            (base_planning_slot.trainer_plan_id, day, 2)
+                        )
+                        if trainer_override is not None:
+                            has_fix_keys.add(k2)
                     if slot2 and flex_plan:
                         plan2 = flex_plan
 
