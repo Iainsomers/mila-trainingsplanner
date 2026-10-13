@@ -1091,6 +1091,18 @@ def flex_planner_view(request):
         if target_ids:
             plan_targets[plan.id] = target_ids
 
+    # A personal override is the most specific source for that athlete/day.
+    # Remember those plan ids before choosing the default plan so an older
+    # alphabetically-first plan cannot hide a newly edited training.
+    override_plan_ids_by_athlete_day = {}
+    if selected_athlete_ids:
+        for athlete_id, override_date, plan_id in TrainingSlot.objects.filter(
+            athlete_id__in=selected_athlete_ids,
+            date__gte=start,
+            date__lt=end,
+        ).values_list("athlete_id", "date", "plan_id"):
+            override_plan_ids_by_athlete_day.setdefault((athlete_id, override_date), set()).add(plan_id)
+
     relevant_plan_ids = set()
     plan_for_athlete_day = {}
     if flex_plan:
@@ -1101,9 +1113,21 @@ def flex_planner_view(request):
             day = start + timedelta(days=day_offset)
             matching_plan = None
 
-            for plan in accessible_plans:
+            candidate_plans = [
+                plan for plan in accessible_plans
+                if (
+                    plan.id in override_plan_ids_by_athlete_day.get((athlete.id, day), set())
+                    and athlete.id in plan_targets.get(plan.id, set())
+                )
+            ]
+            candidate_plan_ids = {plan.id for plan in candidate_plans}
+            ordered_plans = candidate_plans + [
+                plan for plan in accessible_plans if plan.id not in candidate_plan_ids
+            ]
+            for plan in ordered_plans:
                 target_ids = plan_targets.get(plan.id, set())
-                if athlete.id not in target_ids:
+                has_targeted_override = plan.id in candidate_plan_ids
+                if athlete.id not in target_ids and not has_targeted_override:
                     continue
                 if plan.start_date and plan.start_date > day:
                     continue
@@ -3282,7 +3306,16 @@ def athlete_year_calendar_view(request):
                 check1 = check_map.get((day, 1))
                 check2 = check_map.get((day, 2))
 
-            day_plan = _athlete_plan_for_day(active_source_plans, day) if selected_athlete else None
+            day_override_plans = [
+                plan for plan in active_source_plans
+                if (plan.id, selected_athlete.id, day, 1) in slot_lookup
+                or (plan.id, selected_athlete.id, day, 2) in slot_lookup
+            ] if selected_athlete else []
+            day_plan = (
+                day_override_plans[0]
+                if day_override_plans
+                else (_athlete_plan_for_day(active_source_plans, day) if selected_athlete else None)
+            )
             slot1 = None
             slot2 = None
             if day_plan and selected_athlete:

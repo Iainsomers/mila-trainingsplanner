@@ -3564,7 +3564,12 @@ class SlotModalSaveTests(TestCase):
         flex_page = self.client.get(
             f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={athlete.id}"
         )
-        flex_cell = flex_page.context["week_rows"][0]["athlete_rows"][0]["am_cells"][0]
+        flex_cell = next(
+            cell
+            for week in flex_page.context["week_rows"]
+            for cell in week["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
         self.assertEqual(flex_cell["slot"].plan_id, active_plan.id)
         self.assertEqual(
             flex_cell["slot"].segments.all()[0].standard_strength_program,
@@ -3582,6 +3587,67 @@ class SlotModalSaveTests(TestCase):
         )
         self.assertEqual(ayc_cell["slot"].id, active_slot.id)
         self.assertContains(ayc_page, "Monday strength")
+
+    def test_ayc_override_is_visible_in_ayc_and_flex_when_plans_overlap(self):
+        user = get_user_model().objects.create_user(
+            username="ayc-visible-override-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Visible Override Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        old_plan = TrainingPlan.objects.create(owner=user, name="A old plan")
+        current_plan = TrainingPlan.objects.create(owner=user, name="Z current plan")
+        PlanMembership.objects.create(plan=old_plan, athlete=athlete)
+        PlanMembership.objects.create(plan=current_plan, athlete=athlete)
+        day = date.today()
+        old_slot = TrainingSlot.objects.create(plan=old_plan, date=day, slot_index=1)
+        old_slot.segments.create(type="CORE", text="800m z1", zone="1", order=1)
+        current_slot = TrainingSlot.objects.create(plan=current_plan, date=day, slot_index=1)
+        current_slot.segments.create(type="CORE", text="1000m z2", zone="2", order=1)
+
+        self.client.force_login(user)
+        save_response = self.client.post(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "plan": str(current_plan.id),
+                "slot_text": "1200m z3",
+                "core_text": "1200m z3",
+            },
+        )
+        self.assertEqual(save_response.status_code, 200)
+
+        ayc_page = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}&hide=none"
+        )
+        ayc_cell = next(
+            cell
+            for week in ayc_page.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        self.assertEqual(ayc_cell["slot"].plan_id, current_plan.id)
+        self.assertEqual(ayc_cell["slot"].core_text(), "1200m z3")
+
+        flex_page = self.client.get(
+            f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        flex_cell = next(
+            cell
+            for week in flex_page.context["week_rows"]
+            for cell in week["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
+        self.assertEqual(flex_cell["plan"].id, current_plan.id)
+        self.assertIsNotNone(flex_cell["plan_id"])
+        self.assertEqual(flex_cell["slot"].plan_id, current_plan.id)
+        self.assertEqual(flex_cell["slot"].core_text(), "1200m z3")
 
     def test_athlete_year_shows_pending_evaluation_reminders_for_past_week(self):
         coach = get_user_model().objects.create_user(
