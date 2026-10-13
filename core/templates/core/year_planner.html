@@ -1019,10 +1019,11 @@
 
   function cellPayload(cell) {
     const trainingWrap = cell.querySelector("[data-year-training-wrap]");
+    const trainingSelect = trainingWrap?.querySelector("[data-year-training]");
     return {
       scope: cell.dataset.scope,
       date: cell.dataset.date,
-      training: cell.querySelector("[data-year-training]")?.value || trainingWrap?.dataset.yearTrainingValue || "",
+      training: trainingSelect ? trainingSelect.value : (trainingWrap?.dataset.yearTrainingValue || ""),
     };
   }
 
@@ -1488,7 +1489,6 @@
     });
     select.addEventListener("mousedown", (event) => {
       if (event.button !== 0) return;
-      if (!select.value) return;
       const startCell = select.closest("[data-year-cell]");
       paint = {
         row: select.closest("[data-year-row]"),
@@ -1505,7 +1505,7 @@
     if (layer !== "training") return;
     if (event.button !== 0) return;
     const select = wrap.querySelector("[data-year-training]");
-    if (!select || !select.value) return;
+    if (!select) return;
     const startCell = wrap.closest("[data-year-cell]");
     paint = {
       row: wrap.closest("[data-year-row]"),
