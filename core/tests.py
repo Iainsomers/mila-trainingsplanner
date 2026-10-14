@@ -5864,6 +5864,93 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, "Shared Selected")
         self.assertNotContains(response, "Shared Hidden")
 
+    def test_dco_saved_selection_save_as_keeps_existing_selection(self):
+        trainer = get_user_model().objects.create_user(
+            username="dco-multiple-selections", password="secret", is_staff=True
+        )
+        first = Athlete.objects.create(owner=trainer, name="DCO First", birth_year=2000, gender="X")
+        second = Athlete.objects.create(owner=trainer, name="DCO Second", birth_year=2001, gender="X")
+        self.client.force_login(trainer)
+
+        first_response = self.client.post(
+            "/coach/daily-overview/",
+            {
+                "action": "save_dco_selection",
+                "date": date.today().isoformat(),
+                "slots": "both",
+                "selection_name": "First group",
+                "athletes": [str(first.id)],
+            },
+        )
+        self.assertEqual(first_response.status_code, 302)
+        first_saved = CoachSettings.objects.get(user=trainer).dco_saved_selections
+        self.assertEqual(len(first_saved), 1)
+
+        second_response = self.client.post(
+            "/coach/daily-overview/",
+            {
+                "action": "save_dco_selection",
+                "date": date.today().isoformat(),
+                "slots": "both",
+                "saved_selection": first_saved[0]["id"],
+                "selection_name": "Second group",
+                "athletes": [str(second.id)],
+            },
+        )
+        self.assertEqual(second_response.status_code, 302)
+        saved = CoachSettings.objects.get(user=trainer).dco_saved_selections
+        self.assertEqual({item["name"] for item in saved}, {"First group", "Second group"})
+        self.assertEqual(next(item for item in saved if item["name"] == "First group")["athlete_ids"], [first.id])
+        self.assertEqual(next(item for item in saved if item["name"] == "Second group")["athlete_ids"], [second.id])
+
+    def test_dco_saved_selections_belong_to_active_coach(self):
+        logged_in = get_user_model().objects.create_user(
+            username="dco-selection-grantee", password="secret", is_staff=True
+        )
+        active_owner = get_user_model().objects.create_user(
+            username="dco-selection-owner", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=active_owner, name="Owner athlete", birth_year=2000, gender="X")
+        CoachAccess.objects.create(owner=active_owner, grantee=logged_in, can_edit=True)
+        CoachSettings.objects.create(
+            user=logged_in,
+            dco_saved_selections=[{"id": "wrong-owner", "name": "Logged-in selection", "athlete_ids": []}],
+        )
+        CoachSettings.objects.create(
+            user=active_owner,
+            dco_saved_selections=[{"id": "active-owner", "name": "Active selection", "athlete_ids": [athlete.id]}],
+        )
+        self.client.force_login(logged_in)
+        session = self.client.session
+        session["active_coach_owner_id"] = active_owner.id
+        session.save()
+
+        response = self.client.get("/coach/daily-overview/?selection=selection")
+        self.assertContains(response, "Active selection")
+        self.assertNotContains(response, "Logged-in selection")
+
+        self.client.post(
+            "/coach/daily-overview/",
+            {
+                "action": "save_dco_selection",
+                "date": date.today().isoformat(),
+                "slots": "both",
+                "selection_name": "New active selection",
+                "athletes": [str(athlete.id)],
+            },
+        )
+        self.assertTrue(
+            CoachSettings.objects.get(user=active_owner).dco_saved_selections
+        )
+        self.assertIn(
+            "New active selection",
+            {item["name"] for item in CoachSettings.objects.get(user=active_owner).dco_saved_selections},
+        )
+        self.assertEqual(
+            CoachSettings.objects.get(user=logged_in).dco_saved_selections[0]["name"],
+            "Logged-in selection",
+        )
+
     def test_stats_landing_page_shows_selector_before_results(self):
         trainer = get_user_model().objects.create_user(username="statslanding", password="secret", is_staff=True)
         Athlete.objects.create(owner=trainer, name="Landing Athlete", birth_year=2000, gender="X")

@@ -10133,7 +10133,9 @@ def trainer_stats_view(request):
 
     all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     all_athlete_ids = {athlete.id for athlete in all_athletes}
-    coach_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
+    # Saved DCO selections belong to the active coach, not necessarily the
+    # logged-in account (a coach with delegated access can switch owners).
+    coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
     dco_saved_selections = []
     for item in coach_settings.dco_saved_selections or []:
         if not isinstance(item, dict):
@@ -10171,9 +10173,22 @@ def trainer_stats_view(request):
         make_standard = request.POST.get("standard_selection") == "on"
         saved_rows = []
         updated = False
+        existing_selection_name = ""
+        if selection_id:
+            existing_selection_name = next(
+                (item["name"] for item in dco_saved_selections if item["id"] == selection_id),
+                "",
+            )
         for item in dco_saved_selections:
             row = {"id": item["id"], "name": item["name"], "athlete_ids": item["athlete_ids"]}
-            if selection_id and item["id"] == selection_id:
+            # A different name means "Save as" a new selection.  Keeping the
+            # selected item id only updates the current selection when the
+            # name was left unchanged.
+            if (
+                selection_id
+                and item["id"] == selection_id
+                and (not selection_name or selection_name == existing_selection_name)
+            ):
                 row.update({"name": selection_name or item["name"], "athlete_ids": selected_ids})
                 updated = True
             saved_rows.append(row)
@@ -10403,7 +10418,8 @@ def daily_overview_view(request):
 
     all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     all_athlete_ids = {athlete.id for athlete in all_athletes}
-    coach_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
+    # Keep quick selections scoped to the trainer currently being viewed.
+    coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
     dco_train_athlete_ids = {
         int(value)
         for value in (coach_settings.dco_train_athlete_ids or [])
@@ -10473,6 +10489,12 @@ def daily_overview_view(request):
         make_standard = request.POST.get("standard_selection") == "on"
 
         updated = False
+        existing_selection_name = ""
+        if selection_id:
+            existing_selection_name = next(
+                (item["name"] for item in dco_saved_selections if item["id"] == selection_id),
+                "",
+            )
         saved_rows = []
         for item in dco_saved_selections:
             row = {
@@ -10480,7 +10502,11 @@ def daily_overview_view(request):
                 "name": item["name"],
                 "athlete_ids": item["athlete_ids"],
             }
-            if selection_id and item["id"] == selection_id:
+            if (
+                selection_id
+                and item["id"] == selection_id
+                and (not selection_name or selection_name == existing_selection_name)
+            ):
                 row["name"] = selection_name or item["name"]
                 row["athlete_ids"] = selected_ids
                 updated = True
