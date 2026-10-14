@@ -3649,6 +3649,59 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(flex_cell["slot"].plan_id, current_plan.id)
         self.assertEqual(flex_cell["slot"].core_text(), "1200m z3")
 
+    def test_flex_keeps_targeted_override_visible_after_source_plan_end(self):
+        user = get_user_model().objects.create_user(
+            username="flex-override-after-plan-end-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Override After Plan End Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        day = date(2026, 10, 13)
+        plan = TrainingPlan.objects.create(
+            owner=user,
+            name="Short source plan",
+            start_date=date(2026, 10, 1),
+            end_date=date(2026, 10, 12),
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        override = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=athlete,
+            date=day,
+            slot_index=2,
+        )
+        override.segments.create(type="CORE", text="2000m z3", zone="3", order=1)
+
+        self.client.force_login(user)
+        ayc_page = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}&hide=none"
+        )
+        ayc_cell = next(
+            cell
+            for week in ayc_page.context["week_rows"]
+            for cell in week["cells2"]
+            if cell["day"] == day
+        )
+        self.assertIsNotNone(ayc_cell["slot"])
+        self.assertEqual(ayc_cell["slot"].core_text(), "2000m z3")
+
+        flex_page = self.client.get(
+            f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        flex_cell = next(
+            cell
+            for week in flex_page.context["week_rows"]
+            for cell in week["athlete_rows"][0]["pm_cells"]
+            if cell["day"] == day
+        )
+        self.assertIsNotNone(flex_cell["slot"])
+        self.assertEqual(flex_cell["slot"].core_text(), "2000m z3")
+
     def test_ayc_override_is_visible_for_base_assigned_trainer_plan(self):
         user = get_user_model().objects.create_user(
             username="ayc-base-override-coach",

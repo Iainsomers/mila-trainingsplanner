@@ -47,6 +47,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Toont de effectieve planning per geselecteerde atleet.
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
+- Een persoonlijke wijziging blijft zichtbaar, ook wanneer de oorspronkelijke bronplanning op die datum formeel al is afgelopen.
 - Toont bij zoneonderdelen waarvoor een handmatige Z1/Z2/Z3-HR is ingevuld ook de toepasselijke HR naast de richttijd.
 - Haalt weekphase-kleuren uit de Year Planner. Meerdere fases in één week worden diagonaal gecombineerd; de oude weektype-dropdown bestaat niet meer.
 

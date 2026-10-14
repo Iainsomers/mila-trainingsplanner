@@ -1144,9 +1144,13 @@ def flex_planner_view(request):
                 has_base_assignment = plan.id in base_plan_ids_by_athlete.get(athlete.id, set())
                 if athlete.id not in target_ids and not has_base_assignment and not has_targeted_override:
                     continue
-                if plan.start_date and plan.start_date > day:
+                # A personal override is an explicit training for this
+                # athlete/day.  AYC keeps that override visible even when
+                # the source plan's nominal date range has since ended (or
+                # has not started yet), so Flex must not hide it here.
+                if plan.start_date and plan.start_date > day and not has_targeted_override:
                     continue
-                if plan.end_date and plan.end_date < day:
+                if plan.end_date and plan.end_date < day and not has_targeted_override:
                     continue
 
                 matching_plan = plan
