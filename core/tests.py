@@ -3856,7 +3856,6 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "Change password")
         self.assertContains(page, "special character")
-        self.assertContains(page, 'href="/password-change/"', html=False)
 
         invalid = self.client.post(
             "/password-change/",

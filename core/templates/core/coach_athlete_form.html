@@ -84,6 +84,7 @@
       </p>
     </div>
     <div class="d-flex gap-2">
+      {% if self_view %}<a href="{% url 'password_change' %}" class="btn btn-sm btn-link text-muted">Change password</a>{% endif %}
       <a href="{% if self_view %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>

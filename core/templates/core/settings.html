@@ -83,7 +83,8 @@
       </div>
       <div id="evaluation-sharing-off-hint" class="form-text mt-3" {% if evaluation_sharing_enabled %}hidden{% endif %}>Turn on Evaluation sharing to choose which evaluation types other coaches may see.</div>
     </div>
-    <div class="card-footer bg-white d-flex justify-content-end">
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+      <a href="{% url 'password_change' %}" class="small text-muted">Change password</a>
       {% if can_edit_settings %}<button type="submit" class="btn btn-primary">Save settings</button>{% endif %}
     </div>
   </form>
