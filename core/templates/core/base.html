@@ -56,6 +56,17 @@
         color: var(--mila-team-color-2) !important;
       }
 
+      /* Filled buttons always need readable white text, including generic
+         settings/account actions added outside the planning pages. */
+      .mila-team-branded .btn-primary,
+      .mila-team-branded .btn-success,
+      .mila-team-branded .btn-danger,
+      .mila-team-branded .btn-warning,
+      .mila-team-branded .btn-info,
+      .mila-team-branded .btn-dark {
+        color: #ffffff !important;
+      }
+
       /* Blue planning controls keep their normal Bootstrap contrast color. */
       .mila-team-branded .calendar-page .btn-primary,
       .mila-team-branded .calendar-page .btn-outline-primary,
