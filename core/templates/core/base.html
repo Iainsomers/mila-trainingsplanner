@@ -146,6 +146,7 @@
     {% if request.user.is_authenticated %}
       <form method="post" action="{% url 'logout' %}" class="mila-logout">
         {% csrf_token %}
+        <a href="{% url 'password_change' %}" class="btn btn-sm btn-outline-secondary bg-white me-1">Change password</a>
         <button type="submit" class="btn btn-sm btn-outline-secondary bg-white">Logout</button>
       </form>
     {% endif %}

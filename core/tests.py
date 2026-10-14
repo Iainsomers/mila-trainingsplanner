@@ -3846,6 +3846,41 @@ class SlotModalSaveTests(TestCase):
         logout_response = self.client.post("/logout/")
         self.assertRedirects(logout_response, "/login/", fetch_redirect_response=False)
 
+    def test_authenticated_user_can_change_password_with_complexity_rules(self):
+        user = get_user_model().objects.create_user(
+            username="password-change-user", password="OldPass1!"
+        )
+        self.client.force_login(user)
+
+        page = self.client.get("/password-change/")
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Change password")
+        self.assertContains(page, "special character")
+        self.assertContains(page, 'href="/password-change/"', html=False)
+
+        invalid = self.client.post(
+            "/password-change/",
+            {
+                "old_password": "OldPass1!",
+                "new_password1": "short",
+                "new_password2": "short",
+            },
+        )
+        self.assertEqual(invalid.status_code, 200)
+        self.assertContains(invalid, "at least 8 characters")
+
+        changed = self.client.post(
+            "/password-change/",
+            {
+                "old_password": "OldPass1!",
+                "new_password1": "NewPass2!",
+                "new_password2": "NewPass2!",
+            },
+        )
+        self.assertRedirects(changed, "/password-change/done/")
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("NewPass2!"))
+
     def test_athlete_sees_base_planning_tab_as_read_only(self):
         coach = get_user_model().objects.create_user(
             username="baseplanningcoach", password="secret", is_staff=True
