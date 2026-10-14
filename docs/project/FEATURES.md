@@ -102,6 +102,7 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 - De lijstweergave van de Race Calendar toont per wedstrijd datum, naam en reeds gekozen afstanden; afstandsbeheer verschijnt pas na het openen van de wedstrijd.
 - De lijst toont boven iedere gekozen afstand een groene teller met het aantal deelnemende atleten; bij nul deelnemers wordt geen teller getoond.
 - Trainers kiezen eerst `All` of een Trainer Planning-groep en daarna `All` of één atleet binnen die groep. De keuze `Show all races` bepaalt of wedstrijden zonder deelnemers uit die selectie zichtbaar blijven; afstandstellers volgen dezelfde selectie.
+- De groepskeuzes in de Race Calendar tonen alleen Trainer Planning-groepen van de actieve trainer; gedelegeerde toegang voegt geen groepen van de ingelogde trainer toe.
 - Atleet kiest maximaal drie afstanden per wedstrijd.
 - Een wedstrijd kan als doelwedstrijd worden gemarkeerd.
 - De popup kan voor trainers alle atleten, een Trainer Planning-groep of alleen reeds deelnemende atleten tonen; een atleet ziet alleen zichzelf. Achter ingeklapte atleetnamen staan geen afstandspillen.

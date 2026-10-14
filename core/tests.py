@@ -5340,6 +5340,32 @@ class RaceSelectDisplayTests(TestCase):
         )
         self.assertContains(confirmed_calendar, 'class="race-calendar-event race-calendar-target-confirmed"', html=False)
 
+    def test_race_calendar_group_filter_only_lists_active_coach_plans(self):
+        logged_in = get_user_model().objects.create_user(
+            username="race-group-grantee", password="secret", is_staff=True
+        )
+        active_owner = get_user_model().objects.create_user(
+            username="race-group-owner", password="secret", is_staff=True
+        )
+        CoachAccess.objects.create(owner=active_owner, grantee=logged_in, can_edit=True)
+        own_plan = TrainingPlan.objects.create(
+            owner=logged_in, name="Own hidden group", plan_kind=TrainingPlan.PLAN_KIND_TRAINER
+        )
+        active_plan = TrainingPlan.objects.create(
+            owner=active_owner, name="Active coach group", plan_kind=TrainingPlan.PLAN_KIND_TRAINER
+        )
+        self.client.force_login(logged_in)
+        session = self.client.session
+        session["active_coach_owner_id"] = active_owner.id
+        session.save()
+
+        response = self.client.get("/race-calendar/?year=2026&view=list")
+
+        self.assertContains(response, "Active coach group")
+        self.assertNotContains(response, "Own hidden group")
+        self.assertContains(response, f'value="plan:{active_plan.id}"', html=False)
+        self.assertNotContains(response, f'value="plan:{own_plan.id}"', html=False)
+
     def test_races_overview_redirects_directly_to_calendar(self):
         coach = get_user_model().objects.create_user(
             username="racesredirectcoach", password="secret", is_staff=True

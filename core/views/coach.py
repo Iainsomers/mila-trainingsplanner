@@ -7774,7 +7774,7 @@ def race_calendar_view(request):
         trainer_plans = list(
             _filter_owned(
                 TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER).prefetch_related("athletes", "groups__athletes"),
-                request.user,
+                request,
             ).order_by("name")
         )
 
