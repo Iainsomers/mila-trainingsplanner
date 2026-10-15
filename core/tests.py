@@ -3208,6 +3208,7 @@ class SlotModalSaveTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Reset to plan")
+        self.assertContains(response, f"plan={flex_plan.id}&athlete={athlete.id}")
 
         reset_response = self.client.post(
             f"/slot-reset-override/2026/09/24/1/?plan={flex_plan.id}&athlete={athlete.id}&source=flex"

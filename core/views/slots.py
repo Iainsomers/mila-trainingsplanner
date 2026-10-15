@@ -1300,6 +1300,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "is_override": bool(has_fix),
                 "has_athlete_override": has_athlete_override,
                 "is_flex_source": _is_flex_source(request),
+                "reset_plan_id": (
+                    requested_plan_id
+                    if _is_flex_source(request) and requested_plan_id.isdigit()
+                    else (selected_plan.id if selected_plan else "")
+                ),
                 "is_athlete_year_calendar": is_athlete_year_calendar,
                 "athlete_year_can_edit_training": athlete_year_can_edit_training,
                 "saved_templates": _saved_templates_for_user(request),
