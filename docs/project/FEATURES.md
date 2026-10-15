@@ -19,6 +19,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 ## Trainer Planning
 
 - Meerdere weken, standaard vier.
+- `Print weeks` drukt de momenteel ingestelde periode van 1–12 weken af in liggend A4; navigatie en bewerkingsknoppen worden weggelaten.
 - De lijst met trainerplannen toont de eigenaar/coach compact in een eigen, links uitgelijnde middelste kolom.
 - Weken blijven zeven dagen breed en extra weken stapelen verticaal.
 - Huidige week wordt geel gemarkeerd.
@@ -142,7 +143,7 @@ Flex Planner en AYC kiezen voor een atleet op een datum dezelfde actieve bronpla
 
 ## Daily Coach Overview Training
 
-Selectie op datum, AM/PM, alle atleten, selectie, trains, geplande training en opgeslagen selecties. Opgeslagen selecties kunnen onbeperkt naast elkaar bestaan: een andere naam maakt een nieuwe selectie, dezelfde naam werkt de gekozen selectie bij. Ze worden opgeslagen per actieve trainer, zodat gedelegeerde coachweergaven geen selecties met elkaar delen. De resultaatpagina behoudt de selectie en toont atleet-specifieke tempo's, RPE en opmerkingen.
+Selectie op datum, AM/PM, alle atleten, selectie, trains, geplande training en opgeslagen selecties. Opgeslagen selecties kunnen onbeperkt naast elkaar bestaan: een andere naam maakt een nieuwe selectie, dezelfde naam werkt de gekozen selectie bij. Ze worden opgeslagen per actieve trainer, zodat gedelegeerde coachweergaven geen selecties met elkaar delen. De resultaatpagina behoudt de selectie, toont atleet-specifieke tempo's, RPE en opmerkingen en heeft een Print-knop voor de gekozen atleten en dag.
 
 ## Stats
 

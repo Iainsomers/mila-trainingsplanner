@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-Bijgewerkt: 12 oktober 2026.
+Bijgewerkt: 15 oktober 2026.
 
 ## Stijl
 
@@ -54,6 +54,8 @@ Bijgewerkt: 12 oktober 2026.
 ## Trainer Planner
 
 - Toon bij een gevulde trainingscel rechtsboven een compacte rode `×` om die specifieke AM- of PM-training direct te verwijderen, gelijk aan de Flex Planner.
+- Print de ingestelde 1–12 weken als liggend A4. Verberg navigatie, instellingen, kopieer- en verwijderacties op papier; houd trainingskleuren waar mogelijk aan.
+- DCO Training krijgt de Print-knop pas na de atleetselectie en drukt alleen de gekozen atleten, datum en AM/PM-weergave af.
 
 ## Year Planner
 

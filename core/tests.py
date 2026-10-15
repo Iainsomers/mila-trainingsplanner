@@ -2598,6 +2598,45 @@ class SlotModalSaveTests(TestCase):
         self.client.force_login(user)
         return user, plan, athlete
 
+    def test_trainer_planning_print_uses_selected_week_range(self):
+        user = get_user_model().objects.create_user(
+            username="trainer-print-coach", password="secret", is_staff=True
+        )
+        plan = TrainingPlan.objects.create(
+            owner=user, name="Printable plan", plan_kind=TrainingPlan.PLAN_KIND_TRAINER
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            f"/planning/trainer/{plan.id}/?date=2026-10-12&weeks=3"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Print weeks")
+        self.assertContains(response, "@page { size: A4 landscape")
+        self.assertEqual(response.context["visible_weeks"], 3)
+
+    def test_dco_print_is_available_after_athlete_selection(self):
+        user = get_user_model().objects.create_user(
+            username="dco-print-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=user, name="DCO Print Athlete", birth_year=2000, gender="X"
+        )
+        self.client.force_login(user)
+
+        selection = self.client.get(
+            "/coach/daily-overview/?date=2026-10-13&selection=selection"
+        )
+        result = self.client.get(
+            f"/coach/daily-overview/?date=2026-10-13&selection=selection&athletes={athlete.id}&slots=both&ok=1"
+        )
+
+        self.assertNotContains(selection, "onclick=\"window.print()\"")
+        self.assertContains(result, "Print")
+        self.assertContains(result, "DCO Print Athlete")
+        self.assertContains(result, "daily-print-grid")
+
     def test_base_planning_autosave_allows_intermediate_overlapping_blocks(self):
         user, _, athlete = self._user_plan_and_athlete()
         block1 = AthleteBasePlanningBlock.objects.create(

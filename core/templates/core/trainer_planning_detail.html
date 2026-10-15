@@ -183,6 +183,44 @@
     .trainer-planning-go {
       color: #fff !important;
     }
+    .trainer-print-title { display: none; }
+
+    @media print {
+      @page { size: A4 landscape; margin: 8mm; }
+      body { font-size: 8pt; color: #000; }
+      .trainer-planning-page { padding: 0 !important; }
+      .mila-logout,
+      .mila-team-branded::before { display: none !important; }
+      .trainer-print-hide,
+      .trainer-action-btn,
+      .trainer-week-copy-btn,
+      .trainer-week-paste-btn,
+      #modal-container { display: none !important; }
+      .trainer-title-input { display: none !important; }
+      .trainer-print-title { display: block; font-size: 16pt; font-weight: 700; }
+      .trainer-week-block {
+        margin: 0 0 5mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+      }
+      .trainer-week-block + .trainer-week-block { break-before: auto; }
+      .trainer-planning-table { width: 100%; font-size: 7pt; }
+      .trainer-planning-table th,
+      .trainer-planning-table td { padding: 2px; }
+      .trainer-planning-slot { width: 18mm; }
+      .trainer-cell,
+      .trainer-day-cell { min-height: 17mm; height: auto; }
+      .trainer-celltext { font-size: 7pt; line-height: 1.15; }
+      .table-responsive { overflow: visible !important; }
+      .trainer-week-block .trainer-planning-table th,
+      .trainer-week-block .trainer-planning-table td,
+      .trainer-week-block .trainer-cell,
+      .trainer-week-block .trainer-cell-empty,
+      .trainer-week-block .pill {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+    }
   </style>
 
   <script>
@@ -540,7 +578,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 trainer-planning-page">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <input
@@ -550,9 +588,10 @@
         value="{{ plan.name }}"
         required
       >
+      <strong class="trainer-print-title">{{ plan.name }}</strong>
       <p class="text-muted mb-0">Trainer planning · {{ week_start }} t/m {{ week_end }}</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 trainer-print-hide">
       <a id="trainerPlanningBack" href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Planner</a>
       <a id="trainerPlanningList" href="{% url 'trainer_planning' %}" class="btn btn-outline-secondary">Trainer Planner</a>
       <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
@@ -569,7 +608,7 @@
     </div>
   {% endif %}
 
-  <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+  <div class="d-flex flex-wrap align-items-end gap-2 mb-3 trainer-print-hide">
     <a class="btn btn-outline-secondary" href="{% url 'trainer_planning_detail' plan.id %}?date={{ prev_week|date:'Y-m-d' }}&weeks={{ visible_weeks }}">Previous week</a>
 
     <form method="get" class="d-flex align-items-end gap-2">
@@ -587,6 +626,8 @@
       </div>
       <button type="submit" class="btn btn-primary trainer-planning-go">Go</button>
     </form>
+
+    <button type="button" class="btn btn-outline-primary" onclick="window.print()">Print weeks</button>
 
     <a class="btn btn-outline-secondary" href="{% url 'trainer_planning_detail' plan.id %}?date={{ next_week|date:'Y-m-d' }}&weeks={{ visible_weeks }}">Next week</a>
 

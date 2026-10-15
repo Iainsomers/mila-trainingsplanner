@@ -73,6 +73,22 @@
     overflow: hidden;
     white-space: pre-wrap;
   }
+
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    body { font-size: 9pt; color: #000; }
+    .mila-logout,
+    .mila-team-branded::before { display: none !important; }
+    .daily-print-hide { display: none !important; }
+    .daily-overview-page { padding: 0 !important; }
+    .daily-print-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px !important; }
+    .daily-print-grid > [class*="col-"] { flex: initial !important; width: auto !important; max-width: none !important; }
+    .daily-print-card { break-inside: avoid; page-break-inside: avoid; }
+    .daily-slotbox { min-height: 0; }
+    .daily-eval-comment { max-height: none; overflow: visible; }
+    .pill,
+    .daily-rpe-pill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
 </style>
 {% endblock %}
 
@@ -83,10 +99,11 @@
       <h2 class="mb-1">Daily Coach Overview</h2>
       <p class="text-muted mb-0">{{ date }}</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 daily-print-hide">
       {% if show_results %}
         <a href="{{ previous_day_url }}" class="btn btn-sm btn-outline-primary">Previous day</a>
         <a href="{{ next_day_url }}" class="btn btn-sm btn-outline-primary">Next day</a>
+        <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">Print</button>
       {% endif %}
       <a href="{% url 'planning_overview' %}" class="btn btn-sm btn-outline-secondary">Planner</a>
       {% if show_results %}
@@ -240,10 +257,10 @@
 
   {% if show_results %}
     {% if rows %}
-      <div class="row g-2">
+      <div class="row g-2 daily-print-grid">
         {% for r in rows %}
           <div class="col-12 col-md-6 col-xl-3">
-            <div class="card h-100">
+            <div class="card h-100 daily-print-card">
               <div class="card-body p-2" style="font-size:12px; line-height:1.25;">
                 <div class="mb-2">
                   <strong style="font-size:14px;">{{ r.athlete.name }}</strong>
