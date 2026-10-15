@@ -3850,6 +3850,29 @@ class SlotModalSaveTests(TestCase):
         self.assertIsNotNone(flex_cell["slot"])
         self.assertEqual(flex_cell["slot"].core_text(), "2000m z3")
 
+    def test_flex_uses_explicit_athlete_slot_without_membership(self):
+        user = get_user_model().objects.create_user(
+            username="flex-explicit-slot-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(owner=user, name="Explicit Slot Athlete", birth_year=2000, gender="X")
+        day = date(2026, 10, 13)
+        plan = TrainingPlan.objects.create(owner=user, name="Explicit source plan")
+        slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=day, slot_index=2)
+        slot.segments.create(type="CORE", text="5*1000m z2", zone="2", order=1)
+        self.client.force_login(user)
+
+        page = self.client.get(f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={athlete.id}")
+        cell = next(
+            cell
+            for week in page.context["week_rows"]
+            for cell in week["athlete_rows"][0]["pm_cells"]
+            if cell["day"] == day
+        )
+        self.assertIsNotNone(cell["slot"])
+        self.assertEqual(cell["slot"].core_text(), "5*1000m z2")
+
     def test_ayc_override_is_visible_for_base_assigned_trainer_plan(self):
         user = get_user_model().objects.create_user(
             username="ayc-base-override-coach",

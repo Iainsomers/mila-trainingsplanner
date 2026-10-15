@@ -1131,6 +1131,9 @@ def flex_planner_view(request):
                     and (
                         athlete.id in plan_targets.get(plan.id, set())
                         or plan.id in base_plan_ids_by_athlete.get(athlete.id, set())
+                        # An athlete-specific slot is an explicit assignment
+                        # even when an older membership/group link is missing.
+                        or plan.id in override_plan_ids_by_athlete_day.get((athlete.id, day), set())
                     )
                 )
             ]
@@ -1142,7 +1145,8 @@ def flex_planner_view(request):
                 target_ids = plan_targets.get(plan.id, set())
                 has_targeted_override = plan.id in candidate_plan_ids
                 has_base_assignment = plan.id in base_plan_ids_by_athlete.get(athlete.id, set())
-                if athlete.id not in target_ids and not has_base_assignment and not has_targeted_override:
+                has_direct_override = plan.id in override_plan_ids_by_athlete_day.get((athlete.id, day), set())
+                if athlete.id not in target_ids and not has_base_assignment and not has_targeted_override and not has_direct_override:
                     continue
                 # A personal override or an explicit Base Planning
                 # assignment is the source of truth for this athlete/day.

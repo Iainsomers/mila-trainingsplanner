@@ -26,6 +26,7 @@ Bijgewerkt: 12 oktober 2026.
 - Flex Planner toont de effectieve, gepersonaliseerde planning. Het verwijderen van een flex-override onderdrukt een basistraining correct.
 - Persoonlijke wijzigingen na de formele einddatum van een bronplanning blijven ook in Flex Planner zichtbaar, net als in AYC.
 - Base Planning-koppelingen naar trainerplannen blijven ook bij meerdere geselecteerde atleten zichtbaar in Flex Planner, onafhankelijk van de formele planrange.
+- Expliciete atleet-slots worden in Flex Planner als bronplanning herkend, ook zonder oude planlidmaatschap- of groepskoppeling.
 - In Flex Planner kan een persoonlijke override met `Reset to plan` worden verwijderd, zodat de onderliggende trainertraining opnieuw zichtbaar wordt.
 - AYC gebruikt dezelfde actieve bronplanning als Flex Planner; achtergebleven persoonlijke slots uit oude of niet-toegewezen plannen verbergen de actuele training niet meer.
 - Weekphase-kleuren komen uit Year Planner en verschijnen ook in Flex Planner, AYC en Trainer Planning. Bij meerdere fases krijgt de week een gecombineerde kleur.
