@@ -1379,6 +1379,21 @@ def flex_planner_view(request):
                                 slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
                             elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
                                 slot = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, slot_index))
+                                if not slot:
+                                    # The assignment itself is authoritative.
+                                    # Fall back to a direct lookup when the
+                                    # preload did not include this trainer plan.
+                                    slot = (
+                                        TrainingSlot.objects
+                                        .filter(
+                                            plan_id=base_planning_slot.trainer_plan_id,
+                                            date=day,
+                                            slot_index=slot_index,
+                                        )
+                                        .filter(Q(athlete__isnull=True) | Q(athlete_id=athlete.id))
+                                        .prefetch_related("segments")
+                                        .first()
+                                    )
                             if slot and flex_plan:
                                 plan = flex_plan
                                 no_plan = False

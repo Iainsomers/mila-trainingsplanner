@@ -49,6 +49,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
 - Een persoonlijke wijziging blijft zichtbaar, ook wanneer de oorspronkelijke bronplanning op die datum formeel al is afgelopen.
 - Een trainerplan dat via Base Planning aan een atleet is gekoppeld, blijft voor die atleet zichtbaar in Flex Planner; de Base Planning-koppeling gaat vóór de formele datumrange van het plan.
+- Flex haalt een toegewezen trainer-slot zo nodig rechtstreeks op vanuit Base Planning als de voorlaadlijst het plan niet bevat.
 - Een expliciet atleet-slot blijft in Flex Planner zichtbaar als de oude planlidmaatschap- of groepskoppeling ontbreekt.
 - Een persoonlijke Flex-override kan met `Reset to plan` volledig worden verwijderd. Daarmee komt de onderliggende trainerplanning terug; velden leegmaken is niet hetzelfde als resetten.
 - Toont bij zoneonderdelen waarvoor een handmatige Z1/Z2/Z3-HR is ingevuld ook de toepasselijke HR naast de richttijd.
