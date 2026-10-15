@@ -1086,6 +1086,12 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
     if not athlete:
         return HttpResponse("No athlete", status=400)
 
+    # Flex cells may point at the underlying trainer plan in their URL, while
+    # the personal override is stored in the owner's Flex Planner plan. Reset
+    # must therefore resolve the same edit plan as slot_modal before deleting.
+    if _is_flex_source(request):
+        selected_plan = _flex_edit_plan_for_request(request, selected_plan, athlete)
+
     forbid = None if _is_flex_planner_plan(selected_plan) else _forbid_if_athlete_not_in_plan(selected_plan, athlete)
     if forbid:
         return forbid
