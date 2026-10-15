@@ -793,6 +793,9 @@ class _VirtualSegmentList:
     def all(self):
         return self._segments
 
+    def exists(self):
+        return bool(self._segments)
+
 
 class _VirtualSegment:
     def __init__(self, text, type="CORE", zone="", special="", t_type="", reps=1, distance_m=None, duration_s=None, norm_distance_m=None, standard_strength_program=None):
@@ -1102,16 +1105,17 @@ def flex_planner_view(request):
         ).values_list("block__athlete_id", "trainer_plan_id"):
             base_plan_ids_by_athlete.setdefault(athlete_id, set()).add(trainer_plan_id)
 
-    # A personal override is the most specific source for that athlete/day.
-    # Remember those plan ids before choosing the default plan so an older
-    # alphabetically-first plan cannot hide a newly edited training.
+    # A nonempty personal override is the most specific source for that
+    # athlete/day. An empty slot in an unrelated old plan is not an active
+    # assignment and must not hide the current trainer plan.
     override_plan_ids_by_athlete_day = {}
     if selected_athlete_ids:
         for athlete_id, override_date, plan_id in TrainingSlot.objects.filter(
             athlete_id__in=selected_athlete_ids,
             date__gte=start,
             date__lt=end,
-        ).values_list("athlete_id", "date", "plan_id"):
+            segments__isnull=False,
+        ).values_list("athlete_id", "date", "plan_id").distinct():
             override_plan_ids_by_athlete_day.setdefault((athlete_id, override_date), set()).add(plan_id)
 
     relevant_plan_ids = set()
@@ -1277,20 +1281,26 @@ def flex_planner_view(request):
                     trainer_plan_ids.add(base_slot.trainer_plan_id)
 
     trainer_slot_lookup = {}
+    trainer_personal_slot_lookup = {}
     if trainer_plan_ids:
         trainer_slot_qs = (
             TrainingSlot.objects
             .filter(
                 plan_id__in=trainer_plan_ids,
-                athlete__isnull=True,
                 date__gte=start,
                 date__lt=end,
             )
+            .filter(Q(athlete__isnull=True) | Q(athlete_id__in=selected_athlete_ids))
             .prefetch_related("segments")
             .select_related("plan")
         )
         for trainer_slot in trainer_slot_qs:
-            trainer_slot_lookup[(trainer_slot.plan_id, trainer_slot.date, trainer_slot.slot_index)] = trainer_slot
+            if trainer_slot.athlete_id is None:
+                trainer_slot_lookup[(trainer_slot.plan_id, trainer_slot.date, trainer_slot.slot_index)] = trainer_slot
+            else:
+                trainer_personal_slot_lookup[
+                    (trainer_slot.plan_id, trainer_slot.athlete_id, trainer_slot.date, trainer_slot.slot_index)
+                ] = trainer_slot
 
     race_entries_by_athlete_day = {}
     if selected_athlete_ids:
@@ -1321,9 +1331,13 @@ def flex_planner_view(request):
             pm_cells = []
 
             for day in days:
-                plan = plan_for_athlete_day.get((athlete.id, day))
+                day_plan = plan_for_athlete_day.get((athlete.id, day))
 
                 for slot_index, target_cells in ((1, am_cells), (2, pm_cells)):
+                    plan = day_plan
+                    base_planning_slot = _base_planning_slot_for_day(
+                        base_blocks_by_athlete, athlete.id, day, slot_index
+                    )
                     slot = None
                     is_override = False
                     flex_blocks_base = False
@@ -1334,6 +1348,27 @@ def flex_planner_view(request):
                         base_slot = slot_lookup.get((plan.id, None, day, slot_index))
                         slot = override_slot or base_slot
                         is_override = override_slot is not None
+
+                    # Base Planning selects a source per daypart, not per day.
+                    # Keep an explicit personal edit, but do not let another
+                    # plan's shared (possibly empty) slot mask this assignment.
+                    if base_planning_slot and not is_override:
+                        if (
+                            base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
+                            and base_planning_slot.trainer_plan_id
+                        ):
+                            plan = base_planning_slot.trainer_plan
+                            assigned_override = trainer_personal_slot_lookup.get(
+                                (plan.id, athlete.id, day, slot_index)
+                            )
+                            slot = assigned_override or trainer_slot_lookup.get(
+                                (plan.id, day, slot_index)
+                            )
+                            is_override = assigned_override is not None
+                            no_plan = False
+                        elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                            slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                            no_plan = False
 
                     if flex_plan:
                         flex_override_slot = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
@@ -1358,9 +1393,6 @@ def flex_planner_view(request):
                                 plan = flex_plan
                                 no_plan = False
 
-                    base_planning_slot = _base_planning_slot_for_day(
-                        base_blocks_by_athlete, athlete.id, day, slot_index
-                    )
                     if (
                         base_planning_slot
                         and base_planning_slot.mode == AthleteBasePlanningSlot.MODE_REST

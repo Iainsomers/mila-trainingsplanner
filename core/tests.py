@@ -3294,6 +3294,11 @@ class SlotModalSaveTests(TestCase):
             mode=AthleteBasePlanningSlot.MODE_TRAINER,
             trainer_plan=trainer_plan,
         )
+        TrainingSlot.objects.create(
+            plan=trainer_plan,
+            date=date(2026, 9, 24),
+            slot_index=1,
+        )
         self.client.force_login(user)
 
         response = self.client.get(
@@ -3303,6 +3308,61 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(response.status_code, 200)
         target_cell = response.context["week_rows"][0]["athlete_rows"][0]["am_cells"][3]
         self.assertIsNone(target_cell["slot"])
+
+    def test_flex_uses_base_planning_trainer_plan_for_each_daypart(self):
+        user = get_user_model().objects.create_user(
+            username="mixed-trainer-base-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user, name="Mixed Trainer Base Athlete", birth_year=2000, gender="X"
+        )
+        first_plan = TrainingPlan.objects.create(
+            owner=user, name="A CORE", plan_kind=TrainingPlan.PLAN_KIND_TRAINER
+        )
+        second_plan = TrainingPlan.objects.create(
+            owner=user, name="B MILA", plan_kind=TrainingPlan.PLAN_KIND_TRAINER
+        )
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block, weekday=0, slot_index=2,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER, trainer_plan=first_plan,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block, weekday=1, slot_index=2,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER, trainer_plan=second_plan,
+        )
+        monday_slot = TrainingSlot.objects.create(
+            plan=first_plan, date=date(2026, 10, 12), slot_index=2
+        )
+        monday_slot.segments.create(type="CORE", text="40' z1", order=0)
+        TrainingSlot.objects.create(
+            plan=first_plan, date=date(2026, 10, 13), slot_index=2
+        )
+        tuesday_slot = TrainingSlot.objects.create(
+            plan=second_plan, date=date(2026, 10, 13), slot_index=2
+        )
+        tuesday_slot.segments.create(type="CORE", text="5*1000m z3", order=0)
+        self.client.force_login(user)
+
+        response = self.client.get(
+            f"/flex-planner/?start=2026-10-12&weeks=1&athletes={athlete.id}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        pm_cells = response.context["week_rows"][0]["athlete_rows"][0]["pm_cells"]
+        self.assertEqual(pm_cells[0]["slot"].core_text(), "40' z1")
+        self.assertEqual(pm_cells[0]["plan_id"], first_plan.id)
+        self.assertEqual(pm_cells[1]["slot"].core_text(), "5*1000m z3")
+        self.assertEqual(pm_cells[1]["plan_id"], second_plan.id)
 
     def test_flex_keeps_trainer_plan_id_for_copying_source_training(self):
         user = get_user_model().objects.create_user(
