@@ -86,6 +86,35 @@ def _flex_edit_plan_for_request(request, selected_plan, athlete):
     if _is_flex_planner_plan(selected_plan):
         return selected_plan
 
+    # Flex Planner renders personal overrides from the active coach's Flex
+    # Planner plan. A displayed source slot can belong to another coach's
+    # trainer plan, so do not let that source plan's owner redirect the write
+    # into a different Flex Planner plan (where the override would be saved
+    # and load in the popup, but remain invisible in the current Flex view).
+    if _is_flex_source(request):
+        owner = _active_coach_user(request)
+        if owner:
+            plan = (
+                TrainingPlan.objects
+                .filter(owner=owner, name__startswith="Flex Planner")
+                .order_by("id")
+                .first()
+            )
+            if plan:
+                return plan
+            name = f"Flex Planner {getattr(owner, 'id', 'legacy')}"
+            kwargs = {"owner": owner, "name": name}
+            fields = {field.name for field in TrainingPlan._meta.fields}
+            if "plan_kind" in fields:
+                kwargs["plan_kind"] = TrainingPlan.PLAN_KIND_LEGACY
+            if "start_date" in fields:
+                kwargs["start_date"] = date_cls.today()
+            if "end_date" in fields:
+                kwargs["end_date"] = date_cls.today()
+            if "description" in fields:
+                kwargs["description"] = "Automatically created fallback plan for Flex Planner cells."
+            return TrainingPlan.objects.create(**kwargs)
+
     owner = None
     if request.user.is_staff or request.user.is_superuser:
         if selected_plan and _can_edit_coach_owner(request, getattr(selected_plan, "owner_id", None)):

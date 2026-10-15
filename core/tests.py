@@ -4860,6 +4860,80 @@ class SlotModalSaveTests(TestCase):
         )
         self.assertEqual(copied_slot.core_text(), "1200m z2")
 
+    def test_flex_copy_from_shared_trainer_plan_is_visible_in_active_coach_flex_view(self):
+        active_coach = get_user_model().objects.create_user(
+            username="flex-copy-active-coach", password="secret", is_staff=True
+        )
+        source_coach = get_user_model().objects.create_user(
+            username="flex-copy-source-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=active_coach,
+            name="Flex shared-plan copy athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        source_plan = TrainingPlan.objects.create(
+            owner=source_coach,
+            name="Shared trainer plan for Flex copy",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        CoachAccess.objects.create(owner=source_coach, grantee=active_coach, can_edit=True)
+
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        target_day = date(2026, 11, 22)
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=target_day.weekday(),
+            slot_index=2,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=source_plan,
+        )
+        source_day = date(2026, 11, 21)
+        source_slot = TrainingSlot.objects.create(
+            plan=source_plan,
+            date=source_day,
+            slot_index=2,
+        )
+        source_slot.segments.create(type="CORE", text="8*400m z4", order=0)
+
+        self.client.force_login(active_coach)
+        copy_response = self.client.post(
+            f"/slot-copy/{source_day.year}/{source_day.month}/{source_day.day}/2/"
+            f"?plan={source_plan.id}&athlete={athlete.id}&source=flex"
+        )
+        self.assertEqual(copy_response.status_code, 200)
+        paste_response = self.client.post(
+            f"/slot-paste/{target_day.year}/{target_day.month}/{target_day.day}/2/"
+            f"?plan={source_plan.id}&athlete={athlete.id}&source=flex"
+        )
+        self.assertEqual(paste_response.status_code, 200)
+
+        active_flex_plan = TrainingPlan.objects.get(
+            owner=active_coach, name__startswith="Flex Planner"
+        )
+        copied_slot = TrainingSlot.objects.get(
+            plan=active_flex_plan,
+            athlete=athlete,
+            date=target_day,
+            slot_index=2,
+        )
+        self.assertEqual(copied_slot.core_text(), "8*400m z4")
+
+        response = self.client.get(
+            f"/flex-planner/?start=2026-11-16&weeks=1&athletes={athlete.id}"
+        )
+        self.assertEqual(response.status_code, 200)
+        pm_cells = response.context["week_rows"][0]["athlete_rows"][0]["pm_cells"]
+        self.assertEqual(pm_cells[target_day.weekday()]["slot"].core_text(), "8*400m z4")
+
     def test_edit_access_coach_can_save_shared_ayc_training(self):
         owner = get_user_model().objects.create_user(
             username="ayc-shared-owner", password="secret", is_staff=True

@@ -28,6 +28,7 @@ Bijgewerkt: 15 oktober 2026.
 - Base Planning-koppelingen naar trainerplannen blijven ook bij meerdere geselecteerde atleten zichtbaar in Flex Planner, onafhankelijk van de formele planrange.
 - Een expliciete Base Planning-koppeling kan het trainer-slot rechtstreeks laden wanneer de normale Flex-voorlaadlijst het plan mist.
 - Flex Planner kiest nu per AM/PM-dagdeel het in Base Planning toegewezen trainerplan. Daarmee kan een leeg slot in een ander, alfabetisch eerder gekoppeld plan (zoals bij Brenn op 13-10 PM) de juiste training niet meer verbergen. Lege, niet-toegewezen oude persoonlijke slots tellen niet als actieve bronplanning.
+- Drag/kopieer vanuit een trainerplan bewaart de Flex-override nu in het plan van de actieve coachweergave. Zo wordt een kopie vanuit een gedeeld trainerplan niet alleen in de trainingspopup getoond maar ook in de Flex Planner-cel.
 - Trainer Planning kan de ingestelde periode van 1–12 weken als liggend A4 afdrukken. DCO Training kan na de atleetselectie de gekozen dag en AM/PM-slots afdrukken.
 - Expliciete atleet-slots worden in Flex Planner als bronplanning herkend, ook zonder oude planlidmaatschap- of groepskoppeling.
 - In Flex Planner kan een persoonlijke override met `Reset to plan` worden verwijderd, zodat de onderliggende trainertraining opnieuw zichtbaar wordt.
