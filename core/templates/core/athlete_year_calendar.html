@@ -2579,6 +2579,35 @@
     saveButton.disabled = true;
     errorEl.textContent = "";
 
+    // On mobile the Bootstrap fade transition can outlive a fast reload. In
+    // that case the backdrop remains over the refreshed AYC and makes the
+    // page look frozen (only the logout link is still reachable). Always
+    // finish the modal cleanup before refreshing, with a guarded fallback for
+    // browsers that do not emit hidden.bs.modal after navigation.
+    var refreshed = false;
+    function refreshAfterModalCleanup() {
+      if (refreshed) return;
+      refreshed = true;
+      document.querySelectorAll(".modal-backdrop").forEach(function(backdrop) {
+        backdrop.remove();
+      });
+      document.body.classList.remove("modal-open");
+      document.body.style.removeProperty("overflow");
+      document.body.style.removeProperty("padding-right");
+      modalEl.style.display = "none";
+      modalEl.setAttribute("aria-hidden", "true");
+      window.location.reload();
+    }
+
+    function waitForModalToClose() {
+      modalEl.addEventListener("hidden.bs.modal", refreshAfterModalCleanup, {once: true});
+      var instance = bootstrap.Modal.getOrCreateInstance(modalEl);
+      instance.hide();
+      // Bootstrap normally emits hidden.bs.modal after 300ms. Keep a small
+      // safety net for interrupted animations on iOS/Safari.
+      window.setTimeout(refreshAfterModalCleanup, 600);
+    }
+
     fetch(window.location.href, {
       method: "POST",
       body: new FormData(formEl),
@@ -2586,8 +2615,7 @@
       credentials: "same-origin"
     }).then(function(response) {
       if (!response.ok) throw new Error("save");
-      bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-      window.setTimeout(function() { window.location.reload(); }, 120);
+      waitForModalToClose();
     }).catch(function() {
       saveButton.disabled = false;
       errorEl.textContent = "Daily vitals could not be saved. Try again.";

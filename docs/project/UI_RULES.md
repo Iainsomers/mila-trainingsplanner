@@ -41,7 +41,7 @@ Bijgewerkt: 12 oktober 2026.
 - Bestaande waarden moeten direct bij openen zichtbaar zijn.
 - Planner, Dashboard en Logout moeten bereikbaar blijven zonder Admin.
 - Toon Week reports onderaan de week als een 2×2-grid met dezelfde vier kleuren als desktop.
-- Toon bij Daily vitals een compacte hartknop naast de datum; invoer gebeurt in een schermpassende popup.
+- Toon bij Daily vitals een compacte hartknop naast de datum; invoer gebeurt in een schermpassende popup. Na opslaan sluit de popup eerst volledig, inclusief backdrop en `modal-open`-status, voordat de mobiele AYC ververst.
 - Toon de vier weekgemiddelden compact in het weeksamenvattingsblok en gebruik `NA` totdat minimaal drie waarden beschikbaar zijn.
 
 ## Desktop AYC
