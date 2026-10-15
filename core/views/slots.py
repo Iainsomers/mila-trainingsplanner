@@ -1218,6 +1218,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     eff = _get_effective_slot(selected_plan, athlete, d, slot_index, prefetch_segments=True)
     visible_slot = eff["visible_slot"]
     has_fix = eff["has_fix"]
+    # An empty personal override has no visible segments, but must still
+    # expose the action that removes the override and restores the plan.
+    has_athlete_override = bool(eff.get("override_slot"))
     if (
         request.method == "GET"
         and (_is_flex_source(request) or is_athlete_year_calendar)
@@ -1289,6 +1292,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "selected_plan": selected_plan,
                 "selected_athlete": athlete,
                 "is_override": bool(has_fix),
+                "has_athlete_override": has_athlete_override,
                 "is_athlete_year_calendar": is_athlete_year_calendar,
                 "athlete_year_can_edit_training": athlete_year_can_edit_training,
                 "saved_templates": _saved_templates_for_user(request),
