@@ -192,3 +192,7 @@ De aparte uitleespagina haalt één gekozen kalenderdag via de bestaande Polar v
 ## Trainingspopups en knopcontrast
 
 AYC, Flex Planner en Trainer Planning plaatsen de trainingspopup onder `document.body`, boven de Bootstrap-backdrop en buiten de teambekleding. Flex ondersteunt dit bij zowel fetch als HTMX; Trainer Planning bij HTMX. Polar-knoppen gebruiken witte tekst op gevulde achtergronden, onafhankelijk van teamkleur 2.
+
+## Flex Planner — persoonlijke kopie op een rustdag
+
+Een expliciete persoonlijke training (zoals een gekopieerde trainertraining) heeft voorrang op `Rest` in Base Planning. `Rest` verbergt nog steeds de gedeelde trainerplanning, maar wist/verbergt geen expliciet geplaatste atleettraining.

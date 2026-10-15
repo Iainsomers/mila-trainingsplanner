@@ -71,6 +71,8 @@ Bijgewerkt: 15 oktober 2026.
 
 ## Validatie en resterende beperkingen
 
+- Flex Planner toont een gekopieerde/persoonlijke atleettraining ook wanneer Base Planning voor dat dagdeel `Rest` bevat. De gedeelde trainertraining blijft op zo'n dagdeel verborgen; een expliciete persoonlijke override heeft voorrang.
+
 - De Flex/Base Planning-reparatie is met tien gerichte regressietests en `manage.py check` gevalideerd. In de bredere `SlotModalSaveTests`-reeks slagen 59 van 60 tests; alleen `test_shared_coach_can_save_vitals_for_accessible_athlete` faalt nog met HTTP 403 in plaats van 204. Dit betreft de aparte vitals-rechtenroute, niet de Flex-weergave.
 - De 46 gerichte Polar-tests slaagden, inclusief Type D-berekening, HR-opslag en rechten. Django-check en migratiecontrole slaagden; beide zoneverdelingen zijn tegen de aangeleverde JSON gecontroleerd.
 - Witte Polar-knoptekst en Type D zijn op 390/1440 px gecontroleerd. De popupblokkade is met de echte Flex/Trainer-openers gereproduceerd en opgelost voor AM/PM, lege/bestaande invoer en klikbaarheid van Save/Close. Vier gerichte Django-modaltests slaagden.

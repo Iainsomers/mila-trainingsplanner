@@ -1396,6 +1396,7 @@ def flex_planner_view(request):
                     if (
                         base_planning_slot
                         and base_planning_slot.mode == AthleteBasePlanningSlot.MODE_REST
+                        and not is_override
                         and not _slot_has_race(slot)
                     ):
                         # Rest is an explicit base-planning choice. It must
