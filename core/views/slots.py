@@ -1315,6 +1315,24 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     action = (request.POST.get("action") or "").strip().lower()
 
+    # Fallback for direct-loaded slot modals where HTMX is not present.
+    # Resolve the owner's Flex plan before removing the personal override.
+    if action == "reset_to_plan" and athlete:
+        reset_plan = selected_plan
+        if _is_flex_source(request):
+            reset_plan = _flex_edit_plan_for_request(request, selected_plan, athlete)
+        TrainingSlot.objects.filter(
+            plan=reset_plan,
+            athlete=athlete,
+            date=d,
+            slot_index=slot_index,
+        ).delete()
+        _bump_stats_version()
+        if _is_flex_source(request):
+            resp = HttpResponse("Reset to plan")
+            resp["HX-Refresh"] = "true"
+            return resp
+
     # Delete action
     if action == "delete" and athlete:
         keep_empty_override = _is_flex_source(request) or is_athlete_year_calendar

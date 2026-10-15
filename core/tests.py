@@ -3239,6 +3239,29 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(TrainingSlot.objects.filter(id=empty_override.id).exists())
 
+    def test_direct_flex_modal_reset_fallback_removes_override(self):
+        user = get_user_model().objects.create_user(
+            username="direct-reset-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(owner=user, name="Direct Reset Athlete", birth_year=2000, gender="X")
+        source_plan = TrainingPlan.objects.create(owner=user, name="Direct source plan")
+        PlanMembership.objects.create(plan=source_plan, athlete=athlete)
+        flex_plan = TrainingPlan.objects.create(owner=user, name=f"Flex Planner {user.id}")
+        empty_override = TrainingSlot.objects.create(
+            plan=flex_plan, athlete=athlete, date=date(2026, 9, 24), slot_index=1
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            f"/slot-modal/2026/09/24/1/?plan={source_plan.id}&athlete={athlete.id}&source=flex",
+            {"action": "reset_to_plan", "plan": str(source_plan.id), "athlete": str(athlete.id), "source": "flex"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(TrainingSlot.objects.filter(id=empty_override.id).exists())
+
     def test_flex_hides_empty_trainer_plan_from_base_planning(self):
         user = get_user_model().objects.create_user(
             username="empty-trainer-base-coach",
