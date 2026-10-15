@@ -48,6 +48,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
 - Een persoonlijke wijziging blijft zichtbaar, ook wanneer de oorspronkelijke bronplanning op die datum formeel al is afgelopen.
+- Een trainerplan dat via Base Planning aan een atleet is gekoppeld, blijft voor die atleet zichtbaar in Flex Planner; de Base Planning-koppeling gaat vóór de formele datumrange van het plan.
 - Toont bij zoneonderdelen waarvoor een handmatige Z1/Z2/Z3-HR is ingevuld ook de toepasselijke HR naast de richttijd.
 - Haalt weekphase-kleuren uit de Year Planner. Meerdere fases in één week worden diagonaal gecombineerd; de oude weektype-dropdown bestaat niet meer.
 

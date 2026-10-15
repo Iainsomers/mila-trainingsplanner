@@ -3264,6 +3264,59 @@ class SlotModalSaveTests(TestCase):
         clipboard = self.client.session.get("training_clipboard")
         self.assertEqual(clipboard["segments"][0]["text"], "1200m z2")
 
+    def test_flex_shows_same_base_trainer_plan_for_multiple_athletes(self):
+        user = get_user_model().objects.create_user(
+            username="multi-base-flex-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athletes = [
+            Athlete.objects.create(owner=user, name=f"Multi Base Athlete {index}", birth_year=2000, gender="X")
+            for index in (1, 2)
+        ]
+        trainer_plan = TrainingPlan.objects.create(
+            owner=user,
+            name="Shared base trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+            start_date=date(2026, 10, 1),
+            end_date=date(2026, 10, 12),
+        )
+        day = date(2026, 10, 13)
+        source_slot = TrainingSlot.objects.create(
+            plan=trainer_plan,
+            date=day,
+            slot_index=2,
+        )
+        source_slot.segments.create(type="CORE", text="1600m z2", zone="2", order=1)
+        for athlete in athletes:
+            block = AthleteBasePlanningBlock.objects.create(
+                athlete=athlete,
+                planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+                start_month=1,
+                start_day=1,
+                end_month=12,
+                end_day=31,
+            )
+            AthleteBasePlanningSlot.objects.create(
+                block=block,
+                weekday=day.weekday(),
+                slot_index=2,
+                mode=AthleteBasePlanningSlot.MODE_TRAINER,
+                trainer_plan=trainer_plan,
+            )
+
+        self.client.force_login(user)
+        response = self.client.get(
+            f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={athletes[0].id}&athletes={athletes[1].id}"
+        )
+        self.assertEqual(response.status_code, 200)
+        rows = response.context["week_rows"][0]["athlete_rows"]
+        self.assertEqual(len(rows), 2)
+        for row in rows:
+            cell = next(cell for cell in row["pm_cells"] if cell["day"] == day)
+            self.assertIsNotNone(cell["slot"])
+            self.assertEqual(cell["slot"].core_text(), "1600m z2")
+
     def test_group_auto_wucd_is_applied_for_base_plan_training(self):
         user = get_user_model().objects.create_user(
             username="groupcoach",
