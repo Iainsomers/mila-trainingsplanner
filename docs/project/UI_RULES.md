@@ -41,7 +41,7 @@ Bijgewerkt: 12 oktober 2026.
 - Bestaande waarden moeten direct bij openen zichtbaar zijn.
 - Planner, Dashboard en Logout moeten bereikbaar blijven zonder Admin.
 - Toon Week reports onderaan de week als een 2×2-grid met dezelfde vier kleuren als desktop.
-- Toon bij Daily vitals een compacte hartknop naast de datum; invoer gebeurt in een schermpassende popup. Na opslaan sluit de popup volledig, inclusief backdrop en `modal-open`-status, zonder een paginareload tijdens de mobiele Bootstrap-transitie.
+- Toon bij Daily vitals een compacte hartknop naast de datum; invoer gebeurt in een schermpassende popup. Plaats deze popup buiten de AYC/team-stackingcontext zodat de Bootstrap-backdrop nooit boven het formulier komt. Na opslaan sluit de popup volledig, inclusief backdrop en `modal-open`-status, zonder een paginareload tijdens de mobiele Bootstrap-transitie.
 - Toon de vier weekgemiddelden compact in het weeksamenvattingsblok en gebruik `NA` totdat minimaal drie waarden beschikbaar zijn.
 
 ## Desktop AYC

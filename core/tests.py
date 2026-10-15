@@ -4231,6 +4231,7 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('class="btn btn-sm btn-outline-danger ayc-mobile-vitals-button"', template_source)
         self.assertIn('id="mobileVitalsModal"', template_source)
         self.assertIn('class="ayc-mobile-vitals-avg"', template_source)
+        self.assertIn('document.body.appendChild(modalEl);', template_source)
 
     def test_mobile_vitals_batch_saves_all_four_values(self):
         _, _, athlete = self._user_plan_and_athlete()

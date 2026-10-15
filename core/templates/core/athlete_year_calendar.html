@@ -2572,6 +2572,11 @@
       fields.morning_hr.value = button.dataset.vitalsMorningHr || "";
       fields.hrv.value = button.dataset.vitalsHrv || "";
       errorEl.textContent = "";
+      // Keep the modal outside the AYC/team-branding stacking context. The
+      // Bootstrap backdrop is appended to body; the dialog must live there
+      // too or iOS can place the backdrop above the form, leaving only the
+      // fixed Logout control clickable.
+      document.body.appendChild(modalEl);
       bootstrap.Modal.getOrCreateInstance(modalEl).show();
     });
   });
