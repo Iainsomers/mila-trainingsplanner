@@ -53,7 +53,7 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 - Flex kiest het via Base Planning toegewezen trainerplan per AM/PM-dagdeel; een gedeeld (ook leeg) slot uit een ander gekoppeld plan mag die training niet verbergen. Een expliciete persoonlijke wijziging en een Flex-override behouden hun voorrang.
 - Drag/kopieer van een training uit een toegankelijk trainerplan schrijft de persoonlijke override naar het Flex-plan van de coachweergave die op dat moment openstaat. Daardoor is de kopie direct zichtbaar in dezelfde Flex Planner, ook als het bronplan van een andere coach is.
 - Flex haalt een toegewezen trainer-slot zo nodig rechtstreeks op vanuit Base Planning als de voorlaadlijst het plan niet bevat.
-- De trainingspopup gebruikt bij een individuele Base Planning-training hetzelfde geldige datumblok als de Flex Planner-cel, zodat de invoervelden de getoonde training voorinvullen.
+- De trainingspopup volgt bij Flex dezelfde bronkeuze als de kalendercel: een individuele Base Planning-training (of Rest) gaat vóór een gekoppeld trainerplan. Bij meerdere datumblokken wordt het blok met de laatste `effective_from` gebruikt.
 - Een expliciet atleet-slot blijft in Flex Planner zichtbaar als de oude planlidmaatschap- of groepskoppeling ontbreekt.
 - Een persoonlijke Flex-override kan met `Reset to plan` volledig worden verwijderd. Daarmee komt de onderliggende trainerplanning terug; velden leegmaken is niet hetzelfde als resetten.
 - Toont bij zoneonderdelen waarvoor een handmatige Z1/Z2/Z3-HR is ingevuld ook de toepasselijke HR naast de richttijd.

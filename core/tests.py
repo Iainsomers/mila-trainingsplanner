@@ -3238,6 +3238,71 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(response.context["core_text"], "Current plan 8*400m z4")
         self.assertEqual(response.context["cd_text"], "800m z1")
 
+    def test_flex_modal_prefers_individual_base_training_over_assigned_trainer_plan(self):
+        user = get_user_model().objects.create_user(
+            username="base-modal-vs-trainer-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="Individual Base Training Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        trainer_plan = TrainingPlan.objects.create(
+            owner=user,
+            name="Assigned Trainer Plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=trainer_plan, athlete=athlete)
+        flex_plan = TrainingPlan.objects.create(owner=user, name=f"Flex Planner {user.id}")
+        day = date(2026, 9, 24)
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            effective_from=date(2026, 1, 1),
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=day.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINING,
+            training_text="WU=800m z1\nCORE=Individual 6*500m z3\nCD=600m z1",
+        )
+        trainer_slot = TrainingSlot.objects.create(
+            plan=trainer_plan,
+            date=day,
+            slot_index=1,
+        )
+        trainer_slot.segments.create(type="CORE", text="Trainer plan 10 km z1", order=0)
+        self.client.force_login(user)
+
+        flex_page = self.client.get(
+            f"/flex-planner/?start=2026-09-21&weeks=1&athletes={athlete.id}"
+        )
+        flex_cell = next(
+            cell
+            for week in flex_page.context["week_rows"]
+            for cell in week["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
+        self.assertEqual(flex_cell["slot"].core_text(), "Individual 6*500m z3")
+
+        response = self.client.get(
+            f"/slot-modal/{day.year}/{day.month}/{day.day}/1/"
+            f"?plan={trainer_plan.id}&athlete={athlete.id}&source=flex"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["wu_text"], "800m z1")
+        self.assertEqual(response.context["core_text"], "Individual 6*500m z3")
+        self.assertEqual(response.context["cd_text"], "600m z1")
+
     def test_flex_modal_prefills_training_from_source_plan_before_override(self):
         user = get_user_model().objects.create_user(
             username="source-plan-modal-coach",

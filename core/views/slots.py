@@ -1269,18 +1269,23 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # An empty personal override has no visible segments, but must still
     # expose the action that removes the override and restores the plan.
     has_athlete_override = bool(eff.get("override_slot"))
-    if (
-        request.method == "GET"
-        and (_is_flex_source(request) or is_athlete_year_calendar)
-        and _is_flex_planner_plan(selected_plan)
-        and display_plan
-        and display_plan.id != selected_plan.id
-        and not visible_slot
-    ):
-        source_eff = _get_effective_slot(display_plan, athlete, d, slot_index, prefetch_segments=True)
-        visible_slot = source_eff["visible_slot"]
-        has_fix = source_eff["has_fix"]
-    if (_is_flex_source(request) or is_athlete_year_calendar) and _is_flex_planner_plan(selected_plan) and not visible_slot:
+    if request.method == "GET" and _is_flex_source(request) and _is_flex_planner_plan(selected_plan) and not visible_slot:
+        base_planning_slot = _base_planning_slot_for_slot_reset(athlete, d, slot_index) if athlete else None
+        if base_planning_slot:
+            # The Flex cell already resolves the current Base Planning mode.
+            # Prefer that same source over a plan id carried by the cell URL;
+            # an athlete may have a trainer-plan assignment even when this
+            # specific daypart is an individual Base Planning workout or rest.
+            visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
+            has_fix = False
+        elif display_plan and display_plan.id != selected_plan.id:
+            source_eff = _get_effective_slot(display_plan, athlete, d, slot_index, prefetch_segments=True)
+            visible_slot = source_eff["visible_slot"]
+            has_fix = source_eff["has_fix"]
+        if not visible_slot and not base_planning_slot:
+            visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
+            has_fix = False
+    elif is_athlete_year_calendar and _is_flex_planner_plan(selected_plan) and not visible_slot:
         visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
         has_fix = False
     if is_athlete_year_calendar and (not visible_slot or not visible_slot.segments.exists()):
