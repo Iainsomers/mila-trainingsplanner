@@ -254,7 +254,20 @@ def _base_planning_slot_for_slot_reset(athlete, day, slot_index):
         .prefetch_related("slots")
         .order_by("sort_order", "start_month", "start_day", "id")
     )
-    for block in blocks:
+    applicable_blocks = [
+        block for block in blocks
+        if getattr(block, "effective_from", date_cls(1900, 1, 1)) <= day
+    ]
+    if not applicable_blocks:
+        return None
+
+    latest_effective_from = max(
+        getattr(block, "effective_from", date_cls(1900, 1, 1))
+        for block in applicable_blocks
+    )
+    for block in applicable_blocks:
+        if getattr(block, "effective_from", date_cls(1900, 1, 1)) != latest_effective_from:
+            continue
         if not _base_block_covers_day_for_slot_reset(block, day):
             continue
         for base_slot in block.slots.all():

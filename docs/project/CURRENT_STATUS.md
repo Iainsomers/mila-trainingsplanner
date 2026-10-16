@@ -1,6 +1,6 @@
 # Actuele status
 
-Bijgewerkt: 15 oktober 2026.
+Bijgewerkt: 16 oktober 2026.
 
 ## Productiestatus
 
@@ -72,6 +72,7 @@ Bijgewerkt: 15 oktober 2026.
 ## Validatie en resterende beperkingen
 
 - Flex Planner toont een gekopieerde/persoonlijke atleettraining ook wanneer Base Planning voor dat dagdeel `Rest` bevat. De gedeelde trainertraining blijft op zo'n dagdeel verborgen; een expliciete persoonlijke override heeft voorrang.
+- De trainingspopup voor een individuele Base Planning-training kiest nu hetzelfde datumblok als de Flex Planner-cel; een ouder effectief blok mag de ingevulde popup niet overschrijven.
 
 - De Flex/Base Planning-reparatie is met tien gerichte regressietests en `manage.py check` gevalideerd. In de bredere `SlotModalSaveTests`-reeks slagen 59 van 60 tests; alleen `test_shared_coach_can_save_vitals_for_accessible_athlete` faalt nog met HTTP 403 in plaats van 204. Dit betreft de aparte vitals-rechtenroute, niet de Flex-weergave.
 - De 46 gerichte Polar-tests slaagden, inclusief Type D-berekening, HR-opslag en rechten. Django-check en migratiecontrole slaagden; beide zoneverdelingen zijn tegen de aangeleverde JSON gecontroleerd.
