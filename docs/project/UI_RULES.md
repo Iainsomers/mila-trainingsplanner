@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-Bijgewerkt: 15 oktober 2026.
+Bijgewerkt: 17 oktober 2026.
 
 ## Stijl
 
@@ -10,6 +10,7 @@ Bijgewerkt: 15 oktober 2026.
 - Primaire acties zijn duidelijk; secundaire navigatie gebruikt een outline-stijl.
 - Voorkom horizontaal scrollen op mobiel behalve waar een bewust desktopoverzicht wordt gebruikt.
 - Gebruik het vaste MiLa-logo als browsericoon en als beginschermicoon op iOS en Android.
+- Toon in Athlete Input de geselecteerde atleetnaam voor trainers op een vaste plek boven de tabbladen, zodat die bij iedere tab zichtbaar blijft.
 
 ## Terminologie
 

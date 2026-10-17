@@ -78,6 +78,8 @@
       <p class="text-muted mb-0">
         {% if mode == "create" %}
           Add an athlete.
+        {% elif not self_view and athlete %}
+          Selected athlete: <span class="fw-semibold text-body">{{ athlete.name }}</span>
         {% else %}
           
         {% endif %}

@@ -6251,6 +6251,12 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertIn('minutes && seconds ? minutes + ":" + seconds + "." + (hundredths || "00") : ""', source)
         self.assertIn("target._setFixedTimeSeconds(calculatedSeconds)", source)
 
+    def test_selected_athlete_name_is_shown_to_coaches_across_tabs(self):
+        source = get_template("core/coach_athlete_form.html").template.source
+
+        self.assertIn('{% elif not self_view and athlete %}', source)
+        self.assertIn('Selected athlete: <span class="fw-semibold text-body">{{ athlete.name }}</span>', source)
+
 
 class TrainingSegmentLabelTests(TestCase):
     def test_main_labels_replace_core_labels(self):

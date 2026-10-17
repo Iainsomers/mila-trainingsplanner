@@ -1,8 +1,10 @@
 # Functionele onderdelen
 
-Bijgewerkt: 16 oktober 2026.
+Bijgewerkt: 17 oktober 2026.
 
 ## Dashboard en Planning
+
+In Athlete Input staat boven de tabs voor trainers steeds de naam van de geselecteerde atleet. De aanduiding blijft zichtbaar wanneer tussen tabs wordt gewisseld; in de eigen Athlete settings van een atleet wordt deze niet getoond.
 
 Het coachdashboard toont Planning bovenaan. Onder `Coach dashboard` staat voor trainers met gedeelde toegang een `View as coach`-keuze. Standaard kijkt een trainer als zichzelf; na selectie van een andere toegestane coach tonen plannings- en beheerschermen alleen de gegevens van die coach. De dropdown toont of die toegang view-only of edit is; bij view-only worden schrijfacties server-side geblokkeerd. Settings is een werkende dashboardtegel voor coachinstellingen, waaronder Planning Camps. Stats en Polar houden hun under-development-aanduiding.
 
