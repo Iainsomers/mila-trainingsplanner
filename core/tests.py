@@ -99,6 +99,48 @@ class NewPlansWishesTests(TestCase):
         self.assertContains(response, "up to 3 active wishes")
         self.assertEqual(UserWish.objects.filter(author=self.user, status=UserWish.STATUS_ACTIVE).count(), 3)
 
+    def test_wish_author_and_admin_can_edit_but_other_users_cannot(self):
+        wish = UserWish.objects.create(author=self.user, title="Original", description="Old details")
+
+        self.client.force_login(self.user)
+        owner_page = self.client.get(f"/new-plans-wishes/?section=wishes&edit_wish={wish.id}")
+        self.assertContains(owner_page, 'name="action" value="update_wish"')
+        owner_save = self.client.post("/new-plans-wishes/", {
+            "action": "update_wish",
+            "wish_id": wish.id,
+            "title": "Owner edit",
+            "description": "Updated by owner",
+        })
+        self.assertEqual(owner_save.status_code, 302)
+        wish.refresh_from_db()
+        self.assertEqual((wish.title, wish.description), ("Owner edit", "Updated by owner"))
+
+        self.client.force_login(self.other_user)
+        other_page = self.client.get(f"/new-plans-wishes/?section=wishes&edit_wish={wish.id}")
+        self.assertNotContains(other_page, 'name="action" value="update_wish"')
+        other_save = self.client.post("/new-plans-wishes/", {
+            "action": "update_wish",
+            "wish_id": wish.id,
+            "title": "Unauthorized edit",
+            "description": "Should not save",
+        })
+        self.assertEqual(other_save.status_code, 403)
+        wish.refresh_from_db()
+        self.assertEqual(wish.title, "Owner edit")
+
+        self.client.force_login(self.admin)
+        admin_page = self.client.get(f"/new-plans-wishes/?section=wishes&edit_wish={wish.id}")
+        self.assertContains(admin_page, 'name="action" value="update_wish"')
+        admin_save = self.client.post("/new-plans-wishes/", {
+            "action": "update_wish",
+            "wish_id": wish.id,
+            "title": "Admin edit",
+            "description": "Updated by admin",
+        })
+        self.assertEqual(admin_save.status_code, 302)
+        wish.refresh_from_db()
+        self.assertEqual((wish.title, wish.description), ("Admin edit", "Updated by admin"))
+
     def test_wishes_are_anonymous_except_for_admin_and_can_be_liked(self):
         wish = UserWish.objects.create(author=self.user, title="Dark mode")
         self.client.force_login(self.other_user)

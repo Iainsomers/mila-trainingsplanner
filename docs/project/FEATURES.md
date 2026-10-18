@@ -1,8 +1,10 @@
 # Functionele onderdelen
 
-Bijgewerkt: 17 oktober 2026.
+Bijgewerkt: 18 oktober 2026.
 
 ## Dashboard en Planning
+
+In New, Plans, Wishes kan de maker een eigen actieve wish bewerken. De productbeheerder (`admin`) kan iedere actieve wish bewerken. Andere gebruikers hebben geen Edit-knop en wijzigingen worden ook server-side geweigerd.
 
 In Athlete Input staat boven de tabs voor trainers steeds de naam van de geselecteerde atleet. De aanduiding blijft zichtbaar wanneer tussen tabs wordt gewisseld; in de eigen Athlete settings van een atleet wordt deze niet getoond.
 

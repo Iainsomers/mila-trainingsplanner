@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-Bijgewerkt: 17 oktober 2026.
+Bijgewerkt: 18 oktober 2026.
 
 ## Stijl
 
@@ -11,6 +11,7 @@ Bijgewerkt: 17 oktober 2026.
 - Voorkom horizontaal scrollen op mobiel behalve waar een bewust desktopoverzicht wordt gebruikt.
 - Gebruik het vaste MiLa-logo als browsericoon en als beginschermicoon op iOS en Android.
 - Toon in Athlete Input de geselecteerde atleetnaam voor trainers op een vaste plek boven de tabbladen, zodat die bij iedere tab zichtbaar blijft.
+- In New, Plans, Wishes staat `Edit` alleen bij eigen wishes of voor de productbeheerder; andere gebruikers krijgen alleen de beschikbare like-actie.
 
 ## Terminologie
 

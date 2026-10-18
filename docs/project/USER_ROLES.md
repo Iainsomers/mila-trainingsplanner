@@ -22,6 +22,8 @@ Een trainer is doorgaans staff- of superuser en kan:
 
 Een trainer ziet standaard alleen de eigen gegevens. Als via `CoachAccess` toegang tot een andere trainer is gegeven, kiest de trainer op het dashboard expliciet als welke coach hij kijkt. Die keuze toont uitsluitend gegevens van die gekozen coach en mengt ze niet met de eigen atleten, plannen, wedstrijden of templates. Gedeelde toegang is standaard view-only; alleen wanneer `can_edit` aan staat mag de meekijkende trainer wijzigingen opslaan. Deze toegang is niet transitief: als trainer A trainer B mag zien en B trainer C mag zien, dan ziet A trainer C niet. Historische atleten zonder owner horen via datamigratie aan de juiste trainer te worden gekoppeld, niet via een brede zichtbaarheidsexceptie.
 
+Iedere gebruiker kan eigen actieve wishes indienen en bewerken. Alleen de productbeheerder kan wishes van andere gebruikers bewerken; overige gebruikers kunnen die alleen bekijken en liken.
+
 ## Atleet
 
 Een atleetaccount is aan één `Athlete` gekoppeld. Een atleet kan uitsluitend zien en gebruiken:

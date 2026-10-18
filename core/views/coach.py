@@ -560,6 +560,27 @@ def new_plans_wishes_view(request):
                 like.delete()
             return redirect("new_plans_wishes")
 
+        if action == "update_wish":
+            wish = get_object_or_404(
+                UserWish,
+                id=request.POST.get("wish_id"),
+                status=UserWish.STATUS_ACTIVE,
+            )
+            if wish.author_id != request.user.id and not is_admin:
+                return HttpResponseForbidden("You can only edit your own wishes.")
+            title = request.POST.get("title", "").strip()
+            if not title:
+                return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(
+                    request.user,
+                    is_admin,
+                    error="Please add a title for your wish.",
+                    edit_wish=wish,
+                ))
+            wish.title = title
+            wish.description = request.POST.get("description", "").strip()
+            wish.save(update_fields=["title", "description", "updated_at"])
+            return redirect("new_plans_wishes")
+
         if not is_admin:
             return HttpResponseForbidden("Only the admin account can manage new features and plans.")
 
@@ -644,16 +665,25 @@ def new_plans_wishes_view(request):
         return HttpResponseForbidden("Unknown action.")
 
     edit_plan = None
+    edit_wish = None
     if is_admin and str(request.GET.get("edit", "")).isdigit():
         edit_plan = PlannedChange.objects.filter(id=int(request.GET["edit"])).first()
+    if str(request.GET.get("edit_wish", "")).isdigit():
+        edit_wish = UserWish.objects.filter(
+            id=int(request.GET["edit_wish"]),
+            status=UserWish.STATUS_ACTIVE,
+        ).first()
+        if edit_wish and edit_wish.author_id != request.user.id and not is_admin:
+            edit_wish = None
     return render(request, "core/new_plans_wishes.html", _new_plans_wishes_context(
         request.user,
         is_admin,
         edit_plan=edit_plan,
+        edit_wish=edit_wish,
     ))
 
 
-def _new_plans_wishes_context(user, is_admin, error="", edit_plan=None):
+def _new_plans_wishes_context(user, is_admin, error="", edit_plan=None, edit_wish=None):
     active_wishes = UserWish.objects.filter(status=UserWish.STATUS_ACTIVE).select_related("author").prefetch_related("likes__user")
     planned_changes = (
         PlannedChange.objects
@@ -691,6 +721,7 @@ def _new_plans_wishes_context(user, is_admin, error="", edit_plan=None):
         "is_product_admin": is_admin,
         "error": error,
         "edit_plan": edit_plan,
+        "edit_wish": edit_wish,
         "urgency_choices": PlannedChange.URGENCY_CHOICES,
     }
 

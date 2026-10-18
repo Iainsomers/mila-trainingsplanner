@@ -102,12 +102,22 @@
           {% for wish in active_wishes %}
           <article class="border-top pt-3 mt-3 d-flex justify-content-between gap-3">
             <div>
+              {% if edit_wish and edit_wish.id == wish.id %}
+              <form method="post" class="w-100">
+                {% csrf_token %}<input type="hidden" name="action" value="update_wish"><input type="hidden" name="wish_id" value="{{ wish.id }}">
+                <div class="mb-2"><label class="form-label" for="edit-wish-title">Wish</label><input id="edit-wish-title" name="title" class="form-control" maxlength="160" value="{{ wish.title }}" required></div>
+                <div class="mb-2"><label class="form-label" for="edit-wish-description">Details</label><textarea id="edit-wish-description" name="description" class="form-control" rows="3">{{ wish.description }}</textarea></div>
+                <button class="btn btn-sm btn-primary">Save</button> <a class="btn btn-sm btn-outline-secondary" href="{% url 'new_plans_wishes' %}?section=wishes">Cancel</a>
+              </form>
+              {% else %}
               <strong>{{ wish.title }}</strong>
               {% if is_product_admin %}<span class="text-muted small ms-2">{{ wish.author.get_full_name|default:wish.author.username }}</span>{% endif %}
               {% if wish.description %}<div class="mt-1">{{ wish.description|linebreaksbr }}</div>{% endif %}
               {% if is_product_admin and wish.likes.all %}<div class="small text-muted mt-2">Liked by: {% for like in wish.likes.all %}{{ like.user.get_full_name|default:like.user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+              {% endif %}
             </div>
             <div class="d-flex gap-2 align-items-start">
+              {% if wish.author_id == request.user.id or is_product_admin %}{% if not edit_wish or edit_wish.id != wish.id %}<a class="btn btn-sm btn-outline-primary" href="{% url 'new_plans_wishes' %}?section=wishes&amp;edit_wish={{ wish.id }}">Edit</a>{% endif %}{% endif %}
               {% if wish.author_id != request.user.id %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle_like"><input type="hidden" name="wish_id" value="{{ wish.id }}"><button class="btn btn-sm {% if wish.id in liked_wish_ids %}btn-primary{% else %}btn-outline-primary{% endif %}">Like{% if wish.likes.count %} ({{ wish.likes.count }}){% endif %}</button></form>{% else %}<span class="text-muted small pt-1">Your wish</span>{% endif %}
               {% if is_product_admin %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="cancel_wish"><input type="hidden" name="wish_id" value="{{ wish.id }}"><button class="btn btn-sm btn-outline-danger">Cancel</button></form>{% endif %}
             </div>
