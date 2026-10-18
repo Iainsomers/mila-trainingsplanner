@@ -3334,6 +3334,16 @@ def athlete_year_calendar_view(request):
     # BULK FETCH checks & comments (performance)
     check_map = {}
     comment_map = {}
+    not_done_slot_keys = set()
+    if selected_athlete:
+        not_done_slot_keys = set(
+            AthleteDayCheck.objects.filter(
+                athlete=selected_athlete,
+                date__gte=start,
+                date__lte=end,
+                status=AthleteDayCheck.STATUS_NOT_DONE,
+            ).values_list("date", "slot_index")
+        )
     if selected_athlete and evaluation_visibility["training"]:
         checks = AthleteDayCheck.objects.filter(
             athlete=selected_athlete,
@@ -3602,6 +3612,8 @@ def athlete_year_calendar_view(request):
 
         if selected_athlete:
             for cell in cells1 + cells2:
+                if (cell["day"], cell["slot_index"]) in not_done_slot_keys:
+                    continue
                 slot = cell.get("slot")
                 for load in _ayc_slot_loads_for_totals(slot, selected_athlete):
                     if load.get("kind") == "alt":

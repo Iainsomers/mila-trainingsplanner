@@ -73,6 +73,7 @@ De instelling `See session km` staat in Athlete settings > General, is standaard
 - De huidige week is geel en de huidige dag donkerder geel.
 - Weektype staat als gekleurde pil.
 - `Total` en de zoneverdeling tonen het berekende weektotaal.
+- Een training met evaluatiestatus `Not done` telt niet mee in de weekkilometers, zone-/wedstrijdverdeling of ALT-minuten; de geplande training blijft zichtbaar.
 - Zoneonderdelen tonen naast de indicatieve tijd de handmatige HR-grens wanneer die voor de atleet is ingevuld.
 - AM en PM worden afzonderlijk getoond.
 - Training en Evaluation hebben beide een zichtbare knop `Open`.

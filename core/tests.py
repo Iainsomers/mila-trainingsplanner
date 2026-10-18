@@ -2719,6 +2719,65 @@ class SlotModalSaveTests(TestCase):
         hidden_response = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
         self.assertNotContains(hidden_response, '<div class="session-km-label">')
 
+    def test_ayc_week_totals_exclude_not_done_running_and_alternative_load(self):
+        user, plan, athlete = self._user_plan_and_athlete()
+        day = date.today()
+        not_done_slot = TrainingSlot.objects.create(
+            plan=plan, athlete=athlete, date=day, slot_index=1
+        )
+        TrainingSegment.objects.create(
+            slot=not_done_slot,
+            order=1,
+            type="CORE",
+            text="5km z1",
+            distance_m=5000,
+            norm_distance_m=5000,
+            zone="1",
+        )
+        TrainingSegment.objects.create(
+            slot=not_done_slot,
+            order=2,
+            type="ALT",
+            text="30' z1",
+            duration_s=1800,
+            zone="1",
+        )
+        completed_slot = TrainingSlot.objects.create(
+            plan=plan, athlete=athlete, date=day, slot_index=2
+        )
+        TrainingSegment.objects.create(
+            slot=completed_slot,
+            order=1,
+            type="CORE",
+            text="2km z2",
+            distance_m=2000,
+            norm_distance_m=2000,
+            zone="2",
+        )
+        TrainingSegment.objects.create(
+            slot=completed_slot,
+            order=2,
+            type="ALT",
+            text="10' z2",
+            duration_s=600,
+            zone="2",
+        )
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_NOT_DONE,
+            updated_by=user,
+        )
+
+        response = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
+
+        self.assertEqual(response.status_code, 200)
+        week = next(row for row in response.context["week_rows"] if row["week_start"] <= day <= row["week_end"])
+        self.assertEqual(week["sum_tot_km"], "2.0")
+        self.assertEqual(week["alt_z1_min"], 0)
+        self.assertEqual(week["alt_z2_min"], 10)
+
     def test_base_planning_autosave_allows_intermediate_overlapping_blocks(self):
         user, _, athlete = self._user_plan_and_athlete()
         block1 = AthleteBasePlanningBlock.objects.create(

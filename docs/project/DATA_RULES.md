@@ -63,6 +63,7 @@ Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, 
 - Toon daarnaast verdeling over zones en wedstrijden.
 - Tijdsblokken in Alternative met Z1, Z2 of Z3 blijven aparte `ALT Z1/Z2/Z3`-minuten en worden niet omgerekend naar hardloopkilometers. Alternative Z4 en Z5 worden niet als ALT-weektotaal getoond.
 - `//` splitst ook Alternative in afzonderlijke blokken, bijvoorbeeld `20' z1//10' z2//10' z3`.
+- Een sessie met de evaluatiestatus `Not done` draagt niet bij aan het weektotaal, de zone-/wedstrijdkilometers of ALT-minuten. De geplande sessie blijft wel zichtbaar in de kalender.
 
 `See session km` toont per AYC-sessie het opgetelde loopvolume van WU, Sprint, Main, Main 2 en CD, ongeacht de zoneverdeling. Kilometers uit Alternative worden uitgesloten. Tijdsdelen gebruiken dezelfde tempo-/zoneomrekening als de bestaande trainingsberekening.
 - Stats vergelijkt het totaal van de huidige kalenderweek met de vorige kalenderweek.
