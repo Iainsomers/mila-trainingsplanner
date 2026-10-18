@@ -548,6 +548,20 @@
         </div>
         {% endif %}
 
+        {% if mode == "edit" and athlete %}
+        <div class="mb-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="see_session_km"
+            name="see_session_km"
+            {% if form.see_session_km %}checked{% endif %}
+          >
+          <label class="form-check-label" for="see_session_km">See session km</label>
+          <div class="form-text">Show total running distance in each session in the Athlete Year Calendar, excluding Alternative.</div>
+        </div>
+        {% endif %}
+
         <div class="mt-3 mb-3">
           <label class="form-label d-block">WU/CD settings</label>
           <div class="row g-3 align-items-end">

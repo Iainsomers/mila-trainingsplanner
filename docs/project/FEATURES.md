@@ -65,6 +65,8 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 
 ## Athlete Year Calendar (AYC)
 
+De instelling `See session km` staat in Athlete settings > General, is standaard aan en kan door de atleet zelf of een trainer worden gewijzigd. Wanneer deze aanstaat, toont de AYC rechtsboven per sessie het totale loopvolume van WU, Sprint, Main, Main 2 en CD; Alternative telt niet mee.
+
 - Trainer kan tussen atleten schakelen; atleet ziet alleen zichzelf.
 - Desktop toont een brede jaartabel; mobiel toont één week tegelijk.
 - Op mobiel opent de huidige week automatisch en navigeert men met pijlen.

@@ -2538,6 +2538,17 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
     return loads
 
 
+def _ayc_slot_session_km(slot, athlete=None):
+    """Return planned running distance for a session, excluding Alternative."""
+    loads = _ayc_slot_loads_for_totals(slot, athlete)
+    meters = sum(
+        float(load.get("meters") or 0)
+        for load in loads
+        if load.get("kind") != "alt"
+    )
+    return _format_km(round(meters)) if meters > 0 else ""
+
+
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     def base_trainer_plan_assigned_for_day(plan):
         if not plan:
@@ -3515,6 +3526,7 @@ def athlete_year_calendar_view(request):
                 "slot_index": 1,
                 "plan_id": slot1.plan_id if slot1 and getattr(slot1, "plan_id", None) else (plan1.id if plan1 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot1),
+                "session_km": _ayc_slot_session_km(slot1, selected_athlete) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
             })
             cells2.append({
                 "day": day,
@@ -3524,6 +3536,7 @@ def athlete_year_calendar_view(request):
                 "slot_index": 2,
                 "plan_id": slot2.plan_id if slot2 and getattr(slot2, "plan_id", None) else (plan2.id if plan2 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot2),
+                "session_km": _ayc_slot_session_km(slot2, selected_athlete) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
             })
             comment = None
             if selected_athlete:
@@ -3756,6 +3769,7 @@ def athlete_year_calendar_view(request):
             "athletes": athletes,
             "selected_athlete_id": str(selected_athlete_id or ""),
             "selected_athlete": selected_athlete,
+            "show_session_km": bool(selected_athlete and getattr(selected_athlete, "see_session_km", True)),
             "show_training_reports": show_training_reports,
             "show_week_reports": show_week_reports,
             "show_daily_vitals": show_daily_vitals,

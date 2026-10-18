@@ -9186,6 +9186,7 @@ def coach_athlete_create_view(request):
         "is_private": False,
         "view_weeks_ahead": 2,
         "training_reports_enabled": True,
+        "see_session_km": True,
         "week_report_enabled": False,
         "daily_vitals_enabled": False,
         "year_planner_training_enabled": False,
@@ -9417,6 +9418,7 @@ def coach_athlete_create_view(request):
                 zone_hr_bpm=zone_hr_bpm,
                 view_weeks_ahead=view_weeks_ahead,
                 training_reports_enabled=form["training_reports_enabled"],
+                see_session_km=True,
                 week_report_enabled=form["week_report_enabled"],
                 daily_vitals_enabled=form["daily_vitals_enabled"],
                 year_planner_training_enabled=form["year_planner_training_enabled"],
@@ -9510,6 +9512,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "is_private": getattr(athlete, "is_private", False),
         "view_weeks_ahead": getattr(athlete, "view_weeks_ahead", 2),
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
+        "see_session_km": getattr(athlete, "see_session_km", True),
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
         "year_planner_training_enabled": getattr(athlete, "year_planner_training_enabled", False),
@@ -9556,6 +9559,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["target_thm"] = (request.POST.get("target_thm") or "").strip()
         form["target_t4"] = (request.POST.get("target_t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
+        form["see_session_km"] = (request.POST.get("see_session_km") == "on")
         if self_view:
             form["view_weeks_ahead"] = str(getattr(athlete, "view_weeks_ahead", 2))
             form["training_reports_enabled"] = getattr(athlete, "training_reports_enabled", True)
@@ -9749,6 +9753,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.zone_hr_bpm = zone_hr_bpm
             athlete.view_weeks_ahead = view_weeks_ahead
             athlete.training_reports_enabled = form["training_reports_enabled"]
+            athlete.see_session_km = form["see_session_km"]
             athlete.week_report_enabled = form["week_report_enabled"]
             athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
             athlete.year_planner_training_enabled = form["year_planner_training_enabled"]

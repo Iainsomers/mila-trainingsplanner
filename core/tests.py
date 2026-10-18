@@ -2679,6 +2679,46 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(result, "DCO Print Athlete")
         self.assertContains(result, "daily-print-grid")
 
+    def test_ayc_session_km_includes_running_segments_but_excludes_alternative(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+        day = date.today()
+        slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=day, slot_index=1)
+        segment_data = [
+            ("WU", "1km z1", 1000, 1, "1"),
+            ("SPR", "4*100m", 100, 4, "1"),
+            ("CORE", "3km z2", 3000, 1, "2"),
+            ("CORE2", "2km z3", 2000, 1, "3"),
+            ("CD", "500m z1", 500, 1, "1"),
+            ("ALT", "5km z1", 5000, 1, "1"),
+        ]
+        for order, (segment_type, text, distance_m, reps, zone) in enumerate(segment_data, start=1):
+            TrainingSegment.objects.create(
+                slot=slot,
+                order=order,
+                type=segment_type,
+                text=text,
+                distance_m=distance_m,
+                norm_distance_m=distance_m * reps,
+                reps=reps,
+                zone=zone,
+            )
+
+        response = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
+        self.assertEqual(response.status_code, 200)
+        current_cell = next(
+            cell
+            for week in response.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        self.assertEqual(current_cell["session_km"], "6.9")
+        self.assertContains(response, 'class="session-km-label">6.9 km</div>')
+
+        athlete.see_session_km = False
+        athlete.save(update_fields=["see_session_km"])
+        hidden_response = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
+        self.assertNotContains(hidden_response, '<div class="session-km-label">')
+
     def test_base_planning_autosave_allows_intermediate_overlapping_blocks(self):
         user, _, athlete = self._user_plan_and_athlete()
         block1 = AthleteBasePlanningBlock.objects.create(
@@ -6290,6 +6330,8 @@ class AthleteTimeInputFormatTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
+        self.assertIn('id="see_session_km"', html)
+        self.assertIn('id="see_session_km"\n            name="see_session_km"\n            checked', html)
         self.assertIn('class="zone-time-grid"', html)
         self.assertIn('class="pr-time-grid"', html)
         self.assertEqual(html.count('class="col-md-2 pr-time-card"'), 10)
@@ -6325,6 +6367,43 @@ class AthleteTimeInputFormatTests(TestCase):
 
         self.assertIn('{% elif not self_view and athlete %}', source)
         self.assertIn('Selected athlete: <span class="fw-semibold text-body">{{ athlete.name }}</span>', source)
+
+    def test_trainer_and_athlete_can_change_see_session_km(self):
+        User = get_user_model()
+        coach = User.objects.create_user(username="session-km-coach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="sessionkmrunner",
+            birth_year=2000,
+            gender="X",
+        )
+        athlete_user = User.objects.create_user(username="sessionkmrunner", password="secret")
+        form_data = {
+            "name": athlete.name,
+            "birth_year": "2000",
+            "gender": "X",
+            "zone_method": "manual",
+            "z1_pace": "6:00",
+            "z2_pace": "5:30",
+            "z3_pace": "5:00",
+            "z4_pace": "4:30",
+            "z5_pace": "4:00",
+        }
+
+        self.client.force_login(coach)
+        trainer_response = self.client.post(f"/coach/athletes/{athlete.id}/edit/", form_data)
+        self.assertEqual(trainer_response.status_code, 302)
+        athlete.refresh_from_db()
+        self.assertFalse(athlete.see_session_km)
+
+        self.client.force_login(athlete_user)
+        athlete_response = self.client.post(
+            "/athlete/settings/",
+            {**form_data, "see_session_km": "on"},
+        )
+        self.assertEqual(athlete_response.status_code, 302)
+        athlete.refresh_from_db()
+        self.assertTrue(athlete.see_session_km)
 
 
 class TrainingSegmentLabelTests(TestCase):

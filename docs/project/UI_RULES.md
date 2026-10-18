@@ -12,6 +12,7 @@ Bijgewerkt: 18 oktober 2026.
 - Gebruik het vaste MiLa-logo als browsericoon en als beginschermicoon op iOS en Android.
 - Toon in Athlete Input de geselecteerde atleetnaam voor trainers op een vaste plek boven de tabbladen, zodat die bij iedere tab zichtbaar blijft.
 - In New, Plans, Wishes staat `Edit` alleen bij eigen wishes of voor de productbeheerder; andere gebruikers krijgen alleen de beschikbare like-actie.
+- Als `See session km` is ingeschakeld, staat het sessietotaal compact rechtsboven in iedere sessiecel van de AYC, ook mobiel.
 
 ## Terminologie
 

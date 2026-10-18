@@ -376,6 +376,7 @@ class Athlete(models.Model):
     view_weeks_ahead = models.IntegerField(default=2)
 
     training_reports_enabled = models.BooleanField(default=True)
+    see_session_km = models.BooleanField(default=True)
     week_report_enabled = models.BooleanField(default=False)
     daily_vitals_enabled = models.BooleanField(default=False)
     year_planner_training_enabled = models.BooleanField(default=False)
