@@ -2333,6 +2333,9 @@
     document.getElementById("commentOkBtn").disabled = !ok;
     document.getElementById("reportValidationMsg").textContent = ok ? "" : "For each training, leave everything empty or enter Done + RPE 0-10 + a comment of at least 4 letters.";
   }
+  function setNotDoneRpe(statusId, rpeId){
+    if (val(statusId) === "not_done") setVal(rpeId, "0");
+  }
   function post(slotIndex, status, rpe, comment){
     var fd = new FormData();
     var watchId = watchVal("aypWatchActivityId");
@@ -2371,6 +2374,8 @@
       setVal("reportT2Status", el.getAttribute("data-t2-status"));
       setVal("reportT2Rpe", el.getAttribute("data-t2-rpe"));
       setVal("reportT2Comment", el.getAttribute("data-t2-comment"));
+      setNotDoneRpe("reportT1Status", "reportT1Rpe");
+      setNotDoneRpe("reportT2Status", "reportT2Rpe");
       var savedWatchId = el.getAttribute("data-t1-watch-id") || el.getAttribute("data-t2-watch-id") || "";
       var savedWatchSummary = el.getAttribute("data-t1-watch-summary") || el.getAttribute("data-t2-watch-summary") || "";
       setSavedWatchResult(savedWatchId, savedWatchSummary);
@@ -2401,6 +2406,12 @@
     });
   }
   document.querySelectorAll(".report-field").forEach(function(el){ el.addEventListener("input", validate); el.addEventListener("change", validate); });
+  [["reportT1Status", "reportT1Rpe"], ["reportT2Status", "reportT2Rpe"]].forEach(function(fields){
+    document.getElementById(fields[0]).addEventListener("change", function(){
+      setNotDoneRpe(fields[0], fields[1]);
+      validate();
+    });
+  });
   document.querySelectorAll("[data-voice-comment-target]").forEach(function(btn) {
     if (!SpeechRecognitionApi) {
       btn.disabled = true;

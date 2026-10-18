@@ -4690,6 +4690,24 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(saved_report.rpe, 6)
         self.assertEqual(saved_report.comment, "Coach test report")
 
+        not_done_response = self.client.post(
+            f"/athlete/year/?year={future_day.year}&athlete={athlete.id}",
+            {
+                "date": future_day.isoformat(),
+                "slot_index": "2",
+                "report_submit": "1",
+                "check_status": "not_done",
+                "rpe": "",
+                "report_comment": "Had to rest",
+            },
+        )
+        self.assertEqual(not_done_response.status_code, 200)
+        not_done_report = AthleteDayCheck.objects.get(
+            athlete=athlete, date=future_day, slot_index=2
+        )
+        self.assertEqual(not_done_report.rpe, 0)
+        self.assertEqual(not_done_report.comment, "Had to rest")
+
         desktop_page = self.client.get(
             f"/athlete/year/?year={future_day.year}&athlete={athlete.id}"
         )
@@ -4698,6 +4716,15 @@ class SlotModalSaveTests(TestCase):
         )[1].split("</script>", 1)[0]
         self.assertNotIn("window.location.reload();", desktop_vitals_script)
         self.assertIn('"X-Requested-With": "XMLHttpRequest"', desktop_vitals_script)
+
+    def test_not_done_evaluation_defaults_rpe_to_zero_and_keeps_comment_minimum(self):
+        source = get_template("core/athlete_year_calendar.html").template.source
+
+        self.assertIn('function setNotDoneRpe(statusId, rpeId)', source)
+        self.assertIn('setVal(rpeId, "0")', source)
+        self.assertIn('setNotDoneRpe("reportT1Status", "reportT1Rpe")', source)
+        self.assertIn('setNotDoneRpe("reportT2Status", "reportT2Rpe")', source)
+        self.assertIn('comment.length >= 4', source)
 
     def test_shared_coach_can_save_vitals_for_accessible_athlete(self):
         owner = get_user_model().objects.create_user(

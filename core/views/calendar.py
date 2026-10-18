@@ -3015,7 +3015,11 @@ def athlete_year_calendar_view(request):
                     if report_submit is not None:
                         rpe_raw = (request.POST.get("rpe") or "").strip()
                         comment_raw = (request.POST.get("report_comment") or "").strip()
-                        obj.rpe = int(rpe_raw) if rpe_raw.isdigit() and 0 <= int(rpe_raw) <= 10 else None
+                        obj.rpe = (
+                            0
+                            if status == AthleteDayCheck.STATUS_NOT_DONE
+                            else int(rpe_raw) if rpe_raw.isdigit() and 0 <= int(rpe_raw) <= 10 else None
+                        )
                         obj.comment = comment_raw
                         obj.watch_activity_id = watch_activity_id
                         obj.watch_activity_summary = watch_activity_summary

@@ -91,6 +91,8 @@ Ondersteunde onderdelen zijn WU, Mob/Tech, Sprint, Main, Main 2, Alternative en 
 
 ## Evaluaties
 
+Bij trainingsevaluaties wordt RPE automatisch op 0 gezet wanneer `Not done` wordt gekozen. De bestaande controle blijft staan: bij een ingevulde evaluatie is een commentaar van minimaal vier tekens vereist.
+
 Per training kan de atleet vastleggen:
 
 - status: Done, More/too fast, Adjusted, Less/slower of Not done;
