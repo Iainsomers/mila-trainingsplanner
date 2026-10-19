@@ -289,7 +289,7 @@
                     </select>
                     </div>
                     <div class="form-check form-switch mb-1">
-                      <input class="form-check-input race-expand-toggle" type="checkbox" role="switch" id="raceExpand{{ race.id }}">
+                      <input class="form-check-input race-expand-toggle" type="checkbox" role="switch" id="raceExpand{{ race.id }}" checked>
                       <label class="form-check-label small" for="raceExpand{{ race.id }}">Expand all</label>
                     </div>
                   </div>
@@ -298,7 +298,7 @@
 
                 <div class="race-entry-list">
                   <div class="race-entry-head">
-                    <span>Athlete / distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>
+                    <span>Athlete</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>
                   </div>
                   {% for athlete_row in row.athlete_rows %}
                     <details class="race-entry-athlete" data-plan-ids="{{ athlete_row.plan_ids }}" data-participating="{% if athlete_row.participating %}1{% else %}0{% endif %}" {% if is_athlete_user %}open{% endif %}>
@@ -306,18 +306,20 @@
                         <strong class="race-entry-athlete-name">{{ athlete_row.athlete.name }}</strong>
                       </summary>
                       <input type="hidden" name="athletes" value="{{ athlete_row.athlete.id }}" class="race-athlete-submit-id">
-                      {% for distance_entry in athlete_row.distance_entries %}
-                        {% with distance=distance_entry.distance entry=distance_entry.entry %}
-                        <div class="race-entry-distance" data-distance-id="{{ distance.id }}" data-distance-label="{{ distance.display_distance }}">
-                          <span>{{ distance.display_distance }}</span>
-                          <label><input type="checkbox" data-race-role="coach" name="coach_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.coach_selected %}checked{% endif %} {% if is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
-                          <label><input type="checkbox" data-race-role="athlete" name="athlete_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.athlete_selected %}checked{% endif %} {% if not is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
-                          <label><input type="checkbox" data-race-role="target" name="target_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.target_selected %}checked{% endif %}></label>
-                        </div>
-                        {% endwith %}
-                      {% empty %}
-                        <div class="text-muted small">No distances yet.</div>
-                      {% endfor %}
+                      <div class="race-entry-distance-list">
+                        {% for distance_entry in athlete_row.distance_entries %}
+                          {% with distance=distance_entry.distance entry=distance_entry.entry %}
+                          <div class="race-entry-distance" data-distance-id="{{ distance.id }}" data-distance-label="{{ distance.display_distance }}">
+                            <span>{{ distance.display_distance }}</span>
+                            <label><input type="checkbox" data-race-role="coach" name="coach_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.coach_selected %}checked{% endif %} {% if is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
+                            <label><input type="checkbox" data-race-role="athlete" name="athlete_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.athlete_selected %}checked{% endif %} {% if not is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
+                            <label><input type="checkbox" data-race-role="target" name="target_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.target_selected %}checked{% endif %}></label>
+                          </div>
+                          {% endwith %}
+                        {% empty %}
+                          <div class="text-muted small race-entry-no-distances">No distances yet.</div>
+                        {% endfor %}
+                      </div>
                     </details>
                   {% endfor %}
                 </div>
@@ -693,27 +695,44 @@
   }
 
   .race-entry-list { border: 1px solid #dee2e6; border-radius: 7px; overflow: hidden; }
-  .race-entry-head,
-  .race-entry-distance {
+  .race-entry-head {
     display: grid;
-    grid-template-columns: minmax(150px, 1fr) 70px 70px 70px;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(110px, .8fr) 70px 70px 70px;
     align-items: center;
     gap: 6px;
   }
   .race-entry-head { padding: 6px 9px; background: #f8f9fa; font-size: .72rem; font-weight: 700; text-align: center; }
   .race-entry-head span:first-child { text-align: left; }
-  .race-entry-athlete { padding: 0 9px 7px; border-top: 1px solid #e9ecef; }
+  .race-entry-athlete {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(110px, .8fr) 70px 70px 70px;
+    align-items: start;
+    gap: 6px;
+    padding: 0 9px;
+    border-top: 1px solid #e9ecef;
+  }
+  .race-entry-athlete[hidden] { display: none; }
+  .race-athlete-submit-id { display: none; }
   .race-entry-athlete-summary {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 38px;
-    padding: 5px 0;
+    min-height: 32px;
+    padding: 3px 0;
     cursor: pointer;
   }
   .race-entry-athlete-summary::marker { color: #6c757d; }
-  .race-entry-athlete-name { min-width: 150px; }
-  .race-entry-distance { min-height: 30px; font-size: .84rem; }
+  .race-entry-athlete-name { min-width: 0; }
+  .race-entry-distance-list { grid-column: 2 / -1; min-width: 0; }
+  .race-entry-distance {
+    display: grid;
+    grid-template-columns: minmax(110px, .8fr) 70px 70px 70px;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    font-size: .84rem;
+  }
+  .race-entry-no-distances { min-height: 32px; display: flex; align-items: center; }
   .race-entry-distance label { text-align: center; }
   .race-distance-management { border: 1px solid #dee2e6; border-radius: 7px; padding: 0 10px 10px; }
   .race-distance-management > summary { cursor: pointer; font-weight: 700; padding: 9px 0; }
@@ -742,10 +761,13 @@
       gap: 6px;
     }
 
-    .race-entry-head,
-    .race-entry-distance { grid-template-columns: minmax(90px, 1fr) 52px 52px 52px; gap: 2px; }
+    .race-entry-head { grid-template-columns: minmax(100px, 1.1fr) minmax(72px, .8fr) 42px 42px 42px; gap: 2px; }
     .race-entry-head { font-size: .65rem; padding-inline: 5px; }
-    .race-entry-athlete { padding-inline: 5px; }
+    .race-entry-athlete { grid-template-columns: minmax(100px, 1.1fr) minmax(72px, .8fr) 42px 42px 42px; gap: 2px; padding-inline: 5px; }
+    .race-entry-distance { grid-template-columns: minmax(72px, .8fr) 42px 42px 42px; gap: 2px; }
+    .race-entry-distance-list { grid-column: 2 / -1; }
+    .race-entry-athlete-summary { font-size: .8rem; }
+    .race-entry-distance { font-size: .75rem; }
   }
 </style>
 {% endblock %}

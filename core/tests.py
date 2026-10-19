@@ -6196,6 +6196,9 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotIn(f'value="athlete:{athlete_two.id}"', top_athlete_selector)
         self.assertContains(response, f'data-initial-filter="athlete:{athlete_one.id}"', html=False)
         self.assertContains(response, 'class="form-check-input race-expand-toggle"', html=False)
+        self.assertRegex(response.content.decode(), r'class="form-check-input race-expand-toggle"[^>]*checked')
+        self.assertContains(response, '<span>Athlete</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>', html=False)
+        self.assertContains(response, 'class="race-entry-distance-list"', html=False)
         self.assertContains(response, 'row.open = toggle.checked', html=False)
 
         group_response = self.client.get(
