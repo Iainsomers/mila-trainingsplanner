@@ -123,6 +123,7 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 - De lijstweergave van de Race Calendar toont per wedstrijd datum, naam en reeds gekozen afstanden; afstandsbeheer verschijnt pas na het openen van de wedstrijd.
 - De lijst toont boven iedere gekozen afstand een groene teller met het aantal deelnemende atleten; bij nul deelnemers wordt geen teller getoond.
 - Trainers kiezen eerst `All` of een Trainer Planning-groep en daarna `All` of één atleet binnen die groep. De keuze `Show all races` bepaalt of wedstrijden zonder deelnemers uit die selectie zichtbaar blijven; afstandstellers volgen dezelfde selectie.
+- Bij wijzigen van de groep of atleet in de hoofdfilter wordt `Show all races` automatisch uitgezet; de trainer kan het daarna zelf weer aanzetten.
 - De groepskeuzes in de Race Calendar tonen alleen Trainer Planning-groepen van de actieve trainer; gedelegeerde toegang voegt geen groepen van de ingelogde trainer toe.
 - Atleet kiest maximaal drie afstanden per wedstrijd.
 - Een wedstrijd kan als doelwedstrijd worden gemarkeerd.
@@ -135,7 +136,7 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 - Athlete- en Target-vinkjes worden voor atleten direct op de achtergrond opgeslagen; daarom heeft hun wedstrijdpopup geen aparte Save selections-knop.
 - Ook Coach- en Target-vinkjes van trainers worden direct op de achtergrond opgeslagen; de wedstrijdpopup heeft voor geen van beide rollen nog een Save selections-knop.
 - Atleten kunnen in zowel List als Calendar view een wedstrijd toevoegen aan de kalender van hun trainer en daar nieuwe afstanden aan toevoegen. Bestaande afstanden of de wedstrijd verwijderen blijft trainer-only.
-- Een trainerspopup neemt de bovenaan gekozen groep of atleet als beginfilter over. De popupselector kan daarna naar alle atleten, een andere groep, één atleet of deelnemende atleten schakelen.
+- Een trainerspopup start standaard met `Participating athletes`; de popupselector kan daarna naar alle atleten of een groep schakelen.
 - Met de schakelaar `Expand all` opent of sluit de trainer alle momenteel zichtbare atleetregels tegelijk.
 - De kalenderweergave kleurt wedstrijden volgens de zwaarste akkoordstatus binnen de gekozen atleet/groep: licht zonder deelname, oranje/rood omlijnd bij een enkel akkoord en oranje/rood gevuld bij dubbel akkoord. Alleen trainers zien een groene badge met het aantal deelnemers boven nul.
 - Trainer-, atleet- en doelwedstrijdvinkjes hebben afzonderlijke rechten. Bestaande selecties worden als wederzijds bevestigd gemigreerd.

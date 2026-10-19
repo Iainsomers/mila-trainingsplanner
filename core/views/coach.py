@@ -7929,14 +7929,9 @@ def race_calendar_view(request):
         {"value": f"athlete:{athlete.id}", "label": athlete.name}
         for athlete in race_athletes if athlete.id in group_athlete_ids
     ]
-    if race_athlete != "all":
-        # The popup offers groups and participating athletes, not individual
-        # athlete choices. Preserve any group context from the calendar filter.
-        popup_initial_filter = race_group if race_group != "all" else "all"
-    elif race_group != "all":
-        popup_initial_filter = race_group
-    else:
-        popup_initial_filter = "all"
+    # In the race popup, start with only athletes who have at least one
+    # selection; the dropdown can still be changed to All or any group.
+    popup_initial_filter = "participating"
 
     race_rows_by_id = {row["race"].id: row for row in race_rows}
     races_by_date = {}

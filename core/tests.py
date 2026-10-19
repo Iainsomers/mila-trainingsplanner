@@ -6181,7 +6181,7 @@ class RaceSelectDisplayTests(TestCase):
         self.client.force_login(coach)
 
         response = self.client.get(
-            f"/race-calendar/?year=2026&view=list&period=full&race_group=plan:{trainer_plan.id}&race_athlete=athlete:{athlete_one.id}&show_all=0"
+            f"/race-calendar/?year=2026&view=list&period=full&race_group=plan:{trainer_plan.id}&race_athlete=athlete:{athlete_one.id}"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -6194,13 +6194,15 @@ class RaceSelectDisplayTests(TestCase):
         top_athlete_selector = response.content.decode().split('id="raceAthlete"', 1)[1].split('</select>', 1)[0]
         self.assertIn(f'value="athlete:{athlete_one.id}" selected', top_athlete_selector)
         self.assertNotIn(f'value="athlete:{athlete_two.id}"', top_athlete_selector)
-        self.assertContains(response, f'data-initial-filter="plan:{trainer_plan.id}"', html=False)
+        self.assertContains(response, 'data-initial-filter="participating"', html=False)
         popup_athlete_filter = response.content.decode().split(
             'class="form-select form-select-sm race-athlete-filter"', 1
         )[1].split("</select>", 1)[0]
         self.assertIn('value="participating"', popup_athlete_filter)
         self.assertNotIn("athlete:", popup_athlete_filter)
         self.assertContains(response, 'row.dataset.participating === "1"', html=False)
+        self.assertContains(response, "this.form.querySelector('[name=show_all]').checked=false", html=False)
+        self.assertNotRegex(response.content.decode(), r'name="show_all" value="1" checked')
         self.assertContains(response, 'class="form-check-input race-expand-toggle"', html=False)
         self.assertRegex(response.content.decode(), r'class="form-check-input race-expand-toggle"[^>]*checked')
         self.assertContains(response, '<span>Athlete</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>', html=False)
@@ -6208,9 +6210,13 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, 'row.open = toggle.checked', html=False)
 
         group_response = self.client.get(
-            f"/race-calendar/?year=2026&view=list&period=full&race_group=plan:{trainer_plan.id}&race_athlete=all&show_all=1"
+            f"/race-calendar/?year=2026&view=list&period=full&race_group=plan:{trainer_plan.id}&race_athlete=all"
         )
-        self.assertContains(group_response, f'data-initial-filter="plan:{trainer_plan.id}"', html=False)
+        self.assertContains(group_response, 'data-initial-filter="participating"', html=False)
+        self.assertNotRegex(
+            group_response.content.decode(),
+            r'name="show_all" value="1" checked',
+        )
 
         scoped_calendar = self.client.get(
             f"/race-calendar/?year=2026&view=calendar&period=full&race_group=plan:{trainer_plan.id}&race_athlete=all&show_all=1"
