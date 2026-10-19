@@ -3479,7 +3479,7 @@ def athlete_year_calendar_view(request):
                 else:
                     slot2 = flex_override2
 
-            if selected_athlete and not slot1 and not flex_blocks_slot1:
+            if selected_athlete and not flex_blocks_slot1 and k1 not in has_fix_keys:
                 base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, selected_athlete.id, day, 1)
                 if base_planning_slot:
                     if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
@@ -3493,6 +3493,13 @@ def athlete_year_calendar_view(request):
                         )
                         if trainer_override is not None:
                             has_fix_keys.add(k1)
+                        elif slot1 is None:
+                            plan1 = base_planning_slot.trainer_plan
+                    elif (
+                        base_planning_slot.mode == AthleteBasePlanningSlot.MODE_REST
+                        and not _slot_has_race(slot1)
+                    ):
+                        slot1 = None
                     if slot1 and flex_plan:
                         # Keep the underlying trainer plan on the rendered slot.
                         # Flex edits are routed to the athlete owner's Flex plan
@@ -3500,7 +3507,7 @@ def athlete_year_calendar_view(request):
                         # identify the real source plan.
                         plan1 = flex_plan
 
-            if selected_athlete and not slot2 and not flex_blocks_slot2:
+            if selected_athlete and not flex_blocks_slot2 and k2 not in has_fix_keys:
                 base_planning_slot = _base_planning_slot_for_day(base_blocks_by_athlete, selected_athlete.id, day, 2)
                 if base_planning_slot:
                     if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
@@ -3514,6 +3521,13 @@ def athlete_year_calendar_view(request):
                         )
                         if trainer_override is not None:
                             has_fix_keys.add(k2)
+                        elif slot2 is None:
+                            plan2 = base_planning_slot.trainer_plan
+                    elif (
+                        base_planning_slot.mode == AthleteBasePlanningSlot.MODE_REST
+                        and not _slot_has_race(slot2)
+                    ):
+                        slot2 = None
                     if slot2 and flex_plan:
                         plan2 = flex_plan
 

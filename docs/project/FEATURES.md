@@ -76,6 +76,7 @@ De instelling `See session km` staat in Athlete settings > General, is standaard
 - Een training met evaluatiestatus `Not done` telt niet mee in de weekkilometers, zone-/wedstrijdverdeling of ALT-minuten; de geplande training blijft zichtbaar.
 - Zoneonderdelen tonen naast de indicatieve tijd de handmatige HR-grens wanneer die voor de atleet is ingevuld.
 - AM en PM worden afzonderlijk getoond.
+- Individuele Base Planning geldt per AM/PM-dagdeel ook wanneer een gekoppeld groepsplan daar een training heeft: `Rest` verbergt die groepstraining en een individueel Base Planning-plan bepaalt de bron. Een expliciete persoonlijke AYC/Flex-override blijft voorrang houden.
 - Training en Evaluation hebben beide een zichtbare knop `Open`.
 - Trainingen openen in een op mobiel beeldvullende popup, maar niet groter dan het scherm.
 - Bestaande AM- én PM-trainingen worden vooraf ingevuld in de popup.

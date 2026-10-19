@@ -4367,6 +4367,37 @@ class SlotModalSaveTests(TestCase):
         )
         self.assertIsNone(flex_cell["slot"])
 
+        ayc_page = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}&hide=none"
+        )
+        ayc_cell = next(
+            cell
+            for week in ayc_page.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        self.assertIsNone(ayc_cell["slot"])
+
+        personal_override = TrainingSlot.objects.create(
+            plan=trainer_plan,
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+        )
+        personal_override.segments.create(
+            type="CORE", text="800m z3", zone="3", order=1
+        )
+        ayc_with_personal_override = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}&hide=none"
+        )
+        override_cell = next(
+            cell
+            for week in ayc_with_personal_override.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        self.assertEqual(override_cell["slot"].core_text(), "800m z3")
+
     def test_flex_personal_copy_overrides_base_planning_rest(self):
         user = get_user_model().objects.create_user(
             username="flex-copy-over-rest-coach",

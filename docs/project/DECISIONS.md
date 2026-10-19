@@ -14,6 +14,10 @@ Type D bewaart vier HR-bovengrenzen per atleet in PolarAnalysisSettings, met Est
 
 Een Polar-pauzemarkering die aanhoudende afstandstoename tegenspreekt mag gemeten loopdata niet verbergen. Ruwe waarden blijven intact; genegeerde markeringen en correcties krijgen een zichtbare reden.
 
+## 2026-10-19 — Individuele Base Planning is leidend per dagdeel
+
+De individuele Base Planning bepaalt in AYC en Flex Planner de trainingsbron per AM/PM-dagdeel, ook wanneer een gekoppeld groepsplan daar een training bevat. `Rest` onderdrukt die groepstraining. Een expliciete persoonlijke trainingsoverride blijft voorrang houden.
+
 ## 2026-10-07 — Atletenrechten blijven gescheiden
 
 `Extended edit rights` bepaalt of een atleet toekomstige AYC-trainingen en lege dagdelen mag wijzigen. `Can change base planning` is een afzonderlijk trainerrecht voor de eigen Base Planning. Het ene recht activeert het andere niet.
