@@ -6199,6 +6199,7 @@ class RaceSelectDisplayTests(TestCase):
             'class="form-select form-select-sm race-athlete-filter"', 1
         )[1].split("</select>", 1)[0]
         self.assertIn('value="participating"', popup_athlete_filter)
+        self.assertIn('value="participating" selected', popup_athlete_filter)
         self.assertNotIn("athlete:", popup_athlete_filter)
         self.assertContains(response, 'row.dataset.participating === "1"', html=False)
         self.assertContains(response, "this.form.querySelector('[name=show_all]').checked=false", html=False)

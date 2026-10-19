@@ -282,7 +282,7 @@
                       <optgroup label="Groups">
                         {% for option in race_group_options %}<option value="{{ option.value }}" {% if popup_initial_filter == option.value %}selected{% endif %}>{{ option.label }}</option>{% endfor %}
                       </optgroup>
-                      <option value="participating">Participating athletes</option>
+                      <option value="participating" {% if popup_initial_filter == 'participating' %}selected{% endif %}>Participating athletes</option>
                     </select>
                     </div>
                     <div class="form-check form-switch mb-1">
