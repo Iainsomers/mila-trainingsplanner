@@ -6194,7 +6194,13 @@ class RaceSelectDisplayTests(TestCase):
         top_athlete_selector = response.content.decode().split('id="raceAthlete"', 1)[1].split('</select>', 1)[0]
         self.assertIn(f'value="athlete:{athlete_one.id}" selected', top_athlete_selector)
         self.assertNotIn(f'value="athlete:{athlete_two.id}"', top_athlete_selector)
-        self.assertContains(response, f'data-initial-filter="athlete:{athlete_one.id}"', html=False)
+        self.assertContains(response, f'data-initial-filter="plan:{trainer_plan.id}"', html=False)
+        popup_athlete_filter = response.content.decode().split(
+            'class="form-select form-select-sm race-athlete-filter"', 1
+        )[1].split("</select>", 1)[0]
+        self.assertIn('value="participating"', popup_athlete_filter)
+        self.assertNotIn("athlete:", popup_athlete_filter)
+        self.assertContains(response, 'row.dataset.participating === "1"', html=False)
         self.assertContains(response, 'class="form-check-input race-expand-toggle"', html=False)
         self.assertRegex(response.content.decode(), r'class="form-check-input race-expand-toggle"[^>]*checked')
         self.assertContains(response, '<span>Athlete</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>', html=False)

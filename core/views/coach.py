@@ -7929,12 +7929,10 @@ def race_calendar_view(request):
         {"value": f"athlete:{athlete.id}", "label": athlete.name}
         for athlete in race_athletes if athlete.id in group_athlete_ids
     ]
-    popup_athlete_options = [
-        {"value": f"athlete:{athlete.id}", "label": athlete.name}
-        for athlete in race_athletes
-    ]
     if race_athlete != "all":
-        popup_initial_filter = race_athlete
+        # The popup offers groups and participating athletes, not individual
+        # athlete choices. Preserve any group context from the calendar filter.
+        popup_initial_filter = race_group if race_group != "all" else "all"
     elif race_group != "all":
         popup_initial_filter = race_group
     else:
@@ -7993,7 +7991,6 @@ def race_calendar_view(request):
         "race_athletes": race_athletes,
         "race_group_options": race_group_options,
         "race_athlete_options": race_athlete_options,
-        "popup_athlete_options": popup_athlete_options,
         "race_group": race_group,
         "race_athlete": race_athlete,
         "popup_initial_filter": popup_initial_filter,

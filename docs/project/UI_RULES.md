@@ -81,7 +81,7 @@ Bijgewerkt: 18 oktober 2026.
 - Beperk Add race tot een compacte kaartbreedte en open Race Calendar direct vanuit Races zonder tussenpagina.
 - Plaats voor trainers naast Add race eerst een groepsfilter (`All` telt als groep) en daarna een daarvan afhankelijke atleetfilter; laat zowel wedstrijdzichtbaarheid als afstandstellers deze combinatie volgen.
 - Geef Add race en de Race filter op desktop dezelfde kaartbreedte.
-- Laat de atleetselector in een wedstrijdpopup starten met de bovenliggende kalenderfilter en plaats er een compacte Expand all-schakelaar naast; deze staat standaard aan.
+- Laat de popupfilter alleen `All`, groepen en `Participating athletes` aanbieden; geen individuele atleten. Plaats er een compacte Expand all-schakelaar naast, standaard aan. Als de kalender op een atleet binnen een groep staat gefilterd, start de popup met die groep.
 - Gebruik in de Race Calendar dezelfde oranje/rode akkoordkleuren als bij wedstrijdpillen; plaats het deelnemersaantal als kleine groene badge rechts in de wedstrijdtegel.
 - Toon afstandskeuzes en beheeracties pas nadat de gebruiker een wedstrijd opent.
 - Splits de atleet-/afstandskolom in aparte kolommen, zodat naam en afstand direct naast elkaar staan. Houd de rijen compact; de selectiekolommen zijn Trainer, Athlete en Target.
