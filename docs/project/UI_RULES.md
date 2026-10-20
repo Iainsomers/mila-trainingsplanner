@@ -97,6 +97,7 @@ Bijgewerkt: 18 oktober 2026.
 - In Athlete Input heet de zone-tab `Zones. HR, Speed`; binnen die tab staat de sectie `Current times`.
 - Focus Points gebruikt een compacte, horizontaal scrollbare matrix op smalle schermen. De focuspuntkolom blijft zichtbaar; coachcomments in Comment coaches, Plan en Progress staan inline en bovenaan uitgelijnd, met initialen uit eerste/laatste username-deel (`Voornaam_Achternaam`) en de volledige tekst in de vaste kleur van die coach. Het kleine plusje staat rechtsboven zonder de commentaarregel omlaag te duwen. De commentaarpopup heeft alleen een klein `Overwrite`-vinkje rechtsboven, zonder extra uitlegtekst.
 - Focus Points toont Prioriteit compact als —, 🥇, 🥈 of 🥉; klikken opent een klein menu met de vier opties. Er is per atleet maximaal één gouden, zilveren en bronzen medaille; bij een nieuwe keuze schuiven gelijke/lager gerangschikte punten door, waarbij een punt voorbij brons geen medaille meer heeft. De drie Other-namen kunnen met een klein plusje bij de naam per atleet worden aangepast; zonder opgeslagen naam blijven de labels `Other 1`, `Other 2` en `Other 3`.
+- Focus Points biedt trainers met editrechten een `.xlsx`-import voor `Comment coaches`. Toon vóór import een expliciete bevestigingscheckbox en maak duidelijk dat lege cellen de eigen bestaande comments voor de atleten in het bestand wissen; comments van andere trainers en Plan/Progress blijven behouden.
 
 ## Responsiviteit controleren
 

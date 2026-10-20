@@ -26,6 +26,11 @@ from django.utils.dateparse import parse_time
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, evaluation_visibility_for_request, is_coach_tools_only_user
+from core.focus_point_import import (
+    FocusPointImportError,
+    normalize_athlete_name,
+    parse_focus_point_comments_workbook,
+)
 from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, AthleteFocusPoint, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
@@ -5467,13 +5472,85 @@ def focus_points_view(request):
             "races_tactics", "recovery_capacity", "injuries", "life_balance",
             "coach_collaboration", "other_1", "other_2", "other_3",
         }
+        action = (request.POST.get("action") or "comment").strip()
+        if action == "import_comments":
+            uploaded_file = request.FILES.get("comments_workbook")
+            if uploaded_file is None:
+                query = urlencode({
+                    "athlete": selected_athlete.id,
+                    "import_error": "Choose an Excel workbook to import.",
+                })
+                return redirect(f"{reverse('focus_points')}?{query}")
+            if request.POST.get("confirm_replace") != "on":
+                query = urlencode({
+                    "athlete": selected_athlete.id,
+                    "import_error": "Confirm that your existing comments may be replaced.",
+                })
+                return redirect(f"{reverse('focus_points')}?{query}")
+            try:
+                imported_keys, imported_rows = parse_focus_point_comments_workbook(uploaded_file)
+                athletes_by_name = {}
+                for accessible_athlete in athletes:
+                    athletes_by_name.setdefault(normalize_athlete_name(accessible_athlete.name), []).append(
+                        accessible_athlete
+                    )
+
+                resolved_rows = []
+                seen_athletes = set()
+                unmatched_names = []
+                duplicate_names = []
+                for row in imported_rows:
+                    matches = athletes_by_name.get(normalize_athlete_name(row["athlete_name"]), [])
+                    if not matches:
+                        unmatched_names.append(row["athlete_name"])
+                    elif len(matches) > 1:
+                        duplicate_names.append(row["athlete_name"])
+                    elif matches[0].id in seen_athletes:
+                        duplicate_names.append(row["athlete_name"])
+                    else:
+                        seen_athletes.add(matches[0].id)
+                        resolved_rows.append((matches[0], row["comments"]))
+
+                if unmatched_names or duplicate_names:
+                    details = []
+                    if unmatched_names:
+                        details.append("Not found among athletes you can access: " + ", ".join(unmatched_names[:8]))
+                    if duplicate_names:
+                        details.append("Duplicate or ambiguous athlete names: " + ", ".join(duplicate_names[:8]))
+                    raise FocusPointImportError(" ".join(details))
+
+                with transaction.atomic():
+                    FocusPointComment.objects.filter(
+                        coach=request.user,
+                        athlete__in=[athlete for athlete, _ in resolved_rows],
+                        point_key__in=imported_keys,
+                    ).delete()
+                    new_comments = [
+                        FocusPointComment(
+                            athlete=import_athlete,
+                            coach=request.user,
+                            point_key=key,
+                            comment=comment,
+                        )
+                        for import_athlete, comments in resolved_rows
+                        for key, comment in comments.items()
+                        if comment
+                    ]
+                    FocusPointComment.objects.bulk_create(new_comments)
+                return redirect(
+                    f"{reverse('focus_points')}?athlete={selected_athlete.id}"
+                    f"&imported={len(resolved_rows)}&comments={len(new_comments)}"
+                )
+            except FocusPointImportError as exc:
+                query = urlencode({"athlete": selected_athlete.id, "import_error": str(exc)})
+                return redirect(f"{reverse('focus_points')}?{query}")
+
         point_keys = focus_point_keys | {
             f"{key}__{column}" for key in focus_point_keys for column in ("plan", "progress")
         }
         if point_key not in point_keys:
             return HttpResponseForbidden("Invalid focus point.")
 
-        action = (request.POST.get("action") or "comment").strip()
         if action == "priority":
             priority_value = (request.POST.get("priority") or "").strip()
             if point_key not in focus_point_keys or priority_value not in {"", "1", "2", "3"}:
@@ -5622,6 +5699,9 @@ def focus_points_view(request):
         "focus_point_rows": focus_point_rows,
         "can_edit": can_edit,
         "saved": request.GET.get("saved") == "1",
+        "imported_count": request.GET.get("imported", ""),
+        "imported_comment_count": request.GET.get("comments", ""),
+        "import_error": request.GET.get("import_error", ""),
     })
 
 

@@ -2,15 +2,20 @@ from django.contrib.auth import get_user_model
 from datetime import date, timedelta
 import json
 import os
+import zipfile
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
+from xml.sax.saxutils import escape
 
 from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
+from core.focus_point_import import FOCUS_POINT_HEADERS
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -28,6 +33,51 @@ from core.views.coach import (
     _watch_plan_is_clear_mismatch,
     _watch_v4_sessions_for_plan,
 )
+
+
+def _focus_comments_xlsx(rows):
+    """Build a small standards-compliant enough inline-string XLSX test fixture."""
+    headers = ["", *FOCUS_POINT_HEADERS.keys()]
+
+    def column_name(number):
+        result = ""
+        while number:
+            number, remainder = divmod(number - 1, 26)
+            result = chr(65 + remainder) + result
+        return result
+
+    all_rows = [headers, *rows]
+    xml_rows = []
+    for row_index, values in enumerate(all_rows, start=1):
+        cells = []
+        for column_index, value in enumerate(values, start=1):
+            if value is None or value == "":
+                continue
+            reference = f"{column_name(column_index)}{row_index}"
+            cells.append(
+                f'<c r="{reference}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>'
+            )
+        xml_rows.append(f'<row r="{row_index}">{"".join(cells)}</row>')
+    worksheet = (
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        f'<sheetData>{"".join(xml_rows)}</sheetData></worksheet>'
+    )
+    workbook = (
+        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '<sheets><sheet name="Comments" sheetId="1" r:id="rId1"/></sheets></workbook>'
+    )
+    relationships = (
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+        'Target="worksheets/sheet1.xml"/></Relationships>'
+    )
+    output = BytesIO()
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("xl/workbook.xml", workbook)
+        archive.writestr("xl/_rels/workbook.xml.rels", relationships)
+        archive.writestr("xl/worksheets/sheet1.xml", worksheet)
+    return output.getvalue()
 
 
 class SecurityHeadersTests(TestCase):
@@ -1552,6 +1602,12 @@ class PlanningOverviewTests(TestCase):
             "comment": "Should not save.",
         })
         self.assertEqual(denied.status_code, 403)
+        import_denied = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "action": "import_comments",
+            "confirm_replace": "on",
+        })
+        self.assertEqual(import_denied.status_code, 403)
 
     def test_focus_point_priority_and_other_labels_are_shared_per_athlete(self):
         owner = get_user_model().objects.create_user(
@@ -1617,6 +1673,86 @@ class PlanningOverviewTests(TestCase):
         )
         label = AthleteFocusPoint.objects.get(athlete=athlete, point_key="other_1")
         self.assertEqual(label.custom_label, "Stride mechanics")
+
+    def test_focus_point_xlsx_import_replaces_only_importing_coach_focus_comments(self):
+        coach = get_user_model().objects.create_user(username="xlsx-coach", password="secret", is_staff=True)
+        other_coach = get_user_model().objects.create_user(
+            username="xlsx-other-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=coach, name="Cari Hughes", birth_year=2000, gender="X")
+        CoachSettings.objects.create(user=coach, focus_points_enabled=True)
+        FocusPointComment.objects.create(
+            athlete=athlete, coach=coach, point_key="speed", comment="Old speed comment"
+        )
+        FocusPointComment.objects.create(
+            athlete=athlete, coach=coach, point_key="endurance_z1_z3", comment="Old endurance comment"
+        )
+        FocusPointComment.objects.create(
+            athlete=athlete, coach=coach, point_key="speed__plan", comment="Keep the plan comment"
+        )
+        FocusPointComment.objects.create(
+            athlete=athlete, coach=other_coach, point_key="speed", comment="Keep another coach's comment"
+        )
+        row = ["Cari Hughes", None, None, "Updated speed comment", None, None, None, None, None, None]
+        workbook = SimpleUploadedFile(
+            "Standard Comments PACE.xlsx", _focus_comments_xlsx([row]),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.client.force_login(coach)
+
+        response = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "action": "import_comments",
+            "confirm_replace": "on",
+            "comments_workbook": workbook,
+        })
+
+        self.assertRedirects(
+            response,
+            f"/planning/focus-points/?athlete={athlete.id}&imported=1&comments=1",
+        )
+        self.assertFalse(FocusPointComment.objects.filter(
+            athlete=athlete, coach=coach, point_key="endurance_z1_z3"
+        ).exists())
+        self.assertTrue(FocusPointComment.objects.filter(
+            athlete=athlete, coach=coach, point_key="speed", comment="Updated speed comment"
+        ).exists())
+        self.assertTrue(FocusPointComment.objects.filter(
+            athlete=athlete, coach=coach, point_key="speed__plan", comment="Keep the plan comment"
+        ).exists())
+        self.assertTrue(FocusPointComment.objects.filter(
+            athlete=athlete, coach=other_coach, point_key="speed", comment="Keep another coach's comment"
+        ).exists())
+
+    def test_focus_point_xlsx_import_rejects_unmatched_names_without_changing_comments(self):
+        coach = get_user_model().objects.create_user(username="xlsx-scope-coach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="In Scope", birth_year=2000, gender="X")
+        CoachSettings.objects.create(user=coach, focus_points_enabled=True)
+        existing = FocusPointComment.objects.create(
+            athlete=athlete, coach=coach, point_key="speed", comment="Must remain"
+        )
+        row = ["Not In Scope", None, None, "New comment", None, None, None, None, None, None]
+        workbook = SimpleUploadedFile(
+            "comments.xlsx", _focus_comments_xlsx([row]),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.client.force_login(coach)
+
+        response = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "action": "import_comments",
+            "confirm_replace": "on",
+            "comments_workbook": workbook,
+        })
+
+        self.assertRedirects(
+            response,
+            f"/planning/focus-points/?athlete={athlete.id}&import_error=Not+found+among+athletes+you+can+access%3A+Not+In+Scope",
+        )
+        error_page = self.client.get(response.url)
+        self.assertContains(error_page, "Not found among athletes you can access")
+        existing.refresh_from_db()
+        self.assertEqual(existing.comment, "Must remain")
 
     def test_detailed_camps_are_coach_configurable(self):
         user = get_user_model().objects.create_user(

@@ -91,6 +91,10 @@
   </div>
 
   {% if saved %}<div class="alert alert-success py-2">Comment saved.</div>{% endif %}
+  {% if imported_count %}
+    <div class="alert alert-success py-2">Imported comments for {{ imported_count }} athletes ({{ imported_comment_count }} non-empty comments).</div>
+  {% endif %}
+  {% if import_error %}<div class="alert alert-danger py-2">{{ import_error }}</div>{% endif %}
 
   <div class="card mb-3">
     <div class="card-body py-2">
@@ -109,6 +113,31 @@
   </div>
 
   {% if selected_athlete %}
+    {% if can_edit %}
+      <div class="card mb-3">
+        <div class="card-body py-2">
+          <form method="post" action="{% url 'focus_points' %}" enctype="multipart/form-data" class="row g-2 align-items-end">
+            {% csrf_token %}
+            <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+            <input type="hidden" name="action" value="import_comments">
+            <div class="col-12 col-lg-5">
+              <label for="focusCommentsWorkbook" class="form-label mb-1">Import coach comments</label>
+              <input id="focusCommentsWorkbook" type="file" name="comments_workbook" class="form-control form-control-sm" accept=".xlsx" required>
+            </div>
+            <div class="col-12 col-lg-5">
+              <div class="form-check mb-1">
+                <input class="form-check-input" type="checkbox" name="confirm_replace" id="confirmFocusCommentsReplace" required>
+                <label class="form-check-label small" for="confirmFocusCommentsReplace">Replace my comments for athletes in this file</label>
+              </div>
+              <div class="form-text">Empty cells remove your comment. Other coaches’ comments, Plan and Progress stay unchanged.</div>
+            </div>
+            <div class="col-12 col-lg-2 d-grid">
+              <button type="submit" class="btn btn-outline-primary btn-sm">Import .xlsx</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endif %}
     <div class="card">
       <div class="card-header bg-white">
         <strong>{{ selected_athlete.name }}</strong>
