@@ -95,7 +95,7 @@ Bijgewerkt: 18 oktober 2026.
 - Behoud ingevoerde waarden na validatiefouten.
 - Een popup mag niet groter worden dan het viewport en de opslaanknop moet bereikbaar blijven.
 - In Athlete Input heet de zone-tab `Zones. HR, Speed`; binnen die tab staat de sectie `Current times`.
-- Focus Points gebruikt een compacte, horizontaal scrollbare matrix op smalle schermen. De focuspuntkolom blijft zichtbaar; coachcomments staan inline, met initialen en de volledige tekst in de vaste kleur van die coach. De add/edit-actie is een klein plusje rechtsboven in de cel.
+- Focus Points gebruikt een compacte, horizontaal scrollbare matrix op smalle schermen. De focuspuntkolom blijft zichtbaar; coachcomments staan inline, met initialen en de volledige tekst in de vaste kleur van die coach. De add/edit-actie is een klein plusje rechtsboven in de cel. De commentaarpopup heeft alleen een klein `Overwrite`-vinkje rechtsboven, zonder extra uitlegtekst.
 
 ## Responsiviteit controleren
 

@@ -5515,9 +5515,13 @@ def focus_points_view(request):
             athlete=selected_athlete,
         ).select_related("coach").order_by("coach__id")
         for item in comments:
-            first = (item.coach.first_name or "").strip()
-            last = (item.coach.last_name or "").strip()
-            initials = (first[:1] + last[:1]).upper() or item.coach.get_username()[:2].upper()
+            coach_name = (item.coach.get_full_name() or item.coach.get_username()).strip()
+            name_parts = coach_name.split()
+            initials = (
+                name_parts[0][:1] + name_parts[-1][:1]
+                if len(name_parts) > 1
+                else (name_parts[0][:2] if name_parts else item.coach.get_username()[:2])
+            ).upper()
             hue = ((item.coach_id * 137.508) % 360) / 360
             red, green, blue = colorsys.hls_to_rgb(hue, 0.32, 0.62)
             item.initials = initials

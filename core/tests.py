@@ -1451,6 +1451,7 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Anna Athlete")
         self.assertContains(response, "Zoe Athlete")
         self.assertContains(response, "Comment coaches")
+        self.assertContains(response, "Overwrite")
         self.assertContains(response, "Overwrite other coaches")
         self.assertContains(response, 'aria-label="Add your comment for Endurance Z1–Z3"')
 
@@ -1461,7 +1462,7 @@ class PlanningOverviewTests(TestCase):
         )
         other_coach = get_user_model().objects.create_user(
             username="focus-other", password="secret", is_staff=True,
-            first_name="Honore", last_name="Hoedt",
+            first_name="Tomasz", last_name="Olsthoorn Lewandowski",
         )
         athlete = Athlete.objects.create(owner=coach, name="Focus Athlete", birth_year=2000, gender="X")
         CoachSettings.objects.create(user=coach, focus_points_enabled=True)
@@ -1479,7 +1480,7 @@ class PlanningOverviewTests(TestCase):
         self.assertRedirects(saved, f"/planning/focus-points/?athlete={athlete.id}&saved=1")
         self.assertEqual(FocusPointComment.objects.filter(athlete=athlete, point_key=key).count(), 2)
         page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
-        self.assertContains(page, "HH:")
+        self.assertContains(page, "TL:")
         self.assertContains(page, "IS:")
         self.assertNotContains(page, "IA:")
         self.assertContains(page, "Needs more easy mileage.")
