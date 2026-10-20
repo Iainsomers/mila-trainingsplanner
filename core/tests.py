@@ -2990,6 +2990,64 @@ class SlotModalSaveTests(TestCase):
         )
         self.assertEqual((future_block2.start_month, future_block2.start_day, future_block2.end_month, future_block2.end_day), (7, 1, 12, 31))
 
+    def test_base_planning_form_autosave_persists_slot_and_block_fields(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Original",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=1,
+        )
+        slot = AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_REST,
+        )
+
+        response = self.client.post(
+            f"/planning/base/?athlete={athlete.id}",
+            {
+                "athlete_id": str(athlete.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "save",
+                "autosave": "1",
+                "block_id": [str(block.id)],
+                f"block_{block.id}_label": "Autosaved block",
+                f"block_{block.id}_start": "01-01",
+                f"block_{block.id}_end": "31-12",
+                f"slot_{slot.id}_mode": AthleteBasePlanningSlot.MODE_TRAINING,
+                f"slot_{slot.id}_training_text": "CORE=5 km z2",
+                f"slot_{slot.id}_trainer_plan": "",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200, response.content.decode())
+        self.assertEqual(response.json(), {"ok": True})
+        editable_block = AthleteBasePlanningBlock.objects.get(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            effective_from=date.today() + timedelta(days=1),
+        )
+        self.assertEqual(editable_block.label, "Autosaved block")
+        editable_slot = editable_block.slots.get(weekday=0, slot_index=1)
+        self.assertEqual(editable_slot.mode, AthleteBasePlanningSlot.MODE_TRAINING)
+        self.assertEqual(editable_slot.training_text, "CORE=5 km z2")
+
+    def test_base_planning_slot_autosave_uses_full_form_save_path(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        page = self.client.get(f"/planning/base/?athlete={athlete.id}")
+
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "const data = new FormData(planningForm);")
+        self.assertContains(page, 'data.set("action", "save");')
+        self.assertNotContains(page, 'data.set("action", "autosave_slot");')
+
     def test_base_planning_block_copy_keeps_slots(self):
         user, plan, athlete = self._user_plan_and_athlete()
         block = AthleteBasePlanningBlock.objects.create(

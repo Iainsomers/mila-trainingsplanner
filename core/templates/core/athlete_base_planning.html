@@ -377,6 +377,7 @@
 
     let modal = null;
     let draggedSlotId = "";
+    let autosaveQueue = Promise.resolve();
 
     function getModal() {
       if (!modal && window.bootstrap) {
@@ -530,32 +531,29 @@
       if (!modeInput || !trainingInput || !trainerInput) return;
 
       setAutosaveStatus("Saving...", false);
-      submitSlotAutosave(slotId, modeInput.value || "rest", trainingInput.value || "", trainerInput.value || "");
+      submitFormAutosave();
     }
 
-    function submitSlotAutosave(slotId, mode, trainingText, trainerPlan) {
+    function submitFormAutosave() {
       if (!planningForm) return;
-      const data = new FormData();
-      const athleteInput = planningForm.querySelector('input[name="athlete_id"]');
-      const kindInput = planningForm.querySelector('input[name="kind"]');
-      const embeddedInput = planningForm.querySelector('input[name="embedded"]');
-      if (athleteInput) data.set("athlete_id", athleteInput.value || "");
-      if (kindInput) data.set("kind", kindInput.value || "");
-      if (embeddedInput) data.set("embedded", embeddedInput.value || "1");
-      data.set("action", "autosave_slot");
+      // Use the same complete form payload and server-side save path as the
+      // Save button. This keeps revision mapping and slot persistence in sync.
+      const data = new FormData(planningForm);
+      data.set("action", "save");
       data.set("autosave", "1");
-      data.set("slot_id", slotId);
-      data.set("mode", mode);
-      data.set("training_text", trainingText);
-      data.set("trainer_plan", trainerPlan);
-      postAutosave(data)
+      autosaveQueue = autosaveQueue
+        .catch(() => {})
+        .then(() => postAutosave(data))
         .then((payload) => {
-          if (!payload.ok) throw new Error("slot save failed");
+          if (!payload.ok) {
+            const details = Array.isArray(payload.errors) ? payload.errors.join(" ") : "";
+            throw new Error(details || "Base planning save failed");
+          }
           remapSlotIds(payload.slot_map || {});
           setAutosaveStatus("Saved", false);
         })
         .catch((error) => {
-          console.error("Base planning slot autosave failed", error);
+          console.error("Base planning autosave failed", error);
           setAutosaveStatus("Save failed", true);
         });
     }
