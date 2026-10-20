@@ -98,6 +98,7 @@
                   </button>
                   <div class="collapse mt-3" id="questionnaireCollapse{{ questionnaire.id }}">
                     <div class="small text-muted mb-2">Read only</div>
+                    {% if can_edit %}<a href="{% url 'evaluations' %}?edit={{ questionnaire.id }}" class="btn btn-outline-primary btn-sm mb-3">Edit title and athletes</a>{% endif %}
                     <div class="border rounded">
                       {% for question in questionnaire.questions.all %}
                         <div class="p-2 {% if not forloop.first %}border-top{% endif %}">
@@ -130,22 +131,24 @@
       </div>
 
       <div class="col-lg-7">
-        {% if can_edit and show_new %}
+        {% if can_edit and show_new or can_edit and edit_questionnaire %}
           <div class="card mb-4">
             <div class="card-body">
-              <h5 class="card-title">{% if copy_source %}Copy questionnaire{% else %}New questionnaire{% endif %}</h5>
+              <h5 class="card-title">{% if edit_questionnaire %}Edit questionnaire{% elif copy_source %}Copy questionnaire{% else %}New questionnaire{% endif %}</h5>
               <form method="post">
                 {% csrf_token %}
                 {% if form_error %}<div class="alert alert-danger py-2" role="alert">{{ form_error }}</div>{% endif %}
                 <div class="mb-3">
                   <label class="form-label">Title</label>
-                  <input type="text" name="title" class="form-control" value="{% if form_data %}{{ form_data.title }}{% elif copy_source %}{{ copy_source.title }} copy{% endif %}" required>
+                  <input type="text" name="title" class="form-control" value="{% if form_data %}{{ form_data.title }}{% elif edit_questionnaire %}{{ edit_questionnaire.title }}{% elif copy_source %}{{ copy_source.title }} copy{% endif %}" required>
                 </div>
+                {% if not edit_questionnaire %}
                 <div class="mb-3">
                   <label class="form-label">Description</label>
                   <textarea name="description" class="form-control" rows="2">{% if form_data %}{{ form_data.description }}{% elif copy_source %}{{ copy_source.description }}{% endif %}</textarea>
                 </div>
-                <div class="mb-3">
+                {% endif %}
+                {% if not edit_questionnaire %}<div class="mb-3">
                   <label class="form-label">Normal questions</label>
                   <div class="form-text mb-2">Type every question on a new line. Press Enter after each question.</div>
                   <textarea name="questions" class="form-control" rows="8" placeholder="How do you feel?&#10;What went well?&#10;What can improve?">{% if form_data %}{{ form_data.questions }}{% elif copy_source %}{% for question in copy_source.questions.all %}{% if question.question_type == "text" %}{{ question.text }}
@@ -178,41 +181,33 @@
                       {% endfor %}
                     {% endif %}
                   </div>
-                </div>
+                </div>{% endif %}
                 <div class="border rounded p-3 mb-3">
                   <label class="form-label" for="evaluation-audience">Available to</label>
                   <select class="form-select" name="audience_mode" id="evaluation-audience">
-                    <option value="all" {% if not form_data or form_data.audience_mode == "all" %}selected{% endif %}>All athletes</option>
-                    <option value="selected" {% if form_data.audience_mode == "selected" %}selected{% endif %}>Selected groups and/or athletes</option>
+                    <option value="all" {% if form_data %}{% if form_data.audience_mode == "all" %}selected{% endif %}{% elif not edit_questionnaire or edit_questionnaire.available_to_all %}selected{% endif %}>All athletes</option>
+                    <option value="selected" {% if form_data %}{% if form_data.audience_mode == "selected" %}selected{% endif %}{% elif edit_questionnaire and not edit_questionnaire.available_to_all %}selected{% endif %}>Selected athletes</option>
                   </select>
-                  <div id="evaluation-audience-targets" class="mt-3 {% if not form_data or form_data.audience_mode != 'selected' %}d-none{% endif %}">
-                    <div class="form-text mb-2">Choose at least one group or athlete. Athletes in a chosen group can also fill in this questionnaire.</div>
+                  <div id="evaluation-audience-targets" class="mt-3 {% if form_data %}{% if form_data.audience_mode != 'selected' %}d-none{% endif %}{% elif not edit_questionnaire or edit_questionnaire.available_to_all %}d-none{% endif %}">
+                    <div class="form-text mb-2">Choose at least one athlete.</div>
                     <div class="row g-3">
-                      <div class="col-sm-6">
-                        <strong class="small d-block mb-1">Groups</strong>
-                        <div class="border rounded p-2 overflow-auto" style="max-height: 180px">
-                          {% for group in audience_groups %}
-                            <div class="form-check"><input class="form-check-input" type="checkbox" name="available_groups" id="evaluation-group-{{ group.id }}" value="{{ group.id }}" {% if form_data and group.id|stringformat:'s' in form_data.available_groups %}checked{% endif %}><label class="form-check-label" for="evaluation-group-{{ group.id }}">{{ group.name }}</label></div>
-                          {% empty %}<span class="small text-muted">No groups</span>{% endfor %}
-                        </div>
-                      </div>
-                      <div class="col-sm-6">
+                      <div class="col-12">
                         <strong class="small d-block mb-1">Athletes</strong>
                         <div class="border rounded p-2 overflow-auto" style="max-height: 180px">
                           {% for audience_athlete in audience_athletes %}
-                            <div class="form-check"><input class="form-check-input" type="checkbox" name="available_athletes" id="evaluation-athlete-{{ audience_athlete.id }}" value="{{ audience_athlete.id }}" {% if form_data and audience_athlete.id|stringformat:'s' in form_data.available_athletes %}checked{% endif %}><label class="form-check-label" for="evaluation-athlete-{{ audience_athlete.id }}">{{ audience_athlete.name }}</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="available_athletes" id="evaluation-athlete-{{ audience_athlete.id }}" value="{{ audience_athlete.id }}" {% if form_data %}{% if audience_athlete.id|stringformat:'s' in form_data.available_athletes %}checked{% endif %}{% elif audience_athlete.is_selected %}checked{% endif %}><label class="form-check-label" for="evaluation-athlete-{{ audience_athlete.id }}">{{ audience_athlete.name }}</label></div>
                           {% empty %}<span class="small text-muted">No athletes</span>{% endfor %}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div class="form-check mb-3">
-                  <input class="form-check-input" type="checkbox" name="is_active" id="evaluation-active" {% if form_data %}{% if form_data.is_active %}checked{% endif %}{% elif not copy_source or copy_source.is_active %}checked{% endif %}>
+                  <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" name="is_active" id="evaluation-active" {% if form_data %}{% if form_data.is_active %}checked{% endif %}{% elif edit_questionnaire and edit_questionnaire.is_active or not edit_questionnaire and not copy_source or copy_source and copy_source.is_active %}checked{% endif %}>
                   <label class="form-check-label" for="evaluation-active">Active — athletes can fill this in</label>
                 </div>
                 <div class="d-flex gap-2">
-                  <button type="submit" class="btn btn-primary">Create questionnaire</button>
+                  {% if edit_questionnaire %}<button type="submit" name="update_questionnaire" value="{{ edit_questionnaire.id }}" class="btn btn-primary">Save changes</button>{% else %}<button type="submit" class="btn btn-primary">Create questionnaire</button>{% endif %}
                   <a href="{% url 'evaluations' %}" class="btn btn-outline-secondary">Cancel</a>
                 </div>
               </form>

@@ -791,7 +791,9 @@ def evaluations_view(request):
     can_edit = _active_coach_access_label(request) != "view"
     show_new = (request.GET.get("new") or "") == "1"
     copy_id = (request.GET.get("copy") or "").strip()
+    edit_id = (request.GET.get("edit") or "").strip()
     copy_source = None
+    edit_questionnaire = None
     form_error = ""
     form_data = request.POST if request.method == "POST" else None
     copy_owner_ids = {request.user.id}
@@ -813,72 +815,102 @@ def evaluations_view(request):
             questionnaire = get_object_or_404(EvaluationQuestionnaire, id=delete_id, owner=owner)
             questionnaire.delete()
             return redirect("evaluations")
-        title = (request.POST.get("title") or "").strip()
-        description = (request.POST.get("description") or "").strip()
-        questions_text = (request.POST.get("questions") or "").strip()
-        matrix_titles = request.POST.getlist("matrix_title")
-        matrix_columns = request.POST.getlist("matrix_columns")
-        matrix_rows = request.POST.getlist("matrix_rows")
-        is_active = bool(request.POST.get("is_active"))
-        audience_mode = request.POST.get("audience_mode", "all")
-        selected_athlete_ids = request.POST.getlist("available_athletes")
-        selected_group_ids = request.POST.getlist("available_groups")
-        text_questions = [line.strip() for line in questions_text.splitlines() if line.strip()]
-        matrix_questions = []
-        for matrix_title, columns_text, rows_text in zip(matrix_titles, matrix_columns, matrix_rows):
-            columns = [line.strip() for line in columns_text.splitlines() if line.strip()]
-            rows = [line.strip() for line in rows_text.splitlines() if line.strip()]
-            if matrix_title.strip() and columns and rows:
-                matrix_questions.append((matrix_title.strip(), columns, rows))
-        target_athletes = Athlete.objects.filter(owner=owner, id__in=selected_athlete_ids)
-        target_groups = Group.objects.filter(owner=owner, id__in=selected_group_ids)
-        valid_selection = (
-            audience_mode == "all"
-            or (
-                audience_mode == "selected"
-                and (target_athletes.exists() or target_groups.exists())
-                and target_athletes.count() == len(set(selected_athlete_ids))
-                and target_groups.count() == len(set(selected_group_ids))
-            )
-        )
-        if not valid_selection:
-            form_error = "Choose at least one athlete or group from this coach."
-            show_new = True
-        elif title and (text_questions or matrix_questions):
-            questionnaire = EvaluationQuestionnaire.objects.create(
-                owner=owner,
-                title=title,
-                description=description,
-                is_active=is_active,
-                available_to_all=(audience_mode == "all"),
-            )
-            if audience_mode == "selected":
-                questionnaire.available_to_athletes.set(target_athletes)
-                questionnaire.available_to_groups.set(target_groups)
-            questions_to_create = [
-                EvaluationQuestion(
-                    questionnaire=questionnaire,
-                    text=text,
-                    order=index,
-                    required=False,
+        update_id = (request.POST.get("update_questionnaire") or "").strip()
+        if update_id.isdigit():
+            edit_id = update_id
+            edit_questionnaire = get_object_or_404(EvaluationQuestionnaire, id=update_id, owner=owner)
+            audience_mode = request.POST.get("audience_mode", "all")
+            selected_athlete_ids = request.POST.getlist("available_athletes")
+            target_athletes = Athlete.objects.filter(owner=owner, id__in=selected_athlete_ids)
+            valid_selection = (
+                audience_mode == "all"
+                or (
+                    audience_mode == "selected"
+                    and target_athletes.exists()
+                    and target_athletes.count() == len(set(selected_athlete_ids))
                 )
-                for index, text in enumerate(text_questions, start=1)
-            ]
-            next_order = len(questions_to_create) + 1
-            questions_to_create.extend(
-                EvaluationQuestion(
-                    questionnaire=questionnaire,
-                    text=matrix_title,
-                    order=next_order + index,
-                    required=False,
-                    question_type=EvaluationQuestion.TYPE_MATRIX,
-                    matrix_columns=columns,
-                    matrix_rows=rows,
-                )
-                for index, (matrix_title, columns, rows) in enumerate(matrix_questions)
             )
-            EvaluationQuestion.objects.bulk_create(questions_to_create)
-            return redirect("evaluations")
+            title = (request.POST.get("title") or "").strip()
+            if not valid_selection:
+                form_error = "Choose at least one athlete from this coach."
+                show_new = False
+            elif not title:
+                form_error = "Enter a title for this questionnaire."
+                show_new = False
+            else:
+                edit_questionnaire.title = title
+                edit_questionnaire.is_active = bool(request.POST.get("is_active"))
+                edit_questionnaire.available_to_all = audience_mode == "all"
+                edit_questionnaire.save(update_fields=["title", "is_active", "available_to_all", "updated_at"])
+                if audience_mode == "selected":
+                    edit_questionnaire.available_to_athletes.set(target_athletes)
+                else:
+                    edit_questionnaire.available_to_athletes.clear()
+                edit_questionnaire.available_to_groups.clear()
+                return redirect("evaluations")
+        if not update_id.isdigit():
+            title = (request.POST.get("title") or "").strip()
+            description = (request.POST.get("description") or "").strip()
+            questions_text = (request.POST.get("questions") or "").strip()
+            matrix_titles = request.POST.getlist("matrix_title")
+            matrix_columns = request.POST.getlist("matrix_columns")
+            matrix_rows = request.POST.getlist("matrix_rows")
+            is_active = bool(request.POST.get("is_active"))
+            audience_mode = request.POST.get("audience_mode", "all")
+            selected_athlete_ids = request.POST.getlist("available_athletes")
+            text_questions = [line.strip() for line in questions_text.splitlines() if line.strip()]
+            matrix_questions = []
+            for matrix_title, columns_text, rows_text in zip(matrix_titles, matrix_columns, matrix_rows):
+                columns = [line.strip() for line in columns_text.splitlines() if line.strip()]
+                rows = [line.strip() for line in rows_text.splitlines() if line.strip()]
+                if matrix_title.strip() and columns and rows:
+                    matrix_questions.append((matrix_title.strip(), columns, rows))
+            target_athletes = Athlete.objects.filter(owner=owner, id__in=selected_athlete_ids)
+            valid_selection = (
+                audience_mode == "all"
+                or (
+                    audience_mode == "selected"
+                    and target_athletes.exists()
+                    and target_athletes.count() == len(set(selected_athlete_ids))
+                )
+            )
+            if not valid_selection:
+                form_error = "Choose at least one athlete from this coach."
+                show_new = True
+            elif title and (text_questions or matrix_questions):
+                questionnaire = EvaluationQuestionnaire.objects.create(
+                    owner=owner,
+                    title=title,
+                    description=description,
+                    is_active=is_active,
+                    available_to_all=(audience_mode == "all"),
+                )
+                if audience_mode == "selected":
+                    questionnaire.available_to_athletes.set(target_athletes)
+                questions_to_create = [
+                    EvaluationQuestion(
+                        questionnaire=questionnaire,
+                        text=text,
+                        order=index,
+                        required=False,
+                    )
+                    for index, text in enumerate(text_questions, start=1)
+                ]
+                next_order = len(questions_to_create) + 1
+                questions_to_create.extend(
+                    EvaluationQuestion(
+                        questionnaire=questionnaire,
+                        text=matrix_title,
+                        order=next_order + index,
+                        required=False,
+                        question_type=EvaluationQuestion.TYPE_MATRIX,
+                        matrix_columns=columns,
+                        matrix_rows=rows,
+                    )
+                    for index, (matrix_title, columns, rows) in enumerate(matrix_questions)
+                )
+                EvaluationQuestion.objects.bulk_create(questions_to_create)
+                return redirect("evaluations")
 
     questionnaires = list(
         EvaluationQuestionnaire.objects
@@ -886,6 +918,20 @@ def evaluations_view(request):
         .prefetch_related("questions")
         .order_by("-updated_at", "-id")
     )
+    if edit_id.isdigit():
+        edit_questionnaire = next((q for q in questionnaires if q.id == int(edit_id)), None)
+    if edit_questionnaire:
+        selected_athlete_ids = set(edit_questionnaire.available_to_athletes.values_list("id", flat=True))
+        selected_athlete_ids.update(
+            edit_questionnaire.available_to_groups.filter(owner=owner)
+            .values_list("athletes__id", flat=True)
+        )
+        selected_athlete_ids.discard(None)
+    else:
+        selected_athlete_ids = set()
+    audience_athletes = list(Athlete.objects.filter(owner=owner).order_by("name"))
+    for listed_athlete in audience_athletes:
+        listed_athlete.is_selected = listed_athlete.id in selected_athlete_ids
     if copy_id.isdigit():
         copy_source = next((q for q in copy_sources if q.id == int(copy_id)), None)
         show_new = bool(copy_source)
@@ -937,7 +983,7 @@ def evaluations_view(request):
     for questionnaire in questionnaires:
         questionnaire.response_count = response_counts.get(questionnaire.id, 0)
         questionnaire.filled_responses = responses_by_questionnaire.get(questionnaire.id, [])
-        questionnaire.audience_summary = "All athletes" if questionnaire.available_to_all else "Selected athletes/groups"
+        questionnaire.audience_summary = "All athletes" if questionnaire.available_to_all else "Selected athletes"
 
     return render(request, "core/evaluations.html", {
         "is_athlete_user": False,
@@ -947,8 +993,8 @@ def evaluations_view(request):
         "show_new": show_new,
         "copy_source": copy_source,
         "copy_sources": copy_sources,
-        "audience_athletes": Athlete.objects.filter(owner=owner).order_by("name"),
-        "audience_groups": Group.objects.filter(owner=owner).order_by("name"),
+        "edit_questionnaire": edit_questionnaire,
+        "audience_athletes": audience_athletes,
         "form_error": form_error,
         "form_data": form_data,
         "selected_filled_questionnaire": selected_filled_questionnaire,

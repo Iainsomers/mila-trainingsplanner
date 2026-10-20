@@ -394,14 +394,12 @@ class TrackTimerTests(TestCase):
         second_user = get_user_model().objects.create_user(username="audience-second", password="secret")
         first = Athlete.objects.create(owner=coach, name="Audience First", birth_year=2000, gender="X")
         second = Athlete.objects.create(owner=coach, name="Audience Second", birth_year=2001, gender="X")
-        group = Group.objects.create(owner=coach, name="Audience Group")
-        group.athletes.add(first)
         questionnaire = EvaluationQuestionnaire.objects.create(
             owner=coach,
             title="Selected audience",
             available_to_all=False,
         )
-        questionnaire.available_to_groups.add(group)
+        questionnaire.available_to_athletes.add(first)
         EvaluationQuestion.objects.create(questionnaire=questionnaire, text="How are you?")
 
         self.client.force_login(first_user)
@@ -427,6 +425,57 @@ class TrackTimerTests(TestCase):
         created = EvaluationQuestionnaire.objects.get(title="One athlete only")
         self.assertFalse(created.available_to_all)
         self.assertQuerySetEqual(created.available_to_athletes.all(), [second], transform=lambda item: item)
+
+    def test_evaluation_title_and_audience_edit_preserves_submitted_answers(self):
+        coach = get_user_model().objects.create_user(username="evaluation-edit-coach", password="secret", is_staff=True)
+        first_user = get_user_model().objects.create_user(username="evaluation-edit-first", password="secret")
+        second_user = get_user_model().objects.create_user(username="evaluation-edit-second", password="secret")
+        first = Athlete.objects.create(owner=coach, name="Evaluation Edit First", birth_year=2000, gender="X")
+        second = Athlete.objects.create(owner=coach, name="Evaluation Edit Second", birth_year=2001, gender="X")
+        questionnaire = EvaluationQuestionnaire.objects.create(
+            owner=coach,
+            title="Original title",
+            available_to_all=False,
+        )
+        questionnaire.available_to_athletes.add(first)
+        question = EvaluationQuestion.objects.create(questionnaire=questionnaire, text="How did it go?")
+        old_response = EvaluationResponse.objects.create(
+            questionnaire=questionnaire,
+            athlete=first,
+            answers={str(question.id): "I felt good"},
+        )
+
+        self.client.force_login(coach)
+        edit_page = self.client.get(f"/evaluations/?edit={questionnaire.id}")
+        self.assertContains(edit_page, "Edit questionnaire")
+        self.assertContains(edit_page, "Original title")
+        self.assertContains(edit_page, "Evaluation Edit First")
+        self.assertContains(edit_page, "Save changes")
+
+        update = self.client.post(
+            "/evaluations/",
+            {
+                "update_questionnaire": str(questionnaire.id),
+                "title": "Updated title",
+                "audience_mode": "selected",
+                "available_athletes": [str(second.id)],
+                "is_active": "on",
+            },
+        )
+        self.assertEqual(update.status_code, 302)
+        questionnaire.refresh_from_db()
+        self.assertEqual(questionnaire.title, "Updated title")
+        self.assertQuerySetEqual(questionnaire.available_to_athletes.all(), [second], transform=lambda item: item)
+        self.assertTrue(EvaluationResponse.objects.filter(pk=old_response.pk).exists())
+        self.assertEqual(EvaluationResponse.objects.get(pk=old_response.pk).answers[str(question.id)], "I felt good")
+
+        self.client.force_login(first_user)
+        self.assertNotContains(self.client.get("/evaluations/"), "Updated title")
+        self.assertEqual(self.client.get(f"/evaluations/{questionnaire.id}/").status_code, 404)
+        self.client.force_login(second_user)
+        self.assertContains(self.client.get("/evaluations/"), "Updated title")
+        self.client.force_login(coach)
+        self.assertContains(self.client.get(f"/evaluations/?filled={questionnaire.id}"), "Evaluation Edit First")
 
     def test_evaluation_copy_sources_require_edit_access_and_copy_structure_only(self):
         coach = get_user_model().objects.create_user(username="copy-target", password="secret", is_staff=True)
