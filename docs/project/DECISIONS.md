@@ -4,7 +4,7 @@ Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen.
 
 ## 2026-10-20 — Focus-pointprioriteit en Other-namen zijn gedeeld per atleet
 
-Prio (—/🥇/🥈/🥉) en aangepaste namen van Other 1–3 horen bij de atleet, niet bij een coach. Iedere coach met editrechten op die atleet kan deze waarden aanpassen; een lege Other-naam toont de standaardnaam.
+Prio (—/🥇/🥈/🥉) en aangepaste namen van Other 1–3 horen bij de atleet, niet bij een coach. Iedere coach met editrechten op die atleet kan deze waarden aanpassen; een lege Other-naam toont de standaardnaam. Per atleet kan een medaille maar één keer voorkomen; bij toekenning schuiven dezelfde en lagere posities door, en een keuze voor — verwijdert de prioriteit en vult de resterende volgorde op.
 
 ## 2026-10-20 — Focus point-commentaar blijft per coach apart
 

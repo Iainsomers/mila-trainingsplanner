@@ -5478,11 +5478,37 @@ def focus_points_view(request):
             priority_value = (request.POST.get("priority") or "").strip()
             if point_key not in focus_point_keys or priority_value not in {"", "1", "2", "3"}:
                 return HttpResponseForbidden("Invalid focus point priority.")
-            AthleteFocusPoint.objects.update_or_create(
-                athlete=selected_athlete,
-                point_key=point_key,
-                defaults={"priority": int(priority_value) if priority_value else None},
-            )
+            with transaction.atomic():
+                ranked_settings = list(
+                    AthleteFocusPoint.objects.select_for_update().filter(
+                        athlete=selected_athlete,
+                        priority__isnull=False,
+                    ).order_by("priority", "point_key")
+                )
+                target, _ = AthleteFocusPoint.objects.get_or_create(
+                    athlete=selected_athlete,
+                    point_key=point_key,
+                )
+                others = [setting for setting in ranked_settings if setting.point_key != point_key]
+                slots = [None, None, None]
+                if priority_value:
+                    target_index = int(priority_value) - 1
+                    for setting in others:
+                        old_index = int(setting.priority) - 1
+                        new_index = old_index + 1 if old_index >= target_index else old_index
+                        if new_index < len(slots) and slots[new_index] is None:
+                            slots[new_index] = setting
+                    slots[target_index] = target
+                else:
+                    for index, setting in enumerate(others[:len(slots)]):
+                        slots[index] = setting
+
+                AthleteFocusPoint.objects.filter(athlete=selected_athlete).exclude(
+                    priority__isnull=True
+                ).update(priority=None)
+                for index, setting in enumerate(slots):
+                    if setting is not None:
+                        AthleteFocusPoint.objects.filter(pk=setting.pk).update(priority=index + 1)
             return redirect(f"{reverse('focus_points')}?athlete={selected_athlete.id}&saved=1")
 
         if action == "label":

@@ -1566,8 +1566,12 @@ class PlanningOverviewTests(TestCase):
 
         initial = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
         self.assertContains(initial, "Other 1")
+        self.assertContains(initial, "focus-priority-trigger")
+        self.assertNotContains(initial, '<select name="priority"', html=False)
         for payload in (
             {"action": "priority", "point_key": "speed", "priority": "1"},
+            {"action": "priority", "point_key": "endurance_z1_z3", "priority": "2"},
+            {"action": "priority", "point_key": "races_tactics", "priority": "3"},
             {"action": "label", "point_key": "other_1", "custom_label": "Running form"},
         ):
             payload["athlete_id"] = str(athlete.id)
@@ -1588,16 +1592,29 @@ class PlanningOverviewTests(TestCase):
         shared_priority = self.client.post("/planning/focus-points/", {
             "athlete_id": str(athlete.id),
             "action": "priority",
-            "point_key": "speed",
-            "priority": "2",
+            "point_key": "injuries",
+            "priority": "1",
         })
         self.assertEqual(shared_priority.status_code, 302)
 
         page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
         self.assertContains(page, "Stride mechanics")
+        self.assertContains(page, "🥇")
         self.assertContains(page, "🥈")
+        self.assertContains(page, "🥉")
         setting = AthleteFocusPoint.objects.get(athlete=athlete, point_key="speed")
         self.assertEqual(setting.priority, 2)
+        self.assertEqual(
+            AthleteFocusPoint.objects.get(athlete=athlete, point_key="endurance_z1_z3").priority,
+            3,
+        )
+        self.assertIsNone(
+            AthleteFocusPoint.objects.get(athlete=athlete, point_key="races_tactics").priority
+        )
+        self.assertEqual(
+            AthleteFocusPoint.objects.get(athlete=athlete, point_key="injuries").priority,
+            1,
+        )
         label = AthleteFocusPoint.objects.get(athlete=athlete, point_key="other_1")
         self.assertEqual(label.custom_label, "Stride mechanics")
 

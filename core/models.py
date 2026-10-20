@@ -273,7 +273,12 @@ class AthleteFocusPoint(models.Model):
             models.UniqueConstraint(
                 fields=["athlete", "point_key"],
                 name="unique_athlete_focus_point_setting",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["athlete", "priority"],
+                condition=Q(priority__isnull=False),
+                name="unique_nonnull_focus_priority_per_athlete",
+            ),
         ]
 
     def __str__(self) -> str:

@@ -36,7 +36,40 @@
     border-radius: 50%;
     font-size: 1rem;
   }
-  .focus-priority-select { min-width: 3.4rem; padding-right: 1.5rem; }
+  .focus-priority-trigger {
+    min-width: 1.7rem;
+    min-height: 1.7rem;
+    padding: 0 .12rem;
+    border: 0;
+    border-radius: .3rem;
+    background: transparent;
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .focus-priority-trigger:hover,
+  .focus-priority-trigger:focus-visible { background: #f1f3f5; outline: 2px solid #86b7fe; }
+  .focus-priority-menu {
+    position: fixed;
+    z-index: 2000;
+    display: flex;
+    gap: .2rem;
+    padding: .25rem;
+    border: 1px solid #ced4da;
+    border-radius: .45rem;
+    background: #fff;
+    box-shadow: 0 .25rem .75rem #0002;
+  }
+  .focus-priority-option {
+    min-width: 2rem;
+    height: 2rem;
+    padding: .15rem;
+    border: 0;
+    border-radius: .3rem;
+    background: transparent;
+    font-size: 1rem;
+  }
+  .focus-priority-option:hover,
+  .focus-priority-option:focus-visible { background: #e9ecef; outline: 0; }
   .focus-point-editor { min-height: 180px; }
   @media (max-width: 700px) {
     .focus-points-table { min-width: 900px; }
@@ -124,18 +157,17 @@
                 </td>
                 <td>
                   {% if can_edit %}
-                    <form method="post" action="{% url 'focus_points' %}" class="m-0">
+                    <form method="post" action="{% url 'focus_points' %}" class="m-0 focus-priority-form">
                       {% csrf_token %}
                       <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
                       <input type="hidden" name="action" value="priority">
                       <input type="hidden" name="point_key" value="{{ point.key }}">
-                      <select class="form-select form-select-sm focus-priority-select" name="priority"
-                        aria-label="Priority for {{ point.label }}" onchange="this.form.submit()">
-                        <option value="" {% if point.priority is None %}selected{% endif %}>—</option>
-                        <option value="1" title="Gold" {% if point.priority == 1 %}selected{% endif %}>🥇</option>
-                        <option value="2" title="Silver" {% if point.priority == 2 %}selected{% endif %}>🥈</option>
-                        <option value="3" title="Bronze" {% if point.priority == 3 %}selected{% endif %}>🥉</option>
-                      </select>
+                      <input type="hidden" name="priority" value="">
+                      <button type="button" class="focus-priority-trigger" data-current="{{ point.priority|default:'' }}"
+                        aria-label="Set priority for {{ point.label }}" aria-haspopup="menu" aria-expanded="false"
+                        title="{% if point.priority == 1 %}Gold{% elif point.priority == 2 %}Silver{% elif point.priority == 3 %}Bronze{% else %}Set priority{% endif %}">
+                        {% if point.priority == 1 %}🥇{% elif point.priority == 2 %}🥈{% elif point.priority == 3 %}🥉{% else %}—{% endif %}
+                      </button>
                     </form>
                   {% elif point.priority == 1 %}<span title="Gold medal">🥇</span>
                   {% elif point.priority == 2 %}<span title="Silver medal">🥈</span>
@@ -250,6 +282,71 @@
         modal.show();
       });
     });
+
+    let priorityMenu = null;
+    let priorityTrigger = null;
+    function closePriorityMenu() {
+      if (priorityMenu) priorityMenu.remove();
+      if (priorityTrigger) priorityTrigger.setAttribute("aria-expanded", "false");
+      priorityMenu = null;
+      priorityTrigger = null;
+    }
+    document.querySelectorAll(".focus-priority-trigger").forEach(function (button) {
+      button.addEventListener("click", function (event) {
+        event.stopPropagation();
+        if (priorityTrigger === button) {
+          closePriorityMenu();
+          return;
+        }
+        closePriorityMenu();
+        const form = button.closest("form");
+        const priorityInput = form.querySelector('input[name="priority"]');
+        const menu = document.createElement("div");
+        menu.className = "focus-priority-menu";
+        menu.setAttribute("role", "menu");
+        [
+          { value: "", label: "—", title: "No priority" },
+          { value: "1", label: "🥇", title: "Gold" },
+          { value: "2", label: "🥈", title: "Silver" },
+          { value: "3", label: "🥉", title: "Bronze" }
+        ].forEach(function (choice) {
+          const option = document.createElement("button");
+          option.type = "button";
+          option.className = "focus-priority-option";
+          option.setAttribute("role", "menuitemradio");
+          option.setAttribute("aria-checked", String(button.dataset.current === choice.value));
+          option.setAttribute("aria-label", choice.title);
+          option.title = choice.title;
+          option.textContent = choice.label;
+          option.addEventListener("click", function () {
+            priorityInput.value = choice.value;
+            closePriorityMenu();
+            form.requestSubmit();
+          });
+          menu.appendChild(option);
+        });
+        document.body.appendChild(menu);
+        const rect = button.getBoundingClientRect();
+        const menuRect = menu.getBoundingClientRect();
+        const left = Math.max(4, Math.min(rect.left, window.innerWidth - menuRect.width - 4));
+        const top = rect.bottom + menuRect.height < window.innerHeight - 4
+          ? rect.bottom + 3
+          : Math.max(4, rect.top - menuRect.height - 3);
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+        priorityMenu = menu;
+        priorityTrigger = button;
+        button.setAttribute("aria-expanded", "true");
+      });
+    });
+    document.addEventListener("click", function (event) {
+      if (priorityMenu && !priorityMenu.contains(event.target)) closePriorityMenu();
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") closePriorityMenu();
+    });
+    window.addEventListener("resize", closePriorityMenu);
+    window.addEventListener("scroll", closePriorityMenu, true);
   });
 </script>
 {% endif %}
