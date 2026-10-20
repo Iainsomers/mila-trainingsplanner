@@ -5488,7 +5488,7 @@ def focus_points_view(request):
                 })
                 return redirect(f"{reverse('focus_points')}?{query}")
             try:
-                imported_keys, imported_rows = parse_focus_point_comments_workbook(uploaded_file)
+                _, imported_rows = parse_focus_point_comments_workbook(uploaded_file)
                 athletes_by_name = {}
                 for accessible_athlete in athletes:
                     athletes_by_name.setdefault(normalize_athlete_name(accessible_athlete.name), []).append(
@@ -5520,26 +5520,20 @@ def focus_points_view(request):
                     raise FocusPointImportError(" ".join(details))
 
                 with transaction.atomic():
-                    FocusPointComment.objects.filter(
-                        coach=request.user,
-                        athlete__in=[athlete for athlete, _ in resolved_rows],
-                        point_key__in=imported_keys,
-                    ).delete()
-                    new_comments = [
-                        FocusPointComment(
-                            athlete=import_athlete,
-                            coach=request.user,
-                            point_key=key,
-                            comment=comment,
-                        )
-                        for import_athlete, comments in resolved_rows
-                        for key, comment in comments.items()
-                        if comment
-                    ]
-                    FocusPointComment.objects.bulk_create(new_comments)
+                    imported_comment_count = 0
+                    for import_athlete, comments in resolved_rows:
+                        for key, comment in comments.items():
+                            if comment:
+                                FocusPointComment.objects.update_or_create(
+                                    athlete=import_athlete,
+                                    coach=request.user,
+                                    point_key=key,
+                                    defaults={"comment": comment},
+                                )
+                                imported_comment_count += 1
                 return redirect(
                     f"{reverse('focus_points')}?athlete={selected_athlete.id}"
-                    f"&imported={len(resolved_rows)}&comments={len(new_comments)}"
+                    f"&imported={len(resolved_rows)}&comments={imported_comment_count}"
                 )
             except FocusPointImportError as exc:
                 query = urlencode({"athlete": selected_athlete.id, "import_error": str(exc)})

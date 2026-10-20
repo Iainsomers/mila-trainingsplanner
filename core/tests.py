@@ -1711,8 +1711,8 @@ class PlanningOverviewTests(TestCase):
             response,
             f"/planning/focus-points/?athlete={athlete.id}&imported=1&comments=1",
         )
-        self.assertFalse(FocusPointComment.objects.filter(
-            athlete=athlete, coach=coach, point_key="endurance_z1_z3"
+        self.assertTrue(FocusPointComment.objects.filter(
+            athlete=athlete, coach=coach, point_key="endurance_z1_z3", comment="Old endurance comment"
         ).exists())
         self.assertTrue(FocusPointComment.objects.filter(
             athlete=athlete, coach=coach, point_key="speed", comment="Updated speed comment"

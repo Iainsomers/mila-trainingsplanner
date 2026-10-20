@@ -10,7 +10,7 @@ Prio (—/🥇/🥈/🥉) en aangepaste namen van Other 1–3 horen bij de atlee
 
 Coachcommentaren bij Focus Points worden afzonderlijk per atleet, focuspunt en coach bewaard. Overschrijven van commentaar van andere coaches is een expliciete, standaard uitgeschakelde keuze; het wist alleen commentaren bij datzelfde focuspunt. De eerste implementatiefase maakt alleen de kolom `Comment coaches` functioneel.
 
-Excel-import van Focus Points vervangt alleen de comments van de ingelogde coach, voor de in het bestand genoemde bereikbare atleten en aanwezige focuspuntenkolommen. Lege cellen wissen diens commentaar; ontbrekende/ambigue atleten blokkeren de volledige import. Coachcomments van anderen en Plan/Progress blijven ongemoeid.
+Excel-import van Focus Points vervangt alleen de comments van de ingelogde coach waarvoor een niet-lege cel is ingevuld, bij de in het bestand genoemde bereikbare atleten. Lege cellen laten bestaande comments staan; ontbrekende/ambigue atleten blokkeren de volledige import. Coachcomments van anderen en Plan/Progress blijven ongemoeid.
 
 ## 2026-10-20 — Vragenlijststatus en doelgroep zijn aparte keuzes
 
