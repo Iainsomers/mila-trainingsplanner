@@ -36,6 +36,7 @@
     border-radius: 50%;
     font-size: 1rem;
   }
+  .focus-priority-select { min-width: 3.4rem; padding-right: 1.5rem; }
   .focus-point-editor { min-height: 180px; }
   @media (max-width: 700px) {
     .focus-points-table { min-width: 900px; }
@@ -95,7 +96,14 @@
           <tbody>
             {% for point in focus_point_rows %}
               <tr>
-                <th scope="row" class="fw-semibold">{{ point.label }}</th>
+                <th scope="row" class="fw-semibold {% if point.is_custom_label %}focus-point-cell{% endif %}">
+                  {{ point.label }}
+                  {% if point.is_custom_label and can_edit %}
+                    <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit focus-point-add"
+                      data-action="label" data-point-key="{{ point.key }}" data-point-label="{{ point.label }}"
+                      data-own-label="{{ point.custom_label }}" aria-label="Rename {{ point.label }}" title="Rename focus point">+</button>
+                  {% endif %}
+                </th>
                 <td class="focus-point-cell">
                   {% for comment in point.comments %}
                     <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
@@ -114,7 +122,26 @@
                     <span class="text-muted">—</span>
                   {% endif %}
                 </td>
-                <td><span class="text-muted">—</span></td>
+                <td>
+                  {% if can_edit %}
+                    <form method="post" action="{% url 'focus_points' %}" class="m-0">
+                      {% csrf_token %}
+                      <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+                      <input type="hidden" name="action" value="priority">
+                      <input type="hidden" name="point_key" value="{{ point.key }}">
+                      <select class="form-select form-select-sm focus-priority-select" name="priority"
+                        aria-label="Priority for {{ point.label }}" onchange="this.form.submit()">
+                        <option value="" {% if point.priority is None %}selected{% endif %}>—</option>
+                        <option value="1" title="Gold" {% if point.priority == 1 %}selected{% endif %}>🥇</option>
+                        <option value="2" title="Silver" {% if point.priority == 2 %}selected{% endif %}>🥈</option>
+                        <option value="3" title="Bronze" {% if point.priority == 3 %}selected{% endif %}>🥉</option>
+                      </select>
+                    </form>
+                  {% elif point.priority == 1 %}<span title="Gold medal">🥇</span>
+                  {% elif point.priority == 2 %}<span title="Silver medal">🥈</span>
+                  {% elif point.priority == 3 %}<span title="Bronze medal">🥉</span>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
                 <td class="focus-point-cell">
                   {% for comment in point.plan_comments %}
                     <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
@@ -159,6 +186,7 @@
         {% csrf_token %}
         <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
         <input type="hidden" name="point_key" id="focusPointKey">
+        <input type="hidden" name="action" id="focusPointAction" value="comment">
         <div class="modal-header">
           <div>
             <h2 class="modal-title fs-5" id="focusPointModalTitle">Coach comment</h2>
@@ -173,8 +201,14 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <label for="focusPointComment" class="form-label">Your comment</label>
-          <textarea class="form-control focus-point-editor" id="focusPointComment" name="comment" placeholder="Type your focus note..."></textarea>
+          <div id="focusPointCommentFields">
+            <label for="focusPointComment" class="form-label">Your comment</label>
+            <textarea class="form-control focus-point-editor" id="focusPointComment" name="comment" placeholder="Type your focus note..."></textarea>
+          </div>
+          <div id="focusPointLabelFields" class="d-none">
+            <label for="focusPointCustomLabel" class="form-label">Focus point name</label>
+            <input type="text" maxlength="120" class="form-control" id="focusPointCustomLabel" name="custom_label">
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -195,12 +229,23 @@
     const modalTitle = document.getElementById("focusPointModalTitle");
     const comment = document.getElementById("focusPointComment");
     const overwrite = document.getElementById("overwriteFocusComments");
+    const action = document.getElementById("focusPointAction");
+    const commentFields = document.getElementById("focusPointCommentFields");
+    const labelFields = document.getElementById("focusPointLabelFields");
+    const customLabel = document.getElementById("focusPointCustomLabel");
+    const overwriteControl = overwrite.closest(".form-check-inline");
     document.querySelectorAll(".focus-point-edit").forEach(function (button) {
       button.addEventListener("click", function () {
+        const editAction = button.dataset.action || "comment";
+        action.value = editAction;
         pointKey.value = button.dataset.pointKey || "";
         pointLabel.textContent = button.dataset.pointLabel || "";
-        modalTitle.textContent = (button.dataset.columnLabel || "Comment coaches") + " comment";
+        modalTitle.textContent = editAction === "label" ? "Rename focus point" : (button.dataset.columnLabel || "Comment coaches") + " comment";
+        commentFields.classList.toggle("d-none", editAction === "label");
+        labelFields.classList.toggle("d-none", editAction !== "label");
+        overwriteControl.classList.toggle("d-none", editAction === "label");
         comment.value = button.dataset.ownComment || "";
+        customLabel.value = button.dataset.ownLabel || "";
         overwrite.checked = false;
         modal.show();
       });

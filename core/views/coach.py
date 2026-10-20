@@ -26,7 +26,7 @@ from django.utils.dateparse import parse_time
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, evaluation_visibility_for_request, is_coach_tools_only_user
-from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, AthleteFocusPoint, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -5473,6 +5473,33 @@ def focus_points_view(request):
         if point_key not in point_keys:
             return HttpResponseForbidden("Invalid focus point.")
 
+        action = (request.POST.get("action") or "comment").strip()
+        if action == "priority":
+            priority_value = (request.POST.get("priority") or "").strip()
+            if point_key not in focus_point_keys or priority_value not in {"", "1", "2", "3"}:
+                return HttpResponseForbidden("Invalid focus point priority.")
+            AthleteFocusPoint.objects.update_or_create(
+                athlete=selected_athlete,
+                point_key=point_key,
+                defaults={"priority": int(priority_value) if priority_value else None},
+            )
+            return redirect(f"{reverse('focus_points')}?athlete={selected_athlete.id}&saved=1")
+
+        if action == "label":
+            custom_label_key = point_key in {"other_1", "other_2", "other_3"}
+            if not custom_label_key:
+                return HttpResponseForbidden("Only Other focus points can be renamed.")
+            custom_label = (request.POST.get("custom_label") or "").strip()[:120]
+            AthleteFocusPoint.objects.update_or_create(
+                athlete=selected_athlete,
+                point_key=point_key,
+                defaults={"custom_label": custom_label},
+            )
+            return redirect(f"{reverse('focus_points')}?athlete={selected_athlete.id}&saved=1")
+
+        if action != "comment":
+            return HttpResponseForbidden("Invalid focus point action.")
+
         comment_text = (request.POST.get("comment") or "").strip()
         overwrite_all = request.POST.get("overwrite_all") == "on"
         with transaction.atomic():
@@ -5515,6 +5542,12 @@ def focus_points_view(request):
         key: {column: f"{key}__{column}" for column in ("plan", "progress")}
         for key, _ in focus_points
     }
+    point_settings = {}
+    if selected_athlete:
+        point_settings = {
+            setting.point_key: setting
+            for setting in AthleteFocusPoint.objects.filter(athlete=selected_athlete)
+        }
     comments_by_point = {key: [] for key, _ in focus_points}
     own_comments = {}
     if selected_athlete:
@@ -5538,21 +5571,24 @@ def focus_points_view(request):
             if item.coach_id == request.user.id:
                 own_comments[item.point_key] = item.comment
 
-    focus_point_rows = [
-        {
+    focus_point_rows = []
+    for key, default_label in focus_points:
+        setting = point_settings.get(key)
+        focus_point_rows.append({
             "key": key,
-            "label": label,
+            "label": ((setting.custom_label.strip() if setting else "") or default_label),
+            "custom_label": setting.custom_label if setting else "",
+            "is_custom_label": key in {"other_1", "other_2", "other_3"},
             "comments": comments_by_point.get(key, []),
             "own_comment": own_comments.get(key, ""),
+            "priority": setting.priority if setting else None,
             "plan_key": comment_keys[key]["plan"],
             "plan_comments": comments_by_point.get(comment_keys[key]["plan"], []),
             "plan_own_comment": own_comments.get(comment_keys[key]["plan"], ""),
             "progress_key": comment_keys[key]["progress"],
             "progress_comments": comments_by_point.get(comment_keys[key]["progress"], []),
             "progress_own_comment": own_comments.get(comment_keys[key]["progress"], ""),
-        }
-        for key, label in focus_points
-    ]
+        })
 
     return render(request, "core/focus_points.html", {
         "athletes": athletes,

@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-10-20 — Focus-pointprioriteit en Other-namen zijn gedeeld per atleet
+
+Prio (—/🥇/🥈/🥉) en aangepaste namen van Other 1–3 horen bij de atleet, niet bij een coach. Iedere coach met editrechten op die atleet kan deze waarden aanpassen; een lege Other-naam toont de standaardnaam.
+
 ## 2026-10-20 — Focus point-commentaar blijft per coach apart
 
 Coachcommentaren bij Focus Points worden afzonderlijk per atleet, focuspunt en coach bewaard. Overschrijven van commentaar van andere coaches is een expliciete, standaard uitgeschakelde keuze; het wist alleen commentaren bij datzelfde focuspunt. De eerste implementatiefase maakt alleen de kolom `Comment coaches` functioneel.

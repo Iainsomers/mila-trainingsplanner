@@ -258,6 +258,28 @@ class FocusPointComment(models.Model):
         return f"{self.athlete} - {self.point_key} - {self.coach}"
 
 
+class AthleteFocusPoint(models.Model):
+    athlete = models.ForeignKey(
+        "Athlete",
+        on_delete=models.CASCADE,
+        related_name="focus_point_settings",
+    )
+    point_key = models.CharField(max_length=64)
+    priority = models.PositiveSmallIntegerField(null=True, blank=True)
+    custom_label = models.CharField(max_length=120, blank=True, default="")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["athlete", "point_key"],
+                name="unique_athlete_focus_point_setting",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.athlete} - {self.point_key}"
+
+
 class NewFeature(models.Model):
     title = models.CharField(max_length=160)
     description = models.TextField(blank=True, default="")

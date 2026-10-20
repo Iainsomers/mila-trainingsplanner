@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -1552,6 +1552,54 @@ class PlanningOverviewTests(TestCase):
             "comment": "Should not save.",
         })
         self.assertEqual(denied.status_code, 403)
+
+    def test_focus_point_priority_and_other_labels_are_shared_per_athlete(self):
+        owner = get_user_model().objects.create_user(
+            username="focus-shared-owner", password="secret", is_staff=True
+        )
+        editor = get_user_model().objects.create_user(
+            username="focus-shared-editor", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=owner, name="Shared Focus Athlete", birth_year=2000, gender="X")
+        CoachSettings.objects.create(user=owner, focus_points_enabled=True)
+        self.client.force_login(owner)
+
+        initial = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
+        self.assertContains(initial, "Other 1")
+        for payload in (
+            {"action": "priority", "point_key": "speed", "priority": "1"},
+            {"action": "label", "point_key": "other_1", "custom_label": "Running form"},
+        ):
+            payload["athlete_id"] = str(athlete.id)
+            self.assertEqual(self.client.post("/planning/focus-points/", payload).status_code, 302)
+
+        access = CoachAccess.objects.create(owner=owner, grantee=editor, can_edit=True)
+        self.client.force_login(editor)
+        session = self.client.session
+        session["active_coach_owner_id"] = owner.id
+        session.save()
+        shared_update = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "action": "label",
+            "point_key": "other_1",
+            "custom_label": "Stride mechanics",
+        })
+        self.assertEqual(shared_update.status_code, 302)
+        shared_priority = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "action": "priority",
+            "point_key": "speed",
+            "priority": "2",
+        })
+        self.assertEqual(shared_priority.status_code, 302)
+
+        page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
+        self.assertContains(page, "Stride mechanics")
+        self.assertContains(page, "🥈")
+        setting = AthleteFocusPoint.objects.get(athlete=athlete, point_key="speed")
+        self.assertEqual(setting.priority, 2)
+        label = AthleteFocusPoint.objects.get(athlete=athlete, point_key="other_1")
+        self.assertEqual(label.custom_label, "Stride mechanics")
 
     def test_detailed_camps_are_coach_configurable(self):
         user = get_user_model().objects.create_user(

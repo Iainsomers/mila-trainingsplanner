@@ -96,6 +96,7 @@ Bijgewerkt: 18 oktober 2026.
 - Een popup mag niet groter worden dan het viewport en de opslaanknop moet bereikbaar blijven.
 - In Athlete Input heet de zone-tab `Zones. HR, Speed`; binnen die tab staat de sectie `Current times`.
 - Focus Points gebruikt een compacte, horizontaal scrollbare matrix op smalle schermen. De focuspuntkolom blijft zichtbaar; coachcomments in Comment coaches, Plan en Progress staan inline en bovenaan uitgelijnd, met initialen uit eerste/laatste username-deel (`Voornaam_Achternaam`) en de volledige tekst in de vaste kleur van die coach. Het kleine plusje staat rechtsboven zonder de commentaarregel omlaag te duwen. De commentaarpopup heeft alleen een klein `Overwrite`-vinkje rechtsboven, zonder extra uitlegtekst.
+- Focus Points toont Prioriteit als —, 🥇, 🥈 of 🥉. De drie Other-namen kunnen met een klein plusje bij de naam per atleet worden aangepast; zonder opgeslagen naam blijven de labels `Other 1`, `Other 2` en `Other 3`.
 
 ## Responsiviteit controleren
 

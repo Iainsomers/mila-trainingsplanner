@@ -22,9 +22,11 @@ Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA
 
 ### Focus Points and Desired Improvements
 
-Wanneer de bestaande `Focus Points and Desired Improvements`-schakelaar in Coach Settings aanstaat, verschijnt de pagina onder Planning. De trainer kiest bovenaan een toegankelijke atleet. De focuspuntenmatrix heeft de kolommen Comment coaches, Prio, Plan, Progress en Comment Athlete. Comment coaches, Plan en Progress zijn invulbaar; Prio en Comment Athlete zijn nog placeholders.
+Wanneer de bestaande `Focus Points and Desired Improvements`-schakelaar in Coach Settings aanstaat, verschijnt de pagina onder Planning. De trainer kiest bovenaan een toegankelijke atleet. De focuspuntenmatrix heeft de kolommen Comment coaches, Prio, Plan, Progress en Comment Athlete. Comment coaches, Plan en Progress zijn invulbaar; Prio is per focuspunt instelbaar als —, 1/goud, 2/zilver of 3/brons. De drie Other-namen zijn per atleet aanpasbaar; een lege aangepaste naam toont weer Other 1/2/3. Comment Athlete is nog een placeholder.
 
 Een trainer met eigen beheer of gedeelde editrechten kan per focuspunt en per invulbare kolom een eigen commentaar opslaan. Commentaren blijven afzonderlijk per coach opgeslagen, worden achter elkaar in de cel getoond en zijn inclusief initialen (eerste en laatste username-deel, gescheiden door `_`) volledig gekleurd in een stabiele, aan die coach gekoppelde kleur. De standaardoptie `Overwrite` staat uit en staat compact rechtsboven in de commentaarpopup; dan blijven opmerkingen van andere coaches staan. Met de optie aan worden alle commentaren voor die focuspunt/kolom verwijderd voordat het commentaar van de huidige trainer wordt opgeslagen. Een leeg eigen commentaar verwijdert alleen dat commentaar. View-only coaches kunnen de pagina lezen maar niet opslaan; atleten en coach-tools-only accounts hebben geen toegang.
+
+Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de coach die de laatste wijziging deed. Iedere coach met editrechten op de actieve coachweergave kan ze aanpassen en overschrijven.
 
 ## Trainer Planning
 

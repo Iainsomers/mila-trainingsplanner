@@ -27,6 +27,7 @@ De centrale gegevens zijn:
 - Wedstrijden en geselecteerde afstanden.
 - Trainingsevaluaties, losse evaluatievragenlijsten, weekrapporten en dagelijkse waarden.
 - `FocusPointComment`: coachcommentaar per atleet en focuspunt, met coach als auteur.
+- `AthleteFocusPoint`: gedeelde prioriteit en eventuele aangepaste Other-naam per atleet en focuspunt.
 - Year Planner-dagfases en datumranges voor whereabouts.
 - Standaard krachtprogramma's en Polar-koppelingen.
 - `PolarAnalysisSettings`: één set numerieke HR-analysegrenzen en Estimated-vlag per atleet, afzonderlijk van de HR-tekst in Athlete settings.
