@@ -193,7 +193,7 @@
   {% endif %}
 
   {% if selected_athlete %}
-    <form method="post" id="basePlanningForm">
+    <form method="post" action="{% url 'athlete_base_planning' %}" id="basePlanningForm">
       {% csrf_token %}
       <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
       <input type="hidden" name="kind" value="{{ planning_kind }}">

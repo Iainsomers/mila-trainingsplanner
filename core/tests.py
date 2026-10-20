@@ -3044,6 +3044,7 @@ class SlotModalSaveTests(TestCase):
         page = self.client.get(f"/planning/base/?athlete={athlete.id}")
 
         self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'action="/planning/base/" id="basePlanningForm"')
         self.assertContains(page, "const data = new FormData(planningForm);")
         self.assertContains(page, 'data.set("action", "save");')
         self.assertNotContains(page, 'data.set("action", "autosave_slot");')
