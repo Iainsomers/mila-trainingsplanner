@@ -5462,10 +5462,13 @@ def focus_points_view(request):
             return HttpResponseForbidden("Choose an accessible athlete.")
 
         point_key = (request.POST.get("point_key") or "").strip()
-        point_keys = {
+        focus_point_keys = {
             "endurance_z1_z3", "endurance_z4_z5", "speed", "race_technique",
             "races_tactics", "recovery_capacity", "injuries", "life_balance",
             "coach_collaboration", "other_1", "other_2", "other_3",
+        }
+        point_keys = focus_point_keys | {
+            f"{key}__{column}" for key in focus_point_keys for column in ("plan", "progress")
         }
         if point_key not in point_keys:
             return HttpResponseForbidden("Invalid focus point.")
@@ -5508,6 +5511,10 @@ def focus_points_view(request):
         ("other_2", "Other 2"),
         ("other_3", "Other 3"),
     ]
+    comment_keys = {
+        key: {column: f"{key}__{column}" for column in ("plan", "progress")}
+        for key, _ in focus_points
+    }
     comments_by_point = {key: [] for key, _ in focus_points}
     own_comments = {}
     if selected_athlete:
@@ -5537,6 +5544,12 @@ def focus_points_view(request):
             "label": label,
             "comments": comments_by_point.get(key, []),
             "own_comment": own_comments.get(key, ""),
+            "plan_key": comment_keys[key]["plan"],
+            "plan_comments": comments_by_point.get(comment_keys[key]["plan"], []),
+            "plan_own_comment": own_comments.get(comment_keys[key]["plan"], ""),
+            "progress_key": comment_keys[key]["progress"],
+            "progress_comments": comments_by_point.get(comment_keys[key]["progress"], []),
+            "progress_own_comment": own_comments.get(comment_keys[key]["progress"], ""),
         }
         for key, label in focus_points
     ]

@@ -9,7 +9,11 @@
   .focus-points-table th:first-child,
   .focus-points-table td:first-child { min-width: 245px; }
   .focus-points-table th:nth-child(2),
-  .focus-points-table td:nth-child(2) { min-width: 310px; }
+  .focus-points-table td:nth-child(2),
+  .focus-points-table th:nth-child(4),
+  .focus-points-table td:nth-child(4),
+  .focus-points-table th:nth-child(5),
+  .focus-points-table td:nth-child(5) { min-width: 230px; }
   .focus-points-table td:not(:first-child) { vertical-align: top; }
   .focus-point-comment {
     color: var(--coach-color);
@@ -100,6 +104,7 @@
                     <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit focus-point-add"
                       data-point-key="{{ point.key }}"
                       data-point-label="{{ point.label }}"
+                      data-column-label="Comment coaches"
                       data-own-comment="{{ point.own_comment }}"
                       aria-label="{% if point.own_comment %}Edit{% else %}Add{% endif %} your comment for {{ point.label }}"
                       title="{% if point.own_comment %}Edit comment{% else %}Add comment{% endif %}">
@@ -110,8 +115,30 @@
                   {% endif %}
                 </td>
                 <td><span class="text-muted">—</span></td>
-                <td><span class="text-muted">—</span></td>
-                <td><span class="text-muted">—</span></td>
+                <td class="focus-point-cell">
+                  {% for comment in point.plan_comments %}
+                    <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
+                  {% endfor %}
+                  {% if can_edit %}
+                    <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit focus-point-add"
+                      data-point-key="{{ point.plan_key }}" data-point-label="{{ point.label }}" data-column-label="Plan"
+                      data-own-comment="{{ point.plan_own_comment }}"
+                      aria-label="{% if point.plan_own_comment %}Edit{% else %}Add{% endif %} your Plan comment for {{ point.label }}"
+                      title="{% if point.plan_own_comment %}Edit Plan comment{% else %}Add Plan comment{% endif %}">+</button>
+                  {% elif not point.plan_comments %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="focus-point-cell">
+                  {% for comment in point.progress_comments %}
+                    <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
+                  {% endfor %}
+                  {% if can_edit %}
+                    <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit focus-point-add"
+                      data-point-key="{{ point.progress_key }}" data-point-label="{{ point.label }}" data-column-label="Progress"
+                      data-own-comment="{{ point.progress_own_comment }}"
+                      aria-label="{% if point.progress_own_comment %}Edit{% else %}Add{% endif %} your Progress comment for {{ point.label }}"
+                      title="{% if point.progress_own_comment %}Edit Progress comment{% else %}Add Progress comment{% endif %}">+</button>
+                  {% elif not point.progress_comments %}<span class="text-muted">—</span>{% endif %}
+                </td>
                 <td><span class="text-muted">—</span></td>
               </tr>
             {% endfor %}
@@ -134,7 +161,7 @@
         <input type="hidden" name="point_key" id="focusPointKey">
         <div class="modal-header">
           <div>
-            <h2 class="modal-title fs-5">Coach comment</h2>
+            <h2 class="modal-title fs-5" id="focusPointModalTitle">Coach comment</h2>
             <div class="small text-muted" id="focusPointLabel"></div>
           </div>
           <div class="d-flex align-items-center ms-auto me-2">
@@ -165,12 +192,14 @@
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     const pointKey = document.getElementById("focusPointKey");
     const pointLabel = document.getElementById("focusPointLabel");
+    const modalTitle = document.getElementById("focusPointModalTitle");
     const comment = document.getElementById("focusPointComment");
     const overwrite = document.getElementById("overwriteFocusComments");
     document.querySelectorAll(".focus-point-edit").forEach(function (button) {
       button.addEventListener("click", function () {
         pointKey.value = button.dataset.pointKey || "";
         pointLabel.textContent = button.dataset.pointLabel || "";
+        modalTitle.textContent = (button.dataset.columnLabel || "Comment coaches") + " comment";
         comment.value = button.dataset.ownComment || "";
         overwrite.checked = false;
         modal.show();

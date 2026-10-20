@@ -1454,6 +1454,8 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Overwrite")
         self.assertContains(response, "Overwrite other coaches")
         self.assertContains(response, 'aria-label="Add your comment for Endurance Z1–Z3"')
+        self.assertContains(response, 'data-column-label="Plan"')
+        self.assertContains(response, 'data-column-label="Progress"')
         self.assertNotContains(response, "Leave this empty to remove your own comment.")
 
     def test_focus_point_comments_are_kept_per_coach_until_overwritten(self):
@@ -1485,6 +1487,21 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(page, "IS:")
         self.assertNotContains(page, "TO:")
         self.assertContains(page, "Needs more easy mileage.")
+
+        for column, text in (("plan", "Build the weekly progression."), ("progress", "Improving steadily.")):
+            saved_column = self.client.post("/planning/focus-points/", {
+                "athlete_id": str(athlete.id),
+                "point_key": f"{key}__{column}",
+                "comment": text,
+            })
+            self.assertEqual(saved_column.status_code, 302)
+            self.assertTrue(FocusPointComment.objects.filter(
+                athlete=athlete, coach=coach, point_key=f"{key}__{column}", comment=text
+            ).exists())
+
+        page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
+        self.assertContains(page, "Build the weekly progression.")
+        self.assertContains(page, "Improving steadily.")
 
         replaced = self.client.post("/planning/focus-points/", {
             "athlete_id": str(athlete.id),

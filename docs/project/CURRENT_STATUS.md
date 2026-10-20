@@ -16,7 +16,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Belangrijk werkend gedrag
 
-- Focus Points and Desired Improvements staat onder Planning wanneer de coachschakelaar aanstaat. Trainers kiezen een toegankelijke atleet; eigen trainers en gedelegeerde trainers met editrechten kunnen commentaar per focuspunt opslaan. Commentaar wordt per coach met initialen en vaste coachkleur getoond. `Overwrite all other comments` staat standaard uit; view-only coaches kunnen alleen lezen. Prio, Plan, Progress en Comment Athlete zijn in deze eerste fase nog placeholders.
+- Focus Points and Desired Improvements staat onder Planning wanneer de coachschakelaar aanstaat. Trainers kiezen een toegankelijke atleet; eigen trainers en gedelegeerde trainers met editrechten kunnen commentaar in Comment coaches, Plan en Progress per focuspunt opslaan. Commentaar wordt per coach met username-initialen en vaste coachkleur getoond. `Overwrite` staat standaard uit en geldt alleen voor dezelfde focuspunt/kolom-cel; view-only coaches kunnen alleen lezen. Prio en Comment Athlete zijn nog placeholders.
 
 - `Extended edit rights` geeft een atleet toegang tot toekomstige AYC-trainingen en lege dagdelen. `Can change base planning` staat daar los van en geeft alleen toegang tot de eigen Base Planning.
 - Coach Settings bevat `Shared athlete whereabouts in Year Planner`, standaard uit. Daarmee verschijnen read-only whereabouts van ploeggenoten en gerelateerde coaches in de Year Planner; trainingen blijven afgeschermd.
