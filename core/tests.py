@@ -1454,15 +1454,16 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Overwrite")
         self.assertContains(response, "Overwrite other coaches")
         self.assertContains(response, 'aria-label="Add your comment for Endurance Z1–Z3"')
+        self.assertNotContains(response, "Leave this empty to remove your own comment.")
 
     def test_focus_point_comments_are_kept_per_coach_until_overwritten(self):
         coach = get_user_model().objects.create_user(
-            username="focus-owner", password="secret", is_staff=True,
+            username="Iain_Somers", password="secret", is_staff=True,
             first_name="Iain", last_name="Somers",
         )
         other_coach = get_user_model().objects.create_user(
-            username="focus-other", password="secret", is_staff=True,
-            first_name="Tomasz", last_name="Olsthoorn Lewandowski",
+            username="Tomasz_Olsthoorn_Lewandowski", password="secret", is_staff=True,
+            first_name="Tomasz", last_name="Olsthoorn",
         )
         athlete = Athlete.objects.create(owner=coach, name="Focus Athlete", birth_year=2000, gender="X")
         CoachSettings.objects.create(user=coach, focus_points_enabled=True)
@@ -1482,7 +1483,7 @@ class PlanningOverviewTests(TestCase):
         page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
         self.assertContains(page, "TL:")
         self.assertContains(page, "IS:")
-        self.assertNotContains(page, "IA:")
+        self.assertNotContains(page, "TO:")
         self.assertContains(page, "Needs more easy mileage.")
 
         replaced = self.client.post("/planning/focus-points/", {

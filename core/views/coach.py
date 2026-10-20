@@ -5515,8 +5515,9 @@ def focus_points_view(request):
             athlete=selected_athlete,
         ).select_related("coach").order_by("coach__id")
         for item in comments:
-            coach_name = (item.coach.get_full_name() or item.coach.get_username()).strip()
-            name_parts = coach_name.split()
+            username_parts = [part for part in item.coach.get_username().split("_") if part]
+            coach_name_parts = (item.coach.get_full_name() or "").split()
+            name_parts = username_parts if len(username_parts) > 1 else coach_name_parts
             initials = (
                 name_parts[0][:1] + name_parts[-1][:1]
                 if len(name_parts) > 1
