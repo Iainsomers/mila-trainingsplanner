@@ -761,7 +761,13 @@ def evaluations_view(request):
         questionnaires = list(
             EvaluationQuestionnaire.objects
             .filter(owner=athlete.owner, is_active=True)
+            .filter(
+                Q(available_to_all=True)
+                | Q(available_to_athletes=athlete)
+                | Q(available_to_groups__athletes=athlete)
+            )
             .prefetch_related("questions")
+            .distinct()
             .order_by("title", "id")
         )
         responses = {
@@ -786,6 +792,19 @@ def evaluations_view(request):
     show_new = (request.GET.get("new") or "") == "1"
     copy_id = (request.GET.get("copy") or "").strip()
     copy_source = None
+    form_error = ""
+    form_data = request.POST if request.method == "POST" else None
+    copy_owner_ids = {request.user.id}
+    copy_owner_ids.update(
+        CoachAccess.objects.filter(grantee=request.user, can_edit=True)
+        .values_list("owner_id", flat=True)
+    )
+    copy_sources = list(
+        EvaluationQuestionnaire.objects.filter(owner_id__in=copy_owner_ids)
+        .select_related("owner")
+        .prefetch_related("questions")
+        .order_by("owner__username", "title", "id")
+    )
     if request.method == "POST":
         if not can_edit:
             return HttpResponse("Forbidden", status=403)
@@ -801,6 +820,9 @@ def evaluations_view(request):
         matrix_columns = request.POST.getlist("matrix_columns")
         matrix_rows = request.POST.getlist("matrix_rows")
         is_active = bool(request.POST.get("is_active"))
+        audience_mode = request.POST.get("audience_mode", "all")
+        selected_athlete_ids = request.POST.getlist("available_athletes")
+        selected_group_ids = request.POST.getlist("available_groups")
         text_questions = [line.strip() for line in questions_text.splitlines() if line.strip()]
         matrix_questions = []
         for matrix_title, columns_text, rows_text in zip(matrix_titles, matrix_columns, matrix_rows):
@@ -808,13 +830,31 @@ def evaluations_view(request):
             rows = [line.strip() for line in rows_text.splitlines() if line.strip()]
             if matrix_title.strip() and columns and rows:
                 matrix_questions.append((matrix_title.strip(), columns, rows))
-        if title and (text_questions or matrix_questions):
+        target_athletes = Athlete.objects.filter(owner=owner, id__in=selected_athlete_ids)
+        target_groups = Group.objects.filter(owner=owner, id__in=selected_group_ids)
+        valid_selection = (
+            audience_mode == "all"
+            or (
+                audience_mode == "selected"
+                and (target_athletes.exists() or target_groups.exists())
+                and target_athletes.count() == len(set(selected_athlete_ids))
+                and target_groups.count() == len(set(selected_group_ids))
+            )
+        )
+        if not valid_selection:
+            form_error = "Choose at least one athlete or group from this coach."
+            show_new = True
+        elif title and (text_questions or matrix_questions):
             questionnaire = EvaluationQuestionnaire.objects.create(
                 owner=owner,
                 title=title,
                 description=description,
                 is_active=is_active,
+                available_to_all=(audience_mode == "all"),
             )
+            if audience_mode == "selected":
+                questionnaire.available_to_athletes.set(target_athletes)
+                questionnaire.available_to_groups.set(target_groups)
             questions_to_create = [
                 EvaluationQuestion(
                     questionnaire=questionnaire,
@@ -847,7 +887,7 @@ def evaluations_view(request):
         .order_by("-updated_at", "-id")
     )
     if copy_id.isdigit():
-        copy_source = next((q for q in questionnaires if q.id == int(copy_id)), None)
+        copy_source = next((q for q in copy_sources if q.id == int(copy_id)), None)
         show_new = bool(copy_source)
 
     responses = list(
@@ -897,6 +937,7 @@ def evaluations_view(request):
     for questionnaire in questionnaires:
         questionnaire.response_count = response_counts.get(questionnaire.id, 0)
         questionnaire.filled_responses = responses_by_questionnaire.get(questionnaire.id, [])
+        questionnaire.audience_summary = "All athletes" if questionnaire.available_to_all else "Selected athletes/groups"
 
     return render(request, "core/evaluations.html", {
         "is_athlete_user": False,
@@ -905,6 +946,11 @@ def evaluations_view(request):
         "can_edit": can_edit,
         "show_new": show_new,
         "copy_source": copy_source,
+        "copy_sources": copy_sources,
+        "audience_athletes": Athlete.objects.filter(owner=owner).order_by("name"),
+        "audience_groups": Group.objects.filter(owner=owner).order_by("name"),
+        "form_error": form_error,
+        "form_data": form_data,
         "selected_filled_questionnaire": selected_filled_questionnaire,
         "filled_responses": filled_responses,
         "selected_response": selected_response,
@@ -924,7 +970,11 @@ def evaluation_fill_view(request, questionnaire_id):
         return redirect("dashboard")
 
     questionnaire = get_object_or_404(
-        EvaluationQuestionnaire.objects.prefetch_related("questions"),
+        EvaluationQuestionnaire.objects.prefetch_related("questions").filter(
+            Q(available_to_all=True)
+            | Q(available_to_athletes=athlete)
+            | Q(available_to_groups__athletes=athlete)
+        ).distinct(),
         id=questionnaire_id,
         owner=athlete.owner,
         is_active=True,

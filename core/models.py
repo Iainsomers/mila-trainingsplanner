@@ -155,6 +155,17 @@ class EvaluationQuestionnaire(models.Model):
     title = models.CharField(max_length=160)
     description = models.TextField(blank=True, default="")
     is_active = models.BooleanField(default=True)
+    available_to_all = models.BooleanField(default=True)
+    available_to_athletes = models.ManyToManyField(
+        "Athlete",
+        related_name="available_evaluation_questionnaires",
+        blank=True,
+    )
+    available_to_groups = models.ManyToManyField(
+        "Group",
+        related_name="available_evaluation_questionnaires",
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -17,7 +17,7 @@ Een trainer is doorgaans staff- of superuser en kan:
 - in de AYC tussen toegankelijke atleten schakelen;
 - Year Planner-training phases en whereabouts beheren, inclusief bulktoepassing op geselecteerde atleten;
 - coach-whereabouts in de Year Planner bekijken en beheren voor zichzelf en coaches waarvoor toegang is verleend; deze uitzondering geldt uitsluitend voor coach-whereabouts, niet voor andere gegevens van een view-only coach;
-- evaluatievragenlijsten maken en ingevulde antwoorden bekijken;
+- evaluatievragenlijsten maken, doelgroep (alle eigen atleten of geselecteerde eigen groepen/atleten) instellen en ingevulde antwoorden bekijken; als kopieerbron zijn eigen formulieren en formulieren van coaches met expliciete editrechten toegestaan, zonder antwoorden of wijzigingen aan het origineel;
 - stats, Polar en Django Admin openen waar beschikbaar.
 
 Een trainer ziet standaard alleen de eigen gegevens. Als via `CoachAccess` toegang tot een andere trainer is gegeven, kiest de trainer op het dashboard expliciet als welke coach hij kijkt. Die keuze toont uitsluitend gegevens van die gekozen coach en mengt ze niet met de eigen atleten, plannen, wedstrijden of templates. Gedeelde toegang is standaard view-only; alleen wanneer `can_edit` aan staat mag de meekijkende trainer wijzigingen opslaan. Deze toegang is niet transitief: als trainer A trainer B mag zien en B trainer C mag zien, dan ziet A trainer C niet. Historische atleten zonder owner horen via datamigratie aan de juiste trainer te worden gekoppeld, niet via een brede zichtbaarheidsexceptie.
@@ -35,7 +35,7 @@ Een atleetaccount is aan één `Athlete` gekoppeld. Een atleet kan uitsluitend z
 - de eigen wedstrijdselectie;
 - de Race Calendar, waarin de atleet wedstrijden en nieuwe afstanden voor de kalender van de eigen trainer kan toevoegen en uitsluitend de eigen wedstrijdvinkjes en het gedeelde doelwedstrijdvinkje kan aanpassen; bestaande afstanden verwijderen blijft trainer-only;
 - het eigen dashboard en Planning-overzicht als toegangspunten;
-- beschikbare evaluatievragenlijsten invullen en uitsluitend de eigen antwoorden terugzien;
+- actieve evaluatievragenlijsten invullen wanneer de atleet expliciet of via een geselecteerde eigen groep tot de doelgroep behoort, en uitsluitend de eigen antwoorden terugzien;
 - de eigen Year Planner alleen lezen wanneer de trainer Training en/of Whereabouts daarvoor heeft ingeschakeld;
 - een logoutknop die naar de loginpagina terugkeert.
 

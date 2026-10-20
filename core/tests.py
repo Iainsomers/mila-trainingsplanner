@@ -388,6 +388,93 @@ class TrackTimerTests(TestCase):
         self.assertFalse(EvaluationQuestionnaire.objects.filter(id=questionnaire.id).exists())
         self.assertFalse(EvaluationResponse.objects.filter(id=response.id).exists())
 
+    def test_evaluation_questionnaire_can_target_groups_and_individual_athletes(self):
+        coach = get_user_model().objects.create_user(username="audience-coach", password="secret", is_staff=True)
+        first_user = get_user_model().objects.create_user(username="audience-first", password="secret")
+        second_user = get_user_model().objects.create_user(username="audience-second", password="secret")
+        first = Athlete.objects.create(owner=coach, name="Audience First", birth_year=2000, gender="X")
+        second = Athlete.objects.create(owner=coach, name="Audience Second", birth_year=2001, gender="X")
+        group = Group.objects.create(owner=coach, name="Audience Group")
+        group.athletes.add(first)
+        questionnaire = EvaluationQuestionnaire.objects.create(
+            owner=coach,
+            title="Selected audience",
+            available_to_all=False,
+        )
+        questionnaire.available_to_groups.add(group)
+        EvaluationQuestion.objects.create(questionnaire=questionnaire, text="How are you?")
+
+        self.client.force_login(first_user)
+        self.assertContains(self.client.get("/evaluations/"), "Selected audience")
+        self.assertEqual(self.client.get(f"/evaluations/{questionnaire.id}/").status_code, 200)
+
+        self.client.force_login(second_user)
+        self.assertNotContains(self.client.get("/evaluations/"), "Selected audience")
+        self.assertEqual(self.client.get(f"/evaluations/{questionnaire.id}/").status_code, 404)
+
+        self.client.force_login(coach)
+        create_response = self.client.post(
+            "/evaluations/",
+            {
+                "title": "One athlete only",
+                "questions": "How was training?",
+                "audience_mode": "selected",
+                "available_athletes": [str(second.id)],
+                "is_active": "on",
+            },
+        )
+        self.assertEqual(create_response.status_code, 302)
+        created = EvaluationQuestionnaire.objects.get(title="One athlete only")
+        self.assertFalse(created.available_to_all)
+        self.assertQuerySetEqual(created.available_to_athletes.all(), [second], transform=lambda item: item)
+
+    def test_evaluation_copy_sources_require_edit_access_and_copy_structure_only(self):
+        coach = get_user_model().objects.create_user(username="copy-target", password="secret", is_staff=True)
+        editable = get_user_model().objects.create_user(username="copy-editable", password="secret", is_staff=True)
+        view_only = get_user_model().objects.create_user(username="copy-view-only", password="secret", is_staff=True)
+        CoachAccess.objects.create(owner=editable, grantee=coach, can_edit=True)
+        CoachAccess.objects.create(owner=view_only, grantee=coach, can_edit=False)
+        source = EvaluationQuestionnaire.objects.create(owner=editable, title="English SEAS")
+        text_question = EvaluationQuestion.objects.create(questionnaire=source, text="How do you feel?", order=1)
+        EvaluationQuestion.objects.create(
+            questionnaire=source,
+            text="Progress",
+            order=2,
+            question_type=EvaluationQuestion.TYPE_MATRIX,
+            matrix_columns=["2025", "2026"],
+            matrix_rows=["Strength"],
+        )
+        source_athlete = Athlete.objects.create(owner=editable, name="Copy source athlete", birth_year=2000, gender="X")
+        EvaluationResponse.objects.create(questionnaire=source, athlete=source_athlete, answers={str(text_question.id): "Private answer"})
+        hidden = EvaluationQuestionnaire.objects.create(owner=view_only, title="No edit access")
+
+        self.client.force_login(coach)
+        copy_page = self.client.get(f"/evaluations/?new=1&copy={source.id}")
+        self.assertContains(copy_page, "English SEAS")
+        self.assertNotContains(copy_page, "No edit access")
+        self.assertContains(copy_page, "Available to")
+
+        response = self.client.post(
+            "/evaluations/",
+            {
+                "title": "English SEAS copy",
+                "description": "Translated version",
+                "questions": "How do you feel?",
+                "matrix_title": "Progress",
+                "matrix_columns": "2025\n2026",
+                "matrix_rows": "Strength",
+                "audience_mode": "all",
+                "is_active": "on",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        copied = EvaluationQuestionnaire.objects.get(owner=coach, title="English SEAS copy")
+        self.assertEqual(copied.questions.count(), 2)
+        self.assertEqual(copied.questions.get(question_type=EvaluationQuestion.TYPE_MATRIX).matrix_columns, ["2025", "2026"])
+        self.assertFalse(copied.responses.exists())
+        self.assertTrue(EvaluationQuestionnaire.objects.filter(pk=source.pk, owner=editable).exists())
+        self.assertTrue(EvaluationQuestionnaire.objects.filter(pk=hidden.pk, owner=view_only).exists())
+
     def test_pr_database_lists_records_with_freshness_colors(self):
         user = get_user_model().objects.create_user(username="pr-db-coach", password="secret", is_staff=True)
         fresh = MatchAthleteRecord.objects.create(

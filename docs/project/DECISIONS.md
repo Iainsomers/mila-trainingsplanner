@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-10-20 — Vragenlijststatus en doelgroep zijn aparte keuzes
+
+`Active` bepaalt of een vragenlijst ingevuld kan worden. `Available to` staat altijd apart in beeld en kiest tussen alle atleten of geselecteerde eigen groepen en/of atleten. Bij de geselecteerde doelgroep moet minimaal één keuze worden opgeslagen. Een coach mag als kopieerbron alleen eigen vragenlijsten en vragenlijsten van coaches met expliciete editrechten gebruiken; kopiëren neemt geen antwoorden over en verandert de bron niet.
+
 ## 2026-10-12 — Vaste zoneberekening, afzonderlijke AI-interpretatie
 
 Polar Type D berekent kilometers deterministisch op basis van tempo en HR. AI beschrijft uitsluitend een mogelijke trainingsstructuur en verandert geen totalen of planning. Ontbrekende dekking blijft Unclassified; geen geforceerde zone op basis van het geplande trainingstype.
