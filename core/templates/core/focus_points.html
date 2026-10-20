@@ -71,11 +71,29 @@
   .focus-priority-option:hover,
   .focus-priority-option:focus-visible { background: #e9ecef; outline: 0; }
   .focus-point-editor { min-height: 180px; }
+  .focus-points-controls {
+    display: grid;
+    grid-template-columns: minmax(15rem, 1fr) minmax(0, 3fr);
+    gap: .75rem;
+    align-items: end;
+  }
+  .focus-points-import {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1.2fr) minmax(16rem, 1.6fr) auto;
+    gap: .6rem;
+    align-items: end;
+    min-width: 0;
+  }
+  .focus-points-import .form-text { margin-top: .15rem; }
   @media (max-width: 700px) {
     .focus-points-table { min-width: 900px; }
     .focus-points-table th:first-child,
     .focus-points-table td:first-child { position: sticky; left: 0; z-index: 1; background: #fff; }
     .focus-points-table thead th:first-child { z-index: 2; background: #f8f9fa; }
+  }
+  @media (max-width: 1000px) {
+    .focus-points-controls { grid-template-columns: minmax(0, 1fr); }
+    .focus-points-import { grid-template-columns: minmax(0, 1fr); }
   }
 </style>
 {% endblock %}
@@ -98,8 +116,8 @@
 
   <div class="card mb-3">
     <div class="card-body py-2">
-      <div class="row g-2 align-items-end">
-        <form method="get" class="col-12 col-lg-3">
+      <div class="focus-points-controls">
+        <form method="get" class="focus-points-athlete">
           <label for="focusAthlete" class="form-label mb-1">Athlete</label>
           <select id="focusAthlete" name="athlete" class="form-select" onchange="this.form.submit()">
             {% for athlete in athletes %}
@@ -108,27 +126,27 @@
           </select>
         </form>
         {% if can_edit and selected_athlete %}
-          <form method="post" action="{% url 'focus_points' %}" enctype="multipart/form-data" class="col-12 col-lg-9 row g-2 align-items-end m-0">
+          <form method="post" action="{% url 'focus_points' %}" enctype="multipart/form-data" class="focus-points-import">
             {% csrf_token %}
             <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
             <input type="hidden" name="action" value="import_comments">
-            <div class="col-12 col-lg-5">
+            <div>
               <label for="focusCommentsWorkbook" class="form-label mb-1">Import coach comments</label>
               <input id="focusCommentsWorkbook" type="file" name="comments_workbook" class="form-control form-control-sm" accept=".xlsx" required>
             </div>
-            <div class="col-12 col-lg-5">
+            <div>
               <div class="form-check mb-1">
                 <input class="form-check-input" type="checkbox" name="confirm_replace" id="confirmFocusCommentsReplace" required>
                 <label class="form-check-label small" for="confirmFocusCommentsReplace">Replace my comments for athletes in this file</label>
               </div>
               <div class="form-text">Only non-empty cells replace your comments; other coaches, Plan and Progress stay unchanged.</div>
             </div>
-            <div class="col-12 col-lg-2 d-grid">
+            <div class="d-grid">
               <button type="submit" class="btn btn-outline-primary btn-sm">Import</button>
             </div>
           </form>
         {% elif not can_edit %}
-          <div class="col-auto"><span class="badge text-bg-secondary">View only</span></div>
+          <div><span class="badge text-bg-secondary">View only</span></div>
         {% endif %}
       </div>
     </div>

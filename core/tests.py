@@ -1506,6 +1506,8 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, 'aria-label="Add your comment for Endurance Z1–Z3"')
         self.assertContains(response, 'data-column-label="Plan"')
         self.assertContains(response, 'data-column-label="Progress"')
+        self.assertContains(response, "focus-points-controls")
+        self.assertContains(response, "focus-points-import")
         self.assertNotContains(response, "Leave this empty to remove your own comment.")
 
     def test_focus_point_comments_are_kept_per_coach_until_overwritten(self):
