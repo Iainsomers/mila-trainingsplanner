@@ -352,6 +352,7 @@
     const modalContent = document.getElementById("baseSlotModalContent");
     const activeIdInput = document.getElementById("baseSlotActiveId");
     const planningForm = document.getElementById("basePlanningForm");
+    const autosaveUrl = "{% url 'athlete_base_planning' %}";
     const autosaveStatus = document.getElementById("baseAutosaveStatus");
     const isIdealWeek = {{ is_ideal_week|yesno:"true,false" }};
     const modeSelect = document.getElementById("baseSlotMode");
@@ -502,7 +503,7 @@
         headers["X-CSRFToken"] = token;
       }
 
-      return fetch(planningForm.action || window.location.href, {
+      return fetch(autosaveUrl, {
         method: "POST",
         body: data,
         credentials: "same-origin",
