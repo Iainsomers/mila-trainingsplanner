@@ -513,10 +513,11 @@
           try {
             payload = text ? JSON.parse(text) : null;
           } catch (error) {
-            throw new Error("HTTP " + response.status + ": " + text.slice(0, 300));
+            throw new Error("HTTP " + response.status);
           }
           if (!response.ok) {
-            throw new Error("HTTP " + response.status + ": " + text.slice(0, 300));
+            const details = payload && Array.isArray(payload.errors) ? payload.errors.join(" ") : "";
+            throw new Error(details || ("HTTP " + response.status));
           }
           return payload || {};
         });
@@ -554,7 +555,8 @@
         })
         .catch((error) => {
           console.error("Base planning autosave failed", error);
-          setAutosaveStatus("Save failed", true);
+          const reason = error && error.message ? error.message.slice(0, 100) : "Unknown error";
+          setAutosaveStatus("Save failed: " + reason, true);
         });
     }
 
