@@ -12,13 +12,25 @@
   .focus-points-table td:nth-child(2) { min-width: 310px; }
   .focus-points-table td:not(:first-child) { vertical-align: top; }
   .focus-point-comment {
-    border-left: 4px solid var(--coach-color);
-    border-radius: .25rem;
-    background: #f8f9fa;
-    padding: .45rem .55rem;
-    margin-bottom: .4rem;
+    color: var(--coach-color);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+  .focus-point-comment + .focus-point-comment::before {
+    content: " · ";
+    color: #6c757d;
+  }
+  .focus-point-cell { position: relative; padding-top: 1.7rem !important; }
+  .focus-point-add {
+    position: absolute;
+    top: .2rem;
+    right: .25rem;
+    width: 1.35rem;
+    height: 1.35rem;
+    padding: 0;
+    line-height: 1;
+    border-radius: 50%;
+    font-size: 1rem;
   }
   .focus-point-editor { min-height: 180px; }
   @media (max-width: 700px) {
@@ -80,19 +92,18 @@
             {% for point in focus_point_rows %}
               <tr>
                 <th scope="row" class="fw-semibold">{{ point.label }}</th>
-                <td>
+                <td class="focus-point-cell">
                   {% for comment in point.comments %}
-                    <div class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}">
-                      <strong style="color: {{ comment.coach_color }}">{{ comment.initials }}:</strong>
-                      <span>{{ comment.comment }}</span>
-                    </div>
+                    <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
                   {% endfor %}
                   {% if can_edit %}
-                    <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit"
+                    <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit focus-point-add"
                       data-point-key="{{ point.key }}"
                       data-point-label="{{ point.label }}"
-                      data-own-comment="{{ point.own_comment }}">
-                      {% if point.own_comment %}Edit comment{% else %}+ Add comment{% endif %}
+                      data-own-comment="{{ point.own_comment }}"
+                      aria-label="{% if point.own_comment %}Edit{% else %}Add{% endif %} your comment for {{ point.label }}"
+                      title="{% if point.own_comment %}Edit comment{% else %}Add comment{% endif %}">
+                      +
                     </button>
                   {% elif not point.comments %}
                     <span class="text-muted">—</span>
@@ -132,10 +143,10 @@
           <label for="focusPointComment" class="form-label">Your comment</label>
           <textarea class="form-control focus-point-editor" id="focusPointComment" name="comment" placeholder="Type your focus note..."></textarea>
           <div class="form-text mb-3">Leave this empty to remove your own comment.</div>
-          <div class="form-check border rounded p-3 ps-5">
+          <div class="form-check border rounded px-2 py-1 ps-4">
             <input class="form-check-input" type="checkbox" value="on" id="overwriteFocusComments" name="overwrite_all">
-            <label class="form-check-label fw-semibold" for="overwriteFocusComments">Overwrite all other comments</label>
-            <div class="form-text">When selected, comments from all other coaches for this focus point will be removed. Your comment will remain.</div>
+            <label class="form-check-label small fw-semibold" for="overwriteFocusComments">Overwrite other coaches</label>
+            <div class="form-text small">Remove other coaches' comments for this focus point. Your comment will remain.</div>
           </div>
         </div>
         <div class="modal-footer">
