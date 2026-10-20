@@ -540,6 +540,17 @@
       return zones;
     }
 
+    function flexCompoundZones(text) {
+      const matches = (text || "").matchAll(/\b\d+\s*(?:x|\*|×)\s*\(([^)]*)\)/gi);
+      const zones = new Set();
+      for (const match of matches) {
+        for (const zoneMatch of match[1].matchAll(/\bz\s*([1-6])\b/gi)) {
+          zones.add(Number(zoneMatch[1]));
+        }
+      }
+      return Array.from(zones).sort((a, b) => a - b).map(String);
+    }
+
     function flexZoneColor(zone) {
       const mapping = {
         "1": "#f8f8f0",
@@ -556,7 +567,8 @@
       document.querySelectorAll("[data-flex-segment]").forEach((el) => {
         const text = el.textContent || "";
         const tRange = flexProgressiveTKeys(text);
-        const zoneRange = tRange ? null : flexProgressiveZones(text);
+        const compoundZones = flexCompoundZones(text);
+        const zoneRange = tRange ? null : (compoundZones.length > 1 ? compoundZones : flexProgressiveZones(text));
         const colors = (tRange || zoneRange || [])
           .map((value) => tRange ? flexTColor(value) : flexZoneColor(value))
           .filter(Boolean);

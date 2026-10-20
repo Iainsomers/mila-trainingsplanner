@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-Bijgewerkt: 18 oktober 2026.
+Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
 
@@ -24,6 +24,7 @@ Bijgewerkt: 18 oktober 2026.
 ## Kleuren
 
 - Z1 t/m Z6 volgen de bestaande zonekleuren.
+- Als één herhaalblok in Flex Planner meerdere zones bevat, krijgt de trainingspil een compacte verdeling van de bijbehorende zonekleuren; de trainings- en weektotalen blijven onafhankelijk hiervan berekend.
 - Huidige week: geel.
 - Huidige dag binnen die week: donkerder geel.
 - Weektype is een gekleurde pil: Recovery, Aerobe, Specific, Intense of Taper.
