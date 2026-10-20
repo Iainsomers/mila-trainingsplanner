@@ -26,6 +26,7 @@ De centrale gegevens zijn:
 - `TrainingSegment`: onderdeel van een training, zoals WU, MOB, SPR, CORE, CORE2, ALT of CD.
 - Wedstrijden en geselecteerde afstanden.
 - Trainingsevaluaties, losse evaluatievragenlijsten, weekrapporten en dagelijkse waarden.
+- `FocusPointComment`: coachcommentaar per atleet en focuspunt, met coach als auteur.
 - Year Planner-dagfases en datumranges voor whereabouts.
 - Standaard krachtprogramma's en Polar-koppelingen.
 - `PolarAnalysisSettings`: één set numerieke HR-analysegrenzen en Estimated-vlag per atleet, afzonderlijk van de HR-tekst in Athlete settings.

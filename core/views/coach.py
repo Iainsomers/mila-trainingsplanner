@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 import calendar as py_calendar
 import base64
+import colorsys
 import json
 import math
 import os
@@ -25,7 +26,7 @@ from django.utils.dateparse import parse_time
 from django.utils import timezone
 
 from core.access import coach_tools_data_owner, evaluation_visibility_for_request, is_coach_tools_only_user
-from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -5432,7 +5433,7 @@ def planning_overview_view(request):
 
 
 @login_required
-@require_GET
+@require_http_methods(["GET", "POST"])
 def focus_points_view(request):
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
@@ -5444,10 +5445,104 @@ def focus_points_view(request):
         return redirect("planning_overview")
 
     athletes = _filter_owned(
-        Athlete.objects.all(),
+        Athlete.objects.select_related("owner"),
         request,
     ).order_by(Lower("name"), "id")
-    return render(request, "core/focus_points.html", {"athletes": athletes})
+    athlete_by_id = {item.id: item for item in athletes}
+    selected_id = (request.POST.get("athlete_id") or request.GET.get("athlete") or "").strip()
+    selected_athlete = athlete_by_id.get(int(selected_id)) if selected_id.isdigit() else None
+    if selected_athlete is None and athletes:
+        selected_athlete = athletes[0]
+
+    can_edit = _active_coach_access_label(request) != "view"
+    if request.method == "POST":
+        if not can_edit:
+            return HttpResponseForbidden("View-only coach access cannot change focus points.")
+        if not selected_athlete:
+            return HttpResponseForbidden("Choose an accessible athlete.")
+
+        point_key = (request.POST.get("point_key") or "").strip()
+        point_keys = {
+            "endurance_z1_z3", "endurance_z4_z5", "speed", "race_technique",
+            "races_tactics", "recovery_capacity", "injuries", "life_balance",
+            "coach_collaboration", "other_1", "other_2", "other_3",
+        }
+        if point_key not in point_keys:
+            return HttpResponseForbidden("Invalid focus point.")
+
+        comment_text = (request.POST.get("comment") or "").strip()
+        overwrite_all = request.POST.get("overwrite_all") == "on"
+        with transaction.atomic():
+            point_comments = FocusPointComment.objects.filter(
+                athlete=selected_athlete,
+                point_key=point_key,
+            )
+            if overwrite_all:
+                point_comments.delete()
+            if comment_text:
+                FocusPointComment.objects.update_or_create(
+                    athlete=selected_athlete,
+                    point_key=point_key,
+                    coach=request.user,
+                    defaults={"comment": comment_text},
+                )
+            else:
+                FocusPointComment.objects.filter(
+                    athlete=selected_athlete,
+                    point_key=point_key,
+                    coach=request.user,
+                ).delete()
+        return redirect(f"{reverse('focus_points')}?athlete={selected_athlete.id}&saved=1")
+
+    focus_points = [
+        ("endurance_z1_z3", "Endurance Z1–Z3"),
+        ("endurance_z4_z5", "Endurance Z4–Z5"),
+        ("speed", "Speed"),
+        ("race_technique", "Running technique at race distance"),
+        ("races_tactics", "Races and tactics"),
+        ("recovery_capacity", "Recovery capacity"),
+        ("injuries", "Injuries"),
+        ("life_balance", "Balance in daily life (study / training / work)"),
+        ("coach_collaboration", "Coaching in collaboration with trainer"),
+        ("other_1", "Other 1"),
+        ("other_2", "Other 2"),
+        ("other_3", "Other 3"),
+    ]
+    comments_by_point = {key: [] for key, _ in focus_points}
+    own_comments = {}
+    if selected_athlete:
+        comments = FocusPointComment.objects.filter(
+            athlete=selected_athlete,
+        ).select_related("coach").order_by("coach__id")
+        for item in comments:
+            first = (item.coach.first_name or "").strip()
+            last = (item.coach.last_name or "").strip()
+            initials = (first[:1] + last[:1]).upper() or item.coach.get_username()[:2].upper()
+            hue = ((item.coach_id * 137.508) % 360) / 360
+            red, green, blue = colorsys.hls_to_rgb(hue, 0.32, 0.62)
+            item.initials = initials
+            item.coach_color = "#%02x%02x%02x" % (round(red * 255), round(green * 255), round(blue * 255))
+            comments_by_point.setdefault(item.point_key, []).append(item)
+            if item.coach_id == request.user.id:
+                own_comments[item.point_key] = item.comment
+
+    focus_point_rows = [
+        {
+            "key": key,
+            "label": label,
+            "comments": comments_by_point.get(key, []),
+            "own_comment": own_comments.get(key, ""),
+        }
+        for key, label in focus_points
+    ]
+
+    return render(request, "core/focus_points.html", {
+        "athletes": athletes,
+        "selected_athlete": selected_athlete,
+        "focus_point_rows": focus_point_rows,
+        "can_edit": can_edit,
+        "saved": request.GET.get("saved") == "1",
+    })
 
 
 def _trainer_planning_qs(user_or_request):

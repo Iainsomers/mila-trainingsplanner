@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.template.loader import get_template
 from django.utils import timezone
 
-from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
+from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
@@ -1450,6 +1450,87 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Anna Athlete")
         self.assertContains(response, "Zoe Athlete")
+        self.assertContains(response, "Comment coaches")
+        self.assertContains(response, "Overwrite all other comments")
+
+    def test_focus_point_comments_are_kept_per_coach_until_overwritten(self):
+        coach = get_user_model().objects.create_user(
+            username="focus-owner", password="secret", is_staff=True,
+            first_name="Iain", last_name="Somers",
+        )
+        other_coach = get_user_model().objects.create_user(
+            username="focus-other", password="secret", is_staff=True,
+            first_name="Honore", last_name="Hoedt",
+        )
+        athlete = Athlete.objects.create(owner=coach, name="Focus Athlete", birth_year=2000, gender="X")
+        CoachSettings.objects.create(user=coach, focus_points_enabled=True)
+        key = "endurance_z1_z3"
+        FocusPointComment.objects.create(
+            athlete=athlete, coach=other_coach, point_key=key, comment="Needs more easy mileage."
+        )
+        self.client.force_login(coach)
+
+        saved = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "point_key": key,
+            "comment": "Build consistently.",
+        })
+        self.assertRedirects(saved, f"/planning/focus-points/?athlete={athlete.id}&saved=1")
+        self.assertEqual(FocusPointComment.objects.filter(athlete=athlete, point_key=key).count(), 2)
+        page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
+        self.assertContains(page, "HH:")
+        self.assertContains(page, "IS:")
+        self.assertContains(page, "Needs more easy mileage.")
+
+        replaced = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "point_key": key,
+            "comment": "Only this comment remains.",
+            "overwrite_all": "on",
+        })
+        self.assertRedirects(replaced, f"/planning/focus-points/?athlete={athlete.id}&saved=1")
+        remaining = FocusPointComment.objects.filter(athlete=athlete, point_key=key)
+        self.assertEqual(remaining.count(), 1)
+        self.assertEqual(remaining.get().coach_id, coach.id)
+        self.assertEqual(remaining.get().comment, "Only this comment remains.")
+
+    def test_focus_point_edit_rights_are_required_for_shared_coach_comments(self):
+        owner = get_user_model().objects.create_user(
+            username="focus-shared-owner", password="secret", is_staff=True
+        )
+        editor = get_user_model().objects.create_user(
+            username="focus-shared-editor", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=owner, name="Shared Focus Athlete", birth_year=2000, gender="X")
+        CoachSettings.objects.create(user=owner, focus_points_enabled=True)
+        access = CoachAccess.objects.create(owner=owner, grantee=editor, can_edit=True)
+        self.client.force_login(editor)
+        session = self.client.session
+        session["active_coach_owner_id"] = owner.id
+        session.save()
+
+        editable = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
+        self.assertEqual(editable.status_code, 200)
+        self.assertContains(editable, "Add comment")
+        saved = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "point_key": "speed",
+            "comment": "Shared edit note.",
+        })
+        self.assertEqual(saved.status_code, 302)
+        self.assertTrue(FocusPointComment.objects.filter(athlete=athlete, coach=editor, comment="Shared edit note.").exists())
+
+        access.can_edit = False
+        access.save(update_fields=["can_edit"])
+        view_only = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
+        self.assertEqual(view_only.status_code, 200)
+        self.assertContains(view_only, "View only")
+        denied = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "point_key": "speed",
+            "comment": "Should not save.",
+        })
+        self.assertEqual(denied.status_code, 403)
 
     def test_detailed_camps_are_coach_configurable(self):
         user = get_user_model().objects.create_user(

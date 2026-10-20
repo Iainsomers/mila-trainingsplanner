@@ -230,6 +230,34 @@ class EvaluationResponse(models.Model):
         return f"{self.questionnaire} - {self.athlete}"
 
 
+class FocusPointComment(models.Model):
+    athlete = models.ForeignKey(
+        "Athlete",
+        on_delete=models.CASCADE,
+        related_name="focus_point_comments",
+    )
+    coach = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="focus_point_comments",
+    )
+    point_key = models.CharField(max_length=64)
+    comment = models.TextField(blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["coach__id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["athlete", "point_key", "coach"],
+                name="unique_focus_point_comment_per_coach",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.athlete} - {self.point_key} - {self.coach}"
+
+
 class NewFeature(models.Model):
     title = models.CharField(max_length=160)
     description = models.TextField(blank=True, default="")

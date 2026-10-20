@@ -20,6 +20,12 @@ Het dashboard bevat ook Evaluations. In Coach Settings kan een coach deze module
 
 Ingelogde pagina's publiceren het MiLa-logo als favicon, Apple touch icon en PWA-icoon. Een snelkoppeling die vanaf een telefoon op het beginscherm wordt gezet, gebruikt daardoor standaard het MiLa-logo.
 
+### Focus Points and Desired Improvements
+
+Wanneer de bestaande `Focus Points and Desired Improvements`-schakelaar in Coach Settings aanstaat, verschijnt de pagina onder Planning. De trainer kiest bovenaan een toegankelijke atleet. De eerste versie toont de focuspuntenmatrix met de kolommen Comment coaches, Prio, Plan, Progress en Comment Athlete; op dit moment is alleen Comment coaches functioneel.
+
+Een trainer met eigen beheer of gedeelde editrechten kan per focuspunt een eigen commentaar opslaan. Commentaren blijven afzonderlijk per coach opgeslagen en worden met de coachinitialen en een stabiele, aan die coach gekoppelde kleur getoond. De standaardoptie `Overwrite all other comments` staat uit: dan blijven opmerkingen van andere coaches staan. Met de optie aan worden alle commentaren voor dat focuspunt verwijderd voordat het commentaar van de huidige trainer wordt opgeslagen. Een leeg eigen commentaar verwijdert alleen dat commentaar. View-only coaches kunnen de pagina lezen maar niet opslaan; atleten en coach-tools-only accounts hebben geen toegang.
+
 ## Trainer Planning
 
 - Meerdere weken, standaard vier.

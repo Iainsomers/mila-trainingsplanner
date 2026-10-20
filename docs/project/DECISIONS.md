@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-10-20 — Focus point-commentaar blijft per coach apart
+
+Coachcommentaren bij Focus Points worden afzonderlijk per atleet, focuspunt en coach bewaard. Overschrijven van commentaar van andere coaches is een expliciete, standaard uitgeschakelde keuze; het wist alleen commentaren bij datzelfde focuspunt. De eerste implementatiefase maakt alleen de kolom `Comment coaches` functioneel.
+
 ## 2026-10-20 — Vragenlijststatus en doelgroep zijn aparte keuzes
 
 `Active` bepaalt of een vragenlijst ingevuld kan worden. `Available to` staat altijd apart in beeld en kiest tussen alle atleten of geselecteerde losse atleten. Bij de geselecteerde doelgroep moet minimaal één eigen atleet worden gekozen. Oude vragenlijsten met groepsdoelgroepen blijven werken totdat ze worden bewerkt; dan wordt de huidige groepssamenstelling omgezet in expliciete atleetkeuzes. Een coach mag als kopieerbron alleen eigen vragenlijsten en vragenlijsten van coaches met expliciete editrechten gebruiken; kopiëren neemt geen antwoorden over en verandert de bron niet.

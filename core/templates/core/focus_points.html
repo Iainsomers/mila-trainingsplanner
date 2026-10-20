@@ -2,19 +2,170 @@
 
 {% block title %}Focus Points and Desired Improvements{% endblock %}
 
+{% block extra_head %}
+<style>
+  .focus-points-table-wrap { overflow-x: auto; }
+  .focus-points-table { min-width: 980px; }
+  .focus-points-table th:first-child,
+  .focus-points-table td:first-child { min-width: 245px; }
+  .focus-points-table th:nth-child(2),
+  .focus-points-table td:nth-child(2) { min-width: 310px; }
+  .focus-points-table td:not(:first-child) { vertical-align: top; }
+  .focus-point-comment {
+    border-left: 4px solid var(--coach-color);
+    border-radius: .25rem;
+    background: #f8f9fa;
+    padding: .45rem .55rem;
+    margin-bottom: .4rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .focus-point-editor { min-height: 180px; }
+  @media (max-width: 700px) {
+    .focus-points-table { min-width: 900px; }
+    .focus-points-table th:first-child,
+    .focus-points-table td:first-child { position: sticky; left: 0; z-index: 1; background: #fff; }
+    .focus-points-table thead th:first-child { z-index: 2; background: #f8f9fa; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-3" style="max-width: 760px;">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0">Focus Points and Desired Improvements <span class="text-muted">(under construction)</span></h1>
-    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back to planning</a>
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="h3 mb-1">Focus Points and Desired Improvements</h1>
+      <p class="text-muted mb-0">Coach focus notes for each athlete.</p>
+    </div>
+    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back to Planning</a>
   </div>
 
-  <div class="list-group">
-    {% for athlete in athletes %}
-      <div class="list-group-item">{{ athlete.name }}</div>
-    {% empty %}
-      <div class="list-group-item text-muted">No athletes yet.</div>
-    {% endfor %}
+  {% if saved %}<div class="alert alert-success py-2">Comment saved.</div>{% endif %}
+
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+          <label for="focusAthlete" class="form-label mb-1">Athlete</label>
+          <select id="focusAthlete" name="athlete" class="form-select" onchange="this.form.submit()">
+            {% for athlete in athletes %}
+              <option value="{{ athlete.id }}" {% if selected_athlete.id == athlete.id %}selected{% endif %}>{{ athlete.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if not can_edit %}<div class="col-auto"><span class="badge text-bg-secondary">View only</span></div>{% endif %}
+      </form>
+    </div>
+  </div>
+
+  {% if selected_athlete %}
+    <div class="card">
+      <div class="card-header bg-white">
+        <strong>{{ selected_athlete.name }}</strong>
+        <span class="text-muted small ms-2">Click a coach comment cell to add or update your comment.</span>
+      </div>
+      <div class="focus-points-table-wrap">
+        <table class="table table-bordered table-sm mb-0 focus-points-table">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Focus point</th>
+              <th scope="col">Comment coaches</th>
+              <th scope="col">Prio</th>
+              <th scope="col">Plan</th>
+              <th scope="col">Progress</th>
+              <th scope="col">Comment Athlete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for point in focus_point_rows %}
+              <tr>
+                <th scope="row" class="fw-semibold">{{ point.label }}</th>
+                <td>
+                  {% for comment in point.comments %}
+                    <div class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}">
+                      <strong style="color: {{ comment.coach_color }}">{{ comment.initials }}:</strong>
+                      <span>{{ comment.comment }}</span>
+                    </div>
+                  {% endfor %}
+                  {% if can_edit %}
+                    <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit"
+                      data-point-key="{{ point.key }}"
+                      data-point-label="{{ point.label }}"
+                      data-own-comment="{{ point.own_comment }}">
+                      {% if point.own_comment %}Edit comment{% else %}+ Add comment{% endif %}
+                    </button>
+                  {% elif not point.comments %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td><span class="text-muted">—</span></td>
+                <td><span class="text-muted">—</span></td>
+                <td><span class="text-muted">—</span></td>
+                <td><span class="text-muted">—</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-light border">No athletes are available for this coach.</div>
+  {% endif %}
+</div>
+
+{% if selected_athlete and can_edit %}
+<div class="modal fade" id="focusPointCommentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="{% url 'focus_points' %}">
+        {% csrf_token %}
+        <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+        <input type="hidden" name="point_key" id="focusPointKey">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title fs-5">Coach comment</h2>
+            <div class="small text-muted" id="focusPointLabel"></div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label for="focusPointComment" class="form-label">Your comment</label>
+          <textarea class="form-control focus-point-editor" id="focusPointComment" name="comment" placeholder="Type your focus note..."></textarea>
+          <div class="form-text mb-3">Leave this empty to remove your own comment.</div>
+          <div class="form-check border rounded p-3 ps-5">
+            <input class="form-check-input" type="checkbox" value="on" id="overwriteFocusComments" name="overwrite_all">
+            <label class="form-check-label fw-semibold" for="overwriteFocusComments">Overwrite all other comments</label>
+            <div class="form-text">When selected, comments from all other coaches for this focus point will be removed. Your comment will remain.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save comment</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const modalEl = document.getElementById("focusPointCommentModal");
+    if (!modalEl || !window.bootstrap) return;
+    if (modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    const pointKey = document.getElementById("focusPointKey");
+    const pointLabel = document.getElementById("focusPointLabel");
+    const comment = document.getElementById("focusPointComment");
+    const overwrite = document.getElementById("overwriteFocusComments");
+    document.querySelectorAll(".focus-point-edit").forEach(function (button) {
+      button.addEventListener("click", function () {
+        pointKey.value = button.dataset.pointKey || "";
+        pointLabel.textContent = button.dataset.pointLabel || "";
+        comment.value = button.dataset.ownComment || "";
+        overwrite.checked = false;
+        modal.show();
+      });
+    });
+  });
+</script>
+{% endif %}
 {% endblock %}
