@@ -49,16 +49,16 @@ def pace(seconds, meters):
     return f"{rounded // 60}:{rounded % 60:02}"
 
 
-def distance_rounded_to_25(value):
+def distance_rounded_to_50(value):
     value = number(value)
     if value is None or value < 0:
         return "NA"
-    return display(math.floor(value / 25 + 0.5) * 25)
+    return display(math.floor(value / 50 + 0.5) * 50)
 
 
 def lap_rows(laps):
     return [{"index": i, "distance": display(lap.get("distanceMeters")),
-             "distance_rounded_25": distance_rounded_to_25(lap.get("distanceMeters")),
+             "distance_rounded_50": distance_rounded_to_50(lap.get("distanceMeters")),
              "duration": duration(lap.get("durationMillis")),
              "pace": pace(number(lap.get("durationMillis")) / 1000 if number(lap.get("durationMillis")) is not None else None, lap.get("distanceMeters")),
              "elapsed": duration(lap.get("splitTimeMillis"))}

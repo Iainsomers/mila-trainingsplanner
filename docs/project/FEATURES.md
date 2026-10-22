@@ -202,7 +202,7 @@ De aparte uitleespagina haalt één gekozen kalenderdag via de bestaande Polar v
 
 | Type | Uitkomst |
 | --- | --- |
-| A | Exacte afstand, afstand afgerond op 25 meter, duur, aparte handmatige/automatische rondes en min/km per ronde. |
+| A | Exacte afstand, afstand afgerond op 50 meter, duur, aparte handmatige/automatische rondes en min/km per ronde. |
 | B | Cumulatieve afstand, hartslag en tempo over het vorige getoonde interval; interval 1–3600 seconden. |
 | C | Ruw en verwerkt tempo naast elkaar, met werkelijke vensterduur, status en reden. |
 | D | Km per tempozone en HR-zone in één overzicht, plus een vaste trainingssamenvatting en optionele AI-toelichting. |
