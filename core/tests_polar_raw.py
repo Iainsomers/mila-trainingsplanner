@@ -137,6 +137,33 @@ class RawPolarTests(SimpleTestCase):
         result = translate([{"sport": {"id": "1"}, "laps": {"laps": laps}}], 5, mode="A", athlete=athlete)
         self.assertEqual(result[0]["parts"][0]["description"], type_a_description(laps, athlete))
 
+    def test_type_a_groups_repeated_distance_across_z1_to_z2(self):
+        athlete = SimpleNamespace(
+            get_zone_speed_mps=lambda: {"1": 4.35, "2": 4.55, "3": 5.0, "4": 5.5, "5": 6.0},
+            pr_tm_s=None, pr_thm_s=None, pr_10000_s=None, pr_5000_s=None,
+            pr_3000_s=None, pr_1500_s=None, pr_1000_s=None, pr_800_s=None,
+            pr_600_s=None, pr_400_s=None,
+        )
+        laps = [
+            {"distanceMeters": 3777.5, "durationMillis": 1067531},
+            {"distanceMeters": 981.3, "durationMillis": 224750},
+            {"distanceMeters": 246.0, "durationMillis": 89625},
+            {"distanceMeters": 994.6, "durationMillis": 227000},
+            {"distanceMeters": 255.6, "durationMillis": 85875},
+            {"distanceMeters": 1003.8, "durationMillis": 224375},
+            {"distanceMeters": 248.3, "durationMillis": 84875},
+            {"distanceMeters": 1016.1, "durationMillis": 224250},
+            {"distanceMeters": 252.7, "durationMillis": 84750},
+            {"distanceMeters": 1013.3, "durationMillis": 223500},
+            {"distanceMeters": 249.1, "durationMillis": 87875},
+            {"distanceMeters": 1016.5, "durationMillis": 216500},
+            {"distanceMeters": 19.5, "durationMillis": 4125},
+        ]
+        self.assertEqual(
+            type_a_description(laps, athlete),
+            "WU: 3800 m Z1 · Main: 6×1000 m Z1>Z2, recovery avg 87 s · CD: none",
+        )
+
     @patch("core.views.polar_raw._polar_targets_for_user")
     @patch("core.views.polar_raw._polar_json_request")
     def test_fetch_uses_bearer_and_renders(self, fetch, targets):

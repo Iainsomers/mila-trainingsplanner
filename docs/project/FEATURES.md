@@ -209,7 +209,7 @@ De aparte uitleespagina haalt één gekozen kalenderdag via de bestaande Polar v
 
 - Original Polar JSON blijft beschikbaar. A/B veranderen of schatten geen ontbrekende samples; NA betekent ontbrekend of niet berekenbaar.
 - Type A sluit recordings met een bekende niet-hardloopsport uit, volgens dezelfde Polar-sportcontrole als Type D. Ontbrekende sportmetadata wordt niet automatisch uitgesloten.
-- Type A genereert uit duidelijke handmatige rondes een compacte omschrijving met warming-up, gegroepeerde hoofdsegmenten, gemiddelde herstelduur per segment in seconden en een eventuele duidelijke cooling-down.
+- Type A genereert uit duidelijke handmatige rondes een compacte omschrijving met warming-up, op herhaalde afstand gegroepeerde hoofdsegmenten, het Z-bereik per segment, gemiddelde herstelduur per segment in seconden en een eventuele duidelijke cooling-down.
 - C gebruikt een gecentreerd venster van maximaal 15 seconden binnen rondegrenzen, pauzes en geldige data. Mogelijke stops en meetpieken blijven zichtbaar. De criteria staan in `DATA_RULES.md`.
 - D gebruikt handmatige rondegemiddelden wanneer bruikbaar; anders alleen ongeflagde C-tempo's. De tempozones komen uit Athlete settings. Bekende niet-hardloopsporten worden uitgesloten en recordings worden afzonderlijk geanalyseerd.
 - HR gebruikt afstandstoenames en gemiddelde hartslag van de eindpunten. De vier bovengrenzen voor Z1–Z4 zijn invoerbaar; Z1 heeft geen ondergrens, Z5 is open naar boven.

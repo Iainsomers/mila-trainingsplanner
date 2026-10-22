@@ -119,12 +119,26 @@ def type_a_description(laps, athlete=None):
                 "zone": zone,
                 "zone_label": zone_text if zone is not None else "",
             })
-    work_positions = [index for index, row in enumerate(parsed) if row["zone"] is not None and row["zone"] >= 2]
+    substantial_distances = [row["rounded_m"] for row in parsed if row["rounded_m"] >= 400]
+    first_is_warmup = bool(
+        parsed
+        and parsed[0]["zone"] == 1
+        and parsed[0]["rounded_m"] >= 1000
+        and substantial_distances.count(parsed[0]["rounded_m"]) == 1
+    )
+    main_start = 1 if first_is_warmup else 0
+    candidate_distances = [row["rounded_m"] for row in parsed[main_start:] if row["rounded_m"] >= 400]
+    work_positions = [
+        index for index, row in enumerate(parsed)
+        if index >= main_start
+        and row["rounded_m"] >= 400
+        and (candidate_distances.count(row["rounded_m"]) >= 2 or (row["zone"] or 0) >= 2)
+    ]
     if not work_positions:
         return "No clear main section detected."
 
     first_work, last_work = work_positions[0], work_positions[-1]
-    warmup = parsed[0] if first_work > 0 and parsed[0]["zone"] == 1 and parsed[0]["rounded_m"] >= 1000 else None
+    warmup = parsed[0] if first_is_warmup and first_work > 0 else None
 
     work_rows = [parsed[index] for index in work_positions]
     groups = []
@@ -136,8 +150,10 @@ def type_a_description(laps, athlete=None):
     segment_texts = []
     for group in groups:
         group_rows = group["rows"]
-        zones = [row["zone_label"] for row in group_rows if row["zone_label"]]
-        zone_label = max(set(zones), key=lambda value: (zones.count(value), value)) if zones else ""
+        zones = sorted({row["zone"] for row in group_rows if row["zone"] is not None})
+        zone_label = ""
+        if zones:
+            zone_label = f"Z{zones[0]}" if len(zones) == 1 else f"Z{zones[0]}>Z{zones[-1]}"
         recoveries = []
         for before, after in zip(group_rows, group_rows[1:]):
             recoveries.extend(
