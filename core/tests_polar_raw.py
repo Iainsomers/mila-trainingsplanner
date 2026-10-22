@@ -3,7 +3,13 @@ from types import SimpleNamespace
 from django.test import SimpleTestCase, RequestFactory
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-from core.views.polar_raw import sample_rows, translate, polar_raw_view, pace
+from core.views.polar_raw import (
+    distance_rounded_to_25,
+    pace,
+    polar_raw_view,
+    sample_rows,
+    translate,
+)
 
 
 class RawPolarTests(SimpleTestCase):
@@ -31,8 +37,24 @@ class RawPolarTests(SimpleTestCase):
         part = result[0]["parts"][0]
         self.assertEqual(part["manual"][0]["duration"], "00:01:00.234")
         self.assertEqual(part["manual"][0]["distance"], "400.25")
+        self.assertEqual(part["manual"][0]["distance_rounded_25"], "400")
         self.assertEqual(len(part["auto"]), 1)
         self.assertEqual(part["distance"], "NA")
+
+    def test_lap_distance_is_rounded_to_nearest_25_metres(self):
+        self.assertEqual(distance_rounded_to_25(412.49), "400")
+        self.assertEqual(distance_rounded_to_25(412.5), "425")
+        self.assertEqual(distance_rounded_to_25(438), "450")
+        self.assertEqual(distance_rounded_to_25(None), "NA")
+        self.assertEqual(distance_rounded_to_25(-1), "NA")
+
+        html = render_to_string(
+            "core/polar_raw_laps.html",
+            {"rows": [{"index": 1, "distance": "412.5", "distance_rounded_25": "425",
+                       "duration": "00:01:00.000", "pace": "2:25", "elapsed": "00:01:00.000"}]},
+        )
+        self.assertIn("Distance rounded to 25 m", html)
+        self.assertIn("<td>425</td>", html)
 
     @patch("core.views.polar_raw._polar_targets_for_user")
     @patch("core.views.polar_raw._polar_json_request")

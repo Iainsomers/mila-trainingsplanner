@@ -100,7 +100,7 @@ Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, 
 
 ## Polar: ruwe samples en tempoverwerking
 
-- A berekent min/km uit afstand en duur van iedere afzonderlijke ronde; duur blijft tot milliseconden zichtbaar.
+- A berekent min/km uit afstand en duur van iedere afzonderlijke ronde; duur blijft tot milliseconden zichtbaar. Naast de oorspronkelijke afstand wordt de rondeafstand rekenkundig afgerond naar het dichtstbijzijnde veelvoud van 25 meter; een exact half veelvoud wordt naar boven afgerond.
 - B berekent tempo uit het verschil in cumulatieve afstand en de tijd sinds de vorige getoonde regel. Eerste regel, ontbrekende afstand en niet-positieve afstandstoename geven NA. Alleen exacte sampletijdstippen worden gekoppeld; geen interpolatie of carry-forward.
 - C berekent native afstandstoenames als snelheid en gebruikt een tijdgewogen, gecentreerd venster van maximaal 15 seconden. Rondegrenzen, ontbrekende/negatieve afstand en pauzes begrenzen het venster. De daadwerkelijke duur staat in de tabel.
 - Mogelijke stilstand: maximaal 0,5 m/s gedurende minimaal 5 seconden. Zonder aanvullende bevestiging blijft dit Possible stop.
