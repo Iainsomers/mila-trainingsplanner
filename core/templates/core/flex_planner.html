@@ -672,6 +672,31 @@
       return loads;
     }
 
+    function flexSplitMainSegments(text) {
+      const value = text || "";
+      const parts = [];
+      let start = 0;
+      let depth = 0;
+      for (let index = 0; index < value.length; index += 1) {
+        const char = value[index];
+        if (char === "(") depth += 1;
+        else if (char === ")") depth = Math.max(0, depth - 1);
+        else if (depth === 0 && value.startsWith("//", index)) {
+          const part = value.slice(start, index).trim();
+          if (part) parts.push(part);
+          index += 1;
+          start = index + 1;
+        } else if (depth === 0 && char === "+") {
+          const part = value.slice(start, index).trim();
+          if (part) parts.push(part);
+          start = index + 1;
+        }
+      }
+      const finalPart = value.slice(start).trim();
+      if (finalPart) parts.push(finalPart);
+      return parts;
+    }
+
     function flexLoadsForSegment(el, zoneSpeeds) {
       const speeds = zoneSpeeds || FLEX_ZONE_SPEEDS_MPS;
       const segType = (el.getAttribute("data-flex-type") || "").toUpperCase();
@@ -685,6 +710,28 @@
       const dataTKey = flexNormalizeTKey(el.getAttribute("data-flex-t") || "");
       const dataSpecial = (el.getAttribute("data-flex-special") || "").toUpperCase();
       const isRace = ["RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING"].includes(dataSpecial) || el.classList.contains("pill-race") || el.classList.contains("pill-race-pending") || el.classList.contains("pill-race-target-pending") || /race/i.test(text);
+
+      if (segType === "CORE") {
+        const mainParts = flexSplitMainSegments(text);
+        if (mainParts.length > 1) {
+          return mainParts.flatMap((part) => {
+            const zoneMatch = part.match(/\bz\s*([1-6])\b/i);
+            const partTKey = flexTKey(part);
+            const partElement = {
+              textContent: part,
+              classList: el.classList,
+              getAttribute(name) {
+                if (name === "data-flex-type") return segType;
+                if (name === "data-flex-zone") return zoneMatch ? zoneMatch[1] : fallbackZone;
+                if (name === "data-flex-t") return partTKey;
+                if (name === "data-flex-special") return dataSpecial;
+                return "";
+              }
+            };
+            return flexLoadsForSegment(partElement, speeds);
+          });
+        }
+      }
 
       if (segType === "ALT") {
         const altParts = text.split("//").map((part) => part.trim()).filter(Boolean);

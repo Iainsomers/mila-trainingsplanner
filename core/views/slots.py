@@ -22,6 +22,7 @@ from core.models import (
     CoachAccess,
 )
 from core.parser import parse_segment_text
+from core.training_text import split_main_segments
 from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
 
 from .common import (
@@ -1719,7 +1720,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     sprint_parse = parse_segment_text(sprint_text_for_parse) if sprint_text else None
     if core_text:
         core_parse = None
-        for core_part in [p.strip() for p in core_text.split("//") if p.strip()]:
+        for core_part in split_main_segments(core_text):
             for expanded_core_part in _expand_repeated_core_set_parts(core_part):
                 core_parse = _parse_core_segment_text(expanded_core_part)
                 if core_parse is not None and not core_parse.ok:
@@ -1845,7 +1846,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     next_followup_order = 3
     if core_text:
         parts = []
-        for core_part in [p.strip() for p in core_text.split("//") if p.strip()]:
+        for core_part in split_main_segments(core_text):
             parts.extend(_expand_repeated_core_set_parts(core_part))
 
         slot.segments.filter(type="CORE").delete()

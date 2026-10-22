@@ -60,6 +60,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 ## Flex Planner
 
 - Toont de effectieve planning per geselecteerde atleet.
+- In Main kunnen zelfstandige trainingsonderdelen met `//` of `+` worden gescheiden; ieder onderdeel wordt apart opgeslagen en weergegeven, en telt mee in de eigen zone-totalen.
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
 - Een persoonlijke wijziging blijft zichtbaar, ook wanneer de oorspronkelijke bronplanning op die datum formeel al is afgelopen.

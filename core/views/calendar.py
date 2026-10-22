@@ -33,6 +33,7 @@ from core.models import (
 )
 from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from core.parser import parse_segment_text
+from core.training_text import split_main_segments
 from core.wucd import apply_auto_wucd_texts
 from .common import (
     _calendar_display_mode,
@@ -832,9 +833,19 @@ def _clone_slot_for_display(slot):
 
     segments = []
     for seg in source_segments:
+        seg_type = getattr(seg, "type", "") or ""
+        seg_text = getattr(seg, "text", "") or ""
+        if str(seg_type).upper() == "CORE":
+            main_parts = split_main_segments(seg_text)
+            if len(main_parts) > 1:
+                for main_part in main_parts:
+                    clone = _virtual_segment_from_text("CORE", main_part)
+                    clone.standard_strength_program = getattr(seg, "standard_strength_program", None)
+                    segments.append(clone)
+                continue
         clone = _VirtualSegment(
-            text=getattr(seg, "text", "") or "",
-            type=getattr(seg, "type", "") or "",
+            text=seg_text,
+            type=seg_type,
             zone=getattr(seg, "zone", "") or "",
             special=getattr(seg, "special", "") or "",
             t_type=getattr(seg, "t_type", "") or "",
@@ -897,7 +908,12 @@ def _virtual_slot_from_base_training(text):
         value = values.get(seg_type) or ""
         if not value:
             continue
-        parts = [part.strip() for part in value.split("//") if part.strip()] if seg_type == "ALT" else [value]
+        if seg_type == "ALT":
+            parts = [part.strip() for part in value.split("//") if part.strip()]
+        elif seg_type == "CORE":
+            parts = split_main_segments(value)
+        else:
+            parts = [value]
         segments.extend(_virtual_segment_from_text(seg_type, part) for part in parts)
     return _VirtualSlot(segments) if segments else None
 
@@ -2457,6 +2473,13 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
             continue
 
         text = getattr(seg, "text", "") or ""
+        if seg_type in {"CORE", "CORE2"}:
+            main_parts = split_main_segments(text)
+            if len(main_parts) > 1:
+                for main_part in main_parts:
+                    part_segment = _virtual_segment_from_text(seg_type, main_part)
+                    loads.extend(_ayc_slot_loads_for_totals(_VirtualSlot([part_segment]), athlete))
+                continue
         special = (getattr(seg, "special", "") or "").upper()
         is_race = special in ("RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING") or bool(re.search(r"race", text, re.I))
         fallback_zone = (str(getattr(seg, "zone", "") or "").strip() or ("4" if is_race else "1"))
@@ -2701,7 +2724,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
         if segment_type == "CORE":
             parts = []
-            for core_part in [p.strip() for p in raw_text.split("//") if p.strip()]:
+            for core_part in split_main_segments(raw_text):
                 parts.extend(_expand_repeated_core_set_parts(core_part))
 
             for part in parts:
@@ -3539,6 +3562,8 @@ def athlete_year_calendar_view(request):
                     slot2 = None
                     check2 = None
 
+            slot1 = _clone_slot_for_display(slot1)
+            slot2 = _clone_slot_for_display(slot2)
             _annotate_slot_segment_display_times(slot1, selected_athlete)
             _annotate_slot_segment_display_times(slot2, selected_athlete)
 

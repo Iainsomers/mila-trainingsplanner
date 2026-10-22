@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.focus_point_import import FOCUS_POINT_HEADERS
-from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
+from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
@@ -7020,6 +7020,86 @@ class TrainingSegmentLabelTests(TestCase):
 
 
 class FlexPlannerAltTotalsTests(TestCase):
+    def test_main_segment_splitter_accepts_plus_and_keeps_inner_compound_separators(self):
+        from core.training_text import split_main_segments
+
+        self.assertEqual(
+            split_main_segments("8*(400m z2-50m z1-150m z3) + 2*1000m z3 // 5*200m z4"),
+            ["8*(400m z2-50m z1-150m z3)", "2*1000m z3", "5*200m z4"],
+        )
+
+    def test_flex_plus_saves_main_as_two_segments_and_both_zones_count(self):
+        from core.stats import athlete_week_stats
+
+        trainer = get_user_model().objects.create_user(username="plusmaincoach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Plus Main Athlete", birth_year=2000, gender="X")
+        week_start = date(2026, 10, 26)
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Flex Planner Plus Main",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        self.client.force_login(trainer)
+
+        response = self.client.post(
+            f"/slot-modal/{week_start.year}/{week_start.month}/{week_start.day}/1/",
+            {
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "source": "flex",
+                "core_text": "2*1000m z2 + 2*1000m z3",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date=week_start, slot_index=1)
+        segments = list(slot.segments.filter(type="CORE").order_by("order", "id"))
+        self.assertEqual([segment.text for segment in segments], ["2*1000m z2", "2*1000m z3"])
+
+        stats = athlete_week_stats(plan, athlete, week_start)
+        self.assertEqual(stats["zones"]["2"]["distance_m"], 2000)
+        self.assertEqual(stats["zones"]["3"]["distance_m"], 2000)
+
+    def test_legacy_plus_main_counts_each_part_in_stats_and_ayc(self):
+        from core.stats import athlete_week_stats, base_week_stats
+        from core.views.calendar import _ayc_slot_loads_for_totals
+
+        cache.clear()
+        trainer = get_user_model().objects.create_user(username="legacypluscoach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Legacy Plus Athlete", birth_year=2000, gender="X")
+        week_start = date(2026, 10, 26)
+        plan = TrainingPlan.objects.create(owner=trainer, name="Legacy plus plan")
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=week_start, slot_index=1)
+        slot.segments.create(
+            type="CORE",
+            text="2*1000m z2+2*1000m z3",
+            zone="2",
+            reps=2,
+            distance_m=1000,
+            norm_distance_m=2000,
+        )
+        base_slot = TrainingSlot.objects.create(plan=plan, date=week_start, slot_index=1)
+        base_slot.segments.create(type="CORE", text="2*1000m z2+2*1000m z3", zone="2")
+
+        stats = athlete_week_stats(plan, athlete, week_start)
+        self.assertEqual(stats["zones"]["2"]["distance_m"], 2000)
+        self.assertEqual(stats["zones"]["3"]["distance_m"], 2000)
+        base_stats = base_week_stats(plan, week_start)
+        self.assertEqual(base_stats["zones"]["2"]["distance_m"], 2000)
+        self.assertEqual(base_stats["zones"]["3"]["distance_m"], 2000)
+        display_slot = _clone_slot_for_display(slot)
+        self.assertEqual(
+            [segment.text for segment in display_slot.segments.all()],
+            ["2*1000m z2", "2*1000m z3"],
+        )
+        loads = _ayc_slot_loads_for_totals(slot, athlete)
+        self.assertEqual(
+            {(load["zone"], load["meters"]) for load in loads},
+            {("2", 2000.0), ("3", 2000.0)},
+        )
+
     def test_flex_totals_keep_alt_z1_to_z3_separate_from_running_distance(self):
         source = get_template("core/flex_planner.html").template.source
 

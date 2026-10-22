@@ -1,6 +1,6 @@
 # Data-, invoer- en rekenregels
 
-Bijgewerkt: 18 oktober 2026.
+Bijgewerkt: 22 oktober 2026.
 
 ## Zones
 
@@ -46,7 +46,7 @@ Onder meer ondersteund:
 - `p` voor pauze en `sp` voor seriepauze.
 - Bij `p` en `sp` zijn waarden vanaf 15 seconden; waarden van 14 of lager zijn minuten. Een expliciete `'` of `"` blijft leidend.
 
-Compound onderdelen moeten afstand, zone en T-label per deel correct optellen.
+Compound onderdelen moeten afstand, zone en T-label per deel correct optellen. In `Main` scheiden zowel `//` als een `+` op het hoogste niveau zelfstandige segmenten; tekens binnen haakjes blijven onderdeel van het herhaalblok. `//` blijft de scheiding voor Alternative-blokken.
 
 Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, `T4`, `T1500`, enzovoort), eventueel met spaties binnen het label. Vrije tekst mag geen tempo-label opleveren: `ritme` bevat bijvoorbeeld de letters `tm`, maar telt niet als TM. Deze regel geldt identiek voor Flex Planner en AYC.
 

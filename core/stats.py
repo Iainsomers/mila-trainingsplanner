@@ -2,17 +2,19 @@ from collections import defaultdict
 from datetime import date as date_cls
 import hashlib
 import re
+from types import SimpleNamespace
 
 from django.core.cache import cache
 
 from core.zones import ensure_full_zone_dict, DEFAULT_ZONE_SPEED_MPS
 from core.models import TrainingSlot, AthleteDayCheck
+from core.training_text import split_main_segments
 from core.views.common import _week_days
 
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v15"
+STATS_SCHEMA_VERSION = "v16"
 
 
 def _stats_version() -> int:
@@ -642,6 +644,35 @@ def base_week_stats(plan, week_start: date_cls):
                         alt_zones[alt_zone]["duration_s"] += alt_duration_s
                     continue
 
+                if str(getattr(seg, "type", "")).upper() == "CORE":
+                    main_parts = split_main_segments(getattr(seg, "text", ""))
+                    if len(main_parts) > 1:
+                        for main_part in main_parts:
+                            part_zone_match = _COMPOUND_ZONE_RE.search(main_part)
+                            part_zone = str(part_zone_match.group(1)) if part_zone_match else zone
+                            part_segment = SimpleNamespace(text=main_part, t_type="")
+                            part_loads = _text_fallback_loads(
+                                part_segment,
+                                part_zone,
+                                speeds,
+                                lambda tt: _t_speed_mps(athlete, tt),
+                            ) or []
+                            for load in part_loads:
+                                load_zone = load["zone"]
+                                load_nm = int(load["distance_m"])
+                                load_dur = int(load["duration_s"])
+                                load_t = (load.get("t_type") or "").strip()
+                                if load_t in t_totals:
+                                    t_totals[load_t]["distance_m"] += load_nm
+                                    t_totals[load_t]["duration_s"] += load_dur
+                                if is_race:
+                                    race["distance_m"] += load_nm
+                                    race["duration_s"] += load_dur
+                                else:
+                                    zones[load_zone]["distance_m"] += load_nm
+                                    zones[load_zone]["duration_s"] += load_dur
+                        continue
+
                 if not zone or zone not in speeds:
                     continue
 
@@ -743,6 +774,35 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                     for alt_zone, alt_duration_s in _alt_zone_durations(seg):
                         alt_zones[alt_zone]["duration_s"] += alt_duration_s
                     continue
+
+                if str(getattr(seg, "type", "")).upper() == "CORE":
+                    main_parts = split_main_segments(getattr(seg, "text", ""))
+                    if len(main_parts) > 1:
+                        for main_part in main_parts:
+                            part_zone_match = _COMPOUND_ZONE_RE.search(main_part)
+                            part_zone = str(part_zone_match.group(1)) if part_zone_match else zone
+                            part_segment = SimpleNamespace(text=main_part, t_type="")
+                            part_loads = _text_fallback_loads(
+                                part_segment,
+                                part_zone,
+                                speeds,
+                                lambda tt: _t_speed_mps(athlete, tt),
+                            ) or []
+                            for load in part_loads:
+                                load_zone = load["zone"]
+                                load_nm = int(load["distance_m"])
+                                load_dur = int(load["duration_s"])
+                                load_t = (load.get("t_type") or "").strip()
+                                if load_t in t_totals:
+                                    t_totals[load_t]["distance_m"] += load_nm
+                                    t_totals[load_t]["duration_s"] += load_dur
+                                if is_race:
+                                    race["distance_m"] += load_nm
+                                    race["duration_s"] += load_dur
+                                else:
+                                    zones[load_zone]["distance_m"] += load_nm
+                                    zones[load_zone]["duration_s"] += load_dur
+                        continue
 
                 if not zone or zone not in speeds:
                     continue
