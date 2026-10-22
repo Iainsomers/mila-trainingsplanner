@@ -5,6 +5,7 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse
 from core.views.polar_raw import (
     distance_rounded_to_50,
+    lap_zone_pace,
     pace,
     polar_raw_view,
     sample_rows,
@@ -51,10 +52,35 @@ class RawPolarTests(SimpleTestCase):
         html = render_to_string(
             "core/polar_raw_laps.html",
             {"rows": [{"index": 1, "distance": "425", "distance_rounded_50": "450",
-                       "duration": "00:01:00.000", "pace": "2:21", "elapsed": "00:01:00.000"}]},
+                       "duration": "00:01:00.000", "pace": "2:21", "zone_pace": "Z5 / T4",
+                       "elapsed": "00:01:00.000"}]},
         )
         self.assertIn("Distance rounded to 50 m", html)
         self.assertIn("<td>450</td>", html)
+
+    def test_lap_zone_pace_uses_selected_athlete_z_and_t_references(self):
+        athlete = SimpleNamespace(
+            get_zone_speed_mps=lambda: {"1": 3.0, "2": 3.5, "3": 4.0, "4": 4.5, "5": 5.0},
+            pr_tm_s=12000,
+            pr_thm_s=5400,
+            pr_10000_s=2400,
+            pr_5000_s=1050,
+            pr_3000_s=600,
+            pr_1500_s=285,
+            pr_1000_s=180,
+            pr_800_s=136,
+            pr_600_s=99,
+            pr_400_s=60,
+        )
+        self.assertEqual(lap_zone_pace(400, 90000, athlete), "Z4 / T10")
+        self.assertEqual(lap_zone_pace(400, 90000, None), "NA")
+
+        result = translate(
+            [{"laps": {"laps": [{"distanceMeters": 400, "durationMillis": 90000}]}}],
+            5,
+            athlete=athlete,
+        )
+        self.assertEqual(result[0]["parts"][0]["manual"][0]["zone_pace"], "Z4 / T10")
 
     @patch("core.views.polar_raw._polar_targets_for_user")
     @patch("core.views.polar_raw._polar_json_request")

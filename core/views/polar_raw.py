@@ -9,8 +9,16 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .coach import (_polar_targets_for_user, _polar_json_request,
-                    _refresh_polar_v4_token, POLAR_V4_TRAINING_SESSIONS_URL)
+from .coach import (
+    POLAR_V4_TRAINING_SESSIONS_URL,
+    _closest_watch_label,
+    _polar_json_request,
+    _polar_targets_for_user,
+    _refresh_polar_v4_token,
+    _threshold_watch_label,
+    _watch_t_reference_speeds,
+    _watch_z_reference_speeds,
+)
 
 
 def number(value):
@@ -56,11 +64,24 @@ def distance_rounded_to_50(value):
     return display(math.floor(value / 50 + 0.5) * 50)
 
 
-def lap_rows(laps):
+def lap_zone_pace(distance_m, duration_ms, athlete):
+    distance_m, duration_ms = number(distance_m), number(duration_ms)
+    if not athlete or distance_m is None or duration_ms is None or distance_m <= 0 or duration_ms <= 0:
+        return "NA"
+    speed_mps = distance_m / (duration_ms / 1000)
+    labels = [
+        _closest_watch_label(speed_mps, _watch_z_reference_speeds(athlete)),
+        _threshold_watch_label(speed_mps, _watch_t_reference_speeds(athlete)),
+    ]
+    return " / ".join(label for label in labels if label) or "NA"
+
+
+def lap_rows(laps, athlete=None):
     return [{"index": i, "distance": display(lap.get("distanceMeters")),
              "distance_rounded_50": distance_rounded_to_50(lap.get("distanceMeters")),
              "duration": duration(lap.get("durationMillis")),
              "pace": pace(number(lap.get("durationMillis")) / 1000 if number(lap.get("durationMillis")) is not None else None, lap.get("distanceMeters")),
+             "zone_pace": lap_zone_pace(lap.get("distanceMeters"), lap.get("durationMillis"), athlete),
              "elapsed": duration(lap.get("splitTimeMillis"))}
             for i, lap in enumerate(laps if isinstance(laps, list) else [], 1)
             if isinstance(lap, dict)]
@@ -110,7 +131,7 @@ def sample_rows(exercise, interval):
     return rows, metadata, end > 86400000
 
 
-def translate(payload, interval, mode="A"):
+def translate(payload, interval, mode="A", athlete=None):
     sessions = payload if isinstance(payload, list) else next(
         (payload[key] for key in ("trainingSessions", "training-sessions", "sessions")
          if isinstance(payload, dict) and isinstance(payload.get(key), list)), [])
@@ -134,8 +155,8 @@ def translate(payload, interval, mode="A"):
             parts.append({"index": index, "sport": item.get("sport", ""),
                           "distance": display(item.get("distanceMeters")),
                           "duration": duration(item.get("durationMillis")),
-                          "manual": lap_rows(laps.get("laps") or laps.get("manualLaps") or laps.get("manual-laps")),
-                          "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps")),
+                          "manual": lap_rows(laps.get("laps") or laps.get("manualLaps") or laps.get("manual-laps"), athlete),
+                          "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps"), athlete),
                           "samples": rows, "metadata": metadata, "truncated": truncated,
                           "processed": processed, "processing_notes": processing_notes})
         result.append({"name": session.get("name") or "Training session",
@@ -222,7 +243,7 @@ def polar_raw_view(request):
                 context["analyses"] = analyze_payload(payload, target.get("athlete") if target else None, context["hr_bounds"])
                 if data.get("ai_interpretation") == "on" and context["analyses"]:
                     context["ai_text"], context["ai_error"] = ai_interpretation(context["analyses"])
-            context.update(results=translate(payload, interval, context["mode"]) if context["mode"] != "D" else [], fetched=True,
+            context.update(results=translate(payload, interval, context["mode"], target.get("athlete") if target else None) if context["mode"] != "D" else [], fetched=True,
                            raw=json.dumps(payload, ensure_ascii=False, indent=2))
         except (ValueError, RuntimeError) as exc:
             context["error"] = str(exc) or "Choose a valid date and an interval between 1 and 3600 seconds."
