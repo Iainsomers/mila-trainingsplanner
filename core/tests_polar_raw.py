@@ -131,8 +131,8 @@ class RawPolarTests(SimpleTestCase):
         ]
         self.assertEqual(
             type_a_description(laps, athlete),
-            "WU: 3800 m Z1 · Main: 3×2000 m Z2 3:38 p107 + "
-            "2×1000 m Z2 3:36 p40 · CD: none",
+            "WU: 3800 m Z1 · Main: 3×2000 m Z2 (3:38) p107 + "
+            "2×1000 m Z2 (3:36) p40 · CD: none",
         )
 
         result = translate([{"sport": {"id": "1"}, "laps": {"laps": laps}}], 5, mode="A", athlete=athlete)
@@ -162,7 +162,7 @@ class RawPolarTests(SimpleTestCase):
         ]
         self.assertEqual(
             type_a_description(laps, athlete),
-            "WU: 3800 m Z1 · Main: 6×1000 m Z1>Z2 3:42 p87 · CD: none",
+            "WU: 3800 m Z1 · Main: 6×1000 m Z1>Z2 (3:42) p87 · CD: none",
         )
 
     def test_type_a_detects_short_repetitions_by_clear_speed_split(self):
@@ -184,7 +184,7 @@ class RawPolarTests(SimpleTestCase):
         laps = [{"distanceMeters": distance, "durationMillis": duration} for distance, duration in values]
         self.assertEqual(
             type_a_description(laps, athlete),
-            "WU: 4300 m Z1 · Main: 9×100 m Z1>Z3 3:55 p82 · CD: 4600 m Z1",
+            "WU: 4300 m Z1 · Main: 9×100 m Z1>Z3 (3:55) p82 · CD: 4600 m Z1",
         )
 
     def test_type_a_describes_continuous_run_without_manual_laps(self):
@@ -227,8 +227,8 @@ class RawPolarTests(SimpleTestCase):
         laps = [{"distanceMeters": distance, "durationMillis": duration} for distance, duration in values]
         self.assertEqual(
             type_a_description(laps, athlete),
-            "WU: 4000 m Z1 · Main: 5×50 m Z1>Z2 4:04 p53 + "
-            "4×100 m Z1>Z2 3:42 p73 · CD: 4250 m Z1",
+            "WU: 4000 m Z1 · Main: 5×50 m Z1>Z2 (4:04) p53 + "
+            "4×100 m Z1>Z2 (3:42) p73 · CD: 4250 m Z1",
         )
 
     @patch("core.views.polar_raw._polar_targets_for_user")

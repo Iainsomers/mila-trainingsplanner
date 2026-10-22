@@ -220,7 +220,7 @@ def type_a_description(laps, athlete=None):
             sum(row["distance_m"] for row in group_rows),
         )
         if average_pace != "NA":
-            segment += f" {average_pace}"
+            segment += f" ({average_pace})"
         if recoveries:
             average = math.floor(sum(recoveries) / len(recoveries) + 0.5)
             segment += f" p{average}"
