@@ -39,6 +39,7 @@ Bijgewerkt: 20 oktober 2026.
 ## Mobiele AYC
 
 - `Suggest Input` in de trainingsevaluatie toont Type A Polar-resultaten in een schermpassende, intern scrollbare popup met een duidelijke sluitknop.
+- Een bruikbare Type A-omschrijving toont de acties `Use AM` en `Use PM` rechts naast de omschrijving; op smalle schermen mogen deze knoppen onder de tekst afbreken.
 - Toon één week tegelijk.
 - Houd weeknavigatie, totaal en weektype bovenaan goed zichtbaar.
 - Iedere trainingsdag toont AM en/of PM; lege dagen blijven compact.

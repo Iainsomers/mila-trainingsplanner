@@ -1,6 +1,7 @@
 """Read-only Polar v4 inspection; never imports or modifies workouts."""
 import json
 import math
+import re
 from datetime import date, timedelta
 from urllib.parse import urlencode
 
@@ -310,6 +311,34 @@ def type_a_general_description(exercise, athlete=None):
     return description
 
 
+def type_a_training_fields(description):
+    """Convert a Type A description into the three AYC training fields."""
+    text = str(description or "").strip()
+    if not text or text.lower() == "no clear main section detected.":
+        return {"wu": "", "main": "", "cd": ""}
+
+    fields = {"wu": "", "main": "", "cd": ""}
+    found_main = False
+    for part in re.split(r"\s+·\s+", text):
+        label, separator, value = part.partition(":")
+        if not separator:
+            continue
+        key = {"wu": "wu", "main": "main", "cd": "cd"}.get(label.strip().lower())
+        if not key:
+            continue
+        value = value.strip()
+        if value.lower() == "none":
+            value = ""
+        if key == "main":
+            value = re.sub(r",\s*recovery\s+avg\s+\d+\s*s\s*$", "", value, flags=re.IGNORECASE).strip()
+            found_main = bool(value)
+        fields[key] = value
+
+    if not found_main:
+        fields["main"] = re.sub(r"^continuous\s+run:\s*", "", text, flags=re.IGNORECASE).strip()
+    return fields
+
+
 def sample_rows(exercise, interval):
     source = exercise.get("samples")
     streams = source.get("samples", []) if isinstance(source, dict) else []
@@ -400,6 +429,7 @@ def translate(payload, interval, mode="A", athlete=None):
                           "manual": lap_rows(manual_laps, athlete),
                           "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps"), athlete),
                           "description": description, "description_label": description_label,
+                          "training_fields": type_a_training_fields(description) if mode == "A" else {},
                           "samples": rows, "metadata": metadata, "truncated": truncated,
                           "processed": processed, "processing_notes": processing_notes})
         if mode == "A" and not parts:

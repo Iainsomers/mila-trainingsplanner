@@ -117,7 +117,7 @@ Per training kan de atleet vastleggen:
 - status: Done, More/too fast, Adjusted, Less/slower of Not done;
 - RPE van 0 tot 10;
 - commentaar;
-- een `Suggest Input`-knop die de Type A Polar-output voor de gekozen atleet en datum in een popup toont; bestaande opgeslagen horlogeresultaten blijven zichtbaar en verwijderbaar;
+- een `Suggest Input`-knop die de Type A Polar-output voor de gekozen atleet en datum in een popup toont; naast een bruikbare gegenereerde omschrijving staan `Use AM` en `Use PM`, waarmee WU, Main en CD naar het gekozen AYC-trainingsslot worden overgenomen. De tekst `Continuous run` wordt daarbij niet meegenomen; bestaande opgeslagen horlogeresultaten blijven zichtbaar en verwijderbaar;
 - afzonderlijke AM/PM-evaluaties wanneer er twee trainingen zijn.
 
 Naast trainingsevaluaties bestaat Evaluations voor losse coachvragenlijsten. Trainers publiceren actieve vragenlijsten voor hun atleten. Trainers kunnen de vragen en antwoorden alleen lezen; atleten kunnen alleen hun eigen antwoorden invullen en later terugzien.

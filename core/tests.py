@@ -33,7 +33,7 @@ from core.views.coach import (
     _watch_plan_is_clear_mismatch,
     _watch_v4_sessions_for_plan,
 )
-from core.views.polar_raw import type_a_description
+from core.views.polar_raw import type_a_description, type_a_training_fields
 
 
 def _focus_comments_xlsx(rows):
@@ -2308,6 +2308,15 @@ class PolarPlanMismatchTests(TestCase):
         self.assertIn("10'", description)
         self.assertIn("15'", description)
         self.assertIn("recovery avg 90 s", description)
+
+    def test_type_a_training_fields_strip_summary_only_text(self):
+        fields = type_a_training_fields(
+            "WU: 1650 m Z1 · Main: 10' Z1 (5:58/km) + 10' Z1 (5:33/km), recovery avg 90 s · CD: none"
+        )
+        self.assertEqual(fields["wu"], "1650 m Z1")
+        self.assertEqual(fields["main"], "10' Z1 (5:58/km) + 10' Z1 (5:33/km)")
+        self.assertEqual(fields["cd"], "")
+        self.assertEqual(type_a_training_fields("Continuous run: 12.4 km Z1 (5:20/km)")["main"], "12.4 km Z1 (5:20/km)")
 
     def test_v4_manual_laps_remain_preferred_over_auto_laps(self):
         session = {

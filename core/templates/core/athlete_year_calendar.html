@@ -2162,13 +2162,66 @@
       meta.textContent = "Distance: " + session.distance + " m · Duration: " + session.duration; box.appendChild(meta);
       (session.parts || []).forEach(function(part) {
         if (part.description) {
-          var description = document.createElement("div"); description.className = "alert alert-light border py-2 mb-2";
-          description.textContent = (part.description_label || "Description") + ": " + part.description; box.appendChild(description);
+          var description = document.createElement("div");
+          description.className = "alert alert-light border py-2 mb-2 d-flex align-items-start justify-content-between gap-2";
+          var descriptionText = document.createElement("div");
+          descriptionText.textContent = (part.description_label || "Description") + ": " + part.description;
+          description.appendChild(descriptionText);
+          var fields = part.training_fields || {};
+          if (fields.main) {
+            var actions = document.createElement("div");
+            actions.className = "d-flex flex-wrap gap-1 flex-shrink-0";
+            [1, 2].forEach(function(slotIndex) {
+              var button = document.createElement("button");
+              button.type = "button";
+              button.className = "btn btn-sm btn-outline-primary";
+              button.textContent = slotIndex === 1 ? "Use AM" : "Use PM";
+              button.addEventListener("click", function(event) {
+                event.preventDefault();
+                useTypeATraining(fields, slotIndex, button);
+              });
+              actions.appendChild(button);
+            });
+            description.appendChild(actions);
+          }
+          box.appendChild(description);
         }
         renderTypeALaps(box, "Manual laps", part.manual);
         renderTypeALaps(box, "Automatic laps", part.auto);
       });
       parent.appendChild(box);
+    });
+  }
+  function useTypeATraining(fields, slotIndex, button) {
+    if (!activeDate || !activeAthlete || !fields || !fields.main) return;
+    var originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = "Saving...";
+    var formData = new FormData();
+    formData.append("date", activeDate);
+    formData.append("slot_index", String(slotIndex));
+    formData.append("slot_text", [fields.wu, fields.main, fields.cd].filter(Boolean).join("\n"));
+    formData.append("wu_text", fields.wu || "");
+    formData.append("mob_text", "");
+    formData.append("sprint_text", "");
+    formData.append("core_text", fields.main || "");
+    formData.append("core2_text", "");
+    formData.append("alt_text", "");
+    formData.append("cd_text", fields.cd || "");
+    var dateParts = activeDate.split("-");
+    var saveUrl = "/slot-modal/" + dateParts[0] + "/" + dateParts[1] + "/" + dateParts[2] + "/" + slotIndex + "/?athlete=" + encodeURIComponent(activeAthlete) + "&source=athlete_year";
+    fetch(saveUrl, {
+      method: "POST",
+      body: formData,
+      headers: {"X-CSRFToken": getCookie("csrftoken")},
+      credentials: "same-origin"
+    }).then(function(response) {
+      if (!response.ok) throw new Error("Training could not be saved.");
+      window.location.reload();
+    }).catch(function() {
+      button.disabled = false;
+      button.textContent = originalLabel;
+      window.alert("Training could not be saved. Check that this day has an editable training slot.");
     });
   }
   function hideSuggestInputPlaceholder() {

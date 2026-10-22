@@ -137,6 +137,8 @@ class RawPolarTests(SimpleTestCase):
 
         result = translate([{"sport": {"id": "1"}, "laps": {"laps": laps}}], 5, mode="A", athlete=athlete)
         self.assertEqual(result[0]["parts"][0]["description"], type_a_description(laps, athlete))
+        self.assertEqual(result[0]["parts"][0]["training_fields"]["wu"], "3800 m Z1")
+        self.assertIn("3×2000 m Z2", result[0]["parts"][0]["training_fields"]["main"])
 
     def test_type_a_groups_repeated_distance_across_z1_to_z2(self):
         athlete = SimpleNamespace(
@@ -207,6 +209,7 @@ class RawPolarTests(SimpleTestCase):
         part = result[0]["parts"][0]
         self.assertEqual(part["description_label"], "General description")
         self.assertEqual(part["description"], "Continuous run: 15.0 km Z2 (4:47/km)")
+        self.assertEqual(part["training_fields"], {"wu": "", "main": "15.0 km Z2 (4:47/km)", "cd": ""})
 
     def test_type_a_splits_short_repetitions_and_tolerates_one_gps_outlier(self):
         athlete = SimpleNamespace(
