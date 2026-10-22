@@ -747,7 +747,7 @@
       }
 
       const text = (el.getAttribute("data-flex-source-text") || el.textContent || "").trim();
-      const ownerRow = typeof el.closest === "function" ? el.closest(".flex-athlete-row-start") : null;
+      const ownerRow = typeof el.closest === "function" ? el.closest("tr") : null;
       const pauseMode = el.getAttribute("data-flex-pause-mode") || (ownerRow ? ownerRow.getAttribute("data-flex-pause-mode") : "");
       const repetitions = flexNumberAttr(el, "data-flex-reps") || 1;
       const pauseLoad = flexActivePauseLoad(el, text, repetitions, speeds, pauseMode);
@@ -1470,7 +1470,7 @@
                 {% endfor %}
               </tr>
 
-              <tr>
+              <tr data-flex-pause-mode="{{ pause_mode }}">
                 <td class="flex-slot-label">PM</td>
                 {% for cell in row.pm_cells %}
                   <td class="flex-day-cell">

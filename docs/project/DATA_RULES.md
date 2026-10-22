@@ -67,6 +67,7 @@ Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, 
 - Een sessie met de evaluatiestatus `Not done` draagt niet bij aan het weektotaal, de zone-/wedstrijdkilometers of ALT-minuten. De geplande sessie blijft wel zichtbaar in de kalender.
 
 `See session km` toont per sessie in AYC, Flex Planner en DCO Training het opgetelde loopvolume van WU, Sprint, Main, Main 2 en CD, ongeacht de zoneverdeling. Kilometers uit Alternative worden uitgesloten. Tijdsdelen gebruiken dezelfde tempo-/zoneomrekening als de bestaande trainingsberekening. Met coachinstelling `Active unless "pp"` telt een actieve `p` daarnaast als Z1: tijdpauzes worden met de Z1-snelheid van de atleet omgerekend, meterpauzes tellen als opgegeven afstand. Bij herhalingen telt per set `reps - 1`; expliciete herhalingen in de trainingsnotatie zijn leidend boven verouderde opgeslagen herhalingsmetadata. `sp` en `pp` blijven statisch. `Always static` telt geen pauzeafstand. Een onvolledige `p` zonder berekenbare pauzetelling of duur/afstand levert 0 m op.
+- De Flex Planner past de gekozen pauzemodus toe op trainingen in zowel het AM- als het PM-dagdeel en telt de actieve pauzeafstand in het zichtbare weektotaal bij Z1 op.
 - Stats vergelijkt het totaal van de huidige kalenderweek met de vorige kalenderweek.
 
 ## Wedstrijden

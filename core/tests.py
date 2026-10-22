@@ -3371,6 +3371,69 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(hidden_dco.context["rows"][0]["session_km1"], "")
         self.assertNotContains(hidden_dco, '<div class="daily-session-km-label')
 
+    def test_existing_trainer_plan_pm_pauses_follow_coach_mode_in_flex(self):
+        coach = get_user_model().objects.create_user(
+            username="coach-pm-pauses", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="PM Pause Athlete", birth_year=2000, gender="X"
+        )
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="PM pause trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        day = date.today()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=day.weekday(),
+            slot_index=2,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=plan,
+        )
+        slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=2)
+        TrainingSegment.objects.create(
+            slot=slot, order=1, type="WU", text="3800m z1",
+            distance_m=3800, norm_distance_m=3800, zone="1",
+        )
+        TrainingSegment.objects.create(
+            slot=slot, order=2, type="CORE",
+            text="4*1200m z2>z3 p2 (5:30-->5:00)",
+            distance_m=1200, norm_distance_m=4800, reps=1, zone="2",
+        )
+        settings = CoachSettings.objects.create(
+            user=coach, pause_mode=CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+        )
+        self.client.force_login(coach)
+        week_start = day - timedelta(days=day.weekday())
+        url = f"/flex-planner/?start={week_start.isoformat()}&weeks=1&athletes={athlete.id}"
+
+        static = self.client.get(url)
+        static_cell = next(
+            cell for cell in static.context["week_rows"][0]["athlete_rows"][0]["pm_cells"]
+            if cell["day"] == day
+        )
+        self.assertEqual(static_cell["session_km"], "8.6")
+
+        settings.pause_mode = CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP
+        settings.save(update_fields=["pause_mode"])
+        active = self.client.get(url)
+        active_cell = next(
+            cell for cell in active.context["week_rows"][0]["athlete_rows"][0]["pm_cells"]
+            if cell["day"] == day
+        )
+        self.assertGreater(float(active_cell["session_km"]), float(static_cell["session_km"]))
+        self.assertContains(active, '<tr data-flex-pause-mode="active_unless_pp">')
+        self.assertFalse(TrainingSlot.objects.filter(athlete=athlete, date=day).exists())
+
     def test_ayc_week_totals_exclude_not_done_running_and_alternative_load(self):
         user, plan, athlete = self._user_plan_and_athlete()
         day = date.today()
