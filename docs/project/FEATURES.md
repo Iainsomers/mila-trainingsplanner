@@ -211,6 +211,7 @@ De aparte uitleespagina haalt één gekozen kalenderdag via de bestaande Polar v
 - Type A sluit recordings met een bekende niet-hardloopsport uit, volgens dezelfde Polar-sportcontrole als Type D. Ontbrekende sportmetadata wordt niet automatisch uitgesloten.
 - Type A genereert uit duidelijke handmatige rondes een compacte omschrijving met warming-up, op herhaalde afstand gegroepeerde hoofdsegmenten, het Z-bereik per segment, gemiddelde herstelduur per segment in seconden en een eventuele duidelijke cooling-down.
 - Korte herhalingen met relatief lange herstel-laps kunnen bij een duidelijke tweedeling in snelheid eveneens worden herkend, ook wanneer werk en herstel op dezelfde afgeronde afstand uitkomen.
+- Zonder handmatige laps toont Type A een General description voor een duurloop, met totale kilometers, gemiddeld tempo en de dichtstbijzijnde ingestelde Z-zone van de atleet.
 - C gebruikt een gecentreerd venster van maximaal 15 seconden binnen rondegrenzen, pauzes en geldige data. Mogelijke stops en meetpieken blijven zichtbaar. De criteria staan in `DATA_RULES.md`.
 - D gebruikt handmatige rondegemiddelden wanneer bruikbaar; anders alleen ongeflagde C-tempo's. De tempozones komen uit Athlete settings. Bekende niet-hardloopsporten worden uitgesloten en recordings worden afzonderlijk geanalyseerd.
 - HR gebruikt afstandstoenames en gemiddelde hartslag van de eindpunten. De vier bovengrenzen voor Z1–Z4 zijn invoerbaar; Z1 heeft geen ondergrens, Z5 is open naar boven.

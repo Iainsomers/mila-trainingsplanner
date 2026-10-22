@@ -11,6 +11,7 @@ from core.views.polar_raw import (
     sample_rows,
     translate,
     type_a_description,
+    type_a_general_description,
 )
 
 
@@ -185,6 +186,27 @@ class RawPolarTests(SimpleTestCase):
             type_a_description(laps, athlete),
             "WU: 4300 m Z1 · Main: 9×100 m Z1>Z3 p82 · CD: 4600 m Z1",
         )
+
+    def test_type_a_describes_continuous_run_without_manual_laps(self):
+        athlete = SimpleNamespace(
+            get_zone_speed_mps=lambda: {"1": 3.0, "2": 3.5, "3": 4.0, "4": 4.5, "5": 5.0},
+            pr_tm_s=None, pr_thm_s=None, pr_10000_s=None, pr_5000_s=None,
+            pr_3000_s=None, pr_1500_s=None, pr_1000_s=None, pr_800_s=None,
+            pr_600_s=None, pr_400_s=None,
+        )
+        exercise = {
+            "sport": {"id": "1"},
+            "distanceMeters": 14958.7,
+            "durationMillis": 4286783,
+        }
+        self.assertEqual(
+            type_a_general_description(exercise, athlete),
+            "Continuous run: 15.0 km Z2 (4:47/km)",
+        )
+        result = translate([exercise], 5, mode="A", athlete=athlete)
+        part = result[0]["parts"][0]
+        self.assertEqual(part["description_label"], "General description")
+        self.assertEqual(part["description"], "Continuous run: 15.0 km Z2 (4:47/km)")
 
     @patch("core.views.polar_raw._polar_targets_for_user")
     @patch("core.views.polar_raw._polar_json_request")

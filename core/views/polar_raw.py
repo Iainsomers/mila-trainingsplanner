@@ -201,6 +201,21 @@ def type_a_description(laps, athlete=None):
     return " · ".join(parts)
 
 
+def type_a_general_description(exercise, athlete=None):
+    distance_m = number(exercise.get("distanceMeters")) if isinstance(exercise, dict) else None
+    duration_ms = number(exercise.get("durationMillis")) if isinstance(exercise, dict) else None
+    if distance_m is None or duration_ms is None or distance_m <= 0 or duration_ms <= 0:
+        return ""
+    z_pace, _ = lap_zone_paces(distance_m, duration_ms, athlete)
+    average_pace = pace(duration_ms / 1000, distance_m)
+    description = f"Continuous run: {distance_m / 1000:.1f} km"
+    if z_pace != "NA":
+        description += f" {z_pace}"
+    if average_pace != "NA":
+        description += f" ({average_pace}/km)"
+    return description
+
+
 def sample_rows(exercise, interval):
     source = exercise.get("samples")
     streams = source.get("samples", []) if isinstance(source, dict) else []
@@ -276,12 +291,21 @@ def translate(payload, interval, mode="A", athlete=None):
             if mode == "C":
                 from .polar_processing import processed_rows
                 processed, processing_notes = processed_rows(item, rows)
+            description = ""
+            description_label = ""
+            if mode == "A":
+                if manual_laps:
+                    description = type_a_description(manual_laps, athlete)
+                    description_label = "Generated description"
+                else:
+                    description = type_a_general_description(item, athlete)
+                    description_label = "General description"
             parts.append({"index": index, "sport": item.get("sport", ""),
                           "distance": display(item.get("distanceMeters")),
                           "duration": duration(item.get("durationMillis")),
                           "manual": lap_rows(manual_laps, athlete),
                           "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps"), athlete),
-                          "description": type_a_description(manual_laps, athlete) if mode == "A" and manual_laps else "",
+                          "description": description, "description_label": description_label,
                           "samples": rows, "metadata": metadata, "truncated": truncated,
                           "processed": processed, "processing_notes": processing_notes})
         if mode == "A" and not parts:
