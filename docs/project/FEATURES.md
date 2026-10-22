@@ -117,7 +117,7 @@ Per training kan de atleet vastleggen:
 - status: Done, More/too fast, Adjusted, Less/slower of Not done;
 - RPE van 0 tot 10;
 - commentaar;
-- een `Suggest Input`-knop die de Type A Polar-output voor de gekozen atleet en datum in een popup toont; naast een bruikbare gegenereerde omschrijving staan `Use AM` en `Use PM`, waarmee WU, Main en CD naar het gekozen AYC-trainingsslot worden overgenomen. De tekst `Continuous run` wordt daarbij niet meegenomen; bestaande opgeslagen horlogeresultaten blijven zichtbaar en verwijderbaar;
+- een `Watch A`-knop die de Type A Polar-output voor de gekozen atleet en datum in een popup toont; naast een bruikbare gegenereerde omschrijving staan `Use AM` en `Use PM`, waarmee WU, Main en CD naar het gekozen AYC-trainingsslot worden overgenomen. De tekst `Continuous run` wordt daarbij niet meegenomen; bestaande opgeslagen horlogeresultaten blijven zichtbaar en verwijderbaar;
 - afzonderlijke AM/PM-evaluaties wanneer er twee trainingen zijn.
 
 Naast trainingsevaluaties bestaat Evaluations voor losse coachvragenlijsten. Trainers publiceren actieve vragenlijsten voor hun atleten. Trainers kunnen de vragen en antwoorden alleen lezen; atleten kunnen alleen hun eigen antwoorden invullen en later terugzien.
@@ -181,7 +181,7 @@ Trainer-only, nog in ontwikkeling. De hoofdpagina toont eerst uitsluitend de atl
 
 ## Polar
 
-Ondersteunt OAuth en synchronisatie van relevante trainings-, activiteits- en lapgegevens. `Suggest Input` in de AYC gebruikt dezelfde Type A Polar-verwerking als de Polar Integration-pagina en toont de sessies, beschrijving en laps in een popup. Bestaande opgeslagen horlogeresultaten blijven intact.
+Ondersteunt OAuth en synchronisatie van relevante trainings-, activiteits- en lapgegevens. `Watch A` in de AYC gebruikt dezelfde Type A Polar-verwerking als de Polar Integration-pagina en toont de sessies, beschrijving en laps in een popup. Bestaande opgeslagen horlogeresultaten blijven intact.
 
 Wanneer horlogedata duidelijk niet aansluit op de geplande training begint de interpretatie met een rood kruis. Via `Suggest alternative plan` kan vervolgens een alternatief trainingsconcept uit de horlogedata worden gereconstrueerd. Dit concept vervangt de oude interpretatie in beeld, toont een betrouwbaarheidsschatting en vervangt de oorspronkelijke planning nooit automatisch. Naast handmatige laps kan een herhalend fartlekpatroon uit aanhoudende tempowisselingen worden herkend. Polar v4 haalt naast laps ook interval-samples op; deze worden genormaliseerd naar een tijd/afstand-profiel zodat de bestaande matcher en AI-analyse korte versnellingen en complexe intervalstructuren kunnen gebruiken. Als Polar v4 geen handmatige laps levert, worden automatische laps als pace-data getoond met lagere zekerheid; ze krijgen geen bevestigde workout-blokkenstatus.
 

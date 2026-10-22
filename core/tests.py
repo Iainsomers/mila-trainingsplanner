@@ -2509,6 +2509,7 @@ class PolarPlanMismatchTests(TestCase):
     def test_ayc_suggest_input_shows_placeholder_without_watch_fetch(self):
         source = get_template("core/athlete_year_calendar.html").template.source
         self.assertIn('id="suggestInputBtn"', source)
+        self.assertIn('>Watch A<', source)
         self.assertIn('id="suggestInputPlaceholder"', source)
         self.assertIn('id="suggestInputPlaceholderClose"', source)
         self.assertIn('id="suggestInputPlaceholderBody"', source)
