@@ -62,7 +62,7 @@
       <div class="card mb-3"><div class="card-body"><h2 class="h5">{{ session.name }} — {{ session.start }}</h2><p>Distance: {{ session.distance }} m · Duration: {{ session.duration }}</p>
       {% for part in session.parts %}<h3 class="h6">Recording {{ part.index }} {{ part.sport }}</h3>
         {% if mode == 'A' %}<p>Distance: {{ part.distance }} m · Duration: {{ part.duration }}</p>
-          <p class="small text-muted">Pace (min/km) uses the duration and distance of each individual lap.</p><h4 class="h6">Manual laps</h4>{% include "core/polar_raw_laps.html" with rows=part.manual %}
+          <p class="small text-muted">Pace (min/km) uses the duration and distance of each individual lap.</p>{% if mode == 'A' and part.description %}<div class="alert alert-light border py-2"><strong>Generated description:</strong> {{ part.description }}</div>{% endif %}<h4 class="h6">Manual laps</h4>{% include "core/polar_raw_laps.html" with rows=part.manual %}
           <h4 class="h6">Automatic laps</h4>{% include "core/polar_raw_laps.html" with rows=part.auto %}
         {% else %}
           {% for item in part.metadata %}<div class="small text-muted">{{ item }}</div>{% endfor %}

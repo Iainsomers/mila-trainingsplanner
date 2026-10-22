@@ -10,6 +10,7 @@ from core.views.polar_raw import (
     polar_raw_view,
     sample_rows,
     translate,
+    type_a_description,
 )
 
 
@@ -106,6 +107,35 @@ class RawPolarTests(SimpleTestCase):
             "laps": {"laps": [{"distanceMeters": 1000, "durationMillis": 90000}]},
         }], 5, mode="A")
         self.assertEqual(cycling_only, [])
+
+    def test_type_a_generates_warmup_main_recoveries_and_no_cooldown(self):
+        athlete = SimpleNamespace(
+            get_zone_speed_mps=lambda: {"1": 3.8, "2": 4.6, "3": 5.0, "4": 5.5, "5": 6.0},
+            pr_tm_s=None, pr_thm_s=None, pr_10000_s=None, pr_5000_s=None,
+            pr_3000_s=None, pr_1500_s=None, pr_1000_s=None, pr_800_s=None,
+            pr_600_s=None, pr_400_s=None,
+        )
+        laps = [
+            {"distanceMeters": 3784.7, "durationMillis": 1108657},
+            {"distanceMeters": 1986.9, "durationMillis": 428000},
+            {"distanceMeters": 338.5, "durationMillis": 124625},
+            {"distanceMeters": 2003.2, "durationMillis": 433000},
+            {"distanceMeters": 163.8, "durationMillis": 89500},
+            {"distanceMeters": 1993.1, "durationMillis": 443126},
+            {"distanceMeters": 72.9, "durationMillis": 29750},
+            {"distanceMeters": 989.7, "durationMillis": 215750},
+            {"distanceMeters": 97.8, "durationMillis": 40125},
+            {"distanceMeters": 994.1, "durationMillis": 213125},
+            {"distanceMeters": 30.5, "durationMillis": 8125},
+        ]
+        self.assertEqual(
+            type_a_description(laps, athlete),
+            "WU: 3800 m Z1 · Main: 3×2000 m Z2, recovery avg 107 s + "
+            "2×1000 m Z2, recovery avg 40 s · CD: none",
+        )
+
+        result = translate([{"sport": {"id": "1"}, "laps": {"laps": laps}}], 5, mode="A", athlete=athlete)
+        self.assertEqual(result[0]["parts"][0]["description"], type_a_description(laps, athlete))
 
     @patch("core.views.polar_raw._polar_targets_for_user")
     @patch("core.views.polar_raw._polar_json_request")

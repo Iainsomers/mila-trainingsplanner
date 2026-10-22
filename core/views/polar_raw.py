@@ -99,6 +99,68 @@ def lap_rows(laps, athlete=None):
     return rows
 
 
+def type_a_description(laps, athlete=None):
+    rows = lap_rows(laps, athlete)
+    parsed = []
+    for row in rows:
+        distance_m = number(row["distance"])
+        duration_ms = None
+        source = laps[row["index"] - 1] if isinstance(laps, list) and row["index"] <= len(laps) else {}
+        if isinstance(source, dict):
+            duration_ms = number(source.get("durationMillis"))
+        zone_text = str(row.get("z_pace") or "")
+        zone = int(zone_text[1:]) if zone_text.startswith("Z") and zone_text[1:].isdigit() else None
+        if distance_m is not None and distance_m >= 0 and duration_ms is not None and duration_ms > 0:
+            parsed.append({
+                "index": row["index"],
+                "distance_m": distance_m,
+                "rounded_m": int(math.floor(distance_m / 50 + 0.5) * 50),
+                "duration_s": duration_ms / 1000,
+                "zone": zone,
+                "zone_label": zone_text if zone is not None else "",
+            })
+    work_positions = [index for index, row in enumerate(parsed) if row["zone"] is not None and row["zone"] >= 2]
+    if not work_positions:
+        return "No clear main section detected."
+
+    first_work, last_work = work_positions[0], work_positions[-1]
+    warmup = parsed[0] if first_work > 0 and parsed[0]["zone"] == 1 and parsed[0]["rounded_m"] >= 1000 else None
+
+    work_rows = [parsed[index] for index in work_positions]
+    groups = []
+    for row in work_rows:
+        if not groups or groups[-1]["distance_m"] != row["rounded_m"]:
+            groups.append({"distance_m": row["rounded_m"], "rows": []})
+        groups[-1]["rows"].append(row)
+
+    segment_texts = []
+    for group in groups:
+        group_rows = group["rows"]
+        zones = [row["zone_label"] for row in group_rows if row["zone_label"]]
+        zone_label = max(set(zones), key=lambda value: (zones.count(value), value)) if zones else ""
+        recoveries = []
+        for before, after in zip(group_rows, group_rows[1:]):
+            recoveries.extend(
+                row["duration_s"] for row in parsed
+                if before["index"] < row["index"] < after["index"] and (row["zone"] or 0) < 2
+            )
+        segment = f"{len(group_rows)}×{group['distance_m']} m"
+        if zone_label:
+            segment += f" {zone_label}"
+        if recoveries:
+            average = math.floor(sum(recoveries) / len(recoveries) + 0.5)
+            segment += f", recovery avg {average} s"
+        segment_texts.append(segment)
+
+    trailing = parsed[last_work + 1:]
+    cooldown_distance = sum(row["distance_m"] for row in trailing if row["zone"] == 1)
+    cooldown = cooldown_distance >= 1000 and trailing and all(row["zone"] == 1 for row in trailing)
+    parts = [f"WU: {warmup['rounded_m']} m {warmup['zone_label']}" if warmup else "WU: none"]
+    parts.append("Main: " + " + ".join(segment_texts))
+    parts.append(f"CD: {int(math.floor(cooldown_distance / 50 + 0.5) * 50)} m Z1" if cooldown else "CD: none")
+    return " · ".join(parts)
+
+
 def sample_rows(exercise, interval):
     source = exercise.get("samples")
     streams = source.get("samples", []) if isinstance(source, dict) else []
@@ -168,6 +230,7 @@ def translate(payload, interval, mode="A", athlete=None):
                 continue
             laps = item.get("laps") or {}
             laps = laps if isinstance(laps, dict) else {}
+            manual_laps = laps.get("laps") or laps.get("manualLaps") or laps.get("manual-laps") or []
             rows, metadata, truncated = sample_rows(item, interval)
             processed, processing_notes = [], []
             if mode == "C":
@@ -176,8 +239,9 @@ def translate(payload, interval, mode="A", athlete=None):
             parts.append({"index": index, "sport": item.get("sport", ""),
                           "distance": display(item.get("distanceMeters")),
                           "duration": duration(item.get("durationMillis")),
-                          "manual": lap_rows(laps.get("laps") or laps.get("manualLaps") or laps.get("manual-laps"), athlete),
+                          "manual": lap_rows(manual_laps, athlete),
                           "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps"), athlete),
+                          "description": type_a_description(manual_laps, athlete) if mode == "A" and manual_laps else "",
                           "samples": rows, "metadata": metadata, "truncated": truncated,
                           "processed": processed, "processing_notes": processing_notes})
         if mode == "A" and not parts:
