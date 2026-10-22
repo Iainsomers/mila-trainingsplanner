@@ -1858,7 +1858,7 @@ class PlanningOverviewTests(TestCase):
         settings_page = self.client.get("/settings/")
         self.assertContains(settings_page, "P(ause)mode")
         self.assertContains(settings_page, 'name="pause_mode"')
-        self.assertContains(settings_page, '<option value="always_static" selected>Static unless ap</option>', html=True)
+        self.assertContains(settings_page, '<option value="always_static" selected>Static unless &quot;ap&quot;</option>', html=True)
         self.assertContains(settings_page, 'Active unless &quot;pp&quot;')
 
         response = self.client.post("/settings/", {"pause_mode": "active_unless_pp"})

@@ -80,7 +80,7 @@ De instelling `See session km` staat in Athlete settings > General, is standaard
 
 Coach Settings bevat onder Planning eveneens `See session km`, standaard aan. Deze coachbrede instelling toont hetzelfde sessietotaal rechtsboven in de trainingscellen van Flex Planner en Daily Coach Overview Training.
 
-De coachinstelling `P(ause)mode` bepaalt hoe pauzes in de kilometerberekening meetellen. `Static unless ap` telt alleen een expliciete `ap` als actieve Z1-pauze; gewone `p` blijft statisch. `Active unless "pp"` telt zowel `p` als `ap` actief. `sp` (seriepauze) en `pp` (passieve pauze) blijven in beide standen statisch. Tijdpauzes worden omgerekend met de Z1-snelheid van de atleet; pauzes in meters gebruiken de opgegeven afstand. Per set tellen `reps - 1` pauzes. Dezelfde extra Z1-afstand telt mee in AYC, Flex Planner, Trainer Planning en DCO, voor AM en PM.
+De coachinstelling `P(ause)mode` bepaalt hoe pauzes in de kilometerberekening meetellen. `Static unless "ap"` telt alleen een expliciete `ap` als actieve Z1-pauze; gewone `p` blijft statisch. `Active unless "pp"` telt zowel `p` als `ap` actief. `sp` (seriepauze) en `pp` (passieve pauze) blijven in beide standen statisch. Tijdpauzes worden omgerekend met de Z1-snelheid van de atleet; pauzes in meters gebruiken de opgegeven afstand. Per set tellen `reps - 1` pauzes. Dezelfde extra Z1-afstand telt mee in AYC, Flex Planner, Trainer Planning en DCO, voor AM en PM.
 
 - Trainer kan tussen atleten schakelen; atleet ziet alleen zichzelf.
 - Desktop toont een brede jaartabel; mobiel toont één week tegelijk.

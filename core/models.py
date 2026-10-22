@@ -40,7 +40,7 @@ class CoachSettings(models.Model):
     PAUSE_MODE_ALWAYS_STATIC = "always_static"
     PAUSE_MODE_ACTIVE_UNLESS_PP = "active_unless_pp"
     PAUSE_MODE_CHOICES = [
-        (PAUSE_MODE_ALWAYS_STATIC, "Static unless ap"),
+        (PAUSE_MODE_ALWAYS_STATIC, 'Static unless "ap"'),
         (PAUSE_MODE_ACTIVE_UNLESS_PP, 'Active unless "pp"'),
     ]
 

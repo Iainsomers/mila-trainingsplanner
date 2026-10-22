@@ -21,7 +21,7 @@ Bijgewerkt: 20 oktober 2026.
 - Intern mogen `CORE` en `CORE2` blijven bestaan.
 - Gebruik binnen één scherm consistente knopnamen. In de mobiele AYC heten zowel training als evaluatie `Open`.
 - Bestaande productlabels zijn grotendeels Engels; voeg geen willekeurige mix van Nederlands en Engels toe zonder een bredere vertaalbeslissing.
-- Coach Settings > Planning toont de compacte dropdown `P(ause)mode` met `Static unless ap` en `Active unless "pp"`.
+- Coach Settings > Planning toont de compacte dropdown `P(ause)mode` met `Static unless "ap"` en `Active unless "pp"`.
 
 ## Kleuren
 
