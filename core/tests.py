@@ -1858,7 +1858,7 @@ class PlanningOverviewTests(TestCase):
         settings_page = self.client.get("/settings/")
         self.assertContains(settings_page, "P(ause)mode")
         self.assertContains(settings_page, 'name="pause_mode"')
-        self.assertContains(settings_page, '<option value="always_static" selected>Always static</option>', html=True)
+        self.assertContains(settings_page, '<option value="always_static" selected>Static unless ap</option>', html=True)
         self.assertContains(settings_page, 'Active unless &quot;pp&quot;')
 
         response = self.client.post("/settings/", {"pause_mode": "active_unless_pp"})
@@ -3148,6 +3148,12 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(_ayc_pause_distance_m("4x200m sp1 pp1", 4, athlete, active), 0)
         self.assertEqual(_ayc_pause_distance_m("4x200m p", 4, athlete, active), 0)
         self.assertEqual(_ayc_pause_distance_m("4x200m p1", 4, athlete, CoachSettings.PAUSE_MODE_ALWAYS_STATIC), 0)
+        static = CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+        self.assertAlmostEqual(_ayc_pause_distance_m("4x200m ap1", 4, athlete, static), 3 * 60 * speed)
+        self.assertEqual(_ayc_pause_distance_m("4x200m ap=50m", 4, athlete, static), 150)
+        self.assertAlmostEqual(_ayc_pause_distance_m("4x200m ap11", 4, athlete, static), 3 * 11 * speed)
+        self.assertAlmostEqual(_ayc_pause_distance_m("4x200m ap1", 4, athlete, active), 3 * 60 * speed)
+        self.assertEqual(_ayc_pause_distance_m("4x200m sp1 pp1", 4, athlete, static), 0)
 
     def test_active_pauses_are_added_to_z1_session_loads_only_when_enabled(self):
         _, plan, athlete = self._user_plan_and_athlete()
@@ -3176,6 +3182,19 @@ class SlotModalSaveTests(TestCase):
         week_start = date.today() - timedelta(days=date.today().weekday())
         weekly = athlete_week_stats(plan, athlete, week_start, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP)
         self.assertEqual(weekly["zones"]["1"]["distance_m"], 336)
+
+        segment = slot.segments.get(type="CORE")
+        segment.text = "3x1000m ap1"
+        segment.save(update_fields=["text"])
+        static_loads = _ayc_slot_loads_for_totals(
+            slot, athlete, CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+        )
+        self.assertAlmostEqual(
+            next(load for load in static_loads if load.get("zone") == "1")["meters"],
+            2 * 60 * athlete.get_zone_speed_mps()["1"],
+        )
+        static_weekly = athlete_week_stats(plan, athlete, week_start, CoachSettings.PAUSE_MODE_ALWAYS_STATIC)
+        self.assertEqual(static_weekly["zones"]["1"]["distance_m"], 336)
 
     def test_trainer_planning_print_uses_selected_week_range(self):
         user = get_user_model().objects.create_user(
@@ -3433,6 +3452,30 @@ class SlotModalSaveTests(TestCase):
         self.assertGreater(float(active_cell["session_km"]), float(static_cell["session_km"]))
         self.assertContains(active, '<tr data-flex-pause-mode="active_unless_pp">')
         self.assertFalse(TrainingSlot.objects.filter(athlete=athlete, date=day).exists())
+
+        # Existing trainer-plan sessions in either half of the day must also
+        # count an explicitly active `ap` when ordinary `p` is static.
+        AthleteBasePlanningSlot.objects.create(
+            block=block, weekday=day.weekday(), slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER, trainer_plan=plan,
+        )
+        am_slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=1)
+        TrainingSegment.objects.create(
+            slot=am_slot, order=1, type="CORE", text="3*1000m z2 ap=50m",
+            distance_m=1000, norm_distance_m=3000, reps=1, zone="2",
+        )
+        pm_main = slot.segments.get(type="CORE")
+        pm_main.text = "4*1200m z2>z3 ap2 (5:30-->5:00)"
+        pm_main.save(update_fields=["text"])
+        settings.pause_mode = CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+        settings.save(update_fields=["pause_mode"])
+        explicit = self.client.get(url)
+        athlete_row = explicit.context["week_rows"][0]["athlete_rows"][0]
+        am_cell = next(cell for cell in athlete_row["am_cells"] if cell["day"] == day)
+        pm_cell = next(cell for cell in athlete_row["pm_cells"] if cell["day"] == day)
+        self.assertEqual(am_cell["session_km"], "3.1")
+        self.assertGreater(float(pm_cell["session_km"]), float(static_cell["session_km"]))
+        self.assertContains(explicit, '<tr data-flex-pause-mode="always_static">')
 
     def test_ayc_week_totals_exclude_not_done_running_and_alternative_load(self):
         user, plan, athlete = self._user_plan_and_athlete()

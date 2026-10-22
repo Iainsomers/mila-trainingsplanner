@@ -34,7 +34,7 @@ Een Polar-pauzemarkering die aanhoudende afstandstoename tegenspreekt mag gemete
 
 ## 2026-10-22 — Actieve pauzes tellen als Z1-afstand
 
-Alleen een losse `p` is actief; `sp` en `pp` blijven statisch. De coach kiest `Always static` of `Active unless "pp"`. Actieve pauzes tellen per set `reps - 1`; tijd wordt met de persoonlijke Z1-snelheid omgerekend en meters worden letterlijk toegevoegd. Niet-berekenbare pauzes leveren 0 m op.
+Een losse `p` is actief in de stand `Active unless "pp"`; in `Static unless ap` is alleen `ap` actief. `ap` blijft ook in de actieve stand actief; `sp` en `pp` blijven altijd statisch. Actieve pauzes tellen per set `reps - 1`; tijd wordt met de persoonlijke Z1-snelheid omgerekend en meters worden letterlijk toegevoegd. Niet-berekenbare pauzes leveren 0 m op.
 
 ## 2026-10-19 — Individuele Base Planning is leidend per dagdeel
 

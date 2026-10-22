@@ -713,12 +713,13 @@
     }
 
     function flexActivePauseLoad(el, text, fallbackReps, speeds, pauseMode) {
-      if ((pauseMode || "") !== "active_unless_pp") return null;
-      const match = (text || "").match(/\bp\s*=?\s*(\d+(?:[.,]\d+)?)\s*(m|min|mins|minute|minutes|sec|secs|second|seconds|s|'|")?(?![A-Za-z])/i);
+      if (!["always_static", "active_unless_pp"].includes(pauseMode || "")) return null;
+      const match = [...(text || "").matchAll(/\b(ap|p)\s*=?\s*(\d+(?:[.,]\d+)?)\s*(m|min|mins|minute|minutes|sec|secs|second|seconds|s|'|")?(?![A-Za-z])/gi)]
+        .find(candidate => candidate[1].toLowerCase() === "ap" || pauseMode === "active_unless_pp");
       if (!match) return null;
 
-      const value = Number(String(match[1]).replace(",", "."));
-      const unit = String(match[2] || "").toLowerCase();
+      const value = Number(String(match[2]).replace(",", "."));
+      const unit = String(match[3] || "").toLowerCase();
       let metersPerPause = 0;
       if (unit === "m") metersPerPause = value;
       else {

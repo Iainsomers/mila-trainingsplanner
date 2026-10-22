@@ -15,23 +15,24 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v17"
+STATS_SCHEMA_VERSION = "v18"
 
 
 def active_pause_distance_m(text, reps, speed_mps, pause_mode):
-    if pause_mode != CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP:
+    if pause_mode not in (CoachSettings.PAUSE_MODE_ALWAYS_STATIC, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP):
         return 0.0
     text = str(text or "")
-    match = re.search(
-        r"\bp\s*=?\s*(\d+(?:[.,]\d+)?)\s*(m|min|mins|minute|minutes|sec|secs|second|seconds|s|'|\")?(?![A-Za-z])",
-        text,
-        re.I,
+    matches = re.finditer(
+        r"\b(ap|p)\s*=?\s*(\d+(?:[.,]\d+)?)\s*(m|min|mins|minute|minutes|sec|secs|second|seconds|s|'|\")?(?![A-Za-z])",
+        text, re.I,
     )
+    match = next((candidate for candidate in matches if candidate.group(1).lower() == "ap"
+                  or pause_mode == CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP), None)
     if not match:
         return 0.0
 
-    value = float(match.group(1).replace(",", "."))
-    unit = (match.group(2) or "").lower()
+    value = float(match.group(2).replace(",", "."))
+    unit = (match.group(3) or "").lower()
     if unit == "m":
         meters_per_pause = value
     elif unit in {"min", "mins", "minute", "minutes", "'"}:
