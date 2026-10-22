@@ -7468,7 +7468,7 @@ class TrainingSegmentLabelTests(TestCase):
         )
         segment = slot.segments.create(type="CORE", text="20' z2", zone="2", duration_s=1200)
 
-        self.assertEqual(_segment_rep_time_label(athlete, segment), "actual Z1 1:40/Z2 3:20")
+        self.assertEqual(_segment_rep_time_label(athlete, segment), "4:10 min/km")
         loads = _ayc_slot_loads_for_totals(slot, athlete)
         self.assertEqual(sum(load["meters"] for load in loads), 1100)
         weekly = athlete_week_stats(plan, athlete, day)

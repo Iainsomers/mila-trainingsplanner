@@ -2093,22 +2093,6 @@ def _watch_segment_loads(seg):
     return loads
 
 
-def _watch_segment_time_label(seg):
-    loads = _watch_segment_loads(seg)
-    if not loads:
-        return ""
-    zone_seconds = {}
-    for load in loads:
-        zone = str(load.get("zone") or "").strip()
-        seconds = float(load.get("seconds") or 0)
-        if zone and seconds > 0:
-            zone_seconds[zone] = zone_seconds.get(zone, 0) + seconds
-    if not zone_seconds:
-        return ""
-    parts = [f"Z{zone} {_format_rep_time_seconds(seconds)}" for zone, seconds in sorted(zone_seconds.items(), key=lambda item: int(item[0]) if item[0].isdigit() else 99)]
-    return "actual " + "/".join(parts)
-
-
 def _segment_duration_pace_label(athlete, seg):
     try:
         duration_s = float(getattr(seg, "duration_s", None) or 0)
@@ -2182,10 +2166,6 @@ def _segment_compound_part_zone_labels(seg, distances_m):
 def _segment_rep_time_label(athlete, seg):
     if not athlete or not seg:
         return ""
-
-    actual_label = _watch_segment_time_label(seg)
-    if actual_label:
-        return actual_label
 
     seg_type = (getattr(seg, "type", "") or "").upper()
     if seg_type not in {"CORE", "CORE2"}:
@@ -2326,10 +2306,10 @@ def _annotate_slot_segment_display_times(slot, athlete):
         text = getattr(seg, "text", "") or ""
         actual_loads = _watch_segment_loads(seg)
         seg.flex_actual_loads_json = json.dumps(actual_loads, separators=(",", ":")) if actual_loads else ""
-        label = _segment_rep_time_label(athlete, seg)
         # Watch sessions already carry measured zone time. Do not append the
-        # planned HR guidance until actual watch HR samples are integrated.
+        # planned pace or HR guidance to the already descriptive watch text.
         is_watch_slot = str(getattr(getattr(seg, "slot", None), "source", "") or "") in {"watch_a", "watch_b", "watch_c"}
+        label = "" if is_watch_slot else _segment_rep_time_label(athlete, seg)
         hr_label = "" if is_watch_slot else _segment_hr_label(athlete, seg)
         display_labels = "; ".join(part for part in (label, hr_label) if part)
         seg.display_text = f"{text} ({display_labels})" if text and display_labels else text
