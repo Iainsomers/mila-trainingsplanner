@@ -165,7 +165,7 @@ def type_a_description(laps, athlete=None):
             segment += f" {zone_label}"
         if recoveries:
             average = math.floor(sum(recoveries) / len(recoveries) + 0.5)
-            segment += f", recovery avg {average} s"
+            segment += f" p{average}"
         segment_texts.append(segment)
 
     trailing = parsed[last_work + 1:]

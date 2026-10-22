@@ -130,8 +130,8 @@ class RawPolarTests(SimpleTestCase):
         ]
         self.assertEqual(
             type_a_description(laps, athlete),
-            "WU: 3800 m Z1 · Main: 3×2000 m Z2, recovery avg 107 s + "
-            "2×1000 m Z2, recovery avg 40 s · CD: none",
+            "WU: 3800 m Z1 · Main: 3×2000 m Z2 p107 + "
+            "2×1000 m Z2 p40 · CD: none",
         )
 
         result = translate([{"sport": {"id": "1"}, "laps": {"laps": laps}}], 5, mode="A", athlete=athlete)
@@ -161,7 +161,7 @@ class RawPolarTests(SimpleTestCase):
         ]
         self.assertEqual(
             type_a_description(laps, athlete),
-            "WU: 3800 m Z1 · Main: 6×1000 m Z1>Z2, recovery avg 87 s · CD: none",
+            "WU: 3800 m Z1 · Main: 6×1000 m Z1>Z2 p87 · CD: none",
         )
 
     @patch("core.views.polar_raw._polar_targets_for_user")
