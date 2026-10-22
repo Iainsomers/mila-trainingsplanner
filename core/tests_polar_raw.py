@@ -208,6 +208,28 @@ class RawPolarTests(SimpleTestCase):
         self.assertEqual(part["description_label"], "General description")
         self.assertEqual(part["description"], "Continuous run: 15.0 km Z2 (4:47/km)")
 
+    def test_type_a_splits_short_repetitions_and_tolerates_one_gps_outlier(self):
+        athlete = SimpleNamespace(
+            get_zone_speed_mps=lambda: {"1": 4.0, "2": 4.7, "3": 5.2, "4": 5.7, "5": 6.2},
+            pr_tm_s=None, pr_thm_s=None, pr_10000_s=None, pr_5000_s=None,
+            pr_3000_s=None, pr_1500_s=None, pr_1000_s=None, pr_800_s=None,
+            pr_600_s=None, pr_400_s=None,
+        )
+        values = [
+            (3980.7, 1206782), (42.1, 12000), (65.5, 29750),
+            (58.3, 14375), (73.9, 61000), (57.9, 14125),
+            (109.3, 60500), (77.1, 16125), (77.0, 61250),
+            (50.2, 13125), (136.7, 92625), (100.9, 24125),
+            (107.2, 77750), (105.6, 22625), (74.5, 70750),
+            (100.7, 23375), (90.4, 69875), (112.5, 23250),
+            (55.4, 43875), (4230.6, 1219875),
+        ]
+        laps = [{"distanceMeters": distance, "durationMillis": duration} for distance, duration in values]
+        self.assertEqual(
+            type_a_description(laps, athlete),
+            "WU: 4000 m Z1 · Main: 5×50 m Z1>Z2 p53 + 4×100 m Z1>Z2 p73 · CD: 4250 m Z1",
+        )
+
     @patch("core.views.polar_raw._polar_targets_for_user")
     @patch("core.views.polar_raw._polar_json_request")
     def test_fetch_uses_bearer_and_renders(self, fetch, targets):

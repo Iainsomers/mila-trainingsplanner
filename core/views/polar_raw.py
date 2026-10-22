@@ -147,7 +147,7 @@ def type_a_description(laps, athlete=None):
                 for index in range(len(speeds) - 1) if speeds[index] > 0
             ]
             gap_ratio, gap_index = max(gaps, default=(0, 0))
-            if gap_ratio >= 1.8:
+            if gap_ratio >= 1.5:
                 speed_threshold = math.sqrt(speeds[gap_index] * speeds[gap_index + 1])
                 work_positions = [
                     index for index, speed in short_candidates if speed >= speed_threshold
@@ -160,16 +160,44 @@ def type_a_description(laps, athlete=None):
 
     work_rows = [parsed[index] for index in work_positions]
     short_structure = bool(work_rows and max(row["rounded_m"] for row in work_rows) <= 250)
-    short_distance = 0
-    if short_structure:
-        ordered = sorted(row["rounded_m"] for row in work_rows)
-        short_distance = ordered[len(ordered) // 2]
     groups = []
-    for row in work_rows:
-        group_distance = short_distance if short_structure else row["rounded_m"]
-        if not groups or groups[-1]["distance_m"] != group_distance:
-            groups.append({"distance_m": group_distance, "rows": []})
-        groups[-1]["rows"].append(row)
+    if short_structure:
+        def median_distance(values):
+            ordered = sorted(row["rounded_m"] for row in values)
+            return ordered[len(ordered) // 2]
+
+        one_distance = median_distance(work_rows)
+        one_cost = sum(abs(row["rounded_m"] - one_distance) for row in work_rows)
+        best_split = None
+        for split_at in range(2, len(work_rows) - 1):
+            left, right = work_rows[:split_at], work_rows[split_at:]
+            left_distance, right_distance = median_distance(left), median_distance(right)
+            if abs(left_distance - right_distance) < 50:
+                continue
+            split_cost = (
+                sum(abs(row["rounded_m"] - left_distance) for row in left)
+                + sum(abs(row["rounded_m"] - right_distance) for row in right)
+            )
+            boundary_recovery = sum(
+                row["duration_s"] for row in parsed
+                if left[-1]["index"] < row["index"] < right[0]["index"]
+            )
+            candidate = (split_cost, -boundary_recovery, split_at, left_distance, right_distance)
+            if best_split is None or candidate < best_split:
+                best_split = candidate
+        if best_split and best_split[0] <= one_cost - 50:
+            _, _, split_at, left_distance, right_distance = best_split
+            groups = [
+                {"distance_m": left_distance, "rows": work_rows[:split_at]},
+                {"distance_m": right_distance, "rows": work_rows[split_at:]},
+            ]
+        else:
+            groups = [{"distance_m": one_distance, "rows": work_rows}]
+    else:
+        for row in work_rows:
+            if not groups or groups[-1]["distance_m"] != row["rounded_m"]:
+                groups.append({"distance_m": row["rounded_m"], "rows": []})
+            groups[-1]["rows"].append(row)
 
     segment_texts = []
     for group in groups:
@@ -193,8 +221,10 @@ def type_a_description(laps, athlete=None):
         segment_texts.append(segment)
 
     trailing = parsed[last_work + 1:]
-    cooldown_distance = sum(row["distance_m"] for row in trailing if row["zone"] == 1)
-    cooldown = cooldown_distance >= 1000 and trailing and all(row["zone"] == 1 for row in trailing)
+    cooldown_start = next((index for index, row in enumerate(trailing) if row["rounded_m"] >= 1000), None)
+    cooldown_rows = trailing[cooldown_start:] if cooldown_start is not None else []
+    cooldown_distance = sum(row["distance_m"] for row in cooldown_rows if row["zone"] == 1)
+    cooldown = cooldown_distance >= 1000 and cooldown_rows and all(row["zone"] == 1 for row in cooldown_rows)
     parts = [f"WU: {warmup['rounded_m']} m {warmup['zone_label']}" if warmup else "WU: none"]
     parts.append("Main: " + " + ".join(segment_texts))
     parts.append(f"CD: {int(math.floor(cooldown_distance / 50 + 0.5) * 50)} m Z1" if cooldown else "CD: none")
