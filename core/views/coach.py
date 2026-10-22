@@ -5396,6 +5396,35 @@ def polar_activity_suggestions_view(request):
 
 @login_required
 @require_GET
+def polar_type_a_ayc_view(request):
+    """Return the same Type A Polar output used by Polar Integration for AYC."""
+    athlete_id = (request.GET.get("athlete") or "").strip()
+    day = (request.GET.get("date") or "").strip()
+    try:
+        target_date = date.fromisoformat(day)
+    except ValueError:
+        return JsonResponse({"ok": False, "message": "Invalid date."}, status=400)
+
+    athlete, connection = _polar_connection_for_athlete_request(request, athlete_id)
+    if not athlete:
+        return JsonResponse({"ok": False, "message": "Athlete not found."}, status=404)
+    if not connection or not connection.v4_access_token:
+        return JsonResponse({"ok": False, "message": "No Polar v4 connection for this athlete."})
+
+    sessions, status_message = _polar_v4_sessions_for_day(connection, target_date)
+    if status_message:
+        return JsonResponse({"ok": False, "message": status_message})
+    from .polar_raw import translate
+    results = translate(sessions, 5, "A", athlete)
+    return JsonResponse({
+        "ok": True,
+        "message": "" if results else "No Polar training found for this day.",
+        "results": results,
+    })
+
+
+@login_required
+@require_GET
 def coach_console_view(request):
     return redirect("planning_overview")
 

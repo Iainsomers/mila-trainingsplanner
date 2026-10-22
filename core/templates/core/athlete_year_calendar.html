@@ -1900,8 +1900,9 @@
 </div>
 
 <div id="suggestInputPlaceholder" role="dialog" aria-modal="true" aria-labelledby="suggestInputPlaceholderText" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000; align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; width:320px; max-width:100%; border-radius:8px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2); text-align:center;">
-    <p id="suggestInputPlaceholderText" class="mb-3">hier even niets</p>
+  <div style="background:#fff; width:760px; max-width:100%; max-height:92vh; overflow:auto; border-radius:8px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+    <h5 id="suggestInputPlaceholderText" class="mb-3">Polar Type A</h5>
+    <div id="suggestInputPlaceholderBody" class="small">No Polar result loaded.</div>
     <button type="button" id="suggestInputPlaceholderClose" class="btn btn-sm btn-primary">Close</button>
   </div>
 </div>
@@ -1909,6 +1910,7 @@
 <script>
 (function() {
   var activeDate = "";
+  var activeAthlete = "{{ selected_athlete_id }}";
   var SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
   var activeVoiceRecognition = null;
   var activeVoiceButton = null;
@@ -2110,8 +2112,64 @@
   }
   function showSuggestInputPlaceholder() {
     var popup = document.getElementById("suggestInputPlaceholder");
+    var body = document.getElementById("suggestInputPlaceholderBody");
     popup.style.display = "flex";
     document.getElementById("suggestInputPlaceholderClose").focus();
+    body.textContent = "Loading Polar Type A...";
+    fetch("/integrations/polar/type-a-ayc/?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate), {
+      headers: {"Accept": "application/json"}
+    }).then(function(response) { return response.json(); }).then(function(data) {
+      if (!data.ok) {
+        body.textContent = data.message || "Polar Type A could not be loaded.";
+        return;
+      }
+      renderTypeAResults(body, data.results || [], data.message || "");
+    }).catch(function() {
+      body.textContent = "Polar Type A could not be loaded.";
+    });
+  }
+  function renderTypeALaps(parent, title, rows) {
+    if (!rows || !rows.length) return;
+    var heading = document.createElement("div");
+    heading.className = "fw-semibold mt-2";
+    heading.textContent = title;
+    parent.appendChild(heading);
+    var table = document.createElement("table");
+    table.className = "table table-sm mb-2";
+    var head = document.createElement("tr");
+    ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km", "Zx", "Tx"].forEach(function(label) {
+      var cell = document.createElement("th"); cell.textContent = label; head.appendChild(cell);
+    });
+    var thead = document.createElement("thead"); thead.appendChild(head); table.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    rows.forEach(function(row) {
+      var tr = document.createElement("tr");
+      [row.index, row.distance, row.distance_rounded_50, row.duration, row.pace, row.z_pace, row.t_pace].forEach(function(value) {
+        var cell = document.createElement("td"); cell.textContent = value == null ? "NA" : value; tr.appendChild(cell);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody); parent.appendChild(table);
+  }
+  function renderTypeAResults(parent, results, message) {
+    parent.innerHTML = "";
+    if (!results.length) { parent.textContent = message || "No Polar training found for this day."; return; }
+    results.forEach(function(session) {
+      var box = document.createElement("div"); box.className = "border rounded p-2 mb-2";
+      var title = document.createElement("div"); title.className = "fw-bold";
+      title.textContent = (session.name || "Training session") + (session.start ? " — " + session.start : ""); box.appendChild(title);
+      var meta = document.createElement("div"); meta.className = "text-muted mb-2";
+      meta.textContent = "Distance: " + session.distance + " m · Duration: " + session.duration; box.appendChild(meta);
+      (session.parts || []).forEach(function(part) {
+        if (part.description) {
+          var description = document.createElement("div"); description.className = "alert alert-light border py-2 mb-2";
+          description.textContent = (part.description_label || "Description") + ": " + part.description; box.appendChild(description);
+        }
+        renderTypeALaps(box, "Manual laps", part.manual);
+        renderTypeALaps(box, "Automatic laps", part.auto);
+      });
+      parent.appendChild(box);
+    });
   }
   function hideSuggestInputPlaceholder() {
     document.getElementById("suggestInputPlaceholder").style.display = "none";

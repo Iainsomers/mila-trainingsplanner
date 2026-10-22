@@ -2487,12 +2487,38 @@ class PolarPlanMismatchTests(TestCase):
         self.assertIn('id="suggestInputBtn"', source)
         self.assertIn('id="suggestInputPlaceholder"', source)
         self.assertIn('id="suggestInputPlaceholderClose"', source)
-        self.assertIn("hier even niets", source)
+        self.assertIn('id="suggestInputPlaceholderBody"', source)
         self.assertIn('addEventListener("click", showSuggestInputPlaceholder)', source)
-        self.assertNotIn("/integrations/polar/activity-suggestions/", source)
+        self.assertIn("/integrations/polar/type-a-ayc/", source)
         self.assertNotIn("Suggest alternative plan", source)
         self.assertIn('id="aypWatchResultSection"', source)
         self.assertIn('id="deleteWatchInputBtn"', source)
+
+    def test_ayc_type_a_endpoint_returns_polar_integration_output(self):
+        coach = get_user_model().objects.create_user(
+            username="Wilbert van Vliet", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=coach, name="Wilbert van Vliet", birth_year=1980, gender="M")
+        PolarConnection.objects.create(user=coach, member_id="type-a-ayc-member", v4_access_token="token")
+        self.client.force_login(coach)
+        session = {
+            "startTime": "2026-10-22T10:00:00",
+            "distanceMeters": 3800,
+            "durationMillis": 1200000,
+            "exercises": [{
+                "distanceMeters": 3800,
+                "durationMillis": 1200000,
+                "sport": {"id": "1"},
+                "laps": {"laps": [{"distanceMeters": 3800, "durationMillis": 1200000}]},
+            }],
+        }
+        with patch("core.views.coach._polar_v4_sessions_for_day", return_value=([session], "")):
+            response = self.client.get(
+                f"/integrations/polar/type-a-ayc/?athlete={athlete.id}&date=2026-10-22"
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(response.json()["results"][0]["parts"][0]["description_label"], "Generated description")
 
 
 class TrainerPlanningListTests(TestCase):
