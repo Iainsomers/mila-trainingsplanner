@@ -8852,6 +8852,9 @@ def settings_view(request):
         coach_settings.focus_points_enabled = (request.POST.get("focus_points_enabled") == "on")
         coach_settings.live_sharing_training_schedules = (request.POST.get("live_sharing_training_schedules") == "on")
         coach_settings.see_session_km = (request.POST.get("see_session_km") == "on")
+        pause_mode = request.POST.get("pause_mode")
+        if pause_mode in dict(CoachSettings.PAUSE_MODE_CHOICES):
+            coach_settings.pause_mode = pause_mode
         coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
         coach_settings.evaluation_sharing_enabled = (request.POST.get("evaluation_sharing_enabled") == "on")
         coach_settings.year_planner_shared_whereabouts_enabled = (
@@ -8864,6 +8867,7 @@ def settings_view(request):
             "focus_points_enabled",
             "live_sharing_training_schedules",
             "see_session_km",
+            "pause_mode",
             "year_planner_shared_whereabouts_enabled",
             "updated_at",
         ])
@@ -8909,6 +8913,8 @@ def settings_view(request):
         "focus_points_enabled": coach_settings.focus_points_enabled,
         "live_sharing_training_schedules": coach_settings.live_sharing_training_schedules,
         "see_session_km": coach_settings.see_session_km,
+        "pause_mode": coach_settings.pause_mode,
+        "pause_mode_choices": CoachSettings.PAUSE_MODE_CHOICES,
         "year_planner_shared_whereabouts_enabled": coach_settings.year_planner_shared_whereabouts_enabled,
         "can_edit_settings": can_edit_settings,
     })

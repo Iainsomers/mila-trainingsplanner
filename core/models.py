@@ -37,6 +37,13 @@ class CoachSettings(models.Model):
     """
     Persistente coach-voorkeuren (per ingelogde User).
     """
+    PAUSE_MODE_ALWAYS_STATIC = "always_static"
+    PAUSE_MODE_ACTIVE_UNLESS_PP = "active_unless_pp"
+    PAUSE_MODE_CHOICES = [
+        (PAUSE_MODE_ALWAYS_STATIC, "Always static"),
+        (PAUSE_MODE_ACTIVE_UNLESS_PP, 'Active unless "pp"'),
+    ]
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -69,6 +76,11 @@ class CoachSettings(models.Model):
     live_sharing_training_schedules = models.BooleanField(default=False)
     year_planner_shared_whereabouts_enabled = models.BooleanField(default=False)
     see_session_km = models.BooleanField(default=True)
+    pause_mode = models.CharField(
+        max_length=24,
+        choices=PAUSE_MODE_CHOICES,
+        default=PAUSE_MODE_ALWAYS_STATIC,
+    )
 
     # Trainingsbuilder (Core + Alternative zijn altijd zichtbaar)
     tb_show_wu = models.BooleanField(default=True)

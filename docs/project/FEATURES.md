@@ -198,6 +198,8 @@ De vier voor de aanvraag vereiste MiLa-logo's staan in `core/static/core/brand/c
 
 ## Polar Integration — Type A/B/C/D
 
+Coach Settings > Planning bevat `P(ause)mode` met de keuzes `Always static` en `Active unless "pp"`. De keuze wordt per coach opgeslagen maar beïnvloedt de kilometerberekeningen nog niet.
+
 De aparte uitleespagina haalt één gekozen kalenderdag via de bestaande Polar v4-koppeling op. De app gebruikt het Bearer-token; een API-link in de browser vraagt niet om de juiste koppeling. Bij HTTP 401 probeert de app één tokenvernieuwing; datumparsefouten krijgen alternatieve datumformaten. Andere fouten tonen de Polar-foutreden.
 
 | Type | Uitkomst |

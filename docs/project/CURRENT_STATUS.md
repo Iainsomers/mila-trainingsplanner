@@ -16,6 +16,8 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Belangrijk werkend gedrag
 
+- Coach Settings bevat een opgeslagen `P(ause)mode`-dropdown met `Always static` en `Active unless "pp"`; koppeling aan de kilometertelling volgt later.
+
 - Polar Type A toont voor iedere handmatige en automatische ronde naast de exacte afstand ook de afstand afgerond op 50 meter en afzonderlijke Zx- en Tx-tempoaanduidingen van de geselecteerde atleet.
 - Polar Type A sluit bekende niet-hardlooprecordings, zoals fietslogs, uit met dezelfde sport-ID-regel als Type D.
 - Polar Type A genereert bij duidelijke handmatige laps een beschrijving van WU, hoofdsegmenten, gemiddelde herstelduur per segment en eventuele CD.

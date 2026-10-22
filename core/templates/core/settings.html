@@ -25,6 +25,14 @@
         <input class="form-check-input" type="checkbox" role="switch" id="see-session-km" name="see_session_km" {% if see_session_km %}checked{% endif %} {% if not can_edit_settings %}disabled{% endif %}>
         <label class="form-check-label" for="see-session-km">See session km</label>
       </div>
+      <div class="mt-3">
+        <label class="form-label" for="pause-mode">P(ause)mode</label>
+        <select class="form-select" id="pause-mode" name="pause_mode" {% if not can_edit_settings %}disabled{% endif %}>
+          {% for value, label in pause_mode_choices %}
+          <option value="{{ value }}" {% if pause_mode == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="form-check form-switch mt-3">
         <input class="form-check-input" type="checkbox" role="switch" id="year-planner-shared-whereabouts-enabled" name="year_planner_shared_whereabouts_enabled" {% if year_planner_shared_whereabouts_enabled %}checked{% endif %} {% if not can_edit_settings %}disabled{% endif %}>
         <label class="form-check-label" for="year-planner-shared-whereabouts-enabled">Shared athlete whereabouts in Year Planner</label>

@@ -1847,6 +1847,30 @@ class PlanningOverviewTests(TestCase):
         self.assertRedirects(enabled, "/settings/")
         self.assertTrue(CoachSettings.objects.get(user=coach).see_session_km)
 
+    def test_coach_can_select_pause_mode_without_affecting_calculations(self):
+        coach = get_user_model().objects.create_user(
+            username="pause-mode-settings-coach",
+            password="secret",
+            is_staff=True,
+        )
+        self.client.force_login(coach)
+
+        settings_page = self.client.get("/settings/")
+        self.assertContains(settings_page, "P(ause)mode")
+        self.assertContains(settings_page, 'name="pause_mode"')
+        self.assertContains(settings_page, '<option value="always_static" selected>Always static</option>', html=True)
+        self.assertContains(settings_page, 'Active unless &quot;pp&quot;')
+
+        response = self.client.post("/settings/", {"pause_mode": "active_unless_pp"})
+        self.assertRedirects(response, "/settings/")
+        settings = CoachSettings.objects.get(user=coach)
+        self.assertEqual(settings.pause_mode, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP)
+
+        invalid = self.client.post("/settings/", {"pause_mode": "unsupported"})
+        self.assertRedirects(invalid, "/settings/")
+        settings.refresh_from_db()
+        self.assertEqual(settings.pause_mode, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP)
+
     def test_other_coach_cannot_change_owner_settings(self):
         owner = get_user_model().objects.create_user(
             username="settings-owner", password="secret", is_staff=True
