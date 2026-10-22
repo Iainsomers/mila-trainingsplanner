@@ -215,6 +215,12 @@ def type_a_description(laps, athlete=None):
         segment = f"{len(group_rows)}×{group['distance_m']} m"
         if zone_label:
             segment += f" {zone_label}"
+        average_pace = pace(
+            sum(row["duration_s"] for row in group_rows),
+            sum(row["distance_m"] for row in group_rows),
+        )
+        if average_pace != "NA":
+            segment += f" {average_pace}"
         if recoveries:
             average = math.floor(sum(recoveries) / len(recoveries) + 0.5)
             segment += f" p{average}"
