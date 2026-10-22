@@ -86,6 +86,27 @@ class RawPolarTests(SimpleTestCase):
         self.assertEqual(row["z_pace"], "Z4")
         self.assertEqual(row["t_pace"], "T10")
 
+    def test_type_a_excludes_known_non_running_recordings(self):
+        payload = {"trainingSessions": [{
+            "sport": {"id": "2", "name": "Cycling"},
+            "exercises": [
+                {"sport": {"id": "2", "name": "Cycling"}, "distanceMeters": 20000},
+                {"sport": {"id": "1", "name": "Running"}, "distanceMeters": 5000},
+            ],
+        }]}
+        type_a = translate(payload, 5, mode="A")
+        self.assertEqual(len(type_a[0]["parts"]), 1)
+        self.assertEqual(type_a[0]["parts"][0]["distance"], "5000")
+
+        type_b = translate(payload, 5, mode="B")
+        self.assertEqual(len(type_b[0]["parts"]), 2)
+
+        cycling_only = translate([{
+            "sport": {"id": "2", "name": "Cycling"},
+            "laps": {"laps": [{"distanceMeters": 1000, "durationMillis": 90000}]},
+        }], 5, mode="A")
+        self.assertEqual(cycling_only, [])
+
     @patch("core.views.polar_raw._polar_targets_for_user")
     @patch("core.views.polar_raw._polar_json_request")
     def test_fetch_uses_bearer_and_renders(self, fetch, targets):

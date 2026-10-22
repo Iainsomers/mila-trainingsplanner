@@ -143,6 +143,13 @@ def sample_rows(exercise, interval):
     return rows, metadata, end > 86400000
 
 
+def polar_sport_id(item, session=None):
+    sport = item.get("sport") if isinstance(item, dict) else None
+    if not sport and isinstance(session, dict):
+        sport = session.get("sport")
+    return str(sport.get("id", "")) if isinstance(sport, dict) else ""
+
+
 def translate(payload, interval, mode="A", athlete=None):
     sessions = payload if isinstance(payload, list) else next(
         (payload[key] for key in ("trainingSessions", "training-sessions", "sessions")
@@ -157,6 +164,8 @@ def translate(payload, interval, mode="A", athlete=None):
         items = ([session] if session.get("laps") or not exercises else []) + [
             item for item in exercises if isinstance(item, dict)]
         for index, item in enumerate(items, 1):
+            if mode == "A" and polar_sport_id(item, session) not in {"", "1"}:
+                continue
             laps = item.get("laps") or {}
             laps = laps if isinstance(laps, dict) else {}
             rows, metadata, truncated = sample_rows(item, interval)
@@ -171,6 +180,8 @@ def translate(payload, interval, mode="A", athlete=None):
                           "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps"), athlete),
                           "samples": rows, "metadata": metadata, "truncated": truncated,
                           "processed": processed, "processing_notes": processing_notes})
+        if mode == "A" and not parts:
+            continue
         result.append({"name": session.get("name") or "Training session",
                        "start": session.get("startTime", ""),
                        "distance": display(session.get("distanceMeters")),
