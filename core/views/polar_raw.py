@@ -64,27 +64,39 @@ def distance_rounded_to_50(value):
     return display(math.floor(value / 50 + 0.5) * 50)
 
 
-def lap_zone_pace(distance_m, duration_ms, athlete):
+def lap_zone_paces(distance_m, duration_ms, athlete):
     distance_m, duration_ms = number(distance_m), number(duration_ms)
     if not athlete or distance_m is None or duration_ms is None or distance_m <= 0 or duration_ms <= 0:
-        return "NA"
+        return "NA", "NA"
     speed_mps = distance_m / (duration_ms / 1000)
-    labels = [
-        _closest_watch_label(speed_mps, _watch_z_reference_speeds(athlete)),
-        _threshold_watch_label(speed_mps, _watch_t_reference_speeds(athlete)),
-    ]
-    return " / ".join(label for label in labels if label) or "NA"
+    z_label = _closest_watch_label(speed_mps, _watch_z_reference_speeds(athlete))
+    t_label = _threshold_watch_label(speed_mps, _watch_t_reference_speeds(athlete))
+    return z_label or "NA", t_label or "NA"
 
 
 def lap_rows(laps, athlete=None):
-    return [{"index": i, "distance": display(lap.get("distanceMeters")),
-             "distance_rounded_50": distance_rounded_to_50(lap.get("distanceMeters")),
-             "duration": duration(lap.get("durationMillis")),
-             "pace": pace(number(lap.get("durationMillis")) / 1000 if number(lap.get("durationMillis")) is not None else None, lap.get("distanceMeters")),
-             "zone_pace": lap_zone_pace(lap.get("distanceMeters"), lap.get("durationMillis"), athlete),
-             "elapsed": duration(lap.get("splitTimeMillis"))}
-            for i, lap in enumerate(laps if isinstance(laps, list) else [], 1)
-            if isinstance(lap, dict)]
+    rows = []
+    for index, lap in enumerate(laps if isinstance(laps, list) else [], 1):
+        if not isinstance(lap, dict):
+            continue
+        z_pace, t_pace = lap_zone_paces(
+            lap.get("distanceMeters"), lap.get("durationMillis"), athlete
+        )
+        rows.append({
+            "index": index,
+            "distance": display(lap.get("distanceMeters")),
+            "distance_rounded_50": distance_rounded_to_50(lap.get("distanceMeters")),
+            "duration": duration(lap.get("durationMillis")),
+            "pace": pace(
+                number(lap.get("durationMillis")) / 1000
+                if number(lap.get("durationMillis")) is not None else None,
+                lap.get("distanceMeters"),
+            ),
+            "z_pace": z_pace,
+            "t_pace": t_pace,
+            "elapsed": duration(lap.get("splitTimeMillis")),
+        })
+    return rows
 
 
 def sample_rows(exercise, interval):

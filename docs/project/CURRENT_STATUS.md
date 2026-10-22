@@ -16,7 +16,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Belangrijk werkend gedrag
 
-- Polar Type A toont voor handmatige en automatische rondes naast de exacte afstand ook de afstand afgerond op 50 meter en de bijbehorende Z/T-tempoaanduiding van de geselecteerde atleet.
+- Polar Type A toont voor iedere handmatige en automatische ronde naast de exacte afstand ook de afstand afgerond op 50 meter en afzonderlijke Zx- en Tx-tempoaanduidingen van de geselecteerde atleet.
 
 - Team Pace gebruikt goed zichtbare middengroene en warme auberginekleurige teambekleding; een teamlogo is nog niet ingesteld.
 - Focus Points and Desired Improvements staat onder Planning wanneer de coachschakelaar aanstaat. Trainers kiezen een toegankelijke atleet; eigen trainers en gedelegeerde trainers met editrechten kunnen commentaar in Comment coaches, Plan en Progress per focuspunt opslaan. Commentaar wordt per coach met username-initialen en vaste coachkleur getoond. `Overwrite` staat standaard uit en geldt alleen voor dezelfde focuspunt/kolom-cel; view-only coaches kunnen alleen lezen. Edit-coaches kunnen ook de `.xlsx`-matrix met coachcomments importeren: namen worden vooraf gevalideerd en alleen niet-lege cellen vervangen de eigen comments; comments van anderen en Plan/Progress blijven staan. Prio is per focuspunt gedeeld opgeslagen als —/goud/zilver/brons; de Other 1–3-labels zijn per atleet door iedere bevoegde coach aanpasbaar. Comment Athlete is nog een placeholder.
