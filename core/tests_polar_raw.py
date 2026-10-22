@@ -164,6 +164,28 @@ class RawPolarTests(SimpleTestCase):
             "WU: 3800 m Z1 · Main: 6×1000 m Z1>Z2 p87 · CD: none",
         )
 
+    def test_type_a_detects_short_repetitions_by_clear_speed_split(self):
+        athlete = SimpleNamespace(
+            get_zone_speed_mps=lambda: {"1": 4.2, "2": 4.6, "3": 5.1, "4": 5.6, "5": 6.1},
+            pr_tm_s=None, pr_thm_s=None, pr_10000_s=None, pr_5000_s=None,
+            pr_3000_s=None, pr_1500_s=None, pr_1000_s=None, pr_800_s=None,
+            pr_600_s=None, pr_400_s=None,
+        )
+        values = [
+            (4278.7, 1337657), (86.6, 20750), (84.9, 77750),
+            (100.1, 19625), (84.6, 77000), (99.2, 23000),
+            (85.3, 75375), (102.1, 22750), (104.1, 75375),
+            (92.4, 22750), (184.7, 119875), (82.6, 21875),
+            (98.8, 75625), (101.3, 23125), (128.0, 81000),
+            (92.8, 22750), (97.7, 74625), (89.0, 22375),
+            (4612.2, 1350875),
+        ]
+        laps = [{"distanceMeters": distance, "durationMillis": duration} for distance, duration in values]
+        self.assertEqual(
+            type_a_description(laps, athlete),
+            "WU: 4300 m Z1 · Main: 9×100 m Z1>Z3 p82 · CD: 4600 m Z1",
+        )
+
     @patch("core.views.polar_raw._polar_targets_for_user")
     @patch("core.views.polar_raw._polar_json_request")
     def test_fetch_uses_bearer_and_renders(self, fetch, targets):

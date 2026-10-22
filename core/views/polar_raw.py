@@ -135,16 +135,40 @@ def type_a_description(laps, athlete=None):
         and (candidate_distances.count(row["rounded_m"]) >= 2 or (row["zone"] or 0) >= 2)
     ]
     if not work_positions:
+        short_candidates = [
+            (index, row["distance_m"] / row["duration_s"])
+            for index, row in enumerate(parsed)
+            if index >= main_start and 50 <= row["rounded_m"] <= 250 and row["duration_s"] > 0
+        ]
+        speeds = sorted(speed for _, speed in short_candidates if speed > 0)
+        if len(speeds) >= 3:
+            gaps = [
+                (speeds[index + 1] / speeds[index], index)
+                for index in range(len(speeds) - 1) if speeds[index] > 0
+            ]
+            gap_ratio, gap_index = max(gaps, default=(0, 0))
+            if gap_ratio >= 1.8:
+                speed_threshold = math.sqrt(speeds[gap_index] * speeds[gap_index + 1])
+                work_positions = [
+                    index for index, speed in short_candidates if speed >= speed_threshold
+                ]
+    if not work_positions:
         return "No clear main section detected."
 
     first_work, last_work = work_positions[0], work_positions[-1]
     warmup = parsed[0] if first_is_warmup and first_work > 0 else None
 
     work_rows = [parsed[index] for index in work_positions]
+    short_structure = bool(work_rows and max(row["rounded_m"] for row in work_rows) <= 250)
+    short_distance = 0
+    if short_structure:
+        ordered = sorted(row["rounded_m"] for row in work_rows)
+        short_distance = ordered[len(ordered) // 2]
     groups = []
     for row in work_rows:
-        if not groups or groups[-1]["distance_m"] != row["rounded_m"]:
-            groups.append({"distance_m": row["rounded_m"], "rows": []})
+        group_distance = short_distance if short_structure else row["rounded_m"]
+        if not groups or groups[-1]["distance_m"] != group_distance:
+            groups.append({"distance_m": group_distance, "rows": []})
         groups[-1]["rows"].append(row)
 
     segment_texts = []
