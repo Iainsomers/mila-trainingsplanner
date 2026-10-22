@@ -33,6 +33,7 @@ from core.views.coach import (
     _watch_plan_is_clear_mismatch,
     _watch_v4_sessions_for_plan,
 )
+from core.views.polar_raw import type_a_description
 
 
 def _focus_comments_xlsx(rows):
@@ -2293,6 +2294,20 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual(suggestion["lap_source"], "automatic")
         self.assertEqual(len(suggestion["splits"]), 3)
         self.assertEqual(suggestion["confidence"], 0.65)
+
+    def test_type_a_recognises_timed_blocks_with_short_recoveries(self):
+        description = type_a_description([
+            {"distanceMeters": 1674.6, "durationMillis": 600282},
+            {"distanceMeters": 147.2, "durationMillis": 90125},
+            {"distanceMeters": 1803.2, "durationMillis": 600375},
+            {"distanceMeters": 154.9, "durationMillis": 90000},
+            {"distanceMeters": 2938.2, "durationMillis": 900501},
+            {"distanceMeters": 168.3, "durationMillis": 90000},
+        ])
+        self.assertIn("Main: 10'", description)
+        self.assertIn("10'", description)
+        self.assertIn("15'", description)
+        self.assertIn("recovery avg 90 s", description)
 
     def test_v4_manual_laps_remain_preferred_over_auto_laps(self):
         session = {

@@ -119,6 +119,64 @@ def type_a_description(laps, athlete=None):
                 "zone": zone,
                 "zone_label": zone_text if zone is not None else "",
             })
+
+    # Some Polar recordings split a workout into timed work blocks and short
+    # active recoveries. These blocks have no repeated distance pattern, so
+    # recognize the alternating duration/distance pattern before the normal
+    # distance-based main-section detector.
+    timed_work = []
+    timed_recoveries = []
+    cursor = 0
+    while cursor < len(parsed):
+        work = parsed[cursor]
+        if work["duration_s"] < 300 or work["rounded_m"] < 500:
+            break
+        timed_work.append(work)
+        cursor += 1
+        if cursor >= len(parsed):
+            break
+        recovery = parsed[cursor]
+        if recovery["duration_s"] > 180 or recovery["rounded_m"] > 300:
+            break
+        timed_recoveries.append(recovery)
+        cursor += 1
+    if timed_work:
+        work_distances = sorted(row["rounded_m"] for row in timed_work)
+        work_durations = sorted(row["duration_s"] for row in timed_work)
+        middle = len(work_distances) // 2
+        distance_median = work_distances[middle]
+        duration_median = work_durations[middle]
+    else:
+        distance_median = duration_median = 0
+    looks_like_timed_blocks = (
+        len(timed_work) >= 2
+        and len(timed_recoveries) >= len(timed_work) - 1
+        and timed_work[0]["rounded_m"] <= distance_median * 1.7
+        and timed_work[0]["duration_s"] <= duration_median * 1.7
+    )
+    if looks_like_timed_blocks:
+        def timed_label(row):
+            seconds = int(math.floor(row["duration_s"] + 0.5))
+            rounded_minutes = int(math.floor(seconds / 60 + 0.5))
+            if rounded_minutes and abs(seconds - rounded_minutes * 60) <= 2:
+                duration_label = f"{rounded_minutes}'"
+            else:
+                duration_label = f"{seconds}s"
+            label = row["zone_label"] or ""
+            average_pace = pace(row["duration_s"], row["distance_m"])
+            if average_pace != "NA":
+                label += f" ({average_pace}/km)" if label else f"({average_pace}/km)"
+            return f"{duration_label} {label}".strip()
+
+        recovery_values = timed_recoveries[:len(timed_work) - 1]
+        average_recovery = int(math.floor(
+            sum(row["duration_s"] for row in recovery_values) / len(recovery_values) + 0.5
+        ))
+        parts = ["WU: none", "Main: " + " + ".join(timed_label(row) for row in timed_work)]
+        parts[1] += f", recovery avg {average_recovery} s"
+        parts.append("CD: none")
+        return " · ".join(parts)
+
     substantial_distances = [row["rounded_m"] for row in parsed if row["rounded_m"] >= 400]
     first_is_warmup = bool(
         parsed
