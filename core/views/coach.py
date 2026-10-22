@@ -8851,6 +8851,7 @@ def settings_view(request):
         coach_settings.detailed_camps_enabled = (request.POST.get("detailed_camps_enabled") == "on")
         coach_settings.focus_points_enabled = (request.POST.get("focus_points_enabled") == "on")
         coach_settings.live_sharing_training_schedules = (request.POST.get("live_sharing_training_schedules") == "on")
+        coach_settings.see_session_km = (request.POST.get("see_session_km") == "on")
         coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
         coach_settings.evaluation_sharing_enabled = (request.POST.get("evaluation_sharing_enabled") == "on")
         coach_settings.year_planner_shared_whereabouts_enabled = (
@@ -8862,6 +8863,7 @@ def settings_view(request):
             "detailed_camps_enabled",
             "focus_points_enabled",
             "live_sharing_training_schedules",
+            "see_session_km",
             "year_planner_shared_whereabouts_enabled",
             "updated_at",
         ])
@@ -8906,6 +8908,7 @@ def settings_view(request):
         "detailed_camps_enabled": coach_settings.detailed_camps_enabled,
         "focus_points_enabled": coach_settings.focus_points_enabled,
         "live_sharing_training_schedules": coach_settings.live_sharing_training_schedules,
+        "see_session_km": coach_settings.see_session_km,
         "year_planner_shared_whereabouts_enabled": coach_settings.year_planner_shared_whereabouts_enabled,
         "can_edit_settings": can_edit_settings,
     })
@@ -10366,6 +10369,7 @@ from core.views.calendar import (
     _VirtualSegment,
     _VirtualSlot,
     _athlete_plan_for_day,
+    _ayc_slot_session_km,
     _ayc_slot_loads_for_totals,
     _annotate_slot_segment_display_times,
     _base_planning_slot_for_day,
@@ -11098,6 +11102,8 @@ def daily_overview_view(request):
             "athlete": athlete,
             "slot1": slot1,
             "slot2": slot2,
+            "session_km1": _ayc_slot_session_km(slot1, athlete) if coach_settings.see_session_km else "",
+            "session_km2": _ayc_slot_session_km(slot2, athlete) if coach_settings.see_session_km else "",
             "check1": check1,
             "check2": check2,
             "check1_badge": _daily_status_badge(status1),
@@ -11143,6 +11149,7 @@ def daily_overview_view(request):
         "show_results": show_results,
         "show_am": slot_filter in {"am", "both"},
         "show_pm": slot_filter in {"pm", "both"},
+        "show_session_km": coach_settings.see_session_km,
         "selection_url": selection_url,
         "previous_day_url": f"{reverse('daily_overview')}?{urlencode(previous_day_query, doseq=True)}",
         "next_day_url": f"{reverse('daily_overview')}?{urlencode(next_day_query, doseq=True)}",

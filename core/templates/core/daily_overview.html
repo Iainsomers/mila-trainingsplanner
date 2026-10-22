@@ -26,6 +26,17 @@
     background: #ffffff;
   }
 
+  .daily-session-km-label {
+    display: block;
+    margin-bottom: 2px;
+    text-align: right;
+    color: #495057;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
   .daily-slotbox-empty {
     color: #777777;
   }
@@ -280,6 +291,7 @@
 
                     {% if r.slot1 %}
                       <div class="daily-slotbox">
+                        {% if show_session_km and r.session_km1 %}<div class="daily-session-km-label">{{ r.session_km1 }} km</div>{% endif %}
                         {% if r.slot1.text %}
                           <span>{{ r.slot1.text|linebreaksbr }}</span>
                         {% else %}
@@ -315,6 +327,7 @@
 
                     {% if r.slot2 %}
                       <div class="daily-slotbox">
+                        {% if show_session_km and r.session_km2 %}<div class="daily-session-km-label">{{ r.session_km2 }} km</div>{% endif %}
                         {% if r.slot2.text %}
                           <span>{{ r.slot2.text|linebreaksbr }}</span>
                         {% else %}

@@ -1826,6 +1826,27 @@ class PlanningOverviewTests(TestCase):
         self.assertTrue(CoachSettings.objects.get(user=coach).evaluations_enabled)
         self.assertContains(self.client.get("/"), 'href="/evaluations/"')
 
+    def test_coach_can_toggle_session_km_in_settings(self):
+        coach = get_user_model().objects.create_user(
+            username="session-km-settings-coach",
+            password="secret",
+            is_staff=True,
+        )
+        self.client.force_login(coach)
+
+        settings_page = self.client.get("/settings/")
+        self.assertContains(settings_page, "See session km")
+        self.assertContains(settings_page, 'name="see_session_km"')
+        self.assertContains(settings_page, 'id="see-session-km" name="see_session_km" checked')
+
+        disabled = self.client.post("/settings/", {})
+        self.assertRedirects(disabled, "/settings/")
+        self.assertFalse(CoachSettings.objects.get(user=coach).see_session_km)
+
+        enabled = self.client.post("/settings/", {"see_session_km": "on"})
+        self.assertRedirects(enabled, "/settings/")
+        self.assertTrue(CoachSettings.objects.get(user=coach).see_session_km)
+
     def test_other_coach_cannot_change_owner_settings(self):
         owner = get_user_model().objects.create_user(
             username="settings-owner", password="secret", is_staff=True
@@ -3159,6 +3180,76 @@ class SlotModalSaveTests(TestCase):
         athlete.save(update_fields=["see_session_km"])
         hidden_response = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
         self.assertNotContains(hidden_response, '<div class="session-km-label">')
+
+    def test_coach_session_km_is_shared_by_flex_and_dco(self):
+        coach = get_user_model().objects.create_user(
+            username="coach-session-km",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Coach Session KM Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        plan = TrainingPlan.objects.create(owner=coach, name="Coach session km plan")
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        day = date.today()
+        slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=1)
+        for order, segment_type, text, distance_m in (
+            (1, "WU", "1km z1", 1000),
+            (2, "CORE", "3km z2", 3000),
+            (3, "ALT", "5km z1", 5000),
+        ):
+            TrainingSegment.objects.create(
+                slot=slot,
+                order=order,
+                type=segment_type,
+                text=text,
+                distance_m=distance_m,
+                norm_distance_m=distance_m,
+                zone="1" if segment_type != "CORE" else "2",
+            )
+        settings = CoachSettings.objects.create(user=coach, see_session_km=True)
+        self.client.force_login(coach)
+
+        week_start = day - timedelta(days=day.weekday())
+        flex = self.client.get(
+            f"/flex-planner/?start={week_start.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        flex_cell = next(
+            cell
+            for cell in flex.context["week_rows"][0]["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
+        self.assertEqual(flex_cell["session_km"], "4.0")
+        self.assertContains(flex, "flex-session-km-label")
+
+        dco = self.client.get(
+            f"/coach/daily-overview/?date={day.isoformat()}&selection=all&slots=am&ok=1"
+        )
+        self.assertEqual(dco.context["rows"][0]["session_km1"], "4.0")
+        self.assertContains(dco, "daily-session-km-label")
+
+        settings.see_session_km = False
+        settings.save(update_fields=["see_session_km"])
+        hidden_flex = self.client.get(
+            f"/flex-planner/?start={week_start.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        hidden_cell = next(
+            cell
+            for cell in hidden_flex.context["week_rows"][0]["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
+        self.assertEqual(hidden_cell["session_km"], "")
+        self.assertNotContains(hidden_flex, '<div class="flex-session-km-label')
+
+        hidden_dco = self.client.get(
+            f"/coach/daily-overview/?date={day.isoformat()}&selection=all&slots=am&ok=1"
+        )
+        self.assertEqual(hidden_dco.context["rows"][0]["session_km1"], "")
+        self.assertNotContains(hidden_dco, '<div class="daily-session-km-label')
 
     def test_ayc_week_totals_exclude_not_done_running_and_alternative_load(self):
         user, plan, athlete = self._user_plan_and_athlete()

@@ -25,6 +25,8 @@ Een trainer ziet standaard alleen de eigen gegevens. Als via `CoachAccess` toega
 
 De trainer en atleet kunnen in Athlete settings > General de persoonlijke optie `See session km` aan- of uitzetten.
 
+De trainer kan daarnaast in Coach Settings > Planning de coachbrede optie `See session km` beheren voor Flex Planner en DCO Training. Deze instelling verandert de persoonlijke AYC-keuze van atleten niet.
+
 Iedere gebruiker kan eigen actieve wishes indienen en bewerken. Alleen de productbeheerder kan wishes van andere gebruikers bewerken; overige gebruikers kunnen die alleen bekijken en liken.
 
 ## Atleet

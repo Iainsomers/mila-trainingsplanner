@@ -78,6 +78,8 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 
 De instelling `See session km` staat in Athlete settings > General, is standaard aan en kan door de atleet zelf of een trainer worden gewijzigd. Wanneer deze aanstaat, toont de AYC rechtsboven per sessie het totale loopvolume van WU, Sprint, Main, Main 2 en CD; Alternative telt niet mee.
 
+Coach Settings bevat onder Planning eveneens `See session km`, standaard aan. Deze coachbrede instelling toont hetzelfde sessietotaal rechtsboven in de trainingscellen van Flex Planner en Daily Coach Overview Training.
+
 - Trainer kan tussen atleten schakelen; atleet ziet alleen zichzelf.
 - Desktop toont een brede jaartabel; mobiel toont één week tegelijk.
 - Op mobiel opent de huidige week automatisch en navigeert men met pijlen.

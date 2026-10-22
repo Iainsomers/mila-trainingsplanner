@@ -65,7 +65,7 @@ Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, 
 - `//` splitst ook Alternative in afzonderlijke blokken, bijvoorbeeld `20' z1//10' z2//10' z3`.
 - Een sessie met de evaluatiestatus `Not done` draagt niet bij aan het weektotaal, de zone-/wedstrijdkilometers of ALT-minuten. De geplande sessie blijft wel zichtbaar in de kalender.
 
-`See session km` toont per AYC-sessie het opgetelde loopvolume van WU, Sprint, Main, Main 2 en CD, ongeacht de zoneverdeling. Kilometers uit Alternative worden uitgesloten. Tijdsdelen gebruiken dezelfde tempo-/zoneomrekening als de bestaande trainingsberekening.
+`See session km` toont per sessie in AYC, Flex Planner en DCO Training het opgetelde loopvolume van WU, Sprint, Main, Main 2 en CD, ongeacht de zoneverdeling. Kilometers uit Alternative worden uitgesloten. Tijdsdelen gebruiken dezelfde tempo-/zoneomrekening als de bestaande trainingsberekening.
 - Stats vergelijkt het totaal van de huidige kalenderweek met de vorige kalenderweek.
 
 ## Wedstrijden

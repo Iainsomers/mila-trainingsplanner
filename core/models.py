@@ -68,6 +68,7 @@ class CoachSettings(models.Model):
     detailed_camps_enabled = models.BooleanField(default=False)
     live_sharing_training_schedules = models.BooleanField(default=False)
     year_planner_shared_whereabouts_enabled = models.BooleanField(default=False)
+    see_session_km = models.BooleanField(default=True)
 
     # Trainingsbuilder (Core + Alternative zijn altijd zichtbaar)
     tb_show_wu = models.BooleanField(default=True)

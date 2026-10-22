@@ -27,6 +27,7 @@ from core.models import (
     AthleteWeekReport,
     AthleteDailyVital,
     CoachAccess,
+    CoachSettings,
     RaceEntry,
     StandardStrengthProgram,
     YearPlannerEntry,
@@ -1024,6 +1025,7 @@ def flex_planner_view(request):
     - opens the existing slot modal with plan + athlete
     """
     accessible_athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request))
+    coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
     accessible_trainer_plans = list(
         _filter_accessible(
             TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_TRAINER).order_by("name"),
@@ -1467,6 +1469,7 @@ def flex_planner_view(request):
                         "is_override": is_override,
                         "no_plan": no_plan,
                         "check": _flex_check_payload(check_lookup.get((athlete.id, day, slot_index))),
+                        "session_km": _ayc_slot_session_km(slot, athlete) if coach_settings.see_session_km else "",
                     })
 
             week_phase_style, week_phase = week_training_style(athlete.id, days)
@@ -1517,6 +1520,7 @@ def flex_planner_view(request):
             "next_url": next_url,
             "max_athletes": 20,
             "max_weeks": 5,
+            "show_session_km": coach_settings.see_session_km,
         },
     )
 
