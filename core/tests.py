@@ -6517,6 +6517,55 @@ class SlotModalSaveTests(TestCase):
             TrainingSlot.objects.filter(athlete=athlete, date=future_day, slot_index=2).exists()
         )
 
+    def test_extended_rights_show_am_pm_evaluations_on_empty_future_day(self):
+        coach = get_user_model().objects.create_user(
+            username="empty-evaluation-coach", password="secret"
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="Empty Evaluation Athlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Empty Evaluation Athlete",
+            birth_year=2000,
+            gender="X",
+            extended_edit_rights=True,
+        )
+        future_day = date.today() + timedelta(days=1)
+
+        self.client.force_login(athlete_user)
+        page = self.client.get(f"/athlete/year/?year={future_day.year}&athlete={athlete.id}")
+        self.assertEqual(page.status_code, 200)
+        report = next(
+            cell
+            for week in page.context["week_rows"]
+            for cell in week["cells3"]
+            if cell["day"] == future_day
+        )
+        self.assertTrue(report["has_slot1"])
+        self.assertTrue(report["has_slot2"])
+        self.assertContains(page, f'data-date="{future_day:%Y-%m-%d}"', html=False)
+        self.assertContains(page, 'data-t1-enabled="1"', html=False)
+        self.assertContains(page, 'data-t2-enabled="1"', html=False)
+
+        response = self.client.post(
+            f"/athlete/year/?year={future_day.year}&athlete={athlete.id}",
+            {
+                "date": future_day.isoformat(),
+                "slot_index": "1",
+                "report_submit": "1",
+                "check_status": "done_as_planned",
+                "rpe": "5",
+                "report_comment": "Future watch report",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            AthleteDayCheck.objects.filter(
+                athlete=athlete, date=future_day, slot_index=1, comment="Future watch report"
+            ).exists()
+        )
+
     def test_athlete_year_pm_training_contains_modal_prefill_values(self):
         template_path = get_template("core/athlete_year_calendar.html").origin.name
         template_source = Path(template_path).read_text(encoding="utf-8")

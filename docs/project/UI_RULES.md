@@ -43,6 +43,7 @@ Bijgewerkt: 20 oktober 2026.
 - Houd weeknavigatie, totaal en weektype bovenaan goed zichtbaar.
 - Iedere trainingsdag toont AM en/of PM; lege dagen blijven compact.
 - Gebruik expliciete `Open`-knoppen; dubbelklikken mag nooit nodig zijn.
+- Bij `Extended edit rights` blijven de AM- en PM-evaluatievelden zichtbaar en openbaar op lege dagdelen; op toekomstige dagen mag de evaluatieknop niet disabled zijn.
 - Training- en evaluatiepopups zijn maximaal schermvullend en intern scrollbaar.
 - Toon de microfoonknop alleen op mobiel bij het Comment-label. Tijdens opname heeft de knop een duidelijke actieve toestand; één opname mag herkenningstekst nooit verdubbelen.
 - De popup voor openstaande evaluaties toont uitsluitend trainingen van de afgelopen zes kalenderdagen, nooit de huidige dag.

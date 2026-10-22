@@ -971,7 +971,7 @@
 
           {% if show_training_reports and mobile_day.report.has_slot1 or show_training_reports and mobile_day.report.has_slot2 %}
           {% with d=mobile_day.report %}
-          <div class="{% if mobile_day.day <= today %}comment-display {% endif %}ayc-mobile-evaluation"
+          <div class="{% if mobile_day.day <= today or athlete_extended_edit_rights %}comment-display {% endif %}ayc-mobile-evaluation"
                data-date="{{ d.day|date:'Y-m-d' }}"
                data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
                data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
@@ -993,7 +993,7 @@
             </div>
             <div class="d-flex align-items-center gap-2">
               {% if d.evaluation_done %}<span class="ayc-mobile-evaluation-done" title="Evaluation completed" aria-label="Evaluation completed">&#10003;</span>{% endif %}
-              <button type="button" class="btn btn-sm btn-outline-secondary" {% if mobile_day.day > today %}disabled{% endif %}>Open</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" {% if mobile_day.day > today and not athlete_extended_edit_rights %}disabled{% endif %}>Open</button>
             </div>
           </div>
           {% endwith %}

@@ -3015,7 +3015,11 @@ def athlete_year_calendar_view(request):
                             return HttpResponse("", status=204)
 
                 elif check_status is not None or toggle_check is not None or report_submit is not None:
-                    if d > today and not _is_coach_user(request.user):
+                    if (
+                        d > today
+                        and not _is_coach_user(request.user)
+                        and not getattr(athlete, "extended_edit_rights", False)
+                    ):
                         return HttpResponse("", status=204)
                     try:
                         slot_index = int(slot_index_raw)
@@ -3476,7 +3480,9 @@ def athlete_year_calendar_view(request):
 
             check1 = None
             check2 = None
-            if selected_athlete and day <= date.today():
+            if selected_athlete and (
+                day <= date.today() or getattr(selected_athlete, "extended_edit_rights", False)
+            ):
                 check1 = check_map.get((day, 1))
                 check2 = check_map.get((day, 2))
 
@@ -3626,8 +3632,12 @@ def athlete_year_calendar_view(request):
                 "comment": comment,
                 "check1": check1,
                 "check2": check2,
-                "has_slot1": bool(slot1),
-                "has_slot2": bool(slot2),
+                "has_slot1": bool(slot1 or (
+                    selected_athlete and getattr(selected_athlete, "extended_edit_rights", False)
+                )),
+                "has_slot2": bool(slot2 or (
+                    selected_athlete and getattr(selected_athlete, "extended_edit_rights", False)
+                )),
                 "evaluation_done": bool(
                     (slot1 or slot2)
                     and (not slot1 or (check1 and check1.effective_status))

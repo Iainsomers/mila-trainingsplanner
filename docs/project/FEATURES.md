@@ -110,7 +110,7 @@ Ondersteunde onderdelen zijn WU, Mob/Tech, Sprint, Main, Main 2, Alternative en 
 
 ## Evaluaties
 
-Bij trainingsevaluaties wordt RPE automatisch op 0 gezet wanneer `Not done` wordt gekozen. De bestaande controle blijft staan: bij een ingevulde evaluatie is een commentaar van minimaal vier tekens vereist.
+Bij trainingsevaluaties wordt RPE automatisch op 0 gezet wanneer `Not done` wordt gekozen. De bestaande controle blijft staan: bij een ingevulde evaluatie is een commentaar van minimaal vier tekens vereist. Atleten met `Extended edit rights` krijgen op ieder zichtbaar dagdeel altijd AM- en PM-evaluatievelden, ook wanneer daar nog geen training staat; toekomstige evaluaties mogen dan ook worden opgeslagen.
 
 Per training kan de atleet vastleggen:
 

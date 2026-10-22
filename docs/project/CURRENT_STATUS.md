@@ -17,6 +17,7 @@ Bijgewerkt: 20 oktober 2026.
 ## Belangrijk werkend gedrag
 
 - In de AYC-trainingsevaluatie toont `Suggest Input` dezelfde Type A Polar-uitvoer als Polar Integration voor de geselecteerde atleet en datum. Bestaande opgeslagen horlogeresultaten blijven zichtbaar en kunnen nog worden verwijderd.
+- Atleten met `Extended edit rights` zien in de AYC altijd AM- en PM-evaluatievelden op zichtbare dagdelen, ook zonder training; toekomstige evaluaties kunnen dan worden opgeslagen voor verdere horloge-integratie.
 - Coach Settings bevat een opgeslagen `P(ause)mode`-dropdown met `Static unless "ap"` en `Active unless "pp"`. In de eerste stand telt alleen een expliciete `ap` als Z1-afstand, in de tweede zowel `p` als `ap`; `sp` en `pp` blijven statisch. Dit geldt ook voor AM- en PM-weektotalen in Flex Planner. Bij expliciete herhalingsnotatie is het aantal uit de trainingstekst leidend boven verouderde opgeslagen herhalingsmetadata.
 
 - Polar Type A toont voor iedere handmatige en automatische ronde naast de exacte afstand ook de afstand afgerond op 50 meter en afzonderlijke Zx- en Tx-tempoaanduidingen van de geselecteerde atleet.
