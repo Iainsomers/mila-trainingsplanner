@@ -2327,7 +2327,10 @@ def _annotate_slot_segment_display_times(slot, athlete):
         actual_loads = _watch_segment_loads(seg)
         seg.flex_actual_loads_json = json.dumps(actual_loads, separators=(",", ":")) if actual_loads else ""
         label = _segment_rep_time_label(athlete, seg)
-        hr_label = _segment_hr_label(athlete, seg)
+        # Watch sessions already carry measured zone time. Do not append the
+        # planned HR guidance until actual watch HR samples are integrated.
+        is_watch_slot = str(getattr(getattr(seg, "slot", None), "source", "") or "") in {"watch_a", "watch_b", "watch_c"}
+        hr_label = "" if is_watch_slot else _segment_hr_label(athlete, seg)
         display_labels = "; ".join(part for part in (label, hr_label) if part)
         seg.display_text = f"{text} ({display_labels})" if text and display_labels else text
     return slot

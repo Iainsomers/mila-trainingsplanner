@@ -64,6 +64,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
 - Watch A/B/C-trainingen worden als horlogebron opgeslagen. Voor deze slots gebruiken Flex Planner, AYC en weektotalen de werkelijke meters en seconden per zone; geplande trainingen blijven hun zone-snelheden gebruiken om afstand en tijd af te leiden. De zichtbare segmenttekst en hovertekst tonen bij horloges de werkelijke zonetijd.
+- Bij Watch A/B/C worden geplande HR-richtwaarden niet getoond; actuele HR-metingen worden later toegevoegd zodra de horlogedata daarvoor wordt verwerkt.
 - Een persoonlijke wijziging blijft zichtbaar, ook wanneer de oorspronkelijke bronplanning op die datum formeel al is afgelopen.
 - Een trainerplan dat via Base Planning aan een atleet is gekoppeld, blijft voor die atleet zichtbaar in Flex Planner; de Base Planning-koppeling gaat vóór de formele datumrange van het plan.
 - Flex kiest het via Base Planning toegewezen trainerplan per AM/PM-dagdeel; een gedeeld (ook leeg) slot uit een ander gekoppeld plan mag die training niet verbergen. Een expliciete persoonlijke wijziging en een Flex-override behouden hun voorrang.
