@@ -44,6 +44,16 @@ class RawPolarTests(SimpleTestCase):
         self.assertEqual(len(part["auto"]), 1)
         self.assertEqual(part["distance"], "NA")
 
+    def test_type_a_lap_shows_average_heart_rate_from_second_samples(self):
+        result = translate([{"laps": {"laps": [
+            {"distanceMeters": 400, "durationMillis": 4000, "splitTimeMillis": 4000},
+            {"distanceMeters": 400, "durationMillis": 4000, "splitTimeMillis": 8000},
+        ]}, "samples": {"samples": [
+            {"type": "HEART_RATE", "intervalMillis": 1000, "values": [140, 150, 160, 170, 180, 190, 200, 210]},
+        ]}}], 5)
+        rows = result[0]["parts"][0]["manual"]
+        self.assertEqual([row["average_hr"] for row in rows], ["155", "195"])
+
     def test_lap_distance_is_rounded_to_nearest_50_metres(self):
         self.assertEqual(distance_rounded_to_50(424.99), "400")
         self.assertEqual(distance_rounded_to_50(425), "450")

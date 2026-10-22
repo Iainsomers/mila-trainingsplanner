@@ -2137,14 +2137,14 @@
     var table = document.createElement("table");
     table.className = "table table-sm mb-2";
     var head = document.createElement("tr");
-    ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km", "Zx", "Tx"].forEach(function(label) {
+    ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km", "Zx", "Tx", "Avg HR"].forEach(function(label) {
       var cell = document.createElement("th"); cell.textContent = label; head.appendChild(cell);
     });
     var thead = document.createElement("thead"); thead.appendChild(head); table.appendChild(thead);
     var tbody = document.createElement("tbody");
     rows.forEach(function(row) {
       var tr = document.createElement("tr");
-      [row.index, row.distance, row.distance_rounded_50, row.duration, row.pace, row.z_pace, row.t_pace].forEach(function(value) {
+      [row.index, row.distance, row.distance_rounded_50, row.duration, row.pace, row.z_pace, row.t_pace, row.average_hr].forEach(function(value) {
         var cell = document.createElement("td"); cell.textContent = value == null ? "NA" : value; tr.appendChild(cell);
       });
       tbody.appendChild(tr);

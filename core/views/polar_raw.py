@@ -75,11 +75,49 @@ def lap_zone_paces(distance_m, duration_ms, athlete):
     return z_label or "NA", t_label or "NA"
 
 
-def lap_rows(laps, athlete=None):
+def lap_average_hr(lap, start_ms, end_ms, samples):
+    if not isinstance(samples, dict):
+        return "NA"
+    streams = samples.get("samples")
+    if not isinstance(streams, list):
+        return "NA"
+    stream = next((item for item in streams if isinstance(item, dict) and str(item.get("type", "")).upper() == "HEART_RATE"), None)
+    if not stream:
+        return "NA"
+    interval_ms = number(stream.get("intervalMillis"))
+    values = stream.get("values")
+    if interval_ms is None or interval_ms <= 0 or not isinstance(values, list):
+        return "NA"
+    try:
+        start_ms = float(start_ms or 0)
+        end_ms = float(end_ms or 0)
+    except (TypeError, ValueError):
+        return "NA"
+    if end_ms <= start_ms:
+        return "NA"
+    heart_rates = []
+    for index, value in enumerate(values):
+        timestamp = index * interval_ms
+        if timestamp < start_ms or timestamp >= end_ms:
+            continue
+        bpm = number(value)
+        if bpm is not None and bpm > 0:
+            heart_rates.append(bpm)
+    if not heart_rates:
+        return "NA"
+    return display(math.floor(sum(heart_rates) / len(heart_rates) + 0.5))
+
+
+def lap_rows(laps, athlete=None, samples=None):
     rows = []
+    elapsed_ms = 0
     for index, lap in enumerate(laps if isinstance(laps, list) else [], 1):
         if not isinstance(lap, dict):
             continue
+        duration_ms = number(lap.get("durationMillis")) or 0
+        split_ms = number(lap.get("splitTimeMillis"))
+        start_ms = elapsed_ms
+        end_ms = split_ms if split_ms is not None and split_ms >= start_ms else start_ms + duration_ms
         z_pace, t_pace = lap_zone_paces(
             lap.get("distanceMeters"), lap.get("durationMillis"), athlete
         )
@@ -88,6 +126,7 @@ def lap_rows(laps, athlete=None):
             "distance": display(lap.get("distanceMeters")),
             "distance_rounded_50": distance_rounded_to_50(lap.get("distanceMeters")),
             "duration": duration(lap.get("durationMillis")),
+            "average_hr": lap_average_hr(lap, start_ms, end_ms, samples),
             "pace": pace(
                 number(lap.get("durationMillis")) / 1000
                 if number(lap.get("durationMillis")) is not None else None,
@@ -97,6 +136,7 @@ def lap_rows(laps, athlete=None):
             "t_pace": t_pace,
             "elapsed": duration(lap.get("splitTimeMillis")),
         })
+        elapsed_ms = end_ms
     return rows
 
 
@@ -516,8 +556,8 @@ def translate(payload, interval, mode="A", athlete=None):
             parts.append({"index": index, "sport": item.get("sport", ""),
                           "distance": display(item.get("distanceMeters")),
                           "duration": duration(item.get("durationMillis")),
-                          "manual": lap_rows(manual_laps, athlete),
-                          "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps"), athlete),
+                          "manual": lap_rows(manual_laps, athlete, item.get("samples")),
+                          "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps"), athlete, item.get("samples")),
                           "description": description, "description_label": description_label,
                           "training_fields": type_a_training_fields(description) if mode == "A" else {},
                           "watch_loads": type_a_watch_loads(item, athlete) if mode == "A" else [],
