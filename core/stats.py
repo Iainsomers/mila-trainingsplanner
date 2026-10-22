@@ -8,6 +8,7 @@ from django.core.cache import cache
 
 from core.zones import ensure_full_zone_dict, DEFAULT_ZONE_SPEED_MPS
 from core.models import TrainingSlot, AthleteDayCheck, CoachSettings
+from core.parser import parse_segment_text
 from core.training_text import split_main_segments
 from core.views.common import _week_days
 
@@ -46,8 +47,16 @@ def active_pause_distance_m(text, reps, speed_mps, pause_mode):
         set_count, reps_per_set = int(nested.group(1)), int(nested.group(2))
         pause_count = set_count * max(0, reps_per_set - 1)
     else:
+        # Older saved segments can have stale repetition metadata (often the
+        # default of 1). The workout notation is authoritative when it
+        # explicitly contains a repeat count; keep the stored value as a
+        # fallback for legacy text that does not parse as a repeated block.
+        explicit_reps = re.match(r"^\s*\d+\s*(?:x|\*|×)\s*(?:\(|\d)", text, re.I)
+        parsed = parse_segment_text(text, zone_required=False) if explicit_reps else None
+        text_reps = getattr(parsed, "reps", None) if parsed and parsed.ok else None
         try:
-            pause_count = max(0, int(reps or 1) - 1)
+            effective_reps = int(text_reps) if text_reps is not None else int(reps or 1)
+            pause_count = max(0, effective_reps - 1)
         except (TypeError, ValueError):
             pause_count = 0
     return meters_per_pause * pause_count

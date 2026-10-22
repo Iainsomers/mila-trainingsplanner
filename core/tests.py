@@ -3137,6 +3137,10 @@ class SlotModalSaveTests(TestCase):
         speed = athlete.get_zone_speed_mps()["1"]
 
         self.assertEqual(_ayc_pause_distance_m("3x1000m p1", 3, athlete, active), 2 * 60 * speed)
+        # Historical segments may still carry the model default or another
+        # stale reps value; explicit repeat notation must determine the pauses.
+        self.assertAlmostEqual(_ayc_pause_distance_m("4*1200m z2>z3 p2 (5:30-->5:00)", 1, athlete, active), 3 * 2 * 60 * speed)
+        self.assertAlmostEqual(_ayc_pause_distance_m("4*1200m z2>z3 p2", 9, athlete, active), 3 * 2 * 60 * speed)
         self.assertEqual(_ayc_pause_distance_m("3x(4x1000m) p=1", 12, athlete, active), 9 * 60 * speed)
         self.assertEqual(_ayc_pause_distance_m("4x200m p=50m", 4, athlete, active), 150)
         self.assertEqual(_ayc_pause_distance_m("4x200m p10", 4, athlete, active), 3 * 10 * 60 * speed)
@@ -3155,7 +3159,9 @@ class SlotModalSaveTests(TestCase):
             text="3x1000m p1",
             distance_m=1000,
             norm_distance_m=3000,
-            reps=3,
+            # Simulate an older saved row whose repetition metadata was not
+            # refreshed when its training text was edited.
+            reps=1,
             zone="2",
         )
         active_loads = _ayc_slot_loads_for_totals(
