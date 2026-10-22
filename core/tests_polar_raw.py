@@ -211,6 +211,19 @@ class RawPolarTests(SimpleTestCase):
         self.assertEqual(part["description"], "Continuous run: 15.0 km Z2 (4:47/km)")
         self.assertEqual(part["training_fields"], {"wu": "", "main": "15.0 km Z2 (4:47/km)", "cd": ""})
 
+    def test_type_a_treats_one_long_lap_and_gps_remainder_as_continuous_run(self):
+        athlete = SimpleNamespace(
+            get_zone_speed_mps=lambda: {"1": 3.8, "2": 4.6, "3": 5.0, "4": 5.5, "5": 6.0},
+            pr_tm_s=None, pr_thm_s=None, pr_10000_s=None, pr_5000_s=None,
+            pr_3000_s=None, pr_1500_s=None, pr_1000_s=None, pr_800_s=None,
+            pr_600_s=None, pr_400_s=None,
+        )
+        description = type_a_description([
+            {"distanceMeters": 13170.5, "durationMillis": 3600157},
+            {"distanceMeters": 6, "durationMillis": 1375},
+        ], athlete)
+        self.assertEqual(description, "Continuous run: 13.2 km Z1 (4:33/km)")
+
     def test_type_a_splits_short_repetitions_and_tolerates_one_gps_outlier(self):
         athlete = SimpleNamespace(
             get_zone_speed_mps=lambda: {"1": 4.0, "2": 4.7, "3": 5.2, "4": 5.7, "5": 6.2},

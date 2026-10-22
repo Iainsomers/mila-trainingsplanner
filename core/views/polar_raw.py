@@ -193,6 +193,13 @@ def type_a_description(laps, athlete=None):
         and row["rounded_m"] >= 400
         and (candidate_distances.count(row["rounded_m"]) >= 2 or (row["zone"] or 0) >= 2)
     ]
+    substantial_rows = [row for row in parsed if row["rounded_m"] >= 1000]
+    small_remainder_m = sum(row["distance_m"] for row in parsed if row["rounded_m"] < 1000)
+    if not work_positions and len(substantial_rows) == 1 and small_remainder_m <= 100:
+        return type_a_general_description({
+            "distanceMeters": sum(row["distance_m"] for row in parsed),
+            "durationMillis": sum(row["duration_s"] for row in parsed) * 1000,
+        }, athlete)
     if not work_positions:
         short_candidates = [
             (index, row["distance_m"] / row["duration_s"])

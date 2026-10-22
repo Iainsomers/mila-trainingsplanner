@@ -25,6 +25,7 @@ Bijgewerkt: 20 oktober 2026.
 - Polar Type A sluit bekende niet-hardlooprecordings, zoals fietslogs, uit met dezelfde sport-ID-regel als Type D.
 - Polar Type A genereert bij duidelijke handmatige laps een beschrijving van WU, hoofdsegmenten, gemiddelde herstelduur per segment en eventuele CD.
 - Polar Type A herkent ook afwisselende lange tijdsblokken met korte herstelrondes, zodat bijvoorbeeld 10' + 10' + 15' met gemiddeld 90 seconden herstel als hoofdblok wordt beschreven.
+- Polar Type A valt bij één lange lap met een kleine GPS-restlap terug op een `Continuous run`-omschrijving met de totale sessieafstand en -duur.
 - Polar Type A toont voor hardlooprecordings zonder handmatige laps een General description met afstand, gemiddeld tempo en bijbehorende Z-zone.
 
 - Team Pace gebruikt goed zichtbare middengroene en warme auberginekleurige teambekleding; een teamlogo is nog niet ingesteld.
