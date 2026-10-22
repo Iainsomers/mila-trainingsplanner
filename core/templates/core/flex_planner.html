@@ -712,6 +712,33 @@
       return parts;
     }
 
+    function flexActivePauseLoad(el, text, fallbackReps, speeds, pauseMode) {
+      if ((pauseMode || "") !== "active_unless_pp") return null;
+      const match = (text || "").match(/\bp\s*=?\s*(\d+(?:[.,]\d+)?)\s*(m|min|mins|minute|minutes|sec|secs|second|seconds|s|'|")?(?![A-Za-z])/i);
+      if (!match) return null;
+
+      const value = Number(String(match[1]).replace(",", "."));
+      const unit = String(match[2] || "").toLowerCase();
+      let metersPerPause = 0;
+      if (unit === "m") metersPerPause = value;
+      else {
+        const seconds = ["min", "mins", "minute", "minutes", "'"].includes(unit)
+          ? value * 60
+          : (["sec", "secs", "second", "seconds", "s", '"'].includes(unit) ? value : (value <= 10 ? value * 60 : value));
+        metersPerPause = seconds * Number(speeds["1"] || 0);
+      }
+
+      const nested = (text || "").match(/\b(\d+)\s*(?:x|\*|×)\s*\(\s*(\d+)\s*(?:x|\*|×)/i);
+      const simple = (text || "").match(/\b(\d+)\s*(?:x|\*|×)\s*(?:\d+(?:[.,]\d+)?\s*(?:km|k|m)\b)/i);
+      let pauses = 0;
+      if (nested) pauses = Number(nested[1]) * Math.max(0, Number(nested[2]) - 1);
+      else {
+        const reps = simple ? Number(simple[1]) : Number(fallbackReps || 1);
+        pauses = Math.max(0, reps - 1);
+      }
+      return pauses > 0 && metersPerPause > 0 ? {zone: "1", meters: pauses * metersPerPause, tKey: "", race: false} : null;
+    }
+
     function flexLoadsForSegment(el, zoneSpeeds) {
       const speeds = zoneSpeeds || FLEX_ZONE_SPEEDS_MPS;
       const segType = (el.getAttribute("data-flex-type") || "").toUpperCase();
@@ -719,7 +746,12 @@
         return [];
       }
 
-      const text = (el.textContent || "").trim();
+      const text = (el.getAttribute("data-flex-source-text") || el.textContent || "").trim();
+      const ownerRow = typeof el.closest === "function" ? el.closest(".flex-athlete-row-start") : null;
+      const pauseMode = el.getAttribute("data-flex-pause-mode") || (ownerRow ? ownerRow.getAttribute("data-flex-pause-mode") : "");
+      const repetitions = flexNumberAttr(el, "data-flex-reps") || 1;
+      const pauseLoad = flexActivePauseLoad(el, text, repetitions, speeds, pauseMode);
+      const withPause = (loads) => pauseLoad ? [...loads, pauseLoad] : loads;
       const dataZone = (el.getAttribute("data-flex-zone") || "").trim();
       const fallbackZone = dataZone || flexZoneFromClass(el) || "1";
       const dataTKey = flexNormalizeTKey(el.getAttribute("data-flex-t") || "");
@@ -740,6 +772,9 @@
                 if (name === "data-flex-zone") return zoneMatch ? zoneMatch[1] : fallbackZone;
                 if (name === "data-flex-t") return partTKey;
                 if (name === "data-flex-special") return dataSpecial;
+                if (name === "data-flex-pause-mode") return pauseMode;
+                if (name === "data-flex-reps") return el.getAttribute(name) || "";
+                if (name === "data-flex-source-text") return part;
                 return "";
               }
             };
@@ -767,7 +802,7 @@
 
       const compound = flexCompoundLoads(text, fallbackZone);
       if (compound) {
-        return compound.map((load) => ({...load, race: isRace || load.race}));
+        return withPause(compound.map((load) => ({...load, race: isRace || load.race})));
       }
 
       const reps = flexNumberAttr(el, "data-flex-reps") || 1;
@@ -787,7 +822,7 @@
         if (parsedDuration) meters = parsedDuration * Number(speeds[fallbackZone] || 0);
       }
 
-      if (!meters) return [];
+      if (!meters) return pauseLoad ? [pauseLoad] : [];
 
       const progressive = text.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
       const tRange = flexProgressiveTKeys(text);
@@ -795,24 +830,24 @@
 
       if (progressive && progressive[1] !== progressive[2]) {
         const zoneRange = flexProgressiveZones(text) || [];
-        return zoneRange.map((zone, index) => ({
+        return withPause(zoneRange.map((zone, index) => ({
           zone: zone,
           meters: meters / zoneRange.length,
           tKey: tRange && index < tRange.length ? tRange[index] : tKey,
           race: isRace
-        }));
+        })));
       }
 
       if (tRange) {
-        return tRange.map((rangeTKey) => ({
+        return withPause(tRange.map((rangeTKey) => ({
           zone: flexZoneForTKey(rangeTKey) || fallbackZone,
           meters: meters / tRange.length,
           tKey: rangeTKey,
           race: isRace
-        }));
+        })));
       }
 
-      return [{zone: fallbackZone, meters: meters, tKey: tKey, race: isRace}];
+      return withPause([{zone: fallbackZone, meters: meters, tKey: tKey, race: isRace}]);
     }
 
     function flexPill(cls, label, value) {
@@ -1299,7 +1334,7 @@
 
           <tbody>
             {% for row in week.athlete_rows %}
-              <tr class="flex-athlete-row-start" data-flex-zone-speeds="{{ row.zone_speeds_json|escape }}">
+              <tr class="flex-athlete-row-start" data-flex-zone-speeds="{{ row.zone_speeds_json|escape }}" data-flex-pause-mode="{{ pause_mode }}">
                 <td class="flex-athlete-col {% if row.week_phase %}phase-{{ row.week_phase }}{% endif %}" rowspan="2" {% if row.week_phase_style %}style="{{ row.week_phase_style }}"{% endif %}>
                   <div>{{ row.athlete.name }}</div>
                 </td>

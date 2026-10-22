@@ -80,6 +80,8 @@ De instelling `See session km` staat in Athlete settings > General, is standaard
 
 Coach Settings bevat onder Planning eveneens `See session km`, standaard aan. Deze coachbrede instelling toont hetzelfde sessietotaal rechtsboven in de trainingscellen van Flex Planner en Daily Coach Overview Training.
 
+De coachinstelling `P(ause)mode` bepaalt hoe pauzes in de kilometerberekening meetellen. `Always static` voegt geen pauzeafstand toe. `Active unless "pp"` telt alleen een losse `p` als actieve Z1-pauze; `sp` (seriepauze) en `pp` (passieve pauze) blijven statisch. Tijdpauzes worden omgerekend met de Z1-snelheid van de atleet; pauzes in meters gebruiken de opgegeven afstand. Per set tellen `reps - 1` pauzes. Dezelfde extra Z1-afstand telt mee in AYC, Flex Planner, Trainer Planning en DCO.
+
 - Trainer kan tussen atleten schakelen; atleet ziet alleen zichzelf.
 - Desktop toont een brede jaartabel; mobiel toont één week tegelijk.
 - Op mobiel opent de huidige week automatisch en navigeert men met pijlen.
@@ -197,8 +199,6 @@ De vier voor de aanvraag vereiste MiLa-logo's staan in `core/static/core/brand/c
 - `HR zones` is de vijfde vitalkeuze. De matrix toont Z1–Z5 horizontaal en atleten verticaal. Atleten zonder HR-invoer worden standaard verborgen; `Show NA` toont ook hen. Losse HR-getallen worden als zone-maxima weergegeven (Z1 vanaf 0, Z5 blijft de ingevoerde waarde). Zelf ingevoerde bereiken blijven staan; niet-aansluitende grenzen worden rood gemarkeerd.
 
 ## Polar Integration — Type A/B/C/D
-
-Coach Settings > Planning bevat `P(ause)mode` met de keuzes `Always static` en `Active unless "pp"`. De keuze wordt per coach opgeslagen maar beïnvloedt de kilometerberekeningen nog niet.
 
 De aparte uitleespagina haalt één gekozen kalenderdag via de bestaande Polar v4-koppeling op. De app gebruikt het Bearer-token; een API-link in de browser vraagt niet om de juiste koppeling. Bij HTTP 401 probeert de app één tokenvernieuwing; datumparsefouten krijgen alternatieve datumformaten. Andere fouten tonen de Polar-foutreden.
 

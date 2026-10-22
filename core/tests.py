@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.focus_point_import import FOCUS_POINT_HEADERS
-from core.views.calendar import _annotate_slot_segment_display_times, _ayc_slot_loads_for_totals, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
+from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
@@ -1847,7 +1847,7 @@ class PlanningOverviewTests(TestCase):
         self.assertRedirects(enabled, "/settings/")
         self.assertTrue(CoachSettings.objects.get(user=coach).see_session_km)
 
-    def test_coach_can_select_pause_mode_without_affecting_calculations(self):
+    def test_coach_can_select_pause_mode_and_invalid_option_is_rejected(self):
         coach = get_user_model().objects.create_user(
             username="pause-mode-settings-coach",
             password="secret",
@@ -2318,6 +2318,11 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual(structure["reps_total"], 10)
         self.assertEqual(structure["pattern_m"], ([1000] * 7) + ([500] * 3))
         self.assertEqual(structure["core_distance_m"], 8500)
+
+    def test_planned_pause_duration_uses_ten_minute_cutoff_and_meter_pause_is_not_time(self):
+        self.assertEqual(_planned_interval_structure("3*1000m z2 p1")["pause_s"], 60)
+        self.assertEqual(_planned_interval_structure("3*1000m z2 p=11")["pause_s"], 11)
+        self.assertEqual(_planned_interval_structure("3*1000m z2 p=50m")["pause_s"], 0)
 
     def test_planned_interval_structure_accepts_extra_repeat_asterisk(self):
         structure = _planned_interval_structure("7*1000m z3 // 3**500m z3")
@@ -3126,6 +3131,46 @@ class SlotModalSaveTests(TestCase):
         self.client.force_login(user)
         return user, plan, athlete
 
+    def test_active_pause_distance_supports_time_meters_sets_and_ignored_markers(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        active = CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP
+        speed = athlete.get_zone_speed_mps()["1"]
+
+        self.assertEqual(_ayc_pause_distance_m("3x1000m p1", 3, athlete, active), 2 * 60 * speed)
+        self.assertEqual(_ayc_pause_distance_m("3x(4x1000m) p=1", 12, athlete, active), 9 * 60 * speed)
+        self.assertEqual(_ayc_pause_distance_m("4x200m p=50m", 4, athlete, active), 150)
+        self.assertEqual(_ayc_pause_distance_m("4x200m p10", 4, athlete, active), 3 * 10 * 60 * speed)
+        self.assertEqual(_ayc_pause_distance_m("4x200m p11", 4, athlete, active), 3 * 11 * speed)
+        self.assertEqual(_ayc_pause_distance_m("4x200m sp1 pp1", 4, athlete, active), 0)
+        self.assertEqual(_ayc_pause_distance_m("4x200m p", 4, athlete, active), 0)
+        self.assertEqual(_ayc_pause_distance_m("4x200m p1", 4, athlete, CoachSettings.PAUSE_MODE_ALWAYS_STATIC), 0)
+
+    def test_active_pauses_are_added_to_z1_session_loads_only_when_enabled(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+        slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=date.today(), slot_index=1)
+        TrainingSegment.objects.create(
+            slot=slot,
+            order=1,
+            type="CORE",
+            text="3x1000m p1",
+            distance_m=1000,
+            norm_distance_m=3000,
+            reps=3,
+            zone="2",
+        )
+        active_loads = _ayc_slot_loads_for_totals(
+            slot, athlete, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP
+        )
+        pause_load = next(load for load in active_loads if load.get("zone") == "1")
+        self.assertEqual(pause_load["meters"], 2 * 60 * athlete.get_zone_speed_mps()["1"])
+        self.assertFalse(any(load.get("zone") == "1" for load in _ayc_slot_loads_for_totals(
+            slot, athlete, CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+        )))
+        from core.stats import athlete_week_stats
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        weekly = athlete_week_stats(plan, athlete, week_start, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP)
+        self.assertEqual(weekly["zones"]["1"]["distance_m"], 336)
+
     def test_trainer_planning_print_uses_selected_week_range(self):
         user = get_user_model().objects.create_user(
             username="trainer-print-coach", password="secret", is_staff=True
@@ -3205,6 +3250,36 @@ class SlotModalSaveTests(TestCase):
         hidden_response = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
         self.assertNotContains(hidden_response, '<div class="session-km-label">')
 
+    def test_ayc_active_pause_appears_in_session_km_and_z1_total(self):
+        coach, plan, athlete = self._user_plan_and_athlete()
+        CoachSettings.objects.create(
+            user=coach,
+            pause_mode=CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP,
+        )
+        day = date.today()
+        slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=day, slot_index=1)
+        TrainingSegment.objects.create(
+            slot=slot,
+            order=1,
+            type="CORE",
+            text="3x1000m z2 p1",
+            distance_m=1000,
+            norm_distance_m=3000,
+            reps=3,
+            zone="2",
+        )
+
+        response = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
+        cell = next(
+            cell
+            for week in response.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        week = next(week for week in response.context["week_rows"] if week["week_start"] <= day <= week["week_end"])
+        self.assertEqual(cell["session_km"], "3.3")
+        self.assertEqual(week["sum_z1_km"], "0.3")
+
     def test_coach_session_km_is_shared_by_flex_and_dco(self):
         coach = get_user_model().objects.create_user(
             username="coach-session-km",
@@ -3235,7 +3310,21 @@ class SlotModalSaveTests(TestCase):
                 norm_distance_m=distance_m,
                 zone="1" if segment_type != "CORE" else "2",
             )
-        settings = CoachSettings.objects.create(user=coach, see_session_km=True)
+        TrainingSegment.objects.create(
+            slot=slot,
+            order=4,
+            type="CORE2",
+            text="3x100m p1",
+            distance_m=100,
+            norm_distance_m=300,
+            reps=3,
+            zone="2",
+        )
+        settings = CoachSettings.objects.create(
+            user=coach,
+            see_session_km=True,
+            pause_mode=CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP,
+        )
         self.client.force_login(coach)
 
         week_start = day - timedelta(days=day.weekday())
@@ -3247,13 +3336,14 @@ class SlotModalSaveTests(TestCase):
             for cell in flex.context["week_rows"][0]["athlete_rows"][0]["am_cells"]
             if cell["day"] == day
         )
-        self.assertEqual(flex_cell["session_km"], "4.0")
+        self.assertEqual(flex_cell["session_km"], "4.6")
         self.assertContains(flex, "flex-session-km-label")
+        self.assertContains(flex, 'data-flex-pause-mode="active_unless_pp"')
 
         dco = self.client.get(
             f"/coach/daily-overview/?date={day.isoformat()}&selection=all&slots=am&ok=1"
         )
-        self.assertEqual(dco.context["rows"][0]["session_km1"], "4.0")
+        self.assertEqual(dco.context["rows"][0]["session_km1"], "4.6")
         self.assertContains(dco, "daily-session-km-label")
 
         settings.see_session_km = False

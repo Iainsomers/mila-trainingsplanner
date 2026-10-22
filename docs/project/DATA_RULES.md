@@ -43,8 +43,9 @@ Onder meer ondersteund:
 - `2*(600m-400m) t15`;
 - `5*(1000m z3-200m t8)`;
 - minuten met `'` en seconden met `"`;
-- `p` voor pauze en `sp` voor seriepauze.
-- Bij `p` en `sp` zijn waarden vanaf 15 seconden; waarden van 14 of lager zijn minuten. Een expliciete `'` of `"` blijft leidend.
+- `p` voor een actieve pauze en `sp` voor een seriepauze; `pp` is passief. Alleen een los `p` kan actieve afstand opleveren.
+- `p1` en `p=1` betekenen één minuut. Zonder tijdseenheid zijn waarden t/m 10 minuten en waarden boven 10 seconden. Een expliciete tijdseenheid blijft leidend.
+- `p50m` en `p=50m` betekenen een pauzeafstand van 50 meter.
 
 Compound onderdelen moeten afstand, zone en T-label per deel correct optellen. In `Main` scheiden zowel `//` als een `+` op het hoogste niveau zelfstandige segmenten; tekens binnen haakjes blijven onderdeel van het herhaalblok. `//` blijft de scheiding voor Alternative-blokken.
 
@@ -65,7 +66,7 @@ Tempo-labels worden alleen herkend als afzonderlijke aanduidingen (`TM`, `THM`, 
 - `//` splitst ook Alternative in afzonderlijke blokken, bijvoorbeeld `20' z1//10' z2//10' z3`.
 - Een sessie met de evaluatiestatus `Not done` draagt niet bij aan het weektotaal, de zone-/wedstrijdkilometers of ALT-minuten. De geplande sessie blijft wel zichtbaar in de kalender.
 
-`See session km` toont per sessie in AYC, Flex Planner en DCO Training het opgetelde loopvolume van WU, Sprint, Main, Main 2 en CD, ongeacht de zoneverdeling. Kilometers uit Alternative worden uitgesloten. Tijdsdelen gebruiken dezelfde tempo-/zoneomrekening als de bestaande trainingsberekening.
+`See session km` toont per sessie in AYC, Flex Planner en DCO Training het opgetelde loopvolume van WU, Sprint, Main, Main 2 en CD, ongeacht de zoneverdeling. Kilometers uit Alternative worden uitgesloten. Tijdsdelen gebruiken dezelfde tempo-/zoneomrekening als de bestaande trainingsberekening. Met coachinstelling `Active unless "pp"` telt een actieve `p` daarnaast als Z1: tijdpauzes worden met de Z1-snelheid van de atleet omgerekend, meterpauzes tellen als opgegeven afstand. Bij herhalingen telt per set `reps - 1`; `sp` en `pp` blijven statisch. `Always static` telt geen pauzeafstand. Een onvolledige `p` zonder berekenbare pauzetelling of duur/afstand levert 0 m op.
 - Stats vergelijkt het totaal van de huidige kalenderweek met de vorige kalenderweek.
 
 ## Wedstrijden

@@ -32,7 +32,7 @@ from core.models import (
     StandardStrengthProgram,
     YearPlannerEntry,
 )
-from core.stats import base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
+from core.stats import active_pause_distance_m, base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from core.parser import parse_segment_text
 from core.training_text import split_main_segments
 from core.wucd import apply_auto_wucd_texts
@@ -412,6 +412,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 
 @login_required
 def calendar_view(request):
+    coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
     plans = (
         _filter_accessible(TrainingPlan.objects.order_by("name"), request)
         .exclude(name__startswith="Flex Planner")
@@ -539,11 +540,11 @@ def calendar_view(request):
 
         if selected_plan:
             if selected_athlete:
-                st = athlete_week_stats(selected_plan, selected_athlete, week_start)
+                st = athlete_week_stats(selected_plan, selected_athlete, week_start, coach_settings.pause_mode)
             elif plan_athletes:
-                st = group_week_stats(selected_plan, plan_athletes, week_start)
+                st = group_week_stats(selected_plan, plan_athletes, week_start, coach_settings.pause_mode)
             else:
-                st = base_week_stats(selected_plan, week_start)
+                st = base_week_stats(selected_plan, week_start, coach_settings.pause_mode)
 
             zones = st.get("zones") or {}
             race = st.get("race") or {"distance_m": 0, "duration_s": 0}
@@ -1469,7 +1470,7 @@ def flex_planner_view(request):
                         "is_override": is_override,
                         "no_plan": no_plan,
                         "check": _flex_check_payload(check_lookup.get((athlete.id, day, slot_index))),
-                        "session_km": _ayc_slot_session_km(slot, athlete) if coach_settings.see_session_km else "",
+                        "session_km": _ayc_slot_session_km(slot, athlete, coach_settings.pause_mode) if coach_settings.see_session_km else "",
                     })
 
             week_phase_style, week_phase = week_training_style(athlete.id, days)
@@ -1521,6 +1522,7 @@ def flex_planner_view(request):
             "max_athletes": 20,
             "max_weeks": 5,
             "show_session_km": coach_settings.see_session_km,
+            "pause_mode": coach_settings.pause_mode,
         },
     )
 
@@ -2461,7 +2463,17 @@ def _ayc_compound_loads(text, fallback_zone):
     return loads
 
 
-def _ayc_slot_loads_for_totals(slot, athlete=None):
+def _ayc_pause_distance_m(text, reps, athlete=None, pause_mode=None):
+    """Return active-pause distance in Z1 for one training segment."""
+    return active_pause_distance_m(
+        text,
+        reps,
+        _zone_speed_mps(athlete, "Z1"),
+        pause_mode,
+    )
+
+
+def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
     if not slot:
         return []
 
@@ -2482,7 +2494,7 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
             if len(main_parts) > 1:
                 for main_part in main_parts:
                     part_segment = _virtual_segment_from_text(seg_type, main_part)
-                    loads.extend(_ayc_slot_loads_for_totals(_VirtualSlot([part_segment]), athlete))
+                    loads.extend(_ayc_slot_loads_for_totals(_VirtualSlot([part_segment]), athlete, pause_mode))
                 continue
         special = (getattr(seg, "special", "") or "").upper()
         is_race = special in ("RACE", "IMPORTANT_RACE", "RACE_PENDING", "RACE_TARGET_PENDING") or bool(re.search(r"race", text, re.I))
@@ -2503,6 +2515,15 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
                 if duration_s > 0 and fallback_zone in {"1", "2", "3"}:
                     loads.append({"kind": "alt", "zone": fallback_zone, "seconds": duration_s})
             continue
+
+        pause_m = _ayc_pause_distance_m(
+            text,
+            getattr(seg, "reps", 1),
+            athlete=athlete,
+            pause_mode=pause_mode,
+        )
+        if pause_m > 0:
+            loads.append({"zone": "1", "meters": pause_m, "t_key": "", "race": False})
 
         compound = _ayc_compound_loads(text, fallback_zone)
         if compound:
@@ -2565,9 +2586,9 @@ def _ayc_slot_loads_for_totals(slot, athlete=None):
     return loads
 
 
-def _ayc_slot_session_km(slot, athlete=None):
+def _ayc_slot_session_km(slot, athlete=None, pause_mode=None):
     """Return planned running distance for a session, excluding Alternative."""
-    loads = _ayc_slot_loads_for_totals(slot, athlete)
+    loads = _ayc_slot_loads_for_totals(slot, athlete, pause_mode)
     meters = sum(
         float(load.get("meters") or 0)
         for load in loads
@@ -3112,6 +3133,11 @@ def athlete_year_calendar_view(request):
             selected_athlete_id = ""
 
     athlete_self_view = bool(selected_athlete and not _is_coach_user(request.user))
+    athlete_pause_mode = (
+        CoachSettings.objects.filter(user_id=selected_athlete.owner_id).values_list("pause_mode", flat=True).first()
+        if selected_athlete and selected_athlete.owner_id
+        else CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+    ) or CoachSettings.PAUSE_MODE_ALWAYS_STATIC
     evaluation_visibility = evaluation_visibility_for_request(
         request,
         selected_athlete.owner if selected_athlete else None,
@@ -3579,7 +3605,7 @@ def athlete_year_calendar_view(request):
                 "slot_index": 1,
                 "plan_id": slot1.plan_id if slot1 and getattr(slot1, "plan_id", None) else (plan1.id if plan1 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot1),
-                "session_km": _ayc_slot_session_km(slot1, selected_athlete) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
+                "session_km": _ayc_slot_session_km(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
             })
             cells2.append({
                 "day": day,
@@ -3589,7 +3615,7 @@ def athlete_year_calendar_view(request):
                 "slot_index": 2,
                 "plan_id": slot2.plan_id if slot2 and getattr(slot2, "plan_id", None) else (plan2.id if plan2 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot2),
-                "session_km": _ayc_slot_session_km(slot2, selected_athlete) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
+                "session_km": _ayc_slot_session_km(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
             })
             comment = None
             if selected_athlete:
@@ -3658,7 +3684,7 @@ def athlete_year_calendar_view(request):
                 if (cell["day"], cell["slot_index"]) in not_done_slot_keys:
                     continue
                 slot = cell.get("slot")
-                for load in _ayc_slot_loads_for_totals(slot, selected_athlete):
+                for load in _ayc_slot_loads_for_totals(slot, selected_athlete, athlete_pause_mode):
                     if load.get("kind") == "alt":
                         zone = str(load.get("zone") or "")
                         minutes = int(round(float(load.get("seconds") or 0) / 60.0))

@@ -7,14 +7,50 @@ from types import SimpleNamespace
 from django.core.cache import cache
 
 from core.zones import ensure_full_zone_dict, DEFAULT_ZONE_SPEED_MPS
-from core.models import TrainingSlot, AthleteDayCheck
+from core.models import TrainingSlot, AthleteDayCheck, CoachSettings
 from core.training_text import split_main_segments
 from core.views.common import _week_days
 
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v16"
+STATS_SCHEMA_VERSION = "v17"
+
+
+def active_pause_distance_m(text, reps, speed_mps, pause_mode):
+    if pause_mode != CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP:
+        return 0.0
+    text = str(text or "")
+    match = re.search(
+        r"\bp\s*=?\s*(\d+(?:[.,]\d+)?)\s*(m|min|mins|minute|minutes|sec|secs|second|seconds|s|'|\")?(?![A-Za-z])",
+        text,
+        re.I,
+    )
+    if not match:
+        return 0.0
+
+    value = float(match.group(1).replace(",", "."))
+    unit = (match.group(2) or "").lower()
+    if unit == "m":
+        meters_per_pause = value
+    elif unit in {"min", "mins", "minute", "minutes", "'"}:
+        meters_per_pause = value * 60 * float(speed_mps or 0)
+    elif unit in {"sec", "secs", "second", "seconds", "s", '"'}:
+        meters_per_pause = value * float(speed_mps or 0)
+    else:
+        seconds = value * 60 if value <= 10 else value
+        meters_per_pause = seconds * float(speed_mps or 0)
+
+    nested = re.search(r"\b(\d+)\s*(?:x|\*|×)\s*\(\s*(\d+)\s*(?:x|\*|×)", text, re.I)
+    if nested:
+        set_count, reps_per_set = int(nested.group(1)), int(nested.group(2))
+        pause_count = set_count * max(0, reps_per_set - 1)
+    else:
+        try:
+            pause_count = max(0, int(reps or 1) - 1)
+        except (TypeError, ValueError):
+            pause_count = 0
+    return meters_per_pause * pause_count
 
 
 def _stats_version() -> int:
@@ -602,12 +638,12 @@ def _fetch_week_slots(plan, week_start: date_cls, athlete_ids=None):
     return base_map, override_map
 
 
-def base_week_stats(plan, week_start: date_cls):
+def base_week_stats(plan, week_start: date_cls, pause_mode=None):
     if not plan:
         return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket(), "t_totals": _empty_t_bucket()}
 
     v = _stats_version()
-    cache_key = f"mila:stats:base:{STATS_SCHEMA_VERSION}:{plan.id}:{week_start.isoformat()}:v{v}"
+    cache_key = f"mila:stats:base:{STATS_SCHEMA_VERSION}:{plan.id}:{week_start.isoformat()}:{pause_mode or 'static'}:v{v}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -643,6 +679,14 @@ def base_week_stats(plan, week_start: date_cls):
                     for alt_zone, alt_duration_s in _alt_zone_durations(seg):
                         alt_zones[alt_zone]["duration_s"] += alt_duration_s
                     continue
+
+                pause_m = active_pause_distance_m(
+                    getattr(seg, "text", ""), getattr(seg, "reps", 1), speeds.get("1"), pause_mode
+                )
+                if pause_m > 0:
+                    zones["1"]["distance_m"] += int(round(pause_m))
+                    z1_speed = float(speeds.get("1") or 0)
+                    zones["1"]["duration_s"] += int(round(pause_m / z1_speed)) if z1_speed > 0 else 0
 
                 if str(getattr(seg, "type", "")).upper() == "CORE":
                     main_parts = split_main_segments(getattr(seg, "text", ""))
@@ -723,13 +767,13 @@ def base_week_stats(plan, week_start: date_cls):
     return out
 
 
-def athlete_week_stats(plan, athlete, week_start: date_cls):
+def athlete_week_stats(plan, athlete, week_start: date_cls, pause_mode=None):
     if not plan or not athlete:
         return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket(), "t_totals": _empty_t_bucket()}
 
     v = _stats_version()
     zones_sig = _athlete_zones_sig(athlete)
-    cache_key = f"mila:stats:athlete:{STATS_SCHEMA_VERSION}:{plan.id}:{athlete.id}:{week_start.isoformat()}:{zones_sig}:v{v}"
+    cache_key = f"mila:stats:athlete:{STATS_SCHEMA_VERSION}:{plan.id}:{athlete.id}:{week_start.isoformat()}:{zones_sig}:{pause_mode or 'static'}:v{v}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -774,6 +818,14 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
                     for alt_zone, alt_duration_s in _alt_zone_durations(seg):
                         alt_zones[alt_zone]["duration_s"] += alt_duration_s
                     continue
+
+                pause_m = active_pause_distance_m(
+                    getattr(seg, "text", ""), getattr(seg, "reps", 1), speeds.get("1"), pause_mode
+                )
+                if pause_m > 0:
+                    zones["1"]["distance_m"] += int(round(pause_m))
+                    z1_speed = float(speeds.get("1") or 0)
+                    zones["1"]["duration_s"] += int(round(pause_m / z1_speed)) if z1_speed > 0 else 0
 
                 if str(getattr(seg, "type", "")).upper() == "CORE":
                     main_parts = split_main_segments(getattr(seg, "text", ""))
@@ -876,14 +928,14 @@ def athlete_week_stats(plan, athlete, week_start: date_cls):
     return out
 
 
-def group_week_stats(plan, athletes, week_start: date_cls):
+def group_week_stats(plan, athletes, week_start: date_cls, pause_mode=None):
     athletes = list(athletes or [])
     if not plan or not athletes:
         return {"zones": {}, "race": {}, "alt_zones": _empty_alt_bucket(), "t_totals": _empty_t_bucket()}
 
     v = _stats_version()
     gsig = _group_sig(athletes)
-    cache_key = f"mila:stats:group:{STATS_SCHEMA_VERSION}:{plan.id}:{week_start.isoformat()}:{gsig}:v{v}"
+    cache_key = f"mila:stats:group:{STATS_SCHEMA_VERSION}:{plan.id}:{week_start.isoformat()}:{gsig}:{pause_mode or 'static'}:v{v}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -946,6 +998,14 @@ def group_week_stats(plan, athletes, week_start: date_cls):
                     for alt_zone, alt_duration_s in _alt_zone_durations(seg):
                         alt_zones[alt_zone]["duration_s"] += alt_duration_s
                     continue
+
+                pause_m = active_pause_distance_m(
+                    getattr(seg, "text", ""), getattr(seg, "reps", 1), avg_zone_speeds.get("1"), pause_mode
+                )
+                if pause_m > 0:
+                    zones["1"]["distance_m"] += int(round(pause_m))
+                    z1_speed = float(avg_zone_speeds.get("1") or 0)
+                    zones["1"]["duration_s"] += int(round(pause_m / z1_speed)) if z1_speed > 0 else 0
 
                 if not zone or zone not in avg_zone_speeds:
                     continue

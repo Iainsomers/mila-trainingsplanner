@@ -2565,7 +2565,7 @@ def _coach_distance_token_m(token):
 
 def _coach_suffix_duration_seconds(text, label, default_unit="s"):
     normalised = str(text or "").replace("”", '"').replace("“", '"').replace("″", '"').replace("’", "'").replace("‘", "'").replace("′", "'")
-    pattern = rf"\b{re.escape(label)}\s*(\d+(?:[.,]\d+)?)(?:\s*(\"|sec|secs|second|seconds|s|min|mins|minute|minutes|'))?"
+    pattern = rf"\b{re.escape(label)}\s*=?\s*(\d+(?:[.,]\d+)?)(?:\s*(min|mins|minute|minutes|sec|secs|second|seconds|s|m|\"|'))?"
     matches = list(re.finditer(pattern, normalised, re.I))
     if not matches:
         return 0
@@ -2576,8 +2576,10 @@ def _coach_suffix_duration_seconds(text, label, default_unit="s"):
         return 0
     explicit_unit = match.group(2)
     unit = (explicit_unit or default_unit or "s").lower()
+    if unit == "m":
+        return 0
     if not explicit_unit and str(label or "").lower() in ("p", "sp"):
-        unit = "s" if value >= 15 else "min"
+        unit = "s" if value > 10 else "min"
     if unit in ("min", "mins", "minute", "minutes", "'"):
         return int(round(value * 60))
     return int(round(value))
@@ -10389,7 +10391,7 @@ from core.views.calendar import (
 )
 
 
-def _effective_week_distance_m(athlete, plans, week_start):
+def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None):
     end = week_start + timedelta(days=14)
     days = [week_start + timedelta(days=offset) for offset in range(14)]
     non_trainer_plans = [
@@ -10485,18 +10487,18 @@ def _effective_week_distance_m(athlete, plans, week_start):
                         slot = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, slot_index))
 
             target_week = week_start if day < week_start + timedelta(days=7) else week_start + timedelta(days=7)
-            for load in _ayc_slot_loads_for_totals(slot, athlete):
+            for load in _ayc_slot_loads_for_totals(slot, athlete, pause_mode):
                 if load.get("kind") != "alt":
                     totals[target_week] += float(load.get("meters") or 0)
     return totals
 
 
-def _athlete_week_distance_history(athlete, plans, last_week_start, week_count=26):
+def _athlete_week_distance_history(athlete, plans, last_week_start, week_count=26, pause_mode=None):
     first_week_start = last_week_start - timedelta(days=7 * (week_count - 1))
     totals_by_week = {}
     for offset in range(0, week_count, 2):
         pair_start = first_week_start + timedelta(days=7 * offset)
-        pair_totals = _effective_week_distance_m(athlete, plans, pair_start)
+        pair_totals = _effective_week_distance_m(athlete, plans, pair_start, pause_mode)
         totals_by_week.update(pair_totals)
 
     return [
@@ -10615,7 +10617,7 @@ def trainer_stats_view(request):
     previous_week_start = this_week_start - timedelta(days=7)
     rows = []
     for athlete in all_athletes:
-        totals = _effective_week_distance_m(athlete, plans, previous_week_start)
+        totals = _effective_week_distance_m(athlete, plans, previous_week_start, coach_settings.pause_mode)
         rows.append({
             "athlete": athlete,
             "has_planned_training": bool(totals[previous_week_start] or totals[this_week_start]),
@@ -10678,6 +10680,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         _filter_owned(Athlete.objects.all(), request),
         id=athlete_id,
     )
+    coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
     try:
         selected_months = int(request.GET.get("months") or 6)
     except (TypeError, ValueError):
@@ -10698,6 +10701,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         plans,
         period_last_week_start,
         week_count=week_count,
+        pause_mode=coach_settings.pause_mode,
     )
 
     chart_width = 900
@@ -11108,8 +11112,8 @@ def daily_overview_view(request):
             "athlete": athlete,
             "slot1": slot1,
             "slot2": slot2,
-            "session_km1": _ayc_slot_session_km(slot1, athlete) if coach_settings.see_session_km else "",
-            "session_km2": _ayc_slot_session_km(slot2, athlete) if coach_settings.see_session_km else "",
+            "session_km1": _ayc_slot_session_km(slot1, athlete, coach_settings.pause_mode) if coach_settings.see_session_km else "",
+            "session_km2": _ayc_slot_session_km(slot2, athlete, coach_settings.pause_mode) if coach_settings.see_session_km else "",
             "check1": check1,
             "check2": check2,
             "check1_badge": _daily_status_badge(status1),
