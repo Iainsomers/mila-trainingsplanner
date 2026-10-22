@@ -346,6 +346,89 @@ def type_a_training_fields(description):
     return fields
 
 
+def type_a_watch_loads(exercise, athlete=None):
+    """Return actual Type A distance/time loads for later AYC accounting."""
+    if not isinstance(exercise, dict):
+        return []
+    laps_container = exercise.get("laps") or {}
+    laps_container = laps_container if isinstance(laps_container, dict) else {}
+    manual_laps = laps_container.get("laps") or laps_container.get("manualLaps") or laps_container.get("manual-laps") or []
+    if manual_laps:
+        source_laps = manual_laps
+    else:
+        source_laps = [{
+            "distanceMeters": exercise.get("distanceMeters"),
+            "durationMillis": exercise.get("durationMillis"),
+        }]
+
+    rows = []
+    for index, lap in enumerate(source_laps, 1):
+        if not isinstance(lap, dict):
+            continue
+        distance_m = number(lap.get("distanceMeters"))
+        duration_ms = number(lap.get("durationMillis"))
+        if distance_m is None or distance_m <= 0 or duration_ms is None or duration_ms <= 0:
+            continue
+        z_pace, t_pace = lap_zone_paces(distance_m, duration_ms, athlete)
+        zone = z_pace[1:] if z_pace.startswith("Z") and z_pace[1:].isdigit() else "1"
+        rows.append({
+            "index": index,
+            "distance_m": distance_m,
+            "seconds": duration_ms / 1000.0,
+            "zone": zone,
+            "t_key": _watch_t_key(t_pace),
+        })
+    if not rows:
+        return []
+
+    rounded = [int(math.floor(row["distance_m"] / 50 + 0.5) * 50) for row in rows]
+    first_is_warmup = bool(
+        rows
+        and rows[0]["zone"] == "1"
+        and rounded[0] >= 1000
+        and rounded.count(rounded[0]) == 1
+    )
+    main_start = 1 if first_is_warmup else 0
+    candidate_distances = [rounded[index] for index in range(main_start, len(rows)) if rounded[index] >= 400]
+    work_positions = [
+        index for index, row in enumerate(rows)
+        if index >= main_start
+        and rounded[index] >= 400
+        and (candidate_distances.count(rounded[index]) >= 2 or int(row["zone"]) >= 2)
+    ]
+    first_work = work_positions[0] if work_positions else None
+    last_work = work_positions[-1] if work_positions else None
+    cooldown_start = None
+    if last_work is not None:
+        cooldown_start = next(
+            (index for index in range(last_work + 1, len(rows))
+             if rounded[index] >= 1000 and rows[index]["zone"] == "1"),
+            None,
+        )
+
+    loads = []
+    for index, row in enumerate(rows):
+        segment = "CORE"
+        if first_work is not None and first_is_warmup and index < first_work:
+            segment = "WU"
+        elif cooldown_start is not None and index >= cooldown_start:
+            segment = "CD"
+        loads.append({
+            "segment": segment,
+            "zone": row["zone"],
+            "meters": row["distance_m"],
+            "seconds": row["seconds"],
+            "t_key": row["t_key"],
+            "race": False,
+        })
+    return loads
+
+
+def _watch_t_key(label):
+    normalized = str(label or "").strip().upper()
+    return normalized if normalized.startswith("T") else ""
+
+
 def sample_rows(exercise, interval):
     source = exercise.get("samples")
     streams = source.get("samples", []) if isinstance(source, dict) else []
@@ -437,6 +520,7 @@ def translate(payload, interval, mode="A", athlete=None):
                           "auto": lap_rows(laps.get("autoLaps") or laps.get("auto-laps"), athlete),
                           "description": description, "description_label": description_label,
                           "training_fields": type_a_training_fields(description) if mode == "A" else {},
+                          "watch_loads": type_a_watch_loads(item, athlete) if mode == "A" else [],
                           "samples": rows, "metadata": metadata, "truncated": truncated,
                           "processed": processed, "processing_notes": processing_notes})
         if mode == "A" and not parts:

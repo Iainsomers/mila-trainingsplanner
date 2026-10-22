@@ -7442,6 +7442,41 @@ class TrainingSegmentLabelTests(TestCase):
         self.assertEqual(TrainingSegment(type="CORE").get_type_display(), "Main")
         self.assertEqual(TrainingSegment(type="CORE2").get_type_display(), "Main 2")
 
+    def test_watch_slot_uses_actual_zone_time_for_segment_label_and_totals(self):
+        from core.stats import athlete_week_stats
+
+        coach = get_user_model().objects.create_user(username="watchsourcecoach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Watch Source Athlete",
+            birth_year=2000,
+            gender="X",
+            zone_speed_mps={"1": 3.0, "2": 4.0},
+        )
+        plan = TrainingPlan.objects.create(owner=coach, name="Watch source plan")
+        day = date(2026, 10, 22)
+        slot = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+            source="watch_a",
+            watch_loads=[
+                {"segment": "CORE", "zone": "1", "meters": 300, "seconds": 100},
+                {"segment": "CORE", "zone": "2", "meters": 800, "seconds": 200},
+            ],
+        )
+        segment = slot.segments.create(type="CORE", text="20' z2", zone="2", duration_s=1200)
+
+        self.assertEqual(_segment_rep_time_label(athlete, segment), "actual Z1 1:40/Z2 3:20")
+        loads = _ayc_slot_loads_for_totals(slot, athlete)
+        self.assertEqual(sum(load["meters"] for load in loads), 1100)
+        weekly = athlete_week_stats(plan, athlete, day)
+        self.assertEqual(weekly["zones"]["1"]["distance_m"], 300)
+        self.assertEqual(weekly["zones"]["1"]["duration_s"], 100)
+        self.assertEqual(weekly["zones"]["2"]["distance_m"], 800)
+        self.assertEqual(weekly["zones"]["2"]["duration_s"], 200)
+
 
 class FlexPlannerAltTotalsTests(TestCase):
     def test_main_segment_splitter_accepts_plus_and_keeps_inner_compound_separators(self):

@@ -1,4 +1,5 @@
 from datetime import date, date as date_cls, timedelta
+import json
 import re
 
 from django.http import HttpResponse
@@ -1067,6 +1068,19 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
         is_override = False
 
     slot.segments.all().delete()
+    watch_origin = (request.POST.get("watch_origin") or "").strip().lower()
+    watch_loads = []
+    if watch_origin in {"watch_a", "watch_b", "watch_c"}:
+        try:
+            decoded_loads = json.loads(request.POST.get("watch_loads") or "[]")
+            if isinstance(decoded_loads, list):
+                watch_loads = [item for item in decoded_loads if isinstance(item, dict)]
+        except (TypeError, ValueError):
+            watch_loads = []
+    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c"} else "planned"
+    slot.watch_loads = watch_loads
+    slot.save(update_fields=["source", "watch_loads", "updated_at"])
+
     now = timezone.now()
 
     for item in segments_payload:
@@ -1793,6 +1807,19 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         )
 
     now = timezone.now()
+
+    watch_origin = (request.POST.get("watch_origin") or "").strip().lower()
+    watch_loads = []
+    if watch_origin in {"watch_a", "watch_b", "watch_c"}:
+        try:
+            decoded_loads = json.loads(request.POST.get("watch_loads") or "[]")
+            if isinstance(decoded_loads, list):
+                watch_loads = [item for item in decoded_loads if isinstance(item, dict)]
+        except (TypeError, ValueError):
+            watch_loads = []
+    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c"} else "planned"
+    slot.watch_loads = watch_loads
+    slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
     # Save WU
     if wu_text:

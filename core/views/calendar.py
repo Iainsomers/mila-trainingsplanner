@@ -816,9 +816,12 @@ class _VirtualSegment:
 
 
 class _VirtualSlot:
-    def __init__(self, segments, plan_id=None):
+    def __init__(self, segments, plan_id=None, source="planned", watch_loads=None, slot_id=None):
         self.segments = _VirtualSegmentList(segments)
         self.plan_id = plan_id
+        self.id = slot_id
+        self.source = source or "planned"
+        self.watch_loads = watch_loads if isinstance(watch_loads, list) else []
 
     def core_text(self):
         return " // ".join(seg.text for seg in self.segments.all() if seg.type == "CORE" and seg.text)
@@ -860,7 +863,16 @@ def _clone_slot_for_display(slot):
         clone.display_text = getattr(seg, "display_text", clone.text) or clone.text
         segments.append(clone)
 
-    return _VirtualSlot(segments, plan_id=getattr(slot, "plan_id", None))
+    clone = _VirtualSlot(
+        segments,
+        plan_id=getattr(slot, "plan_id", None),
+        source=getattr(slot, "source", "planned"),
+        watch_loads=getattr(slot, "watch_loads", []),
+        slot_id=getattr(slot, "id", None),
+    )
+    for segment in segments:
+        segment.slot = clone
+    return clone
 
 
 def _parse_base_training_text(text):
@@ -2052,6 +2064,51 @@ def _format_min_km_range(seconds_per_km_values):
     return f"{slow_label}-->{fast_label} min/km"
 
 
+def _watch_segment_loads(seg):
+    slot = getattr(seg, "slot", None)
+    if not slot or str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c"}:
+        return []
+    watch_loads = getattr(slot, "watch_loads", None)
+    if not isinstance(watch_loads, list):
+        return []
+    segment_type = str(getattr(seg, "type", "") or "CORE").upper()
+    loads = []
+    for load in watch_loads:
+        if not isinstance(load, dict) or str(load.get("segment") or "CORE").upper() != segment_type:
+            continue
+        try:
+            meters = float(load.get("meters") or 0)
+            seconds = float(load.get("seconds") or 0)
+        except (TypeError, ValueError):
+            continue
+        if meters <= 0 and seconds <= 0:
+            continue
+        loads.append({
+            "zone": str(load.get("zone") or "").strip(),
+            "meters": meters,
+            "seconds": seconds,
+            "tKey": str(load.get("t_key") or "").strip(),
+            "race": bool(load.get("race")),
+        })
+    return loads
+
+
+def _watch_segment_time_label(seg):
+    loads = _watch_segment_loads(seg)
+    if not loads:
+        return ""
+    zone_seconds = {}
+    for load in loads:
+        zone = str(load.get("zone") or "").strip()
+        seconds = float(load.get("seconds") or 0)
+        if zone and seconds > 0:
+            zone_seconds[zone] = zone_seconds.get(zone, 0) + seconds
+    if not zone_seconds:
+        return ""
+    parts = [f"Z{zone} {_format_rep_time_seconds(seconds)}" for zone, seconds in sorted(zone_seconds.items(), key=lambda item: int(item[0]) if item[0].isdigit() else 99)]
+    return "actual " + "/".join(parts)
+
+
 def _segment_duration_pace_label(athlete, seg):
     try:
         duration_s = float(getattr(seg, "duration_s", None) or 0)
@@ -2125,6 +2182,10 @@ def _segment_compound_part_zone_labels(seg, distances_m):
 def _segment_rep_time_label(athlete, seg):
     if not athlete or not seg:
         return ""
+
+    actual_label = _watch_segment_time_label(seg)
+    if actual_label:
+        return actual_label
 
     seg_type = (getattr(seg, "type", "") or "").upper()
     if seg_type not in {"CORE", "CORE2"}:
@@ -2263,6 +2324,8 @@ def _annotate_slot_segment_display_times(slot, athlete):
 
     for seg in segments:
         text = getattr(seg, "text", "") or ""
+        actual_loads = _watch_segment_loads(seg)
+        seg.flex_actual_loads_json = json.dumps(actual_loads, separators=(",", ":")) if actual_loads else ""
         label = _segment_rep_time_label(athlete, seg)
         hr_label = _segment_hr_label(athlete, seg)
         display_labels = "; ".join(part for part in (label, hr_label) if part)
@@ -2476,6 +2539,31 @@ def _ayc_pause_distance_m(text, reps, athlete=None, pause_mode=None):
 def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
     if not slot:
         return []
+
+    if str(getattr(slot, "source", "") or "") in {"watch_a", "watch_b", "watch_c"}:
+        watch_loads = getattr(slot, "watch_loads", None)
+        if isinstance(watch_loads, list):
+            actual = []
+            for load in watch_loads:
+                if not isinstance(load, dict):
+                    continue
+                try:
+                    meters = float(load.get("meters") or 0)
+                    seconds = float(load.get("seconds") or 0)
+                except (TypeError, ValueError):
+                    continue
+                if meters <= 0 or seconds <= 0:
+                    continue
+                actual.append({
+                    "segment": str(load.get("segment") or "CORE").upper(),
+                    "zone": str(load.get("zone") or "1"),
+                    "meters": meters,
+                    "seconds": seconds,
+                    "t_key": str(load.get("t_key") or ""),
+                    "race": bool(load.get("race")),
+                })
+            if actual:
+                return actual
 
     try:
         segments = slot.segments.all()
@@ -3712,7 +3800,9 @@ def athlete_year_calendar_view(request):
                         continue
 
                     speed = float(_zone_speed_mps(selected_athlete, f"Z{zone}") or 0)
-                    seconds = (meters / speed) if speed > 0 else 0.0
+                    seconds = float(load.get("seconds") or 0)
+                    if seconds <= 0:
+                        seconds = (meters / speed) if speed > 0 else 0.0
 
                     if load.get("race"):
                         race_m += meters

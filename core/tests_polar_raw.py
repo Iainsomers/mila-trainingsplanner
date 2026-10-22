@@ -139,6 +139,10 @@ class RawPolarTests(SimpleTestCase):
         self.assertEqual(result[0]["parts"][0]["description"], type_a_description(laps, athlete))
         self.assertEqual(result[0]["parts"][0]["training_fields"]["wu"], "3800 m Z1")
         self.assertIn("3×2000 m Z2", result[0]["parts"][0]["training_fields"]["main"])
+        self.assertEqual(
+            [round(load["meters"]) for load in result[0]["parts"][0]["watch_loads"]],
+            [3785, 1987, 338, 2003, 164, 1993, 73, 990, 98, 994, 30],
+        )
 
     def test_type_a_groups_repeated_distance_across_z1_to_z2(self):
         athlete = SimpleNamespace(

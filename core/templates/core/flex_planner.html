@@ -747,6 +747,24 @@
         return [];
       }
 
+      const actualLoads = el.getAttribute("data-flex-actual-loads") || "";
+      if (actualLoads) {
+        try {
+          const parsed = JSON.parse(actualLoads);
+          if (Array.isArray(parsed) && parsed.length) {
+            return parsed.map((load) => ({
+              zone: String(load.zone || "1"),
+              meters: Number(load.meters || 0),
+              seconds: Number(load.seconds || 0),
+              tKey: String(load.tKey || ""),
+              race: Boolean(load.race)
+            })).filter((load) => load.meters > 0 || load.seconds > 0);
+          }
+        } catch (error) {
+          // Fall back to the planned calculation when legacy markup is malformed.
+        }
+      }
+
       const text = (el.getAttribute("data-flex-source-text") || el.textContent || "").trim();
       const ownerRow = typeof el.closest === "function" ? el.closest("tr") : null;
       const pauseMode = el.getAttribute("data-flex-pause-mode") || (ownerRow ? ownerRow.getAttribute("data-flex-pause-mode") : "");

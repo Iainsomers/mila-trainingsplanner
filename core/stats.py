@@ -15,12 +15,14 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v18"
+STATS_SCHEMA_VERSION = "v19"
 
 
 def active_pause_distance_m(text, reps, speed_mps, pause_mode):
     if pause_mode not in (CoachSettings.PAUSE_MODE_ALWAYS_STATIC, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP):
         return 0.0
+
+
     text = str(text or "")
     matches = re.finditer(
         r"\b(ap|p)\s*=?\s*(\d+(?:[.,]\d+)?)\s*(m|min|mins|minute|minutes|sec|secs|second|seconds|s|'|\")?(?![A-Za-z])",
@@ -61,6 +63,34 @@ def active_pause_distance_m(text, reps, speed_mps, pause_mode):
         except (TypeError, ValueError):
             pause_count = 0
     return meters_per_pause * pause_count
+
+
+def _watch_loads_for_slot(slot):
+    if str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c"}:
+        return []
+    raw_loads = getattr(slot, "watch_loads", None)
+    if not isinstance(raw_loads, list):
+        return []
+    loads = []
+    for raw in raw_loads:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            meters = float(raw.get("meters") or 0)
+            seconds = float(raw.get("seconds") or 0)
+        except (TypeError, ValueError):
+            continue
+        zone = str(raw.get("zone") or "")
+        if meters <= 0 or seconds <= 0 or zone not in {"1", "2", "3", "4", "5", "6"}:
+            continue
+        loads.append({
+            "zone": zone,
+            "meters": meters,
+            "seconds": seconds,
+            "t_key": str(raw.get("t_key") or ""),
+            "race": bool(raw.get("race")),
+        })
+    return loads
 
 
 def _stats_version() -> int:
@@ -797,6 +827,26 @@ def athlete_week_stats(plan, athlete, week_start: date_cls, pause_mode=None):
     base_map, override_map = _fetch_week_slots(plan, week_start, athlete_ids=[athlete.id])
     days = _week_days(week_start)
 
+    def add_actual_watch_loads(slot):
+        loads = _watch_loads_for_slot(slot)
+        if not loads:
+            return False
+        for load in loads:
+            zone = load["zone"]
+            meters = load["meters"]
+            seconds = load["seconds"]
+            t_key = load["t_key"]
+            if load["race"]:
+                race["distance_m"] += meters
+                race["duration_s"] += seconds
+            elif zone in zones:
+                zones[zone]["distance_m"] += meters
+                zones[zone]["duration_s"] += seconds
+            if t_key in t_totals:
+                t_totals[t_key]["distance_m"] += meters
+                t_totals[t_key]["duration_s"] += seconds
+        return True
+
     for day in days:
         for slot_index in (1, 2):
             check = AthleteDayCheck.objects.filter(
@@ -810,6 +860,9 @@ def athlete_week_stats(plan, athlete, week_start: date_cls, pause_mode=None):
 
             slot = override_map.get((athlete.id, day, slot_index)) or base_map.get((day, slot_index))
             if not slot:
+                continue
+
+            if add_actual_watch_loads(slot):
                 continue
 
             for seg in slot.segments.all():

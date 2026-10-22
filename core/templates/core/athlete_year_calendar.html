@@ -2178,7 +2178,7 @@
               button.textContent = slotIndex === 1 ? "Use AM" : "Use PM";
               button.addEventListener("click", function(event) {
                 event.preventDefault();
-                useTypeATraining(fields, slotIndex, button);
+                useTypeATraining(fields, part.watch_loads || [], slotIndex, button);
               });
               actions.appendChild(button);
             });
@@ -2192,7 +2192,7 @@
       parent.appendChild(box);
     });
   }
-  function useTypeATraining(fields, slotIndex, button) {
+  function useTypeATraining(fields, watchLoads, slotIndex, button) {
     if (!activeDate || !activeAthlete || !fields || !fields.main) return;
     var originalLabel = button.textContent;
     button.disabled = true;
@@ -2208,6 +2208,8 @@
     formData.append("core2_text", "");
     formData.append("alt_text", "");
     formData.append("cd_text", fields.cd || "");
+    formData.append("watch_origin", "watch_a");
+    formData.append("watch_loads", JSON.stringify(watchLoads || []));
     var dateParts = activeDate.split("-");
     var saveUrl = "/slot-modal/" + dateParts[0] + "/" + dateParts[1] + "/" + dateParts[2] + "/" + slotIndex + "/?athlete=" + encodeURIComponent(activeAthlete) + "&source=athlete_year";
     fetch(saveUrl, {

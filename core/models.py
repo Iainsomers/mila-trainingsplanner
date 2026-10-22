@@ -917,6 +917,12 @@ class AthleteBasePlanningSlot(models.Model):
 
 class TrainingSlot(models.Model):
     SLOT_CHOICES = [(1, "Slot 1"), (2, "Slot 2")]
+    SOURCE_CHOICES = [
+        ("planned", "Planned"),
+        ("watch_a", "Watch A"),
+        ("watch_b", "Watch B"),
+        ("watch_c", "Watch C"),
+    ]
 
     date = models.DateField()
     slot_index = models.PositiveSmallIntegerField(choices=SLOT_CHOICES)
@@ -935,6 +941,9 @@ class TrainingSlot(models.Model):
         on_delete=models.CASCADE,
         related_name="personal_slots",
     )
+
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="planned")
+    watch_loads = models.JSONField(default=list, blank=True)
 
     athletes = models.ManyToManyField(Athlete, blank=True, related_name="training_slots")
     groups = models.ManyToManyField(Group, blank=True, related_name="training_slots")
