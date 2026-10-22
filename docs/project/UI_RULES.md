@@ -38,6 +38,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Mobiele AYC
 
+- De `Suggest Input`-placeholder in de trainingsevaluatie blijft een kleine, schermpassende popup met een duidelijke sluitknop.
 - Toon één week tegelijk.
 - Houd weeknavigatie, totaal en weektype bovenaan goed zichtbaar.
 - Iedere trainingsdag toont AM en/of PM; lege dagen blijven compact.

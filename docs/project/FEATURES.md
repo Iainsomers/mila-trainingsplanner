@@ -117,7 +117,7 @@ Per training kan de atleet vastleggen:
 - status: Done, More/too fast, Adjusted, Less/slower of Not done;
 - RPE van 0 tot 10;
 - commentaar;
-- voorgestelde invoer uit horlogedata;
+- een `Suggest Input`-knop die voorlopig alleen de melding `hier even niets` toont; bestaande opgeslagen horlogeresultaten blijven zichtbaar en verwijderbaar;
 - afzonderlijke AM/PM-evaluaties wanneer er twee trainingen zijn.
 
 Naast trainingsevaluaties bestaat Evaluations voor losse coachvragenlijsten. Trainers publiceren actieve vragenlijsten voor hun atleten. Trainers kunnen de vragen en antwoorden alleen lezen; atleten kunnen alleen hun eigen antwoorden invullen en later terugzien.
@@ -181,7 +181,7 @@ Trainer-only, nog in ontwikkeling. De hoofdpagina toont eerst uitsluitend de atl
 
 ## Polar
 
-Ondersteunt OAuth en synchronisatie van relevante trainings-, activiteits- en lapgegevens. Watch suggestions kunnen evaluatie-invoer voorstellen. De atleet controleert een voorstel altijd vóór gebruik.
+Ondersteunt OAuth en synchronisatie van relevante trainings-, activiteits- en lapgegevens. De oude AYC-watchsuggestie-invoer is tijdelijk uitgeschakeld: `Suggest Input` toont alleen een placeholder-popup. De onderliggende suggestieanalyse blijft beschikbaar voor latere herbouw vanuit Polar Type A; bestaande opgeslagen horlogeresultaten blijven intact.
 
 Wanneer horlogedata duidelijk niet aansluit op de geplande training begint de interpretatie met een rood kruis. Via `Suggest alternative plan` kan vervolgens een alternatief trainingsconcept uit de horlogedata worden gereconstrueerd. Dit concept vervangt de oude interpretatie in beeld, toont een betrouwbaarheidsschatting en vervangt de oorspronkelijke planning nooit automatisch. Naast handmatige laps kan een herhalend fartlekpatroon uit aanhoudende tempowisselingen worden herkend. Polar v4 haalt naast laps ook interval-samples op; deze worden genormaliseerd naar een tijd/afstand-profiel zodat de bestaande matcher en AI-analyse korte versnellingen en complexe intervalstructuren kunnen gebruiken. Als Polar v4 geen handmatige laps levert, worden automatische laps als pace-data getoond met lagere zekerheid; ze krijgen geen bevestigde workout-blokkenstatus.
 

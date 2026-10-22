@@ -2482,10 +2482,17 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual(len(suggestion["splits"]), 1)
         self.assertIn("no reliable lap structure", suggestion["summary"])
 
-    def test_mobile_ayc_contains_alternative_plan_action(self):
+    def test_ayc_suggest_input_shows_placeholder_without_watch_fetch(self):
         source = get_template("core/athlete_year_calendar.html").template.source
-        self.assertIn("Suggest alternative plan", source)
-        self.assertIn("&alternative=1", source)
+        self.assertIn('id="suggestInputBtn"', source)
+        self.assertIn('id="suggestInputPlaceholder"', source)
+        self.assertIn('id="suggestInputPlaceholderClose"', source)
+        self.assertIn("hier even niets", source)
+        self.assertIn('addEventListener("click", showSuggestInputPlaceholder)', source)
+        self.assertNotIn("/integrations/polar/activity-suggestions/", source)
+        self.assertNotIn("Suggest alternative plan", source)
+        self.assertIn('id="aypWatchResultSection"', source)
+        self.assertIn('id="deleteWatchInputBtn"', source)
 
 
 class TrainerPlanningListTests(TestCase):

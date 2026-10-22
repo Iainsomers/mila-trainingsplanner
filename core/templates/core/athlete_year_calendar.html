@@ -1883,10 +1883,9 @@
       </div>
     </div>
     <div id="reportValidationMsg" class="text-danger small mb-2 mt-2"></div>
-    <div class="mt-2 border rounded p-2">
+    <div id="aypWatchResultSection" class="mt-2 border rounded p-2" style="display:none;">
       <div class="fw-bold mb-1">Watch results</div>
       <div id="aypWatchResults" class="text-muted small" style="max-height:30vh; overflow:auto; white-space:pre-wrap;">No watch result selected.</div>
-      <div id="aypWatchSuggestions" class="mt-2" style="max-height:38vh; overflow:auto;"></div>
       <input type="hidden" id="aypWatchActivityId">
       <input type="hidden" id="aypWatchActivitySummary">
       <input type="hidden" id="aypWatchActivityPayload">
@@ -1894,17 +1893,22 @@
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
       <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Suggest Input</button>
-      <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger">Delete input</button>
+      <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger" style="display:none;">Delete input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary evaluation-ok-btn" disabled>OK</button>
     </div>
+  </div>
+</div>
+
+<div id="suggestInputPlaceholder" role="dialog" aria-modal="true" aria-labelledby="suggestInputPlaceholderText" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; width:320px; max-width:100%; border-radius:8px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2); text-align:center;">
+    <p id="suggestInputPlaceholderText" class="mb-3">hier even niets</p>
+    <button type="button" id="suggestInputPlaceholderClose" class="btn btn-sm btn-primary">Close</button>
   </div>
 </div>
 
 <script>
 (function() {
   var activeDate = "";
-  var activeAthlete = "{{ selected_athlete_id }}";
-  var activePlannedText = "";
   var SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
   var activeVoiceRecognition = null;
   var activeVoiceButton = null;
@@ -2016,43 +2020,6 @@
       stopVoiceComment();
     }
   }
-  function formatWatchActivity(activity) {
-    var pieces = [];
-    if (activity.sport) pieces.push(activity.sport);
-    if (activity.distance_km !== null && activity.distance_km !== undefined) pieces.push(activity.distance_km + " km");
-    if (activity.duration_label) pieces.push(activity.duration_label);
-    if (activity.avg_hr) pieces.push("avg HR " + activity.avg_hr);
-    if (activity.max_hr) pieces.push("max HR " + activity.max_hr);
-    return pieces.join(" | ");
-  }
-  function renderWatchChoice(activity) {
-    var row = document.createElement("div");
-    row.className = "d-flex align-items-center justify-content-between gap-2 border rounded px-2 py-1 mb-1";
-    var label = document.createElement("div");
-    label.className = "small";
-    label.textContent = (activity.start_time || "").replace("T", " ") + " | " + formatWatchActivity(activity);
-    var choose = document.createElement("button");
-    choose.type = "button";
-    choose.className = "btn btn-sm btn-outline-primary";
-    choose.textContent = "choose";
-    choose.addEventListener("click", function() {
-      var results = document.getElementById("aypWatchResults");
-      var summary = label.textContent;
-      if (results) {
-        results.textContent = summary;
-        results.setAttribute("data-watch-activity-id", activity.id || "");
-      }
-      setVal("aypWatchActivityId", activity.id || "");
-      setVal("aypWatchActivitySummary", summary);
-      setVal("aypWatchActivityPayload", JSON.stringify(activity || {}));
-      if (!val("reportT1Status")) setVal("reportT1Status", "done_as_planned");
-      if (!val("reportT2Status")) setVal("reportT2Status", "done_as_planned");
-      validate();
-    });
-    row.appendChild(label);
-    row.appendChild(choose);
-    return row;
-  }
   function renderWatchTotals(text) {
     var wrapper = document.createElement("div");
     wrapper.className = "mb-2";
@@ -2107,105 +2074,10 @@
     if (displayParts.body) container.appendChild(document.createTextNode(displayParts.body));
     if (displayParts.totals) container.appendChild(renderWatchTotals(displayParts.totals));
   }
-  function renderPlanSuggestion(suggestion) {
-    function splitLine(split) {
-      return (split.label || "Rep") + " " + (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
-    }
-    function compactSplitResult(split) {
-      return (split.duration || "") + (split.pace ? " (" + split.pace + ")" : "");
-    }
-    function splitLinesForSave() {
-      var grouped = {};
-      var lines = [];
-      (suggestion.splits || []).forEach(function(split) {
-        var label = split.label || "";
-        var match = label.match(/^Set\s+(\d+)/i);
-        if (match) {
-          var key = match[1];
-          if (!grouped[key]) grouped[key] = [];
-          grouped[key].push(compactSplitResult(split));
-        } else {
-          lines.push(splitLine(split));
-        }
-      });
-      var setLines = [];
-      Object.keys(grouped).sort(function(a, b) { return Number(a) - Number(b); }).forEach(function(setNumber) {
-        setLines.push("S" + setNumber + ": " + grouped[setNumber].join("-"));
-      });
-      if (setLines.length) lines.push(setLines.join(", "));
-      return lines;
-    }
-    function suggestionTextForSave() {
-      var parts = [];
-      if (suggestion.summary) parts.push(suggestion.summary);
-      if (suggestion.splits && suggestion.splits.length) {
-        parts = parts.concat(splitLinesForSave());
-      }
-      if (suggestion.zone_totals) parts.push(suggestion.zone_totals);
-      return parts.join("\n");
-    }
-    var box = document.createElement("div");
-    box.className = "border rounded p-2 mb-2";
-    var title = document.createElement("div");
-    title.className = "fw-bold small mb-1";
-    title.textContent = suggestion.title || "Watch suggestion";
-    box.appendChild(title);
-    if (suggestion.ai || suggestion.alternative) {
-      var meta = document.createElement("div");
-      meta.className = "small text-muted mb-1";
-      var confidence = typeof suggestion.confidence === "number" ? " · confidence " + Math.round(suggestion.confidence * 100) + "%" : "";
-      meta.textContent = (suggestion.alternative ? "Watch reconstruction" : "AI interpretation") + confidence;
-      box.appendChild(meta);
-    }
-    var summary = document.createElement("div");
-    summary.className = "small mb-2";
-    renderWatchSummaryWithPills(summary, suggestion.summary || "", "");
-    box.appendChild(summary);
-    if (suggestion.splits && suggestion.splits.length) {
-      var list = document.createElement("div");
-      list.className = "small text-muted mb-2";
-      list.textContent = splitLinesForSave().join("\n");
-      list.style.whiteSpace = "pre-wrap";
-      box.appendChild(list);
-    }
-    if (suggestion.zone_totals) {
-      box.appendChild(renderWatchTotals(suggestion.zone_totals));
-    }
-    if (suggestion.mode === "structured_unmatched" || suggestion.mode === "polar_v4_auto_laps") {
-      if (suggestion.mode === "polar_v4_auto_laps") {
-        var note = document.createElement("div");
-        note.className = "small text-muted";
-        note.textContent = "Automatic laps are shown as pace data only; they are not treated as confirmed workout blocks.";
-        box.appendChild(note);
-      }
-      return box;
-    }
-    var use = document.createElement("button");
-    use.type = "button";
-    use.className = "btn btn-sm btn-outline-success";
-    use.textContent = "Use suggestion";
-    use.addEventListener("click", function() {
-      var results = document.getElementById("aypWatchResults");
-      var suggestions = document.getElementById("aypWatchSuggestions");
-      var summaryText = suggestionTextForSave() || suggestion.title || "Watch suggestion";
-      if (results) {
-        renderWatchSummaryWithPills(results, summaryText, suggestion.zone_totals || "");
-        results.setAttribute("data-watch-activity-id", suggestion.activity_id || "plan-watch-suggestion");
-      }
-      if (suggestions) suggestions.innerHTML = "";
-      setVal("aypWatchActivityId", suggestion.activity_id || "plan-watch-suggestion");
-      setVal("aypWatchActivitySummary", summaryText);
-      setVal("aypWatchActivityPayload", JSON.stringify(suggestion || {}));
-      if (!val("reportT1Status")) setVal("reportT1Status", "done_as_planned");
-      if (!val("reportT2Status")) setVal("reportT2Status", "done_as_planned");
-      validate();
-    });
-    box.appendChild(use);
-    return box;
-  }
   function resetWatchResults() {
     var results = document.getElementById("aypWatchResults");
-    var suggestions = document.getElementById("aypWatchSuggestions");
+    document.getElementById("aypWatchResultSection").style.display = "none";
+    document.getElementById("deleteWatchInputBtn").style.display = "none";
     if (results) {
       results.textContent = "No watch result selected.";
       results.removeAttribute("data-watch-activity-id");
@@ -2213,12 +2085,13 @@
     setVal("aypWatchActivityId", "");
     setVal("aypWatchActivitySummary", "");
     setVal("aypWatchActivityPayload", "");
-    if (suggestions) suggestions.innerHTML = "";
   }
   function setSavedWatchResult(id, summary) {
     resetWatchResults();
     if (!id || !summary) return;
     var results = document.getElementById("aypWatchResults");
+    document.getElementById("aypWatchResultSection").style.display = "block";
+    document.getElementById("deleteWatchInputBtn").style.display = "inline-block";
     if (results) {
       renderWatchSummaryWithPills(results, summary, "");
       results.setAttribute("data-watch-activity-id", id);
@@ -2235,100 +2108,14 @@
     });
     validate();
   }
-  function suggestWatchInput() {
-    var suggestions = document.getElementById("aypWatchSuggestions");
-    var btn = document.getElementById("suggestInputBtn");
-    if (!suggestions || !activeAthlete || !activeDate) return;
-    suggestions.textContent = "Syncing watch...";
-    if (btn) btn.disabled = true;
-    var suggestionUrl = "/integrations/polar/activity-suggestions/?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate) + "&planned=" + encodeURIComponent(activePlannedText || "");
-    fetch(suggestionUrl, {
-      headers: {"Accept": "application/json"}
-    })
-      .then(function(response) { return response.json(); })
-      .then(function(data) {
-        suggestions.innerHTML = "";
-        if (!data.ok || ((!data.activities || !data.activities.length) && !data.v4_plan_suggestion)) {
-          suggestions.textContent = data.message || "No watch activities found for this day.";
-          return;
-        }
-        if (data.plan_mismatch) {
-          var warning = document.createElement("div");
-          warning.className = "alert alert-danger py-2 mb-2";
-          var warningText = document.createElement("div");
-          warningText.className = "small fw-semibold";
-          warningText.textContent = data.mismatch_message || "❌ Watch data does not match the planned training closely enough.";
-          warning.appendChild(warningText);
-          var alternativeButton = document.createElement("button");
-          alternativeButton.type = "button";
-          alternativeButton.className = "btn btn-sm btn-outline-danger mt-2";
-          alternativeButton.textContent = "Suggest alternative plan";
-          alternativeButton.addEventListener("click", function() {
-            alternativeButton.disabled = true;
-            alternativeButton.textContent = "Reconstructing...";
-            fetch(suggestionUrl + "&alternative=1", {headers: {"Accept": "application/json"}})
-              .then(function(response) { return response.json(); })
-              .then(function(alternativeData) {
-                var oldResult = suggestions.querySelector(".alternative-plan-result");
-                if (oldResult) oldResult.remove();
-                var result = document.createElement("div");
-                result.className = "alternative-plan-result";
-                if (alternativeData.ok && alternativeData.alternative_suggestion) {
-                  result.appendChild(renderPlanSuggestion(alternativeData.alternative_suggestion));
-                  suggestions.innerHTML = "";
-                  suggestions.appendChild(result);
-                } else {
-                  result.className += " small text-danger mb-2";
-                  result.textContent = alternativeData.message || "No reliable alternative could be reconstructed.";
-                  warning.insertAdjacentElement("afterend", result);
-                }
-              })
-              .catch(function() {
-                warningText.textContent = "❌ Reconstructing the alternative plan failed.";
-              })
-              .finally(function() {
-                alternativeButton.disabled = false;
-                alternativeButton.textContent = "Suggest alternative plan";
-              });
-          });
-          warning.appendChild(alternativeButton);
-          suggestions.appendChild(warning);
-        }
-        if (data.ai_status && (!data.plan_suggestion || !data.plan_suggestion.ai)) {
-          var aiStatus = document.createElement("div");
-          aiStatus.className = "small text-muted mb-2";
-          aiStatus.textContent = data.ai_status;
-          suggestions.appendChild(aiStatus);
-        }
-        if (data.v4_plan_suggestion) {
-          suggestions.appendChild(renderPlanSuggestion(data.v4_plan_suggestion));
-        }
-        if (data.plan_suggestion) {
-          suggestions.appendChild(renderPlanSuggestion(data.plan_suggestion));
-        }
-        data.activities.forEach(function(activity) {
-          suggestions.appendChild(renderWatchChoice(activity));
-        });
-        if (data.watch_debug && data.watch_debug.length) {
-          var debugDetails = document.createElement("details");
-          debugDetails.className = "small text-muted mt-2";
-          var debugSummary = document.createElement("summary");
-          debugSummary.textContent = "Technical watch details";
-          debugDetails.appendChild(debugSummary);
-          var debug = document.createElement("pre");
-          debug.className = "small text-muted border rounded p-2 mt-1";
-          debug.style.whiteSpace = "pre-wrap";
-          debug.textContent = data.watch_debug.join("\n\n");
-          debugDetails.appendChild(debug);
-          suggestions.appendChild(debugDetails);
-        }
-      })
-      .catch(function() {
-        suggestions.textContent = "Watch sync failed.";
-      })
-      .finally(function() {
-        if (btn) btn.disabled = false;
-      });
+  function showSuggestInputPlaceholder() {
+    var popup = document.getElementById("suggestInputPlaceholder");
+    popup.style.display = "flex";
+    document.getElementById("suggestInputPlaceholderClose").focus();
+  }
+  function hideSuggestInputPlaceholder() {
+    document.getElementById("suggestInputPlaceholder").style.display = "none";
+    document.getElementById("suggestInputBtn").focus();
   }
   function filled(prefix){ return !!(val(prefix+"Status") || val(prefix+"Rpe") || val(prefix+"Comment")); }
   function complete(prefix){
@@ -2368,13 +2155,6 @@
       activeDate = el.getAttribute("data-date") || "";
       var t1Enabled = (el.getAttribute("data-t1-enabled") === "1");
       var t2Enabled = (el.getAttribute("data-t2-enabled") === "1");
-      var t1PlanText = el.getAttribute("data-t1-plan-text") || "";
-      var t2PlanText = el.getAttribute("data-t2-plan-text") || "";
-      activePlannedText = t1Enabled ? t1PlanText : "";
-      if (!activePlannedText && t2Enabled) activePlannedText = t2PlanText;
-      if (t1Enabled && t2Enabled && t1PlanText && t2PlanText && t1PlanText !== t2PlanText) {
-        activePlannedText = t1PlanText + " // " + t2PlanText;
-      }
       if (!t1Enabled && !t2Enabled) return;
       setSectionVisible("reportT1", t1Enabled);
       setSectionVisible("reportT2", t2Enabled);
@@ -2435,7 +2215,16 @@
       startVoiceComment(btn);
     });
   });
-  document.getElementById("suggestInputBtn").addEventListener("click", suggestWatchInput);
+  document.getElementById("suggestInputBtn").addEventListener("click", showSuggestInputPlaceholder);
+  document.getElementById("suggestInputPlaceholderClose").addEventListener("click", hideSuggestInputPlaceholder);
+  document.getElementById("suggestInputPlaceholder").addEventListener("click", function(event) {
+    if (event.target === this) hideSuggestInputPlaceholder();
+  });
+  document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape" && document.getElementById("suggestInputPlaceholder").style.display === "flex") {
+      hideSuggestInputPlaceholder();
+    }
+  });
   document.getElementById("deleteWatchInputBtn").addEventListener("click", deleteWatchInput);
   document.getElementById("commentCancelBtn").addEventListener("click", function(){ stopVoiceComment(); document.getElementById("commentModal").style.display = "none"; });
   document.getElementById("commentOkBtn").addEventListener("click", function(){
