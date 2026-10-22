@@ -24,6 +24,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Kleuren
 
+- Team Pace gebruikt donkergroen (`#0B3D2E`) als kleur 1 en donker aubergine (`#4B2142`) als kleur 2. Er is nog geen apart teamlogo.
 - Z1 t/m Z6 volgen de bestaande zonekleuren.
 - Als één herhaalblok in Flex Planner meerdere zones bevat, krijgt de trainingspil een compacte verdeling van de bijbehorende zonekleuren; de trainings- en weektotalen blijven onafhankelijk hiervan berekend.
 - Huidige week: geel.
