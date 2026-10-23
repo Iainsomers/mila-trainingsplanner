@@ -11346,6 +11346,7 @@ def daily_overview_other_view(request):
     counts = []
     for athlete in athletes:
         pending = 0
+        evaluated = 0
         if getattr(athlete, "training_reports_enabled", True):
             for offset in range((window_end - window_start).days + 1):
                 day = window_start + timedelta(days=offset)
@@ -11362,7 +11363,9 @@ def daily_overview_other_view(request):
                                 slot = trainer_slot_lookup.get((base_slot.trainer_plan_id, day, slot_index))
                     if slot and not _slot_is_visually_empty(slot):
                         check = check_lookup.get((athlete.id, day, slot_index))
-                        if not check or not check.effective_status:
+                        if check and check.effective_status:
+                            evaluated += 1
+                        else:
                             pending += 1
 
         if pending == 0:
@@ -11373,7 +11376,19 @@ def daily_overview_other_view(request):
             color = "orange"
         else:
             color = "red"
-        counts.append({"athlete": athlete, "pending_count": pending, "color": color})
+        if evaluated >= 3:
+            evaluated_color = "green"
+        elif evaluated > 0:
+            evaluated_color = "orange"
+        else:
+            evaluated_color = "red"
+        counts.append({
+            "athlete": athlete,
+            "pending_count": pending,
+            "color": color,
+            "evaluated_count": evaluated,
+            "evaluated_color": evaluated_color,
+        })
 
     vital_options = [
         {"key": "sleep_hours", "label": "Sleep length", "field": "sleep_hours", "suffix": " h", "decimals": 1},

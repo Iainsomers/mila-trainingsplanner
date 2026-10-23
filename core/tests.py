@@ -1324,6 +1324,50 @@ Vortex	16,36	30/05/2026
 
 
 class PlanningOverviewTests(TestCase):
+    def test_daily_overview_other_counts_evaluated_training_slots_with_quality_color(self):
+        coach = get_user_model().objects.create_user(
+            username="evaluation-quality-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Evaluation Quality Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Evaluation quality plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        today = date.today()
+        for offset in (1, 2, 3):
+            slot = TrainingSlot.objects.create(
+                plan=plan,
+                date=today - timedelta(days=offset),
+                slot_index=1,
+            )
+            slot.segments.create(type="CORE", text="Easy run", order=0)
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=today - timedelta(days=1),
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+            checked=True,
+            rpe=6,
+            comment="Good",
+            updated_by=coach,
+        )
+
+        self.client.force_login(coach)
+        response = self.client.get("/coach/daily-overview-other/")
+
+        self.assertEqual(response.status_code, 200)
+        row = response.context["athlete_rows"][0]
+        self.assertEqual(row["evaluated_count"], 1)
+        self.assertEqual(row["evaluated_color"], "orange")
+        self.assertContains(response, "Evaluated")
+
     def test_vital_switch_keeps_vitals_open_instead_of_info_quality(self):
         coach = get_user_model().objects.create_user(
             username="vital-switch-coach", password="secret", is_staff=True

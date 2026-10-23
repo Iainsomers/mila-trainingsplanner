@@ -65,15 +65,16 @@
       <p class="text-muted small">Open evaluations from {{ window_start|date:"d-m-Y" }} through {{ window_end|date:"d-m-Y" }}. Today is not included.</p>
       <div class="table-responsive">
         <table class="table table-sm info-quality-table mb-0">
-          <thead><tr><th>Athlete</th><th class="text-end">Open evaluations</th></tr></thead>
+          <thead><tr><th>Athlete</th><th class="text-end">Open evaluations</th><th class="text-end">Evaluated</th></tr></thead>
           <tbody>
             {% for row in athlete_rows %}
               <tr>
                 <td>{{ row.athlete.name }}</td>
                 <td class="text-end"><span class="pending-badge pending-{{ row.color }}">{{ row.pending_count }}</span></td>
+                <td class="text-end"><span class="pending-badge pending-{{ row.evaluated_color }}">{{ row.evaluated_count }}</span></td>
               </tr>
             {% empty %}
-              <tr><td colspan="2" class="text-muted">No athletes found.</td></tr>
+              <tr><td colspan="3" class="text-muted">No athletes found.</td></tr>
             {% endfor %}
           </tbody>
         </table>
