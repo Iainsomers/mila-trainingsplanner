@@ -23,7 +23,7 @@ from core.models import (
     CoachAccess,
 )
 from core.parser import parse_segment_text
-from core.training_text import split_main_segments
+from core.training_text import normalize_watch_main_text, split_main_segments
 from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
 
 from .common import (
@@ -1479,6 +1479,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     alt_segs = list(slot.segments.filter(type="ALT").order_by("order", "id"))
     cd_seg = slot.segments.filter(type="CD").order_by("order", "id").first()
 
+    watch_origin = (request.POST.get("watch_origin") or "").strip().lower()
+
     # input texts (respect toggles)
     wu_text = (request.POST.get("wu_text") or "").strip() if tb_show_wu else ""
     mob_text = (request.POST.get("mob_text") or "").strip() if tb_show_mob else ""
@@ -1489,6 +1491,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     core2_text = (request.POST.get("core2_text") or "").strip() if tb_show_core2 else ""
     alt_text = (request.POST.get("alt_text") or "").strip()
     cd_text = (request.POST.get("cd_text") or "").strip() if tb_show_cd else ""
+    if watch_origin in {"watch_a", "watch_b", "watch_c"}:
+        core_text = normalize_watch_main_text(core_text)
     if core_text:
         wu_text, cd_text = apply_auto_wucd_texts(athlete, selected_plan, core_text, wu_text, cd_text)
 
@@ -1808,7 +1812,6 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     now = timezone.now()
 
-    watch_origin = (request.POST.get("watch_origin") or "").strip().lower()
     watch_loads = []
     if watch_origin in {"watch_a", "watch_b", "watch_c"}:
         try:

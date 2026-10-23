@@ -42,6 +42,7 @@ Onder meer ondersteund:
 - T-progressies lopen via tussenliggende labels, bijvoorbeeld `t15>t4` splitst over T15, T1, T8, T6 en T4;
 - `2*(600m-400m) t15`;
 - `5*(1000m z3-200m t8)`;
+- Watch A/B/C-samenvattingen mogen tempo's tussen haakjes en `+` binnen een herhaalset tonen; bij opslaan worden die displaytekens omgezet naar de bestaande parsernotatie.
 - minuten met `'` en seconden met `"`;
 - `p` is actief in de coachstand `Active unless "pp"`; `ap` is in beide coachstanden expliciet actief. `sp` (seriepauze) en `pp` (passieve pauze) zijn altijd statisch.
 - `p1`/`p=1` en `ap1`/`ap=1` betekenen één minuut. Zonder tijdseenheid zijn waarden t/m 10 minuten en waarden boven 10 seconden. Een expliciete tijdseenheid blijft leidend.

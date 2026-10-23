@@ -7479,6 +7479,18 @@ class TrainingSegmentLabelTests(TestCase):
 
 
 class FlexPlannerAltTotalsTests(TestCase):
+    def test_watch_main_display_notation_is_normalized_before_slot_parsing(self):
+        from core.parser import parse_segment_text
+        from core.training_text import normalize_watch_main_text
+
+        display_text = "2×(1150 m Z2 (4:14) + 1000 m Z2 (4:08) + 800 m Z2 (4:11))"
+        planner_text = normalize_watch_main_text(display_text)
+
+        self.assertEqual(planner_text, "2×(1150 m Z2 - 1000 m Z2 - 800 m Z2)")
+        parsed = parse_segment_text(planner_text)
+        self.assertTrue(parsed.ok)
+        self.assertEqual(parsed.distance_m, 5900)
+
     def test_main_segment_splitter_accepts_plus_and_keeps_inner_compound_separators(self):
         from core.training_text import split_main_segments
 
