@@ -1,9 +1,12 @@
 """Read-only Polar v4 inspection; never imports or modifies workouts."""
 import json
 import math
+import os
 import re
 from datetime import date, timedelta
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
@@ -560,6 +563,149 @@ def type_b_description(laps, athlete=None):
     return " · ".join(parts)
 
 
+def _model_b_ai_description(laps, athlete=None):
+    """Ask the language model to identify nested interval structure for Watch B.
+
+    The model only proposes structure from compact numeric lap facts.  The
+    server validates the numeric ranges and builds the displayed description,
+    so a model response cannot alter measured distance or time calculations.
+    """
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key or not isinstance(laps, list):
+        return ""
+    facts = []
+    elapsed_s = 0.0
+    for index, lap in enumerate(laps, 1):
+        if not isinstance(lap, dict):
+            continue
+        distance_m = number(lap.get("distanceMeters"))
+        duration_ms = number(lap.get("durationMillis"))
+        if distance_m is None or duration_ms is None or distance_m < 0 or duration_ms <= 0:
+            elapsed_s += max(0.0, (duration_ms or 0) / 1000)
+            continue
+        z_label, _ = lap_zone_paces(distance_m, duration_ms, athlete)
+        facts.append({
+            "lap": index,
+            "distance_m": round(distance_m, 1),
+            "rounded_50_m": int(math.floor(distance_m / 50 + 0.5) * 50),
+            "duration_s": round(duration_ms / 1000, 3),
+            "pace": pace(duration_ms / 1000, distance_m),
+            "zone": z_label if z_label != "NA" else "",
+            "elapsed_s": round(elapsed_s, 3),
+        })
+        elapsed_s += duration_ms / 1000
+    if len(facts) < 6:
+        return ""
+
+    prompt = {
+        "task": (
+            "Recognize the performed running workout from manual laps. Find nested "
+            "repeated structures such as 2 sets of (3x500m + 5x400m + 6x200m). "
+            "Short slow laps are recoveries, not work. Include only clearly observed "
+            "warmup, main work and cooldown. Do not force every lap into a block."
+        ),
+        "laps": facts,
+        "output_schema": {
+            "warmup_m": "integer or null",
+            "cooldown_m": "integer or null",
+            "sets": "positive integer",
+            "segments": [
+                {"count": "positive integer", "distance_m": "integer", "zone": "string", "pace": "mm:ss", "recovery_s": "integer or null"}
+            ],
+            "confidence": "number from 0 to 1",
+        },
+    }
+    body = json.dumps({
+        "model": (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip(),
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {"role": "system", "content": (
+                "You are a conservative running-workout structure recognizer. "
+                "Return only valid JSON matching the requested schema. Use measured "
+                "lap facts, never invent distances, counts or a cooldown. The segments "
+                "describe one repeated set; sets describes how many times that sequence "
+                "is repeated. Use null for unknown recovery."
+            )},
+            {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
+        ],
+    }).encode("utf-8")
+    request = Request(
+        "https://api.openai.com/v1/chat/completions", data=body,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=25) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        data = json.loads(payload["choices"][0]["message"]["content"])
+    except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError, IndexError, TypeError):
+        return ""
+
+    if not isinstance(data, dict):
+        return ""
+    try:
+        sets = int(data.get("sets") or 1)
+        warmup_m = int(data["warmup_m"]) if data.get("warmup_m") is not None else 0
+        cooldown_m = int(data["cooldown_m"]) if data.get("cooldown_m") is not None else 0
+        confidence = float(data.get("confidence") or 0)
+    except (TypeError, ValueError):
+        return ""
+    segments = data.get("segments")
+    if not (1 <= sets <= 20 and 0 <= warmup_m <= 50000 and 0 <= cooldown_m <= 50000 and confidence >= 0.65 and isinstance(segments, list) and segments):
+        return ""
+    normalized = []
+    main_m = 0
+    for segment in segments:
+        if not isinstance(segment, dict):
+            return ""
+        try:
+            count = int(segment.get("count"))
+            distance_m = int(segment.get("distance_m"))
+        except (TypeError, ValueError):
+            return ""
+        if not (1 <= count <= 100 and 25 <= distance_m <= 5000):
+            return ""
+        main_m += count * distance_m
+        recovery = segment.get("recovery_s")
+        if recovery is not None:
+            try:
+                recovery = int(recovery)
+            except (TypeError, ValueError):
+                return ""
+            if not 0 <= recovery <= 1800:
+                return ""
+        zone = str(segment.get("zone") or "").strip()
+        if zone and not re.fullmatch(r"Z[1-5](?:>Z[1-5])?", zone):
+            zone = ""
+        segment_pace = str(segment.get("pace") or "").strip()
+        if segment_pace and not re.fullmatch(r"\d{1,2}:\d{2}", segment_pace):
+            segment_pace = ""
+        normalized.append((count, distance_m, zone, segment_pace, recovery))
+    measured_total = sum(float(row["distance_m"]) for row in facts)
+    if warmup_m + cooldown_m + sets * main_m > measured_total + 250:
+        return ""
+
+    def segment_text(item):
+        count, distance_m, zone, segment_pace, recovery = item
+        text = f"{count}×{distance_m} m"
+        if zone:
+            text += f" {zone}"
+        if segment_pace:
+            text += f" ({segment_pace})"
+        if recovery is not None:
+            text += f" p{recovery}"
+        return text
+
+    main_text = " + ".join(segment_text(item) for item in normalized)
+    if sets > 1:
+        main_text = f"{sets}×({main_text})"
+    parts = [f"WU: {int(math.floor(warmup_m / 50 + 0.5) * 50)} m Z1" if warmup_m >= 500 else "WU: none"]
+    parts.append("Main: " + main_text)
+    parts.append(f"CD: {int(math.floor(cooldown_m / 50 + 0.5) * 50)} m Z1" if cooldown_m >= 500 else "CD: none")
+    return " · ".join(parts)
+
+
 def _watch_t_key(label):
     normalized = str(label or "").strip().upper()
     return normalized if normalized.startswith("T") else ""
@@ -697,7 +843,7 @@ def translate_model_b(payload, interval, athlete=None):
             laps_container = laps_container if isinstance(laps_container, dict) else {}
             manual_laps = laps_container.get("laps") or laps_container.get("manualLaps") or laps_container.get("manual-laps") or []
             if manual_laps:
-                description = type_b_description(manual_laps, athlete)
+                description = _model_b_ai_description(manual_laps, athlete) or type_b_description(manual_laps, athlete)
                 if description:
                     result_parts[result_index]["description"] = description
                     result_parts[result_index]["description_label"] = "Generated description"

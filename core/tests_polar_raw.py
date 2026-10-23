@@ -1,4 +1,5 @@
-from unittest.mock import patch
+import json
+from unittest.mock import MagicMock, patch
 from types import SimpleNamespace
 from django.test import SimpleTestCase, RequestFactory
 from django.template.loader import render_to_string
@@ -11,6 +12,7 @@ from core.views.polar_raw import (
     sample_rows,
     translate,
     translate_model_b,
+    _model_b_ai_description,
     type_b_description,
     type_a_description,
     type_a_general_description,
@@ -80,6 +82,34 @@ class RawPolarTests(SimpleTestCase):
         description = type_b_description(laps)
         self.assertIn("8×500 m", description)
         self.assertEqual(description.count("8×500 m"), 2)
+
+    def test_model_b_ai_description_builds_nested_sets_from_structured_response(self):
+        laps = []
+        laps.append({"distanceMeters": 3800, "durationMillis": 1200000})
+        for _ in range(2):
+            laps.extend([
+                {"distanceMeters": 500, "durationMillis": 100000},
+                {"distanceMeters": 60, "durationMillis": 60000},
+                {"distanceMeters": 400, "durationMillis": 80000},
+                {"distanceMeters": 60, "durationMillis": 60000},
+                {"distanceMeters": 500, "durationMillis": 100000},
+            ])
+        laps.append({"distanceMeters": 900, "durationMillis": 300000})
+        response = MagicMock()
+        response.read.return_value = json.dumps({"choices": [{"message": {"content": json.dumps({
+            "warmup_m": 3800,
+            "cooldown_m": 900,
+            "sets": 2,
+            "segments": [
+                {"count": 2, "distance_m": 500, "zone": "Z3", "pace": "3:20", "recovery_s": 60},
+                {"count": 1, "distance_m": 400, "zone": "Z3", "pace": "3:20", "recovery_s": None},
+            ],
+            "confidence": 0.9,
+        })}}]}).encode()
+        response.__enter__.return_value = response
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}), patch("core.views.polar_raw.urlopen", return_value=response):
+            description = _model_b_ai_description(laps)
+        self.assertEqual(description, "WU: 3800 m Z1 · Main: 2×(2×500 m Z3 (3:20) p60 + 1×400 m Z3 (3:20)) · CD: 900 m Z1")
 
     def test_lap_distance_is_rounded_to_nearest_50_metres(self):
         self.assertEqual(distance_rounded_to_50(424.99), "400")
