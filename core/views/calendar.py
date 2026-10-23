@@ -2303,12 +2303,29 @@ def _segment_hr_label(athlete, seg):
     return "-->".join(labels) if is_progressive else "/".join(labels)
 
 
-def _watch_actual_time_label(actual_loads):
+def _watch_actual_time_label(actual_loads, seg=None):
     """Return the measured duration range for a Watch segment."""
     if not actual_loads:
         return ""
+    measured = actual_loads
+    # Type A/B can store short recovery laps in the same CORE bucket as the
+    # work laps. For a repeated single-distance Main, exclude those from the
+    # displayed repetition time; they remain available for totals/analysis.
+    expected_distances = _segment_rep_distances_m(seg) if seg else []
+    try:
+        reps = int(getattr(seg, "reps", None) or 1)
+    except Exception:
+        reps = 1
+    if len(expected_distances) == 1 and reps > 1:
+        threshold = expected_distances[0] * 0.5
+        work_loads = [
+            load for load in actual_loads
+            if float(load.get("meters") or 0) >= threshold
+        ]
+        if work_loads:
+            measured = work_loads
     return _format_rep_time_range(
-        [load.get("seconds") for load in actual_loads if float(load.get("seconds") or 0) > 0]
+        [load.get("seconds") for load in measured if float(load.get("seconds") or 0) > 0]
     )
 
 
@@ -2330,7 +2347,7 @@ def _annotate_slot_segment_display_times(slot, athlete):
         # (which has no measured load anymore) should still receive the normal
         # planned guidance.
         is_watch_segment = bool(actual_loads)
-        label = _watch_actual_time_label(actual_loads) if is_watch_segment else _segment_rep_time_label(athlete, seg)
+        label = _watch_actual_time_label(actual_loads, seg) if is_watch_segment else _segment_rep_time_label(athlete, seg)
         hr_label = "" if is_watch_segment else _segment_hr_label(athlete, seg)
         display_labels = "; ".join(part for part in (label, hr_label) if part)
         seg.display_text = f"{text} ({display_labels})" if text and display_labels else text

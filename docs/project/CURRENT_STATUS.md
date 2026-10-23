@@ -52,6 +52,7 @@ Bijgewerkt: 20 oktober 2026.
 - Ook oudere gedeelde Watch-bronslots worden bij een AYC-bewerking niet meer als actuele totalen gebruikt: er wordt dan een persoonlijke geplande override aangemaakt, zodat een extra WU/CD/Main-afstand niet tegen de oude Watch-afstand wordt verrekend.
 - Bij het bewerken van een Watch A/B/C-training vraagt een wijziging van Main eerst om bevestiging: `Are you sure? This might give an incorrect km count!`; WU, CD, Sprint en Alternative blijven zonder deze waarschuwing bewerkbaar.
 - Bij zo'n wijziging van alleen WU, CD, Sprint of Alternative blijven de gemeten Main-laps en hun werkelijke tijden behouden. De aangepaste niet-Main-onderdelen worden opnieuw uit hun tekst berekend; alleen de gemeten Main-laps blijven leidend voor het horlogetotaal.
+- De weergegeven werkelijke Main-tijd negeert korte herstel-laps die door de horlogeanalyse in dezelfde CORE-reeks zijn geplaatst; deze blijven wel beschikbaar voor de afstandsberekening.
 - Persoonlijke wijzigingen na de formele einddatum van een bronplanning blijven ook in Flex Planner zichtbaar, net als in AYC.
 - Base Planning-koppelingen naar trainerplannen blijven ook bij meerdere geselecteerde atleten zichtbaar in Flex Planner, onafhankelijk van de formele planrange.
 - Een expliciete Base Planning-koppeling kan het trainer-slot rechtstreeks laden wanneer de normale Flex-voorlaadlijst het plan mist.

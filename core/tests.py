@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.focus_point_import import FOCUS_POINT_HEADERS
-from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training, _watch_segment_loads
+from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training, _watch_actual_time_label, _watch_segment_loads
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
@@ -7795,6 +7795,25 @@ class TrainingSegmentLabelTests(TestCase):
         self.assertEqual(weekly["zones"]["1"]["duration_s"], 100)
         self.assertEqual(weekly["zones"]["2"]["distance_m"], 800)
         self.assertEqual(weekly["zones"]["2"]["duration_s"], 200)
+
+    def test_watch_main_time_label_ignores_short_recovery_laps(self):
+        segment = TrainingSegment(
+            type="CORE",
+            text="3x2000m z2 p1",
+            distance_m=2000,
+            norm_distance_m=6000,
+            reps=3,
+        )
+        label = _watch_actual_time_label(
+            [
+                {"meters": 2000, "seconds": 420},
+                {"meters": 200, "seconds": 8},
+                {"meters": 2000, "seconds": 430},
+            ],
+            segment,
+        )
+        self.assertNotIn("0:08", label)
+        self.assertIn("7:00", label)
 
 
 class FlexPlannerAltTotalsTests(TestCase):
