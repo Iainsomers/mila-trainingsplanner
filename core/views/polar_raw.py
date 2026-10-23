@@ -680,6 +680,7 @@ def _model_b_ai_description(laps, athlete=None):
             return ""
         if not (1 <= count <= 100 and 25 <= distance_m <= 5000):
             return ""
+        distance_m = int(math.floor(distance_m / 50 + 0.5) * 50)
         main_m += count * distance_m
         recovery = segment.get("recovery_s")
         if recovery is not None:
@@ -696,26 +697,67 @@ def _model_b_ai_description(laps, athlete=None):
         if segment_pace and not re.fullmatch(r"\d{1,2}:\d{2}", segment_pace):
             segment_pace = ""
         normalized.append((count, distance_m, zone, segment_pace, recovery))
+
+    # Compress a repeated sequence even when the model lists both copies as
+    # one long segment list instead of setting `sets` itself.
+    if len(normalized) >= 4:
+        for period in range(1, len(normalized) // 2 + 1):
+            if len(normalized) % period:
+                continue
+            repeats = len(normalized) // period
+            if repeats < 2:
+                continue
+            keys = [(item[0], item[1], item[2]) for item in normalized]
+            if all(keys[index] == keys[index % period] for index in range(len(keys))):
+                normalized = normalized[:period]
+                sets = max(sets, repeats)
+                break
+    main_m = sum(item[0] * item[1] for item in normalized)
     measured_total = sum(float(row["distance_m"]) for row in facts)
     if warmup_m + cooldown_m + sets * main_m > measured_total + 250:
         return ""
 
-    # Keep the deterministic WU/CD boundary detection authoritative.  The
-    # model is useful for nested Main patterns, but it may conservatively omit
-    # a long leading or trailing easy block even when the laps make it clear.
+    # Keep deterministic outer-block detection authoritative. The model is
+    # useful for nested Main patterns, but it may omit a clear leading/trailing
+    # easy block or select the wrong dominant distance for its boundary.
+    active_positions = [
+        index for index, row in enumerate(facts)
+        if re.fullmatch(r"Z[2-5]", str(row.get("zone") or ""))
+    ]
+    fixed_wu_m = fixed_cd_m = 0
+    if active_positions:
+        first_active = active_positions[0]
+        last_active = active_positions[-1]
+        fixed_wu_m = sum(row["distance_m"] for row in facts[:first_active] if row.get("zone") == "Z1")
+        trailing_z1 = []
+        for row in facts[last_active + 1:]:
+            if row.get("zone") != "Z1":
+                break
+            trailing_z1.append(row)
+        long_trailing_start = next(
+            (index for index, row in enumerate(trailing_z1) if row["rounded_50_m"] >= 1000),
+            None,
+        )
+        if long_trailing_start is not None:
+            trailing_z1 = trailing_z1[long_trailing_start:]
+        fixed_cd_m = sum(row["distance_m"] for row in trailing_z1)
     fixed_description = type_b_description(laps, athlete)
     fixed_wu = re.search(r"WU:\s+(\d+)\s+m\s+Z1", fixed_description or "")
     fixed_cd = re.search(r"CD:\s+(\d+)\s+m\s+Z1", fixed_description or "")
-    if warmup_m < 500 and fixed_wu:
+    if fixed_wu_m >= 500:
+        warmup_m = fixed_wu_m
+    elif warmup_m < 500 and fixed_wu:
         warmup_m = int(fixed_wu.group(1))
-    if cooldown_m < 500 and fixed_cd:
+    if fixed_cd_m >= 500:
+        cooldown_m = fixed_cd_m
+    elif cooldown_m < 500 and fixed_cd:
         cooldown_m = int(fixed_cd.group(1))
     if warmup_m + cooldown_m + sets * main_m > measured_total + 250:
         return ""
 
     def segment_text(item):
         count, distance_m, zone, segment_pace, recovery = item
-        text = f"{count}×{distance_m} m"
+        text = f"{count}×{distance_m} m" if count != 1 else f"{distance_m} m"
         if zone:
             text += f" {zone}"
         if segment_pace:

@@ -111,7 +111,39 @@ class RawPolarTests(SimpleTestCase):
         response.__enter__.return_value = response
         with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}), patch("core.views.polar_raw.urlopen", return_value=response):
             description = _model_b_ai_description(laps)
-        self.assertEqual(description, "WU: 3800 m Z1 · Main: 2×(2×500 m Z3 (3:20) p60 + 1×400 m Z3 (3:20)) · CD: 900 m Z1")
+        self.assertEqual(description, "WU: 3800 m Z1 · Main: 2×(2×500 m Z3 (3:20) p60 + 400 m Z3 (3:20)) · CD: 900 m Z1")
+
+    def test_model_b_ai_rounds_distances_and_compresses_repeated_sequence(self):
+        laps = [
+            {"distanceMeters": 2451, "durationMillis": 720000},
+            {"distanceMeters": 526, "durationMillis": 600000},
+        ]
+        for distance in (1158, 990, 812, 1148, 1000, 824):
+            laps.extend([
+                {"distanceMeters": distance, "durationMillis": 210000 if distance in {812, 824} else 240000},
+                {"distanceMeters": 50, "durationMillis": 60000},
+            ])
+        laps.append({"distanceMeters": 1897, "durationMillis": 600000})
+        response = MagicMock()
+        response.read.return_value = json.dumps({"choices": [{"message": {"content": json.dumps({
+            "warmup_m": None,
+            "cooldown_m": None,
+            "sets": 1,
+            "segments": [
+                {"count": 1, "distance_m": 1158, "zone": "Z2", "pace": "4:10", "recovery_s": 60},
+                {"count": 1, "distance_m": 990, "zone": "Z2", "pace": "4:10", "recovery_s": 60},
+                {"count": 1, "distance_m": 812, "zone": "Z2", "pace": "4:10", "recovery_s": None},
+                {"count": 1, "distance_m": 1148, "zone": "Z2", "pace": "4:10", "recovery_s": 60},
+                {"count": 1, "distance_m": 1000, "zone": "Z2", "pace": "4:10", "recovery_s": 60},
+                {"count": 1, "distance_m": 824, "zone": "Z2", "pace": "4:10", "recovery_s": None},
+            ],
+            "confidence": 0.9,
+        })}}]}).encode()
+        response.__enter__.return_value = response
+        athlete = SimpleNamespace(get_zone_speed_mps=lambda: {"1": 3.0, "2": 4.2, "3": 5.0})
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}), patch("core.views.polar_raw.urlopen", return_value=response):
+            description = _model_b_ai_description(laps, athlete)
+        self.assertEqual(description, "WU: 3000 m Z1 · Main: 2×(1150 m Z2 (4:10) p60 + 1000 m Z2 (4:10) p60 + 800 m Z2 (4:10)) · CD: 1900 m Z1")
 
     def test_lap_distance_is_rounded_to_nearest_50_metres(self):
         self.assertEqual(distance_rounded_to_50(424.99), "400")
