@@ -554,7 +554,12 @@ def type_b_description(laps, athlete=None):
         return label
 
     warmup_rows = [row for row in rows if row["index"] < candidate_rows[0]["index"]]
-    cooldown_rows = [row for row in rows if row["index"] > candidate_rows[-1]["index"]]
+    # The dominant-distance candidates may end before a later work block of a
+    # different distance (for example 400 m followed by 200 m reps). Start CD
+    # after the final clearly faster work lap, not after the last dominant lap.
+    active_rows = [row for row in rows if int(row["zone"] or 0) >= 2]
+    last_work_index = max((row["index"] for row in active_rows), default=candidate_rows[-1]["index"])
+    cooldown_rows = [row for row in rows if row["index"] > last_work_index]
     warmup_distance = sum(row["distance_m"] for row in warmup_rows if row["zone"] == "1")
     # A cooldown can be split over several final easy laps (for example
     # 535 m + 455 m). Keep the trailing Z1 block together instead of requiring
