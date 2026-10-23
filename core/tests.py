@@ -3401,6 +3401,57 @@ class SlotModalSaveTests(TestCase):
             ).exists()
         )
 
+    def test_ayc_edit_creates_personal_override_for_shared_watch_source(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+        day = date.today()
+        shared_watch = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=None,
+            date=day,
+            slot_index=1,
+            source="watch_b",
+            watch_loads=[{"zone": "2", "meters": 6500}],
+        )
+        TrainingSegment.objects.create(
+            slot=shared_watch,
+            order=1,
+            type="CORE",
+            text="6x1000m p1",
+            distance_m=1000,
+            norm_distance_m=6000,
+            reps=6,
+            zone="2",
+        )
+
+        response = self.client.post(
+            "/athlete/year/",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "slot_text": "5km z1",
+                "wu_text": "",
+                "mob_text": "",
+                "sprint_text": "",
+                "core_text": "5km z1",
+                "core2_text": "",
+                "alt_text": "",
+                "cd_text": "",
+            },
+        )
+
+        self.assertIn(response.status_code, (200, 204))
+        shared_watch.refresh_from_db()
+        personal = TrainingSlot.objects.get(
+            plan=plan, athlete=athlete, date=day, slot_index=1
+        )
+        self.assertEqual(shared_watch.source, "watch_b")
+        self.assertEqual(shared_watch.watch_loads[0]["meters"], 6500)
+        self.assertEqual(personal.source, "planned")
+        self.assertEqual(personal.watch_loads, [])
+        self.assertEqual(_ayc_slot_session_km(personal, athlete), "5.0")
+
     def test_watch_slot_modal_marks_main_confirmation_required(self):
         _, plan, athlete = self._user_plan_and_athlete()
         plan.name = "Flex Planner test"

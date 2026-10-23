@@ -2741,6 +2741,26 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         selected_plan = watch_override.plan
         existing_override = watch_override
 
+    # Older Watch imports could have been stored as a shared source slot.
+    # In that case never mutate the shared training: create the athlete's
+    # planned override in the same plan so it hides the actual Watch loads.
+    watch_source = None
+    if not selected_plan:
+        watch_source = (
+            TrainingSlot.objects
+            .filter(
+                athlete__isnull=True,
+                date=d,
+                slot_index=slot_index,
+                source__in={"watch_a", "watch_b", "watch_c"},
+            )
+            .select_related("plan")
+            .order_by("-updated_at", "-id")
+            .first()
+        )
+        if watch_source and any(plan.id == watch_source.plan_id for plan in owned_plans):
+            selected_plan = watch_source.plan
+
     if not selected_plan and requested_plan_id.isdigit():
         for plan in owned_plans:
             if plan.id != int(requested_plan_id):
@@ -2788,6 +2808,8 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
                 break
 
     source_slot = existing_override or base_slot
+    if watch_source and selected_plan and selected_plan.id == watch_source.plan_id and not source_slot:
+        source_slot = watch_source
     if not source_slot and not selected_plan:
         return
 
