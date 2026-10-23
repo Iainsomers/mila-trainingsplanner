@@ -2776,8 +2776,20 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         date=d,
         slot_index=slot_index,
         athlete=athlete,
-        defaults={},
+        # A normal AYC edit is a planned/personal override.  If this slot was
+        # previously filled through Watch A/B/C, the old actual lap loads must
+        # not continue to drive the calendar totals after the coach changes
+        # the text.  Otherwise the visible text and the km total describe two
+        # different trainings.
+        defaults={"source": "planned", "watch_loads": []},
     )
+
+    # ``update_or_create`` only applies defaults when it creates a row.  Clear
+    # the watch provenance explicitly for an existing override as well.
+    if override_slot.source != "planned" or override_slot.watch_loads:
+        override_slot.source = "planned"
+        override_slot.watch_loads = []
+        override_slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
     override_slot.segments.all().delete()
 

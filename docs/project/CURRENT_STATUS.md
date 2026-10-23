@@ -45,6 +45,7 @@ Bijgewerkt: 20 oktober 2026.
 - Flex Planner toont de effectieve, gepersonaliseerde planning. Het verwijderen van een flex-override onderdrukt een basistraining correct.
 - Coach Settings bevat `See session km`; indien ingeschakeld tonen Flex Planner en DCO Training hetzelfde sessietotaal als AYC, zonder Alternative-kilometers.
 - Watch A/B/C-trainingen bewaren de werkelijke meters en seconden uit de horlogeanalyse. Daardoor rekenen AYC, Flex Planner, DCO en weektotalen deze slots niet opnieuw om vanuit geplande zone-snelheden; de zichtbare trainingstekst toont alleen de bestaande min/km-notatie.
+- Een gewone handmatige AYC-bewerking van een eerder met Watch A/B/C opgeslagen training wist de oude werkelijke lapbelasting en maakt de persoonlijke override weer een geplande training. Zo volgen km-totalen na het wijzigen van WU/Main/CD weer de ingevoerde tekst.
 - Persoonlijke wijzigingen na de formele einddatum van een bronplanning blijven ook in Flex Planner zichtbaar, net als in AYC.
 - Base Planning-koppelingen naar trainerplannen blijven ook bij meerdere geselecteerde atleten zichtbaar in Flex Planner, onafhankelijk van de formele planrange.
 - Een expliciete Base Planning-koppeling kan het trainer-slot rechtstreeks laden wanneer de normale Flex-voorlaadlijst het plan mist.

@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.focus_point_import import FOCUS_POINT_HEADERS
-from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
+from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
@@ -3294,6 +3294,52 @@ class SlotModalSaveTests(TestCase):
         )
         static_weekly = athlete_week_stats(plan, athlete, week_start, CoachSettings.PAUSE_MODE_ALWAYS_STATIC)
         self.assertEqual(static_weekly["zones"]["1"]["distance_m"], 336)
+
+    def test_ayc_edit_clears_watch_actual_loads(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+        day = date.today()
+        slot = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+            source="watch_b",
+            watch_loads=[{"zone": "2", "meters": 12600}],
+        )
+        TrainingSegment.objects.create(
+            slot=slot,
+            order=1,
+            type="CORE",
+            text="12.6km z2",
+            distance_m=12600,
+            norm_distance_m=12600,
+            reps=1,
+            zone="2",
+        )
+
+        response = self.client.post(
+            "/athlete/year/",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "slot_text": "5km z1",
+                "wu_text": "",
+                "mob_text": "",
+                "sprint_text": "",
+                "core_text": "5km z1",
+                "core2_text": "",
+                "alt_text": "",
+                "cd_text": "",
+            },
+        )
+
+        self.assertIn(response.status_code, (200, 204))
+        slot.refresh_from_db()
+        self.assertEqual(slot.source, "planned")
+        self.assertEqual(slot.watch_loads, [])
+        self.assertEqual(_ayc_slot_session_km(slot, athlete), "5.0")
 
     def test_trainer_planning_print_uses_selected_week_range(self):
         user = get_user_model().objects.create_user(
