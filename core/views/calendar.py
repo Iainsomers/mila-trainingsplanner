@@ -2324,6 +2324,7 @@ def _watch_actual_time_label(actual_loads, seg=None):
         ]
         if work_loads:
             measured = work_loads
+    duration_values = []
     pace_values = []
     for load in measured:
         try:
@@ -2332,8 +2333,13 @@ def _watch_actual_time_label(actual_loads, seg=None):
         except (TypeError, ValueError):
             continue
         if meters > 0 and seconds > 0:
+            duration_values.append(seconds)
             pace_values.append(seconds / (meters / 1000.0))
-    return _format_min_km_range(pace_values)
+    duration_label = _format_rep_time_range(duration_values)
+    pace_label = _format_min_km_range(pace_values)
+    if duration_label and pace_label:
+        return f"{duration_label} ({pace_label})"
+    return pace_label or duration_label
 
 
 def _annotate_slot_segment_display_times(slot, athlete):

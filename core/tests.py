@@ -7813,7 +7813,7 @@ class TrainingSegmentLabelTests(TestCase):
             segment,
         )
         self.assertNotIn("0:08", label)
-        self.assertIn("3:35-->3:30 min/km", label)
+        self.assertIn("7:10-->7:00 (3:35-->3:30 min/km)", label)
 
 
 class FlexPlannerAltTotalsTests(TestCase):
