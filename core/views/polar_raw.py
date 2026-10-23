@@ -686,6 +686,19 @@ def _model_b_ai_description(laps, athlete=None):
     if warmup_m + cooldown_m + sets * main_m > measured_total + 250:
         return ""
 
+    # Keep the deterministic WU/CD boundary detection authoritative.  The
+    # model is useful for nested Main patterns, but it may conservatively omit
+    # a long leading or trailing easy block even when the laps make it clear.
+    fixed_description = type_b_description(laps, athlete)
+    fixed_wu = re.search(r"WU:\s+(\d+)\s+m\s+Z1", fixed_description or "")
+    fixed_cd = re.search(r"CD:\s+(\d+)\s+m\s+Z1", fixed_description or "")
+    if warmup_m < 500 and fixed_wu:
+        warmup_m = int(fixed_wu.group(1))
+    if cooldown_m < 500 and fixed_cd:
+        cooldown_m = int(fixed_cd.group(1))
+    if warmup_m + cooldown_m + sets * main_m > measured_total + 250:
+        return ""
+
     def segment_text(item):
         count, distance_m, zone, segment_pace, recovery = item
         text = f"{count}×{distance_m} m"
