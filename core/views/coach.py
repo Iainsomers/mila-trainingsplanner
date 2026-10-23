@@ -9532,6 +9532,10 @@ def coach_athletes_view(request):
 @require_http_methods(["GET", "POST"])
 def coach_athlete_create_view(request):
     active_coach = _active_coach_user(request)
+    coach_pause_mode = (
+        CoachSettings.objects.filter(user=active_coach).values_list("pause_mode", flat=True).first()
+        or CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+    )
     unit = "pace"
     unit_label = zone_unit_label(unit)
 
@@ -9568,6 +9572,7 @@ def coach_athlete_create_view(request):
         "view_weeks_ahead": 2,
         "training_reports_enabled": True,
         "see_session_km": True,
+        "pause_mode": coach_pause_mode,
         "week_report_enabled": False,
         "daily_vitals_enabled": False,
         "year_planner_training_enabled": False,
@@ -9836,7 +9841,13 @@ def coach_athlete_create_view(request):
     return render(
         request,
         "core/coach_athlete_form.html",
-        {"mode": "create", "athlete": None, "form": form, "errors": errors},
+        {
+            "mode": "create",
+            "athlete": None,
+            "form": form,
+            "errors": errors,
+            "pause_mode_choices": CoachSettings.PAUSE_MODE_CHOICES,
+        },
     )
 
 
@@ -9853,6 +9864,11 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
     unit = "pace"
     unit_label = zone_unit_label(unit)
+    coach_pause_mode = (
+        CoachSettings.objects.filter(user_id=athlete.owner_id).values_list("pause_mode", flat=True).first()
+        or CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+    )
+    effective_pause_mode = getattr(athlete, "pause_mode", None) or coach_pause_mode
 
     speeds = athlete.get_zone_speed_mps()
     zones_form = zones_form_from_speeds(unit, speeds)
@@ -9894,6 +9910,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "view_weeks_ahead": getattr(athlete, "view_weeks_ahead", 2),
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
         "see_session_km": getattr(athlete, "see_session_km", True),
+        "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
         "year_planner_training_enabled": getattr(athlete, "year_planner_training_enabled", False),
@@ -9941,6 +9958,11 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["target_t4"] = (request.POST.get("target_t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["see_session_km"] = (request.POST.get("see_session_km") == "on")
+        if self_view:
+            form["pause_mode"] = effective_pause_mode
+        else:
+            posted_pause_mode = (request.POST.get("pause_mode") or "").strip()
+            form["pause_mode"] = posted_pause_mode if posted_pause_mode in dict(CoachSettings.PAUSE_MODE_CHOICES) else effective_pause_mode
         if self_view:
             form["view_weeks_ahead"] = str(getattr(athlete, "view_weeks_ahead", 2))
             form["training_reports_enabled"] = getattr(athlete, "training_reports_enabled", True)
@@ -10135,6 +10157,13 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.view_weeks_ahead = view_weeks_ahead
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.see_session_km = form["see_session_km"]
+            if not self_view:
+                # Keep a blank override following the coach. A different
+                # choice is stored per athlete and takes precedence.
+                if getattr(athlete, "pause_mode", None) is None and form["pause_mode"] == coach_pause_mode:
+                    athlete.pause_mode = None
+                else:
+                    athlete.pause_mode = form["pause_mode"]
             athlete.week_report_enabled = form["week_report_enabled"]
             athlete.daily_vitals_enabled = form["daily_vitals_enabled"]
             athlete.year_planner_training_enabled = form["year_planner_training_enabled"]
@@ -10181,6 +10210,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             "saved_notice": saved_notice,
             "active_tab": active_tab,
             "self_view": self_view,
+            "pause_mode_choices": CoachSettings.PAUSE_MODE_CHOICES,
         },
     )
 
@@ -10650,7 +10680,12 @@ def trainer_stats_view(request):
     previous_week_start = this_week_start - timedelta(days=7)
     rows = []
     for athlete in all_athletes:
-        totals = _effective_week_distance_m(athlete, plans, previous_week_start, coach_settings.pause_mode)
+        totals = _effective_week_distance_m(
+            athlete,
+            plans,
+            previous_week_start,
+            getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
+        )
         rows.append({
             "athlete": athlete,
             "has_planned_training": bool(totals[previous_week_start] or totals[this_week_start]),
@@ -10734,7 +10769,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         plans,
         period_last_week_start,
         week_count=week_count,
-        pause_mode=coach_settings.pause_mode,
+        pause_mode=getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
     )
 
     chart_width = 900
@@ -11145,8 +11180,8 @@ def daily_overview_view(request):
             "athlete": athlete,
             "slot1": slot1,
             "slot2": slot2,
-            "session_km1": _ayc_slot_session_km(slot1, athlete, coach_settings.pause_mode) if coach_settings.see_session_km else "",
-            "session_km2": _ayc_slot_session_km(slot2, athlete, coach_settings.pause_mode) if coach_settings.see_session_km else "",
+            "session_km1": _ayc_slot_session_km(slot1, athlete, getattr(athlete, "pause_mode", None) or coach_settings.pause_mode) if coach_settings.see_session_km else "",
+            "session_km2": _ayc_slot_session_km(slot2, athlete, getattr(athlete, "pause_mode", None) or coach_settings.pause_mode) if coach_settings.see_session_km else "",
             "check1": check1,
             "check2": check2,
             "check1_badge": _daily_status_badge(status1),

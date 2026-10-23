@@ -540,7 +540,12 @@ def calendar_view(request):
 
         if selected_plan:
             if selected_athlete:
-                st = athlete_week_stats(selected_plan, selected_athlete, week_start, coach_settings.pause_mode)
+                st = athlete_week_stats(
+                    selected_plan,
+                    selected_athlete,
+                    week_start,
+                    selected_athlete.pause_mode or coach_settings.pause_mode,
+                )
             elif plan_athletes:
                 st = group_week_stats(selected_plan, plan_athletes, week_start, coach_settings.pause_mode)
             else:
@@ -1482,7 +1487,11 @@ def flex_planner_view(request):
                         "is_override": is_override,
                         "no_plan": no_plan,
                         "check": _flex_check_payload(check_lookup.get((athlete.id, day, slot_index))),
-                        "session_km": _ayc_slot_session_km(slot, athlete, coach_settings.pause_mode) if coach_settings.see_session_km else "",
+                        "session_km": _ayc_slot_session_km(
+                            slot,
+                            athlete,
+                            athlete.pause_mode or coach_settings.pause_mode,
+                        ) if coach_settings.see_session_km else "",
                     })
 
             week_phase_style, week_phase = week_training_style(athlete.id, days)
@@ -1490,6 +1499,7 @@ def flex_planner_view(request):
             athlete_rows.append({
                 "athlete": athlete,
                 "zone_speeds_json": json.dumps(athlete.get_zone_speed_mps() or {}),
+                "pause_mode": getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
                 "am_cells": am_cells,
                 "pm_cells": pm_cells,
                 "week_phase": week_phase,
@@ -3208,11 +3218,16 @@ def athlete_year_calendar_view(request):
             selected_athlete_id = ""
 
     athlete_self_view = bool(selected_athlete and not _is_coach_user(request.user))
-    athlete_pause_mode = (
+    coach_pause_mode = (
         CoachSettings.objects.filter(user_id=selected_athlete.owner_id).values_list("pause_mode", flat=True).first()
         if selected_athlete and selected_athlete.owner_id
         else CoachSettings.PAUSE_MODE_ALWAYS_STATIC
     ) or CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+    athlete_pause_mode = (
+        (getattr(selected_athlete, "pause_mode", None) or coach_pause_mode)
+        if selected_athlete
+        else coach_pause_mode
+    )
     evaluation_visibility = evaluation_visibility_for_request(
         request,
         selected_athlete.owner if selected_athlete else None,

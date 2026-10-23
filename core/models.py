@@ -456,6 +456,14 @@ class Athlete(models.Model):
 
     training_reports_enabled = models.BooleanField(default=True)
     see_session_km = models.BooleanField(default=True)
+    # Blank means: follow the owning coach's pause mode.
+    pause_mode = models.CharField(
+        max_length=24,
+        choices=CoachSettings.PAUSE_MODE_CHOICES,
+        null=True,
+        blank=True,
+        default=None,
+    )
     week_report_enabled = models.BooleanField(default=False)
     daily_vitals_enabled = models.BooleanField(default=False)
     year_planner_training_enabled = models.BooleanField(default=False)

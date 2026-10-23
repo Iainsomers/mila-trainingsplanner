@@ -27,6 +27,8 @@ De trainer en atleet kunnen in Athlete settings > General de persoonlijke optie 
 
 De trainer kan daarnaast in Coach Settings > Planning de coachbrede optie `See session km` beheren voor Flex Planner en DCO Training. Deze instelling verandert de persoonlijke AYC-keuze van atleten niet.
 
+De trainer kan in Athlete settings per atleet de `P(ause)mode` instellen. Zonder afwijkende keuze volgt de atleet de coachinstelling; de atleet ziet en wijzigt deze coach-only instelling niet.
+
 Iedere gebruiker kan eigen actieve wishes indienen en bewerken. Alleen de productbeheerder kan wishes van andere gebruikers bewerken; overige gebruikers kunnen die alleen bekijken en liken.
 
 ## Atleet

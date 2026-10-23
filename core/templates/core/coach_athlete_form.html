@@ -533,6 +533,18 @@
           <div class="form-text">Lets the athlete edit future training and add a training to an empty AM or PM slot.</div>
         </div>
 
+        {% if mode == "edit" and not self_view %}
+        <div class="mb-3">
+          <label class="form-label" for="athlete-pause-mode">P(ause)mode</label>
+          <select class="form-select" id="athlete-pause-mode" name="pause_mode">
+            {% for value, label in pause_mode_choices %}
+              <option value="{{ value }}" {% if form.pause_mode == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Defaults to the coach setting. A different choice here overrides it for this athlete.</div>
+        </div>
+        {% endif %}
+
         <div class="mb-3 form-check">
             <input
               class="form-check-input"

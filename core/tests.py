@@ -1872,6 +1872,47 @@ class PlanningOverviewTests(TestCase):
         settings.refresh_from_db()
         self.assertEqual(settings.pause_mode, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP)
 
+    def test_athlete_pause_mode_is_coach_only_and_overrides_coach_default(self):
+        coach = get_user_model().objects.create_user(
+            username="athlete-pause-mode-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Athlete pause mode",
+            birth_year=2000,
+            gender="X",
+        )
+        coach_settings = CoachSettings.objects.create(
+            user=coach,
+            pause_mode=CoachSettings.PAUSE_MODE_ALWAYS_STATIC,
+        )
+        self.client.force_login(coach)
+
+        coach_view = self.client.get(f"/coach/athletes/{athlete.id}/edit/")
+        self.assertEqual(coach_view.status_code, 200)
+        self.assertContains(coach_view, 'name="pause_mode"')
+        self.assertContains(coach_view, '<option value="always_static" selected>Static unless &quot;ap&quot;</option>', html=True)
+
+        response = self.client.post(
+            f"/coach/athletes/{athlete.id}/edit/",
+            {
+                "name": athlete.name,
+                "birth_year": athlete.birth_year,
+                "gender": athlete.gender,
+                "pause_mode": CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP,
+                "z1_pace": "5:00", "z2_pace": "4:30", "z3_pace": "4:00",
+                "z4_pace": "3:40", "z5_pace": "3:20",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.pause_mode, CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP)
+
+        # The athlete self-view has no linked account in this legacy fixture;
+        # visibility is enforced by the template's ``not self_view`` guard.
+
     def test_other_coach_cannot_change_owner_settings(self):
         owner = get_user_model().objects.create_user(
             username="settings-owner", password="secret", is_staff=True
@@ -3362,6 +3403,17 @@ class SlotModalSaveTests(TestCase):
         week = next(week for week in response.context["week_rows"] if week["week_start"] <= day <= week["week_end"])
         self.assertEqual(cell["session_km"], "3.3")
         self.assertEqual(week["sum_z1_km"], "0.3")
+
+        athlete.pause_mode = CoachSettings.PAUSE_MODE_ALWAYS_STATIC
+        athlete.save(update_fields=["pause_mode"])
+        overridden = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
+        overridden_cell = next(
+            cell
+            for week in overridden.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        self.assertEqual(overridden_cell["session_km"], "3.0")
 
     def test_coach_session_km_is_shared_by_flex_and_dco(self):
         coach = get_user_model().objects.create_user(
