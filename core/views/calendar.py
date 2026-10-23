@@ -2304,7 +2304,7 @@ def _segment_hr_label(athlete, seg):
 
 
 def _watch_actual_time_label(actual_loads, seg=None):
-    """Return the measured duration range for a Watch segment."""
+    """Return the measured min/km range for a Watch segment."""
     if not actual_loads:
         return ""
     measured = actual_loads
@@ -2324,9 +2324,16 @@ def _watch_actual_time_label(actual_loads, seg=None):
         ]
         if work_loads:
             measured = work_loads
-    return _format_rep_time_range(
-        [load.get("seconds") for load in measured if float(load.get("seconds") or 0) > 0]
-    )
+    pace_values = []
+    for load in measured:
+        try:
+            meters = float(load.get("meters") or 0)
+            seconds = float(load.get("seconds") or 0)
+        except (TypeError, ValueError):
+            continue
+        if meters > 0 and seconds > 0:
+            pace_values.append(seconds / (meters / 1000.0))
+    return _format_min_km_range(pace_values)
 
 
 def _annotate_slot_segment_display_times(slot, athlete):
