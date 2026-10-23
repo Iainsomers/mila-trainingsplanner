@@ -10,6 +10,7 @@ from core.views.polar_raw import (
     polar_raw_view,
     sample_rows,
     translate,
+    translate_model_b,
     type_a_description,
     type_a_general_description,
 )
@@ -53,6 +54,12 @@ class RawPolarTests(SimpleTestCase):
         ]}}], 5)
         rows = result[0]["parts"][0]["manual"]
         self.assertEqual([row["average_hr"] for row in rows], ["155", "195"])
+
+    def test_model_b_starts_with_same_type_a_output(self):
+        payload = [{"sport": {"id": "1"}, "laps": {"laps": [
+            {"distanceMeters": 1000, "durationMillis": 240000},
+        ]}}]
+        self.assertEqual(translate_model_b(payload, 5), translate(payload, 5, mode="A"))
 
     def test_lap_distance_is_rounded_to_nearest_50_metres(self):
         self.assertEqual(distance_rounded_to_50(424.99), "400")

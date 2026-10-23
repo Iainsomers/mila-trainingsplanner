@@ -5414,12 +5414,16 @@ def polar_type_a_ayc_view(request):
     sessions, status_message = _polar_v4_sessions_for_day(connection, target_date)
     if status_message:
         return JsonResponse({"ok": False, "message": status_message})
-    from .polar_raw import translate
-    results = translate(sessions, 5, "A", athlete)
+    from .polar_raw import translate, translate_model_b
+    model = (request.GET.get("model") or "A").strip().upper()
+    if model not in {"A", "B"}:
+        model = "A"
+    results = translate(sessions, 5, "A", athlete) if model == "A" else translate_model_b(sessions, 5, athlete)
     return JsonResponse({
         "ok": True,
         "message": "" if results else "No Polar training found for this day.",
         "results": results,
+        "model": model,
     })
 
 

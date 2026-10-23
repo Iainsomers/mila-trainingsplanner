@@ -1893,6 +1893,7 @@
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
       <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Watch A</button>
+      <button type="button" id="suggestInputBtnB" class="btn btn-sm btn-outline-primary">Watch B</button>
       <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger" style="display:none;">Delete input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary evaluation-ok-btn" disabled>OK</button>
     </div>
@@ -2110,20 +2111,21 @@
     });
     validate();
   }
-  function showSuggestInputPlaceholder() {
+  function showWatchModel(model) {
     var popup = document.getElementById("suggestInputPlaceholder");
     var body = document.getElementById("suggestInputPlaceholderBody");
     popup.style.display = "flex";
+    document.getElementById("suggestInputPlaceholderText").textContent = "Polar Model " + model;
     document.getElementById("suggestInputPlaceholderClose").focus();
-    body.textContent = "Loading Polar Type A...";
-    fetch("/integrations/polar/type-a-ayc/?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate), {
+    body.textContent = "Loading Polar Model " + model + "...";
+    fetch("/integrations/polar/type-a-ayc/?model=" + encodeURIComponent(model) + "&athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate), {
       headers: {"Accept": "application/json"}
     }).then(function(response) { return response.json(); }).then(function(data) {
       if (!data.ok) {
         body.textContent = data.message || "Polar Type A could not be loaded.";
         return;
       }
-      renderTypeAResults(body, data.results || [], data.message || "");
+      renderTypeAResults(body, data.results || [], data.message || "", model);
     }).catch(function() {
       body.textContent = "Polar Type A could not be loaded.";
     });
@@ -2151,7 +2153,7 @@
     });
     table.appendChild(tbody); parent.appendChild(table);
   }
-  function renderTypeAResults(parent, results, message) {
+  function renderTypeAResults(parent, results, message, model) {
     parent.innerHTML = "";
     if (!results.length) { parent.textContent = message || "No Polar training found for this day."; return; }
     results.forEach(function(session) {
@@ -2178,7 +2180,7 @@
               button.textContent = slotIndex === 1 ? "Use AM" : "Use PM";
               button.addEventListener("click", function(event) {
                 event.preventDefault();
-                useTypeATraining(fields, part.watch_loads || [], slotIndex, button);
+                useWatchTraining(fields, part.watch_loads || [], slotIndex, button, model);
               });
               actions.appendChild(button);
             });
@@ -2192,7 +2194,7 @@
       parent.appendChild(box);
     });
   }
-  function useTypeATraining(fields, watchLoads, slotIndex, button) {
+  function useWatchTraining(fields, watchLoads, slotIndex, button, model) {
     if (!activeDate || !activeAthlete || !fields || !fields.main) return;
     var originalLabel = button.textContent;
     button.disabled = true;
@@ -2208,7 +2210,7 @@
     formData.append("core2_text", "");
     formData.append("alt_text", "");
     formData.append("cd_text", fields.cd || "");
-    formData.append("watch_origin", "watch_a");
+    formData.append("watch_origin", "watch_" + String(model || "A").toLowerCase());
     formData.append("watch_loads", JSON.stringify(watchLoads || []));
     var dateParts = activeDate.split("-");
     var saveUrl = "/slot-modal/" + dateParts[0] + "/" + dateParts[1] + "/" + dateParts[2] + "/" + slotIndex + "/?athlete=" + encodeURIComponent(activeAthlete) + "&source=athlete_year";
@@ -2328,7 +2330,8 @@
       startVoiceComment(btn);
     });
   });
-  document.getElementById("suggestInputBtn").addEventListener("click", showSuggestInputPlaceholder);
+  document.getElementById("suggestInputBtn").addEventListener("click", function() { showWatchModel("A"); });
+  document.getElementById("suggestInputBtnB").addEventListener("click", function() { showWatchModel("B"); });
   document.getElementById("suggestInputPlaceholderClose").addEventListener("click", hideSuggestInputPlaceholder);
   document.getElementById("suggestInputPlaceholder").addEventListener("click", function(event) {
     if (event.target === this) hideSuggestInputPlaceholder();

@@ -572,6 +572,15 @@ def translate(payload, interval, mode="A", athlete=None):
     return result
 
 
+def translate_model_b(payload, interval, athlete=None):
+    """Model B starts as an isolated copy of the stable Model A output.
+
+    Keep this entry point separate so future Model B recognition changes do
+    not require changing the Model A implementation used by Polar Integration.
+    """
+    return translate(payload, interval, mode="A", athlete=athlete)
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def polar_raw_view(request):
