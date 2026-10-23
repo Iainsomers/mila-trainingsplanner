@@ -173,6 +173,30 @@ class RawPolarTests(SimpleTestCase):
         with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}), patch("core.views.polar_raw.urlopen", return_value=response):
             self.assertEqual(_model_b_ai_description(laps), "")
 
+    def test_model_b_fills_missing_segment_pace_from_measured_laps(self):
+        laps = [
+            {"distanceMeters": 3000, "durationMillis": 900000},
+            {"distanceMeters": 1000, "durationMillis": 240000},
+            {"distanceMeters": 100, "durationMillis": 60000},
+            {"distanceMeters": 1000, "durationMillis": 246000},
+            {"distanceMeters": 100, "durationMillis": 60000},
+            {"distanceMeters": 1200, "durationMillis": 420000},
+        ]
+        response = MagicMock()
+        response.read.return_value = json.dumps({"choices": [{"message": {"content": json.dumps({
+            "warmup_m": 3000,
+            "cooldown_m": 1200,
+            "sets": 1,
+            "segments": [
+                {"count": 2, "distance_m": 1000, "zone": "Z2", "pace": "", "recovery_s": 60},
+            ],
+            "confidence": 0.95,
+        })}}]}).encode()
+        response.__enter__.return_value = response
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}), patch("core.views.polar_raw.urlopen", return_value=response):
+            description = _model_b_ai_description(laps)
+        self.assertIn("2×1000 m Z2 (4:03) p60", description)
+
     def test_lap_distance_is_rounded_to_nearest_50_metres(self):
         self.assertEqual(distance_rounded_to_50(424.99), "400")
         self.assertEqual(distance_rounded_to_50(425), "450")

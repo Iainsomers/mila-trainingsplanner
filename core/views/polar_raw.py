@@ -773,11 +773,24 @@ def _model_b_ai_description(laps, athlete=None):
     if warmup_m + cooldown_m + sets * main_m > measured_total + 250:
         return ""
 
+    measured_paces = {}
+    for row in facts:
+        distance_m = int(row.get("rounded_50_m") or 0)
+        actual_distance_m = float(row.get("distance_m") or 0)
+        duration_s = float(row.get("duration_s") or 0)
+        if distance_m <= 0 or actual_distance_m <= 0 or duration_s <= 0:
+            continue
+        total_duration, total_distance = measured_paces.get(distance_m, (0.0, 0.0))
+        measured_paces[distance_m] = (total_duration + duration_s, total_distance + actual_distance_m)
+
     def segment_text(item):
         count, distance_m, zone, segment_pace, recovery = item
         text = f"{count}×{distance_m} m" if count != 1 else f"{distance_m} m"
         if zone:
             text += f" {zone}"
+        if not segment_pace and distance_m in measured_paces:
+            total_duration, total_distance = measured_paces[distance_m]
+            segment_pace = pace(total_duration, total_distance)
         if segment_pace:
             text += f" ({segment_pace})"
         if recovery is not None:
