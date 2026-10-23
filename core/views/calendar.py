@@ -2303,6 +2303,15 @@ def _segment_hr_label(athlete, seg):
     return "-->".join(labels) if is_progressive else "/".join(labels)
 
 
+def _watch_actual_time_label(actual_loads):
+    """Return the measured duration range for a Watch segment."""
+    if not actual_loads:
+        return ""
+    return _format_rep_time_range(
+        [load.get("seconds") for load in actual_loads if float(load.get("seconds") or 0) > 0]
+    )
+
+
 def _annotate_slot_segment_display_times(slot, athlete):
     if not slot:
         return slot
@@ -2316,11 +2325,13 @@ def _annotate_slot_segment_display_times(slot, athlete):
         text = getattr(seg, "text", "") or ""
         actual_loads = _watch_segment_loads(seg)
         seg.flex_actual_loads_json = json.dumps(actual_loads, separators=(",", ":")) if actual_loads else ""
-        # Watch sessions already carry measured zone time. Do not append the
-        # planned pace or HR guidance to the already descriptive watch text.
-        is_watch_slot = str(getattr(getattr(seg, "slot", None), "source", "") or "") in {"watch_a", "watch_b", "watch_c"}
-        label = "" if is_watch_slot else _segment_rep_time_label(athlete, seg)
-        hr_label = "" if is_watch_slot else _segment_hr_label(athlete, seg)
+        # Only segments with measured Watch loads already carry actual timing.
+        # A non-Main edit keeps the actual Main loads, while the edited WU/CD
+        # (which has no measured load anymore) should still receive the normal
+        # planned guidance.
+        is_watch_segment = bool(actual_loads)
+        label = _watch_actual_time_label(actual_loads) if is_watch_segment else _segment_rep_time_label(athlete, seg)
+        hr_label = "" if is_watch_segment else _segment_hr_label(athlete, seg)
         display_labels = "; ".join(part for part in (label, hr_label) if part)
         seg.display_text = f"{text} ({display_labels})" if text and display_labels else text
     return slot
@@ -2533,7 +2544,9 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
     if not slot:
         return []
 
-    if str(getattr(slot, "source", "") or "") in {"watch_a", "watch_b", "watch_c"}:
+    watch_source = str(getattr(slot, "source", "") or "") in {"watch_a", "watch_b", "watch_c"}
+    actual_segment_types = set()
+    if watch_source:
         watch_loads = getattr(slot, "watch_loads", None)
         if isinstance(watch_loads, list):
             actual = []
@@ -2556,17 +2569,27 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
                     "race": bool(load.get("race")),
                 })
             if actual:
-                return actual
+                actual_segment_types = {load["segment"] for load in actual}
+                loads = actual
+            else:
+                loads = []
+        else:
+            loads = []
+    else:
+        loads = []
 
     try:
         segments = slot.segments.all()
     except Exception:
         return []
 
-    loads = []
     for seg in segments:
         seg_type = (getattr(seg, "type", "") or "").upper()
         if seg_type in ("MOB", "TECH"):
+            continue
+        # Actual Watch laps take precedence for the segment they belong to;
+        # edited/non-measured segments are calculated from their current text.
+        if seg_type in actual_segment_types:
             continue
 
         text = getattr(seg, "text", "") or ""
@@ -2813,24 +2836,46 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if not source_slot and not selected_plan:
         return
 
+    watch_sources = {"watch_a", "watch_b", "watch_c"}
+    original_source = str(getattr(source_slot, "source", "") or "")
+    original_watch_loads = list(getattr(source_slot, "watch_loads", []) or [])
+    original_core_text = " // ".join(
+        str(getattr(segment, "text", "") or "").strip()
+        for segment in source_slot.segments.filter(type__in=("CORE", "CORE2")).order_by("id")
+    ) if source_slot else ""
+
+    def _normalise_main_text(value):
+        return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
+
+    requested_core_text = request.POST.get("core_text", "")
+    # WU/CD/Sprint/Alternative edits must not detach the measured Main laps.
+    # A changed Main is deliberately treated as a planned override instead.
+    keep_watch_main = (
+        original_source in watch_sources
+        and bool(original_core_text)
+        and _normalise_main_text(original_core_text) == _normalise_main_text(requested_core_text)
+    )
+    preserved_watch_loads = [
+        load for load in original_watch_loads
+        if isinstance(load, dict)
+        and str(load.get("segment") or "CORE").upper() in {"CORE", "CORE2"}
+    ]
+    override_source = original_source if keep_watch_main else "planned"
+    override_watch_loads = preserved_watch_loads if keep_watch_main else []
+
     override_slot, _ = TrainingSlot.objects.update_or_create(
         plan=source_slot.plan if source_slot else selected_plan,
         date=d,
         slot_index=slot_index,
         athlete=athlete,
-        # A normal AYC edit is a planned/personal override.  If this slot was
-        # previously filled through Watch A/B/C, the old actual lap loads must
-        # not continue to drive the calendar totals after the coach changes
-        # the text.  Otherwise the visible text and the km total describe two
-        # different trainings.
-        defaults={"source": "planned", "watch_loads": []},
+        defaults={"source": override_source, "watch_loads": override_watch_loads},
     )
 
-    # ``update_or_create`` only applies defaults when it creates a row.  Clear
-    # the watch provenance explicitly for an existing override as well.
-    if override_slot.source != "planned" or override_slot.watch_loads:
-        override_slot.source = "planned"
-        override_slot.watch_loads = []
+    # ``update_or_create`` only applies defaults when it creates a row. Keep
+    # actual Main laps for non-Main edits, or clear them when Main changed.
+    if override_slot.source != override_source or override_slot.watch_loads != override_watch_loads:
+        override_slot.source = override_source
+        override_slot.watch_loads = override_watch_loads
         override_slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
     override_slot.segments.all().delete()

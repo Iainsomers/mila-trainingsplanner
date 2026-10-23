@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.focus_point_import import FOCUS_POINT_HEADERS
-from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training
+from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training, _watch_segment_loads
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
@@ -3340,6 +3340,59 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(slot.source, "planned")
         self.assertEqual(slot.watch_loads, [])
         self.assertEqual(_ayc_slot_session_km(slot, athlete), "5.0")
+
+    def test_ayc_non_main_edit_keeps_actual_main_and_recalculates_edited_wu(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+        athlete.auto_wucd_enabled = False
+        athlete.save(update_fields=["auto_wucd_enabled"])
+        day = date.today()
+        slot = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+            source="watch_b",
+            watch_loads=[
+                {"segment": "WU", "zone": "1", "meters": 3800, "seconds": 1200},
+                {"segment": "CORE", "zone": "2", "meters": 6000, "seconds": 1500},
+            ],
+        )
+        slot.segments.create(type="WU", text="3800m z1", distance_m=3800, norm_distance_m=3800, zone="1")
+        slot.segments.create(type="CORE", text="6x1000m z2 p1", distance_m=1000, norm_distance_m=6000, reps=6, zone="2")
+
+        response = self.client.post(
+            "/athlete/year/",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "slot_text": "",
+                "wu_text": "4800m z1",
+                "mob_text": "",
+                "sprint_text": "",
+                "core_text": "6x1000m z2 p1",
+                "core2_text": "",
+                "alt_text": "",
+                "cd_text": "",
+            },
+        )
+
+        self.assertIn(response.status_code, (200, 204))
+        slot.refresh_from_db()
+        self.assertEqual(slot.source, "watch_b")
+        self.assertEqual(
+            slot.watch_loads,
+            [{"segment": "CORE", "zone": "2", "meters": 6000, "seconds": 1500}],
+        )
+        self.assertEqual(
+            _ayc_slot_session_km(slot, athlete, CoachSettings.PAUSE_MODE_ALWAYS_STATIC),
+            "10.8",
+        )
+        core_segment = slot.segments.get(type="CORE")
+        wu_segment = slot.segments.get(type="WU")
+        self.assertTrue(_watch_segment_loads(core_segment))
+        self.assertFalse(_watch_segment_loads(wu_segment))
 
     def test_ayc_edit_targets_watch_override_when_cell_plan_is_source_plan(self):
         _, source_plan, athlete = self._user_plan_and_athlete()
