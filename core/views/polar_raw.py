@@ -712,6 +712,24 @@ def _model_b_ai_description(laps, athlete=None):
                 normalized = normalized[:period]
                 sets = max(sets, repeats)
                 break
+
+    # Never let the language model invent a work distance or repetition count
+    # that is not represented by the measured laps.  A total-distance check
+    # alone is insufficient: e.g. 3x500 + 5x400 + 6x200 can have the same
+    # total as 3x2000 + 2x1000 while describing a completely different workout.
+    observed_counts = {}
+    for row in facts:
+        rounded = int(row.get("rounded_50_m") or 0)
+        observed_counts[rounded] = observed_counts.get(rounded, 0) + 1
+    required_counts = {}
+    for count, distance_m, _zone, _pace, _recovery in normalized:
+        required_counts[distance_m] = required_counts.get(distance_m, 0) + count * sets
+    if any(
+        distance_m not in observed_counts or required > observed_counts[distance_m]
+        for distance_m, required in required_counts.items()
+    ):
+        return ""
+
     main_m = sum(item[0] * item[1] for item in normalized)
     measured_total = sum(float(row["distance_m"]) for row in facts)
     if warmup_m + cooldown_m + sets * main_m > measured_total + 250:

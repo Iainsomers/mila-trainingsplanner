@@ -145,6 +145,34 @@ class RawPolarTests(SimpleTestCase):
             description = _model_b_ai_description(laps, athlete)
         self.assertEqual(description, "WU: 3000 m Z1 · Main: 2×(1150 m Z2 (4:10) p60 + 1000 m Z2 (4:10) p60 + 800 m Z2 (4:10)) · CD: 1900 m Z1")
 
+    def test_model_b_rejects_ai_distances_not_present_in_laps(self):
+        laps = [
+            {"distanceMeters": 3800, "durationMillis": 1200000},
+            {"distanceMeters": 2000, "durationMillis": 420000},
+            {"distanceMeters": 350, "durationMillis": 120000},
+            {"distanceMeters": 2000, "durationMillis": 423000},
+            {"distanceMeters": 150, "durationMillis": 90000},
+            {"distanceMeters": 2000, "durationMillis": 425000},
+            {"distanceMeters": 50, "durationMillis": 30000},
+            {"distanceMeters": 1000, "durationMillis": 215000},
+            {"distanceMeters": 100, "durationMillis": 40000},
+            {"distanceMeters": 1000, "durationMillis": 213000},
+        ]
+        response = MagicMock()
+        response.read.return_value = json.dumps({"choices": [{"message": {"content": json.dumps({
+            "warmup_m": 3800,
+            "cooldown_m": None,
+            "sets": 1,
+            "segments": [
+                {"count": 3, "distance_m": 500, "zone": "Z2", "pace": "3:36", "recovery_s": 120},
+                {"count": 5, "distance_m": 400, "zone": "Z2", "pace": "3:38", "recovery_s": 120},
+            ],
+            "confidence": 0.95,
+        })}}]}).encode()
+        response.__enter__.return_value = response
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}), patch("core.views.polar_raw.urlopen", return_value=response):
+            self.assertEqual(_model_b_ai_description(laps), "")
+
     def test_lap_distance_is_rounded_to_nearest_50_metres(self):
         self.assertEqual(distance_rounded_to_50(424.99), "400")
         self.assertEqual(distance_rounded_to_50(425), "450")
