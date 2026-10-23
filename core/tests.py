@@ -3341,6 +3341,66 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(slot.watch_loads, [])
         self.assertEqual(_ayc_slot_session_km(slot, athlete), "5.0")
 
+    def test_ayc_edit_targets_watch_override_when_cell_plan_is_source_plan(self):
+        _, source_plan, athlete = self._user_plan_and_athlete()
+        flex_plan = TrainingPlan.objects.create(
+            owner=source_plan.owner,
+            name=f"Flex Planner {source_plan.owner_id}",
+        )
+        day = date.today()
+        watch_slot = TrainingSlot.objects.create(
+            plan=flex_plan,
+            athlete=athlete,
+            date=day,
+            slot_index=2,
+            source="watch_b",
+            watch_loads=[{"zone": "2", "meters": 6500}],
+        )
+        TrainingSegment.objects.create(
+            slot=watch_slot,
+            order=1,
+            type="CORE",
+            text="6x1000m p1",
+            distance_m=1000,
+            norm_distance_m=6000,
+            reps=6,
+            zone="2",
+        )
+
+        response = self.client.post(
+            "/athlete/year/",
+            {
+                "date": day.isoformat(),
+                "slot_index": "2",
+                # The AYC cell may submit the underlying source plan id.
+                "plan": str(source_plan.id),
+                "athlete": str(athlete.id),
+                "slot_text": "5km z1",
+                "wu_text": "",
+                "mob_text": "",
+                "sprint_text": "",
+                "core_text": "5km z1",
+                "core2_text": "",
+                "alt_text": "",
+                "cd_text": "",
+            },
+        )
+
+        self.assertIn(response.status_code, (200, 204))
+        watch_slot.refresh_from_db()
+        self.assertEqual(watch_slot.plan_id, flex_plan.id)
+        self.assertEqual(watch_slot.source, "planned")
+        self.assertEqual(watch_slot.watch_loads, [])
+        self.assertEqual(_ayc_slot_session_km(watch_slot, athlete), "5.0")
+        self.assertFalse(
+            TrainingSlot.objects.filter(
+                plan=source_plan,
+                athlete=athlete,
+                date=day,
+                slot_index=2,
+            ).exists()
+        )
+
     def test_watch_slot_modal_marks_main_confirmation_required(self):
         _, plan, athlete = self._user_plan_and_athlete()
         plan.name = "Flex Planner test"

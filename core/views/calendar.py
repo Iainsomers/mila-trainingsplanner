@@ -2721,7 +2721,27 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     selected_plan = None
     requested_plan_id = (request.POST.get("plan") or request.GET.get("plan") or "").strip()
 
-    if requested_plan_id.isdigit():
+    # AYC cells can display a Watch slot through the athlete's Flex Planner
+    # while their data-plan-id still points at the underlying source plan.
+    # Prefer the actual Watch override for this athlete/day/slot so a manual
+    # edit changes the slot that supplies the visible text and actual loads.
+    watch_override = (
+        TrainingSlot.objects
+        .filter(
+            athlete=athlete,
+            date=d,
+            slot_index=slot_index,
+            source__in={"watch_a", "watch_b", "watch_c"},
+        )
+        .select_related("plan")
+        .order_by("-updated_at", "-id")
+        .first()
+    )
+    if watch_override and any(plan.id == watch_override.plan_id for plan in owned_plans):
+        selected_plan = watch_override.plan
+        existing_override = watch_override
+
+    if not selected_plan and requested_plan_id.isdigit():
         for plan in owned_plans:
             if plan.id != int(requested_plan_id):
                 continue
