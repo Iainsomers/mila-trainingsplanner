@@ -464,6 +464,102 @@ def type_a_watch_loads(exercise, athlete=None):
     return loads
 
 
+def type_b_description(laps, athlete=None):
+    """Model B: recognize repeated distance reps split by short/long recoveries."""
+    if not isinstance(laps, list):
+        return ""
+    rows = []
+    elapsed = 0.0
+    for index, lap in enumerate(laps):
+        if not isinstance(lap, dict):
+            continue
+        distance_m = number(lap.get("distanceMeters"))
+        duration_ms = number(lap.get("durationMillis"))
+        if distance_m is None or duration_ms is None or distance_m <= 0 or duration_ms <= 0:
+            elapsed += max(0.0, duration_ms or 0)
+            continue
+        z_pace, _ = lap_zone_paces(distance_m, duration_ms, athlete)
+        split_ms = number(lap.get("splitTimeMillis"))
+        end_elapsed = split_ms if split_ms is not None and split_ms >= elapsed else elapsed + duration_ms
+        rows.append({
+            "index": index,
+            "distance_m": distance_m,
+            "rounded_m": int(math.floor(distance_m / 50 + 0.5) * 50),
+            "duration_s": duration_ms / 1000.0,
+            "zone": z_pace[1:] if z_pace.startswith("Z") and z_pace[1:].isdigit() else "",
+            "start_ms": elapsed,
+            "end_ms": end_elapsed,
+        })
+        elapsed = end_elapsed
+    if len(rows) < 6:
+        return ""
+
+    distance_counts = {}
+    for row in rows:
+        if 350 <= row["rounded_m"] <= 800:
+            distance_counts[row["rounded_m"]] = distance_counts.get(row["rounded_m"], 0) + 1
+    if not distance_counts:
+        return ""
+    dominant_distance = max(distance_counts, key=lambda value: (distance_counts[value], -value))
+    candidate_rows = [
+        row for row in rows
+        if abs(row["distance_m"] - dominant_distance) <= max(75, dominant_distance * 0.15)
+    ]
+    if len(candidate_rows) < 6:
+        return ""
+
+    # A long Z1 lap can contain the end of a work rep and its recovery. Keep
+    # it as a rep when it sits inside the repeated-distance pattern, but do
+    # not let its combined recovery time distort the work pace.
+    groups = [[]]
+    for row in candidate_rows:
+        if groups[-1]:
+            previous = groups[-1][-1]
+            gap_s = max(0.0, (row["start_ms"] - previous["end_ms"]) / 1000.0)
+            intervening = [item for item in rows if previous["index"] < item["index"] < row["index"]]
+            gap_s += sum(item["duration_s"] for item in intervening)
+            if gap_s >= 180:
+                groups.append([])
+        groups[-1].append(row)
+    groups = [group for group in groups if len(group) >= 3]
+    if len(groups) < 2:
+        return ""
+
+    def group_label(group):
+        work_rows = [row for row in group if int(row["zone"] or 0) >= 2]
+        if not work_rows:
+            work_rows = group
+        zones = sorted({int(row["zone"]) for row in work_rows if row["zone"].isdigit()})
+        zone_label = f"Z{zones[0]}" if len(zones) == 1 else (f"Z{zones[0]}>Z{zones[-1]}" if zones else "")
+        representative = dominant_distance
+        work_seconds = sum(row["duration_s"] for row in work_rows)
+        work_distance = sum(min(row["distance_m"], representative) for row in work_rows)
+        average_pace = pace(work_seconds, work_distance)
+        label = f"{len(group)}×{representative} m"
+        if zone_label:
+            label += f" {zone_label}"
+        if average_pace != "NA":
+            label += f" ({average_pace})"
+        recovery_values = []
+        for before, after in zip(group, group[1:]):
+            intervening = [item for item in rows if before["index"] < item["index"] < after["index"]]
+            recovery = sum(item["duration_s"] for item in intervening)
+            if 0 < recovery < 180:
+                recovery_values.append(recovery)
+        if recovery_values:
+            label += f" p{int(math.floor(sum(recovery_values) / len(recovery_values) + 0.5))}"
+        return label
+
+    warmup_rows = [row for row in rows if row["index"] < candidate_rows[0]["index"]]
+    cooldown_rows = [row for row in rows if row["index"] > candidate_rows[-1]["index"]]
+    warmup_distance = sum(row["distance_m"] for row in warmup_rows if row["zone"] == "1")
+    cooldown_distance = sum(row["distance_m"] for row in cooldown_rows if row["zone"] == "1")
+    parts = [f"WU: {int(math.floor(warmup_distance / 50 + 0.5) * 50)} m Z1" if warmup_distance >= 500 else "WU: none"]
+    parts.append("Main: " + " + ".join(group_label(group) for group in groups))
+    parts.append(f"CD: {int(math.floor(cooldown_distance / 50 + 0.5) * 50)} m Z1" if cooldown_distance >= 500 else "CD: none")
+    return " · ".join(parts)
+
+
 def _watch_t_key(label):
     normalized = str(label or "").strip().upper()
     return normalized if normalized.startswith("T") else ""
@@ -578,7 +674,36 @@ def translate_model_b(payload, interval, athlete=None):
     Keep this entry point separate so future Model B recognition changes do
     not require changing the Model A implementation used by Polar Integration.
     """
-    return translate(payload, interval, mode="A", athlete=athlete)
+    result = translate(payload, interval, mode="A", athlete=athlete)
+    sessions = payload if isinstance(payload, list) else next(
+        (payload[key] for key in ("trainingSessions", "training-sessions", "sessions")
+         if isinstance(payload, dict) and isinstance(payload.get(key), list)), []
+    )
+    for session_result, session in zip(result, sessions):
+        if not isinstance(session, dict):
+            continue
+        exercises = session.get("exercises") or []
+        items = ([session] if session.get("laps") or not exercises else []) + [
+            item for item in exercises if isinstance(item, dict)
+        ]
+        result_parts = session_result.get("parts") or []
+        result_index = 0
+        for item in items:
+            if not isinstance(item, dict) or polar_sport_id(item, session) not in {"", "1"}:
+                continue
+            if result_index >= len(result_parts):
+                break
+            laps_container = item.get("laps") or {}
+            laps_container = laps_container if isinstance(laps_container, dict) else {}
+            manual_laps = laps_container.get("laps") or laps_container.get("manualLaps") or laps_container.get("manual-laps") or []
+            if manual_laps:
+                description = type_b_description(manual_laps, athlete)
+                if description:
+                    result_parts[result_index]["description"] = description
+                    result_parts[result_index]["description_label"] = "Generated description"
+                    result_parts[result_index]["training_fields"] = type_a_training_fields(description)
+            result_index += 1
+    return result
 
 
 @login_required

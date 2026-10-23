@@ -11,6 +11,7 @@ from core.views.polar_raw import (
     sample_rows,
     translate,
     translate_model_b,
+    type_b_description,
     type_a_description,
     type_a_general_description,
 )
@@ -60,6 +61,25 @@ class RawPolarTests(SimpleTestCase):
             {"distanceMeters": 1000, "durationMillis": 240000},
         ]}}]
         self.assertEqual(translate_model_b(payload, 5), translate(payload, 5, mode="A"))
+
+    def test_model_b_recognizes_two_repeated_500m_sets_with_combined_lap(self):
+        values = [
+            (1160, 605752), (185, 80250), (788, 562376),
+            (512, 101125), (45, 49875), (2, 9500), (488, 98625),
+            (53, 53874), (13, 8251), (493, 98500), (64, 62249),
+            (481, 99751), (73, 67375), (485, 98500), (55, 61000),
+            (499, 99500), (54, 48500), (1, 11750), (489, 96874),
+            (553, 161501), (192, 223249), (498, 95000), (75, 60126),
+            (498, 96249), (40, 51126), (14, 20749), (494, 97875),
+            (27, 37751), (13, 20875), (501, 98249), (45, 59000),
+            (502, 95125), (40, 39750), (5, 19500), (500, 96751),
+            (49, 44875), (0.1, 14124), (494, 94876), (81, 58750),
+            (495, 93124), (1526, 482253),
+        ]
+        laps = [{"distanceMeters": distance, "durationMillis": duration} for distance, duration in values]
+        description = type_b_description(laps)
+        self.assertIn("8×500 m", description)
+        self.assertEqual(description.count("8×500 m"), 2)
 
     def test_lap_distance_is_rounded_to_nearest_50_metres(self):
         self.assertEqual(distance_rounded_to_50(424.99), "400")
