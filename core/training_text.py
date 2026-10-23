@@ -20,10 +20,13 @@ def normalize_watch_main_text(text):
 
 
 def split_main_segments(text):
-    """Split Main text on top-level ``//`` or ``+`` separators.
+    """Split Main text on top-level ``//``, ``+`` or block ``-`` separators.
 
-    A plus or double slash inside parentheses belongs to the repeated-set
-    expression and is therefore preserved as part of that expression.
+    A plus, double slash or hyphen inside parentheses belongs to the
+    repeated-set expression and is therefore preserved as part of that
+    expression.  At the top level a hyphen is a separator only when its right
+    side starts a new distance/repetition expression; this keeps text such as
+    ``Z1-Z2`` and time ranges intact.
     """
     value = str(text or "")
     parts = []
@@ -56,6 +59,24 @@ def split_main_segments(text):
             index += 1
             start = index
             continue
+        if depth == 0 and char == "-":
+            left = value[start:index].strip()
+            right = value[index + 1:].lstrip()
+            right_starts_distance = re.match(
+                r"(?:\d+\s*(?:x|\*|×)\s*)?\d+(?:[.,]\d+)?\s*(?:km|k|m)\b",
+                right,
+                re.IGNORECASE,
+            )
+            left_has_distance = re.search(
+                r"\d+(?:[.,]\d+)?\s*(?:km|k|m)\b",
+                left,
+                re.IGNORECASE,
+            )
+            if left and left_has_distance and right_starts_distance:
+                parts.append(left)
+                start = index + 1
+                index += 1
+                continue
         index += 1
 
     final_part = value[start:].strip()

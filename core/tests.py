@@ -3452,6 +3452,32 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(personal.watch_loads, [])
         self.assertEqual(_ayc_slot_session_km(personal, athlete), "5.0")
 
+    def test_ayc_edit_counts_added_cd_distance_in_planned_total(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+        day = date.today()
+
+        response = self.client.post(
+            "/athlete/year/",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "slot_text": "",
+                "wu_text": "3800m z1",
+                "mob_text": "",
+                "sprint_text": "",
+                "core_text": "3x2000m z2 p107 - 2x1000m z2 p40",
+                "core2_text": "",
+                "alt_text": "",
+                "cd_text": "1000m",
+            },
+        )
+
+        self.assertIn(response.status_code, (200, 204))
+        slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date=day, slot_index=1)
+        self.assertEqual(_ayc_slot_session_km(slot, athlete, CoachSettings.PAUSE_MODE_ALWAYS_STATIC), "12.8")
+
     def test_watch_slot_modal_marks_main_confirmation_required(self):
         _, plan, athlete = self._user_plan_and_athlete()
         plan.name = "Flex Planner test"
@@ -7737,6 +7763,10 @@ class FlexPlannerAltTotalsTests(TestCase):
         self.assertEqual(
             split_main_segments("8*(400m z2-50m z1-150m z3) + 2*1000m z3 // 5*200m z4"),
             ["8*(400m z2-50m z1-150m z3)", "2*1000m z3", "5*200m z4"],
+        )
+        self.assertEqual(
+            split_main_segments("3x2000m z2 p107 - 2x1000m z2 p40"),
+            ["3x2000m z2 p107", "2x1000m z2 p40"],
         )
 
     def test_flex_plus_saves_main_as_two_segments_and_both_zones_count(self):
