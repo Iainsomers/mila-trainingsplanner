@@ -1360,6 +1360,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "selected_plan": selected_plan,
                 "selected_athlete": athlete,
                 "is_override": bool(has_fix),
+                "is_watch_slot": bool(
+                    visible_slot
+                    and str(getattr(visible_slot, "source", "") or "")
+                    in {"watch_a", "watch_b", "watch_c"}
+                ),
                 "has_athlete_override": has_athlete_override,
                 "is_flex_source": _is_flex_source(request),
                 "reset_plan_id": (

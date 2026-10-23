@@ -3341,6 +3341,37 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(slot.watch_loads, [])
         self.assertEqual(_ayc_slot_session_km(slot, athlete), "5.0")
 
+    def test_watch_slot_modal_marks_main_confirmation_required(self):
+        _, plan, athlete = self._user_plan_and_athlete()
+        plan.name = "Flex Planner test"
+        plan.save(update_fields=["name"])
+        day = date.today()
+        slot = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+            source="watch_b",
+            watch_loads=[{"zone": "2", "meters": 6500}],
+        )
+        TrainingSegment.objects.create(
+            slot=slot,
+            order=1,
+            type="CORE",
+            text="6x1000m p1",
+            distance_m=1000,
+            norm_distance_m=6000,
+            reps=6,
+            zone="2",
+        )
+
+        response = self.client.get(
+            f"/slot-modal/{day:%Y/%m/%d}/1/?plan={plan.id}&athlete={athlete.id}&source=athlete_year"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-watch-slot="1"')
+
     def test_trainer_planning_print_uses_selected_week_range(self):
         user = get_user_model().objects.create_user(
             username="trainer-print-coach", password="secret", is_staff=True

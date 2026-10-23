@@ -79,6 +79,7 @@
               hx-post="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/"
               hx-target="#modal-container"
               hx-swap="innerHTML"
+              data-watch-slot="{{ is_watch_slot|yesno:'1,0' }}"
             >
               {% csrf_token %}
 

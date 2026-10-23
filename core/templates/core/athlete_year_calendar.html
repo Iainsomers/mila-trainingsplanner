@@ -2622,6 +2622,13 @@
     });
   }
 
+  function captureWatchMainOriginal(container) {
+    var form = container.querySelector("form");
+    if (!form || form.getAttribute("data-watch-slot") !== "1") return;
+    var mainField = form.querySelector('[name="core_text"]');
+    if (mainField) form.setAttribute("data-watch-main-original", (mainField.value || "").trim());
+  }
+
   function refreshAycAfterTrainingSave() {
     var url = new URL(window.location.href);
     url.searchParams.set("_ayc_refresh", String(Date.now()));
@@ -2682,6 +2689,7 @@
         container.innerHTML = html;
         prepareSlotForm(container, activeSlotDate, activeSlotIndex);
         applyVisibleTrainingPrefill(container, el);
+        captureWatchMainOriginal(container);
 
         var modalEl = document.getElementById("slotModal");
         if (!modalEl) return;
@@ -2774,6 +2782,16 @@
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
+
+    if (form.getAttribute("data-watch-slot") === "1") {
+      var mainField = form.querySelector('[name="core_text"]');
+      var originalMain = form.getAttribute("data-watch-main-original") || "";
+      var currentMain = mainField ? (mainField.value || "").trim() : "";
+      if (currentMain !== originalMain) {
+        var confirmed = window.confirm("Are you sure? This might give an incorrect km count!");
+        if (!confirmed) return;
+      }
+    }
 
     var formData = new FormData();
     formData.append("date", activeSlotDate || form.getAttribute("data-date") || "");
