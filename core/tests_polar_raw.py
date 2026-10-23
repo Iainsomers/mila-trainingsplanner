@@ -79,9 +79,11 @@ class RawPolarTests(SimpleTestCase):
             (495, 93124), (1526, 482253),
         ]
         laps = [{"distanceMeters": distance, "durationMillis": duration} for distance, duration in values]
-        description = type_b_description(laps)
+        athlete = SimpleNamespace(get_zone_speed_mps=lambda: {"1": 5.0})
+        description = type_b_description(laps, athlete)
         self.assertIn("8×500 m", description)
         self.assertEqual(description.count("8×500 m"), 2)
+        self.assertIn("CD: 1550 m Z1", description)
 
     def test_model_b_ai_description_builds_nested_sets_from_structured_response(self):
         laps = []

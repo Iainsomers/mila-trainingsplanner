@@ -556,7 +556,16 @@ def type_b_description(laps, athlete=None):
     warmup_rows = [row for row in rows if row["index"] < candidate_rows[0]["index"]]
     cooldown_rows = [row for row in rows if row["index"] > candidate_rows[-1]["index"]]
     warmup_distance = sum(row["distance_m"] for row in warmup_rows if row["zone"] == "1")
-    cooldown_distance = sum(row["distance_m"] for row in cooldown_rows if row["zone"] == "1")
+    # A cooldown can be split over several final easy laps (for example
+    # 535 m + 455 m). Keep the trailing Z1 block together instead of requiring
+    # one single lap to be at least one kilometre.
+    cooldown_block = []
+    for row in cooldown_rows:
+        if row["zone"] == "1":
+            cooldown_block.append(row)
+        elif cooldown_block:
+            break
+    cooldown_distance = sum(row["distance_m"] for row in cooldown_block)
     parts = [f"WU: {int(math.floor(warmup_distance / 50 + 0.5) * 50)} m Z1" if warmup_distance >= 500 else "WU: none"]
     parts.append("Main: " + " + ".join(group_label(group) for group in groups))
     parts.append(f"CD: {int(math.floor(cooldown_distance / 50 + 0.5) * 50)} m Z1" if cooldown_distance >= 500 else "CD: none")
