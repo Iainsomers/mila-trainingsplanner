@@ -44,9 +44,9 @@ De individuele Base Planning bepaalt in AYC en Flex Planner de trainingsbron per
 
 `Extended edit rights` bepaalt of een atleet toekomstige AYC-trainingen en lege dagdelen mag wijzigen. `Can change base planning` is een afzonderlijk trainerrecht voor de eigen Base Planning. Het ene recht activeert het andere niet.
 
-## 2026-10-07 — Gedeelde whereabouts zijn read-only
+## 2026-10-07 / 2026-10-26 — Year Planner-privacy
 
-De coach kan in Coach Settings `Shared athlete whereabouts in Year Planner` inschakelen. Atleten met Whereabouts-toegang zien dan whereabouts van andere atleten van dezelfde coach en van gerelateerde coaches, maar nooit hun trainingen of mutaties. Standaard staat deze zichtbaarheid uit.
+De oorspronkelijke keuze om whereabouts van andere atleten te delen is op 26 oktober ingetrokken: atleten zien uitsluitend hun eigen atletenrij en eigen plannergegevens. Een coach kan met `Shared coach whereabouts in Year Planner` uitsluitend read-only whereabouts van gerelateerde coaches tonen. Andere atleten, hun trainingen en mutaties blijven verborgen.
 
 ## 2026-10-07 — Tempoherkenning vereist een los label
 

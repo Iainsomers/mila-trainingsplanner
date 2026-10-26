@@ -6117,12 +6117,11 @@ def year_planner_view(request):
         selected_coach_ids = [coach_id for coach_id in coach_ids if coach_id in available_coach_ids]
 
     selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
-    shared_whereabout_athletes = [athlete]
+    # Athlete-to-athlete whereabouts sharing is disabled: an athlete's Year
+    # Planner must never include another athlete's row or whereabouts.
+    shared_whereabout_athletes = [athlete] if is_athlete_user else []
     shared_whereabout_coach_ids = []
     if is_athlete_user and athlete_can_view_shared_whereabouts and athlete.owner_id:
-        shared_whereabout_athletes = list(
-            Athlete.objects.filter(owner_id=athlete.owner_id).order_by(Lower("name"))
-        )
         shared_whereabout_coach_ids = list(
             CoachAccess.objects.filter(grantee_id=athlete.owner_id)
             .values_list("owner_id", flat=True)
@@ -6133,7 +6132,6 @@ def year_planner_view(request):
             {"user": coach_user, "access_label": "related"}
             for coach_user in coach_users
         ]
-        selected_athletes = shared_whereabout_athletes
         selected_coach_ids = shared_whereabout_coach_ids
     all_visible_athletes_selected = bool(visible_athletes) and set(selected_ids) == {a.id for a in visible_athletes}
     selected_coaches = [
