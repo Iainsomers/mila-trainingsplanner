@@ -2731,6 +2731,26 @@ def _ayc_slot_session_km(slot, athlete=None, pause_mode=None):
     return _format_km(round(meters)) if meters > 0 else ""
 
 
+def _ayc_slot_session_zones(slot, athlete=None, pause_mode=None):
+    """Return non-zero running distance per zone for the session header."""
+    totals = {str(zone): 0.0 for zone in range(1, 7)}
+    for load in _ayc_slot_loads_for_totals(slot, athlete, pause_mode):
+        if load.get("kind") == "alt":
+            continue
+        zone = str(load.get("zone") or "")
+        if zone not in totals:
+            continue
+        try:
+            totals[zone] += float(load.get("meters") or 0)
+        except (TypeError, ValueError):
+            continue
+    return [
+        {"zone": zone, "km": f"{meters / 1000:.1f}"}
+        for zone, meters in totals.items()
+        if meters > 0
+    ]
+
+
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     def base_trainer_plan_assigned_for_day(plan):
         if not plan:
@@ -3827,6 +3847,7 @@ def athlete_year_calendar_view(request):
                 "plan_id": slot1.plan_id if slot1 and getattr(slot1, "plan_id", None) else (plan1.id if plan1 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot1),
                 "session_km": _ayc_slot_session_km(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
+                "session_zones": _ayc_slot_session_zones(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
             })
             cells2.append({
                 "day": day,
@@ -3837,6 +3858,7 @@ def athlete_year_calendar_view(request):
                 "plan_id": slot2.plan_id if slot2 and getattr(slot2, "plan_id", None) else (plan2.id if plan2 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot2),
                 "session_km": _ayc_slot_session_km(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
+                "session_zones": _ayc_slot_session_zones(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
             })
             comment = None
             if selected_athlete:
@@ -4078,6 +4100,7 @@ def athlete_year_calendar_view(request):
             "selected_athlete_id": str(selected_athlete_id or ""),
             "selected_athlete": selected_athlete,
             "show_session_km": bool(selected_athlete and getattr(selected_athlete, "see_session_km", True)),
+            "show_session_zones": bool(selected_athlete and getattr(selected_athlete, "see_session_zones", True)),
             "show_training_reports": show_training_reports,
             "show_week_reports": show_week_reports,
             "show_daily_vitals": show_daily_vitals,

@@ -456,6 +456,7 @@ class Athlete(models.Model):
 
     training_reports_enabled = models.BooleanField(default=True)
     see_session_km = models.BooleanField(default=True)
+    see_session_zones = models.BooleanField(default=True)
     # Coach-only opt-in for the Garmin FIT upload preview.
     garmin_fit_upload_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.

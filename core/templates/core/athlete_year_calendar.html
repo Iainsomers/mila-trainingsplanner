@@ -144,15 +144,38 @@
   }
 
   .session-km-label {
-    display: block;
-    margin: -2px -10px 2px 0;
-    text-align: right;
-    color: #495057;
+    color: #000;
     font-size: 10px;
     font-weight: 700;
     line-height: 1.1;
     white-space: nowrap;
   }
+
+  .session-summary-label {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 3px;
+    margin: -2px -10px 2px 0;
+    min-height: 14px;
+    white-space: nowrap;
+  }
+
+  .session-zone-pills { display: inline-flex; gap: 2px; }
+  .session-zone-pill {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 6px;
+    font-size: 9px;
+    line-height: 1.1;
+    color: #000;
+  }
+  .session-zone-z1 { background-color: #f8f8f0; }
+  .session-zone-z2 { background-color: #f7c6d0; }
+  .session-zone-z3 { background-color: #f06f5f; }
+  .session-zone-z4 { background-color: #bfe7bf; }
+  .session-zone-z5 { background-color: #b7d7ff; }
+  .session-zone-z6 { background-color: #f2c200; }
 
   .pill {
     display: inline-block;
@@ -902,7 +925,7 @@
              data-week-label="{{ w.week_start|date:'d M' }} – {{ w.week_end|date:'d M Y' }}">
       <div class="ayc-mobile-summary{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" {% if w.week_phase_style %}style="{{ w.week_phase_style }}"{% endif %}>
         <div class="d-flex justify-content-between align-items-center gap-2">
-          <div><div class="ayc-mobile-total-label">Total</div><div class="ayc-mobile-total">{{ w.sum_tot_km }} km</div></div>
+          <div><div class="ayc-mobile-total-label">Total</div><div class="ayc-mobile-total">{{ w.sum_tot_km }}</div></div>
           {% if w.week_phase_label %}<span class="week-phase-label ayc-mobile-phase phase-{{ w.week_phase }}">{{ w.week_phase_label }}</span>{% endif %}
         </div>
         <div class="ayc-mobile-zones">
@@ -1250,7 +1273,7 @@
           </td>
           <td class="sumcol week-summary-tooltip" rowspan="{{ ayc_rowspan }}" title="{{ w.sum_pct_tooltip }}" data-tooltip="{{ w.sum_pct_tooltip|escape }}">
             <div style="font-size:11px; line-height:1.35;">
-              <div style="font-weight:bold; color:#000; margin-bottom:3px;">Tot km: {{ w.sum_tot_km }}</div>
+              <div style="font-weight:bold; color:#000; margin-bottom:3px;">{{ w.sum_tot_km }}</div>
               {% if w.has_z1 %}<span class="total-pill total-z1">Z1 {{ w.sum_z1_km }}</span>{% endif %}
               {% if w.has_z2 %}<span class="total-pill total-z2">Z2 {{ w.sum_z2_km }}</span>{% endif %}
               {% if w.has_z3 %}<span class="total-pill total-z3">Z3 {{ w.sum_z3_km }}</span>{% endif %}

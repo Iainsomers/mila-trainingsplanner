@@ -1,4 +1,13 @@
-{% if show_session_km and cell.session_km %}<div class="session-km-label">{{ cell.session_km }} km</div>{% endif %}
+{% if cell.session_km or cell.session_zones %}
+  <div class="session-summary-label">
+    {% if show_session_km and cell.session_km %}<div class="session-km-label">{{ cell.session_km }} km</div>{% endif %}
+    {% if show_session_zones and cell.session_zones %}
+      <span class="session-zone-pills">
+        {% for item in cell.session_zones %}<span class="session-zone-pill session-zone-z{{ item.zone }}">Z{{ item.zone }} {{ item.km }}</span>{% endfor %}
+      </span>
+    {% endif %}
+  </div>
+{% endif %}
 {% if cell.slot.text %}
   <span data-flex-segment data-flex-zone="" data-flex-t="" data-flex-special="" data-flex-type="" data-flex-reps="" data-flex-distance="" data-flex-duration="" data-flex-norm="">{{ cell.slot.text|linebreaksbr }}</span>
 {% else %}

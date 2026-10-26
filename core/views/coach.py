@@ -10004,6 +10004,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "view_weeks_ahead": getattr(athlete, "view_weeks_ahead", 2),
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
         "see_session_km": getattr(athlete, "see_session_km", True),
+        "see_session_zones": getattr(athlete, "see_session_zones", True),
         "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
         "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
@@ -10053,6 +10054,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["target_t4"] = (request.POST.get("target_t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["see_session_km"] = (request.POST.get("see_session_km") == "on")
+        form["see_session_zones"] = (request.POST.get("see_session_zones") == "on")
         if self_view:
             form["garmin_fit_upload_enabled"] = getattr(athlete, "garmin_fit_upload_enabled", False)
         else:
@@ -10256,6 +10258,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.view_weeks_ahead = view_weeks_ahead
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.see_session_km = form["see_session_km"]
+            athlete.see_session_zones = form["see_session_zones"]
             if not self_view:
                 athlete.garmin_fit_upload_enabled = form["garmin_fit_upload_enabled"]
             if not self_view:

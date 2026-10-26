@@ -78,7 +78,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 
 ## Athlete Year Calendar (AYC)
 
-De instelling `See session km` staat in Athlete settings > General, is standaard aan en kan door de atleet zelf of een trainer worden gewijzigd. Wanneer deze aanstaat, toont de AYC rechtsboven per sessie het totale loopvolume van WU, Sprint, Main, Main 2 en CD; Alternative telt niet mee.
+De instellingen `See session km` en `See session zones` staan in Athlete settings > General, zijn standaard gelijk ingeschakeld en kunnen door de atleet zelf of een trainer worden gewijzigd. Wanneer ze aanstaan, toont de AYC rechtsboven per sessie het totale loopvolume van WU, Sprint, Main, Main 2 en CD en kleine zonepillen met de kilometers per zone; Alternative telt niet mee. De totale weekafstand wordt als zwart getal zonder `km`-label getoond.
 
 Trainingen die met `Watch A`, `Watch B` of `Watch C` vanuit een horloge-evaluatie worden geplaatst, bewaren naast de trainingsomschrijving de gemeten segmentloads. Daardoor worden tijdgebonden trainingsdelen niet opnieuw omgerekend met de zone-snelheid van de atleet: afstand, zoneverdeling en zonetijd blijven de werkelijke horlogewaarden.
 

@@ -12,7 +12,7 @@ Bijgewerkt: 20 oktober 2026.
 - Gebruik het vaste MiLa-logo als browsericoon en als beginschermicoon op iOS en Android.
 - Toon in Athlete Input de geselecteerde atleetnaam voor trainers op een vaste plek boven de tabbladen, zodat die bij iedere tab zichtbaar blijft.
 - In New, Plans, Wishes staat `Edit` alleen bij eigen wishes of voor de productbeheerder; andere gebruikers krijgen alleen de beschikbare like-actie.
-- Als `See session km` is ingeschakeld, staat het sessietotaal compact rechtsboven in iedere sessiecel van de AYC, ook mobiel.
+- Als `See session km` is ingeschakeld, staat het sessietotaal compact rechtsboven in iedere sessiecel van de AYC, ook mobiel. Als `See session zones` is ingeschakeld, staan daar kleine zonepillen met kilometers afgerond op 0,1 km naast. Het weektotaal is alleen een zwart getal zonder `km`-tekst.
 - De coachbrede variant van `See session km` gebruikt dezelfde compacte positie in Flex Planner en DCO Training. In Flex schuift het label op wanneer rechtsboven ook een rapporticoon staat.
 
 ## Terminologie
