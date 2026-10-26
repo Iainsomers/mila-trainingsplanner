@@ -48,7 +48,7 @@ Bijgewerkt: 20 oktober 2026.
 - Trainers kunnen eigen gegevens bekijken of expliciet als een toegankelijke coach kijken. Die toegang is niet transitief; view-only blijft server-side read-only.
 - Atleten zien uitsluitend zichzelf in AYC, settings, races, evaluaties en, waar ingesteld, Year Planner.
 - Flex Planner toont de effectieve, gepersonaliseerde planning. Het verwijderen van een flex-override onderdrukt een basistraining correct.
-- Coach Settings bevat `See session km`; indien ingeschakeld tonen Flex Planner en DCO Training hetzelfde sessietotaal als AYC, zonder Alternative-kilometers.
+- Coach Settings bevat `See session km`; indien ingeschakeld tonen Flex Planner en DCO Training hetzelfde sessietotaal als AYC, met `T`-notatie zonder `km` en zonder Alternative-kilometers.
 - Watch A/B/C-trainingen bewaren de werkelijke meters en seconden uit de horlogeanalyse. Daardoor rekenen AYC, Flex Planner, DCO en weektotalen deze slots niet opnieuw om vanuit geplande zone-snelheden; de zichtbare trainingstekst toont alleen de bestaande min/km-notatie.
 - Een gewone handmatige AYC-bewerking van een eerder met Watch A/B/C opgeslagen training wist de oude werkelijke lapbelasting en maakt de persoonlijke override weer een geplande training. Zo volgen km-totalen na het wijzigen van WU/Main/CD weer de ingevoerde tekst.
 - Bij zo'n AYC-bewerking wordt ook een bestaand Watch-slot in het Flex Planner-plan gebruikt wanneer de kalendercel nog naar het onderliggende bronplan verwijst. Daarmee komen de gewijzigde tekst en het opnieuw berekende km-totaal niet meer in een los, onzichtbaar slot terecht.

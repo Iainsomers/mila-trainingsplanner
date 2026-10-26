@@ -13,7 +13,7 @@ Bijgewerkt: 20 oktober 2026.
 - Toon in Athlete Input de geselecteerde atleetnaam voor trainers op een vaste plek boven de tabbladen, zodat die bij iedere tab zichtbaar blijft.
 - In New, Plans, Wishes staat `Edit` alleen bij eigen wishes of voor de productbeheerder; andere gebruikers krijgen alleen de beschikbare like-actie.
 - Als `See session km` is ingeschakeld, staat het sessietotaal als zwart `T`-getal compact rechtsboven in iedere sessiecel van de AYC, ook mobiel. Als `See session zones` is ingeschakeld, staan daar kleine kleurpillen met alleen de kilometers afgerond op 0,1 km naast; de kleur bepaalt de zone. Het weektotaal gebruikt dezelfde `T`-notatie, zonder `km`-tekst.
-- De coachbrede variant van `See session km` gebruikt dezelfde compacte positie in Flex Planner en DCO Training. In Flex schuift het label op wanneer rechtsboven ook een rapporticoon staat.
+- De coachbrede variant van `See session km` gebruikt dezelfde compacte `T`-notatie zonder `km`-label in Flex Planner en DCO Training. In Flex schuift het label op wanneer rechtsboven ook een rapporticoon staat.
 
 ## Terminologie
 

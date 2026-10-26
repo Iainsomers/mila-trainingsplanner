@@ -204,7 +204,7 @@
       display: block;
       margin-bottom: 1px;
       text-align: right;
-      color: #495057;
+      color: #000;
       font-size: 10px;
       font-weight: 700;
       line-height: 1.1;
@@ -1421,7 +1421,7 @@
                       >
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{{ cell.session_km }} km</div>{% endif %}
+                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">T {{ cell.session_km }}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
@@ -1441,7 +1441,7 @@
                       >
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{{ cell.session_km }} km</div>{% endif %}
+                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">T {{ cell.session_km }}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
@@ -1505,7 +1505,7 @@
                       >
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{{ cell.session_km }} km</div>{% endif %}
+                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">T {{ cell.session_km }}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
@@ -1525,7 +1525,7 @@
                       >
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{{ cell.session_km }} km</div>{% endif %}
+                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">T {{ cell.session_km }}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
