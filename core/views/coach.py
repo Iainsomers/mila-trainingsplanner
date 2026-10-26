@@ -5851,9 +5851,12 @@ def focus_points_view(request):
         "can_edit": can_edit,
         "can_edit_athlete_comment": can_edit_athlete_comment,
         "is_athlete_user": is_athlete_user,
-        "show_plan_to_athlete": bool(
+        "show_plan_column": bool(
             selected_athlete
             and (not is_athlete_user or getattr(selected_athlete, "show_plan_to_athlete", False))
+        ),
+        "show_plan_to_athlete": bool(
+            selected_athlete and getattr(selected_athlete, "show_plan_to_athlete", False)
         ),
         "saved": request.GET.get("saved") == "1",
         "imported_count": request.GET.get("imported", ""),

@@ -171,7 +171,7 @@
               <th scope="col">Focus point</th>
               {% if not is_athlete_user %}<th scope="col">Comment coaches</th>{% endif %}
               <th scope="col">Prio</th>
-              {% if not is_athlete_user or show_plan_to_athlete %}<th scope="col">
+              {% if show_plan_column %}<th scope="col">
                 Plan
                 {% if not is_athlete_user %}
                   <form method="post" action="{% url 'focus_points' %}" class="focus-plan-visibility-form">
@@ -240,7 +240,7 @@
                   {% elif point.priority == 3 %}<span title="Bronze medal">🥉</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
-                {% if not is_athlete_user or show_plan_to_athlete %}<td class="focus-point-cell">
+                {% if show_plan_column %}<td class="focus-point-cell">
                   {% for comment in point.plan_comments %}
                     <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
                   {% endfor %}
