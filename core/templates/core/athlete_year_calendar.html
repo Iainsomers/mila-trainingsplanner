@@ -2153,7 +2153,7 @@
       body.textContent = "Polar Type A could not be loaded.";
     });
   }
-  function renderTypeALaps(parent, title, rows) {
+  function renderTypeALaps(parent, title, rows, showLast15Hr) {
     if (!rows || !rows.length) return;
     var heading = document.createElement("div");
     heading.className = "fw-semibold mt-2";
@@ -2162,14 +2162,18 @@
     var table = document.createElement("table");
     table.className = "table table-sm mb-2";
     var head = document.createElement("tr");
-    ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km", "Zx", "Tx", "Avg HR"].forEach(function(label) {
+    var headers = ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km", "Zx", "Tx", "Avg HR"];
+    if (showLast15Hr) headers.push("Last 15s HR");
+    headers.forEach(function(label) {
       var cell = document.createElement("th"); cell.textContent = label; head.appendChild(cell);
     });
     var thead = document.createElement("thead"); thead.appendChild(head); table.appendChild(thead);
     var tbody = document.createElement("tbody");
     rows.forEach(function(row) {
       var tr = document.createElement("tr");
-      [row.index, row.distance, row.distance_rounded_50, row.duration, row.pace, row.z_pace, row.t_pace, row.average_hr].forEach(function(value) {
+      var values = [row.index, row.distance, row.distance_rounded_50, row.duration, row.pace, row.z_pace, row.t_pace, row.average_hr];
+      if (showLast15Hr) values.push(row.average_hr_last_15);
+      values.forEach(function(value) {
         var cell = document.createElement("td"); cell.textContent = value == null ? "NA" : value; tr.appendChild(cell);
       });
       tbody.appendChild(tr);
@@ -2211,8 +2215,8 @@
           }
           box.appendChild(description);
         }
-        renderTypeALaps(box, "Manual laps", part.manual);
-        renderTypeALaps(box, "Automatic laps", part.auto);
+        renderTypeALaps(box, "Manual laps", part.manual, model === "B");
+        renderTypeALaps(box, "Automatic laps", part.auto, model === "B");
       });
       parent.appendChild(box);
     });

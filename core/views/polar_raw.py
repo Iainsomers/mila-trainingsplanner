@@ -111,6 +111,25 @@ def lap_average_hr(lap, start_ms, end_ms, samples):
     return display(math.floor(sum(heart_rates) / len(heart_rates) + 0.5))
 
 
+def lap_average_hr_last_15(lap, start_ms, end_ms, samples):
+    """Return the HR average for the last 15 seconds of a lap.
+
+    Short laps use their complete duration. If no samples are available in
+    the selected window, fall back to the complete lap so the extra display
+    column remains useful for sparse recordings.
+    """
+    try:
+        start_ms = float(start_ms or 0)
+        end_ms = float(end_ms or 0)
+    except (TypeError, ValueError):
+        return "NA"
+    if end_ms <= start_ms:
+        return "NA"
+    tail_start_ms = start_ms if end_ms - start_ms < 15000 else end_ms - 15000
+    tail_average = lap_average_hr(lap, tail_start_ms, end_ms, samples)
+    return tail_average if tail_average != "NA" else lap_average_hr(lap, start_ms, end_ms, samples)
+
+
 def lap_rows(laps, athlete=None, samples=None):
     rows = []
     elapsed_ms = 0
@@ -130,6 +149,7 @@ def lap_rows(laps, athlete=None, samples=None):
             "distance_rounded_50": distance_rounded_to_50(lap.get("distanceMeters")),
             "duration": duration(lap.get("durationMillis")),
             "average_hr": lap_average_hr(lap, start_ms, end_ms, samples),
+            "average_hr_last_15": lap_average_hr_last_15(lap, start_ms, end_ms, samples),
             "pace": pace(
                 number(lap.get("durationMillis")) / 1000
                 if number(lap.get("durationMillis")) is not None else None,

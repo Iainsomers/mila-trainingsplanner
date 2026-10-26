@@ -124,6 +124,7 @@ Per training kan de atleet vastleggen:
 - RPE van 0 tot 10;
 - commentaar;
 - `Watch A` en `Watch B`-knoppen die de Polar-output voor de gekozen atleet en datum in een popup tonen. Model B gebruikt voorlopig exact dezelfde output als Model A, maar heeft een eigen analysekoppeling zodat toekomstige herkenningsverbeteringen alleen Model B hoeven te wijzigen. Naast een bruikbare gegenereerde omschrijving staan `Use AM` en `Use PM`, waarmee WU, Main en CD naar het gekozen AYC-trainingsslot worden overgenomen. De tekst `Continuous run` wordt daarbij niet meegenomen; bestaande opgeslagen horlogeresultaten blijven zichtbaar en verwijderbaar;
+- In de Model B-laptabellen staat naast `Avg HR` ook `Last 15s HR`: het gemiddelde van de laatste 15 seconden van de lap, of van de volledige lap wanneer die korter is. Dit is alleen extra weergave; de generated training line en opgeslagen trainingsvelden veranderen hierdoor niet;
 - Model B herkent als eerste uitbreiding herhaalde afstandsblokken met korte herstel-laps en een langere seriepauze. Een lap die werk en herstel combineert kan als herhaling blijven meetellen wanneer de afstand in het dominante herhalingspatroon valt; bij onvoldoende zekerheid valt Model B terug op Model A.
 - afzonderlijke AM/PM-evaluaties wanneer er twee trainingen zijn.
 

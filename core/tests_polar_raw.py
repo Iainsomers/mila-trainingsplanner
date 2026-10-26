@@ -80,6 +80,18 @@ class RawPolarTests(SimpleTestCase):
         rows = result[0]["parts"][0]["manual"]
         self.assertEqual([row["average_hr"] for row in rows], ["155", "195"])
 
+    def test_model_b_lap_rows_include_last_fifteen_seconds_average(self):
+        result = translate([{"laps": {"laps": [
+            {"distanceMeters": 1000, "durationMillis": 20000, "splitTimeMillis": 20000},
+            {"distanceMeters": 500, "durationMillis": 10000, "splitTimeMillis": 30000},
+        ]}, "samples": {"samples": [
+            {"type": "HEART_RATE", "intervalMillis": 1000,
+             "values": list(range(100, 130))},
+        ]}}], 5)
+        rows = result[0]["parts"][0]["manual"]
+        self.assertEqual([row["average_hr"] for row in rows], ["110", "125"])
+        self.assertEqual([row["average_hr_last_15"] for row in rows], ["112", "125"])
+
     def test_model_b_starts_with_same_type_a_output(self):
         payload = [{"sport": {"id": "1"}, "laps": {"laps": [
             {"distanceMeters": 1000, "durationMillis": 240000},
