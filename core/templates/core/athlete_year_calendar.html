@@ -160,6 +160,11 @@
     border: 1px solid rgba(0, 0, 0, .25);
   }
 
+  .whereabout-empty-marker {
+    position: relative;
+    min-height: 14px;
+  }
+
   .session-km-label {
     color: #000;
     font-size: 10px;
@@ -988,12 +993,12 @@
           </span>
         </div>
         <div class="ayc-mobile-slots">
-          {% if mobile_day.slot1.slot or mobile_day.slot2.slot or athlete_extended_edit_rights %}
+          {% if mobile_day.slot1.slot or mobile_day.slot2.slot or mobile_day.slot1.whereabouts or athlete_extended_edit_rights %}
           {% with cell=mobile_day.slot1 %}
-          {% if cell.slot or athlete_extended_edit_rights %}
+          {% if cell.slot or cell.whereabouts or athlete_extended_edit_rights %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">AM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% endif %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button></div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% else %}{% include "core/partials/whereabout_dots.html" with cell=cell %}{% endif %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button></div>
           </div>
           {% endif %}
           {% endwith %}
@@ -1361,6 +1366,7 @@
                   <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="" data-prefill-wu="" data-prefill-mob="" data-prefill-sprint="" data-prefill-core="" data-prefill-core2="" data-prefill-alt="" data-prefill-cd="">
                   </div>
                 {% endif %}
+                {% if not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
               </div>
             </td>
           {% endfor %}
@@ -1383,6 +1389,7 @@
                   <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="" data-prefill-wu="" data-prefill-mob="" data-prefill-sprint="" data-prefill-core="" data-prefill-core2="" data-prefill-alt="" data-prefill-cd="">
                   </div>
                 {% endif %}
+                {% if not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
               </div>
             </td>
           {% endfor %}

@@ -1464,8 +1464,8 @@
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
                       >
+                        {% include "core/partials/whereabout_dots.html" with cell=cell %}
                         {% if cell.slot %}
-                          {% include "core/partials/whereabout_dots.html" with cell=cell %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
@@ -1485,8 +1485,8 @@
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
                       >
+                        {% include "core/partials/whereabout_dots.html" with cell=cell %}
                         {% if cell.slot %}
-                          {% include "core/partials/whereabout_dots.html" with cell=cell %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
@@ -1550,8 +1550,8 @@
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
                       >
+                        {% include "core/partials/whereabout_dots.html" with cell=cell %}
                         {% if cell.slot %}
-                          {% include "core/partials/whereabout_dots.html" with cell=cell %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
@@ -1571,8 +1571,8 @@
                         hx-target="#modal-container"
                         hx-swap="innerHTML"
                       >
+                        {% include "core/partials/whereabout_dots.html" with cell=cell %}
                         {% if cell.slot %}
-                          {% include "core/partials/whereabout_dots.html" with cell=cell %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
