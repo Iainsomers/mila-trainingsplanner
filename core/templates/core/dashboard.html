@@ -146,6 +146,16 @@
         </div>
       </a>
     </div>
+    {% if garmin_upload_athlete_count %}
+    <div class="col-md-6 col-xl-3">
+      <a href="{% url 'garmin_uploads' %}" class="card h-100 dashboard-tile">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Garmin uploads (under development)</h5>
+          <p class="card-text">Read Garmin FIT files for selected athletes.</p>
+        </div>
+      </a>
+    </div>
+    {% endif %}
   </div>
   {% elif is_athlete_user %}
   <div class="row g-4">
@@ -157,6 +167,16 @@
         </div>
       </a>
     </div>
+    {% if garmin_upload_athlete_count %}
+    <div class="col-md-6 col-lg-4">
+      <a href="{% url 'garmin_uploads' %}" class="card h-100 dashboard-tile">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Garmin uploads (under development)</h5>
+          <p class="card-text">Upload and inspect your Garmin FIT file.</p>
+        </div>
+      </a>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 </div>

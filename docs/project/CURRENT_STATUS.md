@@ -16,6 +16,8 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Belangrijk werkend gedrag
 
+- Garmin FIT uploads zijn beschikbaar voor coaches en geselecteerde atleten waarbij `Allow Garmin FIT uploads` is aangezet. FIT- en Garmin-zipuploads worden per atleet met datum, origineel bestand en genormaliseerde gegevens opgeslagen; de planner wordt nog niet gewijzigd. Model C kan deze opgeslagen activiteiten later uitlezen.
+
 - In de AYC-trainingsevaluatie toont `Watch A` dezelfde Type A Polar-uitvoer als Polar Integration voor de geselecteerde atleet en datum. Bestaande opgeslagen horlogeresultaten blijven zichtbaar en kunnen nog worden verwijderd.
 - In de AYC-trainingsevaluatie staat naast `Watch A` nu `Watch B`. Model B levert voorlopig dezelfde output via een afzonderlijk analysekanaal en kan daardoor verder worden ontwikkeld zonder Model A direct aan te passen.
 - Model B probeert nu herhaalde afstandsblokken te herkennen, inclusief korte herstel-laps en een gecombineerde werk/pauze-lap rond de dominante herhalingsafstand. Bij onvoldoende zekerheid blijft de Model A-uitvoer zichtbaar.

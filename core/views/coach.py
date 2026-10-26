@@ -2,11 +2,13 @@ from datetime import date, timedelta
 import calendar as py_calendar
 import base64
 import colorsys
+import hashlib
 import json
 import math
 import os
 import re
 import secrets
+import struct
 from urllib.parse import urlencode
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -31,6 +33,8 @@ from core.focus_point_import import (
     normalize_athlete_name,
     parse_focus_point_comments_workbook,
 )
+from core.fit_reader import fit_bytes_from_upload, json_safe_fit_data, parse_fit
+from core.models import GarminActivity
 from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, AthleteFocusPoint, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
@@ -502,6 +506,13 @@ def dashboard_view(request):
         )
         dashboard_team = dashboard_settings.team if dashboard_settings else None
     is_llg_team = bool(dashboard_team and dashboard_team.name.casefold() == "llg")
+    garmin_upload_athlete_count = 0
+    if is_athlete_user:
+        garmin_upload_athlete_count = int(bool(getattr(athlete, "garmin_fit_upload_enabled", False)))
+    elif is_trainer_user and not coach_tools_only:
+        garmin_upload_athlete_count = _filter_owned(
+            Athlete.objects.filter(garmin_fit_upload_enabled=True), request
+        ).count()
 
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
@@ -514,6 +525,89 @@ def dashboard_view(request):
         "evaluations_enabled": getattr(evaluation_settings, "evaluations_enabled", True),
         "is_product_admin": _is_product_admin(request.user),
         "is_llg_team": is_llg_team,
+        "garmin_upload_athlete_count": garmin_upload_athlete_count,
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def garmin_uploads_view(request):
+    """Store and preview Garmin FIT data for an enabled athlete.
+
+    The upload is stored per athlete but deliberately does not create a
+    training slot. Model C can consume the normalized FIT information later
+    without changing Polar Model B or the planner.
+    """
+    athlete_user = _athlete_for_user(request.user)
+    is_athlete_user = bool(athlete_user and not request.user.is_staff and not request.user.is_superuser)
+    if is_athlete_user and not getattr(athlete_user, "garmin_fit_upload_enabled", False):
+        return redirect("dashboard")
+    if is_coach_tools_only_user(request.user):
+        return redirect("dashboard")
+    if is_athlete_user:
+        athletes = [athlete_user]
+    else:
+        athletes = list(
+            _filter_owned(
+                Athlete.objects.filter(garmin_fit_upload_enabled=True), request
+            ).order_by(Lower("name"), "id")
+        )
+    athlete_by_id = {item.id: item for item in athletes}
+    selected_raw = (request.POST.get("athlete_id") or request.GET.get("athlete") or "").strip()
+    selected_athlete = athlete_by_id.get(int(selected_raw)) if selected_raw.isdigit() else None
+    if selected_athlete is None and len(athletes) == 1:
+        selected_athlete = athletes[0]
+    preview = None
+    error = ""
+    save_notice = ""
+    if request.method == "POST":
+        if not is_athlete_user and _active_coach_access_label(request) == "view":
+            return HttpResponseForbidden("View-only coach access cannot upload files.")
+        uploaded = request.FILES.get("fit_file")
+        if selected_athlete is None:
+            error = "Choose an athlete first."
+        elif uploaded is None:
+            error = "Choose a Garmin .fit file."
+        elif not uploaded.name.lower().endswith((".fit", ".zip")):
+            error = "Only .fit files or Garmin .zip exports are supported."
+        elif uploaded.size > 12 * 1024 * 1024:
+            error = "The FIT file is too large (maximum 12 MB)."
+        else:
+            try:
+                uploaded_data = uploaded.read()
+                fit_name, fit_raw = fit_bytes_from_upload(uploaded.name, uploaded_data)
+                preview = parse_fit(fit_raw)
+                preview["file_name"] = fit_name
+                preview["human"]["file_name"] = fit_name
+                parsed_data = json_safe_fit_data(preview)
+                activity_start = preview["human"].get("activity_start")
+                activity_hash = hashlib.sha256(uploaded_data).hexdigest()
+                activity, created = GarminActivity.objects.get_or_create(
+                    athlete=selected_athlete,
+                    file_hash=activity_hash,
+                    defaults={
+                        "activity_start": activity_start,
+                        "original_filename": uploaded.name[:255],
+                        "raw_file": uploaded_data,
+                        "parsed_data": parsed_data,
+                    },
+                )
+                preview["saved_activity_id"] = activity.id
+                save_notice = "Activity saved." if created else "This file was already saved for this athlete."
+            except (ValueError, OSError, struct.error) as exc:
+                error = str(exc) or "The FIT file could not be read."
+    saved_activities = list(
+        GarminActivity.objects.filter(athlete=selected_athlete).only(
+            "id", "activity_start", "original_filename", "parsed_data", "uploaded_at"
+        )[:100]
+    ) if selected_athlete else []
+    return render(request, "core/garmin_uploads.html", {
+        "athletes": athletes,
+        "selected_athlete": selected_athlete,
+        "preview": preview,
+        "error": error,
+        "save_notice": save_notice,
+        "saved_activities": saved_activities,
     })
 
 
@@ -9910,6 +10004,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "view_weeks_ahead": getattr(athlete, "view_weeks_ahead", 2),
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
         "see_session_km": getattr(athlete, "see_session_km", True),
+        "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
         "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
@@ -9958,6 +10053,10 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["target_t4"] = (request.POST.get("target_t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["see_session_km"] = (request.POST.get("see_session_km") == "on")
+        if self_view:
+            form["garmin_fit_upload_enabled"] = getattr(athlete, "garmin_fit_upload_enabled", False)
+        else:
+            form["garmin_fit_upload_enabled"] = (request.POST.get("garmin_fit_upload_enabled") == "on")
         if self_view:
             form["pause_mode"] = effective_pause_mode
         else:
@@ -10157,6 +10256,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.view_weeks_ahead = view_weeks_ahead
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.see_session_km = form["see_session_km"]
+            if not self_view:
+                athlete.garmin_fit_upload_enabled = form["garmin_fit_upload_enabled"]
             if not self_view:
                 # Keep a blank override following the coach. A different
                 # choice is stored per athlete and takes precedence.

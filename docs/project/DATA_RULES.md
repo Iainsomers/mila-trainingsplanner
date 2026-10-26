@@ -128,3 +128,11 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 - Km worden per rij en per totaal afzonderlijk op 100 meter afgerond; de som van afgeronde rijen kan daardoor afwijken van het afgeronde totaal. Reken intern met de ongeronde meters. Bij duidelijke overschatting door afstandsdiscontinuïteiten wordt geen geforceerde normalisatie toegepast.
 - Tempo en HR meten verschillende aspecten. HR reageert vertraagd op versnellen en herstellen; de twee zoneverdelingen hoeven niet gelijk te zijn.
 - AI beschrijft een vermoedelijke trainingsstructuur, bepaalt geen zonegrenzen en verandert de vaste kilometerberekening niet.
+
+## Garmin FIT-uploadpreview
+
+- FIT-bestanden worden gelezen en per ingeschakelde atleet opgeslagen; er wordt nog geen TrainingSlot aangemaakt of gewijzigd.
+- De preview gebruikt verstreken tijd, beweegtijd, afstand en lapvelden afzonderlijk. Het verschil tussen verstreken tijd en beweegtijd blijft zichtbaar als pauzetijd.
+- Beschikbare standaard- en Garmin-uitbreidingsvelden worden per berichttype opgesomd. Onbekende velden blijven zichtbaar als veldnummer zodat Model C later geen informatie verliest.
+- De upload is beperkt tot `.fit`-bestanden van maximaal 12 MB en is alleen beschikbaar voor atleten die de coach expliciet heeft geselecteerd.
+- Een Garmin-zip mag één FIT-bestand bevatten. De oorspronkelijke upload en de genormaliseerde JSON blijven samen aan de atleet gekoppeld voor toekomstig gebruik door Watch C.

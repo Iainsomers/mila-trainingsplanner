@@ -456,6 +456,8 @@ class Athlete(models.Model):
 
     training_reports_enabled = models.BooleanField(default=True)
     see_session_km = models.BooleanField(default=True)
+    # Coach-only opt-in for the Garmin FIT upload preview.
+    garmin_fit_upload_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.
     pause_mode = models.CharField(
         max_length=24,
@@ -525,6 +527,34 @@ class Athlete(models.Model):
             except (TypeError, ValueError):
                 out[z] = float(dv)
         return out
+
+
+class GarminActivity(models.Model):
+    """A manually uploaded Garmin FIT activity kept for later Watch C use."""
+
+    athlete = models.ForeignKey(
+        Athlete,
+        on_delete=models.CASCADE,
+        related_name="garmin_activities",
+    )
+    activity_start = models.DateTimeField(null=True, blank=True, db_index=True)
+    original_filename = models.CharField(max_length=255)
+    file_hash = models.CharField(max_length=64, db_index=True)
+    raw_file = models.BinaryField()
+    parsed_data = models.JSONField(default=dict, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-activity_start", "-uploaded_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["athlete", "file_hash"],
+                name="unique_garmin_activity_file_per_athlete",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.athlete} · {self.activity_start or self.original_filename}"
 
 
 class Group(models.Model):

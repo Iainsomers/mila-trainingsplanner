@@ -1,0 +1,106 @@
+{% extends "core/base.html" %}
+
+{% block title %}Garmin uploads{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">Garmin uploads</h1>
+      <p class="text-muted mb-0">Upload a Garmin FIT file and inspect the available training data.</p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+  </div>
+
+  {% if not athletes %}
+    <div class="alert alert-info">No athletes are enabled for Garmin FIT uploads yet. Enable it in Athlete Input.</div>
+  {% else %}
+    <div class="card mb-4">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+          {% csrf_token %}
+          <div class="col-md-5">
+            <label class="form-label" for="garmin-athlete">Athlete</label>
+            <select class="form-select" id="garmin-athlete" name="athlete_id" required>
+              <option value="">Choose an athlete</option>
+              {% for athlete in athletes %}
+                <option value="{{ athlete.id }}" {% if selected_athlete and selected_athlete.id == athlete.id %}selected{% endif %}>{{ athlete.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label" for="garmin-fit-file">Garmin FIT file or ZIP export</label>
+            <input class="form-control" type="file" id="garmin-fit-file" name="fit_file" accept=".fit,.zip" required>
+          </div>
+          <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Read file</button></div>
+        </form>
+        <div class="form-text mt-2">You can upload the FIT file directly or the ZIP file downloaded from Garmin. The original file and its parsed data are saved for this athlete; the upload does not change the athlete’s planning.</div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  {% if save_notice %}<div class="alert alert-success">{{ save_notice }}</div>{% endif %}
+
+  {% if selected_athlete and saved_activities %}
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h6">Saved Garmin activities for {{ selected_athlete.name }}</h2>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Activity date</th><th>File</th><th>Distance</th><th>Uploaded</th></tr></thead>
+            <tbody>
+              {% for activity in saved_activities %}
+                <tr>
+                  <td>{{ activity.activity_start|date:"M j, Y H:i"|default:"Unknown" }}</td>
+                  <td>{{ activity.original_filename }}</td>
+                  <td>{{ activity.parsed_data.human.distance|default:"—" }}</td>
+                  <td>{{ activity.uploaded_at|date:"M j, Y H:i" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if preview %}
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5">{{ preview.human.file_name }}</h2>
+        <div class="row g-3 mb-3">
+          <div class="col-6 col-md-3"><div class="text-muted small">Start</div><div>{{ preview.human.activity_start|default:"—" }}</div></div>
+          <div class="col-6 col-md-3"><div class="text-muted small">Distance</div><div>{{ preview.human.distance }}</div></div>
+          <div class="col-6 col-md-3"><div class="text-muted small">Elapsed time</div><div>{{ preview.human.elapsed }}</div></div>
+          <div class="col-6 col-md-3"><div class="text-muted small">Moving time</div><div>{{ preview.human.moving }}</div></div>
+          <div class="col-6 col-md-3"><div class="text-muted small">Paused</div><div>{{ preview.human.paused }}</div></div>
+          <div class="col-6 col-md-3"><div class="text-muted small">Average HR</div><div>{{ preview.human.avg_hr }}</div></div>
+          <div class="col-6 col-md-3"><div class="text-muted small">Maximum HR</div><div>{{ preview.human.max_hr }}</div></div>
+          <div class="col-6 col-md-3"><div class="text-muted small">Calories</div><div>{{ preview.human.calories }}</div></div>
+        </div>
+
+        <h3 class="h6">Laps</h3>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Lap</th><th>Distance</th><th>Elapsed</th><th>Moving</th><th>min/km</th><th>Avg HR</th><th>Max HR</th><th>Avg power</th></tr></thead>
+            <tbody>
+              {% for lap in preview.human.lap_rows %}
+                <tr><td>{{ lap.number }}</td><td>{{ lap.distance }}</td><td>{{ lap.duration }}</td><td>{{ lap.moving_time }}</td><td>{{ lap.pace }}</td><td>{{ lap.heart_rate }}</td><td>{{ lap.max_heart_rate }}</td><td>{{ lap.power }}</td></tr>
+              {% empty %}<tr><td colspan="8" class="text-muted">No lap messages found.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="h6 mt-4">Data available in this file</h3>
+        <p class="small text-muted">{{ preview.message_count }} FIT messages were read, including {{ preview.record_count }} detailed record samples.</p>
+        <div class="row g-2">
+          {% for message, fields in preview.available_fields.items %}
+            <div class="col-md-6 col-lg-4"><div class="border rounded p-2 h-100"><strong>{{ message }}</strong><div class="small text-muted">{{ fields|join:", " }}</div></div></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

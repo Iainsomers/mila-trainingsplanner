@@ -572,6 +572,19 @@
           <label class="form-check-label" for="see_session_km">See session km</label>
           <div class="form-text">Show total running distance in each session in the Athlete Year Calendar, excluding Alternative.</div>
         </div>
+        {% if not self_view %}
+        <div class="mb-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="garmin_fit_upload_enabled"
+            name="garmin_fit_upload_enabled"
+            {% if form.garmin_fit_upload_enabled %}checked{% endif %}
+          >
+          <label class="form-check-label" for="garmin_fit_upload_enabled">Allow Garmin FIT uploads</label>
+          <div class="form-text">Show this athlete in the coach's Garmin upload tab. This setting is coach-only.</div>
+        </div>
+        {% endif %}
         {% endif %}
 
         <div class="mt-3 mb-3">
