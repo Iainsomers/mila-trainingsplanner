@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.focus_point_import import FOCUS_POINT_HEADERS
-from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training, _watch_actual_time_label, _watch_segment_loads
+from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training, _watch_actual_time_label, _watch_segment_loads, _whereabout_dots
 from core.views.coach import (
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
@@ -2645,6 +2645,25 @@ class PolarPlanMismatchTests(TestCase):
         self.assertNotIn("Suggest alternative plan", source)
         self.assertIn('id="aypWatchResultSection"', source)
         self.assertIn('id="deleteWatchInputBtn"', source)
+
+    def test_planner_whereabout_dots_include_overlapping_types(self):
+        coach = get_user_model().objects.create_user(
+            username="whereabout-dot-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="Whereabout Dot Athlete", birth_year=2000, gender="X"
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=athlete, start_date=date(2026, 10, 7), end_date=date(2026, 10, 9),
+            whereabouts_type="camp", note="Camp",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=athlete, start_date=date(2026, 10, 8), end_date=date(2026, 10, 8),
+            whereabouts_type="travel", note="Travel",
+        )
+        dots = _whereabout_dots(coach, [athlete.id], date(2026, 10, 7), date(2026, 10, 10))
+        self.assertEqual([item["type"] for item in dots[(athlete.id, date(2026, 10, 8))]], ["camp", "travel"])
+        self.assertEqual([item["type"] for item in dots[(athlete.id, date(2026, 10, 7))]], ["camp"])
 
     def test_ayc_type_a_endpoint_returns_polar_integration_output(self):
         coach = get_user_model().objects.create_user(

@@ -31,6 +31,7 @@ from core.models import (
     RaceEntry,
     StandardStrengthProgram,
     YearPlannerEntry,
+    YearPlannerWhereabout,
 )
 from core.stats import active_pause_distance_m, base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from core.parser import parse_segment_text
@@ -57,6 +58,56 @@ from core.views.slots import (
     _core_t_range_parts,
     _parse_core_segment_text,
 )
+
+
+WHEREABOUT_DOT_COLORS = {
+    "camp": "#2e7d5b",
+    "travel": "#9ccc65",
+    "test": "#8a4f7d",
+    "championship": "#d32f2f",
+    "diamond_l": "#e6a8c2",
+    "race_gold": "#c99a00",
+    "race_silver": "#9e9e9e",
+    "race_bronze": "#a66a3f",
+    "race_other": "#ef6c00",
+    "expermeetings": "#1976d2",
+    "medical": "#f2c200",
+    "brinec": "#ef6c00",
+}
+
+
+def _whereabout_dots(owner, athlete_ids, start, end):
+    """Return distinct whereabouts types per athlete/day for planner markers."""
+    athlete_ids = {int(value) for value in (athlete_ids or []) if value}
+    if not owner or not athlete_ids:
+        return {}
+    ranges = YearPlannerWhereabout.objects.filter(
+        owner=owner,
+        start_date__lt=end,
+        end_date__gte=start,
+    ).filter(Q(athlete_id__in=athlete_ids) | Q(athlete__isnull=True)).only(
+        "athlete_id", "start_date", "end_date", "whereabouts_type"
+    )
+    values = {}
+    for item in ranges:
+        first = max(start, item.start_date)
+        last = min(end - timedelta(days=1), item.end_date)
+        target_ids = [item.athlete_id] if item.athlete_id else athlete_ids
+        for athlete_id in target_ids:
+            for day_offset in range((last - first).days + 1):
+                key = (athlete_id, first + timedelta(days=day_offset))
+                values.setdefault(key, set()).add(item.whereabouts_type)
+    color_order = {kind: index for index, kind in enumerate(WHEREABOUT_DOT_COLORS)}
+    return {
+        key: [
+            {"type": kind, "color": WHEREABOUT_DOT_COLORS[kind]}
+            for kind in sorted(
+                (kind for kind in kinds if kind in WHEREABOUT_DOT_COLORS),
+                key=color_order.__getitem__,
+            )
+        ]
+        for key, kinds in values.items()
+    }
 
 
 def _athlete_plan_for_day(athlete_plans, day):
@@ -1115,6 +1166,7 @@ def flex_planner_view(request):
     end = start + timedelta(days=7 * weeks)
     week_starts = [start + timedelta(days=7 * i) for i in range(weeks)]
     owner = _active_coach_user(request)
+    whereabouts_dots = _whereabout_dots(owner, selected_athlete_ids, start, end)
     flex_plan = _get_or_create_flex_planner_plan(owner, start, end) if selected_athletes else None
 
     # Determine which plans are relevant per athlete/date.
@@ -1497,6 +1549,7 @@ def flex_planner_view(request):
                             athlete,
                             athlete.pause_mode or coach_settings.pause_mode,
                         ) if getattr(athlete, "see_session_zones", True) else [],
+                        "whereabouts": whereabouts_dots.get((athlete.id, day), []),
                     })
 
             week_phase_style, week_phase = week_training_style(athlete.id, days)
@@ -3446,6 +3499,14 @@ def athlete_year_calendar_view(request):
     start = max(full_start, cutoff) if cutoff else full_start
     weeks = max(0, ((end - start).days // 7) + 1)
 
+    whereabouts_owner = selected_athlete.owner if selected_athlete else None
+    whereabouts_dots = _whereabout_dots(
+        whereabouts_owner,
+        [selected_athlete.id] if selected_athlete else [],
+        start,
+        end + timedelta(days=1),
+    )
+
     owner = _active_coach_user(request)
     slot_lookup = {}
     has_fix_keys = set()
@@ -3853,6 +3914,7 @@ def athlete_year_calendar_view(request):
                 "modal_prefill": _slot_modal_prefill_texts(slot1),
                 "session_km": _ayc_slot_session_km(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
                 "session_zones": _ayc_slot_session_zones(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
+                "whereabouts": whereabouts_dots.get((selected_athlete.id, day), []) if selected_athlete else [],
             })
             cells2.append({
                 "day": day,
@@ -3864,6 +3926,7 @@ def athlete_year_calendar_view(request):
                 "modal_prefill": _slot_modal_prefill_texts(slot2),
                 "session_km": _ayc_slot_session_km(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
                 "session_zones": _ayc_slot_session_zones(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
+                "whereabouts": whereabouts_dots.get((selected_athlete.id, day), []) if selected_athlete else [],
             })
             comment = None
             if selected_athlete:

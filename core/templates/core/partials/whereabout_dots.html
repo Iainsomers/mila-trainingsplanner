@@ -1,0 +1,5 @@
+{% if cell.slot_index == 1 and cell.whereabouts %}
+  <span class="whereabout-dots" aria-label="Whereabouts">
+    {% for item in cell.whereabouts %}<span class="whereabout-dot" style="background-color: {{ item.color }}" title="{{ item.type }}"></span>{% endfor %}
+  </span>
+{% endif %}

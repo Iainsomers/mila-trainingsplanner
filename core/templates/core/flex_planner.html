@@ -159,6 +159,23 @@
       padding: 0;
     }
 
+    .whereabout-dots {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      display: inline-flex;
+      gap: 2px;
+      z-index: 2;
+    }
+
+    .whereabout-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, .25);
+    }
+
     .flex-cell:hover {
       filter: brightness(0.93);
     }
@@ -1448,6 +1465,7 @@
                         hx-swap="innerHTML"
                       >
                         {% if cell.slot %}
+                          {% include "core/partials/whereabout_dots.html" with cell=cell %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
@@ -1468,6 +1486,7 @@
                         hx-swap="innerHTML"
                       >
                         {% if cell.slot %}
+                          {% include "core/partials/whereabout_dots.html" with cell=cell %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
@@ -1532,6 +1551,7 @@
                         hx-swap="innerHTML"
                       >
                         {% if cell.slot %}
+                          {% include "core/partials/whereabout_dots.html" with cell=cell %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
@@ -1552,6 +1572,7 @@
                         hx-swap="innerHTML"
                       >
                         {% if cell.slot %}
+                          {% include "core/partials/whereabout_dots.html" with cell=cell %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}

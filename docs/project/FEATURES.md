@@ -56,6 +56,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 - Per atleet bepaalt de trainer in Athlete settings > General afzonderlijk of de Training-calendar en/of Whereabouts-calendar in de Year Planner zichtbaar zijn. De legenda volgt die zichtbaarheid.
 - Met `Shared athlete whereabouts in Year Planner` kan de coachinstelling aanvullend instellen dat atleten met Whereabouts-toegang de whereabouts-rijen van andere atleten van dezelfde coach en van gerelateerde coaches mogen zien. Deze schakelaar staat standaard uit en deelt nooit trainingsplanning of bewerkingsrechten.
 - In Details Camps kan een bevoegde coach een deelnemer met een kleine delete-knop uit het kamp verwijderen. Alleen de camp-whereaboutregels van die deelnemer worden verwijderd; de persoon en overige planning blijven bestaan. Atleten met `year_planner_whereabouts_enabled` zien in Planning ook Details Camps, maar alleen kampen waarvoor zij zelf geselecteerd zijn. In zo'n kamp kunnen zij hun eigen aankomst-/vertrek- en reisgegevens wijzigen; andere deelnemers blijven read-only en deelnemers toevoegen of verwijderen blijft trainer-only.
+- AYC en Flex Planner tonen in de linkerbovenhoek van een AM-training één of meerdere gekleurde dots voor de Whereabouts van die dag; meerdere overlappende types worden als meerdere dots weergegeven.
 
 ## Flex Planner
 

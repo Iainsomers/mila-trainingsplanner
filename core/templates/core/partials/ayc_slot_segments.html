@@ -1,3 +1,4 @@
+{% include "core/partials/whereabout_dots.html" with cell=cell %}
 {% if cell.session_km or cell.session_zones %}
   <div class="session-summary-label">
     {% if show_session_km and cell.session_km %}<div class="session-km-label">T {{ cell.session_km }}</div>{% endif %}
