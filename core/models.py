@@ -280,6 +280,7 @@ class AthleteFocusPoint(models.Model):
     point_key = models.CharField(max_length=64)
     priority = models.PositiveSmallIntegerField(null=True, blank=True)
     custom_label = models.CharField(max_length=120, blank=True, default="")
+    athlete_comment = models.TextField(blank=True, default="")
 
     class Meta:
         constraints = [
@@ -457,6 +458,8 @@ class Athlete(models.Model):
     training_reports_enabled = models.BooleanField(default=True)
     see_session_km = models.BooleanField(default=True)
     see_session_zones = models.BooleanField(default=True)
+    # Coach-only opt-in for the athlete's own Desired Improvements view.
+    see_desired_improvement_points = models.BooleanField(default=False)
     # Coach-only opt-in for the Garmin FIT upload preview.
     garmin_fit_upload_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.

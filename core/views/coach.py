@@ -5549,6 +5549,8 @@ def planning_overview_view(request):
     active_coach = _active_coach_user(request) if not is_athlete_user else None
     detailed_camps_enabled = False
     focus_points_enabled = False
+    if is_athlete_user and athlete:
+        focus_points_enabled = bool(getattr(athlete, "see_desired_improvement_points", False))
     if active_coach:
         coach_settings = CoachSettings.objects.filter(
             user=active_coach,
@@ -5571,26 +5573,34 @@ def planning_overview_view(request):
 def focus_points_view(request):
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
-    if is_athlete_user or is_coach_tools_only_user(request.user):
+    if is_coach_tools_only_user(request.user):
         return redirect("planning_overview")
 
-    active_coach = _active_coach_user(request)
-    if not CoachSettings.objects.filter(user=active_coach, focus_points_enabled=True).exists():
-        return redirect("planning_overview")
-
-    athletes = _filter_owned(
-        Athlete.objects.select_related("owner"),
-        request,
-    ).order_by(Lower("name"), "id")
+    active_coach = athlete.owner if is_athlete_user else _active_coach_user(request)
+    if is_athlete_user:
+        if not getattr(athlete, "see_desired_improvement_points", False):
+            return redirect("planning_overview")
+        athletes = [athlete]
+    else:
+        if not CoachSettings.objects.filter(user=active_coach, focus_points_enabled=True).exists():
+            return redirect("planning_overview")
+        athletes = list(_filter_owned(
+            Athlete.objects.select_related("owner"),
+            request,
+        ).order_by(Lower("name"), "id"))
     athlete_by_id = {item.id: item for item in athletes}
     selected_id = (request.POST.get("athlete_id") or request.GET.get("athlete") or "").strip()
     selected_athlete = athlete_by_id.get(int(selected_id)) if selected_id.isdigit() else None
     if selected_athlete is None and athletes:
         selected_athlete = athletes[0]
 
-    can_edit = _active_coach_access_label(request) != "view"
+    can_edit = not is_athlete_user and _active_coach_access_label(request) != "view"
+    can_edit_athlete_comment = is_athlete_user or can_edit
     if request.method == "POST":
-        if not can_edit:
+        action = (request.POST.get("action") or "comment").strip()
+        if is_athlete_user and action != "athlete_comment":
+            return HttpResponseForbidden("Athletes can only change their own comments.")
+        if not is_athlete_user and not can_edit:
             return HttpResponseForbidden("View-only coach access cannot change focus points.")
         if not selected_athlete:
             return HttpResponseForbidden("Choose an accessible athlete.")
@@ -5601,7 +5611,17 @@ def focus_points_view(request):
             "races_tactics", "recovery_capacity", "injuries", "life_balance",
             "coach_collaboration", "other_1", "other_2", "other_3",
         }
-        action = (request.POST.get("action") or "comment").strip()
+        if action == "athlete_comment":
+            if point_key not in focus_point_keys:
+                return HttpResponseForbidden("Invalid focus point.")
+            comment_text = (request.POST.get("comment") or "").strip()
+            AthleteFocusPoint.objects.update_or_create(
+                athlete=selected_athlete,
+                point_key=point_key,
+                defaults={"athlete_comment": comment_text},
+            )
+            return redirect(f"{reverse('focus_points')}?athlete={selected_athlete.id}&saved=1")
+
         if action == "import_comments":
             uploaded_file = request.FILES.get("comments_workbook")
             if uploaded_file is None:
@@ -5814,6 +5834,7 @@ def focus_points_view(request):
             "progress_key": comment_keys[key]["progress"],
             "progress_comments": comments_by_point.get(comment_keys[key]["progress"], []),
             "progress_own_comment": own_comments.get(comment_keys[key]["progress"], ""),
+            "athlete_comment": setting.athlete_comment if setting else "",
         })
 
     return render(request, "core/focus_points.html", {
@@ -5821,6 +5842,8 @@ def focus_points_view(request):
         "selected_athlete": selected_athlete,
         "focus_point_rows": focus_point_rows,
         "can_edit": can_edit,
+        "can_edit_athlete_comment": can_edit_athlete_comment,
+        "is_athlete_user": is_athlete_user,
         "saved": request.GET.get("saved") == "1",
         "imported_count": request.GET.get("imported", ""),
         "imported_comment_count": request.GET.get("comments", ""),
@@ -9672,6 +9695,7 @@ def coach_athlete_create_view(request):
         "view_weeks_ahead": 2,
         "training_reports_enabled": True,
         "see_session_km": True,
+        "see_desired_improvement_points": False,
         "pause_mode": coach_pause_mode,
         "week_report_enabled": False,
         "daily_vitals_enabled": False,
@@ -9905,6 +9929,7 @@ def coach_athlete_create_view(request):
                 view_weeks_ahead=view_weeks_ahead,
                 training_reports_enabled=form["training_reports_enabled"],
                 see_session_km=True,
+                see_desired_improvement_points=False,
                 week_report_enabled=form["week_report_enabled"],
                 daily_vitals_enabled=form["daily_vitals_enabled"],
                 year_planner_training_enabled=form["year_planner_training_enabled"],
@@ -10011,6 +10036,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
         "see_session_km": getattr(athlete, "see_session_km", True),
         "see_session_zones": getattr(athlete, "see_session_zones", True),
+        "see_desired_improvement_points": getattr(athlete, "see_desired_improvement_points", False),
         "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
         "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
@@ -10061,6 +10087,10 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["see_session_km"] = (request.POST.get("see_session_km") == "on")
         form["see_session_zones"] = (request.POST.get("see_session_zones") == "on")
+        if self_view:
+            form["see_desired_improvement_points"] = getattr(athlete, "see_desired_improvement_points", False)
+        else:
+            form["see_desired_improvement_points"] = (request.POST.get("see_desired_improvement_points") == "on")
         if self_view:
             form["garmin_fit_upload_enabled"] = getattr(athlete, "garmin_fit_upload_enabled", False)
         else:
@@ -10265,6 +10295,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.see_session_km = form["see_session_km"]
             athlete.see_session_zones = form["see_session_zones"]
+            if not self_view:
+                athlete.see_desired_improvement_points = form["see_desired_improvement_points"]
             if not self_view:
                 athlete.garmin_fit_upload_enabled = form["garmin_fit_upload_enabled"]
             if not self_view:

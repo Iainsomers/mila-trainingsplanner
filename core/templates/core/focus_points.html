@@ -103,7 +103,7 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
       <h1 class="h3 mb-1">Focus Points and Desired Improvements</h1>
-      <p class="text-muted mb-0">Coach focus notes for each athlete.</p>
+      <p class="text-muted mb-0">{% if is_athlete_user %}Your desired improvement points.{% else %}Coach focus notes for each athlete.{% endif %}</p>
     </div>
     <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back to Planning</a>
   </div>
@@ -114,7 +114,7 @@
   {% endif %}
   {% if import_error %}<div class="alert alert-danger py-2">{{ import_error }}</div>{% endif %}
 
-  <div class="card mb-3">
+  {% if not is_athlete_user %}<div class="card mb-3">
     <div class="card-body py-2">
       <div class="focus-points-controls">
         <form method="get" class="focus-points-athlete">
@@ -150,24 +150,24 @@
         {% endif %}
       </div>
     </div>
-  </div>
+  </div>{% endif %}
 
   {% if selected_athlete %}
     <div class="card">
       <div class="card-header bg-white">
         <strong>{{ selected_athlete.name }}</strong>
-        <span class="text-muted small ms-2">Use + to add or update your comments.</span>
+        <span class="text-muted small ms-2">{% if is_athlete_user %}Add your comments below.{% else %}Use + to add or update your comments.{% endif %}</span>
       </div>
       <div class="focus-points-table-wrap">
         <table class="table table-bordered table-sm mb-0 focus-points-table">
           <thead class="table-light">
             <tr>
               <th scope="col">Focus point</th>
-              <th scope="col">Comment coaches</th>
+              {% if not is_athlete_user %}<th scope="col">Comment coaches</th>{% endif %}
               <th scope="col">Prio</th>
-              <th scope="col">Plan</th>
-              <th scope="col">Progress</th>
-              <th scope="col">Comment Athlete</th>
+              {% if not is_athlete_user %}<th scope="col">Plan</th>
+              <th scope="col">Progress</th>{% endif %}
+              <th scope="col">Comments athletes</th>
             </tr>
           </thead>
           <tbody>
@@ -181,7 +181,7 @@
                       data-own-label="{{ point.custom_label }}" aria-label="Rename {{ point.label }}" title="Rename focus point">+</button>
                   {% endif %}
                 </th>
-                <td class="focus-point-cell">
+                {% if not is_athlete_user %}<td class="focus-point-cell">
                   {% for comment in point.comments %}
                     <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
                   {% endfor %}
@@ -198,7 +198,7 @@
                   {% elif not point.comments %}
                     <span class="text-muted">—</span>
                   {% endif %}
-                </td>
+                </td>{% endif %}
                 <td>
                   {% if can_edit %}
                     <form method="post" action="{% url 'focus_points' %}" class="m-0 focus-priority-form">
@@ -218,7 +218,7 @@
                   {% elif point.priority == 3 %}<span title="Bronze medal">🥉</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
-                <td class="focus-point-cell">
+                {% if not is_athlete_user %}<td class="focus-point-cell">
                   {% for comment in point.plan_comments %}
                     <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
                   {% endfor %}
@@ -241,8 +241,21 @@
                       aria-label="{% if point.progress_own_comment %}Edit{% else %}Add{% endif %} your Progress comment for {{ point.label }}"
                       title="{% if point.progress_own_comment %}Edit Progress comment{% else %}Add Progress comment{% endif %}">+</button>
                   {% elif not point.progress_comments %}<span class="text-muted">—</span>{% endif %}
+                </td>{% endif %}
+                <td class="focus-point-cell">
+                  {% if is_athlete_user %}
+                    <form method="post" action="{% url 'focus_points' %}" class="m-0">
+                      {% csrf_token %}
+                      <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+                      <input type="hidden" name="action" value="athlete_comment">
+                      <input type="hidden" name="point_key" value="{{ point.key }}">
+                      <textarea name="comment" class="form-control form-control-sm" rows="2" aria-label="Comments athletes for {{ point.label }}">{{ point.athlete_comment }}</textarea>
+                      <button type="submit" class="btn btn-sm btn-outline-primary mt-1">Save</button>
+                    </form>
+                  {% elif point.athlete_comment %}
+                    <span class="focus-point-comment">{{ point.athlete_comment }}</span>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
-                <td><span class="text-muted">—</span></td>
               </tr>
             {% endfor %}
           </tbody>

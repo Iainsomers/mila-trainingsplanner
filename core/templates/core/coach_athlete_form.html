@@ -588,6 +588,17 @@
           <input
             class="form-check-input"
             type="checkbox"
+            id="see_desired_improvement_points"
+            name="see_desired_improvement_points"
+            {% if form.see_desired_improvement_points %}checked{% endif %}
+          >
+          <label class="form-check-label" for="see_desired_improvement_points">See desired improvement points</label>
+          <div class="form-text">Allow the athlete to view and fill in their own comments in Desired Improvements. Coach comments remain hidden.</div>
+        </div>
+        <div class="mb-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
             id="garmin_fit_upload_enabled"
             name="garmin_fit_upload_enabled"
             {% if form.garmin_fit_upload_enabled %}checked{% endif %}

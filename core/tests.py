@@ -1555,6 +1555,57 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "focus-points-import")
         self.assertNotContains(response, "Leave this empty to remove your own comment.")
 
+    def test_athlete_can_view_and_edit_only_own_desired_improvement_comments(self):
+        coach = get_user_model().objects.create_user(
+            username="desired-points-coach", password="secret", is_staff=True
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="Desired Points Athlete", password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Desired Points Athlete",
+            birth_year=2000,
+            gender="X",
+            see_desired_improvement_points=True,
+        )
+        CoachSettings.objects.create(user=coach, focus_points_enabled=True)
+        setting = AthleteFocusPoint.objects.create(
+            athlete=athlete,
+            point_key="speed",
+            priority=1,
+            athlete_comment="Keep relaxed shoulders.",
+        )
+        FocusPointComment.objects.create(
+            athlete=athlete,
+            coach=coach,
+            point_key="speed",
+            comment="Coach-only note.",
+        )
+
+        self.client.force_login(athlete_user)
+        page = self.client.get("/planning/focus-points/")
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Comments athletes")
+        self.assertContains(page, "Keep relaxed shoulders.")
+        self.assertNotContains(page, "Coach-only note.")
+        self.assertNotContains(page, "Comment coaches")
+
+        saved = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "action": "athlete_comment",
+            "point_key": "speed",
+            "comment": "New athlete note.",
+        })
+        self.assertEqual(saved.status_code, 302)
+        setting.refresh_from_db()
+        self.assertEqual(setting.athlete_comment, "New athlete note.")
+
+        self.client.force_login(coach)
+        coach_page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
+        self.assertContains(coach_page, "New athlete note.")
+        self.assertContains(coach_page, "Coach-only note.")
+
     def test_focus_point_comments_are_kept_per_coach_until_overwritten(self):
         coach = get_user_model().objects.create_user(
             username="Iain_Somers", password="secret", is_staff=True,
