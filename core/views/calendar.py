@@ -1492,6 +1492,11 @@ def flex_planner_view(request):
                             athlete,
                             athlete.pause_mode or coach_settings.pause_mode,
                         ) if coach_settings.see_session_km else "",
+                        "session_zones": _ayc_slot_session_zones(
+                            slot,
+                            athlete,
+                            athlete.pause_mode or coach_settings.pause_mode,
+                        ) if getattr(athlete, "see_session_zones", True) else [],
                     })
 
             week_phase_style, week_phase = week_training_style(athlete.id, days)

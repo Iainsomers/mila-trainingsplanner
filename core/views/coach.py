@@ -10545,6 +10545,7 @@ from core.views.calendar import (
     _VirtualSlot,
     _athlete_plan_for_day,
     _ayc_slot_session_km,
+    _ayc_slot_session_zones,
     _ayc_slot_loads_for_totals,
     _annotate_slot_segment_display_times,
     _base_planning_slot_for_day,

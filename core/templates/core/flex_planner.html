@@ -201,9 +201,6 @@
     }
 
     .flex-session-km-label {
-      display: block;
-      margin-bottom: 1px;
-      text-align: right;
       color: #000;
       font-size: 10px;
       font-weight: 700;
@@ -211,9 +208,40 @@
       white-space: nowrap;
     }
 
+    .flex-session-summary {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 3px;
+      margin-bottom: 1px;
+      min-height: 14px;
+      white-space: nowrap;
+    }
+
     .flex-session-km-label-with-report {
       padding-right: 22px;
     }
+
+    .flex-session-zone-pills {
+      display: inline-flex;
+      gap: 2px;
+    }
+
+    .flex-session-zone-pill {
+      display: inline-block;
+      padding: 1px 4px;
+      border-radius: 6px;
+      font-size: 9px;
+      line-height: 1.1;
+      color: #000;
+    }
+
+    .flex-session-zone-z1 { background-color: #f8f8f0; }
+    .flex-session-zone-z2 { background-color: #f7c6d0; }
+    .flex-session-zone-z3 { background-color: #f06f5f; }
+    .flex-session-zone-z4 { background-color: #bfe7bf; }
+    .flex-session-zone-z5 { background-color: #b7d7ff; }
+    .flex-session-zone-z6 { background-color: #f2c200; }
 
     .flex-report-btn,
     .flex-delete-btn,
@@ -1421,7 +1449,7 @@
                       >
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">T {{ cell.session_km }}</div>{% endif %}
+                            {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
@@ -1441,7 +1469,7 @@
                       >
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">T {{ cell.session_km }}</div>{% endif %}
+                            {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
@@ -1505,7 +1533,7 @@
                       >
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">T {{ cell.session_km }}</div>{% endif %}
+                            {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
@@ -1525,7 +1553,7 @@
                       >
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if show_session_km and cell.session_km %}<div class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">T {{ cell.session_km }}</div>{% endif %}
+                            {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary"><span class="flex-session-km-label{% if cell.check %} flex-session-km-label-with-report{% endif %}">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
                             {% for seg in cell.slot.segments.all %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
