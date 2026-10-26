@@ -460,6 +460,8 @@ class Athlete(models.Model):
     see_session_zones = models.BooleanField(default=True)
     # Coach-only opt-in for the athlete's own Desired Improvements view.
     see_desired_improvement_points = models.BooleanField(default=False)
+    # Coach-controlled visibility of the Plan column in that view.
+    show_plan_to_athlete = models.BooleanField(default=False)
     # Coach-only opt-in for the Garmin FIT upload preview.
     garmin_fit_upload_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.

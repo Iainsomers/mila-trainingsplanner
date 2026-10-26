@@ -25,6 +25,9 @@
     color: #6c757d;
   }
   .focus-point-cell { position: relative; padding-right: 1.8rem !important; }
+  .focus-plan-visibility-form { margin-top: .2rem; }
+  .focus-plan-visibility-form .form-check-input { vertical-align: middle; }
+  .focus-plan-visibility-form .form-check-label { white-space: nowrap; }
   .focus-point-add {
     position: absolute;
     top: .2rem;
@@ -168,7 +171,23 @@
               <th scope="col">Focus point</th>
               {% if not is_athlete_user %}<th scope="col">Comment coaches</th>{% endif %}
               <th scope="col">Prio</th>
-              <th scope="col">Plan</th>
+              {% if not is_athlete_user or show_plan_to_athlete %}<th scope="col">
+                Plan
+                {% if not is_athlete_user %}
+                  <form method="post" action="{% url 'focus_points' %}" class="focus-plan-visibility-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+                    <input type="hidden" name="action" value="toggle_plan_visibility">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" role="switch" name="show_to_athlete"
+                        id="showPlanToAthlete" {% if show_plan_to_athlete %}checked{% endif %}
+                        {% if not can_edit %}disabled{% endif %}
+                        onchange="this.form.submit()">
+                      <label class="form-check-label small fw-normal" for="showPlanToAthlete">Show to athlete</label>
+                    </div>
+                  </form>
+                {% endif %}
+              </th>{% endif %}
               <th scope="col">Progress</th>
               <th scope="col">Comments athletes</th>
             </tr>
@@ -221,7 +240,7 @@
                   {% elif point.priority == 3 %}<span title="Bronze medal">🥉</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
-                <td class="focus-point-cell">
+                {% if not is_athlete_user or show_plan_to_athlete %}<td class="focus-point-cell">
                   {% for comment in point.plan_comments %}
                     <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
                   {% endfor %}
@@ -232,7 +251,7 @@
                       aria-label="{% if point.plan_own_comment %}Edit{% else %}Add{% endif %} your Plan comment for {{ point.label }}"
                       title="{% if point.plan_own_comment %}Edit Plan comment{% else %}Add Plan comment{% endif %}">+</button>
                   {% elif not point.plan_comments %}<span class="text-muted">—</span>{% endif %}
-                </td>
+                </td>{% endif %}
                 <td class="focus-point-cell">
                   {% for comment in point.progress_comments %}
                     <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>

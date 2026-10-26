@@ -1589,7 +1589,7 @@ class PlanningOverviewTests(TestCase):
         page = self.client.get("/planning/focus-points/")
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "Comments athletes")
-        self.assertContains(page, "Plan")
+        self.assertNotContains(page, ">Plan<", html=False)
         self.assertContains(page, "Progress")
         self.assertContains(page, "Keep relaxed shoulders.")
         self.assertNotContains(page, "Coach-only note.")
@@ -1606,9 +1606,22 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(setting.athlete_comment, "New athlete note.")
 
         self.client.force_login(coach)
+        toggle = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "action": "toggle_plan_visibility",
+            "show_to_athlete": "on",
+        })
+        self.assertEqual(toggle.status_code, 302)
+        athlete.refresh_from_db()
+        self.assertTrue(athlete.show_plan_to_athlete)
         coach_page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
         self.assertContains(coach_page, "New athlete note.")
         self.assertContains(coach_page, "Coach-only note.")
+        self.assertContains(coach_page, "Show to athlete")
+
+        self.client.force_login(athlete_user)
+        shown_page = self.client.get("/planning/focus-points/")
+        self.assertContains(shown_page, "Plan")
 
     def test_focus_point_comments_are_kept_per_coach_until_overwritten(self):
         coach = get_user_model().objects.create_user(

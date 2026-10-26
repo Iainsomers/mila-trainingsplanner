@@ -5605,6 +5605,13 @@ def focus_points_view(request):
         if not selected_athlete:
             return HttpResponseForbidden("Choose an accessible athlete.")
 
+        if action == "toggle_plan_visibility":
+            if is_athlete_user or not can_edit:
+                return HttpResponseForbidden("Only an editable coach can change Plan visibility.")
+            selected_athlete.show_plan_to_athlete = request.POST.get("show_to_athlete") == "on"
+            selected_athlete.save(update_fields=["show_plan_to_athlete"])
+            return redirect(f"{reverse('focus_points')}?athlete={selected_athlete.id}&saved=1")
+
         point_key = (request.POST.get("point_key") or "").strip()
         focus_point_keys = {
             "endurance_z1_z3", "endurance_z4_z5", "speed", "race_technique",
@@ -5844,6 +5851,10 @@ def focus_points_view(request):
         "can_edit": can_edit,
         "can_edit_athlete_comment": can_edit_athlete_comment,
         "is_athlete_user": is_athlete_user,
+        "show_plan_to_athlete": bool(
+            selected_athlete
+            and (not is_athlete_user or getattr(selected_athlete, "show_plan_to_athlete", False))
+        ),
         "saved": request.GET.get("saved") == "1",
         "imported_count": request.GET.get("imported", ""),
         "imported_comment_count": request.GET.get("comments", ""),
