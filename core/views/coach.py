@@ -10359,6 +10359,23 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             target_url = reverse("athlete_settings") if self_view else reverse("coach_athlete_edit", args=[athlete.id])
             return redirect(f"{target_url}?tab={active_tab}&saved=1")
 
+    previous_athlete = None
+    next_athlete = None
+    if not self_view:
+        navigation_athletes = list(
+            _filter_owned(Athlete.objects.order_by(Lower("name"), "id"), request)
+            .only("id", "name")
+        )
+        current_index = next(
+            (index for index, item in enumerate(navigation_athletes) if item.id == athlete.id),
+            None,
+        )
+        if current_index is not None:
+            if current_index > 0:
+                previous_athlete = navigation_athletes[current_index - 1]
+            if current_index + 1 < len(navigation_athletes):
+                next_athlete = navigation_athletes[current_index + 1]
+
     return render(
         request,
         "core/coach_athlete_form.html",
@@ -10370,6 +10387,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             "saved_notice": saved_notice,
             "active_tab": active_tab,
             "self_view": self_view,
+            "previous_athlete": previous_athlete,
+            "next_athlete": next_athlete,
             "pause_mode_choices": CoachSettings.PAUSE_MODE_CHOICES,
         },
     )

@@ -6,7 +6,7 @@ Bijgewerkt: 18 oktober 2026.
 
 In New, Plans, Wishes kan de maker een eigen actieve wish bewerken. De productbeheerder (`admin`) kan iedere actieve wish bewerken. Andere gebruikers hebben geen Edit-knop en wijzigingen worden ook server-side geweigerd.
 
-In Athlete Input staat boven de tabs voor trainers steeds de naam van de geselecteerde atleet. De aanduiding blijft zichtbaar wanneer tussen tabs wordt gewisseld; in de eigen Athlete settings van een atleet wordt deze niet getoond.
+In Athlete Input staat boven de tabs voor trainers steeds de naam van de geselecteerde atleet. De aanduiding blijft zichtbaar wanneer tussen tabs wordt gewisseld; in de eigen Athlete settings van een atleet wordt deze niet getoond. Naast de naam kunnen trainers alfabetisch naar de vorige of volgende atleet binnen de actieve coachweergave gaan; het huidige tabblad blijft behouden.
 
 Het coachdashboard toont Planning bovenaan. Onder `Coach dashboard` staat voor trainers met gedeelde toegang een `View as coach`-keuze. Standaard kijkt een trainer als zichzelf; na selectie van een andere toegestane coach tonen plannings- en beheerschermen alleen de gegevens van die coach. De dropdown toont of die toegang view-only of edit is; bij view-only worden schrijfacties server-side geblokkeerd. Settings is een werkende dashboardtegel voor coachinstellingen, waaronder Planning Camps. Stats en Polar houden hun under-development-aanduiding.
 

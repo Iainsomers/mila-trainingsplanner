@@ -7999,6 +7999,37 @@ class AthleteTimeInputFormatTests(TestCase):
 
         self.assertIn('{% elif not self_view and athlete %}', source)
         self.assertIn('Selected athlete: <span class="fw-semibold text-body">{{ athlete.name }}</span>', source)
+        self.assertIn("previous_athlete.id", source)
+        self.assertIn("next_athlete.id", source)
+        self.assertIn("?tab={{ active_tab }}", source)
+
+    def test_athlete_input_navigation_is_alphabetical_and_scoped_to_active_coach(self):
+        User = get_user_model()
+        admin = User.objects.create_user(
+            username="athlete-nav-admin", password="secret", is_staff=True, is_superuser=True
+        )
+        active_coach = User.objects.create_user(
+            username="athlete-nav-active", password="secret", is_staff=True
+        )
+        unrelated_coach = User.objects.create_user(
+            username="athlete-nav-unrelated", password="secret", is_staff=True
+        )
+        CoachAccess.objects.create(owner=active_coach, grantee=admin, can_edit=True)
+        previous = Athlete.objects.create(owner=active_coach, name="Ada Runner", birth_year=2000, gender="X")
+        current = Athlete.objects.create(owner=active_coach, name="Mira Runner", birth_year=2000, gender="X")
+        following = Athlete.objects.create(owner=active_coach, name="Zoey Runner", birth_year=2000, gender="X")
+        unrelated = Athlete.objects.create(owner=unrelated_coach, name="Aaron Outsider", birth_year=2000, gender="X")
+        self.client.force_login(admin)
+        session = self.client.session
+        session["active_coach_owner_id"] = active_coach.id
+        session.save()
+
+        response = self.client.get(f"/coach/athletes/{current.id}/edit/?tab=base-planning")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'href="/coach/athletes/{previous.id}/edit/?tab=base-planning"', html=False)
+        self.assertContains(response, f'href="/coach/athletes/{following.id}/edit/?tab=base-planning"', html=False)
+        self.assertNotContains(response, f'/coach/athletes/{unrelated.id}/edit/', html=False)
 
     def test_trainer_and_athlete_can_change_see_session_km(self):
         User = get_user_model()

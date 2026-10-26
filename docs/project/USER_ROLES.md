@@ -15,6 +15,7 @@ Een trainer is doorgaans staff- of superuser en kan:
 - rapportages en zichtbaarheid per atleet instellen;
 - voor een geselecteerde atleet vitals en training reports vastleggen, ook wanneer een trainer vooruit werkt;
 - in de AYC tussen toegankelijke atleten schakelen;
+- in Athlete Input alfabetisch tussen atleten van de actieve coachweergave navigeren; de selectie blijft beperkt tot atleten die de trainer daar mag zien;
 - Year Planner-training phases en whereabouts beheren, inclusief bulktoepassing op geselecteerde atleten;
 - coach-whereabouts in de Year Planner bekijken en beheren voor zichzelf en coaches waarvoor toegang is verleend; deze uitzondering geldt uitsluitend voor coach-whereabouts, niet voor andere gegevens van een view-only coach;
 - evaluatievragenlijsten maken, titel/actieve status/doelgroep (alle eigen atleten of geselecteerde losse atleten) aanpassen en ingevulde antwoorden bekijken; als kopieerbron zijn eigen formulieren en formulieren van coaches met expliciete editrechten toegestaan, zonder antwoorden of wijzigingen aan het origineel;

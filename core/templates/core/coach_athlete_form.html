@@ -75,15 +75,27 @@
       <h1 class="mb-1">
         {% if mode == "create" %}New athlete{% elif self_view %}Athlete settings{% else %}Athlete input{% endif %}
       </h1>
-      <p class="text-muted mb-0">
+      <div class="text-muted mb-0 d-flex align-items-center gap-2 flex-wrap">
         {% if mode == "create" %}
           Add an athlete.
         {% elif not self_view and athlete %}
-          Selected athlete: <span class="fw-semibold text-body">{{ athlete.name }}</span>
+          <span>Selected athlete: <span class="fw-semibold text-body">{{ athlete.name }}</span></span>
+          <span class="d-inline-flex align-items-center gap-1" aria-label="Navigate athletes alphabetically">
+            {% if previous_athlete %}
+              <a href="{% url 'coach_athlete_edit' previous_athlete.id %}?tab={{ active_tab }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Previous athlete" aria-label="Previous athlete">&lt;</a>
+            {% else %}
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" title="No previous athlete" aria-label="No previous athlete" disabled>&lt;</button>
+            {% endif %}
+            {% if next_athlete %}
+              <a href="{% url 'coach_athlete_edit' next_athlete.id %}?tab={{ active_tab }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Next athlete" aria-label="Next athlete">&gt;</a>
+            {% else %}
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" title="No next athlete" aria-label="No next athlete" disabled>&gt;</button>
+            {% endif %}
+          </span>
         {% else %}
-          
+          {% if self_view %}&nbsp;{% endif %}
         {% endif %}
-      </p>
+      </div>
     </div>
     <div class="d-flex gap-2">
       {% if self_view %}<a href="{% url 'password_change' %}" class="btn btn-sm btn-link text-muted">Change password</a>{% endif %}
