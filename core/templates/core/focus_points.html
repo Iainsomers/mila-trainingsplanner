@@ -71,6 +71,9 @@
   .focus-priority-option:hover,
   .focus-priority-option:focus-visible { background: #e9ecef; outline: 0; }
   .focus-point-editor { min-height: 180px; }
+  .athlete-comment-form { display: flex; align-items: flex-start; gap: .25rem; }
+  .athlete-comment-form textarea { min-height: 31px; height: 31px; resize: vertical; }
+  .athlete-comment-form button { flex: 0 0 auto; padding: .2rem .45rem; }
   .focus-points-controls {
     display: grid;
     grid-template-columns: minmax(15rem, 1fr) minmax(0, 3fr);
@@ -244,13 +247,13 @@
                 </td>
                 <td class="focus-point-cell">
                   {% if is_athlete_user %}
-                    <form method="post" action="{% url 'focus_points' %}" class="m-0">
+                    <form method="post" action="{% url 'focus_points' %}" class="m-0 athlete-comment-form">
                       {% csrf_token %}
                       <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
                       <input type="hidden" name="action" value="athlete_comment">
                       <input type="hidden" name="point_key" value="{{ point.key }}">
-                      <textarea name="comment" class="form-control form-control-sm" rows="2" aria-label="Comments athletes for {{ point.label }}">{{ point.athlete_comment }}</textarea>
-                      <button type="submit" class="btn btn-sm btn-outline-primary mt-1">Save</button>
+                      <textarea name="comment" class="form-control form-control-sm" rows="1" aria-label="Comments athletes for {{ point.label }}">{{ point.athlete_comment }}</textarea>
+                      <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
                     </form>
                   {% elif point.athlete_comment %}
                     <span class="focus-point-comment">{{ point.athlete_comment }}</span>
