@@ -281,6 +281,8 @@ class AthleteFocusPoint(models.Model):
     priority = models.PositiveSmallIntegerField(null=True, blank=True)
     custom_label = models.CharField(max_length=120, blank=True, default="")
     athlete_comment = models.TextField(blank=True, default="")
+    plan_text = models.TextField(blank=True, default="")
+    progress_text = models.TextField(blank=True, default="")
 
     class Meta:
         constraints = [

@@ -14,6 +14,13 @@
   .focus-points-table td:nth-child(4),
   .focus-points-table th:nth-child(5),
   .focus-points-table td:nth-child(5) { min-width: 230px; }
+  .focus-points-table th.focus-priority-column,
+  .focus-points-table td.focus-priority-column {
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    white-space: nowrap;
+  }
   .focus-points-table td:not(:first-child) { vertical-align: top; }
   .focus-point-comment {
     color: var(--coach-color);
@@ -25,6 +32,7 @@
     color: #6c757d;
   }
   .focus-point-cell { position: relative; padding-right: 1.8rem !important; }
+  .focus-shared-note { white-space: pre-wrap; overflow-wrap: anywhere; }
   .focus-plan-visibility-form { margin-top: .2rem; }
   .focus-plan-visibility-form .form-check-input { vertical-align: middle; }
   .focus-plan-visibility-form .form-check-label { white-space: nowrap; }
@@ -162,7 +170,7 @@
     <div class="card">
       <div class="card-header bg-white">
         <strong>{{ selected_athlete.name }}</strong>
-        <span class="text-muted small ms-2">{% if is_athlete_user %}Add your comments below.{% else %}Use + to add or update your comments.{% endif %}</span>
+        <span class="text-muted small ms-2">{% if is_athlete_user %}Add your comments below.{% else %}Use + to edit coach comments, Plan or Progress.{% endif %}</span>
       </div>
       <div class="focus-points-table-wrap">
         <table class="table table-bordered table-sm mb-0 focus-points-table">
@@ -170,7 +178,7 @@
             <tr>
               <th scope="col">Focus point</th>
               {% if not is_athlete_user %}<th scope="col">Comment coaches</th>{% endif %}
-              {% if not is_athlete_user or show_plan_column %}<th scope="col">Prio</th>{% endif %}
+              {% if not is_athlete_user or show_plan_column %}<th scope="col" class="focus-priority-column">Prio</th>{% endif %}
               {% if show_plan_column %}<th scope="col">
                 Plan
                 {% if not is_athlete_user %}
@@ -221,7 +229,7 @@
                     <span class="text-muted">—</span>
                   {% endif %}
                 </td>{% endif %}
-                {% if not is_athlete_user or show_plan_column %}<td>
+                {% if not is_athlete_user or show_plan_column %}<td class="focus-priority-column">
                   {% if can_edit %}
                     <form method="post" action="{% url 'focus_points' %}" class="m-0 focus-priority-form">
                       {% csrf_token %}
@@ -241,28 +249,22 @@
                   {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>{% endif %}
                 {% if show_plan_column %}<td class="focus-point-cell">
-                  {% for comment in point.plan_comments %}
-                    <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
-                  {% endfor %}
+                  {% if point.plan_text %}<span class="focus-shared-note">{{ point.plan_text }}</span>{% elif not can_edit %}<span class="text-muted">—</span>{% endif %}
                   {% if can_edit %}
                     <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit focus-point-add"
-                      data-point-key="{{ point.plan_key }}" data-point-label="{{ point.label }}" data-column-label="Plan"
-                      data-own-comment="{{ point.plan_own_comment }}"
-                      aria-label="{% if point.plan_own_comment %}Edit{% else %}Add{% endif %} your Plan comment for {{ point.label }}"
-                      title="{% if point.plan_own_comment %}Edit Plan comment{% else %}Add Plan comment{% endif %}">+</button>
-                  {% elif not point.plan_comments %}<span class="text-muted">—</span>{% endif %}
+                      data-action="shared_note" data-column="plan" data-point-key="{{ point.key }}" data-point-label="{{ point.label }}" data-column-label="Plan"
+                      data-own-comment="{{ point.plan_text }}"
+                      aria-label="Edit Plan for {{ point.label }}" title="Edit Plan">+</button>
+                  {% endif %}
                 </td>{% endif %}
                 {% if not is_athlete_user or show_plan_column %}<td class="focus-point-cell">
-                  {% for comment in point.progress_comments %}
-                    <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
-                  {% endfor %}
+                  {% if point.progress_text %}<span class="focus-shared-note">{{ point.progress_text }}</span>{% elif not can_edit %}<span class="text-muted">—</span>{% endif %}
                   {% if can_edit %}
                     <button type="button" class="btn btn-sm btn-outline-primary focus-point-edit focus-point-add"
-                      data-point-key="{{ point.progress_key }}" data-point-label="{{ point.label }}" data-column-label="Progress"
-                      data-own-comment="{{ point.progress_own_comment }}"
-                      aria-label="{% if point.progress_own_comment %}Edit{% else %}Add{% endif %} your Progress comment for {{ point.label }}"
-                      title="{% if point.progress_own_comment %}Edit Progress comment{% else %}Add Progress comment{% endif %}">+</button>
-                  {% elif not point.progress_comments %}<span class="text-muted">—</span>{% endif %}
+                      data-action="shared_note" data-column="progress" data-point-key="{{ point.key }}" data-point-label="{{ point.label }}" data-column-label="Progress"
+                      data-own-comment="{{ point.progress_text }}"
+                      aria-label="Edit Progress for {{ point.label }}" title="Edit Progress">+</button>
+                  {% endif %}
                 </td>{% endif %}
                 <td class="focus-point-cell">
                   {% if is_athlete_user %}
@@ -298,6 +300,7 @@
         <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
         <input type="hidden" name="point_key" id="focusPointKey">
         <input type="hidden" name="action" id="focusPointAction" value="comment">
+        <input type="hidden" name="column" id="focusPointColumn" value="">
         <div class="modal-header">
           <div>
             <h2 class="modal-title fs-5" id="focusPointModalTitle">Coach comment</h2>
@@ -323,7 +326,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save comment</button>
+          <button type="submit" class="btn btn-primary" id="focusPointSaveButton">Save comment</button>
         </div>
       </form>
     </div>
@@ -338,9 +341,11 @@
     const pointKey = document.getElementById("focusPointKey");
     const pointLabel = document.getElementById("focusPointLabel");
     const modalTitle = document.getElementById("focusPointModalTitle");
+    const saveButton = document.getElementById("focusPointSaveButton");
     const comment = document.getElementById("focusPointComment");
     const overwrite = document.getElementById("overwriteFocusComments");
     const action = document.getElementById("focusPointAction");
+    const column = document.getElementById("focusPointColumn");
     const commentFields = document.getElementById("focusPointCommentFields");
     const labelFields = document.getElementById("focusPointLabelFields");
     const customLabel = document.getElementById("focusPointCustomLabel");
@@ -351,11 +356,13 @@
         action.value = editAction;
         pointKey.value = button.dataset.pointKey || "";
         pointLabel.textContent = button.dataset.pointLabel || "";
-        modalTitle.textContent = editAction === "label" ? "Rename focus point" : (button.dataset.columnLabel || "Comment coaches") + " comment";
+        modalTitle.textContent = editAction === "label" ? "Rename focus point" : (editAction === "shared_note" ? button.dataset.columnLabel : (button.dataset.columnLabel || "Comment coaches") + " comment");
+        saveButton.textContent = editAction === "shared_note" ? "Save" : (editAction === "label" ? "Save name" : "Save comment");
         commentFields.classList.toggle("d-none", editAction === "label");
         labelFields.classList.toggle("d-none", editAction !== "label");
-        overwriteControl.classList.toggle("d-none", editAction === "label");
+        overwriteControl.classList.toggle("d-none", editAction !== "comment");
         comment.value = button.dataset.ownComment || "";
+        column.value = button.dataset.column || "";
         customLabel.value = button.dataset.ownLabel || "";
         overwrite.checked = false;
         modal.show();

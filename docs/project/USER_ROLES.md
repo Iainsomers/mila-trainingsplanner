@@ -33,7 +33,7 @@ De trainer kan daarnaast in Coach Settings > Planning de coachbrede optie `See s
 
 De trainer kan in Athlete settings per atleet de `P(ause)mode` instellen. Zonder afwijkende keuze volgt de atleet de coachinstelling; de atleet ziet en wijzigt deze coach-only instelling niet.
 
-De trainer kan in Athlete settings per atleet `See desired improvement points` inschakelen. De atleet krijgt dan toegang tot het eigen overzicht met focuspunten en kan alleen de kolom `Comments athletes` invullen. De coach kan boven de kolom `Plan` per atleet `Show to athlete` aanzetten; zolang die uitstaat ziet de atleet alleen Focus point en `Comments athletes`, en bij inschakeling ook Prio, Plan en Progress. Coaches zien de athlete-comments in hun volledige overzicht.
+De trainer kan in Athlete settings per atleet `See desired improvement points` inschakelen. De atleet krijgt dan toegang tot het eigen overzicht met focuspunten en kan alleen de kolom `Comments athletes` invullen. De coach kan boven de kolom `Plan` per atleet `Show to athlete` aanzetten; zolang die uitstaat ziet de atleet alleen Focus point en `Comments athletes`, en bij inschakeling ook Prio, Plan en Progress. Plan en Progress zijn gedeelde velden die bevoegde trainers onderling overschrijven; bij de atleet worden geen trainers of initialen getoond. De coachcommentaren blijven uitsluitend zichtbaar voor coaches. Coaches zien de athlete-comments in hun volledige overzicht.
 
 Iedere gebruiker kan eigen actieve wishes indienen en bewerken. Alleen de productbeheerder kan wishes van andere gebruikers bewerken; overige gebruikers kunnen die alleen bekijken en liken.
 

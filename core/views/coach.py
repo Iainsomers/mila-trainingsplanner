@@ -5695,10 +5695,19 @@ def focus_points_view(request):
                 query = urlencode({"athlete": selected_athlete.id, "import_error": str(exc)})
                 return redirect(f"{reverse('focus_points')}?{query}")
 
-        point_keys = focus_point_keys | {
-            f"{key}__{column}" for key in focus_point_keys for column in ("plan", "progress")
-        }
-        if point_key not in point_keys:
+        if action == "shared_note":
+            column = (request.POST.get("column") or "").strip()
+            if point_key not in focus_point_keys or column not in {"plan", "progress"}:
+                return HttpResponseForbidden("Invalid shared focus point note.")
+            setting, _ = AthleteFocusPoint.objects.get_or_create(
+                athlete=selected_athlete,
+                point_key=point_key,
+            )
+            setattr(setting, f"{column}_text", (request.POST.get("comment") or "").strip())
+            setting.save(update_fields=[f"{column}_text"])
+            return redirect(f"{reverse('focus_points')}?athlete={selected_athlete.id}&saved=1")
+
+        if point_key not in focus_point_keys:
             return HttpResponseForbidden("Invalid focus point.")
 
         if action == "priority":
@@ -5791,10 +5800,6 @@ def focus_points_view(request):
         ("other_2", "Other 2"),
         ("other_3", "Other 3"),
     ]
-    comment_keys = {
-        key: {column: f"{key}__{column}" for column in ("plan", "progress")}
-        for key, _ in focus_points
-    }
     point_settings = {}
     if selected_athlete:
         point_settings = {
@@ -5835,12 +5840,8 @@ def focus_points_view(request):
             "comments": comments_by_point.get(key, []),
             "own_comment": own_comments.get(key, ""),
             "priority": setting.priority if setting else None,
-            "plan_key": comment_keys[key]["plan"],
-            "plan_comments": comments_by_point.get(comment_keys[key]["plan"], []),
-            "plan_own_comment": own_comments.get(comment_keys[key]["plan"], ""),
-            "progress_key": comment_keys[key]["progress"],
-            "progress_comments": comments_by_point.get(comment_keys[key]["progress"], []),
-            "progress_own_comment": own_comments.get(comment_keys[key]["progress"], ""),
+            "plan_text": setting.plan_text if setting else "",
+            "progress_text": setting.progress_text if setting else "",
             "athlete_comment": setting.athlete_comment if setting else "",
         })
 

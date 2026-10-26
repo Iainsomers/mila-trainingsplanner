@@ -1575,6 +1575,8 @@ class PlanningOverviewTests(TestCase):
             point_key="speed",
             priority=1,
             athlete_comment="Keep relaxed shoulders.",
+            plan_text="Weekly sprint progression.",
+            progress_text="Consistency improving.",
         )
         FocusPointComment.objects.create(
             athlete=athlete,
@@ -1625,8 +1627,12 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(shown_page, "Plan")
         self.assertContains(shown_page, "Prio")
         self.assertContains(shown_page, "Progress")
+        self.assertContains(shown_page, "Weekly sprint progression.")
+        self.assertContains(shown_page, "Consistency improving.")
+        self.assertNotContains(shown_page, "Coach-only note.")
+        self.assertNotContains(shown_page, "desired-points-coach")
 
-    def test_focus_point_comments_are_kept_per_coach_until_overwritten(self):
+    def test_focus_point_comments_are_per_coach_but_plan_and_progress_are_shared(self):
         coach = get_user_model().objects.create_user(
             username="Iain_Somers", password="secret", is_staff=True,
             first_name="Iain", last_name="Somers",
@@ -1659,18 +1665,44 @@ class PlanningOverviewTests(TestCase):
         for column, text in (("plan", "Build the weekly progression."), ("progress", "Improving steadily.")):
             saved_column = self.client.post("/planning/focus-points/", {
                 "athlete_id": str(athlete.id),
-                "point_key": f"{key}__{column}",
+                "action": "shared_note",
+                "point_key": key,
+                "column": column,
                 "comment": text,
             })
             self.assertEqual(saved_column.status_code, 302)
-            self.assertTrue(FocusPointComment.objects.filter(
-                athlete=athlete, coach=coach, point_key=f"{key}__{column}", comment=text
-            ).exists())
+            setting = AthleteFocusPoint.objects.get(athlete=athlete, point_key=key)
+            self.assertEqual(getattr(setting, f"{column}_text"), text)
 
         page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
         self.assertContains(page, "Build the weekly progression.")
         self.assertContains(page, "Improving steadily.")
+        self.assertContains(page, 'class="focus-priority-column"')
 
+        # A second editable coach overwrites the one shared value, without a coach prefix.
+        second_editor = get_user_model().objects.create_user(
+            username="shared-note-editor", password="secret", is_staff=True,
+        )
+        CoachAccess.objects.create(owner=coach, grantee=second_editor, can_edit=True)
+        self.client.force_login(second_editor)
+        session = self.client.session
+        session["active_coach_owner_id"] = coach.id
+        session.save()
+        replaced_plan = self.client.post("/planning/focus-points/", {
+            "athlete_id": str(athlete.id),
+            "action": "shared_note",
+            "point_key": key,
+            "column": "plan",
+            "comment": "Updated plan for everyone.",
+        })
+        self.assertEqual(replaced_plan.status_code, 302)
+        setting.refresh_from_db()
+        self.assertEqual(setting.plan_text, "Updated plan for everyone.")
+        shared_page = self.client.get(f"/planning/focus-points/?athlete={athlete.id}")
+        self.assertContains(shared_page, "Updated plan for everyone.")
+        self.assertNotContains(shared_page, "TL: Updated plan")
+
+        self.client.force_login(coach)
         replaced = self.client.post("/planning/focus-points/", {
             "athlete_id": str(athlete.id),
             "point_key": key,
