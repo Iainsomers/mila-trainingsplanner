@@ -434,6 +434,17 @@
           </div>
         </div>
 
+        {% if self_view %}
+          <div class="mt-3 d-flex align-items-center gap-2 flex-wrap">
+            {% if meeting_requested_at %}
+              <span class="text-success">Meeting requested on {{ meeting_requested_at|date:"d-m-Y" }}</span>
+              <button type="submit" class="btn btn-sm btn-outline-danger" name="meeting_action" value="cancel" aria-label="Cancel meeting request" title="Cancel meeting request">×</button>
+            {% else %}
+              <button type="submit" class="btn btn-sm btn-outline-primary" name="meeting_action" value="request">Request meeting</button>
+            {% endif %}
+          </div>
+        {% endif %}
+
         {% if not self_view %}
         <div class="mt-3 mb-3 form-check">
           <input

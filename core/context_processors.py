@@ -77,3 +77,17 @@ def team_branding(request):
             "logo_url": staticfiles_storage.url(logo_path) if logo_path else "",
         }
     }
+
+
+def meeting_request_popup(request):
+    """Expose undismissed meeting requests to the athlete's main coach."""
+    user = getattr(request, "user", None)
+    if not getattr(user, "is_authenticated", False):
+        return {"new_meeting_requests": []}
+
+    coach_id = _active_coach_id(request)
+    settings = CoachSettings.objects.filter(user_id=coach_id).only("meeting_requests_seen_at").first()
+    requests = Athlete.objects.filter(owner_id=coach_id, meeting_requested_at__isnull=False)
+    if settings and settings.meeting_requests_seen_at:
+        requests = requests.filter(meeting_requested_at__gt=settings.meeting_requests_seen_at)
+    return {"new_meeting_requests": list(requests.order_by("name").only("name", "meeting_requested_at"))}

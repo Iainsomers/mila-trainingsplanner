@@ -163,6 +163,32 @@
     <div class="mila-page-content{% if team_branding %} mila-team-branded{% endif %}">
       {% block content %}{% endblock %}
     </div>
+    {% if new_meeting_requests %}
+      <div class="modal fade" id="meetingRequestModal" tabindex="-1" aria-labelledby="meetingRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title h5" id="meetingRequestModalLabel">New meeting request</h2>
+            </div>
+            <div class="modal-body">
+              {% for athlete in new_meeting_requests %}<p class="mb-1">{{ athlete.name }} requested a meeting.</p>{% endfor %}
+            </div>
+            <div class="modal-footer">
+              <form method="post" action="{% url 'dismiss_meeting_requests' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">OK</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          var modalElement = document.getElementById('meetingRequestModal');
+          if (modalElement && window.bootstrap) bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        });
+      </script>
+    {% endif %}
     {% block extra_js %}{% endblock %}
   </body>
 </html>

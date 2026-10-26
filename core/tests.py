@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 import json
 import os
 import zipfile
@@ -8939,3 +8939,82 @@ class SecurityAccessRegressionTests(TestCase):
         self.assertEqual(year_response.status_code, 200)
         self.assertContains(year_response, "Alice")
         self.assertNotContains(year_response, "Bob")
+
+
+class MeetingRequestTests(TestCase):
+    def setUp(self):
+        self.coach = get_user_model().objects.create_user(username="meeting-coach", password="secret")
+        self.athlete_user = get_user_model().objects.create_user(username="meeting-athlete", password="secret")
+        self.other_user = get_user_model().objects.create_user(username="other-athlete", password="secret")
+        self.athlete = Athlete.objects.create(owner=self.coach, name="Meeting Athlete", birth_year=2000, gender="X")
+        self.other_athlete = Athlete.objects.create(owner=self.coach, name="Other Athlete", birth_year=2001, gender="X")
+
+    def test_athlete_can_request_and_cancel_meeting_from_settings(self):
+        self.athlete_user.username = "meetingathlete"
+        self.athlete_user.save(update_fields=["username"])
+        self.client.force_login(self.athlete_user)
+
+        page = self.client.get("/athlete/settings/")
+        self.assertContains(page, "Request meeting")
+        response = self.client.post("/athlete/settings/", {"meeting_action": "request"})
+        self.assertEqual(response.status_code, 302)
+        self.athlete.refresh_from_db()
+        self.assertIsNotNone(self.athlete.meeting_requested_at)
+        page = self.client.get("/athlete/settings/")
+        self.assertContains(page, "Meeting requested on")
+        self.assertContains(page, 'value="cancel"')
+
+        response = self.client.post("/athlete/settings/", {"meeting_action": "cancel"})
+        self.assertEqual(response.status_code, 302)
+        self.athlete.refresh_from_db()
+        self.assertIsNone(self.athlete.meeting_requested_at)
+
+    def test_main_coach_sees_new_request_and_age_badge_until_dismissed(self):
+        self.athlete.meeting_requested_at = timezone.now() - timedelta(days=3)
+        self.athlete.save(update_fields=["meeting_requested_at"])
+        self.client.force_login(self.coach)
+
+        response = self.client.get("/coach/daily-overview-other/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Meeting Athlete requested a meeting.")
+        self.assertContains(response, "Meeting requested · 3d")
+        self.assertContains(response, "btn-warning")
+
+        response = self.client.post("/coach/meeting-requests/dismiss/")
+        self.assertEqual(response.status_code, 302)
+        response = self.client.get("/coach/daily-overview-other/")
+        self.assertNotContains(response, "Meeting Athlete requested a meeting.")
+        self.assertContains(response, "Meeting requested · 3d")
+
+    def test_meeting_request_button_color_thresholds(self):
+        today = timezone.localdate()
+        athletes = [self.athlete, self.other_athlete]
+        for name in ("Age Five", "Age Six", "Age Two"):
+            athletes.append(Athlete.objects.create(owner=self.coach, name=name, birth_year=2000, gender="X"))
+        for athlete, age in zip(athletes, (0, 3, 5, 6, 2)):
+            athlete.meeting_requested_at = timezone.make_aware(
+                datetime.combine(today - timedelta(days=age), time.min)
+            )
+            athlete.save(update_fields=["meeting_requested_at"])
+
+        self.client.force_login(self.coach)
+        response = self.client.get("/coach/daily-overview-other/")
+        self.assertContains(response, "Meeting requested · 0d")
+        self.assertContains(response, "Meeting requested · 2d")
+        self.assertContains(response, "Meeting requested · 3d")
+        self.assertContains(response, "Meeting requested · 5d")
+        self.assertContains(response, "Meeting requested · 6d")
+        self.assertContains(response, "btn-success")
+        self.assertContains(response, "btn-warning")
+        self.assertContains(response, "btn-danger")
+
+    def test_athlete_cannot_clear_another_athletes_request(self):
+        self.athlete.meeting_requested_at = timezone.now()
+        self.athlete.save(update_fields=["meeting_requested_at"])
+        self.other_user.username = "otherathlete"
+        self.other_user.save(update_fields=["username"])
+        self.client.force_login(self.other_user)
+
+        self.client.post("/athlete/settings/", {"meeting_action": "cancel"})
+        self.athlete.refresh_from_db()
+        self.assertIsNotNone(self.athlete.meeting_requested_at)

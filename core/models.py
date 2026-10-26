@@ -75,6 +75,7 @@ class CoachSettings(models.Model):
     detailed_camps_enabled = models.BooleanField(default=False)
     live_sharing_training_schedules = models.BooleanField(default=False)
     year_planner_shared_whereabouts_enabled = models.BooleanField(default=False)
+    meeting_requests_seen_at = models.DateTimeField(null=True, blank=True)
     see_session_km = models.BooleanField(default=True)
     pause_mode = models.CharField(
         max_length=24,
@@ -480,6 +481,7 @@ class Athlete(models.Model):
     year_planner_whereabouts_enabled = models.BooleanField(default=False)
     extended_edit_rights = models.BooleanField(default=False)
     can_change_base_planning = models.BooleanField(default=False)
+    meeting_requested_at = models.DateTimeField(null=True, blank=True)
 
     auto_wucd_enabled = models.BooleanField(default=False)
     auto_wu_m = models.PositiveIntegerField(default=0)

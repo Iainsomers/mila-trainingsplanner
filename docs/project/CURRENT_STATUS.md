@@ -107,6 +107,8 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Validatie en resterende beperkingen
 
+- Meeting requests zijn toegevoegd aan Athlete Settings en DCO Other Info Quality. Nieuwe aanvragen melden zich via een hoofdcoach-popup; de status/leeftijd blijft zichtbaar tot de atleet annuleert.
+
 - Flex Planner toont een gekopieerde/persoonlijke atleettraining ook wanneer Base Planning voor dat dagdeel `Rest` bevat. De gedeelde trainertraining blijft op zo'n dagdeel verborgen; een expliciete persoonlijke override heeft voorrang.
 - De Flex-popup volgt dezelfde bronkeuze als de cel: individuele Base Planning en expliciete Rest gaan vóór een gekoppeld trainerplan; datumblokken volgen de laatste `effective_from`.
 

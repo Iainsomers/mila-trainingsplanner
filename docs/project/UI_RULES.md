@@ -128,6 +128,12 @@ Controleer bij relevante UI-wijzigingen minimaal:
 
 Polar Integration en de Type A/B/C/D-dataweergave gebruiken witte knoptekst op gevulde primaire/secundaire knoppen. Teamkleur 2 overschrijft deze tekstkleur niet.
 
+## Meeting requests
+
+- In Athlete Settings staat `Request meeting`; na aanvraag verandert dit in de datumstatus met een compacte X-annuleerknop.
+- DCO Other toont een compacte statusknop bij Info Quality: groen 0–2 dagen, oranje 3–5 dagen en rood vanaf 6 dagen.
+- Nieuwe aanvragen tonen de hoofdcoach een Bootstrap-popup met de naam van de atleet; OK markeert de getoonde aanvragen als gezien.
+
 ## Polar en DCO Other
 
 - Type C toont ruw/verwerkt min/km, werkelijk venster, status en reden naast elkaar; op smalle schermen staan meetregels als compacte vakken met eigen labels.

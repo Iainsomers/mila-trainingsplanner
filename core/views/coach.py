@@ -10004,6 +10004,15 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             return HttpResponse("Forbidden", status=403)
     else:
         athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
+    if self_view and request.method == "POST" and request.POST.get("meeting_action"):
+        action = request.POST.get("meeting_action")
+        if action == "request" and not athlete.meeting_requested_at:
+            athlete.meeting_requested_at = timezone.now()
+            athlete.save(update_fields=["meeting_requested_at"])
+        elif action == "cancel" and athlete.meeting_requested_at:
+            athlete.meeting_requested_at = None
+            athlete.save(update_fields=["meeting_requested_at"])
+        return redirect(f"{reverse('athlete_settings')}?tab=general")
     unit = "pace"
     unit_label = zone_unit_label(unit)
     coach_pause_mode = (
@@ -10381,6 +10390,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         {
             "mode": "edit",
             "athlete": athlete,
+            "meeting_requested_at": athlete.meeting_requested_at,
             "form": form,
             "errors": errors,
             "saved_notice": saved_notice,
@@ -10400,6 +10410,22 @@ def athlete_settings_view(request):
     if not athlete:
         return HttpResponse("No athlete profile is linked to this account.", status=404)
     return coach_athlete_edit_view(request, athlete.id, self_view=True)
+
+
+@login_required
+@require_http_methods(["POST"])
+def dismiss_meeting_requests_view(request):
+    coach = _active_coach_user(request)
+    if not request.user.is_staff and not request.user.is_superuser and coach != request.user:
+        return HttpResponseForbidden("Only the main coach can dismiss meeting requests.")
+    latest_request = Athlete.objects.filter(
+        owner=coach, meeting_requested_at__isnull=False
+    ).order_by("-meeting_requested_at").values_list("meeting_requested_at", flat=True).first()
+    if latest_request:
+        settings, _ = CoachSettings.objects.get_or_create(user=coach)
+        settings.meeting_requests_seen_at = latest_request
+        settings.save(update_fields=["meeting_requests_seen_at"])
+    return redirect("daily_overview_other")
 
 
 @login_required
@@ -11671,6 +11697,18 @@ def daily_overview_other_view(request):
             if show_na or len(values) >= 3:
                 vital_rows.append({"athlete": athlete, "value": display_value, "sample_count": len(values)})
 
+    # Meeting requests are private to the athlete's main coach. Delegated
+    # coaches may see only the standard data permitted by their access level.
+    coach_user = _active_coach_user(request)
+    owned_meeting_requests = list(
+        Athlete.objects.filter(owner=coach_user, meeting_requested_at__isnull=False)
+        .order_by("name")
+    )
+    for athlete in owned_meeting_requests:
+        age_days = max(0, (today - timezone.localtime(athlete.meeting_requested_at).date()).days)
+        athlete.meeting_request_age_days = age_days
+        athlete.meeting_request_color = "green" if age_days <= 2 else "orange" if age_days <= 5 else "red"
+
     return render(request, "core/daily_overview_other.html", {
         "athlete_rows": counts,
         "window_start": window_start,
@@ -11683,4 +11721,5 @@ def daily_overview_other_view(request):
         "vitals_window_start": vitals_window_start,
         "vitals_window_end": today,
         "hr_zone_rows": hr_zone_rows,
+        "meeting_requests": owned_meeting_requests,
     })

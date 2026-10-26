@@ -83,6 +83,8 @@ Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-inst
 
 Vertrouw niet alleen op verborgen knoppen. Iedere view en mutatie moet server-side controleren of de gebruiker de betreffende atleet, planning of training mag zien of wijzigen.
 
+Meeting requests zijn alleen door de gekoppelde atleet zelf aan te maken of te annuleren. De hoofdcoach ziet alleen aanvragen van atleten die aan hem/haar toebehoren; gedelegeerde trainers krijgen geen meeting-requestmeldingen.
+
 ## Polar-uitlezen en analysegrenzen
 
 - Een atleet gebruikt de eigen koppeling; een trainer kiest een toegankelijke atleet. De A/B/C/D-uitleespagina sluit losse, ongerelateerde Polar-userkoppelingen uit de selectie uit.
