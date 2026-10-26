@@ -81,18 +81,22 @@ def _whereabout_dots(owner, athlete_ids, start, end):
     athlete_ids = {int(value) for value in (athlete_ids or []) if value}
     if not owner or not athlete_ids:
         return {}
+    # Athlete-calendar dots represent athlete-specific whereabouts only.
+    # Coach and basis-plan rows have no athlete_id and must not fan out to
+    # every athlete selected in Flex Planner (or the single AYC athlete).
     ranges = YearPlannerWhereabout.objects.filter(
         owner=owner,
+        athlete_id__in=athlete_ids,
         start_date__lt=end,
         end_date__gte=start,
-    ).filter(Q(athlete_id__in=athlete_ids) | Q(athlete__isnull=True)).only(
+    ).only(
         "athlete_id", "start_date", "end_date", "whereabouts_type"
     )
     values = {}
     for item in ranges:
         first = max(start, item.start_date)
         last = min(end - timedelta(days=1), item.end_date)
-        target_ids = [item.athlete_id] if item.athlete_id else athlete_ids
+        target_ids = [item.athlete_id]
         for athlete_id in target_ids:
             for day_offset in range((last - first).days + 1):
                 key = (athlete_id, first + timedelta(days=day_offset))

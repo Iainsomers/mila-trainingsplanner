@@ -68,6 +68,7 @@ Bijgewerkt: 20 oktober 2026.
 - In AYC is individuele Base Planning nu net als in Flex leidend boven een gekoppeld groepsplan per AM/PM-dagdeel. `Rest` verbergt de groepstraining; een expliciete persoonlijke override blijft zichtbaar.
 - Weekphase-kleuren komen uit Year Planner en verschijnen ook in Flex Planner, AYC en Trainer Planning. Bij meerdere fases krijgt de week een gecombineerde kleur.
 - Year Planner ondersteunt één, drie of twaalf maanden, stacked of scrollend. Whereabouts zijn verplaatsbare en schaalbare datumranges met benoemde pills, diagonale overlapweergave, rij-kopiëren en bulktoepassing op de geselecteerde atleten.
+- De whereabouts-dots in AYC en Flex Planner zijn beperkt tot ranges die aan die specifieke atleet zijn gekoppeld; coach- en basisplanranges lekken niet naar alle geselecteerde atleten.
 - De Year Planner heeft naast de atleetselector een inklapbare coachselector. Iedere toegankelijke coach heeft een eigen whereabouts-rij; view-only coaches blijven strikt alleen-lezen.
 - Trainers kunnen in de Year Planner per gekozen Trainer Planning-groep direct onder `All` een eigen `Basis - groepsnaam`-rij selecteren. Basisgegevens van verschillende groepen blijven gescheiden.
 - Per atleet zijn Year Planner Training en Whereabouts afzonderlijk zichtbaar te maken. De atleetweergave is alleen-lezen en de legenda volgt de toegestane lagen.

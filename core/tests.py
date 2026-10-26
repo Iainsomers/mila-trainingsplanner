@@ -2759,6 +2759,50 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual([item["type"] for item in dots[(athlete.id, date(2026, 10, 8))]], ["camp", "travel"])
         self.assertEqual([item["type"] for item in dots[(athlete.id, date(2026, 10, 7))]], ["camp"])
 
+    def test_planner_whereabout_dots_do_not_leak_between_athletes_or_scopes(self):
+        coach = get_user_model().objects.create_user(
+            username="whereabout-isolation-coach", password="secret", is_staff=True
+        )
+        robin = Athlete.objects.create(owner=coach, name="Robin", birth_year=2000, gender="X")
+        sara = Athlete.objects.create(owner=coach, name="Sara", birth_year=2000, gender="X")
+        day = date(2026, 10, 27)
+        YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=sara, start_date=day, end_date=day,
+            whereabouts_type="camp", note="Sara camp",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=coach, start_date=day, end_date=day,
+            whereabouts_type="travel", note="Coach travel",
+        )
+
+        robin_dots = _whereabout_dots(coach, [robin.id], day, day + timedelta(days=1))
+        both_dots = _whereabout_dots(coach, [robin.id, sara.id], day, day + timedelta(days=1))
+
+        self.assertNotIn((robin.id, day), robin_dots)
+        self.assertNotIn((robin.id, day), both_dots)
+        self.assertEqual([item["type"] for item in both_dots[(sara.id, day)]], ["camp"])
+
+        self.client.force_login(coach)
+        flex_page = self.client.get(
+            f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={robin.id}"
+        )
+        flex_cell = next(
+            cell
+            for week in flex_page.context["week_rows"]
+            for cell in week["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
+        self.assertEqual(flex_cell["whereabouts"], [])
+
+        ayc_page = self.client.get(f"/athlete/year/?year={day.year}&athlete={robin.id}&hide=none")
+        ayc_cell = next(
+            cell
+            for week in ayc_page.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        self.assertEqual(ayc_cell["whereabouts"], [])
+
     def test_ayc_type_a_endpoint_returns_polar_integration_output(self):
         coach = get_user_model().objects.create_user(
             username="Wilbert van Vliet", password="secret", is_staff=True
