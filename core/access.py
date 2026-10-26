@@ -45,8 +45,13 @@ def evaluation_visibility_for_request(request, owner, athlete_self=False):
         return hidden
     if athlete_self or request.user.is_superuser or request.user.id == owner.id:
         return {key: True for key in hidden}
+    # Keep the pre-sharing behaviour for existing coach access.  The sharing
+    # matrix is an opt-in restriction: only when the owner explicitly enables
+    # it should evaluation types be filtered per receiving coach.  Otherwise a
+    # newly introduced default must not make an existing coach's evaluations
+    # disappear unexpectedly.
     if not CoachSettings.objects.filter(user=owner, evaluation_sharing_enabled=True).exists():
-        return hidden
+        return {key: True for key in hidden}
     if not CoachAccess.objects.filter(owner=owner, grantee=request.user).exists():
         return hidden
     share = CoachEvaluationSharing.objects.filter(owner=owner, grantee=request.user).first()

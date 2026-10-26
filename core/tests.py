@@ -2118,6 +2118,29 @@ class PlanningOverviewTests(TestCase):
         ]
         self.assertTrue(any(flex_checks))
 
+    def test_shared_coach_keeps_legacy_evaluation_visibility_until_sharing_is_enabled(self):
+        owner = get_user_model().objects.create_user(
+            username="legacy-evaluation-owner", password="secret", is_staff=True
+        )
+        grantee = get_user_model().objects.create_user(
+            username="legacy-evaluation-grantee", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="Legacy Evaluation Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        CoachAccess.objects.create(owner=owner, grantee=grantee, can_edit=False)
+
+        self.client.force_login(grantee)
+        self.client.post("/", {"coach_view_owner": str(owner.id)})
+
+        response = self.client.get(
+            f"/athlete/year/?athlete={athlete.id}&year={date.today().year}&hide=none"
+        )
+        self.assertTrue(response.context["show_training_reports"])
+
     def test_live_training_schedule_sharing_requires_both_coaches(self):
         receiving_coach = get_user_model().objects.create_user(
             username="live-sharing-receiver", password="secret", is_staff=True
