@@ -3429,6 +3429,45 @@ class SlotModalSaveTests(TestCase):
         self.client.force_login(user)
         return user, plan, athlete
 
+    def test_base_planning_copy_options_are_limited_to_active_coach(self):
+        admin = get_user_model().objects.create_user(
+            username="base-copy-admin", password="secret", is_staff=True, is_superuser=True
+        )
+        active_coach = get_user_model().objects.create_user(
+            username="base-copy-active", password="secret", is_staff=True
+        )
+        unrelated_coach = get_user_model().objects.create_user(
+            username="base-copy-unrelated", password="secret", is_staff=True
+        )
+        CoachAccess.objects.create(owner=active_coach, grantee=admin, can_edit=True)
+        target = Athlete.objects.create(owner=active_coach, name="Active target", birth_year=2000, gender="X")
+        source = Athlete.objects.create(owner=active_coach, name="Active source", birth_year=2000, gender="X")
+        unrelated = Athlete.objects.create(owner=unrelated_coach, name="Unrelated athlete", birth_year=2000, gender="X")
+        self.client.force_login(admin)
+        session = self.client.session
+        session["active_coach_owner_id"] = active_coach.id
+        session.save()
+
+        page = self.client.get(f"/planning/base/?athlete={target.id}")
+
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, f'<option value="{source.id}">Active source</option>', html=False)
+        self.assertNotContains(page, f'<option value="{unrelated.id}">Unrelated athlete</option>', html=False)
+
+        rejected_copy = self.client.post(
+            "/planning/base/",
+            {
+                "athlete_id": str(target.id),
+                "kind": AthleteBasePlanningBlock.KIND_BASE,
+                "action": "copy_from",
+                "copy_from_athlete_id": str(unrelated.id),
+            },
+        )
+
+        self.assertEqual(rejected_copy.status_code, 200)
+        self.assertContains(rejected_copy, "Choose a valid athlete to copy from.")
+        self.assertFalse(AthleteBasePlanningBlock.objects.filter(athlete=target).exists())
+
     def test_active_pause_distance_supports_time_meters_sets_and_ignored_markers(self):
         _, _, athlete = self._user_plan_and_athlete()
         active = CoachSettings.PAUSE_MODE_ACTIVE_UNLESS_PP

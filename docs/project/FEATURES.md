@@ -173,6 +173,7 @@ General-settings kunnen worden opgeslagen zonder dat alle PR's al zijn ingevuld;
 Onder Z1 t/m Z5 kan de trainer handmatig een HR-waarde of tekstuele HR-zone invullen, bijvoorbeeld `160-170` of `max 170`. Die tekst wordt ongewijzigd bij de trainingen getoond. De zone/snelheidsweergave toont de km/h-omrekening naast min/km.
 De trainer kan per atleet `Extended edit rights` aanzetten. Daarmee mag de atleet toekomstige AYC-trainingen aanpassen en lege dagdelen vullen. `Can change base planning` is een afzonderlijk standaard uitgeschakeld vinkje waarmee de atleet ook de eigen Base Planning mag wijzigen; groepskeuzes blijven beperkt tot groepen van de eigen trainer.
 In Athlete settings > Base Planning worden wijzigingen aan een dagdeel automatisch opgeslagen via dezelfde volledige formulier- en revisielogica als de knop `Save`; die knop blijft beschikbaar als expliciete handmatige opslag. Bij een fout toont de statusregel nu ook de korte foutreden.
+De atleetkeuze en `Copy van...` zijn beperkt tot atleten van de coach die op dat moment actief wordt bekeken; ook de kopieeractie zelf controleert die scope.
 
 ## Tempoherkenning en totalen
 

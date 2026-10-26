@@ -7111,9 +7111,13 @@ def _base_planning_rows(block):
     return rows
 
 
-def _base_planning_athlete_qs_for_user(user):
+def _base_planning_athlete_qs_for_user(request):
+    user = request.user
     if user.is_staff or user.is_superuser:
-        return _filter_owned(Athlete.objects.order_by("name"), user)
+        # Pass the request so staff users are scoped to the coach currently
+        # selected in the dashboard's "view as coach" context. Passing only
+        # the user would make superusers see every athlete in the system.
+        return _filter_owned(Athlete.objects.order_by("name"), request)
 
     athlete = _athlete_for_user(user)
     if not athlete:
@@ -7145,11 +7149,11 @@ def athlete_base_planning_view(request):
         planning_kind = AthleteBasePlanningBlock.KIND_BASE
     redirect_suffix += f"&kind={planning_kind}"
     is_ideal_week = planning_kind == AthleteBasePlanningBlock.KIND_IDEAL
-    athletes = list(_base_planning_athlete_qs_for_user(request.user))
+    athletes = list(_base_planning_athlete_qs_for_user(request))
     selected_athlete = None
     selected_id = (request.POST.get("athlete_id") or request.GET.get("athlete") or "").strip()
     if selected_id.isdigit():
-        selected_athlete = _base_planning_athlete_qs_for_user(request.user).filter(id=int(selected_id)).first()
+        selected_athlete = _base_planning_athlete_qs_for_user(request).filter(id=int(selected_id)).first()
     if not selected_athlete and athletes:
         selected_athlete = athletes[0]
 
@@ -7370,7 +7374,7 @@ def athlete_base_planning_view(request):
             source_id = (request.POST.get("copy_from_athlete_id") or "").strip()
             source_athlete = None
             if source_id.isdigit():
-                source_athlete = _base_planning_athlete_qs_for_user(request.user).filter(id=int(source_id)).first()
+                source_athlete = _base_planning_athlete_qs_for_user(request).filter(id=int(source_id)).first()
 
             if not source_athlete:
                 errors.append("Choose a valid athlete to copy from.")

@@ -24,6 +24,8 @@ Een trainer is doorgaans staff- of superuser en kan:
 
 Een trainer ziet standaard alleen de eigen gegevens. Als via `CoachAccess` toegang tot een andere trainer is gegeven, kiest de trainer op het dashboard expliciet als welke coach hij kijkt. Die keuze toont uitsluitend gegevens van die gekozen coach en mengt ze niet met de eigen atleten, plannen, wedstrijden of templates. Gedeelde toegang is standaard view-only; alleen wanneer `can_edit` aan staat mag de meekijkende trainer wijzigingen opslaan. Deze toegang is niet transitief: als trainer A trainer B mag zien en B trainer C mag zien, dan ziet A trainer C niet. Historische atleten zonder owner horen via datamigratie aan de juiste trainer te worden gekoppeld, niet via een brede zichtbaarheidsexceptie.
 
+In Athlete settings > Base Planning zijn zowel de atleetkeuze als `Copy van...` beperkt tot atleten van de coach die op dat moment wordt bekeken. Dezelfde beperking wordt bij het kopieerverzoek server-side afgedwongen.
+
 De trainer en atleet kunnen in Athlete settings > General de persoonlijke opties `See session km` en `See session zones` aan- of uitzetten. `See session zones` start in dezelfde stand als `See session km`.
 
 De trainer kan daarnaast in Coach Settings > Planning de coachbrede optie `See session km` beheren voor Flex Planner en DCO Training. Deze instelling verandert de persoonlijke AYC-keuze van atleten niet.
