@@ -1584,9 +1584,13 @@ class PlanningOverviewTests(TestCase):
         )
 
         self.client.force_login(athlete_user)
+        planning = self.client.get("/planning/")
+        self.assertContains(planning, "Focus Points and Desired Improvements")
         page = self.client.get("/planning/focus-points/")
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "Comments athletes")
+        self.assertContains(page, "Plan")
+        self.assertContains(page, "Progress")
         self.assertContains(page, "Keep relaxed shoulders.")
         self.assertNotContains(page, "Coach-only note.")
         self.assertNotContains(page, "Comment coaches")

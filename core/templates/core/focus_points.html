@@ -165,8 +165,8 @@
               <th scope="col">Focus point</th>
               {% if not is_athlete_user %}<th scope="col">Comment coaches</th>{% endif %}
               <th scope="col">Prio</th>
-              {% if not is_athlete_user %}<th scope="col">Plan</th>
-              <th scope="col">Progress</th>{% endif %}
+              <th scope="col">Plan</th>
+              <th scope="col">Progress</th>
               <th scope="col">Comments athletes</th>
             </tr>
           </thead>
@@ -218,7 +218,7 @@
                   {% elif point.priority == 3 %}<span title="Bronze medal">🥉</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
                 </td>
-                {% if not is_athlete_user %}<td class="focus-point-cell">
+                <td class="focus-point-cell">
                   {% for comment in point.plan_comments %}
                     <span class="focus-point-comment" style="--coach-color: {{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>
                   {% endfor %}
@@ -241,7 +241,7 @@
                       aria-label="{% if point.progress_own_comment %}Edit{% else %}Add{% endif %} your Progress comment for {{ point.label }}"
                       title="{% if point.progress_own_comment %}Edit Progress comment{% else %}Add Progress comment{% endif %}">+</button>
                   {% elif not point.progress_comments %}<span class="text-muted">—</span>{% endif %}
-                </td>{% endif %}
+                </td>
                 <td class="focus-point-cell">
                   {% if is_athlete_user %}
                     <form method="post" action="{% url 'focus_points' %}" class="m-0">
