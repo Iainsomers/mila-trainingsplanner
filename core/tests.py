@@ -1590,7 +1590,8 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "Comments athletes")
         self.assertNotContains(page, ">Plan<", html=False)
-        self.assertContains(page, "Progress")
+        self.assertNotContains(page, ">Prio<", html=False)
+        self.assertNotContains(page, ">Progress<", html=False)
         self.assertContains(page, "Keep relaxed shoulders.")
         self.assertNotContains(page, "Coach-only note.")
         self.assertNotContains(page, "Comment coaches")
@@ -1622,6 +1623,8 @@ class PlanningOverviewTests(TestCase):
         self.client.force_login(athlete_user)
         shown_page = self.client.get("/planning/focus-points/")
         self.assertContains(shown_page, "Plan")
+        self.assertContains(shown_page, "Prio")
+        self.assertContains(shown_page, "Progress")
 
     def test_focus_point_comments_are_kept_per_coach_until_overwritten(self):
         coach = get_user_model().objects.create_user(
