@@ -1,6 +1,6 @@
 {% if cell.session_km or cell.session_zones %}
   <div class="session-summary-label">
-    {% if show_session_km and cell.session_km %}<div class="session-km-label">{{ cell.session_km }} km</div>{% endif %}
+    {% if show_session_km and cell.session_km %}<div class="session-km-label">T {{ cell.session_km }}</div>{% endif %}
     {% if show_session_zones and cell.session_zones %}
       <span class="session-zone-pills">
         {% for item in cell.session_zones %}<span class="session-zone-pill session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}

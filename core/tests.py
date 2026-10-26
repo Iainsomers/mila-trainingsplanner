@@ -3678,7 +3678,7 @@ class SlotModalSaveTests(TestCase):
             if cell["day"] == day
         )
         self.assertEqual(current_cell["session_km"], "6.9")
-        self.assertContains(response, 'class="session-km-label">6.9 km</div>')
+        self.assertContains(response, 'class="session-km-label">T 6.9</div>')
 
         athlete.see_session_km = False
         athlete.save(update_fields=["see_session_km"])
