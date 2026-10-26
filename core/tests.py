@@ -2297,6 +2297,48 @@ class PlanningOverviewTests(TestCase):
         self.assertFalse(YearPlannerWhereabout.objects.filter(id=first_range.id).exists())
         self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=second_athlete, note=" font   r ").exists())
 
+    def test_athlete_can_edit_own_details_camp_when_whereabouts_enabled(self):
+        coach = get_user_model().objects.create_user(username="camp-athlete-coach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(
+            owner=coach, name="Camp Editable Athlete", birth_year=2000, gender="X",
+            year_planner_whereabouts_enabled=True,
+        )
+        other = Athlete.objects.create(owner=coach, name="Camp Other Athlete", birth_year=2000, gender="X")
+        own_range = YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=athlete, start_date=date(2026, 10, 7), end_date=date(2026, 10, 10),
+            whereabouts_type="camp", note="Athlete Camp",
+        )
+        YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=other, start_date=date(2026, 10, 7), end_date=date(2026, 10, 10),
+            whereabouts_type="camp", note="Athlete Camp",
+        )
+        athlete_user = get_user_model().objects.create_user(username="Camp Editable Athlete", password="secret")
+        self.client.force_login(athlete_user)
+
+        detail = self.client.get("/planning/detailed-camps/camp/?camp=athlete+camp")
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, 'name="arrival_date"')
+        self.assertNotContains(detail, 'name="action" value="delete_participant"')
+
+        saved = self.client.post("/planning/detailed-camps/camp/?camp=athlete+camp", {
+            "participant_type": "Athlete", "participant_id": athlete.id,
+            "arrival_date": "2026-10-08", "departure_date": "2026-10-11",
+            "arrival_flight_number": "KL123", "arrival_flight_time": "10:25",
+            "departure_flight_number": "KL321", "departure_flight_time": "18:45",
+            "rental_car_info": "Rental", "accommodation": "Hotel",
+        }, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.json(), {"ok": True})
+        own_range.refresh_from_db()
+        self.assertEqual(own_range.start_date, date(2026, 10, 8))
+        self.assertEqual(own_range.end_date, date(2026, 10, 11))
+        self.assertEqual(own_range.arrival_flight_number, "KL123")
+
+        deleted = self.client.post("/planning/detailed-camps/camp/?camp=athlete+camp", {
+            "action": "delete_participant", "participant_type": "Athlete", "participant_id": athlete.id,
+        })
+        self.assertEqual(deleted.status_code, 403)
+
     def test_create_camp_and_add_athletes_writes_year_planner_whereabouts(self):
         coach = get_user_model().objects.create_user(username="camp-create-coach", password="secret", is_staff=True)
         CoachSettings.objects.create(user=coach, detailed_camps_enabled=True)

@@ -9247,9 +9247,9 @@ def detailed_camp_detail_view(request):
         return redirect("detailed_camps")
 
     if request.method == "POST":
-        if is_athlete_user:
-            return HttpResponse("Forbidden", status=403)
         if request.POST.get("action") == "add_participants":
+            if is_athlete_user:
+                return HttpResponse("Forbidden", status=403)
             existing_athlete_ids = {
                 item["person"].id for item in camp["participants"] if item["person_type"] == "Athlete"
             }
@@ -9302,6 +9302,8 @@ def detailed_camp_detail_view(request):
 
         if participant_type == "Coach":
             can_edit = _can_manage_year_planner_coach_whereabouts(request, participant["person"])
+        elif is_athlete_user:
+            can_edit = participant["person"].id == athlete.id
         else:
             can_edit = participant["owner_id"] == request.user.id or CoachAccess.objects.filter(
                 owner_id=participant["owner_id"],
@@ -9312,6 +9314,8 @@ def detailed_camp_detail_view(request):
             return HttpResponse("Forbidden", status=403)
 
         if request.POST.get("action") == "delete_participant":
+            if is_athlete_user:
+                return HttpResponse("Forbidden", status=403)
             YearPlannerWhereabout.objects.filter(id__in=participant["range_ids"]).delete()
             return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': camp_key})}")
 
@@ -9351,6 +9355,8 @@ def detailed_camp_detail_view(request):
     for participant in camp["participants"]:
         if participant["person_type"] == "Coach":
             participant["can_edit"] = _can_manage_year_planner_coach_whereabouts(request, participant["person"])
+        elif is_athlete_user:
+            participant["can_edit"] = participant["person"].id == athlete.id
         else:
             participant["can_edit"] = participant["owner_id"] == request.user.id or CoachAccess.objects.filter(
                 owner_id=participant["owner_id"],
