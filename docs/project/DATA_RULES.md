@@ -128,6 +128,7 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 - Km worden per rij en per totaal afzonderlijk op 100 meter afgerond; de som van afgeronde rijen kan daardoor afwijken van het afgeronde totaal. Reken intern met de ongeronde meters. Bij duidelijke overschatting door afstandsdiscontinuïteiten wordt geen geforceerde normalisatie toegepast.
 - Tempo en HR meten verschillende aspecten. HR reageert vertraagd op versnellen en herstellen; de twee zoneverdelingen hoeven niet gelijk te zijn.
 - AI beschrijft een vermoedelijke trainingsstructuur, bepaalt geen zonegrenzen en verandert de vaste kilometerberekening niet.
+- Model B mag herhaalde actieve rondes niet stilzwijgend weglaten: een kort groepje dat door een lange herstelpauze van vergelijkbare herhalingen is afgesplitst, wordt waar de zones overeenkomen aan het volgende of vorige blok toegevoegd. Een AI-voorstel dat een herhaald actief afstandsblok ondertelt, wordt verworpen ten gunste van de vaste herkenning.
 
 ## Garmin FIT-uploadpreview
 

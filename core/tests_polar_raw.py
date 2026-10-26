@@ -19,6 +19,28 @@ from core.views.polar_raw import (
 )
 
 
+def _tim_olsthoorn_6_plus_8_laps():
+    """Screenshot-derived lap sequence: 6 x 400 m, then 8 x 400 m."""
+    values = [
+        (5507.6, 1933.254), (103.1, 34.500), (20.8, 23.624),
+        (392.9, 80.875), (108.1, 57.501), (393.4, 82.750),
+        (117.4, 60.500), (383, 79.375), (120, 59.749),
+        (375.3, 79.251), (111.6, 60.500), (391.3, 83.500),
+        (107.9, 60.499), (378.4, 79.125), (65.3, 20.501),
+        (40.1, 39.750), (495.7, 140.250), (383.5, 79.000),
+        (111.6, 59.624), (378.5, 78.126), (116.3, 283.250),
+        (0, 18.250), (378.5, 80.374), (106.7, 61.875),
+        (389.7, 75.251), (124.3, 61.500), (380.2, 74.249),
+        (89.9, 42.501), (28.5, 19.249), (387.1, 74.501),
+        (113.1, 61.125), (379.4, 74.624), (111.7, 59.125),
+        (384.5, 75.001), (22, 5.125),
+    ]
+    return [
+        {"distanceMeters": distance, "durationMillis": duration * 1000}
+        for distance, duration in values
+    ]
+
+
 class RawPolarTests(SimpleTestCase):
     def setUp(self):
         # Render the real templates without unrelated database context processors.
@@ -84,6 +106,54 @@ class RawPolarTests(SimpleTestCase):
         self.assertIn("8×500 m", description)
         self.assertEqual(description.count("8×500 m"), 2)
         self.assertIn("CD: 1550 m Z1", description)
+
+    def test_model_b_keeps_two_reps_after_a_long_recovery_inside_second_set(self):
+        laps = _tim_olsthoorn_6_plus_8_laps()
+
+        def zones(distance, duration_ms, _athlete):
+            speed = distance / (duration_ms / 1000) if duration_ms else 0
+            return ("Z3" if distance >= 350 and speed >= 4 else "Z1", "NA")
+
+        with patch("core.views.polar_raw.lap_zone_paces", side_effect=zones):
+            description = type_b_description(laps, SimpleNamespace())
+
+        self.assertIn("Main: 6×400 m Z3", description)
+        self.assertIn("8×400 m Z3", description)
+
+    def test_model_b_rejects_ai_description_that_omits_repeated_active_laps(self):
+        laps = _tim_olsthoorn_6_plus_8_laps()
+
+        def zones(distance, duration_ms, _athlete):
+            speed = distance / (duration_ms / 1000) if duration_ms else 0
+            return ("Z3" if distance >= 350 and speed >= 4 else "Z1", "NA")
+
+        response = MagicMock()
+        response.read.return_value = json.dumps({"choices": [{"message": {"content": json.dumps({
+            "warmup_m": 5650,
+            "cooldown_m": None,
+            "sets": 1,
+            "segments": [
+                {"count": 6, "distance_m": 400, "zone": "Z3", "pace": "3:30", "recovery_s": 60},
+                {"count": 6, "distance_m": 400, "zone": "Z3", "pace": "3:17", "recovery_s": 61},
+            ],
+            "confidence": 0.95,
+        })}}]}).encode()
+        response.__enter__.return_value = response
+        with (
+            patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}),
+            patch("core.views.polar_raw.lap_zone_paces", side_effect=zones),
+            patch("core.views.polar_raw.urlopen", return_value=response),
+        ):
+            result = translate_model_b(
+                [{"sport": {"id": "1"}, "laps": {"laps": laps}}],
+                5,
+                SimpleNamespace(),
+            )
+
+        description = result[0]["parts"][0]["description"]
+        self.assertIn("Main: 6×400 m Z3", description)
+        self.assertIn("8×400 m Z3", description)
+        self.assertEqual(description.count("×400 m Z3"), 2)
 
     def test_model_b_ai_description_builds_nested_sets_from_structured_response(self):
         laps = []

@@ -524,7 +524,31 @@ def type_b_description(laps, athlete=None):
             if gap_s >= 180:
                 groups.append([])
         groups[-1].append(row)
-    groups = [group for group in groups if len(group) >= 3]
+    # A long recovery can split one actual set into two groups. Do not drop a
+    # short fragment of repeated work (for example 6 + 2 + 6 reps): when it
+    # matches the following or preceding group by zone, attach it there.
+    # If it does not match either group, keep it visible as its own segment
+    # instead of silently losing completed reps.
+    def work_zones(group):
+        work_rows = [row for row in group if int(row["zone"] or 0) >= 2]
+        return {int(row["zone"]) for row in work_rows}
+
+    def compatible_groups(left, right):
+        left_zones, right_zones = work_zones(left), work_zones(right)
+        return not left_zones or not right_zones or left_zones == right_zones
+
+    index = 0
+    while index < len(groups):
+        if len(groups[index]) < 3:
+            if index + 1 < len(groups) and compatible_groups(groups[index], groups[index + 1]):
+                groups[index + 1] = groups[index] + groups[index + 1]
+                groups.pop(index)
+                continue
+            if index > 0 and compatible_groups(groups[index - 1], groups[index]):
+                groups[index - 1].extend(groups[index])
+                groups.pop(index)
+                continue
+        index += 1
     if len(groups) < 2:
         return ""
 
@@ -727,6 +751,21 @@ def _model_b_ai_description(laps, athlete=None):
     if any(
         distance_m not in observed_counts or required > observed_counts[distance_m]
         for distance_m, required in required_counts.items()
+    ):
+        return ""
+
+    # Repeated active laps of a distance are evidence the AI description must
+    # account for. The previous upper-bound-only check allowed a plausible but
+    # incomplete answer (e.g. 12x400 m when 14 active 400 m laps were recorded).
+    observed_active_counts = {}
+    for row in facts:
+        rounded = int(row.get("rounded_50_m") or 0)
+        zone = str(row.get("zone") or "")
+        if 350 <= rounded <= 800 and re.fullmatch(r"Z[2-5]", zone):
+            observed_active_counts[rounded] = observed_active_counts.get(rounded, 0) + 1
+    if any(
+        observed_count >= 3 and required_counts.get(distance_m, 0) < observed_count
+        for distance_m, observed_count in observed_active_counts.items()
     ):
         return ""
 
