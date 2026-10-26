@@ -6006,20 +6006,11 @@ def year_planner_view(request):
     if is_athlete_user:
         athlete_can_view_training = bool(getattr(athlete, "year_planner_training_enabled", False))
         athlete_can_view_whereabouts = bool(getattr(athlete, "year_planner_whereabouts_enabled", False))
-        athlete_can_view_shared_whereabouts = bool(
-            athlete_can_view_whereabouts
-            and athlete.owner_id
-            and CoachSettings.objects.filter(
-                user_id=athlete.owner_id,
-                year_planner_shared_whereabouts_enabled=True,
-            ).exists()
-        )
         if not athlete_can_view_training and not athlete_can_view_whereabouts:
             return redirect("planning_overview")
     else:
         athlete_can_view_training = True
         athlete_can_view_whereabouts = True
-        athlete_can_view_shared_whereabouts = False
 
     today = date.today()
     try:
@@ -6117,22 +6108,8 @@ def year_planner_view(request):
         selected_coach_ids = [coach_id for coach_id in coach_ids if coach_id in available_coach_ids]
 
     selected_athletes = [a for a in visible_athletes if a.id in selected_ids]
-    # Athlete-to-athlete whereabouts sharing is disabled: an athlete's Year
-    # Planner must never include another athlete's row or whereabouts.
-    shared_whereabout_athletes = [athlete] if is_athlete_user else []
-    shared_whereabout_coach_ids = []
-    if is_athlete_user and athlete_can_view_shared_whereabouts and athlete.owner_id:
-        shared_whereabout_coach_ids = list(
-            CoachAccess.objects.filter(grantee_id=athlete.owner_id)
-            .values_list("owner_id", flat=True)
-        )
-        shared_whereabout_coach_ids = list(dict.fromkeys([athlete.owner_id, *shared_whereabout_coach_ids]))
-        coach_users = get_user_model().objects.filter(id__in=shared_whereabout_coach_ids)
-        coach_options = [
-            {"user": coach_user, "access_label": "related"}
-            for coach_user in coach_users
-        ]
-        selected_coach_ids = shared_whereabout_coach_ids
+    # Athlete Year Planner is strictly personal: no other athlete or coach
+    # whereabouts are added to an athlete's rows.
     all_visible_athletes_selected = bool(visible_athletes) and set(selected_ids) == {a.id for a in visible_athletes}
     selected_coaches = [
         option for option in coach_options
@@ -6155,12 +6132,7 @@ def year_planner_view(request):
         (entry.athlete_id, entry.basis_plan_id, entry.date): entry
         for entry in entries
     }
-    whereabout_athlete_ids = (
-        [shared_athlete.id for shared_athlete in shared_whereabout_athletes]
-        if is_athlete_user and athlete_can_view_shared_whereabouts
-        else selected_ids
-    )
-    where_scope_filter = Q(athlete_id__in=whereabout_athlete_ids)
+    where_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
         where_scope_filter |= Q(athlete__isnull=True, basis_plan=selected_filter_plan)
     whereabout_ranges = list(
@@ -6172,11 +6144,7 @@ def year_planner_view(request):
     coach_whereabout_ranges = list(
         YearPlannerWhereabout.objects
         .filter(
-            owner_id__in=(
-                shared_whereabout_coach_ids
-                if is_athlete_user and athlete_can_view_shared_whereabouts
-                else selected_coach_ids
-            ),
+            owner_id__in=selected_coach_ids,
             athlete__isnull=True,
             basis_plan__isnull=True,
             start_date__lte=end_date,
@@ -6384,7 +6352,6 @@ def year_planner_view(request):
         "year_planner_read_only": is_athlete_user,
         "athlete_can_view_year_planner_training": athlete_can_view_training,
         "athlete_can_view_year_planner_whereabouts": athlete_can_view_whereabouts,
-        "athlete_can_view_shared_whereabouts": athlete_can_view_shared_whereabouts,
     })
 
 
@@ -9026,9 +8993,6 @@ def settings_view(request):
             coach_settings.pause_mode = pause_mode
         coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
         coach_settings.evaluation_sharing_enabled = (request.POST.get("evaluation_sharing_enabled") == "on")
-        coach_settings.year_planner_shared_whereabouts_enabled = (
-            request.POST.get("year_planner_shared_whereabouts_enabled") == "on"
-        )
         coach_settings.save(update_fields=[
             "evaluations_enabled",
             "evaluation_sharing_enabled",
@@ -9037,7 +9001,6 @@ def settings_view(request):
             "live_sharing_training_schedules",
             "see_session_km",
             "pause_mode",
-            "year_planner_shared_whereabouts_enabled",
             "updated_at",
         ])
         for access in shared_coaches:
@@ -9084,7 +9047,6 @@ def settings_view(request):
         "see_session_km": coach_settings.see_session_km,
         "pause_mode": coach_settings.pause_mode,
         "pause_mode_choices": CoachSettings.PAUSE_MODE_CHOICES,
-        "year_planner_shared_whereabouts_enabled": coach_settings.year_planner_shared_whereabouts_enabled,
         "can_edit_settings": can_edit_settings,
     })
 

@@ -1918,7 +1918,7 @@ class PlanningOverviewTests(TestCase):
         settings_page = self.client.get("/settings/")
         self.assertEqual(settings_page.status_code, 200)
         self.assertContains(settings_page, "Planning Camps")
-        self.assertContains(settings_page, "Shared athlete whereabouts in Year Planner")
+        self.assertNotContains(settings_page, "Shared coach whereabouts in Year Planner")
 
         planning_before = self.client.get("/planning/")
         self.assertNotContains(planning_before, "Details Camps")
@@ -1927,13 +1927,11 @@ class PlanningOverviewTests(TestCase):
             "/settings/",
             {
                 "detailed_camps_enabled": "on",
-                "year_planner_shared_whereabouts_enabled": "on",
             },
         )
         self.assertRedirects(response, "/settings/")
         saved_settings = CoachSettings.objects.get(user=user)
         self.assertTrue(saved_settings.detailed_camps_enabled)
-        self.assertTrue(saved_settings.year_planner_shared_whereabouts_enabled)
 
         planning_after = self.client.get("/planning/")
         self.assertContains(planning_after, "Details Camps")
@@ -3124,7 +3122,7 @@ class YearPlannerTests(TestCase):
         self.assertContains(response, "year-read-only")
         self.assertContains(response, "year-training-aerobe")
 
-    def test_athlete_never_sees_other_athlete_rows_but_can_view_related_coach_whereabouts(self):
+    def test_athlete_year_planner_never_shows_other_athletes_or_coaches(self):
         coach, athlete = self._coach_and_athlete()
         athlete.year_planner_whereabouts_enabled = True
         athlete.save(update_fields=["year_planner_whereabouts_enabled"])
@@ -3148,6 +3146,14 @@ class YearPlannerTests(TestCase):
             note="Shared athlete camp",
         )
         YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=athlete,
+            start_date=date(2026, 9, 7),
+            end_date=date(2026, 9, 9),
+            whereabouts_type="camp",
+            note="My own camp",
+        )
+        YearPlannerWhereabout.objects.create(
             owner=related_coach,
             start_date=date(2026, 9, 10),
             end_date=date(2026, 9, 12),
@@ -3157,15 +3163,19 @@ class YearPlannerTests(TestCase):
         athlete_user = get_user_model().objects.create_user(username="Year_Athlete", password="secret")
         self.client.force_login(athlete_user)
 
-        response = self.client.get("/planning/year/?year=2026&period=season")
+        response = self.client.get(
+            f"/planning/year/?year=2026&period=season&coaches={related_coach.id}"
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["selected_ids"], [athlete.id])
         self.assertNotContains(response, "Shared Year Athlete")
         self.assertNotContains(response, "Shared athlete camp")
-        self.assertContains(response, "Related coach travel")
+        self.assertContains(response, "My own camp")
+        self.assertNotContains(response, "Related coach travel")
         self.assertFalse(any(row["scope"] == f"athlete-{other.id}" for row in response.context["rows"]))
-        self.assertTrue(any(row["scope"] == f"coach-{related_coach.id}" for row in response.context["rows"]))
+        self.assertFalse(any(row.get("is_coach") for row in response.context["rows"]))
+        self.assertEqual(response.context["coaches"], [])
 
     def test_year_planner_saves_base_and_athlete_entries(self):
         coach, athlete = self._coach_and_athlete()

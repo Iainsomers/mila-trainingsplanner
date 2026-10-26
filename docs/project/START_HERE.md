@@ -42,7 +42,7 @@ MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers m
 
 - Coach Settings bevat een per coach opgeslagen `Planning Camps`-schakelaar, standaard uit.
 - Bij inschakeling verschijnt Details Camps in de Coach plannings-sectie. Genoemde Camp-whereabouts met dezelfde kampnaam worden als een kamp herkend, ook wanneer deelnemers verschillende datums hebben. Het overzicht bevat atleten en toegankelijke coaches; de brede detailpagina laat individuele aankomst-/vertrekdatums en in-/uitvluchtgegevens automatisch opslaan. Aangepaste datums worden direct in dezelfde Year Planner-range opgeslagen. Deelnemersregels kunnen worden gekopieerd en geplakt; coachregels zijn lichtgeel.
-- Atleten zien alleen hun eigen Year Planner-rij. Coach Settings kan daarnaast read-only whereabouts van gerelateerde coaches delen; andere atleten en hun trainingsplanning blijven verborgen.
+- Atleten zien uitsluitend hun eigen Year Planner-rij en eigen whereabouts. Coaches zijn alleen zichtbaar als rijen in de coachweergave.
 
 ## Belangrijke grenzen
 

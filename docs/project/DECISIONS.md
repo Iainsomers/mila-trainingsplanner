@@ -46,7 +46,7 @@ De individuele Base Planning bepaalt in AYC en Flex Planner de trainingsbron per
 
 ## 2026-10-07 / 2026-10-26 — Year Planner-privacy
 
-De oorspronkelijke keuze om whereabouts van andere atleten te delen is op 26 oktober ingetrokken: atleten zien uitsluitend hun eigen atletenrij en eigen plannergegevens. Een coach kan met `Shared coach whereabouts in Year Planner` uitsluitend read-only whereabouts van gerelateerde coaches tonen. Andere atleten, hun trainingen en mutaties blijven verborgen.
+De oorspronkelijke keuze om whereabouts van andere atleten en gerelateerde coaches met atleten te delen is ingetrokken: atleten zien uitsluitend hun eigen atletenrij en eigen whereabouts. Coachrijen bestaan alleen in de coachweergave.
 
 ## 2026-10-07 — Tempoherkenning vereist een los label
 
