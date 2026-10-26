@@ -41,7 +41,7 @@ Bijgewerkt: 20 oktober 2026.
 
 - `Extended edit rights` geeft een atleet toegang tot toekomstige AYC-trainingen en lege dagdelen. `Can change base planning` staat daar los van en geeft alleen toegang tot de eigen Base Planning.
 - Coach Settings bevat `Shared athlete whereabouts in Year Planner`, standaard uit. Daarmee verschijnen read-only whereabouts van ploeggenoten en gerelateerde coaches in de Year Planner; trainingen blijven afgeschermd.
-- Athlete settings bevat naast `See session km` nu `See session zones`. De AYC kan per sessie zonepillen met kilometers op 0,1 km tonen; de weektotalen tonen alleen het zwarte getal zonder `km`-label.
+- Athlete settings bevat naast `See session km` nu `See session zones`. De AYC kan per sessie kleurpillen met alleen kilometers op 0,1 km tonen; de weektotalen tonen een zwart getal met `T` ervoor zonder `km`-label.
 - De tab in Athlete Input heet `Zones. HR, Speed` en gebruikt binnen de tab `Current times`. De trainer kan HR-invoer en snelheidsondersteuning naast de zone-invoer beheren.
 - De Flex Planner en AYC herkennen `TM` en andere T-labels alleen als losse tempo-aanduidingen. Tekst zoals `ritme` levert daardoor geen onterechte TM-kilometers meer op.
 
