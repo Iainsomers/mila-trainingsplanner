@@ -5809,12 +5809,14 @@ def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
             return ""
 
         candidates = []
-        for load in watch_loads or []:
+        for load_position, load in enumerate(watch_loads or [], 1):
             try:
                 distance = float(load.get("meters", load.get("distance_m")) or 0)
                 seconds = float(load.get("seconds") or 0)
                 zone = int(load.get("zone") or 0)
-                index = int(load.get("index") or 0)
+                # type_a_watch_loads() preserves lap order but does not add an
+                # index. Use the position in that ordered list as the fallback.
+                index = int(load.get("index") or load_position)
             except (TypeError, ValueError, AttributeError):
                 continue
             if (
@@ -5838,12 +5840,19 @@ def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
             pairs.append((first, second))
             if offset:
                 previous_pair_end = pairs[-2][1]["index"]
-                easy_laps = [
-                    load for load in watch_loads or []
-                    if previous_pair_end < int(load.get("index") or 0) < first["index"]
-                    and int(load.get("zone") or 0) == 1
-                    and str(load.get("segment") or "CORE").upper() not in {"WU", "CD"}
-                ]
+                easy_laps = []
+                for load_position, load in enumerate(watch_loads or [], 1):
+                    try:
+                        load_index = int(load.get("index") or load_position)
+                        zone = int(load.get("zone") or 0)
+                    except (TypeError, ValueError, AttributeError):
+                        continue
+                    if (
+                        previous_pair_end < load_index < first["index"]
+                        and zone == 1
+                        and str(load.get("segment") or "CORE").upper() not in {"WU", "CD"}
+                    ):
+                        easy_laps.append(load)
                 if easy_laps:
                     recovery_seconds.append(sum(float(load.get("seconds") or 0) for load in easy_laps))
 

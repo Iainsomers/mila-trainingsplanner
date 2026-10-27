@@ -203,7 +203,7 @@ Meerdere sporten op dezelfde dag blijven als losse activiteiten zichtbaar, maar 
 
 Trainers kunnen per atleet in Athlete Input `Allow Garmin FIT uploads` aanzetten. Alleen deze geselecteerde atleten verschijnen op het dashboardtabblad Garmin uploads. Een trainer of de geselecteerde atleet kan daar een `.fit`-bestand of Garmin-zip uploaden. De activiteit wordt per atleet opgeslagen met de FIT-datum, het originele bestand en de genormaliseerde gegevens. De pagina toont daarnaast een lijst van opgeslagen activiteiten. In de AYC gebruikt Garmin C de opgeslagen lapgegevens van die atleet op de gekozen datum. De match-/AI-uitvoer verandert de planning pas na een expliciete keuze voor `Use AM` of `Use PM`.
 
-Garmin C kan herhaalde, direct aaneengesloten halve afstandslaps samenvoegen tot één langere herhaling wanneer na die lapparen consequent een rustige herstellap volgt. Het getoonde gemiddelde tempo en herstel wijzigen de onderliggende afstands- en zonetotalen niet.
+Garmin C kan herhaalde, direct aaneengesloten halve afstandslaps samenvoegen tot één langere herhaling wanneer na die lapparen consequent een rustige herstellap volgt. De laplijst is zelf chronologisch; als er geen expliciete lapindex is, gebruikt Garmin C de positie in die lijst. Het getoonde gemiddelde tempo en herstel wijzigen de onderliggende afstands- en zonetotalen niet.
 
 ## COROS
 

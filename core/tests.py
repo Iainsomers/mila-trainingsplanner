@@ -3092,10 +3092,12 @@ class PolarPlanMismatchTests(TestCase):
         }]}]
         laps = []
         for _ in range(12):
-            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "2", "distance_m": 504, "seconds": 99})
-            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "3", "distance_m": 510, "seconds": 99})
-            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "1", "distance_m": 200, "seconds": 80})
-        recorded_meters = sum(load["distance_m"] for load in laps)
+            # Match type_a_watch_loads() output: ordered rows with `meters`,
+            # but no explicit lap index.
+            laps.append({"segment": "CORE", "zone": "2", "meters": 504, "seconds": 99})
+            laps.append({"segment": "CORE", "zone": "3", "meters": 510, "seconds": 99})
+            laps.append({"segment": "CORE", "zone": "1", "meters": 200, "seconds": 80})
+        recorded_meters = sum(load["meters"] for load in laps)
         with (
             patch("core.views.polar_raw.translate_model_b", return_value=translated),
             patch("core.views.polar_raw.type_a_watch_loads", return_value=laps),
