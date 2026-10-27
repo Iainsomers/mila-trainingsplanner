@@ -3203,6 +3203,73 @@ class PolarPlanMismatchTests(TestCase):
             "",
         )
 
+    def test_ayc_watch_c_merges_half_laps_from_display_rows(self):
+        from core.views.coach import _watch_c_merge_half_laps_from_raw
+
+        display_rows = []
+        for repetition in range(12):
+            display_rows.extend([
+                {"distance": "503.76", "duration": "00:01:39.650"},
+                {"distance": "511.88", "duration": "00:01:39.670"},
+            ])
+            if repetition < 11:
+                display_rows.append({"distance": "210.61", "duration": "00:01:20.330"})
+
+        result = _watch_c_merge_half_laps_from_raw(
+            "24×500 m Z2>Z3 (3:14)", display_rows
+        )
+
+        self.assertTrue(result.startswith("12×1000 m Z2>Z3"))
+
+    def test_ayc_watch_c_route_falls_back_to_display_rows(self):
+        from core.models import GarminActivity
+
+        coach = get_user_model().objects.create_user(
+            username="garmin-watch-c-display-fallback", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="Display Fallback Athlete", birth_year=1980, gender="M"
+        )
+        activity_date = date(2026, 10, 27)
+        GarminActivity.objects.create(
+            athlete=athlete,
+            activity_start=timezone.make_aware(datetime.combine(activity_date, time(10))),
+            original_filename="coros-display-fallback.fit",
+            file_hash="j" * 64,
+            raw_file=b"fit",
+            parsed_data={
+                "session": {"total_distance": 12000, "total_elapsed_time": 3600},
+                "laps": [{"distance": 12000, "elapsed_time": 3600}],
+            },
+        )
+        display_rows = []
+        for repetition in range(12):
+            display_rows.extend([
+                {"distance": "503.76", "duration": "00:01:39.650"},
+                {"distance": "511.88", "duration": "00:01:39.670"},
+            ])
+            if repetition < 11:
+                display_rows.append({"distance": "210.61", "duration": "00:01:20.330"})
+        old_main = "24×500 m Z2>Z3 (3:14)"
+        translated = [{"parts": [{
+            "description": f"WU: none · Main: {old_main} · CD: none",
+            "training_fields": {"wu": "", "main": old_main, "cd": ""},
+            "manual": display_rows,
+        }]}]
+        self.client.force_login(coach)
+
+        with (
+            patch("core.views.polar_raw.translate_model_b", return_value=translated),
+            patch("core.views.polar_raw.type_a_watch_loads", return_value=[]),
+        ):
+            response = self.client.get(
+                f"/integrations/garmin/type-c-ayc/?athlete={athlete.id}&date={activity_date.isoformat()}"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        part = response.json()["results"][0]["parts"][0]
+        self.assertTrue(part["training_fields"]["main"].startswith("12×1000 m Z2>Z3"))
+
     def test_ayc_watch_c_orders_main_segments_chronologically_from_laps(self):
         from core.models import GarminActivity
 

@@ -5631,6 +5631,13 @@ def garmin_type_c_ayc_view(request):
             # zones, while the 500 m + 500 m + recovery structure is still clear.
             raw_laps = (session.get("laps") or {}).get("laps") or []
             raw_merged_main = _watch_c_merge_half_laps_from_raw(fields.get("main", ""), raw_laps)
+            if not raw_merged_main:
+                # The translated Garmin C result is the exact lap list shown in
+                # the popup. Depending on the FIT source, it can be more complete
+                # than the normalized session copy and uses HH:MM:SS.mmm strings.
+                raw_merged_main = _watch_c_merge_half_laps_from_raw(
+                    fields.get("main", ""), part.get("manual") or []
+                )
             if raw_merged_main:
                 final_main = raw_merged_main
             else:
@@ -5671,14 +5678,32 @@ def _watch_c_merge_half_laps_from_raw(main_text, raw_laps):
     if expected_count < 6 or expected_count % 2 or not 350 <= half_distance <= 800:
         return ""
 
+    def seconds_value(lap):
+        duration_ms = lap.get("durationMillis")
+        if duration_ms not in (None, ""):
+            return float(duration_ms) / 1000.0
+        raw_value = lap.get("elapsed_time") or lap.get("timer_time") or lap.get("duration")
+        if raw_value in (None, ""):
+            return 0.0
+        if isinstance(raw_value, (int, float)):
+            return float(raw_value)
+        text = str(raw_value).strip()
+        if ":" not in text:
+            return float(text)
+        parts = text.split(":")
+        if len(parts) == 3:
+            hours, minutes, seconds = parts
+            return float(hours) * 3600 + float(minutes) * 60 + float(seconds)
+        if len(parts) == 2:
+            minutes, seconds = parts
+            return float(minutes) * 60 + float(seconds)
+        return 0.0
+
     rows = []
     for position, lap in enumerate(raw_laps or [], 1):
         try:
             distance = float(lap.get("distanceMeters", lap.get("distance")) or 0)
-            duration_ms = float(lap.get("durationMillis") or 0)
-            seconds = duration_ms / 1000.0 if duration_ms else float(
-                lap.get("elapsed_time") or lap.get("timer_time") or 0
-            )
+            seconds = seconds_value(lap)
         except (TypeError, ValueError, AttributeError):
             continue
         if distance > 0 and seconds > 0:
