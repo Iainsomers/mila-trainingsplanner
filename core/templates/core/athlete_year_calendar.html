@@ -183,6 +183,27 @@
     white-space: nowrap;
   }
 
+  .watch-source-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    color: #52606d;
+    flex: 0 0 auto;
+  }
+
+  .watch-source-indicator svg {
+    display: block;
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
   .session-zone-pills { display: inline-flex; gap: 2px; }
   .session-zone-pill {
     display: inline-block;
@@ -1939,9 +1960,9 @@
     </div>
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
-      <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Watch A</button>
-      <button type="button" id="suggestInputBtnB" class="btn btn-sm btn-outline-primary">Watch B</button>
-      <button type="button" id="suggestInputBtnC" class="btn btn-sm btn-outline-primary">Watch C</button>
+      <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Polar A</button>
+      <button type="button" id="suggestInputBtnB" class="btn btn-sm btn-outline-primary">Polar B</button>
+      <button type="button" id="suggestInputBtnC" class="btn btn-sm btn-outline-primary">Garmin C</button>
       <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger" style="display:none;">Delete input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary evaluation-ok-btn" disabled>OK</button>
     </div>
@@ -1950,7 +1971,7 @@
 
 <div id="suggestInputPlaceholder" role="dialog" aria-modal="true" aria-labelledby="suggestInputPlaceholderText" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000; align-items:center; justify-content:center; padding:16px;">
   <div style="background:#fff; width:760px; max-width:100%; max-height:92vh; overflow:auto; border-radius:8px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-    <h5 id="suggestInputPlaceholderText" class="mb-3">Polar Type A</h5>
+    <h5 id="suggestInputPlaceholderText" class="mb-3">Polar A</h5>
     <div id="suggestInputPlaceholderBody" class="small">No Polar result loaded.</div>
     <button type="button" id="suggestInputPlaceholderClose" class="btn btn-sm btn-primary">Close</button>
   </div>
@@ -2164,9 +2185,9 @@
     var body = document.getElementById("suggestInputPlaceholderBody");
     popup.style.display = "flex";
     var sourceName = model === "C" ? "Garmin FIT" : "Polar";
-    document.getElementById("suggestInputPlaceholderText").textContent = sourceName + " Model " + model;
+    document.getElementById("suggestInputPlaceholderText").textContent = model === "C" ? "Garmin C" : "Polar " + model;
     document.getElementById("suggestInputPlaceholderClose").focus();
-    body.textContent = "Loading " + sourceName + " Model " + model + "...";
+    body.textContent = "Loading " + (model === "C" ? "Garmin C" : "Polar " + model) + "...";
     var endpoint = model === "C" ? "/integrations/garmin/type-c-ayc/" : "/integrations/polar/type-a-ayc/";
     var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate);
     if (model !== "C") query += "&model=" + encodeURIComponent(model);
@@ -2174,12 +2195,12 @@
       headers: {"Accept": "application/json"}
     }).then(function(response) { return response.json(); }).then(function(data) {
       if (!data.ok) {
-        body.textContent = data.message || sourceName + " Model " + model + " could not be loaded.";
+        body.textContent = data.message || (model === "C" ? "Garmin C" : "Polar " + model) + " could not be loaded.";
         return;
       }
       renderTypeAResults(body, data.results || [], data.message || "", model);
     }).catch(function() {
-      body.textContent = sourceName + " Model " + model + " could not be loaded.";
+      body.textContent = (model === "C" ? "Garmin C" : "Polar " + model) + " could not be loaded.";
     });
   }
   function renderTypeALaps(parent, title, rows, showLast15Hr) {

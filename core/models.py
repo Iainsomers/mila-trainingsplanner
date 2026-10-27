@@ -967,9 +967,9 @@ class TrainingSlot(models.Model):
     SLOT_CHOICES = [(1, "Slot 1"), (2, "Slot 2")]
     SOURCE_CHOICES = [
         ("planned", "Planned"),
-        ("watch_a", "Watch A"),
-        ("watch_b", "Watch B"),
-        ("watch_c", "Watch C"),
+        ("watch_a", "Polar A"),
+        ("watch_b", "Polar B"),
+        ("watch_c", "Garmin C"),
     ]
 
     date = models.DateField()

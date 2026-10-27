@@ -11,7 +11,7 @@ from xml.sax.saxutils import escape
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
-from django.template.loader import get_template
+from django.template.loader import get_template, render_to_string
 from django.utils import timezone
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
@@ -2760,7 +2760,9 @@ class PolarPlanMismatchTests(TestCase):
     def test_ayc_suggest_input_shows_placeholder_without_watch_fetch(self):
         source = get_template("core/athlete_year_calendar.html").template.source
         self.assertIn('id="suggestInputBtn"', source)
-        self.assertIn('>Watch A<', source)
+        self.assertIn('>Polar A<', source)
+        self.assertIn('>Polar B<', source)
+        self.assertIn('>Garmin C<', source)
         self.assertIn('id="suggestInputPlaceholder"', source)
         self.assertIn('id="suggestInputPlaceholderClose"', source)
         self.assertIn('id="suggestInputPlaceholderBody"', source)
@@ -8413,6 +8415,46 @@ class TrainingSegmentLabelTests(TestCase):
         self.assertEqual(weekly["zones"]["1"]["duration_s"], 100)
         self.assertEqual(weekly["zones"]["2"]["distance_m"], 800)
         self.assertEqual(weekly["zones"]["2"]["duration_s"], 200)
+
+    def test_ayc_watch_source_indicator_appears_without_session_totals(self):
+        for source, label in (
+            ("watch_a", "Polar A"),
+            ("watch_b", "Polar B"),
+            ("watch_c", "Garmin C"),
+        ):
+            with self.subTest(source=source):
+                html = render_to_string(
+                    "core/partials/ayc_slot_segments.html",
+                    {
+                        "cell": {
+                            "slot": {"source": source, "text": "800m z1"},
+                            "slot_index": 1,
+                            "whereabouts": [],
+                            "session_km": "",
+                            "session_zones": [],
+                        },
+                        "show_session_km": False,
+                        "show_session_zones": False,
+                    },
+                )
+                self.assertIn(f'aria-label="Imported from {label}"', html)
+                self.assertIn("watch-source-indicator", html)
+
+        planned_html = render_to_string(
+            "core/partials/ayc_slot_segments.html",
+            {
+                "cell": {
+                    "slot": {"source": "planned", "text": "800m z1"},
+                    "slot_index": 1,
+                    "whereabouts": [],
+                    "session_km": "",
+                    "session_zones": [],
+                },
+                "show_session_km": False,
+                "show_session_zones": False,
+            },
+        )
+        self.assertNotIn("watch-source-indicator", planned_html)
 
     def test_watch_main_time_label_ignores_short_recovery_laps(self):
         segment = TrainingSegment(
