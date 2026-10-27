@@ -5674,7 +5674,7 @@ def _watch_c_order_main_by_laps(main_text, watch_loads, cd_text=""):
 
     def load_matches(item, load, *, allow_zone_mismatch=False):
         try:
-            distance_m = float(load.get("meters") or 0)
+            distance_m = float(load.get("meters", load.get("distance_m")) or 0)
             zone = int(load.get("zone") or 0)
             seconds = float(load.get("seconds") or 0)
         except (TypeError, ValueError, AttributeError):
@@ -5811,7 +5811,7 @@ def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
         candidates = []
         for load in watch_loads or []:
             try:
-                distance = float(load.get("meters") or 0)
+                distance = float(load.get("meters", load.get("distance_m")) or 0)
                 seconds = float(load.get("seconds") or 0)
                 zone = int(load.get("zone") or 0)
                 index = int(load.get("index") or 0)
@@ -5888,7 +5888,7 @@ def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
     loads = []
     for index, load in enumerate(watch_loads or []):
         try:
-            distance_m = float(load.get("meters") or 0)
+            distance_m = float(load.get("meters", load.get("distance_m")) or 0)
             zone = int(load.get("zone") or 0)
             seconds = float(load.get("seconds") or 0)
         except (TypeError, ValueError, AttributeError):

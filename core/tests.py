@@ -3040,18 +3040,18 @@ class PolarPlanMismatchTests(TestCase):
             "training_fields": {"wu": "", "main": old_main, "cd": "1700 m Z1"},
         }]}]
         laps = [
-            {"segment": "CORE", "zone": "2", "meters": 1010, "seconds": 268.155},
-            {"segment": "CORE", "zone": "1", "meters": 20, "seconds": 119.124},
-            {"segment": "CORE", "zone": "2", "meters": 1000, "seconds": 260.334},
-            {"segment": "CORE", "zone": "1", "meters": 40, "seconds": 119.8},
-            {"segment": "CORE", "zone": "2", "meters": 1000, "seconds": 256.66},
-            {"segment": "CORE", "zone": "1", "meters": 20, "seconds": 130.693},
-            {"segment": "CORE", "zone": "3", "meters": 990, "seconds": 246.038},
-            {"segment": "CORE", "zone": "1", "meters": 30, "seconds": 141.142},
-            {"segment": "CORE", "zone": "3", "meters": 1000, "seconds": 229.244},
-            {"segment": "CORE", "zone": "1", "meters": 290, "seconds": 141.277},
-            {"segment": "CD", "zone": "1", "meters": 1600, "seconds": 497.159},
-            {"segment": "CD", "zone": "1", "meters": 100, "seconds": 134.201},
+            {"segment": "CORE", "zone": "2", "distance_m": 1010, "seconds": 268.155},
+            {"segment": "CORE", "zone": "1", "distance_m": 20, "seconds": 119.124},
+            {"segment": "CORE", "zone": "2", "distance_m": 1000, "seconds": 260.334},
+            {"segment": "CORE", "zone": "1", "distance_m": 40, "seconds": 119.8},
+            {"segment": "CORE", "zone": "2", "distance_m": 1000, "seconds": 256.66},
+            {"segment": "CORE", "zone": "1", "distance_m": 20, "seconds": 130.693},
+            {"segment": "CORE", "zone": "3", "distance_m": 990, "seconds": 246.038},
+            {"segment": "CORE", "zone": "1", "distance_m": 30, "seconds": 141.142},
+            {"segment": "CORE", "zone": "3", "distance_m": 1000, "seconds": 229.244},
+            {"segment": "CORE", "zone": "1", "distance_m": 290, "seconds": 141.277},
+            {"segment": "CD", "zone": "1", "distance_m": 1600, "seconds": 497.159},
+            {"segment": "CD", "zone": "1", "distance_m": 100, "seconds": 134.201},
         ]
         with (
             patch("core.views.polar_raw.translate_model_b", return_value=translated),
@@ -3092,10 +3092,10 @@ class PolarPlanMismatchTests(TestCase):
         }]}]
         laps = []
         for _ in range(12):
-            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "2", "meters": 504, "seconds": 99})
-            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "3", "meters": 510, "seconds": 99})
-            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "1", "meters": 200, "seconds": 80})
-        recorded_meters = sum(load["meters"] for load in laps)
+            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "2", "distance_m": 504, "seconds": 99})
+            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "3", "distance_m": 510, "seconds": 99})
+            laps.append({"index": len(laps) + 1, "segment": "CORE", "zone": "1", "distance_m": 200, "seconds": 80})
+        recorded_meters = sum(load["distance_m"] for load in laps)
         with (
             patch("core.views.polar_raw.translate_model_b", return_value=translated),
             patch("core.views.polar_raw.type_a_watch_loads", return_value=laps),
@@ -3108,13 +3108,13 @@ class PolarPlanMismatchTests(TestCase):
         part = response.json()["results"][0]["parts"][0]
         self.assertEqual(part["training_fields"]["main"], "12×1000 m Z2>Z3 (3:15) p80")
         self.assertEqual(part["description"], "WU: none · Main: 12×1000 m Z2>Z3 (3:15) p80 · CD: none")
-        self.assertEqual(sum(load["meters"] for load in part["watch_loads"]), recorded_meters)
+        self.assertEqual(sum(load.get("meters", load.get("distance_m")) for load in part["watch_loads"]), recorded_meters)
 
     def test_ayc_watch_c_does_not_combine_half_laps_without_recovery_pattern(self):
         from core.views.coach import _watch_c_merge_same_distance_sequence
 
         continuous_laps = [
-            {"index": index, "segment": "CORE", "zone": str(2 + index % 2), "meters": 500, "seconds": 100}
+            {"index": index, "segment": "CORE", "zone": str(2 + index % 2), "distance_m": 500, "seconds": 100}
             for index in range(1, 13)
         ]
         self.assertEqual(
