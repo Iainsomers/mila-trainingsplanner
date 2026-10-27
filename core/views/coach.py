@@ -11987,6 +11987,7 @@ def daily_overview_other_view(request):
     today = date.today()
     window_start = today - timedelta(days=7)
     window_end = today - timedelta(days=1)
+    active_coach = _active_coach_user(request)
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     athlete_ids = [athlete.id for athlete in athletes]
     training_visible_athlete_ids = {
@@ -12000,7 +12001,7 @@ def daily_overview_other_view(request):
         .exclude(name__startswith="Flex Planner")
     )
     flex_plan_by_athlete = {
-        athlete.id: _get_athlete_year_flex_plan(request.user, athlete, window_start, window_end)
+        athlete.id: _get_athlete_year_flex_plan(active_coach, athlete, window_start, window_end)
         for athlete in athletes
     }
     flex_plan_ids = {plan.id for plan in flex_plan_by_athlete.values() if plan}
@@ -12094,7 +12095,11 @@ def daily_overview_other_view(request):
     for athlete in athletes:
         pending = 0
         evaluated = 0
-        if getattr(athlete, "training_reports_enabled", True):
+        can_view_evaluations = (
+            athlete.id in training_visible_athlete_ids
+            and getattr(athlete, "training_reports_enabled", True)
+        )
+        if can_view_evaluations:
             for offset in range((window_end - window_start).days + 1):
                 day = window_start + timedelta(days=offset)
                 for slot_index in (1, 2):
@@ -12110,30 +12115,38 @@ def daily_overview_other_view(request):
                                 slot = trainer_slot_lookup.get((base_slot.trainer_plan_id, day, slot_index))
                     if slot and not _slot_is_visually_empty(slot):
                         check = check_lookup.get((athlete.id, day, slot_index))
-                        if check and check.effective_status:
+                        if check and check.has_evaluation:
                             evaluated += 1
                         else:
                             pending += 1
 
-        if pending == 0:
-            color = "green"
-        elif pending == 1:
-            color = "yellow"
-        elif pending <= 3:
-            color = "orange"
+        if can_view_evaluations:
+            pending_count = pending
+            evaluated_count = evaluated
+            if pending == 0:
+                color = "green"
+            elif pending == 1:
+                color = "yellow"
+            elif pending <= 3:
+                color = "orange"
+            else:
+                color = "red"
+            if evaluated >= 3:
+                evaluated_color = "green"
+            elif evaluated > 0:
+                evaluated_color = "orange"
+            else:
+                evaluated_color = "red"
         else:
-            color = "red"
-        if evaluated >= 3:
-            evaluated_color = "green"
-        elif evaluated > 0:
-            evaluated_color = "orange"
-        else:
-            evaluated_color = "red"
+            # Without access to the reports, treating every planned session as
+            # open would produce a misleading count (and reveal report state).
+            pending_count = evaluated_count = None
+            color = evaluated_color = ""
         counts.append({
             "athlete": athlete,
-            "pending_count": pending,
+            "pending_count": pending_count,
             "color": color,
-            "evaluated_count": evaluated,
+            "evaluated_count": evaluated_count,
             "evaluated_color": evaluated_color,
         })
 

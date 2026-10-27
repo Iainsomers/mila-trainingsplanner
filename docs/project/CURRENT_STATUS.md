@@ -91,7 +91,7 @@ Bijgewerkt: 27 oktober 2026.
 
 - Settings is een werkende coachdashboardtegel met onder meer Planning Camps; Stats en Polar houden hun under-development-label.
 - Daily Coach Overview Other is beschikbaar met de inklapbare blokken Info Quality en Vitals. Info Quality toont per eigen atleet openstaande AYC-evaluaties van de afgelopen zeven dagen, exclusief vandaag. Vitals toont gemiddelden over de laatste veertien kalenderdagen bij minimaal drie waarden en bevat ook HR zones met Z1–Z5 per atleet; Show NA staat uit en de vitalkeuze houdt Vitals open.
-- Info Quality toont naast open evaluaties ook het aantal geëvalueerde trainingen; 3 of meer is groen, 1–2 oranje en 0 rood.
+- Info Quality toont naast open evaluaties ook het aantal geëvalueerde trainingen; 3 of meer is groen, 1–2 oranje en 0 rood. In `View as coach` gebruikt Info Quality ook de Flex Planner-overrides van die actieve coach. Als trainingsevaluaties voor de trainer niet zichtbaar zijn of voor de atleet uitstaan, worden beide aantallen als streepje getoond zodat sessies niet onterecht als open tellen.
 - Stats is bewust eenvoudig en nog in ontwikkeling.
 - Polar/watch suggestions, vooral automatische workoutmatching zonder handmatige laps, hebben verdere testgevallen en verfijning nodig.
 - E-mail-, WhatsApp- of pushreminders voor openstaande evaluaties zijn nog niet gebouwd; de huidige herinnering is alleen de AYC-popup.

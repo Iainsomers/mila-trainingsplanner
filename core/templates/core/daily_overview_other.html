@@ -70,8 +70,8 @@
             {% for row in athlete_rows %}
               <tr>
                 <td>{{ row.athlete.name }}</td>
-                <td class="text-end"><span class="pending-badge pending-{{ row.color }}">{{ row.pending_count }}</span></td>
-                <td class="text-end"><span class="pending-badge pending-{{ row.evaluated_color }}">{{ row.evaluated_count }}</span></td>
+                <td class="text-end">{% if row.pending_count is not None %}<span class="pending-badge pending-{{ row.color }}">{{ row.pending_count }}</span>{% else %}—{% endif %}</td>
+                <td class="text-end">{% if row.evaluated_count is not None %}<span class="pending-badge pending-{{ row.evaluated_color }}">{{ row.evaluated_count }}</span>{% else %}—{% endif %}</td>
                 <td class="text-end">
                   {% for athlete in meeting_requests %}
                     {% if athlete.id == row.athlete.id %}

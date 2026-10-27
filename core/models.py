@@ -1558,6 +1558,15 @@ class AthleteDayCheck(models.Model):
             return self.STATUS_DONE_AS_PLANNED
         return self.STATUS_NONE
 
+    @property
+    def has_evaluation(self):
+        """Whether this slot has any saved evaluation content."""
+        return bool(
+            self.effective_status
+            or self.rpe is not None
+            or (self.comment or "").strip()
+        )
+
     def __str__(self):
         return f"{self.athlete} - {self.date} ({self.effective_status or '-'})"
 

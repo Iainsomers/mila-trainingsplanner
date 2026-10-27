@@ -1368,6 +1368,138 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(row["evaluated_color"], "orange")
         self.assertContains(response, "Evaluated")
 
+    def test_daily_overview_other_does_not_mark_hidden_evaluations_as_open(self):
+        owner = get_user_model().objects.create_user(
+            username="quality-hidden-owner", password="secret", is_staff=True
+        )
+        grantee = get_user_model().objects.create_user(
+            username="quality-hidden-grantee", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="Quality Hidden Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        CoachAccess.objects.create(owner=owner, grantee=grantee, can_edit=True)
+        CoachSettings.objects.create(user=owner, evaluation_sharing_enabled=True)
+        CoachEvaluationSharing.objects.create(owner=owner, grantee=grantee, training=False)
+        plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="Quality hidden plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        yesterday = date.today() - timedelta(days=1)
+        slot = TrainingSlot.objects.create(plan=plan, date=yesterday, slot_index=1)
+        slot.segments.create(type="CORE", text="Easy run", order=0)
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=yesterday,
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+            checked=True,
+            rpe=6,
+            comment="Completed",
+            updated_by=owner,
+        )
+
+        self.client.force_login(grantee)
+        session = self.client.session
+        session["active_coach_owner_id"] = owner.id
+        session.save()
+        response = self.client.get("/coach/daily-overview-other/")
+
+        self.assertEqual(response.status_code, 200)
+        row = response.context["athlete_rows"][0]
+        self.assertIsNone(row["pending_count"])
+        self.assertIsNone(row["evaluated_count"])
+
+    def test_daily_overview_other_uses_active_coach_flex_overrides_in_view_as_mode(self):
+        owner = get_user_model().objects.create_user(
+            username="quality-flex-owner", password="secret", is_staff=True
+        )
+        grantee = get_user_model().objects.create_user(
+            username="quality-flex-grantee", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=owner,
+            name="Quality Flex Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        CoachAccess.objects.create(owner=owner, grantee=grantee, can_edit=True)
+        source_plan = TrainingPlan.objects.create(
+            owner=owner,
+            name="Quality flex source plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=source_plan, athlete=athlete)
+        yesterday = date.today() - timedelta(days=1)
+        source_slot = TrainingSlot.objects.create(plan=source_plan, date=yesterday, slot_index=1)
+        source_slot.segments.create(type="CORE", text="Easy run", order=0)
+        owner_flex = TrainingPlan.objects.create(owner=owner, name="Flex Planner owner context")
+        TrainingSlot.objects.create(
+            plan=owner_flex,
+            athlete=athlete,
+            date=yesterday,
+            slot_index=1,
+        )
+
+        self.client.force_login(grantee)
+        session = self.client.session
+        session["active_coach_owner_id"] = owner.id
+        session.save()
+        response = self.client.get("/coach/daily-overview-other/")
+
+        self.assertEqual(response.status_code, 200)
+        row = response.context["athlete_rows"][0]
+        self.assertEqual(row["pending_count"], 0)
+        self.assertEqual(row["evaluated_count"], 0)
+
+    def test_daily_overview_other_counts_saved_rpe_or_comment_as_evaluated(self):
+        coach = get_user_model().objects.create_user(
+            username="evaluation-content-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Evaluation Content Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Evaluation content plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        yesterday = date.today() - timedelta(days=1)
+        for slot_index in (1, 2):
+            slot = TrainingSlot.objects.create(plan=plan, date=yesterday, slot_index=slot_index)
+            slot.segments.create(type="CORE", text="Easy run", order=0)
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=yesterday,
+            slot_index=1,
+            rpe=6,
+            updated_by=coach,
+        )
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=yesterday,
+            slot_index=2,
+            comment="Completed",
+            updated_by=coach,
+        )
+
+        self.client.force_login(coach)
+        response = self.client.get("/coach/daily-overview-other/")
+
+        self.assertEqual(response.status_code, 200)
+        row = response.context["athlete_rows"][0]
+        self.assertEqual(row["pending_count"], 0)
+        self.assertEqual(row["evaluated_count"], 2)
+
     def test_vital_switch_keeps_vitals_open_instead_of_info_quality(self):
         coach = get_user_model().objects.create_user(
             username="vital-switch-coach", password="secret", is_staff=True

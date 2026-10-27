@@ -809,8 +809,7 @@ def _flex_check_payload(check):
     rpe = getattr(check, "rpe", None)
     comment = (getattr(check, "comment", "") or "").strip()
 
-    status_none = getattr(AthleteDayCheck, "STATUS_NONE", "")
-    if (not status or status == status_none) and rpe is None and not comment:
+    if not check.has_evaluation:
         return None
 
     status_done = getattr(AthleteDayCheck, "STATUS_DONE_AS_PLANNED", "done_as_planned")
