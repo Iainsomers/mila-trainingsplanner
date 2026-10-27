@@ -5625,13 +5625,18 @@ def garmin_type_c_ayc_view(request):
                     if load.get("segment") == "WU":
                         load["segment"] = "CORE"
             part["watch_loads"] = watch_loads
-            merged_main = _watch_c_merge_same_distance_sequence(fields.get("main", ""), watch_loads)
-            if merged_main:
-                fields["main"] = merged_main
+            ordered_main = _watch_c_order_main_by_laps(
+                fields.get("main", ""), watch_loads, fields.get("cd", "")
+            )
+            main_text = ordered_main if ordered_main is not None else str(fields.get("main", ""))
+            merged_main = _watch_c_merge_same_distance_sequence(main_text, watch_loads)
+            final_main = merged_main or main_text
+            if final_main != str(fields.get("main", "")):
+                fields["main"] = final_main
                 part["training_fields"] = fields
                 description_parts = str(part.get("description") or "").split(" · ")
                 part["description"] = " · ".join(
-                    f"Main: {merged_main}" if text.startswith("Main:") else text
+                    f"Main: {final_main}" if text.startswith("Main:") else text
                     for text in description_parts
                 )
     return JsonResponse({
@@ -5640,6 +5645,147 @@ def garmin_type_c_ayc_view(request):
         "results": results,
         "model": "C",
     })
+
+
+def _watch_c_order_main_by_laps(main_text, watch_loads, cd_text=""):
+    """Align simple Watch C Main segments with measured lap order and counts."""
+    segments = [segment.strip() for segment in str(main_text or "").split("+")]
+    segment_pattern = re.compile(
+        r"^(?:(\d+)\s*[x×]\s*)?(\d+)\s*m\s+(Z[1-5](?:>Z[1-5])?)"
+        r"(?:\s+(\([^)]*\)))?(?:\s+(p\d+))?$",
+        re.IGNORECASE,
+    )
+    parsed = []
+    for text in segments:
+        match = segment_pattern.fullmatch(text)
+        if not match:
+            return None
+        parsed.append({
+            "count": int(match.group(1) or 1),
+            "original_count": int(match.group(1) or 1),
+            "distance": int(match.group(2)),
+            "zone": match.group(3).upper(),
+            "original_zone": match.group(3).upper(),
+            "pace": match.group(4) or "",
+            "recovery": match.group(5) or "",
+        })
+    def zone_numbers(zone_label):
+        return [int(value) for value in re.findall(r"Z([1-5])", zone_label)]
+
+    def load_matches(item, load, *, allow_zone_mismatch=False):
+        try:
+            distance_m = float(load.get("meters") or 0)
+            zone = int(load.get("zone") or 0)
+            seconds = float(load.get("seconds") or 0)
+        except (TypeError, ValueError, AttributeError):
+            return False
+        zones = zone_numbers(item["zone"])
+        if not zones:
+            return False
+        return (
+            (zone >= 2 or (allow_zone_mismatch and str(load.get("segment") or "").upper() == "CD"))
+            and seconds > 0
+            and (allow_zone_mismatch or min(zones) <= zone <= max(zones))
+            and abs(distance_m - item["distance"]) <= max(75, item["distance"] * 0.08)
+        )
+
+    changed = False
+    # A trailing easy lap may be classified as CD by the watch-load parser
+    # and also included in the AI's Main. Prefer the explicit CD classification.
+    if str(cd_text or "").strip():
+        retained = []
+        for item in parsed:
+            if zone_numbers(item["zone"]) != [1]:
+                retained.append(item)
+                continue
+            cd_matches = [
+                load for load in watch_loads or []
+                if str(load.get("segment") or "").upper() == "CD"
+                and load_matches(item, load, allow_zone_mismatch=True)
+            ]
+            if len(cd_matches) >= item["count"]:
+                changed = True
+            else:
+                retained.append(item)
+        parsed = retained
+    if not parsed:
+        return "" if changed else None
+
+    # If a single AI segment represents one distance/zone but the laps show
+    # multiple matching work reps, restore that measured repetition count.
+    for index, item in enumerate(parsed):
+        has_same_distance_sibling = any(
+            other["distance"] == item["distance"]
+            for other_index, other in enumerate(parsed)
+            if other_index != index
+        )
+        if has_same_distance_sibling:
+            continue
+        observed = sum(
+            1 for load in watch_loads or []
+            if str(load.get("segment") or "").upper() not in {"WU", "CD"}
+            and load_matches(item, load, allow_zone_mismatch=True)
+        )
+        if observed > item["count"]:
+            item["count"] = observed
+            changed = True
+
+    used_load_indexes = set()
+    for item in parsed:
+        item["first_lap"] = None
+        matches = [
+            index for index, load in enumerate(watch_loads or [])
+            if index not in used_load_indexes
+            and str(load.get("segment") or "").upper() not in {"WU", "CD"}
+            and load_matches(
+                item,
+                load,
+                allow_zone_mismatch=not any(
+                    other is not item and other["distance"] == item["distance"]
+                    for other in parsed
+                ),
+            )
+        ]
+        if len(matches) < item["count"]:
+            return None
+        selected = matches[:item["count"]]
+        used_load_indexes.update(selected)
+        item["first_lap"] = selected[0]
+        measured_zones = []
+        for index in selected:
+            try:
+                measured_zone = int((watch_loads[index] or {}).get("zone") or 0)
+            except (TypeError, ValueError, AttributeError):
+                measured_zone = 0
+            if measured_zone >= 2:
+                measured_zones.append(measured_zone)
+        if measured_zones:
+            zone_label = (
+                f"Z{min(measured_zones)}>Z{max(measured_zones)}"
+                if min(measured_zones) != max(measured_zones)
+                else f"Z{measured_zones[0]}"
+            )
+            if zone_label != item["zone"]:
+                item["zone"] = zone_label
+                changed = True
+
+    ordered = sorted(parsed, key=lambda item: item["first_lap"])
+    changed = changed or any(item is not parsed[index] for index, item in enumerate(ordered))
+    changed = changed or any(
+        item["count"] != item["original_count"] or item["zone"] != item["original_zone"]
+        for item in parsed
+    )
+    if not changed:
+        return None
+    formatted = []
+    for item in ordered:
+        prefix = f"{item['count']}×" if item["count"] > 1 else ""
+        formatted.append(
+            f"{prefix}{item['distance']} m {item['zone']}"
+            f"{(' ' + item['pace']) if item['pace'] else ''}"
+            f"{(' ' + item['recovery']) if item['recovery'] else ''}"
+        )
+    return " + ".join(formatted)
 
 
 def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
