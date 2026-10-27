@@ -5821,7 +5821,7 @@ def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
                 continue
             if (
                 str(load.get("segment") or "CORE").upper() not in {"WU", "CD"}
-                and zone >= 2
+                and 1 <= zone <= 6
                 and seconds > 0
                 and index > 0
                 and abs(distance - lap_distance) <= max(75, lap_distance * 0.12)
@@ -5844,12 +5844,14 @@ def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
                 for load_position, load in enumerate(watch_loads or [], 1):
                     try:
                         load_index = int(load.get("index") or load_position)
-                        zone = int(load.get("zone") or 0)
+                        distance = float(load.get("meters", load.get("distance_m")) or 0)
+                        seconds = float(load.get("seconds") or 0)
                     except (TypeError, ValueError, AttributeError):
                         continue
                     if (
                         previous_pair_end < load_index < first["index"]
-                        and zone == 1
+                        and seconds > 0
+                        and 0 < distance <= max(300, lap_distance * 0.6)
                         and str(load.get("segment") or "CORE").upper() not in {"WU", "CD"}
                     ):
                         easy_laps.append(load)
@@ -5866,8 +5868,10 @@ def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
         if pair_distance < 700 or any(abs(distance - pair_distance) > max(75, pair_distance * 0.08) for distance in paired_distances):
             return ""
         all_work = [item for pair in pairs for item in pair]
-        zones = sorted({item["zone"] for item in all_work})
-        zone_label = f"Z{zones[0]}" if len(zones) == 1 else f"Z{zones[0]}>Z{zones[-1]}"
+        # Type B's zone range is the training interpretation. Type A's lap
+        # pace classification can differ by one zone around boundaries and
+        # should not prevent this structural half-lap merge.
+        zone_label = match.group(3).upper()
         pace_label = _format_pace(
             sum(item["seconds"] for item in all_work),
             sum(item["meters"] for item in all_work),

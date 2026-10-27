@@ -3093,10 +3093,14 @@ class PolarPlanMismatchTests(TestCase):
         laps = []
         for _ in range(12):
             # Match type_a_watch_loads() output: ordered rows with `meters`,
-            # but no explicit lap index.
-            laps.append({"segment": "CORE", "zone": "2", "meters": 504, "seconds": 99})
+            # but no explicit lap index. Pace-zone labels around a boundary
+            # may disagree with Model B, including on a work lap or recovery.
+            work_zone = "1" if not laps else "2"
+            laps.append({
+                "segment": "CORE", "zone": work_zone, "meters": 504, "seconds": 99,
+            })
             laps.append({"segment": "CORE", "zone": "3", "meters": 510, "seconds": 99})
-            laps.append({"segment": "CORE", "zone": "1", "meters": 200, "seconds": 80})
+            laps.append({"segment": "CORE", "zone": "2", "meters": 200, "seconds": 80})
         recorded_meters = sum(load["meters"] for load in laps)
         with (
             patch("core.views.polar_raw.translate_model_b", return_value=translated),
