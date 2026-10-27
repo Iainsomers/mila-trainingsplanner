@@ -5789,7 +5789,7 @@ def _watch_c_order_main_by_laps(main_text, watch_loads, cd_text=""):
 
 
 def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
-    """Compact Watch C AI segments when they are one measured rep sequence."""
+    """Compact adjacent equal-distance Watch C segments into measured rep sets."""
     segments = [segment.strip() for segment in str(main_text or "").split("+")]
     if len(segments) < 2:
         return ""
@@ -5807,38 +5807,66 @@ def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
             "count": int(match.group(1) or 1),
             "distance": int(match.group(2)),
             "zone": match.group(3).upper(),
+            "original": segment,
         })
-    distances = {item["distance"] for item in parsed_segments}
-    if len(distances) != 1:
-        return ""
-    target_distance = next(iter(distances))
-    expected_count = sum(item["count"] for item in parsed_segments)
-    matching_loads = []
-    for load in watch_loads or []:
+
+    loads = []
+    for index, load in enumerate(watch_loads or []):
         try:
             distance_m = float(load.get("meters") or 0)
             zone = int(load.get("zone") or 0)
             seconds = float(load.get("seconds") or 0)
         except (TypeError, ValueError, AttributeError):
             continue
-        if (
-            zone >= 2
-            and seconds > 0
-            and abs(distance_m - target_distance) <= max(50, target_distance * 0.12)
-        ):
-            matching_loads.append({"meters": distance_m, "seconds": seconds, "zone": zone})
-    if len(matching_loads) != expected_count:
-        return ""
+        if seconds > 0 and str(load.get("segment") or "CORE").upper() not in {"WU", "CD"}:
+            loads.append({"index": index, "meters": distance_m, "seconds": seconds, "zone": zone})
 
-    zones = sorted({item["zone"] for item in matching_loads})
-    if not zones:
-        return ""
-    zone_label = f"Z{zones[0]}" if zones[0] == zones[-1] else f"Z{zones[0]}>Z{zones[-1]}"
-    total_distance = sum(item["meters"] for item in matching_loads)
-    total_seconds = sum(item["seconds"] for item in matching_loads)
-    pace_label = _format_pace(total_seconds, total_distance).replace("/km", "")
-    pace_suffix = f" ({pace_label})" if pace_label else ""
-    return f"{expected_count}×{target_distance} m {zone_label}{pace_suffix}"
+    def merge_run(run):
+        target_distance = run[0]["distance"]
+        expected_count = sum(item["count"] for item in run)
+        allowed_zones = set()
+        for item in run:
+            zone_numbers = [int(number) for number in re.findall(r"\d", item["zone"])]
+            if zone_numbers:
+                allowed_zones.update(range(min(zone_numbers), max(zone_numbers) + 1))
+        matching = [
+            item for item in loads
+            if item["zone"] in allowed_zones
+            and abs(item["meters"] - target_distance) <= max(25, target_distance * 0.12)
+        ]
+        if len(matching) != expected_count:
+            return None
+
+        zones = sorted({item["zone"] for item in matching})
+        if not zones:
+            return None
+        zone_label = f"Z{zones[0]}" if zones[0] == zones[-1] else f"Z{zones[0]}>Z{zones[-1]}"
+        total_distance = sum(item["meters"] for item in matching)
+        total_seconds = sum(item["seconds"] for item in matching)
+        pace_label = _format_pace(total_seconds, total_distance).replace("/km", "")
+        pace_suffix = f" ({pace_label})" if pace_label else ""
+
+        return f"{expected_count}×{target_distance} m {zone_label}{pace_suffix}"
+
+    output = []
+    changed = False
+    cursor = 0
+    while cursor < len(parsed_segments):
+        end = cursor + 1
+        while end < len(parsed_segments) and parsed_segments[end]["distance"] == parsed_segments[cursor]["distance"]:
+            end += 1
+        run = parsed_segments[cursor:end]
+        if len(run) > 1:
+            merged = merge_run(run)
+            if merged:
+                output.append(merged)
+                changed = True
+            else:
+                output.extend(item["original"] for item in run)
+        else:
+            output.append(run[0]["original"])
+        cursor = end
+    return " + ".join(output) if changed else ""
 
 
 @login_required

@@ -3113,8 +3113,9 @@ class PolarPlanMismatchTests(TestCase):
         part = response.json()["results"][0]["parts"][0]
         main = part["training_fields"]["main"]
         self.assertTrue(main.startswith("4×1200 m Z2>Z3"), main)
-        self.assertIn("150 m Z5 (2:45)", main)
-        self.assertIn("150 m Z5 (2:52)", main)
+        self.assertIn("2×150 m Z5 (2:48)", main)
+        self.assertNotIn("150 m Z5 (2:45)", main)
+        self.assertNotIn("150 m Z5 (2:52)", main)
         self.assertNotIn("1600 m Z1", main)
         self.assertEqual(part["description"], f"WU: none · Main: {main} · CD: 1700 m Z1")
 
