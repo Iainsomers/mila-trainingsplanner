@@ -2384,17 +2384,27 @@ def _watch_actual_time_label(actual_loads, seg=None):
         # followed by 4x150 m) in the same CORE bucket. Keep each pill's
         # timing tied to laps near that segment's own rep distance; a broad
         # half-distance cutoff mixed the short sets and recovery laps together.
-        tolerance = max(25.0, target_distance * 0.15)
+        tolerance = max(20.0, target_distance * 0.25)
+        expected_zones = {str(zone) for zone in _segment_zone_labels(seg)}
         work_loads = []
         for load in actual_loads:
             try:
                 meters = float(load.get("meters") or 0)
             except (TypeError, ValueError, AttributeError):
                 continue
-            if meters > 0 and abs(meters - target_distance) <= tolerance:
+            zone = str(load.get("zone") or "").strip()
+            if (
+                meters > 0
+                and abs(meters - target_distance) <= tolerance
+                and (not expected_zones or not zone or zone in expected_zones)
+            ):
                 work_loads.append(load)
         if work_loads:
-            measured = work_loads
+            # Different short-distance Main sets can share CORE and even a
+            # zone. Their chronology and planned rep count identify which
+            # laps belong to this pill; ignore later sets and long recovery
+            # laps without affecting the underlying Watch totals.
+            measured = work_loads[:reps]
     duration_values = []
     pace_values = []
     for load in measured:

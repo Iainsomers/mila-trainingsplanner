@@ -8434,12 +8434,34 @@ class TrainingSegmentLabelTests(TestCase):
 
     def test_watch_short_rep_time_labels_match_each_segments_distance(self):
         loads = [
-            {"meters": 190, "seconds": 38.463},
-            {"meters": 40, "seconds": 45.663},
-            {"meters": 200, "seconds": 41.864},
-            {"meters": 150, "seconds": 25.760},
-            {"meters": 160, "seconds": 26.455},
-            {"meters": 30, "seconds": 44.411},
+            {"meters": 190, "seconds": 38.463, "zone": "5"},
+            {"meters": 40, "seconds": 45.663, "zone": "1"},
+            {"meters": 250, "seconds": 44.631, "zone": "5"},
+            {"meters": 30, "seconds": 44.411, "zone": "1"},
+            {"meters": 200, "seconds": 41.864, "zone": "5"},
+            {"meters": 30, "seconds": 44.629, "zone": "1"},
+            {"meters": 190, "seconds": 41.614, "zone": "4"},
+            {"meters": 30, "seconds": 45.027, "zone": "1"},
+            {"meters": 200, "seconds": 40.956, "zone": "5"},
+            {"meters": 30, "seconds": 119.496, "zone": "1"},
+            {"meters": 190, "seconds": 41.825, "zone": "4"},
+            {"meters": 40, "seconds": 49.550, "zone": "1"},
+            {"meters": 200, "seconds": 43.900, "zone": "4"},
+            {"meters": 30, "seconds": 44.905, "zone": "1"},
+            {"meters": 200, "seconds": 41.867, "zone": "5"},
+            {"meters": 30, "seconds": 89.702, "zone": "1"},
+            {"meters": 200, "seconds": 39.784, "zone": "5"},
+            {"meters": 40, "seconds": 45.120, "zone": "1"},
+            {"meters": 190, "seconds": 43.002, "zone": "4"},
+            {"meters": 50, "seconds": 142.302, "zone": "1"},
+            {"meters": 230, "seconds": 382.1, "zone": "1"},
+            {"meters": 150, "seconds": 25.760, "zone": "5"},
+            {"meters": 220, "seconds": 172.7, "zone": "1"},
+            {"meters": 160, "seconds": 26.455, "zone": "5"},
+            {"meters": 230, "seconds": 382.1, "zone": "1"},
+            {"meters": 150, "seconds": 25.100, "zone": "5"},
+            {"meters": 220, "seconds": 174.4, "zone": "1"},
+            {"meters": 140, "seconds": 25.700, "zone": "5"},
         ]
         segment_200 = TrainingSegment(
             type="CORE", text="10x200m z4>z5 p59", distance_m=200,
@@ -8453,9 +8475,10 @@ class TrainingSegmentLabelTests(TestCase):
         label_200 = _watch_actual_time_label(loads, segment_200)
         label_150 = _watch_actual_time_label(loads, segment_150)
 
-        self.assertIn("3:29-->3:22 min/km", label_200)
-        self.assertNotIn("2:52", label_200)
-        self.assertIn("2:52-->2:45 min/km", label_150)
+        self.assertIn("3:46-->2:59 min/km", label_200)
+        self.assertNotIn("27:41", label_200)
+        self.assertNotIn("6:22", label_200)
+        self.assertIn("3:04-->2:45 min/km", label_150)
         self.assertNotIn("3:22", label_150)
 
 
