@@ -5630,14 +5630,14 @@ def garmin_type_c_ayc_view(request):
             # a watch can label every lap Z1 when the athlete has no usable pace
             # zones, while the 500 m + 500 m + recovery structure is still clear.
             raw_laps = (session.get("laps") or {}).get("laps") or []
-            raw_merged_main = _watch_c_merge_half_laps_from_raw(fields.get("main", ""), raw_laps)
-            if not raw_merged_main:
-                # The translated Garmin C result is the exact lap list shown in
-                # the popup. Depending on the FIT source, it can be more complete
-                # than the normalized session copy and uses HH:MM:SS.mmm strings.
-                raw_merged_main = _watch_c_merge_half_laps_from_raw(
-                    fields.get("main", ""), part.get("manual") or []
-                )
+            main_before = fields.get("main", "")
+            source_candidate = _watch_c_merge_half_laps_from_raw(main_before, raw_laps)
+            # The translated Garmin C result is the exact lap list shown in the
+            # popup and uses HH:MM:SS.mmm strings.
+            display_candidate = _watch_c_merge_half_laps_from_raw(
+                main_before, part.get("manual") or []
+            )
+            raw_merged_main = source_candidate or display_candidate
             if raw_merged_main:
                 final_main = raw_merged_main
             else:
@@ -5655,6 +5655,16 @@ def garmin_type_c_ayc_view(request):
                     f"Main: {final_main}" if text.startswith("Main:") else text
                     for text in description_parts
                 )
+            if request.GET.get("debug") == "1" and (request.user.is_staff or request.user.is_superuser):
+                part["_watch_c_debug"] = {
+                    "version": "half-lap-v3",
+                    "main_before": main_before,
+                    "source_lap_count": len(raw_laps),
+                    "display_lap_count": len(part.get("manual") or []),
+                    "source_candidate": source_candidate,
+                    "display_candidate": display_candidate,
+                    "final_main": final_main,
+                }
     return JsonResponse({
         "ok": True,
         "message": "" if results else "No Garmin FIT activities found for this day.",
