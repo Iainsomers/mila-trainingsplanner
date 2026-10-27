@@ -51,6 +51,7 @@ from .common import (
     _is_coach_user,
     _live_shared_trainer_plans_for_request,
 )
+from core.watch_processing import save_processed_main_reps
 
 from core.views.slots import (
     _expand_repeated_core_set_parts,
@@ -876,12 +877,13 @@ class _VirtualSegment:
 
 
 class _VirtualSlot:
-    def __init__(self, segments, plan_id=None, source="planned", watch_loads=None, slot_id=None):
+    def __init__(self, segments, plan_id=None, source="planned", watch_loads=None, watch_main_reps=None, slot_id=None):
         self.segments = _VirtualSegmentList(segments)
         self.plan_id = plan_id
         self.id = slot_id
         self.source = source or "planned"
         self.watch_loads = watch_loads if isinstance(watch_loads, list) else []
+        self.watch_main_reps = watch_main_reps if isinstance(watch_main_reps, list) else []
 
     def core_text(self):
         return " // ".join(seg.text for seg in self.segments.all() if seg.type == "CORE" and seg.text)
@@ -928,6 +930,7 @@ def _clone_slot_for_display(slot):
         plan_id=getattr(slot, "plan_id", None),
         source=getattr(slot, "source", "planned"),
         watch_loads=getattr(slot, "watch_loads", []),
+        watch_main_reps=getattr(slot, "watch_main_reps", []),
         slot_id=getattr(slot, "id", None),
     )
     for segment in segments:
@@ -3170,6 +3173,8 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
         order += 1
 
+    save_processed_main_reps(override_slot)
+
 
 @login_required
 def athlete_year_calendar_view(request):
@@ -3935,6 +3940,7 @@ def athlete_year_calendar_view(request):
                 "slot_index": 1,
                 "plan_id": slot1.plan_id if slot1 and getattr(slot1, "plan_id", None) else (plan1.id if plan1 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot1),
+                "watch_main_reps_json": json.dumps(getattr(slot1, "watch_main_reps", []) or [], separators=(",", ":")),
                 "session_km": _ayc_slot_session_km(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
                 "session_zones": _ayc_slot_session_zones(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
                 "whereabouts": whereabouts_dots.get((selected_athlete.id, day), []) if selected_athlete else [],
@@ -3947,6 +3953,7 @@ def athlete_year_calendar_view(request):
                 "slot_index": 2,
                 "plan_id": slot2.plan_id if slot2 and getattr(slot2, "plan_id", None) else (plan2.id if plan2 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot2),
+                "watch_main_reps_json": json.dumps(getattr(slot2, "watch_main_reps", []) or [], separators=(",", ":")),
                 "session_km": _ayc_slot_session_km(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
                 "session_zones": _ayc_slot_session_zones(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
                 "whereabouts": whereabouts_dots.get((selected_athlete.id, day), []) if selected_athlete else [],

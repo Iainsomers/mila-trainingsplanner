@@ -24,6 +24,7 @@ from core.models import (
 )
 from core.parser import parse_segment_text
 from core.training_text import normalize_watch_main_text, split_main_segments
+from core.watch_processing import save_processed_main_reps
 from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
 
 from .common import (
@@ -1108,6 +1109,8 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
         seg.parsed_at = now
         seg.save()
 
+    save_processed_main_reps(slot)
+
     _bump_stats_version()
 
     cell_template = "core/partials/trainer_planning_cell.html" if _is_trainer_planning_plan(selected_plan) else "core/partials/calendar_cell.html"
@@ -1987,6 +1990,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if cd_seg:
             cd_seg.delete()
 
+    save_processed_main_reps(slot)
     sync_athlete_auto_wucd_overrides(slot, selected_plan, core_text)
     _bump_stats_version()
 

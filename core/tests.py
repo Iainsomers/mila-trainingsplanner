@@ -8416,6 +8416,39 @@ class TrainingSegmentLabelTests(TestCase):
         self.assertEqual(weekly["zones"]["2"]["distance_m"], 800)
         self.assertEqual(weekly["zones"]["2"]["duration_s"], 200)
 
+
+class WatchProcessedMainRepTests(TestCase):
+    def test_processed_main_reps_are_saved_separately_and_skip_recovery_laps(self):
+        from core.watch_processing import save_processed_main_reps
+
+        coach = get_user_model().objects.create_user(username="watch-rep-layer", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Rep Layer Athlete", birth_year=2000, gender="X")
+        plan = TrainingPlan.objects.create(owner=coach, name="Rep layer plan")
+        raw_loads = [
+            {"segment": "CORE", "zone": "4", "meters": 202, "seconds": 40.5},
+            {"segment": "CORE", "zone": "1", "meters": 45, "seconds": 30},
+            {"segment": "CORE", "zone": "4", "meters": 198, "seconds": 41},
+            {"segment": "CORE", "zone": "5", "meters": 151, "seconds": 25.5},
+            {"segment": "CORE", "zone": "1", "meters": 40, "seconds": 28},
+            {"segment": "CORE", "zone": "5", "meters": 149, "seconds": 24.8},
+        ]
+        slot = TrainingSlot.objects.create(
+            plan=plan, athlete=athlete, date=date(2026, 10, 27), slot_index=1,
+            source="watch_c", watch_loads=raw_loads,
+        )
+        slot.segments.create(type="CORE", text="2*200m z4", order=1, reps=2, distance_m=200, norm_distance_m=400, zone="4")
+        slot.segments.create(type="CORE", text="2*150m z5", order=2, reps=2, distance_m=150, norm_distance_m=300, zone="5")
+        km_before = _ayc_slot_session_km(slot, athlete)
+
+        processed = save_processed_main_reps(slot)
+        slot.refresh_from_db()
+
+        self.assertEqual([rep["distance_m"] for rep in processed], [202, 198, 151, 149])
+        self.assertEqual([rep["rep"] for rep in processed], [1, 2, 3, 4])
+        self.assertEqual(slot.watch_loads, raw_loads)
+        self.assertEqual(slot.watch_main_reps, processed)
+        self.assertEqual(_ayc_slot_session_km(slot, athlete), km_before)
+
     def test_ayc_watch_source_indicator_appears_without_session_totals(self):
         for source, label in (
             ("watch_a", "Polar A"),
@@ -8437,7 +8470,7 @@ class TrainingSegmentLabelTests(TestCase):
                         "show_session_zones": False,
                     },
                 )
-                self.assertIn(f'aria-label="Imported from {label}"', html)
+                self.assertIn(f'aria-label="View measured Main reps from {label}"', html)
                 self.assertIn("watch-source-indicator", html)
 
         planned_html = render_to_string(

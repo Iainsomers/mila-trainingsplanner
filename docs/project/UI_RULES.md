@@ -40,7 +40,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Mobiele AYC
 
-- In de AYC-trainingsevaluatie heten de horlogeknoppen `Polar A`, `Polar B` en `Garmin C`. Een compacte klokindicator rechtsboven in een AM/PM-cel geeft aan wanneer de training uit een van deze modellen is overgenomen; toon de indicator ook als de sessietotalen uitstaan.
+- In de AYC-trainingsevaluatie heten de horlogeknoppen `Polar A`, `Polar B` en `Garmin C`. Een compacte, aanklikbare klokindicator rechtsboven in een AM/PM-cel markeert een overgenomen horlogetraining en opent een mobiel-passende popup met de verwerkte Main-reps: afstand, tijd en min/km. Toon de indicator ook als de sessietotalen uitstaan.
 - Een bruikbare Type A-omschrijving toont de acties `Use AM` en `Use PM` rechts naast de omschrijving; op smalle schermen mogen deze knoppen onder de tekst afbreken.
 - Toon één week tegelijk.
 - Houd weeknavigatie, totaal en weektype bovenaan goed zichtbaar.

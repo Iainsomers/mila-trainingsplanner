@@ -7,9 +7,9 @@
         {% for item in cell.session_zones %}<span class="session-zone-pill session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}
       </span>
     {% endif %}
-    {% if cell.slot.source == "watch_a" %}<span class="watch-source-indicator" title="Imported from Polar A" aria-label="Imported from Polar A"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.25V8l2.5 1.5"/></svg></span>{% endif %}
-    {% if cell.slot.source == "watch_b" %}<span class="watch-source-indicator" title="Imported from Polar B" aria-label="Imported from Polar B"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.25V8l2.5 1.5"/></svg></span>{% endif %}
-    {% if cell.slot.source == "watch_c" %}<span class="watch-source-indicator" title="Imported from Garmin C" aria-label="Imported from Garmin C"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.25V8l2.5 1.5"/></svg></span>{% endif %}
+    {% if cell.slot.source == "watch_a" %}<button type="button" class="watch-source-indicator" data-watch-model="Polar A" data-main-reps="{{ cell.watch_main_reps_json|default:'[]'|escape }}" title="View measured Main reps from Polar A" aria-label="View measured Main reps from Polar A"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.25V8l2.5 1.5"/></svg></button>{% endif %}
+    {% if cell.slot.source == "watch_b" %}<button type="button" class="watch-source-indicator" data-watch-model="Polar B" data-main-reps="{{ cell.watch_main_reps_json|default:'[]'|escape }}" title="View measured Main reps from Polar B" aria-label="View measured Main reps from Polar B"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.25V8l2.5 1.5"/></svg></button>{% endif %}
+    {% if cell.slot.source == "watch_c" %}<button type="button" class="watch-source-indicator" data-watch-model="Garmin C" data-main-reps="{{ cell.watch_main_reps_json|default:'[]'|escape }}" title="View measured Main reps from Garmin C" aria-label="View measured Main reps from Garmin C"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.25V8l2.5 1.5"/></svg></button>{% endif %}
   </div>
 {% endif %}
 {% if cell.slot.text %}

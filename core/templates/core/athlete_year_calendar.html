@@ -189,9 +189,16 @@
     justify-content: center;
     width: 13px;
     height: 13px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
     color: #52606d;
     flex: 0 0 auto;
   }
+
+  .watch-source-indicator:hover { color: #0d6efd; }
+  .watch-source-indicator:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; border-radius: 3px; }
 
   .watch-source-indicator svg {
     display: block;
@@ -1977,6 +1984,16 @@
   </div>
 </div>
 
+<div id="watchMainRepsPopup" role="dialog" aria-modal="true" aria-labelledby="watchMainRepsTitle" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10001; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; width:520px; max-width:100%; max-height:90vh; overflow:auto; border-radius:8px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h5 id="watchMainRepsTitle" class="mb-0">Measured Main reps</h5>
+      <button type="button" id="watchMainRepsClose" class="btn btn-sm btn-outline-secondary" aria-label="Close">×</button>
+    </div>
+    <div id="watchMainRepsBody" class="small"></div>
+  </div>
+</div>
+
 <script>
 (function() {
   var activeDate = "";
@@ -2797,6 +2814,15 @@
   });
 
   document.addEventListener("click", function(event) {
+    var watchRepButton = event.target.closest(".watch-source-indicator");
+    if (watchRepButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      showStoredWatchMainReps(watchRepButton);
+      return;
+    }
+
     var strengthLink = event.target.closest("[data-strength-href]");
     if (strengthLink) {
       event.preventDefault();
@@ -2817,6 +2843,75 @@
 
     openSlotModal(slotBox);
   }, true);
+
+  function showStoredWatchMainReps(button) {
+    var popup = document.getElementById("watchMainRepsPopup");
+    var title = document.getElementById("watchMainRepsTitle");
+    var body = document.getElementById("watchMainRepsBody");
+    title.textContent = "Measured Main reps — " + (button.getAttribute("data-watch-model") || "Watch");
+    body.replaceChildren();
+    var reps = [];
+    try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
+    if (!Array.isArray(reps) || !reps.length) {
+      var empty = document.createElement("div");
+      empty.className = "text-muted";
+      empty.textContent = "No processed Main rep data is available for this training.";
+      body.appendChild(empty);
+    } else {
+      var table = document.createElement("table");
+      table.className = "table table-sm table-striped mb-0";
+      var thead = document.createElement("thead");
+      var header = document.createElement("tr");
+      ["Rep", "Distance", "Time", "min/km"].forEach(function(label) {
+        var th = document.createElement("th"); th.scope = "col"; th.textContent = label; header.appendChild(th);
+      });
+      thead.appendChild(header); table.appendChild(thead);
+      var tbody = document.createElement("tbody");
+      reps.forEach(function(rep, index) {
+        var tr = document.createElement("tr");
+        var distance = Number(rep.distance_m);
+        var seconds = Number(rep.seconds);
+        var pace = Number(rep.pace_seconds_per_km);
+        var values = [
+          String(rep.rep || index + 1),
+          Number.isFinite(distance) ? Math.round(distance) + " m" : "—",
+          formatWatchDuration(seconds),
+          formatWatchPace(pace)
+        ];
+        values.forEach(function(value) { var td = document.createElement("td"); td.textContent = value; tr.appendChild(td); });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody); body.appendChild(table);
+    }
+    popup.style.display = "flex";
+    document.getElementById("watchMainRepsClose").focus();
+  }
+
+  function formatWatchDuration(value) {
+    if (!Number.isFinite(value) || value <= 0) return "—";
+    var tenths = Math.round(value * 10);
+    var seconds = Math.floor(tenths / 10);
+    var tenth = tenths % 10;
+    var minutes = Math.floor(seconds / 60);
+    return (minutes ? minutes + ":" + String(seconds % 60).padStart(2, "0") : String(seconds)) + "." + tenth;
+  }
+
+  function formatWatchPace(value) {
+    if (!Number.isFinite(value) || value <= 0) return "—";
+    var seconds = Math.round(value);
+    return Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+  }
+
+  document.body.appendChild(document.getElementById("watchMainRepsPopup"));
+  document.getElementById("watchMainRepsClose").addEventListener("click", function() {
+    document.getElementById("watchMainRepsPopup").style.display = "none";
+  });
+  document.getElementById("watchMainRepsPopup").addEventListener("click", function(event) {
+    if (event.target === this) this.style.display = "none";
+  });
+  document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") document.getElementById("watchMainRepsPopup").style.display = "none";
+  });
 
   document.addEventListener("click", function(event) {
     var resetButton = event.target.closest('button[hx-post*="slot-reset-override"]');
