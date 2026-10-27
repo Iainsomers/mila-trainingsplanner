@@ -16,7 +16,7 @@ Bijgewerkt: 27 oktober 2026.
 
 ## Belangrijk werkend gedrag
 
-- Garmin FIT uploads zijn beschikbaar voor coaches en geselecteerde atleten waarbij `Allow Garmin FIT uploads` is aangezet. FIT- en Garmin-zipuploads worden per atleet opgeslagen. Watch C in de AYC leest de opgeslagen laps voor de geselecteerde atleet en hergebruikt Watch B's lapherkenning en optionele AI-structuurherkenning; alleen een expliciete Use AM/PM-keuze wijzigt de planning.
+- Garmin FIT uploads zijn beschikbaar voor coaches en geselecteerde atleten waarbij `Allow Garmin FIT uploads` is aangezet. FIT- en Garmin-zipuploads worden per atleet opgeslagen. Watch C in de AYC leest de opgeslagen laps voor de geselecteerde atleet en hergebruikt Watch B's lapherkenning en optionele AI-structuurherkenning; de opgeslagen lapsegmenten volgen de WU/Main/CD-velden van die herkenning. Alleen een expliciete Use AM/PM-keuze wijzigt de planning.
 
 - In de AYC-trainingsevaluatie toont `Watch A` dezelfde Type A Polar-uitvoer als Polar Integration voor de geselecteerde atleet en datum. Bestaande opgeslagen horlogeresultaten blijven zichtbaar en kunnen nog worden verwijderd.
 - In de AYC-trainingsevaluatie staan `Watch A`, `Watch B` en `Watch C`. Watch C gebruikt per atleet de lokaal opgeslagen Garmin FIT-laps van de gekozen datum; de Watch B-matcher/AI wordt hergebruikt en Garmin-bestanden van andere atleten zijn niet zichtbaar via de endpoint.

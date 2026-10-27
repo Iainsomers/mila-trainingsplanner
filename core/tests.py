@@ -2921,6 +2921,42 @@ class PolarPlanMismatchTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
+    def test_ayc_watch_c_does_not_save_warmup_loads_when_model_b_says_none(self):
+        from core.models import GarminActivity
+
+        coach = get_user_model().objects.create_user(
+            username="garmin-watch-c-no-wu", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=coach, name="No Warmup Athlete", birth_year=1980, gender="M")
+        activity_date = date(2026, 10, 22)
+        GarminActivity.objects.create(
+            athlete=athlete,
+            activity_start=timezone.make_aware(datetime.combine(activity_date, time(9))),
+            original_filename="no-warmup.fit",
+            file_hash="c" * 64,
+            raw_file=b"fit",
+            parsed_data={
+                "session": {"total_distance": 2000, "total_elapsed_time": 900},
+                "laps": [{"distance": 1000, "elapsed_time": 500}, {"distance": 1000, "elapsed_time": 400}],
+            },
+        )
+        self.client.force_login(coach)
+        translated = [{"parts": [{"training_fields": {"wu": "", "main": "2x1000m Z2", "cd": ""}}]}]
+        inferred_loads = [
+            {"segment": "WU", "zone": "1", "meters": 1000, "seconds": 500},
+            {"segment": "CORE", "zone": "2", "meters": 1000, "seconds": 400},
+        ]
+        with (
+            patch("core.views.polar_raw.translate_model_b", return_value=translated),
+            patch("core.views.polar_raw.type_a_watch_loads", return_value=inferred_loads),
+        ):
+            response = self.client.get(
+                f"/integrations/garmin/type-c-ayc/?athlete={athlete.id}&date={activity_date.isoformat()}"
+            )
+        self.assertEqual(response.status_code, 200)
+        saved_loads = response.json()["results"][0]["parts"][0]["watch_loads"]
+        self.assertEqual([load["segment"] for load in saved_loads], ["CORE", "CORE"])
+
 
 class TrainerPlanningListTests(TestCase):
     def test_plan_name_shows_owner_name_in_small_muted_text(self):

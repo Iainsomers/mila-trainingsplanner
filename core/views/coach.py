@@ -5614,7 +5614,17 @@ def garmin_type_c_ayc_view(request):
     results = translate_model_b(sessions, 5, athlete)
     for session, result in zip(session_exercises, results):
         for part in result.get("parts") or []:
-            part["watch_loads"] = type_a_watch_loads(session, athlete)
+            watch_loads = type_a_watch_loads(session, athlete)
+            fields = part.get("training_fields") if isinstance(part.get("training_fields"), dict) else {}
+            # Watch B's text recognizer and Type A's load classifier use
+            # different WU heuristics. For Watch C, the recognized training
+            # fields are authoritative: if it says "WU: none", do not retain
+            # an independently inferred WU segment in the saved lap loads.
+            if not str(fields.get("wu") or "").strip():
+                for load in watch_loads:
+                    if load.get("segment") == "WU":
+                        load["segment"] = "CORE"
+            part["watch_loads"] = watch_loads
     return JsonResponse({
         "ok": True,
         "message": "" if results else "No Garmin FIT activities found for this day.",
