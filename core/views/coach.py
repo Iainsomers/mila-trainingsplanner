@@ -5625,12 +5625,21 @@ def garmin_type_c_ayc_view(request):
                     if load.get("segment") == "WU":
                         load["segment"] = "CORE"
             part["watch_loads"] = watch_loads
-            ordered_main = _watch_c_order_main_by_laps(
-                fields.get("main", ""), watch_loads, fields.get("cd", "")
-            )
-            main_text = ordered_main if ordered_main is not None else str(fields.get("main", ""))
-            merged_main = _watch_c_merge_same_distance_sequence(main_text, watch_loads)
-            final_main = merged_main or main_text
+            # Detect half-lap recording directly from the measured Garmin/Coros
+            # laps. This deliberately runs before the zone-based ordering layer:
+            # a watch can label every lap Z1 when the athlete has no usable pace
+            # zones, while the 500 m + 500 m + recovery structure is still clear.
+            raw_laps = (session.get("laps") or {}).get("laps") or []
+            raw_merged_main = _watch_c_merge_half_laps_from_raw(fields.get("main", ""), raw_laps)
+            if raw_merged_main:
+                final_main = raw_merged_main
+            else:
+                ordered_main = _watch_c_order_main_by_laps(
+                    fields.get("main", ""), watch_loads, fields.get("cd", "")
+                )
+                main_text = ordered_main if ordered_main is not None else str(fields.get("main", ""))
+                merged_main = _watch_c_merge_same_distance_sequence(main_text, watch_loads)
+                final_main = merged_main or main_text
             if final_main != str(fields.get("main", "")):
                 fields["main"] = final_main
                 part["training_fields"] = fields
@@ -5645,6 +5654,72 @@ def garmin_type_c_ayc_view(request):
         "results": results,
         "model": "C",
     })
+
+
+def _watch_c_merge_half_laps_from_raw(main_text, raw_laps):
+    """Merge a measured half-lap pattern without relying on pace-zone labels."""
+    pattern = re.compile(
+        r"^(\d+)\s*[x×]\s*(\d+)\s*m\s+(Z[1-5](?:>Z[1-5])?)"
+        r"(?:\s+\([^)]*\))?(?:\s+p\d+)?$",
+        re.IGNORECASE,
+    )
+    match = pattern.fullmatch(str(main_text or "").strip())
+    if not match:
+        return ""
+    expected_count = int(match.group(1))
+    half_distance = int(match.group(2))
+    if expected_count < 6 or expected_count % 2 or not 350 <= half_distance <= 800:
+        return ""
+
+    rows = []
+    for position, lap in enumerate(raw_laps or [], 1):
+        try:
+            distance = float(lap.get("distanceMeters", lap.get("distance")) or 0)
+            duration_ms = float(lap.get("durationMillis") or 0)
+            seconds = duration_ms / 1000.0 if duration_ms else float(
+                lap.get("elapsed_time") or lap.get("timer_time") or 0
+            )
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if distance > 0 and seconds > 0:
+            rows.append({"index": position, "meters": distance, "seconds": seconds})
+
+    tolerance = max(75, half_distance * 0.12)
+    work = [row for row in rows if abs(row["meters"] - half_distance) <= tolerance]
+    if len(work) != expected_count:
+        return ""
+
+    pairs = []
+    recoveries = []
+    for offset in range(0, len(work), 2):
+        first, second = work[offset:offset + 2]
+        if second["index"] != first["index"] + 1:
+            return ""
+        if pairs:
+            between = [
+                row for row in rows
+                if pairs[-1][1]["index"] < row["index"] < first["index"]
+            ]
+            if not between or any(row["meters"] > max(300, half_distance * 0.6) for row in between):
+                return ""
+            recoveries.append(sum(row["seconds"] for row in between))
+        pairs.append((first, second))
+
+    if len(recoveries) < max(2, len(pairs) - 2):
+        return ""
+    pair_distances = [first["meters"] + second["meters"] for first, second in pairs]
+    full_distance = int(math.floor((sum(pair_distances) / len(pair_distances)) / 50 + 0.5) * 50)
+    if full_distance < 700 or any(
+        abs(distance - full_distance) > max(75, full_distance * 0.08)
+        for distance in pair_distances
+    ):
+        return ""
+
+    work_seconds = sum(row["seconds"] for pair in pairs for row in pair)
+    work_meters = sum(pair_distances)
+    pace_label = _format_pace(work_seconds, work_meters).replace("/km", "")
+    recovery_label = int(math.floor(sum(recoveries) / len(recoveries) + 0.5))
+    return f"{len(pairs)}×{full_distance} m {match.group(3).upper()} ({pace_label}) p{recovery_label}"
 
 
 def _watch_c_order_main_by_laps(main_text, watch_loads, cd_text=""):

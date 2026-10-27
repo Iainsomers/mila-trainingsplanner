@@ -3116,6 +3116,81 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual(part["description"], "WU: none · Main: 12×1000 m Z2>Z3 (3:15) p80 · CD: none")
         self.assertEqual(sum(load.get("meters", load.get("distance_m")) for load in part["watch_loads"]), recorded_meters)
 
+    def test_ayc_watch_c_combines_realistic_coros_half_laps_without_zone_labels(self):
+        from core.models import GarminActivity
+
+        coach = get_user_model().objects.create_user(
+            username="garmin-watch-c-coros-half-laps", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=coach, name="Coros Half Lap Athlete", birth_year=1980, gender="M")
+        activity_date = date(2026, 10, 27)
+        distances = [
+            79.33, 157.24, 66.29,
+            503.76, 511.88, 210.61,
+            508.70, 511.55, 197.56,
+            508.20, 510.33, 196.24,
+            508.49, 511.08, 216.19,
+            507.34, 510.33, 198.32,
+            505.12, 515.80, 198.06,
+            513.72, 509.24, 203.01,
+            510.51, 509.99, 250.81,
+            503.36, 508.46, 194.50,
+            511.67, 504.06, 200.15,
+            509.53, 505.20, 198.02,
+            504.80, 504.96, 60.66,
+        ]
+        elapsed = [
+            66.4, 88.44, 98.1,
+            99.65, 99.67, 80.33,
+            101.23, 97.47, 85.72,
+            102.07, 97.73, 88.19,
+            98.94, 97.87, 225.73,
+            99.29, 95.97, 82.72,
+            98.52, 99.10, 95.74,
+            100.10, 97.80, 96.01,
+            98.80, 97.90, 221.73,
+            99.20, 97.60, 85.80,
+            98.10, 97.20, 96.63,
+            99.00, 96.80, 87.98,
+            98.70, 97.30, 60.0,
+        ]
+        GarminActivity.objects.create(
+            athlete=athlete,
+            activity_start=timezone.make_aware(datetime.combine(activity_date, time(10))),
+            original_filename="coros-half-laps.fit",
+            file_hash="h" * 64,
+            raw_file=b"fit",
+            parsed_data={
+                "session": {"total_distance": sum(distances), "total_elapsed_time": sum(elapsed)},
+                "laps": [
+                    {"distance": distance_m, "elapsed_time": seconds}
+                    for distance_m, seconds in zip(distances, elapsed)
+                ],
+            },
+        )
+        self.client.force_login(coach)
+        old_main = "24×500 m Z2>Z3 (3:14)"
+        translated = [{"parts": [{
+            "description": f"WU: none · Main: {old_main} · CD: none",
+            "training_fields": {"wu": "", "main": old_main, "cd": ""},
+        }]}]
+        all_zone_one_loads = [
+            {"segment": "CORE", "zone": "1", "meters": distance_m, "seconds": seconds}
+            for distance_m, seconds in zip(distances, elapsed)
+        ]
+        with (
+            patch("core.views.polar_raw.translate_model_b", return_value=translated),
+            patch("core.views.polar_raw.type_a_watch_loads", return_value=all_zone_one_loads),
+        ):
+            response = self.client.get(
+                f"/integrations/garmin/type-c-ayc/?athlete={athlete.id}&date={activity_date.isoformat()}"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        part = response.json()["results"][0]["parts"][0]
+        self.assertTrue(part["training_fields"]["main"].startswith("12×1000 m Z2>Z3"))
+        self.assertIn("Main: 12×1000 m Z2>Z3", part["description"])
+
     def test_ayc_watch_c_does_not_combine_half_laps_without_recovery_pattern(self):
         from core.views.coach import _watch_c_merge_same_distance_sequence
 
