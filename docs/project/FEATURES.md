@@ -81,7 +81,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 
 De instellingen `See session km` en `See session zones` staan in Athlete settings > General, zijn standaard gelijk ingeschakeld en kunnen door de atleet zelf of een trainer worden gewijzigd. Wanneer ze aanstaan, toont de AYC rechtsboven per sessie het totale loopvolume als zwart `T`-getal en kleine kleurpillen met alleen de kilometers per zone; Alternative telt niet mee. De totale weekafstand gebruikt dezelfde compacte `T`-notatie.
 
-Trainingen die met `Watch A`, `Watch B` of `Watch C` vanuit een horloge-evaluatie worden geplaatst, bewaren naast de trainingsomschrijving de gemeten segmentloads. Daardoor worden tijdgebonden trainingsdelen niet opnieuw omgerekend met de zone-snelheid van de atleet: afstand, zoneverdeling en zonetijd blijven de werkelijke horlogewaarden.
+Trainingen die met `Watch A`, `Watch B` of `Watch C` vanuit een horloge-evaluatie worden geplaatst, bewaren naast de trainingsomschrijving de gemeten segmentloads. Watch C leest de al opgeslagen Garmin FIT-laps voor de geselecteerde atleet en gebruikt dezelfde lapherkenning en optionele AI-structuurherkenning als Watch B. Alleen `Use AM` of `Use PM` schrijft de voorgestelde training naar de AYC; zonder bruikbare laps of bij ontbrekende AI-configuratie blijft de rules-based herkenning leidend. Daardoor worden tijdgebonden trainingsdelen niet opnieuw omgerekend met de zone-snelheid van de atleet: afstand, zoneverdeling en zonetijd blijven de werkelijke horlogewaarden.
 
 Coach Settings bevat onder Planning eveneens `See session km`, standaard aan. Deze coachbrede instelling toont hetzelfde sessietotaal rechtsboven in de trainingscellen van Flex Planner en Daily Coach Overview Training, met de compacte `T`-notatie zonder `km`-label.
 
@@ -199,7 +199,7 @@ Meerdere sporten op dezelfde dag blijven als losse activiteiten zichtbaar, maar 
 
 ## Garmin FIT uploads
 
-Trainers kunnen per atleet in Athlete Input `Allow Garmin FIT uploads` aanzetten. Alleen deze geselecteerde atleten verschijnen op het dashboardtabblad Garmin uploads. Een trainer of de geselecteerde atleet kan daar een `.fit`-bestand of Garmin-zip uploaden. De activiteit wordt per atleet opgeslagen met de FIT-datum, het originele bestand en de genormaliseerde gegevens. De pagina toont daarnaast een lijst van opgeslagen activiteiten. De upload wijzigt nog geen planning; deze gegevens vormen de invoer voor Model C.
+Trainers kunnen per atleet in Athlete Input `Allow Garmin FIT uploads` aanzetten. Alleen deze geselecteerde atleten verschijnen op het dashboardtabblad Garmin uploads. Een trainer of de geselecteerde atleet kan daar een `.fit`-bestand of Garmin-zip uploaden. De activiteit wordt per atleet opgeslagen met de FIT-datum, het originele bestand en de genormaliseerde gegevens. De pagina toont daarnaast een lijst van opgeslagen activiteiten. In de AYC gebruikt Watch C de opgeslagen lapgegevens van die atleet op de gekozen datum. De match-/AI-uitvoer verandert de planning pas na een expliciete keuze voor `Use AM` of `Use PM`.
 
 ## COROS
 

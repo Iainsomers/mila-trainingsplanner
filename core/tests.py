@@ -2859,6 +2859,68 @@ class PolarPlanMismatchTests(TestCase):
         self.assertTrue(response.json()["ok"])
         self.assertEqual(response.json()["results"][0]["parts"][0]["description_label"], "Generated description")
 
+    def test_ayc_watch_c_uses_only_selected_athletes_saved_garmin_laps(self):
+        from core.models import GarminActivity
+
+        coach = get_user_model().objects.create_user(
+            username="garmin-watch-c-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=coach, name="Garmin Athlete", birth_year=1980, gender="M")
+        other = Athlete.objects.create(owner=coach, name="Other Garmin Athlete", birth_year=1981, gender="M")
+        activity_date = date(2026, 10, 22)
+        activity_start = timezone.make_aware(datetime.combine(activity_date, time(9)))
+        parsed_data = {
+            "session": {"total_distance": 3000, "total_elapsed_time": 1200},
+            "total_distance_m": 3000,
+            "total_elapsed_s": 1200,
+            "laps": [
+                {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 150},
+                {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 151},
+                {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 152},
+                {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 153},
+                {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 154},
+                {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 155},
+            ],
+        }
+        GarminActivity.objects.create(
+            athlete=athlete, activity_start=activity_start, original_filename="athlete.fit",
+            file_hash="a" * 64, raw_file=b"fit", parsed_data=parsed_data,
+        )
+        GarminActivity.objects.create(
+            athlete=other, activity_start=activity_start, original_filename="other.fit",
+            file_hash="b" * 64, raw_file=b"fit", parsed_data=parsed_data,
+        )
+        self.client.force_login(coach)
+        mock_results = [{"parts": [{"watch_loads": []}]}]
+        with patch("core.views.polar_raw.translate_model_b", return_value=mock_results) as translate:
+            response = self.client.get(
+                f"/integrations/garmin/type-c-ayc/?athlete={athlete.id}&date={activity_date.isoformat()}"
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(response.json()["model"], "C")
+        self.assertEqual(len(translate.call_args.args[0]), 1)
+        self.assertEqual(translate.call_args.args[0][0]["name"], "athlete.fit")
+        laps = translate.call_args.args[0][0]["laps"]["laps"]
+        self.assertEqual(len(laps), 6)
+        self.assertEqual(laps[0]["distanceMeters"], 500)
+        self.assertEqual(laps[0]["durationMillis"], 200000)
+        self.assertEqual(len(response.json()["results"][0]["parts"][0]["watch_loads"]), 6)
+
+    def test_ayc_watch_c_rejects_garmin_files_for_unavailable_athletes(self):
+        coach = get_user_model().objects.create_user(
+            username="garmin-watch-c-access", password="secret", is_staff=True
+        )
+        other_coach = get_user_model().objects.create_user(
+            username="garmin-watch-c-other", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=other_coach, name="Private Athlete", birth_year=1980, gender="M")
+        self.client.force_login(coach)
+        response = self.client.get(
+            f"/integrations/garmin/type-c-ayc/?athlete={athlete.id}&date=2026-10-22"
+        )
+        self.assertEqual(response.status_code, 404)
+
 
 class TrainerPlanningListTests(TestCase):
     def test_plan_name_shows_owner_name_in_small_muted_text(self):

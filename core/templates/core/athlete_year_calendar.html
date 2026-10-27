@@ -1941,6 +1941,7 @@
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
       <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Watch A</button>
       <button type="button" id="suggestInputBtnB" class="btn btn-sm btn-outline-primary">Watch B</button>
+      <button type="button" id="suggestInputBtnC" class="btn btn-sm btn-outline-primary">Watch C</button>
       <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger" style="display:none;">Delete input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary evaluation-ok-btn" disabled>OK</button>
     </div>
@@ -2162,19 +2163,23 @@
     var popup = document.getElementById("suggestInputPlaceholder");
     var body = document.getElementById("suggestInputPlaceholderBody");
     popup.style.display = "flex";
-    document.getElementById("suggestInputPlaceholderText").textContent = "Polar Model " + model;
+    var sourceName = model === "C" ? "Garmin FIT" : "Polar";
+    document.getElementById("suggestInputPlaceholderText").textContent = sourceName + " Model " + model;
     document.getElementById("suggestInputPlaceholderClose").focus();
-    body.textContent = "Loading Polar Model " + model + "...";
-    fetch("/integrations/polar/type-a-ayc/?model=" + encodeURIComponent(model) + "&athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate), {
+    body.textContent = "Loading " + sourceName + " Model " + model + "...";
+    var endpoint = model === "C" ? "/integrations/garmin/type-c-ayc/" : "/integrations/polar/type-a-ayc/";
+    var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate);
+    if (model !== "C") query += "&model=" + encodeURIComponent(model);
+    fetch(endpoint + query, {
       headers: {"Accept": "application/json"}
     }).then(function(response) { return response.json(); }).then(function(data) {
       if (!data.ok) {
-        body.textContent = data.message || "Polar Type A could not be loaded.";
+        body.textContent = data.message || sourceName + " Model " + model + " could not be loaded.";
         return;
       }
       renderTypeAResults(body, data.results || [], data.message || "", model);
     }).catch(function() {
-      body.textContent = "Polar Type A could not be loaded.";
+      body.textContent = sourceName + " Model " + model + " could not be loaded.";
     });
   }
   function renderTypeALaps(parent, title, rows, showLast15Hr) {
@@ -2383,6 +2388,7 @@
   });
   document.getElementById("suggestInputBtn").addEventListener("click", function() { showWatchModel("A"); });
   document.getElementById("suggestInputBtnB").addEventListener("click", function() { showWatchModel("B"); });
+  document.getElementById("suggestInputBtnC").addEventListener("click", function() { showWatchModel("C"); });
   document.getElementById("suggestInputPlaceholderClose").addEventListener("click", hideSuggestInputPlaceholder);
   document.getElementById("suggestInputPlaceholder").addEventListener("click", function(event) {
     if (event.target === this) hideSuggestInputPlaceholder();

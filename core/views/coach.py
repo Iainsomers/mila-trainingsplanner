@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 import calendar as py_calendar
 import base64
 import colorsys
@@ -5518,6 +5518,108 @@ def polar_type_a_ayc_view(request):
         "message": "" if results else "No Polar training found for this day.",
         "results": results,
         "model": model,
+    })
+
+
+@login_required
+@require_GET
+def garmin_type_c_ayc_view(request):
+    """Use this athlete's saved Garmin FIT laps with Watch B's matcher."""
+    athlete_id = (request.GET.get("athlete") or "").strip()
+    day = (request.GET.get("date") or "").strip()
+    try:
+        target_date = date.fromisoformat(day)
+    except ValueError:
+        return JsonResponse({"ok": False, "message": "Invalid date.", "results": []}, status=400)
+
+    athlete = None
+    if athlete_id.isdigit():
+        if request.user.is_staff or request.user.is_superuser:
+            athlete = _filter_owned(Athlete.objects.all(), request).filter(id=int(athlete_id)).first()
+        else:
+            own_athlete = _athlete_for_user(request.user)
+            if own_athlete and own_athlete.id == int(athlete_id):
+                athlete = own_athlete
+    if not athlete:
+        return JsonResponse({"ok": False, "message": "Athlete not found.", "results": []}, status=404)
+
+    day_start = timezone.make_aware(datetime.combine(target_date, time.min), timezone.get_current_timezone())
+    day_end = day_start + timedelta(days=1)
+    saved_activities = GarminActivity.objects.filter(
+        athlete=athlete,
+        activity_start__gte=day_start,
+        activity_start__lt=day_end,
+    ).order_by("activity_start", "id")
+    sessions = []
+    session_exercises = []
+    for saved in saved_activities:
+        parsed = saved.parsed_data if isinstance(saved.parsed_data, dict) else {}
+        session_data = parsed.get("session") if isinstance(parsed.get("session"), dict) else {}
+        human = parsed.get("human") if isinstance(parsed.get("human"), dict) else {}
+        laps = parsed.get("laps") if isinstance(parsed.get("laps"), list) else []
+        polar_laps = []
+        elapsed_ms = 0
+        for lap in laps:
+            if not isinstance(lap, dict):
+                continue
+            distance_m = lap.get("distance")
+            duration_s = lap.get("elapsed_time") or lap.get("timer_time")
+            try:
+                distance_m = float(distance_m)
+                duration_s = float(duration_s)
+            except (TypeError, ValueError):
+                continue
+            if distance_m < 0 or duration_s <= 0:
+                continue
+            duration_ms = round(duration_s * 1000)
+            elapsed_ms += duration_ms
+            normalized_lap = {
+                "distanceMeters": distance_m,
+                "durationMillis": duration_ms,
+                "splitTimeMillis": elapsed_ms,
+            }
+            if lap.get("avg_heart_rate") is not None:
+                normalized_lap["heartRate"] = lap["avg_heart_rate"]
+            polar_laps.append(normalized_lap)
+        if not polar_laps:
+            continue
+        distance_m = session_data.get("total_distance") or parsed.get("total_distance_m")
+        elapsed_s = session_data.get("total_elapsed_time") or parsed.get("total_elapsed_s")
+        if distance_m is None:
+            distance_m = sum(lap["distanceMeters"] for lap in polar_laps)
+        if elapsed_s is None:
+            elapsed_s = sum(lap["durationMillis"] for lap in polar_laps) / 1000
+        activity_start = saved.activity_start
+        if activity_start:
+            activity_start = timezone.localtime(activity_start).isoformat()
+        session = {
+            "name": saved.original_filename or "Garmin activity",
+            "startTime": activity_start or human.get("activity_start", ""),
+            "distanceMeters": distance_m,
+            "durationMillis": float(elapsed_s) * 1000,
+            "laps": {"laps": polar_laps},
+        }
+        sessions.append(session)
+        session_exercises.append(session)
+
+    if not sessions:
+        return JsonResponse({
+            "ok": True,
+            "message": "No Garmin FIT activities with lap data found for this day.",
+            "results": [],
+            "model": "C",
+        })
+
+    from .polar_raw import translate_model_b, type_a_watch_loads
+    results = translate_model_b(sessions, 5, athlete)
+    for session, result in zip(session_exercises, results):
+        for part in result.get("parts") or []:
+            part["watch_loads"] = type_a_watch_loads(session, athlete)
+    return JsonResponse({
+        "ok": True,
+        "message": "" if results else "No Garmin FIT activities found for this day.",
+        "results": results,
+        "model": "C",
     })
 
 

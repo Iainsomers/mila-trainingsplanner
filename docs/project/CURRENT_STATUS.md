@@ -1,6 +1,6 @@
 # Actuele status
 
-Bijgewerkt: 20 oktober 2026.
+Bijgewerkt: 27 oktober 2026.
 
 ## Productiestatus
 
@@ -16,10 +16,10 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Belangrijk werkend gedrag
 
-- Garmin FIT uploads zijn beschikbaar voor coaches en geselecteerde atleten waarbij `Allow Garmin FIT uploads` is aangezet. FIT- en Garmin-zipuploads worden per atleet met datum, origineel bestand en genormaliseerde gegevens opgeslagen; de planner wordt nog niet gewijzigd. Model C kan deze opgeslagen activiteiten later uitlezen.
+- Garmin FIT uploads zijn beschikbaar voor coaches en geselecteerde atleten waarbij `Allow Garmin FIT uploads` is aangezet. FIT- en Garmin-zipuploads worden per atleet opgeslagen. Watch C in de AYC leest de opgeslagen laps voor de geselecteerde atleet en hergebruikt Watch B's lapherkenning en optionele AI-structuurherkenning; alleen een expliciete Use AM/PM-keuze wijzigt de planning.
 
 - In de AYC-trainingsevaluatie toont `Watch A` dezelfde Type A Polar-uitvoer als Polar Integration voor de geselecteerde atleet en datum. Bestaande opgeslagen horlogeresultaten blijven zichtbaar en kunnen nog worden verwijderd.
-- In de AYC-trainingsevaluatie staat naast `Watch A` nu `Watch B`. Model B levert voorlopig dezelfde output via een afzonderlijk analysekanaal en kan daardoor verder worden ontwikkeld zonder Model A direct aan te passen.
+- In de AYC-trainingsevaluatie staan `Watch A`, `Watch B` en `Watch C`. Watch C gebruikt per atleet de lokaal opgeslagen Garmin FIT-laps van de gekozen datum; de Watch B-matcher/AI wordt hergebruikt en Garmin-bestanden van andere atleten zijn niet zichtbaar via de endpoint.
 - Model B probeert nu herhaalde afstandsblokken te herkennen, inclusief korte herstel-laps en een gecombineerde werk/pauze-lap rond de dominante herhalingsafstand. Een kort herhalingsfragment dat door een lange pauze van vergelijkbare werkblokken is afgesplitst wordt niet meer weggegooid; bij onvoldoende zekerheid blijft de Model A-uitvoer zichtbaar.
 - Model B accepteert een taalmodelvoorstel alleen wanneer de voorgestelde afstanden aantoonbaar voorkomen én alle herhaalde actieve laps voor de herkende afstand zijn meegenomen; anders gebruikt het de rules-based herkenning.
 - Ontbrekende tempo’s in een geldig Model B-taalmodelvoorstel worden server-side opnieuw berekend uit de gemeten laps, zodat Main-blokken altijd hun gemiddelde min/km tonen.

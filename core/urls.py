@@ -34,6 +34,7 @@ from core.views.coach import (
     polar_v4_laps_test_view,
     polar_activity_suggestions_view,
     polar_type_a_ayc_view,
+    garmin_type_c_ayc_view,
     coach_console_view,
     planning_overview_view,
     focus_points_view,
@@ -160,6 +161,7 @@ urlpatterns = [
     path("integrations/polar/v4-laps-test/", polar_v4_laps_test_view, name="polar_v4_laps_test"),
     path("integrations/polar/activity-suggestions/", polar_activity_suggestions_view, name="polar_activity_suggestions"),
     path("integrations/polar/type-a-ayc/", polar_type_a_ayc_view, name="polar_type_a_ayc"),
+    path("integrations/garmin/type-c-ayc/", garmin_type_c_ayc_view, name="garmin_type_c_ayc"),
     path("integrations/coros/status/", coros_status_view, name="coros_status"),
     path("integrations/coros/workouts/", coros_workout_push_view, name="coros_workout_push"),
 
