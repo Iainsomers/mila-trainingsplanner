@@ -16,6 +16,7 @@ Bijgewerkt: 20 oktober 2026.
 - Als `See session km` is ingeschakeld, staat het sessietotaal als zwart `T`-getal compact rechtsboven in iedere sessiecel van de AYC, ook mobiel. Als `See session zones` is ingeschakeld, staan daar kleine kleurpillen met alleen de kilometers afgerond op 0,1 km naast; de kleur bepaalt de zone. Het weektotaal gebruikt dezelfde `T`-notatie, zonder `km`-tekst.
 - In de linkerbovenhoek van een AM-cel staan één of meerdere kleine dots voor de whereabouts van die dag, ook wanneer er geen training gepland is. De dotkleur volgt de Year Planner-legenda; overlappende whereabouts tonen meerdere dots.
 - De coachbrede variant van `See session km` gebruikt dezelfde compacte `T`-notatie zonder `km`-label in Flex Planner en DCO Training. In Flex schuift het label op wanneer rechtsboven ook een rapporticoon staat.
+- In Details Camps kan een trainer met voldoende editrechten de kampnaam direct via de titel bewerken; de titel blijft visueel compact en wordt pas na een klik een invoerveld.
 
 ## Terminologie
 

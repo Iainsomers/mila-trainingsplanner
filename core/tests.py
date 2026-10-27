@@ -2421,6 +2421,61 @@ class PlanningOverviewTests(TestCase):
         self.assertFalse(YearPlannerWhereabout.objects.filter(id=first_range.id).exists())
         self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=second_athlete, note=" font   r ").exists())
 
+    def test_coach_can_rename_camp_across_all_participants(self):
+        coach = get_user_model().objects.create_user(username="camp-rename-coach", password="secret", is_staff=True)
+        shared_coach = get_user_model().objects.create_user(username="camp-rename-shared", password="secret", is_staff=True)
+        CoachAccess.objects.create(owner=shared_coach, grantee=coach, can_edit=True)
+        CoachSettings.objects.create(user=coach, detailed_camps_enabled=True)
+        athlete = Athlete.objects.create(owner=coach, name="Rename Camp Athlete", birth_year=2000, gender="X")
+        own_range = YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=athlete, start_date=date(2026, 10, 7), end_date=date(2026, 10, 10),
+            whereabouts_type="camp", note="Autumn Camp",
+        )
+        coach_range = YearPlannerWhereabout.objects.create(
+            owner=shared_coach, start_date=date(2026, 10, 8), end_date=date(2026, 10, 11),
+            whereabouts_type="camp", note="autumn camp",
+        )
+        self.client.force_login(coach)
+
+        detail = self.client.get("/planning/detailed-camps/camp/?camp=autumn+camp")
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, "data-camp-title-trigger")
+
+        renamed = self.client.post("/planning/detailed-camps/camp/?camp=autumn+camp", {
+            "action": "rename_camp", "name": "  Spring   Training Camp  ",
+        })
+        self.assertRedirects(renamed, "/planning/detailed-camps/camp/?camp=spring+training+camp&saved=1")
+        own_range.refresh_from_db()
+        coach_range.refresh_from_db()
+        self.assertEqual(own_range.note, "Spring Training Camp")
+        self.assertEqual(coach_range.note, "Spring Training Camp")
+
+    def test_camp_rename_requires_edit_access_to_every_participant(self):
+        coach = get_user_model().objects.create_user(username="camp-rename-limited", password="secret", is_staff=True)
+        view_only_coach = get_user_model().objects.create_user(username="camp-rename-view", password="secret", is_staff=True)
+        CoachAccess.objects.create(owner=view_only_coach, grantee=coach, can_edit=False)
+        CoachSettings.objects.create(user=coach, detailed_camps_enabled=True)
+        athlete = Athlete.objects.create(owner=coach, name="Limited Camp Athlete", birth_year=2000, gender="X")
+        YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=athlete, start_date=date(2026, 10, 7), end_date=date(2026, 10, 10),
+            whereabouts_type="camp", note="Shared Camp",
+        )
+        view_only_range = YearPlannerWhereabout.objects.create(
+            owner=view_only_coach, start_date=date(2026, 10, 8), end_date=date(2026, 10, 11),
+            whereabouts_type="camp", note="Shared Camp",
+        )
+        self.client.force_login(coach)
+
+        detail = self.client.get("/planning/detailed-camps/camp/?camp=shared+camp")
+        self.assertEqual(detail.status_code, 200)
+        self.assertNotContains(detail, '<button type="button" class="camp-title-edit-trigger"')
+        renamed = self.client.post("/planning/detailed-camps/camp/?camp=shared+camp", {
+            "action": "rename_camp", "name": "Renamed Camp",
+        })
+        self.assertEqual(renamed.status_code, 403)
+        view_only_range.refresh_from_db()
+        self.assertEqual(view_only_range.note, "Shared Camp")
+
     def test_athlete_can_edit_own_details_camp_when_whereabouts_enabled(self):
         coach = get_user_model().objects.create_user(username="camp-athlete-coach", password="secret", is_staff=True)
         athlete = Athlete.objects.create(

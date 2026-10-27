@@ -9596,7 +9596,38 @@ def detailed_camp_detail_view(request):
     if not camp:
         return redirect("detailed_camps")
 
+    for participant in camp["participants"]:
+        participant["can_edit"] = _can_edit_detailed_camp_participant(
+            request, participant, athlete, is_athlete_user,
+        )
+    can_rename_camp = bool(not is_athlete_user and camp["participants"] and all(
+        participant["can_edit"] for participant in camp["participants"]
+    ))
+
     if request.method == "POST":
+        if request.POST.get("action") == "rename_camp":
+            if not can_rename_camp:
+                return HttpResponse("Forbidden", status=403)
+            new_name = re.sub(r"\s+", " ", (request.POST.get("name") or "").strip())[:120]
+            rename_error = "Enter a camp name." if not new_name else ""
+            if new_name and any(
+                item["key"] != camp_key and item["key"] == _camp_identity(new_name)
+                for item in _detailed_camps_for_owner(owner, _coach_view_owner_ids(request.user))
+            ):
+                rename_error = "A camp with that name already exists."
+            if rename_error:
+                context = _detailed_camp_detail_context(camp, request, error=rename_error, can_rename_camp=can_rename_camp)
+                context.update({"rename_camp": True, "rename_value": new_name})
+                return render(request, "core/detailed_camp_detail.html", context, status=400)
+
+            range_ids = [
+                range_id for participant in camp["participants"]
+                for range_id in participant["range_ids"]
+            ]
+            with transaction.atomic():
+                YearPlannerWhereabout.objects.filter(id__in=range_ids).update(note=new_name)
+            return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': _camp_identity(new_name), 'saved': '1'})}")
+
         if request.POST.get("action") == "add_participants":
             if is_athlete_user:
                 return HttpResponse("Forbidden", status=403)
@@ -9650,16 +9681,9 @@ def detailed_camp_detail_view(request):
         if not participant:
             return HttpResponse("Participant not found", status=404)
 
-        if participant_type == "Coach":
-            can_edit = _can_manage_year_planner_coach_whereabouts(request, participant["person"])
-        elif is_athlete_user:
-            can_edit = participant["person"].id == athlete.id
-        else:
-            can_edit = participant["owner_id"] == request.user.id or CoachAccess.objects.filter(
-                owner_id=participant["owner_id"],
-                grantee=request.user,
-                can_edit=True,
-            ).exists()
+        can_edit = _can_edit_detailed_camp_participant(
+            request, participant, athlete, is_athlete_user,
+        )
         if not can_edit:
             return HttpResponse("Forbidden", status=403)
 
@@ -9675,7 +9699,7 @@ def detailed_camp_detail_view(request):
         except (TypeError, ValueError):
             arrival_date = departure_date = None
         if not arrival_date or not departure_date or departure_date < arrival_date:
-            return render(request, "core/detailed_camp_detail.html", _detailed_camp_detail_context(camp, request, "Arrival and departure dates are required, with departure on or after arrival."), status=400)
+            return render(request, "core/detailed_camp_detail.html", _detailed_camp_detail_context(camp, request, "Arrival and departure dates are required, with departure on or after arrival.", can_rename_camp=can_rename_camp), status=400)
 
         def optional_time(field_name):
             value = (request.POST.get(field_name) or "").strip()
@@ -9686,7 +9710,7 @@ def detailed_camp_detail_view(request):
         if ((request.POST.get("arrival_flight_time") or "").strip() and not arrival_flight_time) or (
             (request.POST.get("departure_flight_time") or "").strip() and not departure_flight_time
         ):
-            return render(request, "core/detailed_camp_detail.html", _detailed_camp_detail_context(camp, request, "Flight times must be valid times."), status=400)
+            return render(request, "core/detailed_camp_detail.html", _detailed_camp_detail_context(camp, request, "Flight times must be valid times.", can_rename_camp=can_rename_camp), status=400)
 
         YearPlannerWhereabout.objects.filter(id__in=participant["range_ids"]).update(
             start_date=arrival_date,
@@ -9703,22 +9727,31 @@ def detailed_camp_detail_view(request):
         return redirect(f"{reverse('detailed_camp_detail')}?{urlencode({'camp': camp_key, 'saved': '1'})}")
 
     for participant in camp["participants"]:
-        if participant["person_type"] == "Coach":
-            participant["can_edit"] = _can_manage_year_planner_coach_whereabouts(request, participant["person"])
-        elif is_athlete_user:
-            participant["can_edit"] = participant["person"].id == athlete.id
-        else:
-            participant["can_edit"] = participant["owner_id"] == request.user.id or CoachAccess.objects.filter(
-                owner_id=participant["owner_id"],
-                grantee=request.user,
-                can_edit=True,
-            ).exists()
-    context = _detailed_camp_detail_context(camp, request, saved=request.GET.get("saved") == "1")
+        participant["can_edit"] = _can_edit_detailed_camp_participant(
+            request, participant, athlete, is_athlete_user,
+        )
+    context = _detailed_camp_detail_context(
+        camp, request, saved=request.GET.get("saved") == "1", can_rename_camp=can_rename_camp,
+    )
     context["is_athlete_user"] = is_athlete_user
     return render(request, "core/detailed_camp_detail.html", context)
 
 
-def _detailed_camp_detail_context(camp, request, error="", saved=False):
+def _can_edit_detailed_camp_participant(request, participant, athlete=None, is_athlete_user=False):
+    if participant["person_type"] == "Coach":
+        return participant["person"].id == request.user.id or CoachAccess.objects.filter(
+            owner=participant["person"], grantee=request.user, can_edit=True,
+        ).exists()
+    if is_athlete_user:
+        return participant["person"].id == athlete.id
+    return participant["owner_id"] == request.user.id or CoachAccess.objects.filter(
+        owner_id=participant["owner_id"],
+        grantee=request.user,
+        can_edit=True,
+    ).exists()
+
+
+def _detailed_camp_detail_context(camp, request, error="", saved=False, can_rename_camp=False):
     existing_athlete_ids = {
         item["person"].id for item in camp["participants"] if item["person_type"] == "Athlete"
     }
@@ -9730,6 +9763,7 @@ def _detailed_camp_detail_context(camp, request, error="", saved=False):
         "camp": camp,
         "saved": saved,
         "error": error,
+        "can_rename_camp": can_rename_camp,
         "can_add_athletes": owner.id == request.user.id or CoachAccess.objects.filter(
             owner=owner, grantee=request.user, can_edit=True,
         ).exists(),

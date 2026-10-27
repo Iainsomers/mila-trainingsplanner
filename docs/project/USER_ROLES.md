@@ -49,7 +49,7 @@ Een atleetaccount is aan één `Athlete` gekoppeld. Een atleet kan uitsluitend z
 - het eigen dashboard en Planning-overzicht als toegangspunten;
 - actieve evaluatievragenlijsten invullen wanneer de atleet expliciet tot de doelgroep behoort, en uitsluitend de eigen antwoorden terugzien. Bestaande vragenlijsten die eerder aan groepen gekoppeld waren blijven voor die atleten beschikbaar totdat de doelgroep wordt aangepast. Als de doelgroep later wordt aangepast, blijven reeds ingediende antwoorden voor de trainer bewaard, maar kan een uitgesloten atleet de vragenlijst niet meer openen;
 - de eigen Year Planner alleen lezen wanneer de trainer Training en/of Whereabouts daarvoor heeft ingeschakeld;
-- de eigen `Details Camps` bekijken en eigen aankomst-/vertrek- en reisgegevens aanpassen wanneer Whereabouts-toegang is ingeschakeld; deelnemers toevoegen of verwijderen blijft trainer-only;
+- de eigen `Details Camps` bekijken en eigen aankomst-/vertrek- en reisgegevens aanpassen wanneer Whereabouts-toegang is ingeschakeld; deelnemers toevoegen of verwijderen en de kampnaam aanpassen blijft trainer-only (voor de kampnaam is edittoegang tot alle deelnemers nodig);
 - een logoutknop die naar de loginpagina terugkeert.
 
 Een atleet mag niet:

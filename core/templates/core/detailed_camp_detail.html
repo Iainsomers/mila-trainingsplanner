@@ -14,11 +14,24 @@
   .camp-actions { display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; }
   .camp-actions form { display: inline-flex; margin: 0; }
   .camp-actions .btn { line-height: 1; }
+  .camp-title-edit-trigger { border: 0; padding: 0; background: transparent; text-align: left; }
+  .camp-title-edit-trigger:hover { color: var(--bs-primary); }
 </style>
 <div class="container-fluid py-3">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-      <h1 class="h3 mb-1">{{ camp.name }}</h1>
+      {% if can_rename_camp %}
+        <h1 class="h3 mb-1"><button type="button" class="camp-title-edit-trigger" data-camp-title-trigger title="Click to rename camp">{{ camp.name }}</button></h1>
+        <form method="post" class="d-flex align-items-center gap-2 mb-1" data-camp-title-form {% if not rename_camp %}hidden{% endif %}>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="rename_camp">
+          <input class="form-control form-control-sm" type="text" name="name" value="{{ rename_value|default:camp.name }}" maxlength="120" required aria-label="Camp name">
+          <button class="btn btn-sm btn-primary" type="submit">Save</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-camp-title-cancel>Cancel</button>
+        </form>
+      {% else %}
+        <h1 class="h3 mb-1">{{ camp.name }}</h1>
+      {% endif %}
       <p class="text-muted mb-0">{{ camp.start_date|date:"d M Y" }} - {{ camp.end_date|date:"d M Y" }}</p>
     </div>
     <a href="{% url 'detailed_camps' %}" class="btn btn-outline-secondary">Back to camps</a>
@@ -122,6 +135,23 @@
   }
 
   const campParticipantTable = document.querySelector("[data-camp-participants]");
+  const campTitleTrigger = document.querySelector("[data-camp-title-trigger]");
+  const campTitleForm = document.querySelector("[data-camp-title-form]");
+  if (campTitleTrigger && campTitleForm) {
+    const campTitleInput = campTitleForm.querySelector('input[name="name"]');
+    campTitleTrigger.addEventListener("click", () => {
+      campTitleTrigger.hidden = true;
+      campTitleForm.hidden = false;
+      campTitleInput.focus();
+      campTitleInput.select();
+    });
+    campTitleForm.querySelector("[data-camp-title-cancel]").addEventListener("click", () => {
+      campTitleInput.value = campTitleTrigger.textContent.trim();
+      campTitleForm.hidden = true;
+      campTitleTrigger.hidden = false;
+    });
+  }
+
   if (campParticipantTable) {
     let activeColumn = null;
     let ascending = true;
