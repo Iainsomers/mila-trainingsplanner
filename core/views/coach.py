@@ -5625,12 +5625,74 @@ def garmin_type_c_ayc_view(request):
                     if load.get("segment") == "WU":
                         load["segment"] = "CORE"
             part["watch_loads"] = watch_loads
+            merged_main = _watch_c_merge_same_distance_sequence(fields.get("main", ""), watch_loads)
+            if merged_main:
+                fields["main"] = merged_main
+                part["training_fields"] = fields
+                description_parts = str(part.get("description") or "").split(" · ")
+                part["description"] = " · ".join(
+                    f"Main: {merged_main}" if text.startswith("Main:") else text
+                    for text in description_parts
+                )
     return JsonResponse({
         "ok": True,
         "message": "" if results else "No Garmin FIT activities found for this day.",
         "results": results,
         "model": "C",
     })
+
+
+def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
+    """Compact Watch C AI segments when they are one measured rep sequence."""
+    segments = [segment.strip() for segment in str(main_text or "").split("+")]
+    if len(segments) < 2:
+        return ""
+    parsed_segments = []
+    segment_pattern = re.compile(
+        r"^(?:(\d+)\s*[x×]\s*)?(\d+)\s*m\s+(Z[1-5](?:>Z[1-5])?)"
+        r"(?:\s+\([^)]*\))?(?:\s+p\d+)?$",
+        re.IGNORECASE,
+    )
+    for segment in segments:
+        match = segment_pattern.fullmatch(segment)
+        if not match:
+            return ""
+        parsed_segments.append({
+            "count": int(match.group(1) or 1),
+            "distance": int(match.group(2)),
+            "zone": match.group(3).upper(),
+        })
+    distances = {item["distance"] for item in parsed_segments}
+    if len(distances) != 1:
+        return ""
+    target_distance = next(iter(distances))
+    expected_count = sum(item["count"] for item in parsed_segments)
+    matching_loads = []
+    for load in watch_loads or []:
+        try:
+            distance_m = float(load.get("meters") or 0)
+            zone = int(load.get("zone") or 0)
+            seconds = float(load.get("seconds") or 0)
+        except (TypeError, ValueError, AttributeError):
+            continue
+        if (
+            zone >= 2
+            and seconds > 0
+            and abs(distance_m - target_distance) <= max(50, target_distance * 0.12)
+        ):
+            matching_loads.append({"meters": distance_m, "seconds": seconds, "zone": zone})
+    if len(matching_loads) != expected_count:
+        return ""
+
+    zones = sorted({item["zone"] for item in matching_loads})
+    if not zones:
+        return ""
+    zone_label = f"Z{zones[0]}" if zones[0] == zones[-1] else f"Z{zones[0]}>Z{zones[-1]}"
+    total_distance = sum(item["meters"] for item in matching_loads)
+    total_seconds = sum(item["seconds"] for item in matching_loads)
+    pace_label = _format_pace(total_seconds, total_distance).replace("/km", "")
+    pace_suffix = f" ({pace_label})" if pace_label else ""
+    return f"{expected_count}×{target_distance} m {zone_label}{pace_suffix}"
 
 
 @login_required

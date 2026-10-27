@@ -2957,6 +2957,57 @@ class PolarPlanMismatchTests(TestCase):
         saved_loads = response.json()["results"][0]["parts"][0]["watch_loads"]
         self.assertEqual([load["segment"] for load in saved_loads], ["CORE", "CORE"])
 
+    def test_ayc_watch_c_merges_same_distance_zone_change_into_one_series(self):
+        from core.models import GarminActivity
+
+        coach = get_user_model().objects.create_user(
+            username="garmin-watch-c-one-series", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=coach, name="One Series Athlete", birth_year=1980, gender="M")
+        activity_date = date(2026, 10, 13)
+        GarminActivity.objects.create(
+            athlete=athlete,
+            activity_start=timezone.make_aware(datetime.combine(activity_date, time(19))),
+            original_filename="one-series.fit",
+            file_hash="d" * 64,
+            raw_file=b"fit",
+            parsed_data={
+                "session": {"total_distance": 7100, "total_elapsed_time": 2500},
+                "laps": [{"distance": 1000, "elapsed_time": 250} for _ in range(12)],
+            },
+        )
+        self.client.force_login(coach)
+        old_main = "3×1000 m Z2 (4:20) p20 + 1000 m Z3 (4:09) p30 + 1000 m Z3 (3:49) p10"
+        translated = [{"parts": [{
+            "description": f"WU: none · Main: {old_main} · CD: 1700 m Z1",
+            "training_fields": {"wu": "", "main": old_main, "cd": "1700 m Z1"},
+        }]}]
+        laps = [
+            {"segment": "CORE", "zone": "2", "meters": 1010, "seconds": 268.155},
+            {"segment": "CORE", "zone": "1", "meters": 20, "seconds": 119.124},
+            {"segment": "CORE", "zone": "2", "meters": 1000, "seconds": 260.334},
+            {"segment": "CORE", "zone": "1", "meters": 40, "seconds": 119.8},
+            {"segment": "CORE", "zone": "2", "meters": 1000, "seconds": 256.66},
+            {"segment": "CORE", "zone": "1", "meters": 20, "seconds": 130.693},
+            {"segment": "CORE", "zone": "3", "meters": 990, "seconds": 246.038},
+            {"segment": "CORE", "zone": "1", "meters": 30, "seconds": 141.142},
+            {"segment": "CORE", "zone": "3", "meters": 1000, "seconds": 229.244},
+            {"segment": "CORE", "zone": "1", "meters": 290, "seconds": 141.277},
+            {"segment": "CD", "zone": "1", "meters": 1600, "seconds": 497.159},
+            {"segment": "CD", "zone": "1", "meters": 100, "seconds": 134.201},
+        ]
+        with (
+            patch("core.views.polar_raw.translate_model_b", return_value=translated),
+            patch("core.views.polar_raw.type_a_watch_loads", return_value=laps),
+        ):
+            response = self.client.get(
+                f"/integrations/garmin/type-c-ayc/?athlete={athlete.id}&date={activity_date.isoformat()}"
+            )
+        self.assertEqual(response.status_code, 200)
+        part = response.json()["results"][0]["parts"][0]
+        self.assertEqual(part["training_fields"]["main"], "5×1000 m Z2>Z3 (4:12)")
+        self.assertEqual(part["description"], "WU: none · Main: 5×1000 m Z2>Z3 (4:12) · CD: 1700 m Z1")
+
 
 class TrainerPlanningListTests(TestCase):
     def test_plan_name_shows_owner_name_in_small_muted_text(self):
