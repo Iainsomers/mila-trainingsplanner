@@ -73,7 +73,11 @@ def processed_main_reps(slot):
             used_indices.add(raw_index)
             output.append({
                 "rep": len(output) + 1,
-                "distance_m": round(meters, 1),
+                # Show the clean planned rep distance (e.g. 200 m), not GPS
+                # drift such as 190 or 250 m. Pace remains based on measured
+                # meters, which are retained separately for transparency.
+                "distance_m": round(distance),
+                "measured_distance_m": round(meters, 1),
                 "seconds": round(seconds, 2),
                 "pace_seconds_per_km": round(seconds * 1000.0 / meters, 2),
             })

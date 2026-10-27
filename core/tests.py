@@ -8443,11 +8443,37 @@ class WatchProcessedMainRepTests(TestCase):
         processed = save_processed_main_reps(slot)
         slot.refresh_from_db()
 
-        self.assertEqual([rep["distance_m"] for rep in processed], [202, 198, 151, 149])
+        self.assertEqual([rep["distance_m"] for rep in processed], [200, 200, 150, 150])
+        self.assertEqual([rep["measured_distance_m"] for rep in processed], [202, 198, 151, 149])
+        self.assertEqual(processed[0]["pace_seconds_per_km"], round(40.5 * 1000 / 202, 2))
         self.assertEqual([rep["rep"] for rep in processed], [1, 2, 3, 4])
         self.assertEqual(slot.watch_loads, raw_loads)
         self.assertEqual(slot.watch_main_reps, processed)
         self.assertEqual(_ayc_slot_session_km(slot, athlete), km_before)
+
+    def test_main_rep_distance_uses_planned_distance_despite_gps_drift(self):
+        from core.watch_processing import processed_main_reps
+
+        coach = get_user_model().objects.create_user(username="watch-rep-rounded", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Rounded Rep Athlete", birth_year=2000, gender="X")
+        plan = TrainingPlan.objects.create(owner=coach, name="Rounded rep plan")
+        slot = TrainingSlot.objects.create(
+            plan=plan, athlete=athlete, date=date(2026, 10, 27), slot_index=1,
+            source="watch_c", watch_loads=[
+                {"segment": "CORE", "zone": "2", "meters": 190, "seconds": 40},
+                {"segment": "CORE", "zone": "1", "meters": 50, "seconds": 30},
+                {"segment": "CORE", "zone": "2", "meters": 250, "seconds": 45},
+                {"segment": "CORE", "zone": "5", "meters": 160, "seconds": 25},
+                {"segment": "CORE", "zone": "5", "meters": 140, "seconds": 24},
+            ],
+        )
+        slot.segments.create(type="CORE", text="2*200m z2", order=1, reps=2, distance_m=200, norm_distance_m=400, zone="2")
+        slot.segments.create(type="CORE", text="2*150m z5", order=2, reps=2, distance_m=150, norm_distance_m=300, zone="5")
+
+        processed = processed_main_reps(slot)
+
+        self.assertEqual([rep["distance_m"] for rep in processed], [200, 200, 150, 150])
+        self.assertEqual([rep["measured_distance_m"] for rep in processed], [190, 250, 160, 140])
 
     def test_ayc_watch_source_indicator_appears_without_session_totals(self):
         for source, label in (

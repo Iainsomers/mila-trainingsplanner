@@ -43,7 +43,7 @@ Onder meer ondersteund:
 - `2*(600m-400m) t15`;
 - `5*(1000m z3-200m t8)`;
 - Watch A/B/C-samenvattingen mogen tempo's tussen haakjes en `+` binnen een herhaalset tonen; bij opslaan worden die displaytekens omgezet naar de bestaande parsernotatie.
-- De ruwe `watch_loads` blijven ongewijzigd en zijn leidend voor bestaande afstands- en zonetotalen. Een aparte, opgeslagen `watch_main_reps`-laag koppelt alleen gemeten Main-laps aan de herhalingsafstand van het opgeslagen Main-plan; herstel-laps en niet-herkende tijdblokken worden niet als reps gepresenteerd. Per rep worden gemeten meters/seconden en daaruit berekende seconden per kilometer bewaard.
+- De ruwe `watch_loads` blijven ongewijzigd en zijn leidend voor bestaande afstands- en zonetotalen. Een aparte, opgeslagen `watch_main_reps`-laag koppelt alleen gemeten Main-laps aan de herhalingsafstand van het opgeslagen Main-plan; herstel-laps en niet-herkende tijdblokken worden niet als reps gepresenteerd. De popup toont de nette geplande rep-afstand (bijvoorbeeld 200 m of 150 m); de werkelijk gemeten meters blijven apart bewaard en worden gebruikt voor het berekende tempo. Seconden en tempo worden dus niet afgerond naar de geplande afstand.
 - minuten met `'` en seconden met `"`;
 - `p` is actief in de coachstand `Active unless "pp"`; `ap` is in beide coachstanden expliciet actief. `sp` (seriepauze) en `pp` (passieve pauze) zijn altijd statisch.
 - `p1`/`p=1` en `ap1`/`ap=1` betekenen één minuut. Zonder tijdseenheid zijn waarden t/m 10 minuten en waarden boven 10 seconden. Een expliciete tijdseenheid blijft leidend.
