@@ -56,6 +56,7 @@ Bijgewerkt: 27 oktober 2026.
 - Bij het bewerken van een Watch A/B/C-training vraagt een wijziging van Main eerst om bevestiging: `Are you sure? This might give an incorrect km count!`; WU, CD, Sprint en Alternative blijven zonder deze waarschuwing bewerkbaar.
 - Bij zo'n wijziging van alleen WU, CD, Sprint of Alternative blijven de gemeten Main-laps en hun werkelijke tijden behouden. De aangepaste niet-Main-onderdelen worden opnieuw uit hun tekst berekend; alleen de gemeten Main-laps blijven leidend voor het horlogetotaal.
 - De weergegeven werkelijke Watch-segmenten tonen repduur én min/km. Korte herstel-laps die door de horlogeanalyse in dezelfde CORE-reeks zijn geplaatst worden uit die weergave gehouden; ze blijven wel beschikbaar voor de afstandsberekening.
+- Bij meerdere korte Main-reeksen in dezelfde CORE-groep worden de werkelijke tijd- en tempo-indicaties per pill gefilterd op de eigen herhalingsafstand, zodat bijvoorbeeld 200 m- en 150 m-reps elkaar niet vervuilen. Dit verandert de km-totalen niet.
 - Persoonlijke wijzigingen na de formele einddatum van een bronplanning blijven ook in Flex Planner zichtbaar, net als in AYC.
 - Base Planning-koppelingen naar trainerplannen blijven ook bij meerdere geselecteerde atleten zichtbaar in Flex Planner, onafhankelijk van de formele planrange.
 - Een expliciete Base Planning-koppeling kan het trainer-slot rechtstreeks laden wanneer de normale Flex-voorlaadlijst het plan mist.

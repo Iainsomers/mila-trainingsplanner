@@ -2379,11 +2379,20 @@ def _watch_actual_time_label(actual_loads, seg=None):
     except Exception:
         reps = 1
     if len(expected_distances) == 1 and reps > 1:
-        threshold = expected_distances[0] * 0.5
-        work_loads = [
-            load for load in actual_loads
-            if float(load.get("meters") or 0) >= threshold
-        ]
+        target_distance = expected_distances[0]
+        # A Watch slot can contain multiple Main sets (for example 10x200 m
+        # followed by 4x150 m) in the same CORE bucket. Keep each pill's
+        # timing tied to laps near that segment's own rep distance; a broad
+        # half-distance cutoff mixed the short sets and recovery laps together.
+        tolerance = max(25.0, target_distance * 0.15)
+        work_loads = []
+        for load in actual_loads:
+            try:
+                meters = float(load.get("meters") or 0)
+            except (TypeError, ValueError, AttributeError):
+                continue
+            if meters > 0 and abs(meters - target_distance) <= tolerance:
+                work_loads.append(load)
         if work_loads:
             measured = work_loads
     duration_values = []

@@ -8432,6 +8432,32 @@ class TrainingSegmentLabelTests(TestCase):
         self.assertNotIn("0:08", label)
         self.assertIn("7:10-->7:00 (3:35-->3:30 min/km)", label)
 
+    def test_watch_short_rep_time_labels_match_each_segments_distance(self):
+        loads = [
+            {"meters": 190, "seconds": 38.463},
+            {"meters": 40, "seconds": 45.663},
+            {"meters": 200, "seconds": 41.864},
+            {"meters": 150, "seconds": 25.760},
+            {"meters": 160, "seconds": 26.455},
+            {"meters": 30, "seconds": 44.411},
+        ]
+        segment_200 = TrainingSegment(
+            type="CORE", text="10x200m z4>z5 p59", distance_m=200,
+            norm_distance_m=2000, reps=10,
+        )
+        segment_150 = TrainingSegment(
+            type="CORE", text="4x150m z5 p243", distance_m=150,
+            norm_distance_m=600, reps=4,
+        )
+
+        label_200 = _watch_actual_time_label(loads, segment_200)
+        label_150 = _watch_actual_time_label(loads, segment_150)
+
+        self.assertIn("3:29-->3:22 min/km", label_200)
+        self.assertNotIn("2:52", label_200)
+        self.assertIn("2:52-->2:45 min/km", label_150)
+        self.assertNotIn("3:22", label_150)
+
 
 class FlexPlannerAltTotalsTests(TestCase):
     def test_watch_main_display_notation_is_normalized_before_slot_parsing(self):
