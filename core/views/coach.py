@@ -5791,6 +5791,81 @@ def _watch_c_order_main_by_laps(main_text, watch_loads, cd_text=""):
 def _watch_c_merge_same_distance_sequence(main_text, watch_loads):
     """Compact adjacent equal-distance Watch C segments into measured rep sets."""
     segments = [segment.strip() for segment in str(main_text or "").split("+")]
+    if len(segments) == 1:
+        # Some watches split one uninterrupted 1000 m effort into two adjacent
+        # 500 m laps, then record an easy recovery lap. Model B sees 24 × 500 m;
+        # the repeated 500,500,easy pattern is stronger evidence for 12 × 1000 m.
+        single_pattern = re.compile(
+            r"^(?:(\d+)\s*[x×]\s*)?(\d+)\s*m\s+(Z[1-5](?:>Z[1-5])?)"
+            r"(?:\s+\([^)]*\))?(?:\s+p\d+)?$",
+            re.IGNORECASE,
+        )
+        match = single_pattern.fullmatch(segments[0])
+        if not match:
+            return ""
+        expected_count = int(match.group(1) or 1)
+        lap_distance = int(match.group(2))
+        if expected_count < 6 or expected_count % 2 or not 350 <= lap_distance <= 800:
+            return ""
+
+        candidates = []
+        for load in watch_loads or []:
+            try:
+                distance = float(load.get("meters") or 0)
+                seconds = float(load.get("seconds") or 0)
+                zone = int(load.get("zone") or 0)
+                index = int(load.get("index") or 0)
+            except (TypeError, ValueError, AttributeError):
+                continue
+            if (
+                str(load.get("segment") or "CORE").upper() not in {"WU", "CD"}
+                and zone >= 2
+                and seconds > 0
+                and index > 0
+                and abs(distance - lap_distance) <= max(75, lap_distance * 0.12)
+            ):
+                candidates.append({"index": index, "meters": distance, "seconds": seconds, "zone": zone})
+        candidates.sort(key=lambda item: item["index"])
+        if len(candidates) != expected_count:
+            return ""
+
+        pairs = []
+        recovery_seconds = []
+        for offset in range(0, len(candidates), 2):
+            first, second = candidates[offset:offset + 2]
+            if second["index"] != first["index"] + 1:
+                return ""
+            pairs.append((first, second))
+            if offset:
+                previous_pair_end = pairs[-2][1]["index"]
+                easy_laps = [
+                    load for load in watch_loads or []
+                    if previous_pair_end < int(load.get("index") or 0) < first["index"]
+                    and int(load.get("zone") or 0) == 1
+                    and str(load.get("segment") or "CORE").upper() not in {"WU", "CD"}
+                ]
+                if easy_laps:
+                    recovery_seconds.append(sum(float(load.get("seconds") or 0) for load in easy_laps))
+
+        # Require repeated recoveries between paired efforts. Without them,
+        # adjacent laps could simply be a continuous run rather than 1000 m reps.
+        if len(recovery_seconds) < max(2, len(pairs) - 2):
+            return ""
+
+        paired_distances = [sum(item["meters"] for item in pair) for pair in pairs]
+        pair_distance = int(math.floor((sum(paired_distances) / len(paired_distances)) / 50 + 0.5) * 50)
+        if pair_distance < 700 or any(abs(distance - pair_distance) > max(75, pair_distance * 0.08) for distance in paired_distances):
+            return ""
+        all_work = [item for pair in pairs for item in pair]
+        zones = sorted({item["zone"] for item in all_work})
+        zone_label = f"Z{zones[0]}" if len(zones) == 1 else f"Z{zones[0]}>Z{zones[-1]}"
+        pace_label = _format_pace(
+            sum(item["seconds"] for item in all_work),
+            sum(item["meters"] for item in all_work),
+        ).replace("/km", "")
+        recovery_label = int(math.floor(sum(recovery_seconds) / len(recovery_seconds) + 0.5))
+        return f"{len(pairs)}×{pair_distance} m {zone_label} ({pace_label}) p{recovery_label}"
+
     if len(segments) < 2:
         return ""
     parsed_segments = []
