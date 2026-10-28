@@ -36,6 +36,7 @@
     text-align: center;
     font-weight: 700;
   }
+  .evaluation-percentage { background: #e9ecef; }
   .pending-green { background: #b7e4c7; }
   .pending-yellow { background: #ffe69c; }
   .pending-orange { background: #f7b267; }
@@ -83,16 +84,19 @@
   {% elif overview_mode == 'information_quality' %}
   <section class="overview-block">
     <div class="overview-content">
-      <p class="text-muted small">Open evaluations from {{ window_start|date:"d-m-Y" }} through {{ window_end|date:"d-m-Y" }}. Today is not included.</p>
+      <p class="text-muted small">Training evaluations from {{ window_start|date:"d-m-Y" }} through {{ window_end|date:"d-m-Y" }}. Today's AM session is included from 12:00 and PM from 21:00.</p>
       <div class="table-responsive">
         <table class="table table-sm info-quality-table mb-0">
-          <thead><tr><th>Athlete</th><th class="text-end">Open evaluations</th><th class="text-end">Evaluated</th><th class="text-end">Meeting request</th></tr></thead>
+          <thead><tr><th>Athlete</th><th class="text-end">Evaluated</th><th class="text-end">Meeting request</th></tr></thead>
           <tbody>
             {% for row in athlete_rows %}
               <tr>
                 <td>{{ row.athlete.name }}</td>
-                <td class="text-end">{% if row.pending_count is not None %}<span class="pending-badge pending-{{ row.color }}">{{ row.pending_count }}</span>{% else %}—{% endif %}</td>
-                <td class="text-end">{% if row.evaluated_count is not None %}<span class="pending-badge pending-{{ row.evaluated_color }}">{{ row.evaluated_count }}</span>{% else %}—{% endif %}</td>
+                <td class="text-end">
+                  {% if row.evaluation_total is None %}—
+                  {% elif row.evaluation_total == 0 %}NA
+                  {% else %}<span class="pending-badge evaluation-percentage" title="{{ row.evaluation_tooltip }}">{{ row.evaluation_percentage }}%</span>{% endif %}
+                </td>
                 <td class="text-end">
                   {% for athlete in meeting_requests %}
                     {% if athlete.id == row.athlete.id %}
@@ -102,7 +106,7 @@
                 </td>
               </tr>
             {% empty %}
-              <tr><td colspan="4" class="text-muted">No athletes found.</td></tr>
+              <tr><td colspan="3" class="text-muted">No athletes found.</td></tr>
             {% endfor %}
           </tbody>
         </table>

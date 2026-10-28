@@ -12041,9 +12041,14 @@ def daily_overview_view(request):
 @login_required
 def daily_overview_other_view(request):
     """Show the staff overview landing page or one of its all-athlete views."""
-    today = date.today()
-    window_start = today - timedelta(days=7)
-    window_end = today - timedelta(days=1)
+    current_time = timezone.localtime()
+    today = current_time.date()
+    window_start = today - timedelta(days=9)
+    window_end = today
+    today_slots_available = {
+        1: current_time.time() >= time(12, 0),
+        2: current_time.time() >= time(21, 0),
+    }
     active_coach = _active_coach_user(request)
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     requested_view = request.GET.get("view", "").strip().lower()
@@ -12170,6 +12175,8 @@ def daily_overview_other_view(request):
             for offset in range((window_end - window_start).days + 1):
                 day = window_start + timedelta(days=offset)
                 for slot_index in (1, 2):
+                    if day == today and not today_slots_available[slot_index]:
+                        continue
                     slot, flex_blocks_base = effective_slot_for(athlete, day, slot_index)
                     if not slot and not flex_blocks_base:
                         base_slot = _base_planning_slot_for_day(
@@ -12187,9 +12194,12 @@ def daily_overview_other_view(request):
                         else:
                             pending += 1
 
+        total_sessions = pending + evaluated
         if can_view_evaluations:
             pending_count = pending
             evaluated_count = evaluated
+            evaluation_percentage = round(evaluated * 100 / total_sessions) if total_sessions else None
+            evaluation_tooltip = f"Open: {pending} · Evaluated: {evaluated}"
             if pending == 0:
                 color = "green"
             elif pending == 1:
@@ -12208,6 +12218,8 @@ def daily_overview_other_view(request):
             # Without access to the reports, treating every planned session as
             # open would produce a misleading count (and reveal report state).
             pending_count = evaluated_count = None
+            evaluation_percentage = None
+            evaluation_tooltip = ""
             color = evaluated_color = ""
         counts.append({
             "athlete": athlete,
@@ -12215,6 +12227,9 @@ def daily_overview_other_view(request):
             "color": color,
             "evaluated_count": evaluated_count,
             "evaluated_color": evaluated_color,
+            "evaluation_percentage": evaluation_percentage,
+            "evaluation_total": total_sessions if can_view_evaluations else None,
+            "evaluation_tooltip": evaluation_tooltip,
         })
 
     vital_options = [

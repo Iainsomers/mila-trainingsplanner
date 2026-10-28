@@ -14,7 +14,7 @@ Een trainer is doorgaans staff- of superuser en kan:
 - standaard krachtprogramma's beheren;
 - rapportages en zichtbaarheid per atleet instellen;
 - in Coach Settings `Pain in training evaluations` beheren. Deze instelling is standaard aan en geldt voor de atleten van die coach, ook wanneer een bevoegde gedelegeerde trainer namens die coach werkt;
-- in DCO Other Info Quality open/evaluated-aantallen zien wanneer trainingsevaluaties voor die trainer zichtbaar zijn en voor de atleet zijn ingeschakeld; anders worden beide aantallen verborgen;
+- in Staff Team Overview Information Quality het percentage geëvalueerde trainingen zien over de laatste tien kalenderdagen (inclusief vandaag; AM vanaf 12:00 en PM vanaf 21:00). Hover toont open en geëvalueerde aantallen; bij nul trainingen staat `NA`. Als de trainer geen recht heeft om evaluaties te zien of evaluaties voor de atleet zijn uitgeschakeld, blijven de gegevens verborgen;
 - voor een geselecteerde atleet vitals en training reports vastleggen, ook wanneer een trainer vooruit werkt;
 - in de AYC tussen toegankelijke atleten schakelen;
 - in Athlete Input alfabetisch tussen atleten van de actieve coachweergave navigeren; de selectie blijft beperkt tot atleten die de trainer daar mag zien;

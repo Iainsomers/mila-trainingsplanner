@@ -1421,7 +1421,93 @@ class PlanningOverviewTests(TestCase):
         row = response.context["athlete_rows"][0]
         self.assertEqual(row["evaluated_count"], 1)
         self.assertEqual(row["evaluated_color"], "orange")
+        self.assertEqual(row["evaluation_total"], 3)
+        self.assertEqual(row["evaluation_percentage"], 33)
+        self.assertEqual(row["evaluation_tooltip"], "Open: 2 · Evaluated: 1")
         self.assertContains(response, "Evaluated")
+        self.assertContains(response, "title=\"Open: 2 · Evaluated: 1\"", html=False)
+        self.assertNotContains(response, "Open evaluations")
+
+    def test_daily_overview_other_counts_ten_days_and_unlocks_today_sessions_at_noon_and_21(self):
+        coach = get_user_model().objects.create_user(
+            username="evaluation-window-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Evaluation Window Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Evaluation window plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        today = date(2026, 10, 28)
+        sessions = [
+            (today - timedelta(days=10), 1),  # Outside the ten-day window.
+            (today - timedelta(days=9), 1),   # First date inside the window.
+            (today, 1),
+            (today, 2),
+        ]
+        for day, slot_index in sessions:
+            slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=slot_index)
+            slot.segments.create(type="CORE", text="Easy run", order=0)
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=today,
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+            checked=True,
+            rpe=5,
+            updated_by=coach,
+        )
+
+        self.client.force_login(coach)
+        cases = [
+            (datetime(2026, 10, 28, 11, 59), 1, 0),
+            (datetime(2026, 10, 28, 12, 0), 2, 1),
+            (datetime(2026, 10, 28, 20, 59), 2, 1),
+            (datetime(2026, 10, 28, 21, 0), 3, 1),
+        ]
+        for local_now, expected_total, expected_evaluated in cases:
+            with self.subTest(local_now=local_now), patch(
+                "core.views.coach.timezone.localtime",
+                return_value=timezone.make_aware(local_now),
+            ):
+                response = self.client.get(
+                    "/coach/daily-overview-other/", {"view": "information_quality"}
+                )
+                row = response.context["athlete_rows"][0]
+                self.assertEqual(response.context["window_start"], today - timedelta(days=9))
+                self.assertEqual(response.context["window_end"], today)
+                self.assertEqual(row["evaluation_total"], expected_total)
+                self.assertEqual(row["evaluated_count"], expected_evaluated)
+                self.assertEqual(
+                    row["evaluation_percentage"],
+                    round(expected_evaluated * 100 / expected_total),
+                )
+
+    def test_daily_overview_other_shows_na_when_no_training_is_scheduled(self):
+        coach = get_user_model().objects.create_user(
+            username="evaluation-empty-coach", password="secret", is_staff=True
+        )
+        Athlete.objects.create(
+            owner=coach,
+            name="No Training Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        self.client.force_login(coach)
+        response = self.client.get(
+            "/coach/daily-overview-other/", {"view": "information_quality"}
+        )
+
+        row = response.context["athlete_rows"][0]
+        self.assertEqual(row["evaluation_total"], 0)
+        self.assertIsNone(row["evaluation_percentage"])
+        self.assertContains(response, "NA")
 
     def test_daily_overview_other_does_not_mark_hidden_evaluations_as_open(self):
         owner = get_user_model().objects.create_user(
