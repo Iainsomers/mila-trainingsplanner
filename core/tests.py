@@ -1324,6 +1324,60 @@ Vortex	16,36	30/05/2026
 
 
 class PlanningOverviewTests(TestCase):
+    def test_fit_issues_marker_is_visible_in_dco_and_flex(self):
+        coach = get_user_model().objects.create_user(
+            username="pain-marker-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Pain Marker Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Pain marker plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        day = date.today()
+        slot = TrainingSlot.objects.create(
+            plan=plan, date=day, slot_index=1
+        )
+        slot.segments.create(type="CORE", text="5km z1", order=0)
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+            checked=True,
+            rpe=5,
+            pain=AthleteDayCheck.PAIN_SOME,
+            updated_by=coach,
+        )
+        self.client.force_login(coach)
+
+        dco = self.client.get(
+            f"/coach/daily-overview/?date={day.isoformat()}&selection=all&slots=am&ok=1"
+        )
+        self.assertEqual(dco.status_code, 200)
+        self.assertEqual(dco.context["rows"][0]["check1_pain"]["symbol"], "🟠")
+        self.assertContains(dco, "Some issues, pls explain!")
+
+        week_start = day - timedelta(days=day.weekday())
+        flex = self.client.get(
+            f"/flex-planner/?start={week_start.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        self.assertEqual(flex.status_code, 200)
+        flex_cell = next(
+            cell
+            for cell in flex.context["week_rows"][0]["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
+        self.assertEqual(flex_cell["check"]["pain_icon"], "🟠")
+        self.assertEqual(flex_cell["check"]["pain_label"], "Some issues, pls explain!")
+        self.assertContains(flex, "🟠")
+
     def test_daily_overview_other_counts_evaluated_training_slots_with_quality_color(self):
         coach = get_user_model().objects.create_user(
             username="evaluation-quality-coach", password="secret", is_staff=True

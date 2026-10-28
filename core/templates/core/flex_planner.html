@@ -290,6 +290,16 @@
       background: rgba(255,255,255,0.9);
     }
 
+    .flex-report-pain {
+      position: absolute;
+      z-index: 4;
+      top: 4px;
+      right: 24px;
+      font-size: 12px;
+      line-height: 1;
+      pointer-events: none;
+    }
+
     .flex-report-status-done,
     .flex-report-status-done_as_planned,
     .flex-report-status-adjusted_ok {
@@ -1513,6 +1523,7 @@
                         title="Paste training"
                       >p</button>
                       {% if cell.slot and cell.check %}
+                        {% if cell.check.pain_icon %}<span class="flex-report-pain" title="{{ cell.check.pain_label }}" aria-label="{{ cell.check.pain_label }}">{{ cell.check.pain_icon }}</span>{% endif %}
                         <button
                           type="button"
                           class="flex-report-btn flex-report-status-{{ cell.check.status|default:'' }}"
@@ -1599,6 +1610,7 @@
                         title="Paste training"
                       >p</button>
                       {% if cell.slot and cell.check %}
+                        {% if cell.check.pain_icon %}<span class="flex-report-pain" title="{{ cell.check.pain_label }}" aria-label="{{ cell.check.pain_label }}">{{ cell.check.pain_icon }}</span>{% endif %}
                         <button
                           type="button"
                           class="flex-report-btn flex-report-status-{{ cell.check.status|default:'' }}"

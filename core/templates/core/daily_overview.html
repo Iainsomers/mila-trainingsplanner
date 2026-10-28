@@ -74,6 +74,15 @@
     font-weight: 600;
     font-size: 11px;
   }
+  .daily-pain-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    font-size: 14px;
+    line-height: 1;
+  }
   .daily-eval-comment {
     margin-top: 4px;
     padding: 4px 6px;
@@ -283,6 +292,7 @@
                       <strong>AM</strong>
                       <span class="daily-check-meta">
                         {% if r.check1 and r.check1.rpe is not None %}<span class="daily-rpe-pill">RPE {{ r.check1.rpe }}</span>{% endif %}
+                        {% if r.check1_pain.symbol %}<span class="daily-pain-indicator" title="{{ r.check1_pain.label }}" aria-label="{{ r.check1_pain.label }}">{{ r.check1_pain.symbol }}</span>{% endif %}
                         {% if r.check1_badge.symbol %}
                           <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check1_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check1_badge.symbol }}</span>
                         {% endif %}
@@ -319,6 +329,7 @@
                       <strong>PM</strong>
                       <span class="daily-check-meta">
                         {% if r.check2 and r.check2.rpe is not None %}<span class="daily-rpe-pill">RPE {{ r.check2.rpe }}</span>{% endif %}
+                        {% if r.check2_pain.symbol %}<span class="daily-pain-indicator" title="{{ r.check2_pain.label }}" aria-label="{{ r.check2_pain.label }}">{{ r.check2_pain.symbol }}</span>{% endif %}
                         {% if r.check2_badge.symbol %}
                           <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; background:{{ r.check2_badge.color }}; color:#ffffff; font-weight:bold; font-size:16px; line-height:1;">{{ r.check2_badge.symbol }}</span>
                         {% endif %}

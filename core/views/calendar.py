@@ -800,6 +800,17 @@ def _flex_check_payload(check):
         "label": visual["label"],
         "rpe": rpe,
         "comment": comment,
+        "pain": getattr(check, "pain", "") or "",
+        "pain_icon": {
+            AthleteDayCheck.PAIN_NONE: "🟢",
+            AthleteDayCheck.PAIN_SOME: "🟠",
+            AthleteDayCheck.PAIN_SERIOUS: "🔴",
+        }.get(getattr(check, "pain", ""), ""),
+        "pain_label": {
+            AthleteDayCheck.PAIN_NONE: "Fit",
+            AthleteDayCheck.PAIN_SOME: "Some issues, pls explain!",
+            AthleteDayCheck.PAIN_SERIOUS: "Serious issue, talk to staff!",
+        }.get(getattr(check, "pain", ""), ""),
     }
 
 

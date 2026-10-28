@@ -11648,6 +11648,14 @@ def _daily_status_badge(status):
     return {"symbol": "", "color": ""}
 
 
+def _daily_pain_indicator(pain):
+    return {
+        "no_pain": {"symbol": "🟢", "label": "Fit"},
+        "some_pain": {"symbol": "🟠", "label": "Some issues, pls explain!"},
+        "serious_pain": {"symbol": "🔴", "label": "Serious issue, talk to staff!"},
+    }.get(pain or "", {"symbol": "", "label": ""})
+
+
 @login_required
 def daily_overview_view(request):
     from datetime import date
@@ -11980,6 +11988,8 @@ def daily_overview_view(request):
             "check2": check2,
             "check1_badge": _daily_status_badge(status1),
             "check2_badge": _daily_status_badge(status2),
+            "check1_pain": _daily_pain_indicator(check1.pain if check1 else ""),
+            "check2_pain": _daily_pain_indicator(check2.pain if check2 else ""),
             "comment": comment_map.get(athlete.id),
         })
 

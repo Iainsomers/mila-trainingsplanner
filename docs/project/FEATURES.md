@@ -66,6 +66,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 - In Main kunnen zelfstandige trainingsonderdelen met `//` of `+` worden gescheiden; ieder onderdeel wordt apart opgeslagen en weergegeven, en telt mee in de eigen zone-totalen.
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
+- Toont bij een zichtbare trainingsevaluatie het Fit/Issues-bolletje naast de evaluatieknop: groen voor Fit, oranje voor Some issues en rood voor Serious issues. Zonder opgeslagen keuze blijft het bolletje weg.
 - Polar A/B- en Garmin C-trainingen worden als horlogebron opgeslagen. Voor deze slots gebruiken Flex Planner, AYC en weektotalen de werkelijke meters en seconden per zone; geplande trainingen blijven hun zone-snelheden gebruiken om afstand en tijd af te leiden. De zichtbare segmenttekst behoudt de min/km-notatie uit de horlogeomschrijving zonder een extra totaal- of `actual`-label.
 - Bij Polar A/B- en Garmin C-slots worden geen geplande HR-richtwaarden getoond. Garmin C toont in de resultaat-popup per lap de gemiddelde hartslag en het gemiddelde van de hartslagsamples over de laatste 15 seconden (kortere laps gebruiken hun volledige duur). Bij oudere uploads leest Garmin C de samples zo nodig opnieuw uit het originele FIT-bestand. Als er geen samples beschikbaar zijn voor het laatste-15-secondenvenster, toont die waarde `NA`; alleen de gewone gemiddelde HR kan terugvallen op het lapgemiddelde.
 - Een persoonlijke wijziging blijft zichtbaar, ook wanneer de oorspronkelijke bronplanning op die datum formeel al is afgelopen.
@@ -188,7 +189,7 @@ Flex Planner en AYC kiezen voor een atleet op een datum dezelfde actieve bronpla
 
 ## Daily Coach Overview Training
 
-Selectie op datum, AM/PM, alle atleten, selectie, trains, geplande training en opgeslagen selecties. Opgeslagen selecties kunnen onbeperkt naast elkaar bestaan: een andere naam maakt een nieuwe selectie, dezelfde naam werkt de gekozen selectie bij. Ze worden opgeslagen per actieve trainer, zodat gedelegeerde coachweergaven geen selecties met elkaar delen. De resultaatpagina behoudt de selectie, toont atleet-specifieke tempo's, RPE en opmerkingen en heeft een Print-knop voor de gekozen atleten en dag.
+Selectie op datum, AM/PM, alle atleten, selectie, trains, geplande training en opgeslagen selecties. Opgeslagen selecties kunnen onbeperkt naast elkaar bestaan: een andere naam maakt een nieuwe selectie, dezelfde naam werkt de gekozen selectie bij. Ze worden opgeslagen per actieve trainer, zodat gedelegeerde coachweergaven geen selecties met elkaar delen. De resultaatpagina behoudt de selectie, toont atleet-specifieke tempo's, RPE en opmerkingen en heeft een Print-knop voor de gekozen atleten en dag. Naast een zichtbare trainingsevaluatie staat ook het Fit/Issues-bolletje: groen voor Fit, oranje voor Some issues en rood voor Serious issues. Zonder opgeslagen keuze blijft het bolletje weg.
 
 ## Stats
 
