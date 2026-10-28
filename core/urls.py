@@ -1,7 +1,7 @@
 from core.views.polar_raw import polar_raw_view
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from core.auth import ThrottledAuthenticationForm
+from core.auth import AthleteAwareLoginView, ThrottledAuthenticationForm
 
 # Import views explicitly to avoid any name collisions via views/__init__.py
 from core.views.coach import (
@@ -117,7 +117,7 @@ urlpatterns = [
     # Login / Logout
     path(
         "login/",
-        auth_views.LoginView.as_view(
+        AthleteAwareLoginView.as_view(
             template_name="core/login.html",
             authentication_form=ThrottledAuthenticationForm,
         ),

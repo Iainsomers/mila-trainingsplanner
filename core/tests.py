@@ -4111,6 +4111,65 @@ class LoginThrottleTests(TestCase):
         )
         self.assertRedirects(response, "/", fetch_redirect_response=False)
 
+    def test_opted_in_athlete_starts_on_ayc(self):
+        Athlete.objects.create(
+            name="login-athlete",
+            birth_year=2000,
+            gender="X",
+            start_on_ayc=True,
+        )
+        get_user_model().objects.create_user(
+            username="login-athlete",
+            password="correct-password-123",
+        )
+
+        response = self.client.post(
+            "/login/",
+            {"username": "login-athlete", "password": "correct-password-123"},
+        )
+
+        self.assertRedirects(response, "/athlete/year/", fetch_redirect_response=False)
+
+    def test_explicit_login_destination_takes_precedence_over_ayc_setting(self):
+        Athlete.objects.create(
+            name="login-athlete-next",
+            birth_year=2000,
+            gender="X",
+            start_on_ayc=True,
+        )
+        get_user_model().objects.create_user(
+            username="login-athlete-next",
+            password="correct-password-123",
+        )
+
+        response = self.client.post(
+            "/login/?next=/planning/",
+            {
+                "username": "login-athlete-next",
+                "password": "correct-password-123",
+                "next": "/planning/",
+            },
+        )
+
+        self.assertRedirects(response, "/planning/", fetch_redirect_response=False)
+
+    def test_trainer_stays_on_dashboard_even_if_an_athlete_prefers_ayc(self):
+        Athlete.objects.create(
+            name="login-user",
+            birth_year=2000,
+            gender="X",
+            start_on_ayc=True,
+        )
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+
+        response = self.client.post(
+            "/login/",
+            {"username": "login-user", "password": "correct-password-123"},
+        )
+
+        self.assertRedirects(response, "/", fetch_redirect_response=False)
+
     def test_repeated_failures_are_temporarily_throttled(self):
         request_kwargs = {"HTTP_X_FORWARDED_FOR": "198.51.100.20"}
         for _ in range(5):
@@ -8968,6 +9027,71 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertEqual(athlete_response.status_code, 302)
         athlete.refresh_from_db()
         self.assertTrue(athlete.see_session_km)
+
+    def test_athlete_can_change_start_on_ayc_setting(self):
+        User = get_user_model()
+        athlete = Athlete.objects.create(
+            name="startaycrunner",
+            birth_year=2000,
+            gender="X",
+        )
+        athlete_user = User.objects.create_user(username="startaycrunner", password="secret")
+        form_data = {
+            "name": athlete.name,
+            "birth_year": "2000",
+            "gender": "X",
+            "zone_method": "manual",
+            "z1_pace": "6:00",
+            "z2_pace": "5:30",
+            "z3_pace": "5:00",
+            "z4_pace": "4:30",
+            "z5_pace": "4:00",
+        }
+
+        self.assertFalse(athlete.start_on_ayc)
+        self.client.force_login(athlete_user)
+        settings_page = self.client.get("/athlete/settings/")
+        self.assertContains(settings_page, "Start op AYC")
+        self.assertContains(settings_page, 'name="start_on_ayc"')
+
+        response = self.client.post(
+            "/athlete/settings/",
+            {**form_data, "start_on_ayc": "on"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        athlete.refresh_from_db()
+        self.assertTrue(athlete.start_on_ayc)
+
+    def test_coach_can_change_start_on_ayc_setting_for_athlete(self):
+        coach = get_user_model().objects.create_user(
+            username="startayccoach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Start AYC coach athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        form_data = {
+            "name": athlete.name,
+            "birth_year": "2000",
+            "gender": "X",
+            "zone_method": "manual",
+            "z1_pace": "6:00",
+            "z2_pace": "5:30",
+            "z3_pace": "5:00",
+            "z4_pace": "4:30",
+            "z5_pace": "4:00",
+            "start_on_ayc": "on",
+        }
+
+        self.client.force_login(coach)
+        response = self.client.post(f"/coach/athletes/{athlete.id}/edit/", form_data)
+
+        self.assertEqual(response.status_code, 302)
+        athlete.refresh_from_db()
+        self.assertTrue(athlete.start_on_ayc)
 
 
 class TrainingSegmentLabelTests(TestCase):

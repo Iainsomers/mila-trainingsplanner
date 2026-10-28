@@ -459,6 +459,7 @@ class Athlete(models.Model):
     view_weeks_ahead = models.IntegerField(default=2)
 
     training_reports_enabled = models.BooleanField(default=True)
+    start_on_ayc = models.BooleanField(default=False)
     see_session_km = models.BooleanField(default=True)
     see_session_zones = models.BooleanField(default=True)
     # Coach-only opt-in for the athlete's own Desired Improvements view.

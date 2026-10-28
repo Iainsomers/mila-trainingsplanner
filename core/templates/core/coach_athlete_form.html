@@ -606,6 +606,17 @@
           <label class="form-check-label" for="see_session_zones">See session zones</label>
           <div class="form-text">Show the running distance per zone beside the session total.</div>
         </div>
+        <div class="mb-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="start_on_ayc"
+            name="start_on_ayc"
+            {% if form.start_on_ayc %}checked{% endif %}
+          >
+          <label class="form-check-label" for="start_on_ayc">Start op AYC</label>
+          <div class="form-text">Open your Athlete Year Calendar after login instead of the dashboard.</div>
+        </div>
         {% if not self_view %}
         <div class="mb-3 form-check">
           <input

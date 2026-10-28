@@ -3,7 +3,9 @@ import hashlib
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.admin.forms import AdminAuthenticationForm
+from django.contrib.auth.views import LoginView
 from django.core.cache import cache
+from django.urls import reverse
 
 
 class _LoginThrottleMixin:
@@ -45,3 +47,24 @@ class ThrottledAuthenticationForm(_LoginThrottleMixin, AuthenticationForm):
 
 class ThrottledAdminAuthenticationForm(_LoginThrottleMixin, AdminAuthenticationForm):
     pass
+
+
+class AthleteAwareLoginView(LoginView):
+    """Send opted-in athlete accounts to their own Athlete Year Calendar."""
+
+    def get_success_url(self):
+        # Explicit destinations (including links to a protected page) always
+        # take precedence over the athlete's preferred start page.
+        if self.get_redirect_url():
+            return super().get_success_url()
+
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return super().get_success_url()
+
+        from core.views.coach import _athlete_for_user
+
+        athlete = _athlete_for_user(user)
+        if athlete and athlete.start_on_ayc:
+            return reverse("athlete_year_calendar")
+        return super().get_success_url()
