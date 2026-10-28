@@ -120,6 +120,7 @@ urlpatterns = [
         AthleteAwareLoginView.as_view(
             template_name="core/login.html",
             authentication_form=ThrottledAuthenticationForm,
+            redirect_authenticated_user=True,
         ),
         name="login",
     ),

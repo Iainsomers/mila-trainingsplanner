@@ -2,7 +2,7 @@
   "name": "MiLa Training Planner",
   "short_name": "MiLa",
   "description": "Training planning for MiLa coaches and athletes",
-  "start_url": "/",
+  "start_url": "/login/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",

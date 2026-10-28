@@ -4350,6 +4350,32 @@ class LoginThrottleTests(TestCase):
 
         self.assertRedirects(response, "/athlete/year/", fetch_redirect_response=False)
 
+    def test_authenticated_athlete_opening_login_is_redirected_to_ayc(self):
+        Athlete.objects.create(
+            name="login-athlete-mobile",
+            birth_year=2000,
+            gender="X",
+            start_on_ayc=True,
+        )
+        user = get_user_model().objects.create_user(
+            username="login-athlete-mobile",
+            password="correct-password-123",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/login/")
+
+        self.assertRedirects(response, "/athlete/year/", fetch_redirect_response=False)
+
+    def test_authenticated_trainer_opening_login_is_redirected_to_dashboard(self):
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        self.client.force_login(self.user)
+
+        response = self.client.get("/login/")
+
+        self.assertRedirects(response, "/", fetch_redirect_response=False)
+
     def test_explicit_login_destination_takes_precedence_over_ayc_setting(self):
         Athlete.objects.create(
             name="login-athlete-next",
