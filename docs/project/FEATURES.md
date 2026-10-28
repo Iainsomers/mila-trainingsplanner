@@ -155,7 +155,7 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 - Atleet kiest maximaal drie afstanden per wedstrijd.
 - Een wedstrijd kan als doelwedstrijd worden gemarkeerd.
 - De popupfilter kan voor trainers `All`, een Trainer Planning-groep of alleen al deelnemende atleten tonen; individuele atleten zijn geen filteroptie en een atleet ziet alleen zichzelf. `Participating athletes` toont een atleet zodra minstens één Trainer-, Athlete- of Target-vakje is aangevinkt. Achter ingeklapte atleetnamen staan geen afstandspillen.
-- De trainerpopup opent standaard alle atleetregels. De tabel heeft aparte, compacte kolommen voor atleet en afstand, gevolgd door Trainer, Athlete en Target.
+- De trainerpopup opent standaard alle atleetregels. De tabel heeft aparte, compacte kolommen voor atleet en afstand, gevolgd door Trainer, Athlete en Target; de waarden delen dezelfde gridkolommen als de koppen.
 - Atleten openen de Race Calendar standaard in de compacte lijstweergave, met de afstanden als pillen achter de wedstrijdnaam.
 - De Races-tegel voor atleten opent de geïntegreerde Race Calendar en niet meer de oude Race Selector. Alleen gekozen afstanden verschijnen in de compacte lijst, met de kleur van de akkoordstatus.
 - In een geopende wedstrijd ziet een atleet de eigen selectiehokjes meteen; trainers blijven atleetregels eerst openklappen.

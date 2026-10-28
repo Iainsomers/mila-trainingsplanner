@@ -691,10 +691,15 @@
     line-height: 1;
   }
 
-  .race-entry-list { border: 1px solid #dee2e6; border-radius: 7px; overflow: hidden; }
+  .race-entry-list {
+    --race-entry-grid-columns: minmax(180px, 1.2fr) minmax(110px, .8fr) 70px 70px 70px;
+    border: 1px solid #dee2e6;
+    border-radius: 7px;
+    overflow: hidden;
+  }
   .race-entry-head {
     display: grid;
-    grid-template-columns: minmax(180px, 1.2fr) minmax(110px, .8fr) 70px 70px 70px;
+    grid-template-columns: var(--race-entry-grid-columns);
     align-items: center;
     gap: 6px;
   }
@@ -702,7 +707,7 @@
   .race-entry-head span:first-child { text-align: left; }
   .race-entry-athlete {
     display: grid;
-    grid-template-columns: minmax(180px, 1.2fr) minmax(110px, .8fr) 70px 70px 70px;
+    grid-template-columns: var(--race-entry-grid-columns);
     align-items: start;
     gap: 6px;
     padding: 0 9px;
@@ -720,16 +725,17 @@
   }
   .race-entry-athlete-summary::marker { color: #6c757d; }
   .race-entry-athlete-name { min-width: 0; }
-  .race-entry-distance-list { grid-column: 2 / -1; min-width: 0; }
+  .race-entry-distance-list { display: contents; }
   .race-entry-distance {
+    grid-column: 2 / -1;
     display: grid;
-    grid-template-columns: minmax(110px, .8fr) 70px 70px 70px;
+    grid-template-columns: subgrid;
     align-items: center;
     gap: 6px;
     min-height: 30px;
     font-size: .84rem;
   }
-  .race-entry-no-distances { min-height: 32px; display: flex; align-items: center; }
+  .race-entry-no-distances { grid-column: 2 / -1; min-height: 32px; display: flex; align-items: center; }
   .race-entry-distance label { text-align: center; }
   .race-distance-management { border: 1px solid #dee2e6; border-radius: 7px; padding: 0 10px 10px; }
   .race-distance-management > summary { cursor: pointer; font-weight: 700; padding: 9px 0; }
@@ -758,11 +764,11 @@
       gap: 6px;
     }
 
-    .race-entry-head { grid-template-columns: minmax(100px, 1.1fr) minmax(72px, .8fr) 42px 42px 42px; gap: 2px; }
+    .race-entry-list { --race-entry-grid-columns: minmax(100px, 1.1fr) minmax(72px, .8fr) 42px 42px 42px; }
+    .race-entry-head { gap: 2px; }
     .race-entry-head { font-size: .65rem; padding-inline: 5px; }
-    .race-entry-athlete { grid-template-columns: minmax(100px, 1.1fr) minmax(72px, .8fr) 42px 42px 42px; gap: 2px; padding-inline: 5px; }
-    .race-entry-distance { grid-template-columns: minmax(72px, .8fr) 42px 42px 42px; gap: 2px; }
-    .race-entry-distance-list { grid-column: 2 / -1; }
+    .race-entry-athlete { gap: 2px; padding-inline: 5px; }
+    .race-entry-distance { gap: 2px; }
     .race-entry-athlete-summary { font-size: .8rem; }
     .race-entry-distance { font-size: .75rem; }
   }
