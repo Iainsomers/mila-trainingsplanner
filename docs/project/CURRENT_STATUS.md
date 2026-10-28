@@ -108,6 +108,8 @@ Bijgewerkt: 27 oktober 2026.
 
 ## Validatie en resterende beperkingen
 
+- AYC-popupbewerkingen slaan nu op in hetzelfde actieve Flex Planner-plan waaruit de popup leest; een regressietest controleert dat de wijziging na opslaan zichtbaar is in zowel AYC als Flex Planner voor atleet en coach.
+
 - Meeting requests zijn toegevoegd aan Athlete Settings en DCO Other Info Quality. Nieuwe aanvragen melden zich via een hoofdcoach-popup; de status/leeftijd blijft zichtbaar tot de atleet annuleert.
 
 - Flex Planner toont een gekopieerde/persoonlijke atleettraining ook wanneer Base Planning voor dat dagdeel `Rest` bevat. De gedeelde trainertraining blijft op zo'n dagdeel verborgen; een expliciete persoonlijke override heeft voorrang.

@@ -6499,6 +6499,111 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(flex_cell["slot"].plan_id, trainer_plan.id)
         self.assertEqual(flex_cell["slot"].core_text(), "1200m z3")
 
+    def test_ayc_modal_saves_to_flex_plan_not_clicked_source_plan(self):
+        user = get_user_model().objects.create_user(
+            username="ayc-modal-flex-target-coach",
+            password="secret",
+            is_staff=True,
+        )
+        athlete_user = get_user_model().objects.create_user(
+            username="AYC Modal Flex Target Athlete",
+            password="secret",
+        )
+        athlete = Athlete.objects.create(
+            owner=user,
+            name="AYC Modal Flex Target Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        trainer_plan = TrainingPlan.objects.create(
+            owner=user,
+            name="AYC modal trainer source",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        flex_plan = TrainingPlan.objects.create(owner=user, name="Flex Planner AYC modal target")
+        day = date.today()
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=day.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=trainer_plan,
+        )
+        source_slot = TrainingSlot.objects.create(plan=trainer_plan, date=day, slot_index=1)
+        source_slot.segments.create(type="CORE", text="DL 30' Z1", zone="1", order=1)
+        self.client.force_login(athlete_user)
+
+        modal = self.client.get(
+            f"/slot-modal/{day:%Y/%m/%d}/1/?plan={trainer_plan.id}&athlete={athlete.id}&source=athlete_year"
+        )
+        self.assertEqual(modal.status_code, 200)
+        self.assertContains(modal, f'value="{flex_plan.id}"')
+
+        # Mirror the AYC modal submission: the hidden modal plan is sent along
+        # with the AYC source marker, rather than the clicked cell's source ID.
+        saved = self.client.post(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "plan": str(flex_plan.id),
+                "source": "athlete_year",
+                "slot_text": "DL 40' Z2 8000m",
+                "core_text": "DL 40' Z2 8000m",
+            },
+        )
+        self.assertEqual(saved.status_code, 200)
+        self.assertFalse(
+            TrainingSlot.objects.filter(
+                plan=trainer_plan,
+                athlete=athlete,
+                date=day,
+                slot_index=1,
+            ).exists()
+        )
+        override = TrainingSlot.objects.get(
+            plan=flex_plan,
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+        )
+        self.assertEqual(override.core_text(), "DL 40' Z2 8000m")
+
+        # The athlete and coach should both read the same override.
+        self.client.force_login(user)
+        ayc_page = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}&hide=none"
+        )
+        self.assertContains(ayc_page, 'var modalPlanField = form.querySelector(\'[name="plan"]\')')
+        self.assertContains(ayc_page, 'formData.append("source", "athlete_year")')
+        ayc_cell = next(
+            cell
+            for week in ayc_page.context["week_rows"]
+            for cell in week["cells1"]
+            if cell["day"] == day
+        )
+        self.assertEqual(ayc_cell["slot"].plan_id, flex_plan.id)
+        self.assertEqual(ayc_cell["slot"].core_text(), "DL 40' Z2 8000m")
+
+        flex_page = self.client.get(
+            f"/flex-planner/?start={day.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        flex_cell = next(
+            cell
+            for week in flex_page.context["week_rows"]
+            for cell in week["athlete_rows"][0]["am_cells"]
+            if cell["day"] == day
+        )
+        self.assertEqual(flex_cell["slot"].core_text(), "DL 40' Z2 8000m")
+
     def test_flex_hides_trainer_slot_when_base_planning_is_rest(self):
         user = get_user_model().objects.create_user(
             username="flex-rest-base-coach",

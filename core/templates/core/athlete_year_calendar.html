@@ -2969,7 +2969,9 @@
     var formData = new FormData();
     formData.append("date", activeSlotDate || form.getAttribute("data-date") || "");
     formData.append("slot_index", activeSlotIndex || form.getAttribute("data-slot-index") || "1");
-    formData.append("plan", activePlanId || "");
+    var modalPlanField = form.querySelector('[name="plan"]');
+    formData.append("plan", modalPlanField ? (modalPlanField.value || "") : (activePlanId || ""));
+    formData.append("source", "athlete_year");
     formData.append("slot_text", collectSlotText(form));
 
     ["wu_text", "mob_text", "sprint_text", "core_text", "core2_text", "alt_text", "cd_text"].forEach(function(name) {

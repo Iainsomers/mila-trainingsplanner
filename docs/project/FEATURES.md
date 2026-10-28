@@ -74,6 +74,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 - De trainingspopup volgt bij Flex dezelfde bronkeuze als de kalendercel: een individuele Base Planning-training (of Rest) gaat vóór een gekoppeld trainerplan. Bij meerdere datumblokken wordt het blok met de laatste `effective_from` gebruikt.
 - Een expliciet atleet-slot blijft in Flex Planner zichtbaar als de oude planlidmaatschap- of groepskoppeling ontbreekt.
 - Een persoonlijke Flex-override kan met `Reset to plan` volledig worden verwijderd. Daarmee komt de onderliggende trainerplanning terug; velden leegmaken is niet hetzelfde als resetten.
+- Een training die via de AYC-popup wordt aangepast, gebruikt dezelfde Flex Planner-plan-ID bij openen en opslaan. Zo ziet de atleet én coach dezelfde persoonlijke override in AYC en Flex Planner, ook wanneer de kalendercel naar een gekoppeld trainerplan verwijst.
 - Toont bij zoneonderdelen waarvoor een handmatige Z1/Z2/Z3-HR is ingevuld ook de toepasselijke HR naast de richttijd.
 - Haalt weekphase-kleuren uit de Year Planner. Meerdere fases in één week worden diagonaal gecombineerd; de oude weektype-dropdown bestaat niet meer.
 

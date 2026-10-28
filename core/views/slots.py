@@ -119,7 +119,16 @@ def _flex_edit_plan_for_request(request, selected_plan, athlete):
             return TrainingPlan.objects.create(**kwargs)
 
     owner = None
-    if request.user.is_staff or request.user.is_superuser:
+    if _is_athlete_year_source(request):
+        # AYC renders personal overrides from the active coach's Flex plan
+        # (or the athlete owner's plan for an athlete login). Keep the modal
+        # on that same plan even when the clicked cell carries a source-plan ID.
+        owner = (
+            _active_coach_user(request)
+            if request.user.is_staff or request.user.is_superuser
+            else getattr(athlete, "owner", None)
+        )
+    elif request.user.is_staff or request.user.is_superuser:
         if selected_plan and _can_edit_coach_owner(request, getattr(selected_plan, "owner_id", None)):
             owner = getattr(selected_plan, "owner", None)
         if owner is None and athlete is not None and _can_edit_coach_owner(
