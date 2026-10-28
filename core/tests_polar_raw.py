@@ -92,6 +92,30 @@ class RawPolarTests(SimpleTestCase):
         self.assertEqual([row["average_hr"] for row in rows], ["110", "125"])
         self.assertEqual([row["average_hr_last_15"] for row in rows], ["112", "125"])
 
+    def test_garmin_lap_rows_use_lap_hr_samples_and_last_fifteen_seconds(self):
+        result = translate([{"laps": {"laps": [
+            {"distanceMeters": 400, "durationMillis": 20000, "splitTimeMillis": 20000,
+             "heartRate": 150, "heartRateSamples": [
+                 {"timeMillis": 1000, "heartRate": 140},
+                 {"timeMillis": 6000, "heartRate": 150},
+                 {"timeMillis": 11000, "heartRate": 160},
+                 {"timeMillis": 16000, "heartRate": 170},
+                 {"timeMillis": 19000, "heartRate": 180},
+             ]},
+        ]}}], 5)
+        row = result[0]["parts"][0]["manual"][0]
+        self.assertEqual(row["average_hr"], "160")
+        self.assertEqual(row["average_hr_last_15"], "165")
+
+    def test_lap_average_hr_falls_back_to_garmin_lap_average(self):
+        result = translate([{"laps": {"laps": [
+            {"distanceMeters": 400, "durationMillis": 20000, "splitTimeMillis": 20000,
+             "heartRate": 151},
+        ]}}], 5)
+        row = result[0]["parts"][0]["manual"][0]
+        self.assertEqual(row["average_hr"], "151")
+        self.assertEqual(row["average_hr_last_15"], "151")
+
     def test_model_b_starts_with_same_type_a_output(self):
         payload = [{"sport": {"id": "1"}, "laps": {"laps": [
             {"distanceMeters": 1000, "durationMillis": 240000},

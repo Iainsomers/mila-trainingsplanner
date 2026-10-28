@@ -67,7 +67,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.
 - Polar A/B- en Garmin C-trainingen worden als horlogebron opgeslagen. Voor deze slots gebruiken Flex Planner, AYC en weektotalen de werkelijke meters en seconden per zone; geplande trainingen blijven hun zone-snelheden gebruiken om afstand en tijd af te leiden. De zichtbare segmenttekst behoudt de min/km-notatie uit de horlogeomschrijving zonder een extra totaal- of `actual`-label.
-- Bij Polar A/B en Garmin C worden geplande HR-richtwaarden niet getoond; actuele HR-metingen worden later toegevoegd zodra de horlogedata daarvoor wordt verwerkt.
+- Bij Polar A/B- en Garmin C-slots worden geen geplande HR-richtwaarden getoond. Garmin C toont in de resultaat-popup per lap de gemiddelde hartslag en de gemiddelde hartslag over de laatste 15 seconden (kortere laps gebruiken hun volledige duur). De FIT-record-hartslagmetingen worden hiervoor gebruikt; wanneer alleen lapgemiddelden beschikbaar zijn, worden die als terugval getoond.
 - Een persoonlijke wijziging blijft zichtbaar, ook wanneer de oorspronkelijke bronplanning op die datum formeel al is afgelopen.
 - Een trainerplan dat via Base Planning aan een atleet is gekoppeld, blijft voor die atleet zichtbaar in Flex Planner; de Base Planning-koppeling gaat vóór de formele datumrange van het plan.
 - Flex kiest het via Base Planning toegewezen trainerplan per AM/PM-dagdeel; een gedeeld (ook leeg) slot uit een ander gekoppeld plan mag die training niet verbergen. Een expliciete persoonlijke wijziging en een Flex-override behouden hun voorrang.

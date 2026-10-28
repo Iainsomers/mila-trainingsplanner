@@ -3062,8 +3062,14 @@ class PolarPlanMismatchTests(TestCase):
             "session": {"total_distance": 3000, "total_elapsed_time": 1200},
             "total_distance_m": 3000,
             "total_elapsed_s": 1200,
+            "heart_rate_samples": [
+                {"timestamp": "2026-10-22T08:00:01+00:00", "heart_rate": 140},
+                {"timestamp": "2026-10-22T08:00:05+00:00", "heart_rate": 155},
+                {"timestamp": "2026-10-22T08:00:10+00:00", "heart_rate": 160},
+            ],
             "laps": [
-                {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 150},
+                {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 150,
+                 "start_time": "2026-10-22T08:00:00+00:00"},
                 {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 151},
                 {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 152},
                 {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 153},
@@ -3094,6 +3100,12 @@ class PolarPlanMismatchTests(TestCase):
         self.assertEqual(len(laps), 6)
         self.assertEqual(laps[0]["distanceMeters"], 500)
         self.assertEqual(laps[0]["durationMillis"], 200000)
+        self.assertEqual(laps[0]["heartRate"], 150)
+        self.assertEqual(laps[0]["heartRateSamples"], [
+            {"timeMillis": 1000, "heartRate": 140},
+            {"timeMillis": 5000, "heartRate": 155},
+            {"timeMillis": 10000, "heartRate": 160},
+        ])
         self.assertEqual(len(response.json()["results"][0]["parts"][0]["watch_loads"]), 6)
 
     def test_ayc_watch_c_rejects_garmin_files_for_unavailable_athletes(self):

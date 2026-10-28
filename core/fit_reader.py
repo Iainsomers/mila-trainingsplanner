@@ -230,6 +230,11 @@ def parse_fit(raw: bytes) -> dict:
             if "start_time" in item:
                 item["start_time"] = _timestamp(item["start_time"])
     session = sessions[0] if sessions else {}
+    heart_rate_samples = [
+        {"timestamp": record.get("timestamp"), "heart_rate": record.get("heart_rate")}
+        for record in records
+        if record.get("timestamp") is not None and record.get("heart_rate") is not None
+    ]
     total_distance = session.get("total_distance")
     if total_distance is None and laps:
         total_distance = sum(float(lap.get("distance") or 0) for lap in laps)
@@ -275,6 +280,7 @@ def parse_fit(raw: bytes) -> dict:
         "session": session,
         "laps": laps,
         "record_count": len(records),
+        "heart_rate_samples": heart_rate_samples,
         "records_preview": records[:3] + (records[-3:] if len(records) > 6 else []),
         "total_distance_m": total_distance,
         "total_elapsed_s": elapsed,

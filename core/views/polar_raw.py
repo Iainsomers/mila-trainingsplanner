@@ -79,18 +79,6 @@ def lap_zone_paces(distance_m, duration_ms, athlete):
 
 
 def lap_average_hr(lap, start_ms, end_ms, samples):
-    if not isinstance(samples, dict):
-        return "NA"
-    streams = samples.get("samples")
-    if not isinstance(streams, list):
-        return "NA"
-    stream = next((item for item in streams if isinstance(item, dict) and str(item.get("type", "")).upper() == "HEART_RATE"), None)
-    if not stream:
-        return "NA"
-    interval_ms = number(stream.get("intervalMillis"))
-    values = stream.get("values")
-    if interval_ms is None or interval_ms <= 0 or not isinstance(values, list):
-        return "NA"
     try:
         start_ms = float(start_ms or 0)
         end_ms = float(end_ms or 0)
@@ -99,15 +87,31 @@ def lap_average_hr(lap, start_ms, end_ms, samples):
     if end_ms <= start_ms:
         return "NA"
     heart_rates = []
-    for index, value in enumerate(values):
-        timestamp = index * interval_ms
-        if timestamp < start_ms or timestamp >= end_ms:
-            continue
-        bpm = number(value)
-        if bpm is not None and bpm > 0:
-            heart_rates.append(bpm)
+    local_samples = lap.get("heartRateSamples") if isinstance(lap, dict) else None
+    if isinstance(local_samples, list):
+        for sample in local_samples:
+            if not isinstance(sample, dict):
+                continue
+            timestamp = number(sample.get("timeMillis"))
+            bpm = number(sample.get("heartRate"))
+            if timestamp is not None and start_ms <= timestamp < end_ms and bpm is not None and bpm > 0:
+                heart_rates.append(bpm)
+    else:
+        streams = samples.get("samples") if isinstance(samples, dict) else None
+        stream = next((item for item in streams or [] if isinstance(item, dict)
+                       and str(item.get("type", "")).upper() == "HEART_RATE"), None)
+        interval_ms = number(stream.get("intervalMillis")) if stream else None
+        values = stream.get("values") if stream else None
+        if interval_ms and interval_ms > 0 and isinstance(values, list):
+            for index, value in enumerate(values):
+                timestamp = index * interval_ms
+                if start_ms <= timestamp < end_ms:
+                    bpm = number(value)
+                    if bpm is not None and bpm > 0:
+                        heart_rates.append(bpm)
     if not heart_rates:
-        return "NA"
+        fallback = number(lap.get("heartRate")) if isinstance(lap, dict) else None
+        return display(fallback) if fallback is not None and fallback > 0 else "NA"
     return display(math.floor(sum(heart_rates) / len(heart_rates) + 0.5))
 
 

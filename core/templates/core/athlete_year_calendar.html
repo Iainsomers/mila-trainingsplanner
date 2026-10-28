@@ -2293,8 +2293,8 @@
           }
           box.appendChild(description);
         }
-        renderTypeALaps(box, "Manual laps", part.manual, model === "B");
-        renderTypeALaps(box, "Automatic laps", part.auto, model === "B");
+        renderTypeALaps(box, "Manual laps", part.manual, model === "B" || model === "C");
+        renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C");
       });
       parent.appendChild(box);
     });

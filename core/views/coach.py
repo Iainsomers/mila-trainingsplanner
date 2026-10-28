@@ -5557,6 +5557,7 @@ def garmin_type_c_ayc_view(request):
         session_data = parsed.get("session") if isinstance(parsed.get("session"), dict) else {}
         human = parsed.get("human") if isinstance(parsed.get("human"), dict) else {}
         laps = parsed.get("laps") if isinstance(parsed.get("laps"), list) else []
+        heart_rate_samples = parsed.get("heart_rate_samples") if isinstance(parsed.get("heart_rate_samples"), list) else []
         polar_laps = []
         elapsed_ms = 0
         for lap in laps:
@@ -5580,6 +5581,27 @@ def garmin_type_c_ayc_view(request):
             }
             if lap.get("avg_heart_rate") is not None:
                 normalized_lap["heartRate"] = lap["avg_heart_rate"]
+            lap_start = lap.get("start_time")
+            if lap_start and heart_rate_samples:
+                try:
+                    lap_start = datetime.fromisoformat(str(lap_start).replace("Z", "+00:00"))
+                    lap_samples = []
+                    for sample in heart_rate_samples:
+                        if not isinstance(sample, dict) or sample.get("timestamp") is None:
+                            continue
+                        try:
+                            sample_time = datetime.fromisoformat(str(sample["timestamp"]).replace("Z", "+00:00"))
+                            offset_ms = round((sample_time - lap_start).total_seconds() * 1000)
+                            if 0 <= offset_ms < duration_ms and sample.get("heart_rate") is not None:
+                                lap_samples.append({
+                                    "timeMillis": elapsed_ms - duration_ms + offset_ms,
+                                    "heartRate": sample["heart_rate"],
+                                })
+                        except (TypeError, ValueError):
+                            continue
+                    normalized_lap["heartRateSamples"] = lap_samples
+                except (TypeError, ValueError):
+                    pass
             polar_laps.append(normalized_lap)
         if not polar_laps:
             continue
