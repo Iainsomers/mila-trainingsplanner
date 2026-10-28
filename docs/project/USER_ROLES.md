@@ -13,6 +13,7 @@ Een trainer is doorgaans staff- of superuser en kan:
 - wedstrijden en wedstrijdafstanden beheren;
 - standaard krachtprogramma's beheren;
 - rapportages en zichtbaarheid per atleet instellen;
+- in Coach Settings `Pain in training evaluations` beheren. Deze instelling is standaard aan en geldt voor de atleten van die coach, ook wanneer een bevoegde gedelegeerde trainer namens die coach werkt;
 - in DCO Other Info Quality open/evaluated-aantallen zien wanneer trainingsevaluaties voor die trainer zichtbaar zijn en voor de atleet zijn ingeschakeld; anders worden beide aantallen verborgen;
 - voor een geselecteerde atleet vitals en training reports vastleggen, ook wanneer een trainer vooruit werkt;
 - in de AYC tussen toegankelijke atleten schakelen;

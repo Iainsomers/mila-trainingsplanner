@@ -3381,6 +3381,24 @@ def athlete_year_calendar_view(request):
                     if report_submit is not None and watch_activity_id and not status:
                         status = AthleteDayCheck.STATUS_DONE_AS_PLANNED
 
+                    if report_submit is not None:
+                        rpe_raw = (request.POST.get("rpe") or "").strip()
+                        comment_raw = (request.POST.get("report_comment") or "").strip()
+                        pain_enabled = CoachSettings.objects.filter(
+                            user_id=athlete.owner_id
+                        ).values_list("training_evaluation_pain_enabled", flat=True).first()
+                        pain_enabled = True if pain_enabled is None else pain_enabled
+                        pain_value = (request.POST.get("pain") or "").strip()
+                        evaluation_has_content = bool(
+                            status or rpe_raw or comment_raw or watch_activity_id
+                        )
+                        if (
+                            pain_enabled
+                            and evaluation_has_content
+                            and pain_value not in dict(AthleteDayCheck.PAIN_CHOICES)
+                        ):
+                            return HttpResponse("Choose a pain level.", status=400)
+
                     obj, _ = AthleteDayCheck.objects.get_or_create(
                         date=d,
                         athlete=athlete,
@@ -3391,14 +3409,14 @@ def athlete_year_calendar_view(request):
                     obj.checked = bool(status)
 
                     if report_submit is not None:
-                        rpe_raw = (request.POST.get("rpe") or "").strip()
-                        comment_raw = (request.POST.get("report_comment") or "").strip()
                         obj.rpe = (
                             0
                             if status == AthleteDayCheck.STATUS_NOT_DONE
                             else int(rpe_raw) if rpe_raw.isdigit() and 0 <= int(rpe_raw) <= 10 else None
                         )
                         obj.comment = comment_raw
+                        if pain_enabled and pain_value in dict(AthleteDayCheck.PAIN_CHOICES):
+                            obj.pain = pain_value
                         obj.watch_activity_id = watch_activity_id
                         obj.watch_activity_summary = watch_activity_summary
                         obj.watch_activity_payload = watch_activity_payload
@@ -3467,6 +3485,15 @@ def athlete_year_calendar_view(request):
         selected_athlete.owner if selected_athlete else None,
         athlete_self=athlete_self_view,
     )
+    evaluation_pain_enabled = (
+        CoachSettings.objects.filter(user_id=selected_athlete.owner_id)
+        .values_list("training_evaluation_pain_enabled", flat=True)
+        .first()
+        if selected_athlete and selected_athlete.owner_id
+        else None
+    )
+    if evaluation_pain_enabled is None:
+        evaluation_pain_enabled = True
     show_training_reports = bool(
         selected_athlete
         and getattr(selected_athlete, "training_reports_enabled", True)
@@ -4199,6 +4226,7 @@ def athlete_year_calendar_view(request):
             "show_session_km": bool(selected_athlete and getattr(selected_athlete, "see_session_km", True)),
             "show_session_zones": bool(selected_athlete and getattr(selected_athlete, "see_session_zones", True)),
             "show_training_reports": show_training_reports,
+            "evaluation_pain_enabled": evaluation_pain_enabled,
             "show_week_reports": show_week_reports,
             "show_daily_vitals": show_daily_vitals,
             "ayc_rowspan": ayc_rowspan,

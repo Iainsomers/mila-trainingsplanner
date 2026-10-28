@@ -4288,6 +4288,78 @@ class SlotModalSaveTests(TestCase):
         self.client.force_login(user)
         return user, plan, athlete
 
+    def test_training_evaluation_pain_defaults_on_and_can_be_disabled(self):
+        coach, _, _ = self._user_plan_and_athlete()
+
+        page = self.client.get("/settings/")
+        self.assertContains(page, 'id="training-evaluation-pain-enabled" name="training_evaluation_pain_enabled" checked')
+        self.assertTrue(CoachSettings.objects.get(user=coach).training_evaluation_pain_enabled)
+
+        response = self.client.post("/settings/", {})
+        self.assertRedirects(response, "/settings/")
+        self.assertFalse(CoachSettings.objects.get(user=coach).training_evaluation_pain_enabled)
+
+    def test_training_evaluation_requires_pain_and_stores_selection(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        day = date.today() + timedelta(days=1)
+        url = f"/athlete/year/?year={day.year}&athlete={athlete.id}"
+        post_data = {
+            "date": day.isoformat(),
+            "slot_index": "1",
+            "report_submit": "1",
+            "check_status": "done_as_planned",
+            "rpe": "5",
+            "report_comment": "Completed the session",
+        }
+
+        rejected = self.client.post(url, post_data)
+        self.assertEqual(rejected.status_code, 400)
+        self.assertFalse(AthleteDayCheck.objects.filter(athlete=athlete, date=day).exists())
+
+        post_data["pain"] = AthleteDayCheck.PAIN_SOME
+        accepted = self.client.post(url, post_data)
+        self.assertEqual(accepted.status_code, 200)
+        saved = AthleteDayCheck.objects.get(athlete=athlete, date=day, slot_index=1)
+        self.assertEqual(saved.pain, AthleteDayCheck.PAIN_SOME)
+
+    def test_disabling_pain_does_not_change_existing_evaluations(self):
+        coach, _, athlete = self._user_plan_and_athlete()
+        day = date.today() - timedelta(days=1)
+        old_evaluation = AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+            checked=True,
+            rpe=4,
+            comment="Legacy evaluation",
+            pain="",
+            updated_by=coach,
+        )
+        CoachSettings.objects.create(user=coach, training_evaluation_pain_enabled=False)
+
+        page = self.client.get(f"/athlete/year/?year={day.year}&athlete={athlete.id}")
+        self.assertFalse(page.context["evaluation_pain_enabled"])
+        self.assertContains(page, 'id="reportT1Pain"')
+        old_evaluation.refresh_from_db()
+        self.assertEqual(old_evaluation.pain, "")
+
+        response = self.client.post(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}",
+            {
+                "date": day.isoformat(),
+                "slot_index": "1",
+                "report_submit": "1",
+                "check_status": AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+                "rpe": "4",
+                "report_comment": "Updated evaluation",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        old_evaluation.refresh_from_db()
+        self.assertEqual(old_evaluation.pain, "")
+        self.assertEqual(old_evaluation.comment, "Updated evaluation")
+
     def test_base_planning_copy_options_are_limited_to_active_coach(self):
         admin = get_user_model().objects.create_user(
             username="base-copy-admin", password="secret", is_staff=True, is_superuser=True
@@ -7225,6 +7297,7 @@ class SlotModalSaveTests(TestCase):
                 "report_submit": "1",
                 "check_status": "done_as_planned",
                 "rpe": "6",
+                "pain": AthleteDayCheck.PAIN_NONE,
                 "report_comment": "Coach test report",
             },
         )
@@ -7243,6 +7316,7 @@ class SlotModalSaveTests(TestCase):
                 "report_submit": "1",
                 "check_status": "not_done",
                 "rpe": "",
+                "pain": AthleteDayCheck.PAIN_NONE,
                 "report_comment": "Had to rest",
             },
         )
@@ -7330,6 +7404,7 @@ class SlotModalSaveTests(TestCase):
                 "report_submit": "1",
                 "check_status": "adjusted_ok",
                 "rpe": "5",
+                "pain": AthleteDayCheck.PAIN_NONE,
                 "report_comment": "Shared coach report",
             },
         )
@@ -8177,6 +8252,7 @@ class SlotModalSaveTests(TestCase):
                 "report_submit": "1",
                 "check_status": "done_as_planned",
                 "rpe": "5",
+                "pain": AthleteDayCheck.PAIN_NONE,
                 "report_comment": "Future watch report",
             },
         )

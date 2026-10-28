@@ -70,6 +70,7 @@ class CoachSettings(models.Model):
 
     # Optional long-term planning modules.
     evaluations_enabled = models.BooleanField(default=True)
+    training_evaluation_pain_enabled = models.BooleanField(default=True)
     focus_points_enabled = models.BooleanField(default=False)
     evaluation_sharing_enabled = models.BooleanField(default=False)
     detailed_camps_enabled = models.BooleanField(default=False)
@@ -1502,6 +1503,15 @@ class AthleteDayComment(models.Model):
 
 
 class AthleteDayCheck(models.Model):
+    PAIN_NONE = "no_pain"
+    PAIN_SOME = "some_pain"
+    PAIN_SERIOUS = "serious_pain"
+    PAIN_CHOICES = [
+        (PAIN_NONE, "No Pain"),
+        (PAIN_SOME, "Some pain"),
+        (PAIN_SERIOUS, "Serious pain"),
+    ]
+
     STATUS_NONE = ""
     STATUS_DONE_AS_PLANNED = "done_as_planned"
     STATUS_TOO_HARD_FAST = "too_hard_fast"
@@ -1523,6 +1533,7 @@ class AthleteDayCheck(models.Model):
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="day_checks")
     checked = models.BooleanField(default=False)
     rpe = models.PositiveSmallIntegerField(null=True, blank=True)
+    pain = models.CharField(max_length=20, choices=PAIN_CHOICES, blank=True, default="")
     comment = models.TextField(blank=True, default="")
     watch_activity_id = models.CharField(max_length=120, blank=True, default="")
     watch_activity_summary = models.TextField(blank=True, default="")
@@ -1565,6 +1576,7 @@ class AthleteDayCheck(models.Model):
         return bool(
             self.effective_status
             or self.rpe is not None
+            or bool(self.pain)
             or (self.comment or "").strip()
         )
 

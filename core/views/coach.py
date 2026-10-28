@@ -9577,9 +9577,13 @@ def settings_view(request):
         if pause_mode in dict(CoachSettings.PAUSE_MODE_CHOICES):
             coach_settings.pause_mode = pause_mode
         coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
+        coach_settings.training_evaluation_pain_enabled = (
+            request.POST.get("training_evaluation_pain_enabled") == "on"
+        )
         coach_settings.evaluation_sharing_enabled = (request.POST.get("evaluation_sharing_enabled") == "on")
         coach_settings.save(update_fields=[
             "evaluations_enabled",
+            "training_evaluation_pain_enabled",
             "evaluation_sharing_enabled",
             "detailed_camps_enabled",
             "focus_points_enabled",
@@ -9624,6 +9628,7 @@ def settings_view(request):
 
     return render(request, "core/settings.html", {
         "evaluations_enabled": coach_settings.evaluations_enabled,
+        "training_evaluation_pain_enabled": coach_settings.training_evaluation_pain_enabled,
         "evaluation_sharing_enabled": coach_settings.evaluation_sharing_enabled,
         "evaluation_share_rows": evaluation_share_rows,
         "detailed_camps_enabled": coach_settings.detailed_camps_enabled,

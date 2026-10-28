@@ -122,7 +122,7 @@ Ondersteunde onderdelen zijn WU, Mob/Tech, Sprint, Main, Main 2, Alternative en 
 
 ## Evaluaties
 
-Bij trainingsevaluaties wordt RPE automatisch op 0 gezet wanneer `Not done` wordt gekozen. De bestaande controle blijft staan: bij een ingevulde evaluatie is een commentaar van minimaal vier tekens vereist. Atleten met `Extended edit rights` krijgen op ieder zichtbaar dagdeel altijd AM- en PM-evaluatievelden, ook wanneer daar nog geen training staat; toekomstige evaluaties mogen dan ook worden opgeslagen.
+Bij trainingsevaluaties wordt RPE automatisch op 0 gezet wanneer `Not done` wordt gekozen. De bestaande controle blijft staan: bij een ingevulde evaluatie is een commentaar van minimaal vier tekens vereist. Daarnaast staat de coachinstelling `Pain in training evaluations` standaard aan. Als die aanstaat, staat naast RPE een verplicht keuzemenu met 🟢 No Pain, 🟠 Some pain en 🔴 Serious pain; nieuwe evaluaties starten vooraf ingevuld op No Pain. De keuze wordt per training/AM-PM opgeslagen. Uitzetten verbergt het veld en maakt Pain niet verplicht; eerder opgeslagen evaluaties worden niet aangepast en een bestaande Pain-waarde blijft behouden. Atleten met `Extended edit rights` krijgen op ieder zichtbaar dagdeel altijd AM- en PM-evaluatievelden, ook wanneer daar nog geen training staat; toekomstige evaluaties mogen dan ook worden opgeslagen.
 
 Per training kan de atleet vastleggen:
 
