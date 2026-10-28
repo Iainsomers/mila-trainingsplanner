@@ -12040,12 +12040,22 @@ def daily_overview_view(request):
 
 @login_required
 def daily_overview_other_view(request):
-    """Show coach-facing quality indicators for recent AYC evaluations."""
+    """Show the staff overview landing page or one of its all-athlete views."""
     today = date.today()
     window_start = today - timedelta(days=7)
     window_end = today - timedelta(days=1)
     active_coach = _active_coach_user(request)
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
+    requested_view = request.GET.get("view", "").strip().lower()
+    # Keep links/bookmarks using the old ?vital=... URL working.
+    if requested_view not in {"vitals", "information_quality"}:
+        requested_view = "vitals" if request.GET.get("vital") else ""
+    if not requested_view:
+        return render(request, "core/daily_overview_other.html", {
+            "overview_mode": "",
+            "athletes": athletes,
+        })
+
     athlete_ids = [athlete.id for athlete in athletes]
     training_visible_athlete_ids = {
         athlete.id
@@ -12334,4 +12344,5 @@ def daily_overview_other_view(request):
         "vitals_window_end": today,
         "hr_zone_rows": hr_zone_rows,
         "meeting_requests": owned_meeting_requests,
+        "overview_mode": requested_view,
     })

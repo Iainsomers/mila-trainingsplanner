@@ -1415,7 +1415,7 @@ class PlanningOverviewTests(TestCase):
         )
 
         self.client.force_login(coach)
-        response = self.client.get("/coach/daily-overview-other/")
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
@@ -1463,7 +1463,7 @@ class PlanningOverviewTests(TestCase):
         session = self.client.session
         session["active_coach_owner_id"] = owner.id
         session.save()
-        response = self.client.get("/coach/daily-overview-other/")
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
@@ -1505,7 +1505,7 @@ class PlanningOverviewTests(TestCase):
         session = self.client.session
         session["active_coach_owner_id"] = owner.id
         session.save()
-        response = self.client.get("/coach/daily-overview-other/")
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
@@ -1548,7 +1548,7 @@ class PlanningOverviewTests(TestCase):
         )
 
         self.client.force_login(coach)
-        response = self.client.get("/coach/daily-overview-other/")
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
@@ -1564,8 +1564,29 @@ class PlanningOverviewTests(TestCase):
             with self.subTest(vital=vital):
                 response = self.client.get("/coach/daily-overview-other/", {"vital": vital})
                 self.assertEqual(response.status_code, 200)
-                self.assertContains(response, '<details class="overview-block" open>\n    <summary>Vitals')
-                self.assertContains(response, '<details class="overview-block">\n    <summary>Info Quality')
+                self.assertContains(response, '<section class="overview-block">')
+                self.assertContains(response, "Average from")
+                self.assertNotContains(response, "Open evaluations from")
+
+    def test_staff_team_overview_landing_lists_accessible_athletes_and_view_choices(self):
+        coach = get_user_model().objects.create_user(
+            username="staff-overview-landing", password="secret", is_staff=True
+        )
+        Athlete.objects.create(owner=coach, name="Visible Athlete", birth_year=2000, gender="X")
+        other_coach = get_user_model().objects.create_user(
+            username="staff-overview-other", password="secret", is_staff=True
+        )
+        Athlete.objects.create(owner=other_coach, name="Private Athlete", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+
+        response = self.client.get("/coach/daily-overview-other/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Staff Team Overview")
+        self.assertContains(response, "Visible Athlete")
+        self.assertNotContains(response, "Private Athlete")
+        self.assertContains(response, "?view=vitals")
+        self.assertContains(response, "?view=information_quality")
 
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(
@@ -2337,7 +2358,7 @@ class PlanningOverviewTests(TestCase):
 
         dco = self.client.get(f"/coach/daily-overview/?date={today.isoformat()}&ok=1")
         self.assertIsNotNone(dco.context["rows"][0]["check1"])
-        dco_other = self.client.get("/coach/daily-overview-other/")
+        dco_other = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
         self.assertEqual(dco_other.context["athlete_rows"][0]["pending_count"], 0)
 
         flex = self.client.get(
@@ -10332,7 +10353,7 @@ class MeetingRequestTests(TestCase):
         self.athlete.save(update_fields=["meeting_requested_at"])
         self.client.force_login(self.coach)
 
-        response = self.client.get("/coach/daily-overview-other/")
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Meeting Athlete requested a meeting.")
         self.assertContains(response, "Meeting requested · 3d")
@@ -10340,7 +10361,7 @@ class MeetingRequestTests(TestCase):
 
         response = self.client.post("/coach/meeting-requests/dismiss/")
         self.assertEqual(response.status_code, 302)
-        response = self.client.get("/coach/daily-overview-other/")
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
         self.assertNotContains(response, "Meeting Athlete requested a meeting.")
         self.assertContains(response, "Meeting requested · 3d")
 
@@ -10356,7 +10377,7 @@ class MeetingRequestTests(TestCase):
             athlete.save(update_fields=["meeting_requested_at"])
 
         self.client.force_login(self.coach)
-        response = self.client.get("/coach/daily-overview-other/")
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
         self.assertContains(response, "Meeting requested · 0d")
         self.assertContains(response, "Meeting requested · 2d")
         self.assertContains(response, "Meeting requested · 3d")

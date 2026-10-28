@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}Daily Coach Overview Other{% endblock %}
+{% block title %}Staff Team Overview{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -43,6 +43,9 @@
   .vital-selector { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
   .vital-selector .btn { min-width: 9rem; }
   .vital-table th, .vital-table td { vertical-align: middle; }
+  .staff-overview-athletes { columns: 2; column-gap: 2rem; }
+  .staff-overview-athletes li { break-inside: avoid; padding: .2rem 0; }
+  @media (max-width: 575.98px) { .staff-overview-athletes { columns: 1; } }
   .hr-zone-table th, .hr-zone-table td { vertical-align: middle; text-align: center; }
   .hr-zone-table th:first-child, .hr-zone-table td:first-child { text-align: left; }
   .hr-zone-table td.hr-zone-misaligned { color: #c00000 !important; font-weight: 700; }
@@ -53,14 +56,32 @@
 <main class="other-overview daily-overview-other-page">
   <div class="d-flex justify-content-between align-items-center gap-3">
     <div>
-      <h1 class="h3 mb-1">Daily Coach Overview Other</h1>
-      <p class="text-muted mb-0">Recent information quality for your athletes.</p>
+      <h1 class="h3 mb-1">Staff Team Overview</h1>
+      <p class="text-muted mb-0">Team vitals and information quality.</p>
     </div>
-    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+    <div class="d-flex gap-2">
+      {% if overview_mode %}<a href="{% url 'daily_overview_other' %}" class="btn btn-outline-secondary">All athletes</a>{% endif %}
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+    </div>
   </div>
 
-  <details class="overview-block">
-    <summary>Info Quality</summary>
+  <nav class="d-flex flex-wrap gap-2 mt-3" aria-label="Staff overview sections">
+    <a class="btn {% if overview_mode == 'vitals' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=vitals">Vitals</a>
+    <a class="btn {% if overview_mode == 'information_quality' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=information_quality">Information Quality</a>
+  </nav>
+
+  {% if not overview_mode %}
+  <section class="overview-block" aria-labelledby="staff-athletes-heading">
+    <div class="overview-content">
+      <h2 id="staff-athletes-heading" class="h5">Athletes</h2>
+      <ul class="staff-overview-athletes list-unstyled mb-0">
+        {% for athlete in athletes %}<li>{{ athlete.name }}</li>
+        {% empty %}<li class="text-muted">No athletes found.</li>{% endfor %}
+      </ul>
+    </div>
+  </section>
+  {% elif overview_mode == 'information_quality' %}
+  <section class="overview-block">
     <div class="overview-content">
       <p class="text-muted small">Open evaluations from {{ window_start|date:"d-m-Y" }} through {{ window_end|date:"d-m-Y" }}. Today is not included.</p>
       <div class="table-responsive">
@@ -87,18 +108,19 @@
         </table>
       </div>
     </div>
-  </details>
+  </section>
 
-  <details class="overview-block"{% if vitals_open %} open{% endif %}>
-    <summary>Vitals</summary>
+  {% else %}
+  <section class="overview-block">
     <div class="overview-content">
       <div class="vital-selector" role="group" aria-label="Vital">
         {% for option in vital_options %}
-          <a class="btn btn-sm {% if selected_vital.key == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?vital={{ option.key }}{% if show_na %}&amp;show_na=1{% endif %}">{{ option.label }}</a>
+          <a class="btn btn-sm {% if selected_vital.key == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=vitals&amp;vital={{ option.key }}{% if show_na %}&amp;show_na=1{% endif %}">{{ option.label }}</a>
         {% endfor %}
       </div>
       <form method="get" class="mb-3">
         <input type="hidden" name="vital" value="{{ selected_vital.key }}">
+        <input type="hidden" name="view" value="vitals">
         <label class="form-check">
           <input class="form-check-input" type="checkbox" name="show_na" value="1"{% if show_na %} checked{% endif %} onchange="this.form.requestSubmit()">
           <span class="form-check-label">Show NA</span>
@@ -139,7 +161,8 @@
       </div>
       {% endif %}
     </div>
-  </details>
+  </section>
+  {% endif %}
 
 </main>
 {% endblock %}
