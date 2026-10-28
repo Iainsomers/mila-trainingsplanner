@@ -44,6 +44,8 @@ Iedere gebruiker kan eigen actieve wishes indienen en bewerken. Alleen de produc
 
 ## Atleet
 
+Een persoonlijk trainingsplan op naam van het atleetaccount maakt dat account in de AYC niet tot trainer; de eigen AYC en de beperkingen voor toekomstige trainingen blijven gelden.
+
 Een atleetaccount is aan één `Athlete` gekoppeld. Een atleet kan uitsluitend zien en gebruiken:
 
 - de eigen AYC;

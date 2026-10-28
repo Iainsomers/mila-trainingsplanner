@@ -52,6 +52,7 @@ from .common import (
     _live_shared_trainer_plans_for_request,
 )
 from core.watch_processing import save_processed_main_reps
+from .athlete_identity import _athlete_for_user, _is_ayc_coach_user
 
 from core.views.slots import (
     _expand_repeated_core_set_parts,
@@ -174,53 +175,6 @@ def _filter_accessible(qs, user_or_request):
         ).distinct()
 
     return _filter_owned(qs, user)
-
-
-def _normalize_athlete_login_value(value):
-    return re.sub(r"[^a-z0-9]", "", (value or "").strip().lower())
-
-
-def _athlete_for_user(user):
-    candidates = []
-
-    username = (getattr(user, "username", "") or "").strip()
-    if username:
-        candidates.append(username)
-        candidates.append(username.replace("_", " "))
-        candidates.append(username.replace(".", " "))
-        if "@" in username:
-            candidates.append(username.split("@", 1)[0])
-
-    first_name = (getattr(user, "first_name", "") or "").strip()
-    last_name = (getattr(user, "last_name", "") or "").strip()
-    full_name = f"{first_name} {last_name}".strip()
-    if full_name:
-        candidates.append(full_name)
-
-    email = (getattr(user, "email", "") or "").strip()
-    if email:
-        candidates.append(email)
-        candidates.append(email.split("@", 1)[0])
-
-    for candidate in candidates:
-        athlete = Athlete.objects.filter(name__iexact=candidate.strip()).first()
-        if athlete:
-            return athlete
-
-    normalized_candidates = {
-        _normalize_athlete_login_value(candidate)
-        for candidate in candidates
-        if _normalize_athlete_login_value(candidate)
-    }
-
-    if not normalized_candidates:
-        return None
-
-    for athlete in Athlete.objects.order_by("name"):
-        if _normalize_athlete_login_value(athlete.name) in normalized_candidates:
-            return athlete
-
-    return None
 
 
 @login_required
@@ -3177,6 +3131,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
 @login_required
 def athlete_year_calendar_view(request):
+    is_ayc_coach = _is_ayc_coach_user(request.user)
     if request.method == "POST":
         date_str = request.POST.get("date")
         text = request.POST.get("comment", "")
@@ -3189,7 +3144,7 @@ def athlete_year_calendar_view(request):
         slot_index_raw = request.POST.get("slot_index")
         athlete = None
 
-        if _is_coach_user(request.user):
+        if is_ayc_coach:
             athlete_id = request.POST.get("athlete") or request.GET.get("athlete")
             if athlete_id:
                 try:
@@ -3210,7 +3165,7 @@ def athlete_year_calendar_view(request):
                 evaluation_visibility = evaluation_visibility_for_request(
                     request,
                     athlete.owner,
-                    athlete_self=not _is_coach_user(request.user),
+                    athlete_self=not is_ayc_coach,
                 )
 
                 if week_report_submit is not None and not evaluation_visibility["week"]:
@@ -3226,16 +3181,16 @@ def athlete_year_calendar_view(request):
                 # selected coach: view-only access must never write, while
                 # edit access may change past, current, and future training.
                 coach_can_edit_training = bool(
-                    _is_coach_user(request.user)
+                    is_ayc_coach
                     and _can_edit_coach_owner(request, athlete.owner_id)
                 )
-                if _is_coach_user(request.user) and not coach_can_edit_training:
+                if is_ayc_coach and not coach_can_edit_training:
                     return HttpResponse("", status=403)
 
                 if slot_text is not None:
                     if (
                         d > today
-                        and not _is_coach_user(request.user)
+                        and not is_ayc_coach
                         and not getattr(athlete, "extended_edit_rights", False)
                     ):
                         return HttpResponse("", status=204)
@@ -3256,7 +3211,7 @@ def athlete_year_calendar_view(request):
 
                     field = (request.POST.get("field") or "").strip()
                     value = request.POST.get("value") or ""
-                    is_coach_user = _is_coach_user(request.user)
+                    is_coach_user = is_ayc_coach
                     allowed_fields = {"match_report", "injuries"}
                     if is_coach_user:
                         allowed_fields.add("comm_trainer")
@@ -3274,7 +3229,7 @@ def athlete_year_calendar_view(request):
                         report.save()
 
                 elif daily_vitals_submit is not None:
-                    if d > today and not _is_coach_user(request.user):
+                    if d > today and not is_ayc_coach:
                         return HttpResponse("", status=204)
 
                     def _parse_vital_value(field_name, raw_value):
@@ -3332,7 +3287,7 @@ def athlete_year_calendar_view(request):
                 elif check_status is not None or toggle_check is not None or report_submit is not None:
                     if (
                         d > today
-                        and not _is_coach_user(request.user)
+                        and not is_ayc_coach
                         and not getattr(athlete, "extended_edit_rights", False)
                     ):
                         return HttpResponse("", status=204)
@@ -3448,7 +3403,7 @@ def athlete_year_calendar_view(request):
     selected_athlete_id = request.GET.get("athlete", "")
     selected_athlete = None
 
-    if _is_coach_user(request.user):
+    if is_ayc_coach:
         athletes = list(_filter_accessible(Athlete.objects.order_by("name"), request))
         if selected_athlete_id:
             try:
@@ -3469,7 +3424,7 @@ def athlete_year_calendar_view(request):
             athletes = []
             selected_athlete_id = ""
 
-    athlete_self_view = bool(selected_athlete and not _is_coach_user(request.user))
+    athlete_self_view = bool(selected_athlete and not is_ayc_coach)
     coach_pause_mode = (
         CoachSettings.objects.filter(user_id=selected_athlete.owner_id).values_list("pause_mode", flat=True).first()
         if selected_athlete and selected_athlete.owner_id
@@ -3510,7 +3465,7 @@ def athlete_year_calendar_view(request):
         and evaluation_visibility["vitals"]
     )
     ayc_rowspan = 2 + (1 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
-    is_coach_user = _is_coach_user(request.user)
+    is_coach_user = is_ayc_coach
     coach_can_edit_training = bool(
         is_coach_user
         and selected_athlete
@@ -3570,7 +3525,7 @@ def athlete_year_calendar_view(request):
     trainer_slot_lookup = {}
 
     if selected_athlete:
-        if _is_coach_user(request.user):
+        if is_ayc_coach:
             owned_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request))
         else:
             owned_plans = list(TrainingPlan.objects.order_by("name"))
@@ -3644,7 +3599,7 @@ def athlete_year_calendar_view(request):
             .prefetch_related(Prefetch("slots", queryset=base_slot_qs, to_attr="_prefetched_base_slots"))
             .order_by("sort_order", "start_month", "start_day", "id")
         )
-        if _is_coach_user(request.user):
+        if is_ayc_coach:
             allowed_base_trainer_plan_ids = set(
                 _live_shared_trainer_plans_for_request(request).values_list("id", flat=True)
             )

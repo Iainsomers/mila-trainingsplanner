@@ -10211,6 +10211,36 @@ class SecurityAccessRegressionTests(TestCase):
         self.assertContains(year_response, "Alice")
         self.assertNotContains(year_response, "Bob")
 
+    def test_athlete_with_personal_training_plan_still_sees_own_ayc(self):
+        TrainingPlan.objects.create(
+            owner=self.alice_user,
+            name="Personal plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        coach_plan = TrainingPlan.objects.create(
+            owner=self.coach,
+            name="Coach schedule",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=coach_plan, athlete=self.alice)
+        self.client.force_login(self.alice_user)
+
+        settings_response = self.client.get("/athlete/settings/")
+        year_response = self.client.get(f"/athlete/year/?year=2026&athlete={self.bob.id}")
+
+        self.assertContains(settings_response, "Alice")
+        self.assertEqual(year_response.status_code, 200)
+        self.assertContains(year_response, "Alice")
+        self.assertNotContains(year_response, "Bob")
+
+        # A personal plan must not give an athlete coach-level future edit rights.
+        future_response = self.client.post(
+            f"/slot-modal/2026/12/28/1/?plan={coach_plan.id}&athlete={self.alice.id}&source=athlete_year",
+            {"main": "Easy run"},
+        )
+        self.assertEqual(future_response.status_code, 403)
+        self.assertIn(b"Future training can only be edited by a coach.", future_response.content)
+
 
 class MeetingRequestTests(TestCase):
     def setUp(self):
