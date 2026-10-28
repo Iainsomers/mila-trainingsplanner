@@ -247,7 +247,7 @@ De aparte uitleespagina haalt één gekozen kalenderdag via de bestaande Polar v
 
 ## Trainingspopups en knopcontrast
 
-AYC, Flex Planner en Trainer Planning plaatsen de trainingspopup onder `document.body`, boven de Bootstrap-backdrop en buiten de teambekleding. Flex ondersteunt dit bij zowel fetch als HTMX; Trainer Planning bij HTMX. Polar-knoppen gebruiken witte tekst op gevulde achtergronden, onafhankelijk van teamkleur 2.
+AYC, Flex Planner en Trainer Planning plaatsen hun trainingspopups onder `document.body`, boven de Bootstrap-backdrop en buiten de teambekleding. De AYC verplaatst ook de `today`-popup naar `document.body`, zodat de backdrop de dialoog niet kan afdekken en de pagina na openen niet onklikbaar blijft. Flex ondersteunt dit bij zowel fetch als HTMX; Trainer Planning bij HTMX. Polar-knoppen gebruiken witte tekst op gevulde achtergronden, onafhankelijk van teamkleur 2.
 
 ## Meeting requests
 

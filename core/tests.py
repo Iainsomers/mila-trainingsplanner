@@ -6984,6 +6984,24 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('class="ayc-mobile-vitals-avg"', template_source)
         self.assertIn('document.body.appendChild(modalEl);', template_source)
 
+    def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
+        _, _, athlete = self._user_plan_and_athlete()
+
+        response = self.client.get(f"/athlete/year/?year=2026&athlete={athlete.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="todayTrainingModal"')
+        self.assertContains(
+            response,
+            'var todayModal = document.getElementById("todayTrainingModal");',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            'document.body.appendChild(todayModal);',
+            html=False,
+        )
+
     def test_mobile_vitals_batch_saves_all_four_values(self):
         _, _, athlete = self._user_plan_and_athlete()
         athlete.daily_vitals_enabled = True

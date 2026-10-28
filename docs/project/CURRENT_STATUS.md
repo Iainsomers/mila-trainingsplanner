@@ -102,7 +102,7 @@ Bijgewerkt: 27 oktober 2026.
 - Type D reproduceert de gecontroleerde voorbeeldtraining: tempo Z1 7,6 km / Z3 5,4 km; HR met de besproken geschatte grenzen 3,8 / 3,9 / 3,6 / 1,7 / 0,0 km. Dit voorbeeld is een rekentest, geen algemeen aanbevolen HR-profiel.
 - Overlappende Polar-pauzemarkeringen tijdens aantoonbare beweging verbergen de loopdata niet meer. Regels uit de aangeleverde JSON zijn lokaal gecontroleerd; persoonsgegevens zijn niet als testfixture gecommit.
 - Type D heeft eigen opgeslagen HR-grenzen per atleet en migratie `0096_polar_analysis_settings`. AI-toelichting gebruikt de bestaande API-configuratie en heeft een zichtbare terugval als die ontbreekt.
-- Polar-knoppen hebben witte tekst op gevulde achtergronden. AYC-, Flex- en Trainer Planning-popups zijn buiten de teambekleding geplaatst zodat invoer, Save en Close boven de backdrop blijven.
+- Polar-knoppen hebben witte tekst op gevulde achtergronden. AYC-, Flex- en Trainer Planning-popups staan buiten de teambekleding; ook de AYC-`today`-popup wordt direct onder `document.body` geplaatst zodat de Bootstrap-backdrop de dialoog niet afdekt.
 - DCO Other heeft werkende Vitals, behoud van het geopende blok en Show NA-filter.
 - Laatste applicatiecommit vóór deze documentatieronde: `9198f0c`. Pushes staan op main; de daadwerkelijke Render-deploystatus is bij deze documentatieronde niet apart bevestigd.
 

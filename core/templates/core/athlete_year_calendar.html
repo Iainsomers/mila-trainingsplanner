@@ -1284,6 +1284,17 @@
     </div>
   </div>
 
+  <script>
+    // Bootstrap appends its backdrop to body. Keep the today dialog in the
+    // same stacking context so the backdrop cannot cover its controls.
+    (function() {
+      var todayModal = document.getElementById("todayTrainingModal");
+      if (todayModal && todayModal.parentElement !== document.body) {
+        document.body.appendChild(todayModal);
+      }
+    })();
+  </script>
+
   <div class="year-table-wrap">
   <table class="year-table">
     <thead>
