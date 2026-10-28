@@ -22,16 +22,16 @@ MESSAGE_NAMES = {
 }
 
 FIELD_NAMES = {
-    0: {"file_id": "type", "session": "event", "lap": "event", "record": "timestamp"},
-    1: {"file_id": "manufacturer", "session": "event_type", "record": "position_lat"},
-    2: {"file_id": "product", "session": "start_time", "lap": "start_time", "record": "position_long"},
-    3: {"file_id": "time_created", "session": "start_position_lat", "record": "altitude"},
-    4: {"file_id": "serial_number", "session": "start_position_long", "record": "enhanced_altitude"},
-    5: {"file_id": "number", "record": "heart_rate"},
-    6: {"record": "cadence"},
-    7: {"session": "total_elapsed_time", "lap": "elapsed_time", "record": "distance"},
-    8: {"session": "total_timer_time", "lap": "timer_time", "record": "speed"},
-    9: {"session": "total_distance", "lap": "distance", "record": "power"},
+    0: {"file_id": "type", "session": "event", "lap": "event", "record": "position_lat"},
+    1: {"file_id": "manufacturer", "session": "event_type", "record": "position_long"},
+    2: {"file_id": "product", "session": "start_time", "lap": "start_time", "record": "altitude"},
+    3: {"file_id": "time_created", "session": "start_position_lat", "record": "heart_rate"},
+    4: {"file_id": "serial_number", "session": "start_position_long", "record": "cadence"},
+    5: {"file_id": "number", "record": "distance"},
+    6: {"record": "speed"},
+    7: {"session": "total_elapsed_time", "lap": "elapsed_time", "record": "power"},
+    8: {"session": "total_timer_time", "lap": "timer_time", "record": "compressed_speed_distance"},
+    9: {"session": "total_distance", "lap": "distance", "record": "grade"},
     10: {"session": "total_cycles", "lap": "total_cycles"},
     11: {"session": "total_calories", "lap": "total_calories"},
     12: {"session": "total_fat_calories"},
@@ -56,6 +56,7 @@ FIELD_NAMES = {
     36: {"session": "normalized_power"},
     37: {"session": "training_stress_score"},
     41: {"session": "num_laps"},
+    253: {"record": "timestamp"},
 }
 
 BASE_TYPES = {
@@ -151,11 +152,11 @@ def _scale(message, field, value):
             return float(value) / 1000.0
         if field == 9:
             return float(value) / 100.0
-    if message == 20 and field in {3, 4}:
-        return float(value) / 5.0
-    if message == 20 and field == 7:
+    if message == 20 and field == 2:
+        return float(value) / 5.0 - 500.0
+    if message == 20 and field == 5:
         return float(value) / 100.0
-    if message == 20 and field == 8:
+    if message == 20 and field == 6:
         return float(value) / 1000.0
     return value
 
@@ -169,10 +170,14 @@ def parse_fit(raw: bytes) -> dict:
     pos = header_size
     definitions = {}
     messages = []
+    last_timestamps = {}
     while pos < end:
         header = raw[pos]
         pos += 1
-        if header & 0x40:
+        compressed_timestamp = bool(header & 0x80)
+        if compressed_timestamp:
+            local = (header >> 5) & 0x03
+        elif header & 0x40:
             local = header & 0x0F
             if pos + 5 > end:
                 break
@@ -202,19 +207,35 @@ def parse_fit(raw: bytes) -> dict:
                     pos += 3
             definitions[local] = (global_num, endian, fields, developer_fields)
             continue
-        local = header & 0x0F
+        if not compressed_timestamp:
+            local = header & 0x0F
         definition = definitions.get(local)
         if not definition:
             break
         global_num, endian, fields, developer_fields = definition
         item = {"message": MESSAGE_NAMES.get(global_num, f"message_{global_num}")}
+        if compressed_timestamp:
+            previous = last_timestamps.get(local)
+            if previous is None:
+                break
+            time_offset = header & 0x1F
+            timestamp = (previous & ~0x1F) + time_offset
+            if time_offset < (previous & 0x1F):
+                timestamp += 0x20
+            item["timestamp"] = timestamp
         for field_num, size, base_type in fields:
+            # Compressed timestamp headers carry the timestamp in their header,
+            # so the corresponding field bytes are omitted from the data message.
+            if compressed_timestamp and field_num == 253:
+                continue
             value = _value(raw[pos:pos + size], base_type, endian)
             pos += size
             if value is not None:
                 item[_display_name(global_num, field_num)] = _scale(global_num, field_num, value)
         for size in developer_fields:
             pos += size
+        if "timestamp" in item:
+            last_timestamps[local] = item["timestamp"]
         messages.append((global_num, item))
 
     by_name = defaultdict(list)
