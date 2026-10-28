@@ -5549,7 +5549,7 @@ def garmin_type_c_ayc_view(request):
         athlete=athlete,
         activity_start__gte=day_start,
         activity_start__lt=day_end,
-    ).order_by("activity_start", "id")
+    ).only("id", "activity_start", "original_filename", "parsed_data", "raw_file").order_by("activity_start", "id")
     sessions = []
     session_exercises = []
     for saved in saved_activities:
@@ -5558,6 +5558,15 @@ def garmin_type_c_ayc_view(request):
         human = parsed.get("human") if isinstance(parsed.get("human"), dict) else {}
         laps = parsed.get("laps") if isinstance(parsed.get("laps"), list) else []
         heart_rate_samples = parsed.get("heart_rate_samples") if isinstance(parsed.get("heart_rate_samples"), list) else []
+        if not heart_rate_samples and saved.raw_file:
+            try:
+                _, fit_raw = fit_bytes_from_upload(saved.original_filename, saved.raw_file)
+                reparsed = parse_fit(fit_raw)
+                heart_rate_samples = reparsed.get("heart_rate_samples") or []
+                if not laps:
+                    laps = reparsed.get("laps") or []
+            except (ValueError, OSError, struct.error):
+                pass
         polar_laps = []
         elapsed_ms = 0
         for lap in laps:

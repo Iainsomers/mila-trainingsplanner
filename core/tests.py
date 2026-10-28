@@ -3062,11 +3062,6 @@ class PolarPlanMismatchTests(TestCase):
             "session": {"total_distance": 3000, "total_elapsed_time": 1200},
             "total_distance_m": 3000,
             "total_elapsed_s": 1200,
-            "heart_rate_samples": [
-                {"timestamp": "2026-10-22T08:00:01+00:00", "heart_rate": 140},
-                {"timestamp": "2026-10-22T08:00:05+00:00", "heart_rate": 155},
-                {"timestamp": "2026-10-22T08:00:10+00:00", "heart_rate": 160},
-            ],
             "laps": [
                 {"distance": 500, "elapsed_time": 200, "avg_heart_rate": 150,
                  "start_time": "2026-10-22T08:00:00+00:00"},
@@ -3087,13 +3082,22 @@ class PolarPlanMismatchTests(TestCase):
         )
         self.client.force_login(coach)
         mock_results = [{"parts": [{"watch_loads": []}]}]
-        with patch("core.views.polar_raw.translate_model_b", return_value=mock_results) as translate:
+        with (
+            patch("core.views.coach.fit_bytes_from_upload", return_value=("athlete.fit", b"fit")),
+            patch("core.views.coach.parse_fit", return_value={"heart_rate_samples": [
+                {"timestamp": "2026-10-22T08:00:01+00:00", "heart_rate": 140},
+                {"timestamp": "2026-10-22T08:00:05+00:00", "heart_rate": 155},
+                {"timestamp": "2026-10-22T08:00:10+00:00", "heart_rate": 160},
+            ]}) as parse_fit,
+            patch("core.views.polar_raw.translate_model_b", return_value=mock_results) as translate,
+        ):
             response = self.client.get(
                 f"/integrations/garmin/type-c-ayc/?athlete={athlete.id}&date={activity_date.isoformat()}"
             )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["ok"])
         self.assertEqual(response.json()["model"], "C")
+        parse_fit.assert_called_once()
         self.assertEqual(len(translate.call_args.args[0]), 1)
         self.assertEqual(translate.call_args.args[0][0]["name"], "athlete.fit")
         laps = translate.call_args.args[0][0]["laps"]["laps"]
