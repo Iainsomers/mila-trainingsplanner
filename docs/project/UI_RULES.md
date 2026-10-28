@@ -42,7 +42,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Mobiele AYC
 
-- In de AM/PM-evaluatiepopup staat `Pain` compact naast RPE. Gebruik de opties 🟢 No Pain, 🟠 Some pain en 🔴 Serious pain; de standaardkeuze is No Pain. Verberg de keuzelijst wanneer de coachinstelling uitstaat.
+- In de AM/PM-evaluatiepopup staat `Pain` compact naast RPE. Gebruik de opties 🟢 Fit, 🟠 Some issues, pls explain! en 🔴 Serious issue, talk to staff!; de standaardkeuze is Fit. Verberg de keuzelijst wanneer de coachinstelling uitstaat.
 - In de AYC-trainingsevaluatie heten de horlogeknoppen `Polar A`, `Polar B` en `Garmin C`. Een compacte, aanklikbare klokindicator rechtsboven in een AM/PM-cel markeert een overgenomen horlogetraining en opent een mobiel-passende popup met de verwerkte Main-reps: afstand, tijd en min/km. Toon de indicator ook als de sessietotalen uitstaan.
 - De Garmin C-lapresultaten tonen ook `Last 15s HR`; op smalle schermen moet de tabel horizontaal te scrollen zijn zodat alle kolommen bereikbaar blijven.
 - Een bruikbare Type A-omschrijving toont de acties `Use AM` en `Use PM` rechts naast de omschrijving; op smalle schermen mogen deze knoppen onder de tekst afbreken.

@@ -1076,7 +1076,7 @@
             </div>
             <div class="d-flex align-items-center gap-2">
               {% if d.evaluation_done %}<span class="ayc-mobile-evaluation-done" title="Evaluation completed" aria-label="Evaluation completed">&#10003;</span>{% endif %}
-              {% if d.check1.pain or d.check2.pain %}<span class="ayc-mobile-evaluation-pain" title="Pain: {% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}Serious pain{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}Some pain{% else %}No Pain{% endif %}" aria-label="Pain: {% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}Serious pain{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}Some pain{% else %}No Pain{% endif %}">{% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}🔴{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}🟠{% else %}🟢{% endif %}</span>{% endif %}
+              {% if d.check1.pain or d.check2.pain %}<span class="ayc-mobile-evaluation-pain" title="Pain: {% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}Serious issue, talk to staff!{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Fit{% endif %}" aria-label="Pain: {% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}Serious issue, talk to staff!{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Fit{% endif %}">{% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}🔴{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}🟠{% else %}🟢{% endif %}</span>{% endif %}
               <button type="button" class="btn btn-sm btn-outline-secondary" {% if mobile_day.day > today and not athlete_extended_edit_rights %}disabled{% endif %}>Open</button>
             </div>
           </div>
@@ -1479,7 +1479,7 @@
                             </span>
                           {% endwith %}
                           <span class="report-preview-rpe">{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
-                          {% if d.check1.pain %}<span class="report-preview-pain" title="{% if d.check1.pain == 'no_pain' %}No Pain{% elif d.check1.pain == 'some_pain' %}Some pain{% else %}Serious pain{% endif %}" aria-label="Pain: {% if d.check1.pain == 'no_pain' %}No Pain{% elif d.check1.pain == 'some_pain' %}Some pain{% else %}Serious pain{% endif %}">{% if d.check1.pain == 'no_pain' %}🟢{% elif d.check1.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
+                          {% if d.check1.pain %}<span class="report-preview-pain" title="{% if d.check1.pain == 'no_pain' %}Fit{% elif d.check1.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}" aria-label="Pain: {% if d.check1.pain == 'no_pain' %}Fit{% elif d.check1.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}">{% if d.check1.pain == 'no_pain' %}🟢{% elif d.check1.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
                         </div>
                         <div class="report-preview-text">{% if d.check1.comment %}{{ d.check1.comment }}{% elif d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary }}{% endif %}</div>
                       </div>
@@ -1493,7 +1493,7 @@
                             </span>
                           {% endwith %}
                           <span class="report-preview-rpe">{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
-                          {% if d.check2.pain %}<span class="report-preview-pain" title="{% if d.check2.pain == 'no_pain' %}No Pain{% elif d.check2.pain == 'some_pain' %}Some pain{% else %}Serious pain{% endif %}" aria-label="Pain: {% if d.check2.pain == 'no_pain' %}No Pain{% elif d.check2.pain == 'some_pain' %}Some pain{% else %}Serious pain{% endif %}">{% if d.check2.pain == 'no_pain' %}🟢{% elif d.check2.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
+                          {% if d.check2.pain %}<span class="report-preview-pain" title="{% if d.check2.pain == 'no_pain' %}Fit{% elif d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}" aria-label="Pain: {% if d.check2.pain == 'no_pain' %}Fit{% elif d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}">{% if d.check2.pain == 'no_pain' %}🟢{% elif d.check2.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
                         </div>
                         <div class="report-preview-text">{% if d.check2.comment %}{{ d.check2.comment }}{% elif d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary }}{% endif %}</div>
                       </div>
@@ -1952,9 +1952,9 @@
           <div {% if not evaluation_pain_enabled %}hidden{% endif %}>
             <label class="form-label mb-1" for="reportT1Pain">Pain</label>
             <select id="reportT1Pain" class="form-select form-select-sm report-field">
-              <option value="no_pain">🟢 No Pain</option>
-              <option value="some_pain">🟠 Some pain</option>
-              <option value="serious_pain">🔴 Serious pain</option>
+              <option value="no_pain">🟢 Fit</option>
+              <option value="some_pain">🟠 Some issues, pls explain!</option>
+              <option value="serious_pain">🔴 Serious issue, talk to staff!</option>
             </select>
           </div>
         </div>
@@ -1988,9 +1988,9 @@
           <div {% if not evaluation_pain_enabled %}hidden{% endif %}>
             <label class="form-label mb-1" for="reportT2Pain">Pain</label>
             <select id="reportT2Pain" class="form-select form-select-sm report-field">
-              <option value="no_pain">🟢 No Pain</option>
-              <option value="some_pain">🟠 Some pain</option>
-              <option value="serious_pain">🔴 Serious pain</option>
+              <option value="no_pain">🟢 Fit</option>
+              <option value="some_pain">🟠 Some issues, pls explain!</option>
+              <option value="serious_pain">🔴 Serious issue, talk to staff!</option>
             </select>
           </div>
         </div>
