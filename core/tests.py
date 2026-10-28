@@ -7872,6 +7872,63 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(open_response.status_code, 200)
         self.assertContains(open_response, f'value="{flex_plan.id}"')
 
+    def test_ayc_modal_prefers_individual_base_training_over_shared_flex_slot(self):
+        coach = get_user_model().objects.create_user(
+            username="ayc-base-modal-coach", password="secret", is_staff=True
+        )
+        athlete_name = "AYC Base Modal Athlete"
+        athlete_user = get_user_model().objects.create_user(
+            username=athlete_name, password="secret"
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name=athlete_name, birth_year=2000, gender="X"
+        )
+        flex_plan = TrainingPlan.objects.create(owner=coach, name="Flex Planner AYC base modal")
+        day = date.today()
+        base_block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=base_block,
+            weekday=day.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINING,
+            training_text="WU=Geen\nSPR=Z2\nCORE=DL 40' Z2 8000m",
+        )
+        shared_slot = TrainingSlot.objects.create(
+            plan=flex_plan, date=day, slot_index=1
+        )
+        shared_slot.segments.create(type="CORE", text="DL 30' Z1", zone="1", order=1)
+        self.client.force_login(athlete_user)
+
+        modal_url = (
+            f"/slot-modal/{day:%Y/%m/%d}/1/?plan={flex_plan.id}"
+            f"&athlete={athlete.id}&source=athlete_year"
+            "&prefill_wu=Geen&prefill_sprint=Z2"
+            "&prefill_core=DL%2040%27%20Z2%208000m"
+        )
+        modal = self.client.get(modal_url)
+        self.assertEqual(modal.status_code, 200)
+        self.assertEqual(modal.context["wu_text"], "Geen")
+        self.assertEqual(modal.context["sprint_text"], "Z2")
+        self.assertEqual(modal.context["core_text"], "DL 40' Z2 8000m")
+
+        # An explicit athlete-specific override remains the source of truth.
+        personal_slot = TrainingSlot.objects.create(
+            plan=flex_plan, athlete=athlete, date=day, slot_index=1
+        )
+        personal_slot.segments.create(
+            type="CORE", text="Personal override", zone="3", order=1
+        )
+        override_modal = self.client.get(modal_url)
+        self.assertEqual(override_modal.status_code, 200)
+        self.assertEqual(override_modal.context["core_text"], "Personal override")
+
     def test_athlete_cannot_edit_future_training_in_ayc_slot_modal(self):
         coach = get_user_model().objects.create_user(
             username="future-ayc-coach", password="secret"

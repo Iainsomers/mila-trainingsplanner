@@ -258,3 +258,5 @@ AYC, Flex Planner en Trainer Planning plaatsen hun trainingspopups onder `docume
 ## Flex Planner — persoonlijke kopie op een rustdag
 
 Een expliciete persoonlijke training (zoals een gekopieerde trainertraining) heeft voorrang op `Rest` in Base Planning. `Rest` verbergt nog steeds de gedeelde trainerplanning, maar wist/verbergt geen expliciet geplaatste atleettraining.
+
+Bij het openen van een AYC-training gebruikt de popup de training die de kalendercel toont, ook wanneer het bewerkplan een gedeeld Flex-slot bevat. Een bestaande persoonlijke Flex-override blijft leidend; zonder die override wordt de celprefill gebruikt, met Base Planning als terugval voor rechtstreeks geopende popups.

@@ -1312,10 +1312,25 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if not visible_slot and not base_planning_slot:
             visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
             has_fix = False
-    elif is_athlete_year_calendar and _is_flex_planner_plan(selected_plan) and not visible_slot:
-        visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
-        has_fix = False
-    if is_athlete_year_calendar and (not visible_slot or not visible_slot.segments.exists()):
+    elif (
+        request.method == "GET"
+        and is_athlete_year_calendar
+        and _is_flex_planner_plan(selected_plan)
+        and not has_athlete_override
+    ):
+        # AYC cells can represent an individual Base Planning workout while
+        # carrying the Flex plan ID for edits. Do not let a shared Flex slot
+        # replace that displayed workout in the modal. Keep a personal Flex
+        # override authoritative; otherwise use the cell's exact prefill, then
+        # resolve Base Planning for direct-loaded modal URLs without prefill.
+        prefill_slot = _virtual_slot_from_modal_prefill(request)
+        if prefill_slot:
+            visible_slot = prefill_slot
+            has_fix = False
+        else:
+            visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
+            has_fix = False
+    elif is_athlete_year_calendar and (not visible_slot or not visible_slot.segments.exists()):
         prefill_slot = _virtual_slot_from_modal_prefill(request)
         if prefill_slot:
             visible_slot = prefill_slot
