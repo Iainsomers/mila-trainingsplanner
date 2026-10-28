@@ -1988,7 +1988,7 @@
 </div>
 
 <div id="suggestInputPlaceholder" role="dialog" aria-modal="true" aria-labelledby="suggestInputPlaceholderText" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10000; align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; width:760px; max-width:100%; max-height:92vh; overflow:auto; border-radius:8px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+  <div style="background:#fff; width:min(1200px, 96vw); max-width:100%; max-height:92vh; overflow:auto; border-radius:8px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
     <h5 id="suggestInputPlaceholderText" class="mb-3">Polar A</h5>
     <div id="suggestInputPlaceholderBody" class="small">No Polar result loaded.</div>
     <button type="button" id="suggestInputPlaceholderClose" class="btn btn-sm btn-primary">Close</button>
@@ -2238,7 +2238,7 @@
     heading.textContent = title;
     parent.appendChild(heading);
     var table = document.createElement("table");
-    table.className = "table table-sm mb-2";
+    table.className = "table table-sm mb-2 text-nowrap";
     var head = document.createElement("tr");
     var headers = ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km", "Zx", "Tx", "Avg HR"];
     if (showLast15Hr) headers.push("Last 15s HR");
@@ -2256,7 +2256,11 @@
       });
       tbody.appendChild(tr);
     });
-    table.appendChild(tbody); parent.appendChild(table);
+    table.appendChild(tbody);
+    var tableScroller = document.createElement("div");
+    tableScroller.className = "table-responsive";
+    tableScroller.appendChild(table);
+    parent.appendChild(tableScroller);
   }
   function renderTypeAResults(parent, results, message, model) {
     parent.innerHTML = "";
