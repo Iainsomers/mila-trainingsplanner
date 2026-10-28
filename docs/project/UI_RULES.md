@@ -12,7 +12,7 @@ Bijgewerkt: 20 oktober 2026.
 - Gebruik het vaste MiLa-logo als browsericoon en als beginschermicoon op iOS en Android.
 - Toon in Athlete Input de geselecteerde atleetnaam voor trainers op een vaste plek boven de tabbladen, zodat die bij iedere tab zichtbaar blijft.
 - Plaats naast die atleetnaam compacte `<`- en `>`-knoppen om alfabetisch door de atleten van de actieve coachweergave te navigeren. Behoud het huidige tabblad; schakel de knop aan de lijstgrens uit.
-- Gebruik in de Race Calendar-popup één gedeelde grid voor de kop en de atleetselecties. Afstanden en de kolommen Trainer, Athlete en Target moeten op desktop en mobiel exact onder hun koppen uitlijnen.
+- Gebruik in de Race Calendar-popup dezelfde kolombreedtes voor de kop, atleetrij en afstandsrij. De afstandswaarde en de checkboxen moeten op desktop en mobiel exact onder Distance, Trainer, Athlete en Target uitlijnen.
 - In New, Plans, Wishes staat `Edit` alleen bij eigen wishes of voor de productbeheerder; andere gebruikers krijgen alleen de beschikbare like-actie.
 - Als `See session km` is ingeschakeld, staat het sessietotaal als zwart `T`-getal compact rechtsboven in iedere sessiecel van de AYC, ook mobiel. Als `See session zones` is ingeschakeld, staan daar kleine kleurpillen met alleen de kilometers afgerond op 0,1 km naast; de kleur bepaalt de zone. Het weektotaal gebruikt dezelfde `T`-notatie, zonder `km`-tekst.
 - In de linkerbovenhoek van een AM-cel staan één of meerdere kleine dots voor de whereabouts van die dag, ook wanneer er geen training gepland is. De dotkleur volgt de Year Planner-legenda; overlappende whereabouts tonen meerdere dots.

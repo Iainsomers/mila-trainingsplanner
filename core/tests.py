@@ -8556,13 +8556,26 @@ class RaceSelectDisplayTests(TestCase):
         self.assertRegex(response.content.decode(), r'class="form-check-input race-expand-toggle"[^>]*checked')
         self.assertContains(response, '<span>Athlete</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>', html=False)
         self.assertContains(response, 'class="race-entry-distance-list"', html=False)
-        self.assertContains(response, '--race-entry-grid-columns:', html=False)
-        self.assertContains(response, 'grid-template-columns: var(--race-entry-grid-columns)', html=False)
-        self.assertContains(response, 'grid-template-columns: subgrid', html=False)
-        self.assertContains(response, '.race-entry-distance-list { display: contents; }', html=False)
         self.assertContains(
             response,
-            '.race-entry-list { --race-entry-grid-columns: minmax(100px, 1.1fr) minmax(72px, .8fr) 42px 42px 42px; }',
+            '--race-entry-grid-columns: minmax(180px, 1fr) 160px 70px 70px 70px;',
+            html=False,
+        )
+        self.assertContains(response, 'grid-template-columns: var(--race-entry-grid-columns)', html=False)
+        self.assertContains(
+            response,
+            'grid-template-columns: var(--race-entry-distance-columns)',
+            html=False,
+        )
+        self.assertContains(response, '--race-entry-distance-columns: 160px 70px 70px 70px;', html=False)
+        self.assertContains(
+            response,
+            '--race-entry-grid-columns: minmax(100px, 1fr) 88px 42px 42px 42px;',
+            html=False,
+        )
+        self.assertContains(
+            response,
+            '--race-entry-distance-columns: 88px 42px 42px 42px;',
             html=False,
         )
         self.assertContains(response, 'row.open = toggle.checked', html=False)
