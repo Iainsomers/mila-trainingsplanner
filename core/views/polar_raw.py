@@ -78,7 +78,7 @@ def lap_zone_paces(distance_m, duration_ms, athlete):
     return z_label or "NA", t_label or "NA"
 
 
-def lap_average_hr(lap, start_ms, end_ms, samples):
+def lap_average_hr(lap, start_ms, end_ms, samples, *, fallback_to_lap=True):
     try:
         start_ms = float(start_ms or 0)
         end_ms = float(end_ms or 0)
@@ -110,7 +110,7 @@ def lap_average_hr(lap, start_ms, end_ms, samples):
                     if bpm is not None and bpm > 0:
                         heart_rates.append(bpm)
     if not heart_rates:
-        fallback = number(lap.get("heartRate")) if isinstance(lap, dict) else None
+        fallback = number(lap.get("heartRate")) if fallback_to_lap and isinstance(lap, dict) else None
         return display(fallback) if fallback is not None and fallback > 0 else "NA"
     return display(math.floor(sum(heart_rates) / len(heart_rates) + 0.5))
 
@@ -118,9 +118,8 @@ def lap_average_hr(lap, start_ms, end_ms, samples):
 def lap_average_hr_last_15(lap, start_ms, end_ms, samples):
     """Return the HR average for the last 15 seconds of a lap.
 
-    Short laps use their complete duration. If no samples are available in
-    the selected window, fall back to the complete lap so the extra display
-    column remains useful for sparse recordings.
+    Short laps use their complete duration. Do not substitute the lap average
+    when samples are missing: that would falsely present it as a tail average.
     """
     try:
         start_ms = float(start_ms or 0)
@@ -130,8 +129,7 @@ def lap_average_hr_last_15(lap, start_ms, end_ms, samples):
     if end_ms <= start_ms:
         return "NA"
     tail_start_ms = start_ms if end_ms - start_ms < 15000 else end_ms - 15000
-    tail_average = lap_average_hr(lap, tail_start_ms, end_ms, samples)
-    return tail_average if tail_average != "NA" else lap_average_hr(lap, start_ms, end_ms, samples)
+    return lap_average_hr(lap, tail_start_ms, end_ms, samples, fallback_to_lap=False)
 
 
 def lap_rows(laps, athlete=None, samples=None):

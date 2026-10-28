@@ -3116,6 +3116,43 @@ class PolarPlanMismatchTests(TestCase):
         ])
         self.assertEqual(len(response.json()["results"][0]["parts"][0]["watch_loads"]), 6)
 
+    def test_ayc_watch_c_maps_record_hr_when_fit_laps_omit_start_time(self):
+        from core.models import GarminActivity
+        from core.views.polar_raw import lap_rows
+
+        coach = get_user_model().objects.create_user(
+            username="garmin-watch-c-hr-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(owner=coach, name="Garmin HR Athlete", birth_year=1980, gender="M")
+        activity_date = date(2026, 10, 22)
+        activity_start = timezone.make_aware(datetime.combine(activity_date, time(9)))
+        GarminActivity.objects.create(
+            athlete=athlete, activity_start=activity_start, original_filename="no-lap-start.fit",
+            file_hash="c" * 64, raw_file=b"fit",
+            parsed_data={
+                "session": {"total_distance": 400, "total_elapsed_time": 20},
+                "laps": [{"distance": 400, "elapsed_time": 20, "avg_heart_rate": 125}],
+            },
+        )
+        samples = [
+            {"timestamp": (activity_start + timedelta(seconds=second)).isoformat(), "heart_rate": bpm}
+            for second, bpm in ((0, 100), (5, 110), (10, 120), (15, 130), (20, 140))
+        ]
+        self.client.force_login(coach)
+        with (
+            patch("core.views.coach.fit_bytes_from_upload", return_value=("no-lap-start.fit", b"fit")),
+            patch("core.views.coach.parse_fit", return_value={"heart_rate_samples": samples}),
+            patch("core.views.polar_raw.translate_model_b", return_value=[{"parts": [{"watch_loads": []}]}]) as translate,
+        ):
+            response = self.client.get(
+                f"/integrations/garmin/type-c-ayc/?athlete={athlete.id}&date={activity_date.isoformat()}"
+            )
+        self.assertEqual(response.status_code, 200)
+        laps = translate.call_args.args[0][0]["laps"]["laps"]
+        row = lap_rows(laps)[0]
+        self.assertEqual(row["average_hr"], "115")
+        self.assertEqual(row["average_hr_last_15"], "120")
+
     def test_ayc_watch_c_rejects_garmin_files_for_unavailable_athletes(self):
         coach = get_user_model().objects.create_user(
             username="garmin-watch-c-access", password="secret", is_staff=True

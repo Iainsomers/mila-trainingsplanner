@@ -107,14 +107,14 @@ class RawPolarTests(SimpleTestCase):
         self.assertEqual(row["average_hr"], "160")
         self.assertEqual(row["average_hr_last_15"], "165")
 
-    def test_lap_average_hr_falls_back_to_garmin_lap_average(self):
+    def test_last_fifteen_seconds_does_not_falsely_fall_back_to_lap_average(self):
         result = translate([{"laps": {"laps": [
             {"distanceMeters": 400, "durationMillis": 20000, "splitTimeMillis": 20000,
              "heartRate": 151},
         ]}}], 5)
         row = result[0]["parts"][0]["manual"][0]
         self.assertEqual(row["average_hr"], "151")
-        self.assertEqual(row["average_hr_last_15"], "151")
+        self.assertEqual(row["average_hr_last_15"], "NA")
 
     def test_model_b_starts_with_same_type_a_output(self):
         payload = [{"sport": {"id": "1"}, "laps": {"laps": [

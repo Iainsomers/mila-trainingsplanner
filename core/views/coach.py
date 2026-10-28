@@ -5591,11 +5591,19 @@ def garmin_type_c_ayc_view(request):
             if lap.get("avg_heart_rate") is not None:
                 normalized_lap["heartRate"] = lap["avg_heart_rate"]
             lap_start = lap.get("start_time")
-            if lap_start and heart_rate_samples:
+            if heart_rate_samples:
                 try:
-                    lap_start = datetime.fromisoformat(str(lap_start).replace("Z", "+00:00"))
+                    if lap_start:
+                        lap_start = datetime.fromisoformat(str(lap_start).replace("Z", "+00:00"))
+                    elif saved.activity_start:
+                        # Some FIT files omit lap.start_time. Anchor the lap to
+                        # the saved activity start plus preceding lap durations
+                        # so its record-level HR samples still map to this lap.
+                        lap_start = saved.activity_start + timedelta(milliseconds=elapsed_ms - duration_ms)
+                    else:
+                        lap_start = None
                     lap_samples = []
-                    for sample in heart_rate_samples:
+                    for sample in heart_rate_samples if lap_start else []:
                         if not isinstance(sample, dict) or sample.get("timestamp") is None:
                             continue
                         try:
