@@ -1424,6 +1424,7 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(row["evaluation_total"], 3)
         self.assertEqual(row["evaluation_percentage"], 33)
         self.assertEqual(row["evaluation_tooltip"], "Open: 2 · Evaluated: 1")
+        self.assertContains(response, "evaluation-percentage-red")
         self.assertContains(response, "Evaluated")
         self.assertContains(response, "title=\"Open: 2 · Evaluated: 1\"", html=False)
         self.assertNotContains(response, "Open evaluations")
