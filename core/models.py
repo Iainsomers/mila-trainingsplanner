@@ -1448,7 +1448,7 @@ class AthleteDailyVital(models.Model):
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="daily_vitals")
 
     sleep_hours = models.FloatField(null=True, blank=True)
-    sleep_quality = models.PositiveSmallIntegerField(null=True, blank=True)
+    sleep_quality = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True)
     morning_hr = models.PositiveSmallIntegerField(null=True, blank=True)
     hrv = models.PositiveSmallIntegerField(null=True, blank=True)
 

@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 import json
 import os
 import zipfile
@@ -7272,6 +7273,8 @@ class SlotModalSaveTests(TestCase):
 
         page = self.client.get(f"/athlete/year/?year={date.today().year}&athlete={athlete.id}")
         self.assertContains(page, 'id="mobileVitalsForm"')
+        self.assertContains(page, 'id="mobileVitalsSleepQuality" name="sleep_quality"', html=False)
+        self.assertContains(page, 'max="10" step="0.1" inputmode="decimal"', html=False)
         self.assertContains(page, 'X-Requested-With', html=False)
         self.assertContains(page, 'bootstrap.Modal.getOrCreateInstance(modalEl).hide()', html=False)
         for field_name in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
@@ -7284,7 +7287,7 @@ class SlotModalSaveTests(TestCase):
                 "daily_vitals_submit": "1",
                 "daily_vitals_batch": "1",
                 "sleep_hours": "8.25",
-                "sleep_quality": "9",
+                "sleep_quality": "9,5",
                 "morning_hr": "46",
                 "hrv": "77",
             },
@@ -7293,7 +7296,7 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(ajax_response.status_code, 204)
         vital.refresh_from_db()
         self.assertEqual(vital.sleep_hours, 8.25)
-        self.assertEqual(vital.sleep_quality, 9)
+        self.assertEqual(vital.sleep_quality, Decimal("9.5"))
         self.assertEqual(vital.morning_hr, 46)
         self.assertEqual(vital.hrv, 77)
 
@@ -7301,7 +7304,7 @@ class SlotModalSaveTests(TestCase):
             f"/athlete/year/?year={date.today().year}&athlete={athlete.id}"
         )
         self.assertContains(refreshed_page, 'data-vitals-sleep-hours="8.25"', html=False)
-        self.assertContains(refreshed_page, 'data-vitals-sleep-quality="9"', html=False)
+        self.assertContains(refreshed_page, 'data-vitals-sleep-quality="9.5"', html=False)
         self.assertContains(refreshed_page, 'data-vitals-morning-hr="46"', html=False)
         self.assertContains(refreshed_page, 'data-vitals-hrv="77"', html=False)
 

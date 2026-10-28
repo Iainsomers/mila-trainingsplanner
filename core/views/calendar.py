@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
 import json
 import re
 
@@ -3252,11 +3253,17 @@ def athlete_year_calendar_view(request):
                                 return round(float(raw_value.replace(",", ".")), 2)
                             except Exception:
                                 return None
+                        if field_name == "sleep_quality":
+                            try:
+                                value = Decimal(raw_value.replace(",", "."))
+                                if value.as_tuple().exponent < -1 or not Decimal("1") <= value <= Decimal("10"):
+                                    return None
+                                return value
+                            except (InvalidOperation, ValueError):
+                                return None
                         try:
                             value = int(raw_value)
                         except Exception:
-                            return None
-                        if field_name == "sleep_quality" and not 1 <= value <= 10:
                             return None
                         return value
 

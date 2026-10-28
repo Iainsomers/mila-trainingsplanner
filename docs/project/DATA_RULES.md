@@ -97,7 +97,7 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 - DCO Other HR-zones lezen `Athlete.zone_hr_bpm`. Een enkel getal is de bovengrens: Z1 wordt `0-max`, Z2–Z4 krijgen de volgende aaneengesloten ondergrens en Z5 toont voorlopig de ingevoerde waarde. Expliciete bereiken worden ongewijzigd getoond; een ondergrens die niet aansluit op de vorige bovengrens wordt als afwijkend gemarkeerd.
 
 - Slaapuren kunnen decimalen bevatten.
-- Slaapkwaliteit gebruikt schaal 1–10.
+- Slaapkwaliteit gebruikt schaal 1–10 en kan met één decimaal worden ingevoerd.
 - Ochtendhartslag en HRV zijn numeriek.
 - Weekgemiddelde pas tonen bij minimaal drie bruikbare waarden.
 - Mobiel worden dezelfde vier gemiddelden gebruikt als desktop; er bestaat geen aparte mobiele berekening.
