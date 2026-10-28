@@ -4367,6 +4367,41 @@ class LoginThrottleTests(TestCase):
 
         self.assertRedirects(response, "/athlete/year/", fetch_redirect_response=False)
 
+    def test_opted_in_athlete_opening_root_directly_is_redirected_to_ayc(self):
+        Athlete.objects.create(
+            name="login-athlete-root",
+            birth_year=2000,
+            gender="X",
+            start_on_ayc=True,
+        )
+        user = get_user_model().objects.create_user(
+            username="login-athlete-root",
+            password="correct-password-123",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/")
+
+        self.assertRedirects(response, "/athlete/year/", fetch_redirect_response=False)
+
+    def test_opted_in_athlete_can_still_open_dashboard_from_inside_app(self):
+        Athlete.objects.create(
+            name="login-athlete-dashboard",
+            birth_year=2000,
+            gender="X",
+            start_on_ayc=True,
+        )
+        user = get_user_model().objects.create_user(
+            username="login-athlete-dashboard",
+            password="correct-password-123",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/", HTTP_REFERER="http://testserver/athlete/year/")
+
+        self.assertEqual(response.status_code, 200, response.get("Location", ""))
+        self.assertContains(response, "Athlete dashboard")
+
     def test_authenticated_trainer_opening_login_is_redirected_to_dashboard(self):
         self.user.is_staff = True
         self.user.save(update_fields=["is_staff"])

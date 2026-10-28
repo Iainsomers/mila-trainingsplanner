@@ -9,7 +9,7 @@ import os
 import re
 import secrets
 import struct
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -487,6 +487,15 @@ def dashboard_view(request):
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
     is_trainer_user = bool(request.user.is_staff or request.user.is_superuser)
     coach_tools_only = is_coach_tools_only_user(request.user)
+
+    # Installed mobile apps (notably existing iOS home-screen shortcuts) may
+    # keep opening the root URL even after the manifest start_url changes.
+    # Treat a direct root launch as app start, while preserving intentional
+    # in-app navigation to the Dashboard through its same-origin referrer.
+    if request.method == "GET" and is_athlete_user and athlete.start_on_ayc:
+        referrer = request.META.get("HTTP_REFERER", "")
+        if not referrer or urlsplit(referrer).netloc != request.get_host():
+            return redirect("athlete_year_calendar")
 
     if request.method == "POST" and is_trainer_user and not coach_tools_only:
         _set_active_coach_user(request, request.POST.get("coach_view_owner"))
