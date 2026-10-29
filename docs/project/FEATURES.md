@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Geselecteerde Race Calendar-wedstrijden (Trainer, Athlete of Target aangevinkt) verschijnen per atleet op de Training-laag van Year Planner in hun Race Type-kleur, nooit als Whereabouts. Meerdere afstanden van dezelfde wedstrijd tellen als één markering; bij meerdere wedstrijden op één dag delen de kleuren de cel. De wedstrijdnaam en het type staan in de tooltip. Wedstrijddagen hebben geen fasekeuze en zijn ook server-side tegen fasewijzigingen beschermd. Bestaande fases blijven onder de wedstrijd bewaard en verschijnen weer na uitvinken. Terugkeren vanuit Race Calendar ververst de planner met behoud van de URL-selectie.
+
 - Races hebben een opgeslagen Race Type: Championship, Race Other, Diamond League, Race Gold, Race Zilver of Race Bronze. Bestaande en nieuwe races beginnen als Race Other. Coaches wijzigen dit direct onder Manage distances; de keuze slaat automatisch op en de lijstomlijning volgt direct de Year Planner-legendakleur. Atleten kunnen het gedeelde racetype alleen lezen.
 
 - Year Planner heeft naast de legenda een `Race Calendar`-knop die de bestaande werkende racelijst binnen de pagina opent. Dezelfde knop keert terug naar de ongewijzigde planner met behoud van de selectie. De geïntegreerde weergave biedt alleen de lijst, inclusief perioden, filters, toevoegen, afstanden en wedstrijdkeuzes; de losse Race Calendar behoudt List/Calendar. Bestaande coach-/atleetrechten blijven gelden.

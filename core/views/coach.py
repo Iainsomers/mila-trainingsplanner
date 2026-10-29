@@ -6633,6 +6633,19 @@ def _year_planner_entry_payload(entry):
     }
 
 
+def _year_planner_selected_races(athlete_ids, owner, start_date, end_date):
+    return (
+        RaceEntry.objects.filter(
+            athlete_id__in=athlete_ids,
+            race_distance__race__owner=owner,
+            race_distance__race__date__range=(start_date, end_date),
+        )
+        .filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True))
+        .select_related("race_distance__race")
+        .order_by("race_distance__race__date", "race_distance__race__name", "race_distance__race_id")
+    )
+
+
 @login_required
 @require_GET
 def year_planner_view(request):
@@ -6754,6 +6767,12 @@ def year_planner_view(request):
         option["user"].id for option in coach_options
     }
     owner = athlete.owner if is_athlete_user and athlete.owner_id else _active_coach_user(request)
+    race_days = {}
+    selected_races = _year_planner_selected_races(selected_ids, owner, start_date, end_date)
+    for race_entry in selected_races:
+        race = race_entry.race_distance.race
+        day_races = race_days.setdefault((race_entry.athlete_id, race.date), {})
+        day_races[race.id] = race
     entry_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
         entry_scope_filter |= Q(athlete__isnull=True, basis_plan=selected_filter_plan)
@@ -6876,6 +6895,7 @@ def year_planner_view(request):
             cells.append({
                 "date": day,
                 "payload": _year_planner_entry_payload(entry_map.get((athlete_obj.id, None, day))),
+                "races": list(race_days.get((athlete_obj.id, day), {}).values()) if show_training else [],
                 "where_ranges": athlete_range_cells.get(day, []),
             })
         rows.append({
@@ -7019,6 +7039,9 @@ def year_planner_entry_save_view(request):
         return JsonResponse({"ok": False, "error": "Athlete not found"}, status=404)
 
     training_type = (payload.get("training") or "").strip()
+
+    if athlete_obj and _year_planner_selected_races([athlete_obj.id], owner, entry_date, entry_date).exists():
+        return JsonResponse({"ok": False, "error": "Race day: training phase cannot be changed"}, status=409)
 
     allowed_training = {choice[0] for choice in YearPlannerEntry.TRAINING_CHOICES}
     if training_type not in allowed_training:

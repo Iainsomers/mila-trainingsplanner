@@ -3849,6 +3849,54 @@ class TrainerPlanningListTests(TestCase):
 
 
 class YearPlannerTests(TestCase):
+    def test_selected_races_fill_training_layer_and_lock_phase_changes(self):
+        import json
+        coach, athlete = self._coach_and_athlete()
+        day = date(2026, 10, 29)
+        YearPlannerEntry.objects.create(owner=coach, athlete=athlete, date=day, training_type="aerobe")
+        race = RaceEvent.objects.create(owner=coach, name="National championship", date=day, race_type="championship")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+        selection = RaceEntry.objects.create(race_distance=distance, athlete=athlete, athlete_selected=True)
+        # Multiple selected distances must not duplicate the same race.
+        second = RaceEventDistance.objects.create(race=race, distance="5000")
+        RaceEntry.objects.create(race_distance=second, athlete=athlete, coach_selected=True)
+        url = f"/planning/year/?year=2026&period=full&athletes={athlete.id}"
+        page = self.client.get(url)
+        cell = next(cell for cell in page.context["rows"][0]["cells"] if cell["date"] == day)
+        self.assertEqual([item.id for item in cell["races"]], [race.id])
+        self.assertEqual(cell["where_ranges"], [])
+        self.assertContains(page, 'data-year-race-locked="1"')
+        self.assertContains(page, 'year-fill year-where-championship')
+        for value in ("specific", "intense", ""):
+            response = self.client.post("/planning/year/entry/", json.dumps({
+                "scope": f"athlete-{athlete.id}", "date": day.isoformat(), "training": value,
+            }), content_type="application/json")
+            self.assertEqual(response.status_code, 409)
+        self.assertEqual(YearPlannerEntry.objects.get(athlete=athlete, date=day).training_type, "aerobe")
+        RaceEntry.objects.filter(race_distance__race=race).update(athlete_selected=False, coach_selected=False, target_selected=False)
+        page = self.client.get(url)
+        self.assertNotContains(page, 'data-year-race-locked="1"')
+
+    def test_race_colors_follow_type_and_do_not_leak_to_other_athletes_or_whereabouts(self):
+        coach, athlete = self._coach_and_athlete()
+        other = Athlete.objects.create(owner=coach, name="Other year athlete", birth_year=2000, gender="X")
+        day = date(2026, 10, 29)
+        race = RaceEvent.objects.create(owner=coach, name="Gold race", date=day, race_type="race_gold")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+        RaceEntry.objects.create(race_distance=distance, athlete=athlete, target_selected=True)
+        url = f"/planning/year/?year=2026&period=full&athletes={athlete.id}&athletes={other.id}"
+        page = self.client.get(url)
+        cells = {row["athlete"].id: next(cell for cell in row["cells"] if cell["date"] == day) for row in page.context["rows"]}
+        self.assertEqual(len(cells[athlete.id]["races"]), 1)
+        self.assertEqual(cells[other.id]["races"], [])
+        race.race_type = "diamond_l"
+        race.save()
+        page = self.client.get(url)
+        self.assertContains(page, 'year-fill year-where-diamond_l')
+        where_only = self.client.get(url + "&show_training=0&show_whereabouts=1")
+        self.assertNotContains(where_only, "Gold race")
+        self.assertNotContains(where_only, 'data-year-race-locked="1"')
+
     def _coach_and_athlete(self):
         coach = get_user_model().objects.create_user(
             username="year-coach",

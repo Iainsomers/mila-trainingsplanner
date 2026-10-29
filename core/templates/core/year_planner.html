@@ -273,6 +273,15 @@
     border-bottom-right-radius: 0;
   }
 
+  .year-race-colors {
+    position: absolute;
+    inset: 1px 0;
+    display: flex;
+    overflow: hidden;
+    border-radius: inherit;
+  }
+  .year-race-colors .year-fill { position: static; flex: 1; border-radius: 0; }
+
   .year-select {
     position: relative;
     z-index: 2;
@@ -894,7 +903,13 @@
                       {% if show_training and not row.is_coach %}
                         <div class="year-layer-wrap year-layer-training"
                              data-year-training-wrap
-                             data-year-training-value="{{ cell.payload.training }}">
+                             {% if cell.races %}data-year-race-locked="1" title="{% for race in cell.races %}{{ race.name }} ({{ race.get_race_type_display }}){% if not forloop.last %}; {% endif %}{% endfor %}"{% endif %}
+                             data-year-training-value="{% if not cell.races %}{{ cell.payload.training }}{% endif %}">
+                          {% if cell.races %}
+                            <div class="year-race-colors" role="img" aria-label="{% for race in cell.races %}{{ race.name }} ({{ race.get_race_type_display }}){% if not forloop.last %}; {% endif %}{% endfor %}">
+                              {% for race in cell.races %}<span class="year-fill year-where-{{ race.race_type }}"></span>{% endfor %}
+                            </div>
+                          {% else %}
                           <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
                           {% if zoom_mode != "1" or year_planner_read_only %}
                             <span class="year-training-static" aria-hidden="true"></span>
@@ -907,6 +922,7 @@
                                 <option value="{{ value }}" {% if cell.payload.training == value %}selected{% endif %}>{{ label }}</option>
                               {% endfor %}
                             </select>
+                          {% endif %}
                           {% endif %}
                         </div>
                       {% endif %}
@@ -960,6 +976,7 @@
     const planning = document.getElementById("yearPlanningPanel");
     const frame = document.getElementById("yearRaceFrame");
     const opening = races.hidden;
+    if (!opening) { window.location.reload(); return; }
     if (opening && !frame.hasAttribute("src")) frame.src = frame.dataset.src;
     races.hidden = !opening;
     planning.hidden = opening;
@@ -1049,12 +1066,13 @@
     return {
       scope: cell.dataset.scope,
       date: cell.dataset.date,
-      training: trainingSelect ? trainingSelect.value : (trainingWrap?.dataset.yearTrainingValue || ""),
+      training: trainingWrap?.dataset.yearRaceLocked ? null : (trainingSelect ? trainingSelect.value : (trainingWrap?.dataset.yearTrainingValue || "")),
     };
   }
 
   function refreshTrainingWrap(wrap) {
     if (!wrap) return;
+    if (wrap.dataset.yearRaceLocked) { wrap.classList.add("has-value"); return; }
     const value = wrap.querySelector("[data-year-training]")?.value || wrap.dataset.yearTrainingValue || "";
     wrap.dataset.yearTrainingValue = value;
     wrap.classList.toggle("has-value", !!value);
@@ -1110,7 +1128,7 @@
   }
 
   async function saveCells(cells) {
-    const uniqueCells = Array.from(new Set(cells)).filter(Boolean);
+    const uniqueCells = Array.from(new Set(cells)).filter((cell) => cell && !cell.querySelector("[data-year-race-locked]"));
     if (!uniqueCells.length) return;
     setStatus("Saving...", false);
     const results = await Promise.all(uniqueCells.map((cell) => saveCell(cell)));
@@ -1124,7 +1142,7 @@
 
   function applyLayer(cell, layer, value) {
     const wrap = cell.querySelector("[data-year-training-wrap]");
-    if (!wrap) return;
+    if (!wrap || wrap.dataset.yearRaceLocked || value === null) return;
     const select = wrap.querySelector("[data-year-training]");
     if (select) select.value = value || "";
     wrap.dataset.yearTrainingValue = value || "";

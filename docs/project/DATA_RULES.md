@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- Year Planner leidt wedstrijddagen live af uit RaceEntry met Trainer, Athlete of Target geselecteerd voor de betreffende atleet en coach. De RaceEvent-datum en het racetype bepalen de Training-markering. Er wordt geen trainingsfase of whereabouts-record voor aangemaakt; fasewijzigingen op zulke dagen worden geweigerd, inclusief wissen. Uitvinken/verwijderen maakt een eerder opgeslagen fase weer zichtbaar.
+
 Bijgewerkt: 22 oktober 2026.
 
 ## Zones
