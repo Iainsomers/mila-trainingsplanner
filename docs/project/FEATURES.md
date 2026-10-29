@@ -1,6 +1,11 @@
 # Functionele onderdelen
 
-Bijgewerkt: 18 oktober 2026.
+## Privacyverklaring
+
+- De openbare Engelstalige privacyverklaring is beschikbaar via `/privacy/` en gelinkt vanaf de loginpagina. De tekst beschrijft de gegevenscategorieën, doeleinden, coach-/atleetzichtbaarheid, bewaartermijnen, beveiligingsmaatregelen, minderjarigen en externe diensten (Render, Oura en jsDelivr).
+- Oura-koppeling is nog niet beschikbaar; de verklaring beschrijft deze voorwaardelijk. Oura-data wordt volgens de gepubliceerde tekst alleen na autorisatie verwerkt; eerdere synchronisaties blijven staan tot accountverwijdering of een verwijderverzoek.
+
+Bijgewerkt: 29 oktober 2026.
 
 ## Dashboard en Planning
 

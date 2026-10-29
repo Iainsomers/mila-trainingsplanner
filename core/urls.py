@@ -1,6 +1,7 @@
 from core.views.polar_raw import polar_raw_view
 from django.urls import path
 from django.contrib.auth import views as auth_views
+from django.views.generic import TemplateView
 from core.auth import AthleteAwareLoginView, ThrottledAuthenticationForm
 
 # Import views explicitly to avoid any name collisions via views/__init__.py
@@ -113,6 +114,11 @@ from core.views.coros import coros_status_view, coros_workout_push_view
 
 
 urlpatterns = [
+    path(
+        "privacy/",
+        TemplateView.as_view(template_name="core/privacy_policy.html"),
+        name="privacy_policy",
+    ),
     path("integrations/polar/raw-data/", polar_raw_view, name="polar_raw"),
     # Login / Logout
     path(

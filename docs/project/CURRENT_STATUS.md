@@ -1,6 +1,10 @@
 # Actuele status
 
-Bijgewerkt: 27 oktober 2026.
+## Privacyverklaring
+
+- Een openbare Engelstalige privacyverklaring staat op `/privacy/` en is bereikbaar vanaf de loginpagina. De tekst omvat de huidige MiLa-verwerking en de toekomstige, optionele Oura-koppeling. Controleer de verklaring opnieuw wanneer dataverwerking, providers of bewaartermijnen veranderen.
+
+Bijgewerkt: 29 oktober 2026.
 
 ## Productiestatus
 
