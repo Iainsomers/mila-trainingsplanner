@@ -104,6 +104,9 @@ Bijgewerkt: 29 oktober 2026.
 
 ## Laatste overdracht — 29 oktober 2026
 
+- De HTTP 500 in Flex Planner is lokaal gereproduceerd en hersteld: het weekclipboard leest nu de al geordende segmenten van virtuele weergaveslots via `all()`. Een paginatest met gevulde AM- en PM-trainingen controleert dat de pagina opent en de weekinhoud bevat. De dynamische rijhoogte met minimum 48 px blijft behouden. De live Render-status na de rollback is nog niet bevestigd.
+- Validatie van deze reparatie: alle 104 tests in `FlexPlannerAltTotalsTests` en `SlotModalSaveTests` slagen, evenals `manage.py check`.
+
 - Flex Planner week kopiëren/plakken is afgerond in commit `fcb0b49`. De acties `c` en `p` staan per atleet/week; kopiëren gebruikt de zichtbare week, plakken blijft binnen dezelfde atleet en laat racecellen ongemoeid. Cel- en rijhoogtes groeien mee met de trainingsinhoud.
 - De wijziging is lokaal gecontroleerd met `manage.py check`, template-compilatie en 12 gerichte Flex Planner-tests.
 - De actuele Render-status moet na de door de eigenaar gemelde HTTP 500/rollback apart worden gecontroleerd. Een Render-dashboard-rollback kan autodeploy uitschakelen; bevestig daarom eerst de live deploy voordat nieuwe wijzigingen worden gepusht.

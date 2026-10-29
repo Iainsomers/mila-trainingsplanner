@@ -18,6 +18,7 @@ MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers m
 - Flex Planner heeft per geselecteerde atleet en week een compacte `c`- en `p`-actie. `c` kopieert de zichtbare week; `p` plakt die week naar een andere week van dezelfde atleet. Racecellen worden niet overschreven. Rijen groeien mee zodat langere trainingen volledig zichtbaar blijven.
 - Lokaal gevalideerd: `manage.py check`, template-compilatie en 12 gerichte `FlexPlannerAltTotalsTests` slagen.
 - De eigenaar meldde na een latere Render-deploy een HTTP 500 en wil die deploy mogelijk terugdraaien. Controleer in Render eerst welke deploy live staat voordat je verder pusht. Een dashboard-rollback kan autodeploy tijdelijk uitschakelen; ga dus niet alleen op de Git-status af.
+- De oorzaak is inmiddels lokaal gereproduceerd: het nieuwe Flex-weekclipboard riep `order_by()` aan op virtuele weergavesegmenten. Dit gebruikt nu `all()`; een echte paginatest met AM en PM bewaakt deze fout. De Render-status blijft afzonderlijk te bevestigen.
 - Ongecommitteerde lokale handleidingen, render-uitvoer en tijdelijke Office-bestanden zijn bewust buiten de wijziging gehouden en mogen niet worden meegestaged.
 
 ## Leesvolgorde voor nieuw werk

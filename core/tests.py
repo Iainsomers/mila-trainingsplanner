@@ -9701,6 +9701,28 @@ class WatchProcessedMainRepTests(TestCase):
 
 
 class FlexPlannerAltTotalsTests(TestCase):
+    def test_flex_week_payload_accepts_display_slots_for_both_sessions(self):
+        import json
+
+        coach = get_user_model().objects.create_user(username="flexweekcoach", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Week Athlete", birth_year=2000, gender="X")
+        monday = date(2026, 10, 26)
+        plan = TrainingPlan.objects.create(owner=coach, name="Week source")
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        for index in (1, 2):
+            slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=monday, slot_index=index)
+            slot.segments.create(type="CORE", text="2*1000m z2 + 2*1000m z3")
+        self.client.force_login(coach)
+
+        response = self.client.get(f"/flex-planner/?start={monday.isoformat()}&weeks=1&athletes={athlete.id}")
+
+        self.assertEqual(response.status_code, 200)
+        row = response.context["week_rows"][0]["athlete_rows"][0]
+        payload = json.loads(row["flex_week_payload"])
+        for index in ("1", "2"):
+            segments = payload["days"][0][index]["segments"]
+            self.assertEqual([seg["text"] for seg in segments], ["2*1000m z2", "2*1000m z3"])
+
     def test_watch_main_display_notation_is_normalized_before_slot_parsing(self):
         from core.parser import parse_segment_text
         from core.training_text import normalize_watch_main_text

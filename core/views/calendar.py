@@ -1549,9 +1549,11 @@ def flex_planner_view(request):
                                 "parse_message": getattr(seg, "parse_message", "") or "",
                                 "special": getattr(seg, "special", "") or "",
                                 "t_type": getattr(seg, "t_type", "") or "",
-                                "standard_strength_program_id": getattr(seg, "standard_strength_program_id", None),
+                                "standard_strength_program_id": getattr(getattr(seg, "standard_strength_program", None), "pk", None),
                             }
-                            for seg in source_slot.segments.order_by("order", "id")
+                            # Display slots already contain segments in display order.
+                            # Virtual slots expose all(), not a database QuerySet.
+                            for seg in source_slot.segments.all()
                         ]
                     day_payload[str(slot_index)] = {
                         "skip": bool(source_cell.get("has_race")),
