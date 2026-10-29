@@ -1288,33 +1288,44 @@
     refreshConnections();
   }
 
-  async function saveCell(cell) {
-    const response = await fetch(saveUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCookie("csrftoken") || "",
-      },
-      body: JSON.stringify(cellPayload(cell)),
+  let trainingSaveQueue = Promise.resolve();
+  let pendingTrainingSaves = 0;
+  window.addEventListener('beforeunload', (event) => {
+    if (!pendingTrainingSaves) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
+  function saveTrainingPayload(payloads) {
+    if (!payloads.length) return Promise.resolve(true);
+    pendingTrainingSaves++;
+    page.inert = true;
+    setStatus('Saving...', false);
+    const save = trainingSaveQueue.then(async () => {
+      try {
+        const response = await fetch("{% url 'year_planner_training_batch' %}", {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') || ''},
+          body: JSON.stringify({cells: payloads}),
+        });
+        if (!response.ok) throw new Error('Save failed');
+        setStatus('Saved', false);
+        return true;
+      } catch (error) {
+        setStatus('Save failed. Please refresh and try again.', true);
+        return false;
+      } finally {
+        pendingTrainingSaves--;
+        page.inert = pendingTrainingSaves > 0;
+      }
     });
-    if (!response.ok) {
-      setStatus("Save failed", true);
-      return false;
-    }
-    return true;
+    trainingSaveQueue = save.then(() => undefined);
+    return save;
   }
 
   async function saveCells(cells) {
     const uniqueCells = Array.from(new Set(cells)).filter((cell) => cell && !cell.querySelector("[data-year-race-locked]"));
-    if (!uniqueCells.length) return;
-    setStatus("Saving...", false);
-    const results = await Promise.all(uniqueCells.map((cell) => saveCell(cell)));
-    if (results.every(Boolean)) {
-      setStatus("Saved", false);
-      window.setTimeout(() => setStatus("", false), 1100);
-    } else {
-      setStatus("Save failed", true);
-    }
+    return saveTrainingPayload(uniqueCells.map(cellPayload).filter((payload) => payload.training !== null));
   }
 
   function applyLayer(cell, layer, value) {
@@ -1334,13 +1345,17 @@
   async function applyRowPayload(row, clipboard) {
     const payloads = Array.isArray(clipboard) ? clipboard : clipboard?.cells || [];
     const cells = Array.from(row.querySelectorAll("[data-year-cell]"));
+    const changes = [];
     cells.forEach((cell, index) => {
       const payload = payloads[index];
-      if (!payload) return;
-      applyCellPayload(cell, payload);
+      if (!payload || payload.training === null || cell.querySelector('[data-year-race-locked]')) return;
+      changes.push({cell, payload: {...cellPayload(cell), training: payload.training}});
     });
-    refreshConnections();
-    await saveCells(cells);
+    if (await saveTrainingPayload(changes.map((change) => change.payload))) {
+      changes.forEach((change) => applyCellPayload(change.cell, change.payload));
+      changedCells = new Set();
+      refreshConnections();
+    }
   }
 
   function updateVisibility() {

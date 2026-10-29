@@ -7021,6 +7021,59 @@ def year_planner_view(request):
 
 @login_required
 @require_http_methods(["POST"])
+def year_planner_training_batch_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return JsonResponse({"ok": False}, status=403)
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+        cells = payload["cells"]
+        if not isinstance(cells, list) or not cells or len(cells) > 1000:
+            raise ValueError
+        scopes, changes = {}, {}
+        for cell in cells:
+            scope = cell["scope"]
+            day = date.fromisoformat(cell["date"])
+            training = cell["training"]
+            if not isinstance(scope, str) or training not in dict(YearPlannerEntry.TRAINING_CHOICES):
+                raise ValueError
+            if scope not in scopes:
+                scopes[scope] = _year_planner_scope_target(request, scope)
+            changes[(scope, day)] = training
+    except (ValueError, TypeError, KeyError):
+        return JsonResponse({"ok": False, "error": "Invalid periodisation cells"}, status=400)
+    except LookupError:
+        return JsonResponse({"ok": False, "error": "Athlete not found"}, status=404)
+    owner = _active_coach_user(request)
+    with transaction.atomic():
+        for scope, (athlete_obj, basis_plan) in scopes.items():
+            days = {day: value for (key, day), value in changes.items() if key == scope}
+            if athlete_obj:
+                for entry in _year_planner_selected_races([athlete_obj.id], owner, min(days), max(days)):
+                    race = entry.race_distance.race
+                    days = {day: value for day, value in days.items() if not race.date <= day <= race.last_date}
+            if not days:
+                continue
+            entries = YearPlannerEntry.objects.filter(owner=owner, athlete=athlete_obj, basis_plan=basis_plan, date__in=days)
+            existing = {entry.date: entry for entry in entries.select_for_update()}
+            entries.filter(date__in=[day for day, value in days.items() if not value]).delete()
+            updates, creates = [], []
+            for day, value in days.items():
+                if not value:
+                    continue
+                if day in existing:
+                    existing[day].training_type = value
+                    existing[day].updated_at = timezone.now()
+                    updates.append(existing[day])
+                else:
+                    creates.append(YearPlannerEntry(owner=owner, athlete=athlete_obj, basis_plan=basis_plan, date=day, training_type=value))
+            YearPlannerEntry.objects.bulk_update(updates, ["training_type", "updated_at"])
+            YearPlannerEntry.objects.bulk_create(creates)
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_http_methods(["POST"])
 def year_planner_training_resize_view(request):
     athlete = _athlete_for_user(request.user)
     if athlete and not request.user.is_staff and not request.user.is_superuser:

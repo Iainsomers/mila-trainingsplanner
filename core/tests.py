@@ -3849,6 +3849,48 @@ class TrainerPlanningListTests(TestCase):
 
 
 class YearPlannerTests(TestCase):
+    def test_full_year_periodisation_paste_is_saved_in_one_batch_and_preserves_races(self):
+        import json
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        coach, athlete = self._coach_and_athlete()
+        start = date(2026, 10, 1)
+        race = RaceEvent.objects.create(owner=coach, name="Batch protected race", date="2026-12-31", end_date="2027-01-02")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+        RaceEntry.objects.create(athlete=athlete, race_distance=distance, coach_selected=True)
+        cells = [{"scope": f"athlete-{athlete.id}", "date": (start + timedelta(days=i)).isoformat(), "training": "aerobe"} for i in range(365)]
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.post("/planning/year/training/batch/", json.dumps({"cells": cells}), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertLess(len(queries), 40)
+        self.assertEqual(YearPlannerEntry.objects.filter(athlete=athlete, training_type="aerobe").count(), 362)
+        self.assertTrue(YearPlannerEntry.objects.filter(athlete=athlete, date=date(2027, 9, 30)).exists())
+        for cell in cells:
+            cell["training"] = "specific" if cell["date"] < "2027-04-01" else ""
+        response = self.client.post("/planning/year/training/batch/", json.dumps({"cells": cells}), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(YearPlannerEntry.objects.filter(athlete=athlete, date__gte=date(2027, 4, 1)).exists())
+        self.assertFalse(YearPlannerEntry.objects.filter(athlete=athlete).exclude(training_type="specific").exists())
+
+    def test_periodisation_batch_is_atomic_and_rejects_inaccessible_targets(self):
+        import json
+        from unittest.mock import patch
+        coach, athlete = self._coach_and_athlete()
+        existing = YearPlannerEntry.objects.create(owner=coach, athlete=athlete, date=date(2026, 10, 1), training_type="aerobe")
+        cells = [{"scope": f"athlete-{athlete.id}", "date": "2026-10-01", "training": ""}, {"scope": f"athlete-{athlete.id}", "date": "2026-10-02", "training": "specific"}]
+        with patch.object(YearPlannerEntry.objects, "bulk_create", side_effect=RuntimeError("Simulated write failure")):
+            with self.assertRaises(RuntimeError):
+                self.client.post("/planning/year/training/batch/", json.dumps({"cells": cells}), content_type="application/json")
+        existing.refresh_from_db()
+        self.assertEqual(existing.training_type, "aerobe")
+        self.assertEqual(YearPlannerEntry.objects.filter(athlete=athlete).count(), 1)
+        other = get_user_model().objects.create_user(username="batchother", is_staff=True)
+        foreign = Athlete.objects.create(owner=other, name="Private batch athlete", birth_year=2000, gender="X")
+        cells[1]["scope"] = f"athlete-{foreign.id}"
+        response = self.client.post("/planning/year/training/batch/", json.dumps({"cells": cells}), content_type="application/json")
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(YearPlannerEntry.objects.filter(id=existing.id).exists())
+
     def test_season_runs_from_october_through_september(self):
         self._coach_and_athlete()
         for year in (2026, 2027):
