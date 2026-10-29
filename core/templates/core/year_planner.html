@@ -1719,6 +1719,8 @@
   document.querySelectorAll("[data-year-training]").forEach((select) => {
     const layer = select.dataset.yearLayer;
     select.addEventListener("change", () => {
+      paint = null;
+      changedCells = new Set();
       refreshTrainingWrap(select.closest("[data-year-training-wrap]"));
       refreshConnections();
       saveCells([select.closest("[data-year-cell]")]);
@@ -1739,6 +1741,9 @@
 
   function startPaintFromWrap(wrap, layer, event) {
     if (trainingResize || event.target.closest('.year-training-handle')) return;
+    // Opening a native select is not a paint action. Saving on that mouseup
+    // would make the page inert and close the menu before a choice is made.
+    if (event.target.closest('[data-year-training]')) return;
     if (layer !== "training") return;
     if (event.button !== 0) return;
     const select = wrap.querySelector("[data-year-training]");

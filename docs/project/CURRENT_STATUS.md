@@ -106,6 +106,8 @@ Bijgewerkt: 29 oktober 2026.
 
 ## Laatste overdracht — 29 oktober 2026
 
+- Het openen van de periodisatiedropdown veroorzaakt geen opslagactie meer. Een gebubbelde mousedown markeerde het startvak onterecht als gewijzigd; de nieuwe opslagblokkade sloot daardoor het keuzemenu voordat een fase gekozen kon worden. Opslaan gebeurt nu na een echte keuze of schilderactie.
+
 - Gedeeltelijk opgeslagen jaarrijen in Year Planner zijn hersteld: de eerdere stroom verstuurde honderden parallelle dagverzoeken. Periodisatie gebruikt nu een atomair batchendpoint met bulkdatabasebewerkingen. Rij-plakken verandert de weergave pas na bevestiging; tijdens opslaan wordt nieuwe bediening tijdelijk geblokkeerd. Wedstrijddagen en rechten blijven beschermd.
 
 - Een periodisatiedag naar `—` wijzigen verwijdert nu ook direct de kleur en sleepgrepen van een leeg blok. Een lege dropdownwaarde viel eerder onterecht terug op de oude fasekleur; de lege keuze blijft nu leidend.
