@@ -8505,7 +8505,7 @@ def standard_strength_detail_view(request, program_id: int):
     })
 
 
-def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full", race_scope="all", show_all_races=True, race_group=None, race_athlete=None):
+def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full", race_scope="all", show_all_races=True, race_group=None, race_athlete=None, race_type_filter="all"):
     view_mode = view_mode if view_mode in ("calendar", "year_list") else "list"
     allowed_periods = {"full", "outdoor", "indoor", "current_next"}
     period_mode = period_mode if period_mode in allowed_periods else "full"
@@ -8515,6 +8515,7 @@ def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="fu
     query = urlencode({
         "year": year,
         "view": view_mode,
+        "race_type_filter": race_type_filter if race_type_filter in dict(RaceEvent.RACE_TYPE_CHOICES) else "all",
         "period": period_mode,
         "race_group": race_group or "all",
         "race_athlete": race_athlete or "all",
@@ -8885,6 +8886,9 @@ def race_calendar_view(request):
         period_mode = "full"
 
     legacy_scope = (request.GET.get("race_scope") or request.POST.get("race_scope") or "all").strip().lower()
+    race_type_filter = (request.GET.get("race_type_filter") or request.POST.get("race_type_filter") or "all").strip().lower()
+    if race_type_filter not in dict(RaceEvent.RACE_TYPE_CHOICES):
+        race_type_filter = "all"
     race_group = (request.GET.get("race_group") or request.POST.get("race_group") or (legacy_scope if legacy_scope.startswith("plan:") else "all")).strip().lower()
     race_athlete = (request.GET.get("race_athlete") or request.POST.get("race_athlete") or (legacy_scope if legacy_scope.startswith("athlete:") else "all")).strip().lower()
     show_all_raw = request.GET.get("show_all") if request.method == "GET" else request.POST.get("show_all")
@@ -8919,7 +8923,7 @@ def race_calendar_view(request):
                 name=name,
                 date=race_date,
             )
-            return _race_calendar_redirect_for_year(year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete)
+            return _race_calendar_redirect_for_year(year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
     if is_athlete_user:
         race_owner_ids = {current_athlete.owner_id} if current_athlete.owner_id else set()
@@ -8941,6 +8945,8 @@ def race_calendar_view(request):
         .prefetch_related("distances")
         .order_by("date", "name", "id")
     )
+    if race_type_filter != "all":
+        races = [race for race in races if race.race_type == race_type_filter]
 
     if is_athlete_user:
         race_athletes = [current_athlete]
@@ -9136,6 +9142,7 @@ def race_calendar_view(request):
         "month_rows": month_rows,
         "distance_choices": RaceEventDistance.DISTANCE_CHOICES,
         "race_type_choices": RaceEvent.RACE_TYPE_CHOICES,
+        "race_type_filter": race_type_filter,
         "trainer_plans": trainer_plans,
         "race_athletes": race_athletes,
         "race_group_options": race_group_options,
@@ -9188,7 +9195,7 @@ def race_calendar_delete_view(request, race_id: int):
     race_athlete = (request.POST.get("race_athlete") or "all").strip().lower()
     show_all_races = request.POST.get("show_all") == "1"
     race.delete()
-    return _race_calendar_redirect_for_year(year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete)
+    return _race_calendar_redirect_for_year(year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
 
 @login_required
@@ -9239,7 +9246,7 @@ def race_calendar_distance_add_view(request, race_id: int):
     race_group = (request.POST.get("race_group") or "all").strip().lower()
     race_athlete = (request.POST.get("race_athlete") or "all").strip().lower()
     show_all_races = request.POST.get("show_all") == "1"
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete)
+    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
 
 @login_required
@@ -9253,7 +9260,7 @@ def race_calendar_distance_delete_view(request, race_id: int, distance_id: int):
     race_athlete = (request.POST.get("race_athlete") or "all").strip().lower()
     show_all_races = request.POST.get("show_all") == "1"
     distance.delete()
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete)
+    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
 
 @login_required
@@ -9342,7 +9349,7 @@ def race_calendar_entries_save_view(request, race_id: int):
     race_group = (request.POST.get("race_group") or "all").strip().lower()
     race_athlete = (request.POST.get("race_athlete") or "all").strip().lower()
     show_all_races = request.POST.get("show_all") == "1"
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete)
+    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
 
 @login_required

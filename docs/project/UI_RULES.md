@@ -96,6 +96,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Race Calendar
 
+- Plaats Group, Athlete en Race Type naast elkaar in het racefilter; op telefoonbreedte staan ze onder elkaar. Race Type heeft All en de bestaande zes categorieën.
 - `Delete race` staat linksonder in de wedstrijdpopup; `Close` blijft rechts. Verwijderen is uitgeschakeld zolang Trainer, Athlete of Target bij een atleet is aangevinkt, onafhankelijk van de zichtbare filters. De knop wordt na automatisch opslaan bijgewerkt.
 - Het Races-lijstblok is op desktop circa 40% breed, met minimaal 640 px voor leesbare kolommen; op smallere schermen gebruikt het de beschikbare breedte.
 - Toon onder Manage distances een compacte Race Type-dropdown. Iedere wedstrijdregel heeft een omlijning van 3 px met links een kleurstrook van 6 px in de Year Planner-legendakleur: Championship rood, Diamond League roze, Gold goud, Zilver zilver, Bronze brons en Other oranje.

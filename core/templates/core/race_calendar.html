@@ -27,15 +27,15 @@
   <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
     <div class="d-flex align-items-center gap-2">
       {% if period_mode != "current_next" %}
-        <a href="?year={{ previous_year }}&view={{ view_mode }}&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">← {{ previous_year }}</a>
-        <a href="?year={{ next_year }}&view={{ view_mode }}&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">{{ next_year }} →</a>
+        <a href="?year={{ previous_year }}&view={{ view_mode }}&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">← {{ previous_year }}</a>
+        <a href="?year={{ next_year }}&view={{ view_mode }}&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">{{ next_year }} →</a>
       {% endif %}
     </div>
 
     {% if not embedded_in_year_planner %}
     <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
-      <a href="?year={{ year }}&view=list&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
-      <a href="?year={{ year }}&view=calendar&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
+      <a href="?year={{ year }}&view=list&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
+      <a href="?year={{ year }}&view=calendar&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
     </div>
     {% endif %}
   </div>
@@ -44,7 +44,7 @@
     <span class="small text-muted">Period:</span>
     <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Period">
       {% for option in period_options %}
-        <a href="?year={{ option.year }}&view={{ view_mode }}&period={{ option.key }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}"
+        <a href="?year={{ option.year }}&view={{ view_mode }}&period={{ option.key }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}"
            class="btn {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
           {{ option.label }}
         </a>
@@ -71,6 +71,7 @@
         <input type="hidden" name="period" value="{{ period_mode }}">
         <input type="hidden" name="race_group" value="{{ race_group }}">
         <input type="hidden" name="race_athlete" value="{{ race_athlete }}">
+        <input type="hidden" name="race_type_filter" value="{{ race_type_filter }}">
         <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
         <div class="col-12 col-md-6">
           <label class="form-label">Name</label>
@@ -94,7 +95,7 @@
         <input type="hidden" name="year" value="{{ year }}">
         <input type="hidden" name="view" value="{{ view_mode }}">
         <input type="hidden" name="period" value="{{ period_mode }}">
-        <div class="col-12 col-sm-6">
+        <div class="col-12 col-sm-4">
           <label class="form-label small mb-1" for="raceGroup">Group</label>
           <select class="form-select form-select-sm" id="raceGroup" name="race_group" onchange="this.form.race_athlete.value='all'; this.form.querySelector('[name=show_all]').checked=false; this.form.submit()">
             <option value="all" {% if race_group == 'all' %}selected{% endif %}>All</option>
@@ -103,12 +104,21 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-12 col-sm-6">
+        <div class="col-12 col-sm-4">
           <label class="form-label small mb-1" for="raceAthlete">Athlete</label>
           <select class="form-select form-select-sm" id="raceAthlete" name="race_athlete" onchange="this.form.querySelector('[name=show_all]').checked=false; this.form.submit()">
             <option value="all" {% if race_athlete == 'all' %}selected{% endif %}>All</option>
             {% for option in race_athlete_options %}
               <option value="{{ option.value }}" {% if race_athlete == option.value %}selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-sm-4">
+          <label class="form-label small mb-1" for="raceTypeFilter">Race Type</label>
+          <select class="form-select form-select-sm" id="raceTypeFilter" name="race_type_filter" onchange="this.form.submit()">
+            <option value="all" {% if race_type_filter == 'all' %}selected{% endif %}>All</option>
+            {% for value, label in race_type_choices %}
+              <option value="{{ value }}" {% if race_type_filter == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select>
         </div>
@@ -233,6 +243,7 @@
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
                 <input type="hidden" name="race_athlete" value="{{ race_athlete }}">
+        <input type="hidden" name="race_type_filter" value="{{ race_type_filter }}">
                 <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
 
                 <div class="mb-3 race-existing-distances">
@@ -288,6 +299,7 @@
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
                 <input type="hidden" name="race_athlete" value="{{ race_athlete }}">
+        <input type="hidden" name="race_type_filter" value="{{ race_type_filter }}">
                 <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
                 <div class="d-flex justify-content-between align-items-end gap-3 mb-2 flex-wrap">
                   <div>
@@ -352,6 +364,7 @@
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
                 <input type="hidden" name="race_athlete" value="{{ race_athlete }}">
+        <input type="hidden" name="race_type_filter" value="{{ race_type_filter }}">
                 <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
                 <button type="submit" class="btn btn-sm btn-outline-danger" data-race-delete {% if not row.can_delete %}disabled title="Remove all athlete selections before deleting this race."{% endif %}>Delete race</button>
               </form>
@@ -373,6 +386,7 @@
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
                 <input type="hidden" name="race_athlete" value="{{ race_athlete }}">
+        <input type="hidden" name="race_type_filter" value="{{ race_type_filter }}">
                 <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
           <div class="modal-header">
             <h5 class="modal-title" id="addRaceDateModalLabel">Add race</h5>

@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Race filter biedt naast Group en Athlete ook Race Type met All en de zes racetypes. Het typefilter combineert met de overige filters en blijft behouden bij periode-/jaarnavigatie en opslaan; Show all races toont uitsluitend races van het gekozen type.
+
 - De groene deelnemeraantallen per afstand in de Race Calendar-lijst worden direct na succesvol automatisch opslaan bijgewerkt, inclusief het verschijnen bij de eerste selectie en verdwijnen bij de laatste uitschrijving. Ze volgen de actieve groeps-/atleetfilter; meerdere vinkjes voor dezelfde atleet/afstand tellen één keer.
 
 - Een race kan alleen verwijderd worden als er geen atleet meer aan gekoppeld is via Trainer-, Athlete- of Target-selectie. Deze controle geldt voor alle atleten, los van filters, en wordt server-side afgedwongen. De Delete race-knop staat linksonder en wordt na opslaan van selecties direct bijgewerkt.

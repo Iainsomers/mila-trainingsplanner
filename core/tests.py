@@ -8791,6 +8791,30 @@ class SegmentRepTimeDisplayTests(TestCase):
 
 
 class RaceSelectDisplayTests(TestCase):
+    def test_race_type_filter_combines_with_athlete_filter_and_survives_save(self):
+        coach = get_user_model().objects.create_user(username="typefiltercoach", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Type filter athlete", birth_year=2000, gender="X")
+        races = {}
+        for value, label in RaceEvent.RACE_TYPE_CHOICES:
+            race = RaceEvent.objects.create(owner=coach, name=f"Meeting {value}", date="2026-07-16", race_type=value)
+            distance = RaceEventDistance.objects.create(race=race, distance="1500")
+            races[value] = race
+            if value == "championship":
+                RaceEntry.objects.create(race_distance=distance, athlete=athlete, coach_selected=True)
+        self.client.force_login(coach)
+        for value in races:
+            page = self.client.get(f"/race-calendar/?year=2026&view=year_list&race_type_filter={value}")
+            self.assertEqual([row["race"].id for row in page.context["race_rows"]], [races[value].id])
+            self.assertContains(page, 'id="raceTypeFilter"')
+        filtered = self.client.get(f"/race-calendar/?year=2026&view=year_list&race_type_filter=race_other&race_athlete=athlete:{athlete.id}&show_all=0")
+        self.assertEqual(filtered.context["race_rows"], [])
+        saved = self.client.post(f"/race-calendar/{races['championship'].id}/distances/add/", {
+            "view": "year_list", "race_type_filter": "championship", "distances": "5000",
+        }, follow=True)
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.context["race_type_filter"], "championship")
+        self.assertEqual([row["race"].id for row in saved.context["race_rows"]], [races["championship"].id])
+
     def test_race_delete_requires_no_selected_athletes_even_outside_filter(self):
         coach = get_user_model().objects.create_user(username="deletecoach", is_staff=True)
         athlete = Athlete.objects.create(owner=coach, name="Linked athlete", birth_year=2000, gender="X")
