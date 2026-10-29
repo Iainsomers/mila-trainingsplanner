@@ -42,9 +42,12 @@ migratie ruimt die velden ook op voor bestaande verbindingen.
 De optionele Oura-OAuth-koppeling gebruikt Render-omgevingsvariabelen
 `OURA_CLIENT_ID` en `OURA_CLIENT_SECRET`. De geregistreerde redirect-URI is
 `https://mila-trainingsplanner.onrender.com/integrations/oura/callback/`.
-De OAuth-flow vraagt alleen `daily heartrate` aan en slaat de tokenrespons
-niet als ruwe diagnostiek op. De dashboardkoppeling slaat alleen de OAuth-
-verbinding op; automatische import naar Daily Vitals is nog niet beschikbaar.
+De OAuth-flow vraagt alleen `daily` aan en slaat de tokenrespons niet als ruwe
+diagnostiek op. De Oura-testpagina haalt op verzoek maximaal 14 dagen aan
+slaap- en readiness-samenvattingen op en toont die uitsluitend tijdelijk in de
+pagina. Resultaten worden niet opgeslagen en veranderen Daily Vitals niet.
+API-verzoeken gebruiken een herkenbare `User-Agent`; OAuth-refresh bewaart het
+vervangen refresh-token.
 
 Voer voor een dependencycontrole `pip-audit -r requirements.txt` uit. De
 productierequirements zijn op 1 oktober 2026 bijgewerkt naar versies zonder

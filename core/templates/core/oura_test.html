@@ -1,0 +1,79 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+    <div>
+      <h1 class="h2 mb-1">Oura test window</h1>
+      <p class="text-muted mb-0">Fetches recent data for preview only. Results are not saved or added to Daily Vitals.</p>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Back to dashboard</a>
+  </div>
+
+  {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+
+  {% if athletes %}
+  <form method="post" class="card card-body mb-4">
+    {% csrf_token %}
+    {% if athletes|length > 1 %}
+    <div class="mb-3" style="max-width: 420px;">
+      <label class="form-label" for="oura-test-athlete">Athlete</label>
+      <select class="form-select" name="athlete_id" id="oura-test-athlete" required>
+        <option value="">Choose an athlete</option>
+        {% for athlete in athletes %}
+        <option value="{{ athlete.id }}" {% if selected_athlete.id == athlete.id %}selected{% endif %}>{{ athlete.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% elif selected_athlete %}
+      <input type="hidden" name="athlete_id" value="{{ selected_athlete.id }}">
+      <p class="mb-3">Athlete: <strong>{{ selected_athlete.name }}</strong></p>
+    {% endif %}
+    <div>
+      <button type="submit" class="btn btn-primary" {% if athletes|length > 1 and not selected_athlete %}disabled{% endif %}>Fetch latest Oura data</button>
+    </div>
+  </form>
+  {% else %}
+  <div class="alert alert-info" role="status">No accessible athlete has both Oura permission enabled and an active Oura connection.</div>
+  {% endif %}
+
+  {% if fetched %}
+    {% if data %}
+    <div class="card">
+      <div class="card-header d-flex flex-wrap justify-content-between gap-2">
+        <strong>Recent Oura results{% if selected_athlete %}: {{ selected_athlete.name }}{% endif %}</strong>
+        <span class="text-muted small">Past 14 days · preview only · not saved</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Sleep (hours)</th>
+              <th scope="col">Sleep score /100</th>
+              <th scope="col">Readiness /100</th>
+              <th scope="col">Lowest sleep HR (bpm)</th>
+              <th scope="col">Average sleep HRV (ms)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in data %}
+            <tr>
+              <td>{{ item.day|date:"d-m-Y" }}</td>
+              <td>{{ item.sleep_hours|default_if_none:"—" }}</td>
+              <td>{{ item.sleep_score|default_if_none:"—" }}</td>
+              <td>{{ item.readiness_score|default_if_none:"—" }}</td>
+              <td>{{ item.lowest_heart_rate|default_if_none:"—" }}</td>
+              <td>{{ item.average_hrv|default_if_none:"—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+      <div class="alert alert-secondary" role="status">Oura returned no records for the past 14 days.</div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

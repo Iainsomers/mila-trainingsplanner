@@ -1,25 +1,27 @@
 import base64
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
-from core.models import OuraConnection
+from core.models import Athlete, OuraConnection
 from core.views.athlete_identity import _athlete_for_user, _is_ayc_coach_user
+from core.views.common import _filter_owned
 
 
 OURA_AUTHORIZE_URL = "https://cloud.ouraring.com/oauth/authorize"
 OURA_TOKEN_URL = "https://api.ouraring.com/oauth/token"
-OURA_SCOPES = "daily heartrate"
+OURA_SCOPES = "daily"
+OURA_API_BASE = "https://api.ouraring.com/v2/usercollection"
 OAUTH_SESSION_KEY = "oura_oauth_pending"
 
 
@@ -53,6 +55,130 @@ def revoke_oura_connection(athlete):
     except requests.RequestException:
         pass
     connection.delete()
+
+
+def _refresh_oura_token(connection):
+    if not connection.refresh_token or not _oura_configured():
+        raise ValueError("Reconnect your Oura account to continue syncing.")
+    response = requests.post(
+        OURA_TOKEN_URL,
+        data={
+            "grant_type": "refresh_token",
+            "refresh_token": connection.refresh_token,
+            "client_id": settings.OURA_CLIENT_ID,
+            "client_secret": settings.OURA_CLIENT_SECRET,
+        },
+        timeout=20,
+        headers={"User-Agent": "MiLaPlanner/1.0"},
+    )
+    response.raise_for_status()
+    payload = response.json()
+    access_token = payload.get("access_token")
+    if not access_token:
+        raise ValueError("Oura token refresh did not return an access token.")
+    connection.access_token = access_token
+    connection.refresh_token = payload.get("refresh_token") or connection.refresh_token
+    expires_in = payload.get("expires_in")
+    try:
+        connection.token_expires_at = timezone.now() + timedelta(seconds=max(0, int(expires_in))) if expires_in is not None else None
+    except (TypeError, ValueError):
+        connection.token_expires_at = None
+    connection.scope = payload.get("scope") or connection.scope
+    connection.save(update_fields=["access_token", "refresh_token", "token_expires_at", "scope"])
+
+
+def _oura_collection(connection, collection, start_date, end_date):
+    if connection.token_expires_at and connection.token_expires_at <= timezone.now() + timedelta(seconds=60):
+        _refresh_oura_token(connection)
+    headers = {
+        "Authorization": f"Bearer {connection.access_token}",
+        "User-Agent": "MiLaPlanner/1.0",
+        "Accept": "application/json",
+    }
+    results = []
+    next_token = None
+    for _ in range(10):
+        params = {"start_date": start_date.isoformat(), "end_date": end_date.isoformat()}
+        if next_token:
+            params["next_token"] = next_token
+        response = requests.get(
+            f"{OURA_API_BASE}/{collection}", params=params, headers=headers, timeout=20
+        )
+        if response.status_code == 401 and connection.refresh_token:
+            _refresh_oura_token(connection)
+            headers["Authorization"] = f"Bearer {connection.access_token}"
+            response = requests.get(
+                f"{OURA_API_BASE}/{collection}", params=params, headers=headers, timeout=20
+            )
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
+            raise ValueError("Oura returned an unexpected data response.")
+        results.extend(item for item in payload["data"] if isinstance(item, dict))
+        next_token = payload.get("next_token")
+        if not next_token:
+            break
+    return results
+
+
+def build_oura_test_data(connection, *, today=None):
+    """Fetch a short-lived preview of recent Oura summaries; store nothing."""
+    today = today or timezone.localdate()
+    start_date = today - timedelta(days=13)
+    end_date = today + timedelta(days=1)
+    sleep_records = _oura_collection(connection, "sleep", start_date, end_date)
+    sleep_scores = _oura_collection(connection, "daily_sleep", start_date, end_date)
+    readiness_scores = _oura_collection(connection, "daily_readiness", start_date, end_date)
+    main_sleep_by_day = {}
+    for item in sleep_records:
+        try:
+            day = date.fromisoformat(str(item.get("day", "")))
+        except ValueError:
+            continue
+        if not start_date <= day <= today:
+            continue
+        if item.get("type") == "nap":
+            continue
+        duration_s = item.get("total_sleep_duration", item.get("total_sleep_time"))
+        try:
+            duration_s = float(duration_s)
+        except (TypeError, ValueError):
+            duration_s = 0
+        current = main_sleep_by_day.get(day)
+        if current is None or duration_s > current[0]:
+            main_sleep_by_day[day] = (duration_s, item)
+
+    def scores_by_day(records):
+        result = {}
+        for record in records:
+            try:
+                record_day = date.fromisoformat(str(record.get("day", "")))
+            except ValueError:
+                continue
+            if start_date <= record_day <= today:
+                result[record_day] = record.get("score")
+        return result
+
+    sleep_score_by_day = scores_by_day(sleep_scores)
+    readiness_by_day = scores_by_day(readiness_scores)
+    days = set(main_sleep_by_day) | set(sleep_score_by_day) | set(readiness_by_day)
+    preview = []
+    for day in sorted(days, reverse=True):
+        item = main_sleep_by_day.get(day, (0, {}))[1]
+        duration_s = item.get("total_sleep_duration", item.get("total_sleep_time"))
+        try:
+            duration_h = round(float(duration_s) / 3600, 2) if duration_s is not None else None
+        except (TypeError, ValueError):
+            duration_h = None
+        preview.append({
+            "day": day,
+            "sleep_hours": duration_h,
+            "sleep_score": sleep_score_by_day.get(day),
+            "readiness_score": readiness_by_day.get(day),
+            "lowest_heart_rate": item.get("lowest_heart_rate"),
+            "average_hrv": item.get("average_hrv"),
+        })
+    return preview
 
 
 @login_required
@@ -163,3 +289,45 @@ def oura_disconnect_view(request):
         return HttpResponseForbidden("Oura can only be disconnected from the athlete's own account.")
     revoke_oura_connection(athlete)
     return redirect(f"{reverse('dashboard')}?oura=disconnected")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def oura_test_view(request):
+    is_coach = _is_ayc_coach_user(request.user)
+    if is_coach:
+        athletes = _filter_owned(
+            Athlete.objects.filter(oura_connection_enabled=True).order_by("name"), request
+        ).filter(oura_connection__isnull=False)
+        raw_athlete_id = request.POST.get("athlete_id") or request.GET.get("athlete_id") or ""
+        athlete = athletes.filter(id=raw_athlete_id).first() if raw_athlete_id.isdigit() else None
+        if athlete is None and athletes.count() == 1:
+            athlete = athletes.first()
+    else:
+        athlete = _athlete_user(request)
+        athletes = [athlete] if athlete and athlete.oura_connection_enabled and OuraConnection.objects.filter(athlete=athlete).exists() else []
+        if not athletes:
+            athlete = None
+
+    connection = OuraConnection.objects.filter(athlete=athlete).first() if athlete else None
+    data = []
+    error = ""
+    fetched = False
+    if request.method == "POST":
+        if not athlete or not connection:
+            error = "Choose an athlete with an active Oura connection."
+        else:
+            try:
+                data = build_oura_test_data(connection)
+                fetched = True
+            except (requests.RequestException, ValueError, KeyError):
+                error = "Oura data could not be fetched. Please try again or reconnect the Oura account."
+
+    return render(request, "core/oura_test.html", {
+        "athletes": athletes,
+        "selected_athlete": athlete,
+        "oura_connected": bool(connection),
+        "data": data,
+        "error": error,
+        "fetched": fetched,
+    })

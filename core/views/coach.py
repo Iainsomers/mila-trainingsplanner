@@ -534,10 +534,15 @@ def dashboard_view(request):
 
     oura_connection = None
     oura_connection_enabled = False
+    oura_preview_available = False
     if is_athlete_user:
         from core.models import OuraConnection
         oura_connection_enabled = bool(getattr(athlete, "oura_connection_enabled", False))
         oura_connection = OuraConnection.objects.filter(athlete=athlete).first()
+    elif is_trainer_user and not coach_tools_only:
+        oura_preview_available = _filter_owned(
+            Athlete.objects.filter(oura_connection_enabled=True, oura_connection__isnull=False), request
+        ).exists()
 
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
@@ -553,6 +558,7 @@ def dashboard_view(request):
         "garmin_upload_athlete_count": garmin_upload_athlete_count,
         "oura_connection": oura_connection,
         "oura_connection_enabled": oura_connection_enabled,
+        "oura_preview_available": oura_preview_available,
         "polar_enabled": bool(is_athlete_user and getattr(athlete, "polar_enabled", False)),
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
         "oura_status": request.GET.get("oura", ""),

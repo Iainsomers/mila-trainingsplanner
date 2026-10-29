@@ -108,6 +108,16 @@
       </a>
     </div>
     {% endif %}
+    {% if is_trainer_user and not coach_tools_only and oura_preview_available %}
+    <div class="col-md-6 col-lg-4">
+      <a href="{% url 'oura_test' %}" class="card h-100 dashboard-tile">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Oura test window</h5>
+          <p class="card-text">Temporarily retrieve recent Oura summaries for a connected athlete.</p>
+        </div>
+      </a>
+    </div>
+    {% endif %}
   </div>
 
   {% if is_athlete_user and not coach_tools_only and oura_connection_enabled %}
@@ -134,14 +144,17 @@
 
             {% if oura_connection %}
               <p class="card-text">Your Oura account is connected. You can disconnect it here at any time.</p>
-              <p class="small text-muted">This currently authorises access; automatic import into Daily Vitals is not active yet.</p>
-              <form method="post" action="{% url 'oura_disconnect' %}" class="mt-auto">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline-danger">Disconnect Oura</button>
-              </form>
+              <p class="small text-muted">Preview the past 14 days of sleep duration, sleep/readiness scores, lowest sleeping heart rate and average HRV in a temporary test window. Preview data is not saved to Daily Vitals.</p>
+              <div class="d-flex flex-wrap gap-2 mt-auto">
+                <a href="{% url 'oura_test' %}" class="btn btn-outline-primary">Open test window</a>
+                <form method="post" action="{% url 'oura_disconnect' %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-danger">Disconnect Oura</button>
+                </form>
+              </div>
             {% elif oura_configured %}
               <p class="card-text">Connect your Oura account to allow MiLa Planner to access the data permissions you approve.</p>
-              <p class="small text-muted">This connection currently authorises access; automatic import into Daily Vitals is not active yet.</p>
+              <p class="small text-muted">An active connection is required before using the Oura test window.</p>
               <form method="post" action="{% url 'oura_connect' %}" class="mt-auto">
                 {% csrf_token %}
                 <div class="form-check mb-2">

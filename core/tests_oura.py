@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from core.models import Athlete, OuraConnection
+from core.models import Athlete, AthleteDailyVital, OuraConnection
 
 
 @override_settings(
@@ -69,7 +69,7 @@ class OuraDashboardAndOAuthTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         query = parse_qs(urlsplit(response["Location"]).query)
-        self.assertEqual(query["scope"], ["daily heartrate"])
+        self.assertEqual(query["scope"], ["daily"])
         self.assertEqual(query["redirect_uri"], ["https://mila-trainingsplanner.onrender.com/integrations/oura/callback/"])
         self.assertEqual(query["code_challenge_method"], ["S256"])
         self.assertTrue(query["state"][0])
@@ -132,6 +132,104 @@ class OuraDashboardAndOAuthTests(TestCase):
         self.assertRedirects(response, f"{reverse('dashboard')}?oura=disconnected", fetch_redirect_response=False)
         self.assertFalse(OuraConnection.objects.exists())
         mocked_get.assert_called_once()
+
+    @patch("core.views.oura.requests.get")
+    def test_coach_oura_test_window_previews_recent_data_without_saving_it(self, mocked_get):
+        OuraConnection.objects.create(
+            athlete=self.athlete,
+            access_token="access-token",
+            scope="daily",
+            health_data_consent_at="2026-10-29T08:00:00+00:00",
+        )
+        sleep_response = Mock()
+        sleep_response.status_code = 200
+        sleep_response.raise_for_status.return_value = None
+        sleep_response.json.return_value = {"data": [{
+            "day": "2026-10-28",
+            "type": "long_sleep",
+            "total_sleep_duration": 27000,
+            "lowest_heart_rate": 47.8,
+            "average_hrv": 72.4,
+        }], "next_token": None}
+        daily_sleep_response = Mock()
+        daily_sleep_response.raise_for_status.return_value = None
+        daily_sleep_response.json.return_value = {"data": [{"day": "2026-10-28", "score": 82}], "next_token": None}
+        readiness_response = Mock()
+        readiness_response.raise_for_status.return_value = None
+        readiness_response.json.return_value = {"data": [{"day": "2026-10-28", "score": 79}], "next_token": None}
+        mocked_get.side_effect = [sleep_response, daily_sleep_response, readiness_response]
+
+        self.client.force_login(self.coach)
+        response = self.client.post(reverse("oura_test"), {"athlete_id": self.athlete.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recent Oura results: Runner One")
+        self.assertContains(response, "7.5")
+        self.assertContains(response, "82")
+        self.assertContains(response, "79")
+        self.assertContains(response, "47.8")
+        self.assertContains(response, "72.4")
+        self.assertFalse(AthleteDailyVital.objects.filter(athlete=self.athlete).exists())
+        self.assertEqual(mocked_get.call_count, 3)
+
+    @patch("core.views.oura.requests.get")
+    def test_oura_preview_does_not_change_existing_daily_vitals(self, mocked_get):
+        OuraConnection.objects.create(
+            athlete=self.athlete,
+            access_token="access-token",
+            scope="daily",
+            health_data_consent_at="2026-10-29T08:00:00+00:00",
+        )
+        vital = AthleteDailyVital.objects.create(
+            athlete=self.athlete,
+            date="2026-10-28",
+            sleep_hours=6.5,
+            morning_hr=51,
+        )
+        responses = []
+        sleep_response = Mock()
+        sleep_response.raise_for_status.return_value = None
+        sleep_response.json.return_value = {"data": [{
+            "day": "2026-10-28",
+            "type": "long_sleep",
+            "total_sleep_duration": 27000,
+            "lowest_heart_rate": 47,
+            "average_hrv": 72,
+        }], "next_token": None}
+        responses.append(sleep_response)
+        for payload in ({"data": [], "next_token": None}, {"data": [], "next_token": None}):
+            api_response = Mock()
+            api_response.raise_for_status.return_value = None
+            api_response.json.return_value = payload
+            responses.append(api_response)
+        mocked_get.side_effect = responses
+
+        self.client.force_login(self.coach)
+        self.client.post(reverse("oura_test"), {"athlete_id": self.athlete.id})
+
+        vital.refresh_from_db()
+        self.assertEqual(vital.sleep_hours, 6.5)
+        self.assertEqual(vital.morning_hr, 51)
+        self.assertIsNone(vital.hrv)
+        self.assertEqual(mocked_get.call_count, 3)
+
+    @patch("core.views.oura.requests.get")
+    def test_coach_cannot_preview_when_oura_permission_is_disabled(self, mocked_get):
+        OuraConnection.objects.create(
+            athlete=self.athlete,
+            access_token="access-token",
+            scope="daily",
+            health_data_consent_at="2026-10-29T08:00:00+00:00",
+        )
+        self.athlete.oura_connection_enabled = False
+        self.athlete.save(update_fields=["oura_connection_enabled"])
+        self.client.force_login(self.coach)
+
+        response = self.client.post(reverse("oura_test"), {"athlete_id": self.athlete.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No accessible athlete has both Oura permission enabled")
+        mocked_get.assert_not_called()
 
     def test_coach_cannot_connect_oura_for_an_athlete(self):
         self.client.force_login(self.coach)
