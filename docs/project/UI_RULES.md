@@ -95,7 +95,7 @@ Bijgewerkt: 20 oktober 2026.
 ## Race Calendar
 
 - Het Races-lijstblok is op desktop circa 40% breed, met minimaal 640 px voor leesbare kolommen; op smallere schermen gebruikt het de beschikbare breedte.
-- Toon onder Manage distances een compacte Race Type-dropdown. Iedere wedstrijdregel heeft een omlijning van 2 px in de Year Planner-legendakleur: Championship rood, Diamond League roze, Gold goud, Zilver zilver, Bronze brons en Other oranje.
+- Toon onder Manage distances een compacte Race Type-dropdown. Iedere wedstrijdregel heeft een omlijning van 3 px met links een kleurstrook van 6 px in de Year Planner-legendakleur: Championship rood, Diamond League roze, Gold goud, Zilver zilver, Bronze brons en Other oranje.
 - Houd de lijstweergave compact op één regel: datum, een uitgelijnde naamkolom en bestaande afstanden zijn direct zichtbaar.
 - Beperk Add race tot een compacte kaartbreedte en open Race Calendar direct vanuit Races zonder tussenpagina.
 - Plaats voor trainers naast Add race eerst een groepsfilter (`All` telt als groep) en daarna een daarvan afhankelijke atleetfilter; laat zowel wedstrijdzichtbaarheid als afstandstellers deze combinatie volgen.
