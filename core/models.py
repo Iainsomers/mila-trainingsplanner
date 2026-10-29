@@ -469,6 +469,8 @@ class Athlete(models.Model):
     show_plan_to_athlete = models.BooleanField(default=False)
     # Coach-only opt-in for the Garmin FIT upload preview.
     garmin_fit_upload_enabled = models.BooleanField(default=False)
+    # Coach-only permission for the athlete to connect an Oura account.
+    oura_connection_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.
     pause_mode = models.CharField(
         max_length=24,

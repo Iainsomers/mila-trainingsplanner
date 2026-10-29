@@ -110,7 +110,7 @@
     {% endif %}
   </div>
 
-  {% if is_athlete_user and not coach_tools_only %}
+  {% if is_athlete_user and not coach_tools_only and oura_connection_enabled %}
   <section class="mb-5" aria-labelledby="hardware-settings-heading">
     <h2 id="hardware-settings-heading" class="h4 mb-3">Hardware settings</h2>
     <div class="row g-4">

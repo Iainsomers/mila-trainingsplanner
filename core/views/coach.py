@@ -525,8 +525,10 @@ def dashboard_view(request):
         ).count()
 
     oura_connection = None
+    oura_connection_enabled = False
     if is_athlete_user:
         from core.models import OuraConnection
+        oura_connection_enabled = bool(getattr(athlete, "oura_connection_enabled", False))
         oura_connection = OuraConnection.objects.filter(athlete=athlete).first()
 
     return render(request, "core/dashboard.html", {
@@ -542,6 +544,7 @@ def dashboard_view(request):
         "is_llg_team": is_llg_team,
         "garmin_upload_athlete_count": garmin_upload_athlete_count,
         "oura_connection": oura_connection,
+        "oura_connection_enabled": oura_connection_enabled,
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
         "oura_status": request.GET.get("oura", ""),
     })
@@ -10669,6 +10672,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "see_session_zones": getattr(athlete, "see_session_zones", True),
         "see_desired_improvement_points": getattr(athlete, "see_desired_improvement_points", False),
         "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
+        "oura_connection_enabled": getattr(athlete, "oura_connection_enabled", False),
         "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
@@ -10727,6 +10731,10 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["garmin_fit_upload_enabled"] = getattr(athlete, "garmin_fit_upload_enabled", False)
         else:
             form["garmin_fit_upload_enabled"] = (request.POST.get("garmin_fit_upload_enabled") == "on")
+        if self_view:
+            form["oura_connection_enabled"] = getattr(athlete, "oura_connection_enabled", False)
+        else:
+            form["oura_connection_enabled"] = (request.POST.get("oura_connection_enabled") == "on")
         if self_view:
             form["pause_mode"] = effective_pause_mode
         else:
@@ -10932,6 +10940,11 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
                 athlete.see_desired_improvement_points = form["see_desired_improvement_points"]
             if not self_view:
                 athlete.garmin_fit_upload_enabled = form["garmin_fit_upload_enabled"]
+                previous_oura_enabled = bool(getattr(athlete, "oura_connection_enabled", False))
+                athlete.oura_connection_enabled = form["oura_connection_enabled"]
+                if previous_oura_enabled and not athlete.oura_connection_enabled:
+                    from core.views.oura import revoke_oura_connection
+                    revoke_oura_connection(athlete)
             if not self_view:
                 # Keep a blank override following the coach. A different
                 # choice is stored per athlete and takes precedence.

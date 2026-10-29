@@ -28,6 +28,7 @@ class OuraDashboardAndOAuthTests(TestCase):
             name="Runner One",
             birth_year=2010,
             gender="V",
+            oura_connection_enabled=True,
         )
         self.client.force_login(self.athlete_user)
 
@@ -38,6 +39,21 @@ class OuraDashboardAndOAuthTests(TestCase):
         self.assertContains(response, "Hardware settings")
         self.assertContains(response, "Oura connection")
         self.assertContains(response, reverse("oura_connect"))
+
+    def test_oura_settings_are_hidden_and_connect_is_blocked_when_coach_disables_them(self):
+        self.athlete.oura_connection_enabled = False
+        self.athlete.save(update_fields=["oura_connection_enabled"])
+
+        response = self.client.get(reverse("dashboard"))
+        connect_response = self.client.post(
+            reverse("oura_connect"),
+            {"consent_oura_data": "on", "confirm_adult_or_guardian": "on"},
+        )
+
+        self.assertNotContains(response, "Hardware settings")
+        self.assertNotContains(response, "Oura connection")
+        self.assertRedirects(connect_response, f"{reverse('dashboard')}?oura=not_enabled", fetch_redirect_response=False)
+        self.assertFalse(OuraConnection.objects.exists())
 
     def test_connect_requires_both_health_and_guardian_confirmations(self):
         response = self.client.post(reverse("oura_connect"), {"consent_oura_data": "on"})

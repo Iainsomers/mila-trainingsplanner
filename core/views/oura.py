@@ -39,12 +39,30 @@ def _athlete_user(request):
     return _athlete_for_user(request.user)
 
 
+def revoke_oura_connection(athlete):
+    """Revoke the remote token when possible and always remove local credentials."""
+    connection = OuraConnection.objects.filter(athlete=athlete).first()
+    if not connection:
+        return
+    try:
+        requests.get(
+            "https://api.ouraring.com/oauth/revoke",
+            params={"access_token": connection.access_token},
+            timeout=10,
+        )
+    except requests.RequestException:
+        pass
+    connection.delete()
+
+
 @login_required
 @require_POST
 def oura_connect_view(request):
     athlete = _athlete_user(request)
     if athlete is None:
         return HttpResponseForbidden("Oura can only be connected from the athlete's own account.")
+    if not athlete.oura_connection_enabled:
+        return redirect(f"{reverse('dashboard')}?oura=not_enabled")
     if not _oura_configured():
         return redirect(f"{reverse('dashboard')}?oura=not_configured")
     if request.POST.get("consent_oura_data") != "on":
@@ -81,7 +99,7 @@ def oura_connect_view(request):
 def oura_callback_view(request):
     pending = request.session.pop(OAUTH_SESSION_KEY, None)
     athlete = _athlete_user(request)
-    if not pending or athlete is None:
+    if not pending or athlete is None or not athlete.oura_connection_enabled:
         return redirect(f"{reverse('dashboard')}?oura=authorization_expired")
 
     returned_state = request.GET.get("state", "")
@@ -143,15 +161,5 @@ def oura_disconnect_view(request):
     athlete = _athlete_user(request)
     if athlete is None:
         return HttpResponseForbidden("Oura can only be disconnected from the athlete's own account.")
-    connection = OuraConnection.objects.filter(athlete=athlete).first()
-    if connection:
-        try:
-            requests.get(
-                "https://api.ouraring.com/oauth/revoke",
-                params={"access_token": connection.access_token},
-                timeout=10,
-            )
-        except requests.RequestException:
-            pass
-        connection.delete()
+    revoke_oura_connection(athlete)
     return redirect(f"{reverse('dashboard')}?oura=disconnected")

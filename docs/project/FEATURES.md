@@ -3,9 +3,9 @@
 ## Privacyverklaring
 
 - De openbare Engelstalige privacyverklaring is beschikbaar via `/privacy/` en gelinkt vanaf de loginpagina. De tekst beschrijft de gegevenscategorieën, doeleinden, coach-/atleetzichtbaarheid, bewaartermijnen, beveiligingsmaatregelen, minderjarigen en externe diensten (Render, Oura en jsDelivr).
-- Oura-koppeling is nog niet beschikbaar; de verklaring beschrijft deze voorwaardelijk. Oura-data wordt volgens de gepubliceerde tekst alleen na autorisatie verwerkt; eerdere synchronisaties blijven staan tot accountverwijdering of een verwijderverzoek.
+- De Oura-koppeling ondersteunt OAuth-autorisatie; automatische data-import is nog niet beschikbaar. Oura-data wordt volgens de gepubliceerde verklaring alleen na autorisatie verwerkt; eerder gesynchroniseerde gegevens blijven staan tot accountverwijdering of een verwijderverzoek.
 - De Engelstalige Terms of Service is openbaar beschikbaar via `/terms/`, met links naar de privacyverklaring. Beide documenten zijn bereikbaar vanaf de loginpagina.
-- Atleten hebben op het dashboard een apart blok `Hardware settings` met de optionele Oura OAuth-koppeling. De verbinding is per eigen atleetaccount, vraagt expliciete wellness-toestemming en een bevestiging van volwassenheid/ouderlijke toestemming, vraagt alleen `daily` en `heartrate`, en kan vanuit hetzelfde blok worden losgekoppeld. Automatische import naar Daily Vitals is nog niet actief.
+- Atleten hebben alleen wanneer hun coach `Allow Oura connection` inschakelt een apart dashboardblok `Hardware settings` met de optionele Oura OAuth-koppeling. De verbinding is per eigen atleetaccount, vraagt expliciete wellness-toestemming en een bevestiging van volwassenheid/ouderlijke toestemming, vraagt alleen `daily` en `heartrate`, en kan vanuit hetzelfde blok worden losgekoppeld. Uitschakelen door de coach trekt de token in (waar mogelijk) en verwijdert de lokaal opgeslagen koppeling. Automatische import naar Daily Vitals is nog niet actief.
 
 Bijgewerkt: 29 oktober 2026.
 

@@ -4,7 +4,7 @@
 
 - Een openbare Engelstalige privacyverklaring staat op `/privacy/` en is bereikbaar vanaf de loginpagina. De tekst omvat de huidige MiLa-verwerking en de toekomstige, optionele Oura-koppeling. Controleer de verklaring opnieuw wanneer dataverwerking, providers of bewaartermijnen veranderen.
 - De bijbehorende Engelstalige Terms of Service staat openbaar op `/terms/` en is eveneens gelinkt vanaf de loginpagina.
-- Op het atleten-dashboard staat een `Hardware settings`-blok voor de optionele Oura OAuth-verbinding. De productieconfiguratie gebruikt `OURA_CLIENT_ID` en `OURA_CLIENT_SECRET`; callback: `https://mila-trainingsplanner.onrender.com/integrations/oura/callback/`. Zonder die Render-secrets toont MiLa de koppeling als nog niet beschikbaar. OAuth-opslag werkt; automatische vitalsimport is nog niet gebouwd.
+- Op het atleten-dashboard staat een `Hardware settings`-blok voor de optionele Oura OAuth-verbinding, alleen zichtbaar als de coach per atleet `Allow Oura connection` inschakelt. Uitschakelen verwijdert de opgeslagen Oura-koppeling. De productieconfiguratie gebruikt `OURA_CLIENT_ID` en `OURA_CLIENT_SECRET`; callback: `https://mila-trainingsplanner.onrender.com/integrations/oura/callback/`. Zonder die Render-secrets toont MiLa de koppeling als nog niet beschikbaar. OAuth-opslag werkt; automatische vitalsimport is nog niet gebouwd.
 
 Bijgewerkt: 29 oktober 2026.
 

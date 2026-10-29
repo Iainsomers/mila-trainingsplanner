@@ -640,6 +640,17 @@
           <label class="form-check-label" for="garmin_fit_upload_enabled">Allow Garmin FIT uploads</label>
           <div class="form-text">Show this athlete in the coach's Garmin upload tab. This setting is coach-only.</div>
         </div>
+        <div class="mb-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="oura_connection_enabled"
+            name="oura_connection_enabled"
+            {% if form.oura_connection_enabled %}checked{% endif %}
+          >
+          <label class="form-check-label" for="oura_connection_enabled">Allow Oura connection</label>
+          <div class="form-text">Show Oura settings on the athlete dashboard. Turning this off disconnects Oura and removes the stored connection. This setting is coach-only.</div>
+        </div>
         {% endif %}
         {% endif %}
 
