@@ -1476,6 +1476,33 @@ class AthleteDailyVital(models.Model):
         return f"{self.athlete} - vitals {self.date}"
 
 
+class OuraConnection(models.Model):
+    """An athlete-authorized Oura OAuth connection."""
+
+    athlete = models.OneToOneField(
+        Athlete,
+        on_delete=models.CASCADE,
+        related_name="oura_connection",
+    )
+    access_token = models.TextField()
+    refresh_token = models.TextField(blank=True, default="")
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    scope = models.CharField(max_length=255, blank=True, default="")
+    connected_at = models.DateTimeField(auto_now_add=True)
+    health_data_consent_at = models.DateTimeField()
+    consented_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="oura_consents",
+    )
+    adult_or_guardian_permission_confirmed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"OuraConnection({self.athlete_id})"
+
+
 class AthleteDayComment(models.Model):
     date = models.DateField()
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="day_comments")

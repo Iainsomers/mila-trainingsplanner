@@ -14,6 +14,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
@@ -492,7 +493,7 @@ def dashboard_view(request):
     # keep opening the root URL even after the manifest start_url changes.
     # Treat a direct root launch as app start, while preserving intentional
     # in-app navigation to the Dashboard through its same-origin referrer.
-    if request.method == "GET" and is_athlete_user and athlete.start_on_ayc:
+    if request.method == "GET" and is_athlete_user and athlete.start_on_ayc and not request.GET.get("oura"):
         referrer = request.META.get("HTTP_REFERER", "")
         if not referrer or urlsplit(referrer).netloc != request.get_host():
             return redirect("athlete_year_calendar")
@@ -523,6 +524,11 @@ def dashboard_view(request):
             Athlete.objects.filter(garmin_fit_upload_enabled=True), request
         ).count()
 
+    oura_connection = None
+    if is_athlete_user:
+        from core.models import OuraConnection
+        oura_connection = OuraConnection.objects.filter(athlete=athlete).first()
+
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
         "is_trainer_user": is_trainer_user,
@@ -535,6 +541,9 @@ def dashboard_view(request):
         "is_product_admin": _is_product_admin(request.user),
         "is_llg_team": is_llg_team,
         "garmin_upload_athlete_count": garmin_upload_athlete_count,
+        "oura_connection": oura_connection,
+        "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
+        "oura_status": request.GET.get("oura", ""),
     })
 
 

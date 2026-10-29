@@ -110,6 +110,60 @@
     {% endif %}
   </div>
 
+  {% if is_athlete_user and not coach_tools_only %}
+  <section class="mb-5" aria-labelledby="hardware-settings-heading">
+    <h2 id="hardware-settings-heading" class="h4 mb-3">Hardware settings</h2>
+    <div class="row g-4">
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <h3 class="h5 card-title">Oura connection</h3>
+            {% if oura_status == "connected" %}
+              <div class="alert alert-success py-2" role="status">Oura account connected.</div>
+            {% elif oura_status == "disconnected" %}
+              <div class="alert alert-info py-2" role="status">Oura account disconnected.</div>
+            {% elif oura_status == "not_configured" %}
+              <div class="alert alert-warning py-2" role="status">Oura is not configured yet. Please try again later.</div>
+            {% elif oura_status == "consent_required" or oura_status == "guardian_required" %}
+              <div class="alert alert-warning py-2" role="alert">Confirm the required consent and parent or guardian permission before connecting.</div>
+            {% elif oura_status == "authorization_failed" or oura_status == "authorization_expired" %}
+              <div class="alert alert-danger py-2" role="alert">Oura could not be connected. Please try again.</div>
+            {% elif oura_status == "authorization_cancelled" %}
+              <div class="alert alert-info py-2" role="status">Oura connection was cancelled.</div>
+            {% endif %}
+
+            {% if oura_connection %}
+              <p class="card-text">Your Oura account is connected. You can disconnect it here at any time.</p>
+              <p class="small text-muted">This currently authorises access; automatic import into Daily Vitals is not active yet.</p>
+              <form method="post" action="{% url 'oura_disconnect' %}" class="mt-auto">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger">Disconnect Oura</button>
+              </form>
+            {% elif oura_configured %}
+              <p class="card-text">Connect your Oura account to allow MiLa Planner to access the data permissions you approve.</p>
+              <p class="small text-muted">This connection currently authorises access; automatic import into Daily Vitals is not active yet.</p>
+              <form method="post" action="{% url 'oura_connect' %}" class="mt-auto">
+                {% csrf_token %}
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" name="consent_oura_data" id="oura-data-consent" required>
+                  <label class="form-check-label small" for="oura-data-consent">I explicitly consent to MiLa Planner processing my Oura wellness data for training planning, as described in the <a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">Privacy Policy</a>.</label>
+                </div>
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" name="confirm_adult_or_guardian" id="oura-guardian-confirmation" required>
+                  <label class="form-check-label small" for="oura-guardian-confirmation">I am 18 or older, or my parent/legal guardian has given permission for this connection.</label>
+                </div>
+                <button type="submit" class="btn btn-outline-primary">Connect Oura</button>
+              </form>
+            {% else %}
+              <p class="card-text mb-0">Oura connection is not available yet.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   {% if not is_athlete_user and not coach_tools_only %}
   <div class="row g-4 mt-auto pt-5">
     {% if is_product_admin %}

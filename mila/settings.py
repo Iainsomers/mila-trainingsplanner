@@ -44,6 +44,15 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 
+# Oura OAuth application configuration. Keep the client secret in the host's
+# secret environment settings; never place it in source control.
+OURA_CLIENT_ID = os.environ.get("OURA_CLIENT_ID", "").strip()
+OURA_CLIENT_SECRET = os.environ.get("OURA_CLIENT_SECRET", "").strip()
+OURA_REDIRECT_URI = os.environ.get(
+    "OURA_REDIRECT_URI",
+    "https://mila-trainingsplanner.onrender.com/integrations/oura/callback/",
+).strip()
+
 _default_csrf_origins = "https://mila-trainingsplanner.onrender.com"
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
