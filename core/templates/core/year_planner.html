@@ -1043,6 +1043,28 @@
   const athleteToggle = document.querySelector("[data-year-athlete-toggle]");
   const coachPanel = document.querySelector("[data-year-coach-panel]");
   const coachToggle = document.querySelector("[data-year-coach-toggle]");
+  const selectorScrollKey = "mila:year-selector-scroll:{{ request.user.pk }}:{{ group_filter|escapejs }}";
+  const selectorLists = Array.from(form.querySelectorAll('.year-athlete-list'));
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(selectorScrollKey) || 'null');
+    sessionStorage.removeItem(selectorScrollKey);
+    if (saved && Date.now() - saved.time < 60000) {
+      window.requestAnimationFrame(() => {
+        selectorLists.forEach((list, index) => { list.scrollTop = saved.positions[index] || 0; });
+        window.scrollTo(saved.x || 0, saved.y || 0);
+      });
+    }
+  } catch (error) { /* Selection also works when browser storage is unavailable. */ }
+  // Capture runs before the checkbox listeners submit and reload this page.
+  form.addEventListener('change', (event) => {
+    if (!event.target.matches('.year-athlete-list input[type="checkbox"]')) return;
+    try {
+      sessionStorage.setItem(selectorScrollKey, JSON.stringify({
+        positions: selectorLists.map((list) => list.scrollTop),
+        x: window.scrollX, y: window.scrollY, time: Date.now(),
+      }));
+    } catch (error) { /* Do not block selection when storage is unavailable. */ }
+  }, true);
   let rowClipboard = null;
   let whereRowClipboard = null;
   let paint = null;
