@@ -119,6 +119,11 @@ urlpatterns = [
         TemplateView.as_view(template_name="core/privacy_policy.html"),
         name="privacy_policy",
     ),
+    path(
+        "terms/",
+        TemplateView.as_view(template_name="core/terms_of_service.html"),
+        name="terms_of_service",
+    ),
     path("integrations/polar/raw-data/", polar_raw_view, name="polar_raw"),
     # Login / Logout
     path(

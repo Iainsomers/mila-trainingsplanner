@@ -3,6 +3,7 @@
 ## Privacyverklaring
 
 - Een openbare Engelstalige privacyverklaring staat op `/privacy/` en is bereikbaar vanaf de loginpagina. De tekst omvat de huidige MiLa-verwerking en de toekomstige, optionele Oura-koppeling. Controleer de verklaring opnieuw wanneer dataverwerking, providers of bewaartermijnen veranderen.
+- De bijbehorende Engelstalige Terms of Service staat openbaar op `/terms/` en is eveneens gelinkt vanaf de loginpagina.
 
 Bijgewerkt: 29 oktober 2026.
 
