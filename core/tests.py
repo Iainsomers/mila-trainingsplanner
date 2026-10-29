@@ -3849,6 +3849,37 @@ class TrainerPlanningListTests(TestCase):
 
 
 class YearPlannerTests(TestCase):
+    def test_resize_periodisation_extends_and_shortens_one_edge(self):
+        import json
+        coach, athlete = self._coach_and_athlete()
+        first = date(2026, 10, 28)
+        for offset in range(3):
+            YearPlannerEntry.objects.create(owner=coach, athlete=athlete, date=first + timedelta(days=offset), training_type="aerobe")
+        payload = {"scope": f"athlete-{athlete.id}", "training": "aerobe", "source_start": "2026-10-28", "source_end": "2026-10-30", "start": "2026-10-28", "end": "2026-11-02"}
+        response = self.client.post("/planning/year/training/resize/", json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(YearPlannerEntry.objects.filter(athlete=athlete).count(), 6)
+        payload.update(source_end="2026-11-02", start="2026-10-30")
+        response = self.client.post("/planning/year/training/resize/", json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(YearPlannerEntry.objects.filter(athlete=athlete).order_by("date").values_list("date", flat=True)), [date(2026, 10, 30) + timedelta(days=i) for i in range(4)])
+
+    def test_resize_periodisation_rejects_races_stale_data_and_other_athletes(self):
+        import json
+        coach, athlete = self._coach_and_athlete()
+        YearPlannerEntry.objects.create(owner=coach, athlete=athlete, date=date(2026, 10, 28), training_type="specific")
+        race = RaceEvent.objects.create(owner=coach, name="Resize barrier", date="2026-10-30")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+        RaceEntry.objects.create(athlete=athlete, race_distance=distance, coach_selected=True)
+        payload = {"scope": f"athlete-{athlete.id}", "training": "specific", "source_start": "2026-10-28", "source_end": "2026-10-28", "start": "2026-10-28", "end": "2026-11-02"}
+        self.assertEqual(self.client.post("/planning/year/training/resize/", json.dumps(payload), content_type="application/json").status_code, 409)
+        self.assertEqual(YearPlannerEntry.objects.filter(athlete=athlete).count(), 1)
+        payload.update(end="2026-10-29", training="intense")
+        self.assertEqual(self.client.post("/planning/year/training/resize/", json.dumps(payload), content_type="application/json").status_code, 409)
+        outsider = get_user_model().objects.create_user(username="resizeother", is_staff=True)
+        self.client.force_login(outsider)
+        self.assertEqual(self.client.post("/planning/year/training/resize/", json.dumps(payload), content_type="application/json").status_code, 404)
+
     def test_selected_races_fill_training_layer_and_lock_phase_changes(self):
         import json
         coach, athlete = self._coach_and_athlete()

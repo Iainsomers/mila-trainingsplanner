@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Periodisatieblokken (Recovery/Aerobe/Specific/Intense/Taper) in Year Planner hebben sleepgrepen aan hun begin en einde, ook over maandgrenzen in de zichtbare periode. Verlengingen nemen de gekozen fase over op aangrenzende dagen; inkorten maakt de vrijgekomen dagen leeg. Wedstrijddagen vormen een grens. Slepen geeft direct een voorbeeld, loslaten slaat de volledige wijziging atomair op; Escape annuleert en bij een opslagfout wordt het voorbeeld teruggedraaid. Atleten blijven alleen-lezen.
+
 - Race filter biedt naast Group en Athlete ook Race Type met All en de zes racetypes. Het typefilter combineert met de overige filters en blijft behouden bij periode-/jaarnavigatie en opslaan; Show all races toont uitsluitend races van het gekozen type.
 
 - De groene deelnemeraantallen per afstand in de Race Calendar-lijst worden direct na succesvol automatisch opslaan bijgewerkt, inclusief het verschijnen bij de eerste selectie en verdwijnen bij de laatste uitschrijving. Ze volgen de actieve groeps-/atleetfilter; meerdere vinkjes voor dezelfde atleet/afstand tellen één keer.

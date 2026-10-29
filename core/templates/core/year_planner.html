@@ -429,6 +429,24 @@
 
   .year-range-handle-start { left: 0; }
   .year-range-handle-end { right: 0; }
+  .year-training-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 7px;
+    z-index: 5;
+    cursor: ew-resize;
+    touch-action: none;
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
+  .year-training-handle[data-side="start"] { left: 0; }
+  .year-training-handle[data-side="end"] { right: 0; }
+  .year-training-handle:hover { background: rgba(0, 0, 0, .2); }
+  .year-training-resizing { cursor: ew-resize; user-select: none; }
+  .year-training-resizing .year-training-handle { pointer-events: none; }
+  .year-training-saving [data-year-training-wrap] { pointer-events: none; }
 
   .year-where-wrap.has-overlaps .year-range-pill {
     inset: 1px 0;
@@ -1026,6 +1044,7 @@
   let rowClipboard = null;
   let whereRowClipboard = null;
   let paint = null;
+  let trainingResize = null;
   let changedCells = new Set();
   let activeWhereRange = null;
   let rangeDrag = null;
@@ -1117,7 +1136,127 @@
         if (next && nextValue === value) item.classList.add("same-next");
       });
     });
+    refreshTrainingHandles();
   }
+
+  function trainingValue(cell) {
+    const wrap = cell.querySelector('[data-year-training-wrap]');
+    return wrap && !wrap.dataset.yearRaceLocked ? wrap.dataset.yearTrainingValue || '' : null;
+  }
+
+  function refreshTrainingHandles() {
+    if (trainingResize) return;
+    page.querySelectorAll('.year-training-handle').forEach((handle) => handle.remove());
+    if (page.classList.contains('year-read-only')) return;
+    cellsByScope.forEach((scopeItems) => {
+      const cells = [...scopeItems].sort((a, b) => a.dataset.date.localeCompare(b.dataset.date));
+      cells.forEach((cell, index) => {
+        const value = trainingValue(cell);
+        if (!value || cell.closest('.year-row-read-only')) return;
+        ['start', 'end'].forEach((side) => {
+          const neighbor = cells[index + (side === 'start' ? -1 : 1)];
+          if (neighbor && trainingValue(neighbor) === value) return;
+          const handle = document.createElement('span');
+          handle.className = 'year-training-handle';
+          handle.dataset.side = side;
+          handle.title = side === 'start' ? 'Drag to change start' : 'Drag to change end';
+          handle.addEventListener('mousedown', (event) => event.stopPropagation());
+          cell.querySelector('[data-year-training-wrap]').appendChild(handle);
+        });
+      });
+    });
+  }
+
+  function showTrainingResize(resize, restore = false) {
+    resize.cells.forEach((cell, index) => {
+      const wrap = cell.querySelector('[data-year-training-wrap]');
+      if (!wrap || wrap.dataset.yearRaceLocked) return;
+      let value = resize.original[index];
+      if (!restore) {
+        if (index >= resize.first && index <= resize.last) value = '';
+        if (index >= resize.start && index <= resize.end) value = resize.value;
+      }
+      const select = wrap.querySelector('[data-year-training]');
+      if (select) select.value = value;
+      wrap.dataset.yearTrainingValue = value;
+      refreshTrainingWrap(wrap);
+    });
+    refreshConnections();
+  }
+
+  page.addEventListener('pointerdown', (event) => {
+    const handle = event.target.closest('.year-training-handle');
+    if (!handle || trainingResize || event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const cell = handle.closest('[data-year-cell]');
+    const cells = [...scopeCells(cell.dataset.scope)].sort((a, b) => a.dataset.date.localeCompare(b.dataset.date));
+    const value = trainingValue(cell);
+    let first = cells.indexOf(cell), last = first;
+    while (first > 0 && trainingValue(cells[first - 1]) === value) first--;
+    while (last < cells.length - 1 && trainingValue(cells[last + 1]) === value) last++;
+    trainingResize = {cells, first, last, start: first, end: last, value,
+      side: handle.dataset.side, original: cells.map(trainingValue), pointer: event.pointerId};
+    document.body.classList.add('year-training-resizing');
+  });
+
+  document.addEventListener('pointermove', (event) => {
+    const resize = trainingResize;
+    if (!resize || resize.saving || event.pointerId !== resize.pointer) return;
+    const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-year-cell]');
+    let index = resize.cells.indexOf(cell);
+    if (index < 0) return;
+    event.preventDefault();
+    if (resize.side === 'start') {
+      index = Math.min(index, resize.last);
+      for (let i = resize.first - 1; i >= index; i--) {
+        if (resize.original[i] === null) { index = i + 1; break; }
+      }
+      resize.start = index;
+    } else {
+      index = Math.max(index, resize.first);
+      for (let i = resize.last + 1; i <= index; i++) {
+        if (resize.original[i] === null) { index = i - 1; break; }
+      }
+      resize.end = index;
+    }
+    showTrainingResize(resize);
+  }, {passive: false});
+
+  function cancelTrainingResize() {
+    if (!trainingResize || trainingResize.saving) return;
+    showTrainingResize(trainingResize, true);
+    trainingResize = null;
+    document.body.classList.remove('year-training-resizing');
+    refreshConnections();
+  }
+  document.addEventListener('pointercancel', cancelTrainingResize);
+  document.addEventListener('pointerup', async (event) => {
+    const resize = trainingResize;
+    if (!resize || resize.saving || event.pointerId !== resize.pointer) return;
+    if (resize.start === resize.first && resize.end === resize.last) { cancelTrainingResize(); return; }
+    resize.saving = true;
+    page.classList.add('year-training-saving');
+    setStatus('Saving...', false);
+    try {
+      const response = await fetch("{% url 'year_planner_training_resize' %}", {
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') || ''},
+        body: JSON.stringify({scope: resize.cells[0].dataset.scope, training: resize.value,
+          source_start: resize.cells[resize.first].dataset.date, source_end: resize.cells[resize.last].dataset.date,
+          start: resize.cells[resize.start].dataset.date, end: resize.cells[resize.end].dataset.date}),
+      });
+      if (!response.ok) throw new Error('Save failed');
+      setStatusThenClear('Saved', false);
+    } catch (error) {
+      showTrainingResize(resize, true);
+      setStatus('Save failed; refresh the page and try again', true);
+    } finally {
+      trainingResize = null;
+      page.classList.remove('year-training-saving');
+      document.body.classList.remove('year-training-resizing');
+      refreshConnections();
+    }
+  });
 
   function refreshAllClasses() {
     allTrainingWraps.forEach(refreshTrainingWrap);
@@ -1560,6 +1699,7 @@
   });
 
   function startPaintFromWrap(wrap, layer, event) {
+    if (trainingResize || event.target.closest('.year-training-handle')) return;
     if (layer !== "training") return;
     if (event.button !== 0) return;
     const select = wrap.querySelector("[data-year-training]");
@@ -1785,6 +1925,7 @@
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      cancelTrainingResize();
       rowClipboard = null;
       whereRowClipboard = null;
       paint = null;

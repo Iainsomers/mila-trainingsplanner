@@ -7017,6 +7017,54 @@ def year_planner_view(request):
 
 @login_required
 @require_http_methods(["POST"])
+def year_planner_training_resize_view(request):
+    athlete = _athlete_for_user(request.user)
+    if athlete and not request.user.is_staff and not request.user.is_superuser:
+        return JsonResponse({"ok": False, "error": "Not allowed"}, status=403)
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+        source_start, source_end, start, end = [
+            date.fromisoformat(payload[key])
+            for key in ("source_start", "source_end", "start", "end")
+        ]
+        training = payload["training"]
+        scope = payload["scope"]
+        if not isinstance(scope, str):
+            raise ValueError
+        if not training or training not in dict(YearPlannerEntry.TRAINING_CHOICES):
+            raise ValueError
+        if source_start > source_end or start > end or (max(end, source_end) - min(start, source_start)).days > 730:
+            raise ValueError
+        # Resize exactly one edge; moving a whole block is a separate action.
+        if start != source_start and end != source_end:
+            raise ValueError
+    except (ValueError, TypeError, KeyError):
+        return JsonResponse({"ok": False, "error": "Invalid periodisation range"}, status=400)
+    try:
+        athlete_obj, basis_plan = _year_planner_scope_target(request, scope)
+    except ValueError:
+        return JsonResponse({"ok": False}, status=400)
+    except LookupError:
+        return JsonResponse({"ok": False}, status=404)
+    owner = _active_coach_user(request)
+    if athlete_obj and _year_planner_selected_races([athlete_obj.id], owner, min(start, source_start), max(end, source_end)).exists():
+        return JsonResponse({"ok": False, "error": "Race days cannot be resized"}, status=409)
+    with transaction.atomic():
+        entries = YearPlannerEntry.objects.select_for_update().filter(owner=owner, athlete=athlete_obj, basis_plan=basis_plan)
+        source = list(entries.filter(date__range=(source_start, source_end)))
+        if len(source) != (source_end - source_start).days + 1 or any(entry.training_type != training for entry in source):
+            return JsonResponse({"ok": False, "error": "Periodisation changed; refresh the page"}, status=409)
+        entries.filter(date__range=(source_start, source_end)).exclude(date__range=(start, end)).delete()
+        for offset in range((end - start).days + 1):
+            YearPlannerEntry.objects.update_or_create(
+                owner=owner, athlete=athlete_obj, basis_plan=basis_plan,
+                date=start + timedelta(days=offset), defaults={"training_type": training},
+            )
+    return JsonResponse({"ok": True})
+
+
+@login_required
+@require_http_methods(["POST"])
 def year_planner_entry_save_view(request):
     athlete = _athlete_for_user(request.user)
     if athlete and not request.user.is_staff and not request.user.is_superuser:
