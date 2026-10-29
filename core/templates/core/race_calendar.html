@@ -183,6 +183,7 @@
             {% for row in race_rows %}
               {% with race=row.race distances=row.distances %}
                 <button type="button" class="race-list-item race-type-{{ race.race_type }}"
+                        data-show-counts="{% if not is_athlete_user %}1{% else %}0{% endif %}"
                         data-race-id="{{ race.id }}"
                         data-bs-toggle="modal" data-bs-target="#raceModal{{ race.id }}">
                   <span class="race-list-date">{{ race.date|date:"d-m-Y" }}</span>
@@ -318,7 +319,7 @@
                     <span>Athlete</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>
                   </div>
                   {% for athlete_row in row.athlete_rows %}
-                    <details class="race-entry-athlete" data-plan-ids="{{ athlete_row.plan_ids }}" data-participating="{% if athlete_row.participating %}1{% else %}0{% endif %}" {% if is_athlete_user %}open{% endif %}>
+                    <details class="race-entry-athlete" data-race-count-scope="{% if athlete_row.in_count_scope %}1{% else %}0{% endif %}" data-plan-ids="{{ athlete_row.plan_ids }}" data-participating="{% if athlete_row.participating %}1{% else %}0{% endif %}" {% if is_athlete_user %}open{% endif %}>
                       <summary class="race-entry-athlete-summary">
                         <strong class="race-entry-athlete-name">{{ athlete_row.athlete.name }}</strong>
                       </summary>
@@ -508,6 +509,31 @@
       : (coachSelected && athleteSelected ? "race-choice-confirmed" : "race-choice-pending"));
   }
 
+  function refreshRaceDistanceCounts(modal) {
+    var listRow = document.querySelector('.race-list-item[data-race-id="' + modal.dataset.raceId + '"]');
+    if (!listRow || listRow.dataset.showCounts !== '1') return;
+    var counts = {};
+    modal.querySelectorAll('.race-entry-athlete[data-race-count-scope="1"]').forEach(function(athleteRow) {
+      athleteRow.querySelectorAll('.race-entry-distance').forEach(function(distanceRow) {
+        if (distanceRow.querySelector('input[data-race-role]:checked')) {
+          var id = distanceRow.dataset.distanceId;
+          counts[id] = (counts[id] || 0) + 1;
+        }
+      });
+    });
+    listRow.querySelectorAll('.race-list-distance-wrap').forEach(function(wrapper) {
+      var count = counts[wrapper.dataset.distanceId] || 0;
+      var badge = wrapper.querySelector('.race-distance-count');
+      if (!count) { if (badge) badge.remove(); return; }
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'race-distance-count';
+        wrapper.appendChild(badge);
+      }
+      badge.textContent = String(count);
+    });
+  }
+
   function autoSaveAthleteSelection(input) {
     var form = input.closest('.race-entry-form[data-auto-save="1"]');
     if (!form) return;
@@ -526,6 +552,7 @@
       if (!response.ok) throw new Error("save failed");
       return response.json();
     }).then(function(data) {
+      refreshRaceDistanceCounts(form.closest('.modal'));
       if (deleteButton) {
         deleteButton.disabled = !data.can_delete;
         deleteButton.title = data.can_delete ? '' : 'Remove all athlete selections before deleting this race.';

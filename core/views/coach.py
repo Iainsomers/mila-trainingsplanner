@@ -9031,6 +9031,7 @@ def race_calendar_view(request):
                 "athlete": athlete,
                 "distance_entries": distance_entries,
                 "participating": participating,
+                "in_count_scope": athlete.id in scoped_athlete_ids,
                 "plan_ids": ",".join(plan_ids_by_athlete.get(athlete.id, [])),
             })
         scoped_participant_count = sum(
