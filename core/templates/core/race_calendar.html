@@ -174,7 +174,7 @@
       {% endfor %}
     </div>
   {% else %}
-    <div class="card">
+    <div class="card race-list-card">
       <div class="card-body">
         <h5 class="card-title">Races</h5>
 
@@ -675,6 +675,11 @@
     font-weight: 700;
   }
   .race-calendar-event:hover { filter: brightness(.96); }
+
+  .race-list-card {
+    width: 40%;
+    min-width: min(640px, 100%);
+  }
 
   .race-list {
     border: 1px solid #dee2e6;
