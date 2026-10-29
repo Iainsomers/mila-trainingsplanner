@@ -1,10 +1,12 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
 {% block title %}Year Planner{% endblock %}
 
 {% block extra_head %}
 <style>
   .year-toolbar { gap: 0.5rem; }
+  .year-day-weekday { display: block; margin-top: 3px; font-weight: 400; }
   .year-athlete-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -900,7 +902,7 @@
             <tr>
               <th class="year-name-cell">Athlete / coach</th>
               {% for day in chunk.days %}
-                <th class="year-day-head" title="{{ day|date:'D d-m-Y' }}">{{ day|date:"d-m" }}</th>
+                {% language "en" %}<th class="year-day-head" title="{{ day|date:'l d-m-Y' }}">{{ day|date:"d-m" }}<span class="year-day-weekday">{{ day|date:"D"|slice:":1" }}</span></th>{% endlanguage %}
               {% endfor %}
             </tr>
           </thead>
