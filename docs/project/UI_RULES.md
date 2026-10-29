@@ -4,6 +4,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
 
+- Flex Planner-rijen groeien mee met de training, met 48 px als minimum. Gebruik rondom de training slechts 2 px verticale padding; reserveer geen lege strook onderaan.
 - Compact, functioneel en rustig; planningsinformatie krijgt voorrang op uitlegtekst.
 - Gebruik bestaande Bootstrap-componenten en de huidige MiLa-visuele taal.
 - Segmenten, zones, totalen en weektypen mogen als compacte pills worden weergegeven.
