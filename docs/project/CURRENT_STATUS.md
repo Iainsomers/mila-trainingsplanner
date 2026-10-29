@@ -106,6 +106,8 @@ Bijgewerkt: 29 oktober 2026.
 
 ## Laatste overdracht — 29 oktober 2026
 
+- Meerdaagse races gebruiken de optionele inclusieve einddatum uit migratie `0127_raceevent_end_date`. Add race toont standaard één datum; `Multiple days` opent `Until`. Race Calendar en Year Planner ondersteunen overlap met de zichtbare periode en blokkeren periodisatie op iedere geselecteerde wedstrijddag. Neem migratie 0127 mee bij de Render-deploy.
+
 - Race Calendar heeft Race Type met omlijningen volgens de Year Planner-legenda. Migratie `0126_raceevent_race_type` geeft alle bestaande races Race Other en moet bij de Render-deploy worden uitgevoerd. De dropdown onder Manage distances slaat automatisch op; atleten kunnen het gedeelde type alleen lezen.
 
 - De HTTP 500 in Flex Planner is lokaal gereproduceerd en hersteld: het weekclipboard leest nu de al geordende segmenten van virtuele weergaveslots via `all()`. Een paginatest met gevulde AM- en PM-trainingen controleert dat de pagina opent en de weekinhoud bevat. De dynamische rijhoogte met minimum 48 px blijft behouden. De live Render-status na de rollback is nog niet bevestigd.

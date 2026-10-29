@@ -6638,8 +6638,9 @@ def _year_planner_selected_races(athlete_ids, owner, start_date, end_date):
         RaceEntry.objects.filter(
             athlete_id__in=athlete_ids,
             race_distance__race__owner=owner,
-            race_distance__race__date__range=(start_date, end_date),
+            race_distance__race__date__lte=end_date,
         )
+        .filter(Q(race_distance__race__end_date__gte=start_date) | Q(race_distance__race__end_date__isnull=True, race_distance__race__date__gte=start_date))
         .filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True))
         .select_related("race_distance__race")
         .order_by("race_distance__race__date", "race_distance__race__name", "race_distance__race_id")
@@ -6771,13 +6772,16 @@ def year_planner_view(request):
     selected_races = _year_planner_selected_races(selected_ids, owner, start_date, end_date)
     for race_entry in selected_races:
         race = race_entry.race_distance.race
-        day_races = race_days.setdefault((race_entry.athlete_id, race.date), {})
-        displayed_race = day_races.setdefault(race.id, race)
-        if not hasattr(displayed_race, "selected_distances"):
-            displayed_race.selected_distances = []
-        distance_label = race_entry.race_distance.display_distance
-        if distance_label not in displayed_race.selected_distances:
-            displayed_race.selected_distances.append(distance_label)
+        first_day = max(race.date, start_date)
+        last_day = min(race.last_date, end_date)
+        for offset in range((last_day - first_day).days + 1):
+            day_races = race_days.setdefault((race_entry.athlete_id, first_day + timedelta(days=offset)), {})
+            displayed_race = day_races.setdefault(race.id, race)
+            if not hasattr(displayed_race, "selected_distances"):
+                displayed_race.selected_distances = []
+            distance_label = race_entry.race_distance.display_distance
+            if distance_label not in displayed_race.selected_distances:
+                displayed_race.selected_distances.append(distance_label)
     entry_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
         entry_scope_filter |= Q(athlete__isnull=True, basis_plan=selected_filter_plan)
@@ -8962,6 +8966,17 @@ def race_calendar_view(request):
             race_date = None
             errors.append("Date is invalid.")
 
+        race_end_date = None
+        if request.POST.get("multiple_days") == "1":
+            try:
+                race_end_date = date.fromisoformat(request.POST.get("end_date") or "")
+                if race_date and race_end_date < race_date:
+                    errors.append("End date must be on or after the start date.")
+                if race_end_date == race_date:
+                    race_end_date = None
+            except (TypeError, ValueError):
+                errors.append("End date is required for a multi-day race.")
+
         if not errors and race_date:
             race_owner = current_athlete.owner if is_athlete_user else _active_coach_user(request)
             if race_owner is None:
@@ -8970,6 +8985,7 @@ def race_calendar_view(request):
                 owner=race_owner,
                 name=name,
                 date=race_date,
+                end_date=race_end_date,
             )
             return _race_calendar_redirect_for_year(year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
@@ -8989,7 +9005,8 @@ def race_calendar_view(request):
 
     races = list(
         RaceEvent.objects
-        .filter(owner_id__in=race_owner_ids, date__gte=start_date, date__lte=end_date)
+        .filter(owner_id__in=race_owner_ids, date__lte=end_date)
+        .filter(Q(end_date__gte=start_date) | Q(end_date__isnull=True, date__gte=start_date))
         .prefetch_related("distances")
         .order_by("date", "name", "id")
     )
@@ -9142,7 +9159,10 @@ def race_calendar_view(request):
     race_rows_by_id = {row["race"].id: row for row in race_rows}
     races_by_date = {}
     for row in race_rows:
-        races_by_date.setdefault(row["race"].date, []).append(row)
+        race = row["race"]
+        first_day, last_day = max(race.date, start_date), min(race.last_date, end_date)
+        for offset in range((last_day - first_day).days + 1):
+            races_by_date.setdefault(first_day + timedelta(days=offset), []).append(row)
 
     month_rows = []
     cal = py_calendar.Calendar(firstweekday=0)
@@ -9505,7 +9525,8 @@ def race_select_view(request):
 
     races = list(
         RaceEvent.objects
-        .filter(owner_id__in=race_owner_ids, date__gte=start_date, date__lte=end_date)
+        .filter(owner_id__in=race_owner_ids, date__lte=end_date)
+        .filter(Q(end_date__gte=start_date) | Q(end_date__isnull=True, date__gte=start_date))
         .prefetch_related("distances")
         .order_by("date", "name", "id")
     )
@@ -9630,7 +9651,9 @@ def race_select_view(request):
             "cells": cells,
         }
         rows.append(row)
-        races_by_date.setdefault(race.date, []).append(row)
+        first_day, last_day = max(race.date, start_date), min(race.last_date, end_date)
+        for offset in range((last_day - first_day).days + 1):
+            races_by_date.setdefault(first_day + timedelta(days=offset), []).append(row)
 
     month_rows = []
     cal = py_calendar.Calendar(firstweekday=0)

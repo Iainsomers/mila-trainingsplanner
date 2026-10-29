@@ -1254,6 +1254,7 @@ class RaceEvent(models.Model):
     name = models.CharField(max_length=160)
     date = models.DateField()
     race_type = models.CharField(max_length=20, choices=RACE_TYPE_CHOICES, default="race_other")
+    end_date = models.DateField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1263,6 +1264,10 @@ class RaceEvent(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} · {self.date}"
+
+    @property
+    def last_date(self):
+        return self.end_date or self.date
 
 
 class RaceEventDistance(models.Model):

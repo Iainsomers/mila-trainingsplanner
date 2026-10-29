@@ -75,14 +75,24 @@
         <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
         <div class="col-12 col-md-6">
           <label class="form-label">Name</label>
-          <input type="text" name="name" class="form-control" required>
+          <input type="text" name="name" class="form-control" value="{{ request.POST.name }}" required>
         </div>
         <div class="col-12 col-md-3">
           <label class="form-label">Date</label>
-          <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+          <input type="date" name="date" class="form-control" value="{% if request.POST.date %}{{ request.POST.date }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" required>
         </div>
         <div class="col-12 col-md-3">
           <button type="submit" class="btn btn-primary w-100">Add</button>
+        </div>
+        <div class="col-12">
+          <label class="form-check small mb-0">
+            <input type="checkbox" class="form-check-input" name="multiple_days" value="1" data-race-multiple-days {% if request.POST.multiple_days == '1' %}checked{% endif %}>
+            <span class="form-check-label">Multiple days</span>
+          </label>
+        </div>
+        <div class="col-12 col-md-6" data-race-end-wrap {% if request.POST.multiple_days != '1' %}hidden{% endif %}>
+          <label class="form-label small mb-1">Until</label>
+          <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request.POST.end_date }}" {% if request.POST.multiple_days != '1' %}disabled{% endif %}>
         </div>
       </form>
     </div>
@@ -196,7 +206,7 @@
                         data-show-counts="{% if not is_athlete_user %}1{% else %}0{% endif %}"
                         data-race-id="{{ race.id }}"
                         data-bs-toggle="modal" data-bs-target="#raceModal{{ race.id }}">
-                  <span class="race-list-date">{{ race.date|date:"d-m-Y" }}</span>
+                  <span class="race-list-date">{{ race.date|date:"d-m-Y" }}{% if race.end_date %}<br>– {{ race.end_date|date:"d-m-Y" }}{% endif %}</span>
                   <span class="race-list-main">
                     <strong class="race-list-name">{{ race.name }}</strong>
                     <span class="race-list-distances">
@@ -230,7 +240,7 @@
             <div class="modal-header">
               <div>
                 <h5 class="modal-title" id="raceModal{{ race.id }}Label">{{ race.name }}</h5>
-                <div class="text-muted small">{{ race.date|date:"d-m-Y" }}</div>
+                <div class="text-muted small">{{ race.date|date:"d-m-Y" }}{% if race.end_date %} – {{ race.end_date|date:"d-m-Y" }}{% endif %}</div>
               </div>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -401,6 +411,14 @@
               <label class="form-label">Date</label>
               <input type="date" name="date" id="addRaceDateInput" class="form-control" required>
             </div>
+            <label class="form-check small mb-2">
+              <input type="checkbox" class="form-check-input" name="multiple_days" value="1" data-race-multiple-days>
+              <span class="form-check-label">Multiple days</span>
+            </label>
+            <div data-race-end-wrap hidden>
+              <label class="form-label">Until</label>
+              <input type="date" name="end_date" class="form-control" disabled>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -429,7 +447,10 @@
       var trigger = event.relatedTarget;
       var date = trigger ? (trigger.getAttribute("data-date") || "") : "";
       var input = document.getElementById("addRaceDateInput");
-      if (input && date) input.value = date;
+      if (input && date) {
+        input.value = date;
+        input.dispatchEvent(new Event('change'));
+      }
     });
   }
 
@@ -595,6 +616,24 @@
 })();
 </script>
 
+<script>
+  document.querySelectorAll('[data-race-multiple-days]').forEach(function(toggle) {
+    var form = toggle.closest('form');
+    var start = form.querySelector('[name="date"]');
+    var wrap = form.querySelector('[data-race-end-wrap]');
+    var end = wrap.querySelector('[name="end_date"]');
+    function update() {
+      wrap.hidden = !toggle.checked;
+      end.disabled = !toggle.checked;
+      end.required = toggle.checked;
+      end.min = start.value;
+      if (toggle.checked && (!end.value || end.value < start.value)) end.value = start.value;
+    }
+    toggle.addEventListener('change', update);
+    start.addEventListener('change', update);
+    update();
+  });
+ </script>
 <script>
   document.querySelectorAll('.race-type-form').forEach(function (form) {
     var select = form.querySelector('select');

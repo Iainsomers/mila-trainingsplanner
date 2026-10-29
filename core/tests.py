@@ -3849,6 +3849,19 @@ class TrainerPlanningListTests(TestCase):
 
 
 class YearPlannerTests(TestCase):
+    def test_multiday_race_marks_and_protects_full_range_across_year_boundary(self):
+        import json
+        coach, athlete = self._coach_and_athlete()
+        race = RaceEvent.objects.create(owner=coach, name="Multi day championship", date="2026-12-31", end_date="2027-01-02", race_type="championship")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+        RaceEntry.objects.create(athlete=athlete, race_distance=distance, coach_selected=True)
+        page = self.client.get(f"/planning/year/?year=2027&period=full&athletes={athlete.id}")
+        cells = page.context["rows"][0]["cells"]
+        self.assertEqual([cell["date"] for cell in cells if cell["races"]], [date(2027, 1, 1), date(2027, 1, 2)])
+        for day, expected_status in (("2027-01-01", 409), ("2027-01-02", 409), ("2027-01-03", 200)):
+            response = self.client.post("/planning/year/entry/", json.dumps({"scope": f"athlete-{athlete.id}", "date": day, "training": "aerobe"}), content_type="application/json")
+            self.assertEqual(response.status_code, expected_status)
+
     def test_resize_periodisation_extends_and_shortens_one_edge(self):
         import json
         coach, athlete = self._coach_and_athlete()
@@ -8822,6 +8835,37 @@ class SegmentRepTimeDisplayTests(TestCase):
 
 
 class RaceSelectDisplayTests(TestCase):
+    def test_multiday_race_creation_and_validation_keep_single_day_default(self):
+        coach = get_user_model().objects.create_user(username="multidaycoach", is_staff=True)
+        self.client.force_login(coach)
+        single = self.client.post("/race-calendar/?year=2026&view=year_list", {
+            "name": "Single meeting", "date": "2026-07-16", "end_date": "2026-07-18", "view": "year_list",
+        })
+        self.assertEqual(single.status_code, 302)
+        self.assertIsNone(RaceEvent.objects.get(name="Single meeting").end_date)
+        multi = self.client.post("/race-calendar/?year=2026&view=year_list", {
+            "name": "Three day nationals", "date": "2026-07-16", "multiple_days": "1", "end_date": "2026-07-18", "view": "year_list",
+        }, follow=True)
+        self.assertEqual(multi.status_code, 200)
+        self.assertEqual(RaceEvent.objects.get(name="Three day nationals").end_date, date(2026, 7, 18))
+        self.assertContains(multi, "18-07-2026")
+        for end_date in ("2026-07-15", ""):
+            invalid = self.client.post("/race-calendar/?year=2026&view=year_list", {
+                "name": "Invalid meeting", "date": "2026-07-16", "multiple_days": "1", "end_date": end_date,
+            })
+            self.assertEqual(invalid.status_code, 200)
+            self.assertTrue(invalid.context["errors"])
+            self.assertFalse(RaceEvent.objects.filter(name="Invalid meeting").exists())
+
+    def test_multiday_race_crossing_year_is_visible_on_all_calendar_days(self):
+        coach = get_user_model().objects.create_user(username="multiyearcoach", is_staff=True)
+        race = RaceEvent.objects.create(owner=coach, name="New year meeting", date="2026-12-31", end_date="2027-01-02")
+        self.client.force_login(coach)
+        page = self.client.get("/race-calendar/?year=2027&view=calendar&period=full")
+        self.assertEqual([row["race"].id for row in page.context["race_rows"]], [race.id])
+        cells = [cell for month in page.context["month_rows"] for week in month["weeks"] for cell in week if cell["in_month"]]
+        self.assertEqual([cell["day"] for cell in cells if cell["races"]], [date(2027, 1, 1), date(2027, 1, 2)])
+
     def test_race_type_filter_combines_with_athlete_filter_and_survives_save(self):
         coach = get_user_model().objects.create_user(username="typefiltercoach", is_staff=True)
         athlete = Athlete.objects.create(owner=coach, name="Type filter athlete", birth_year=2000, gender="X")

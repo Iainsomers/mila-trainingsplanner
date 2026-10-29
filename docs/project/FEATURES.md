@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Add race vraagt standaard alleen een datum. `Multiple days` klapt een optionele `Until`-einddatum open; uitschakelen maakt de wedstrijd weer eendaags. De einddatum is inclusief en mag niet vóór de start liggen. De lijst en popup tonen het datumbereik. Race Calendar en de Training-laag van Year Planner tonen alle wedstrijddagen, ook over maand-/jaargrenzen; alle dagen blokkeren fasewijzigingen. Bestaande races blijven eendaags. Bestaande AYC/Flex-raceafstanden blijven gekoppeld aan de startdatum; de duur van het evenement verdubbelt de trainingsafstand niet automatisch.
+
 - Periodisatieblokken (Recovery/Aerobe/Specific/Intense/Taper) in Year Planner hebben sleepgrepen aan hun begin en einde, ook over maandgrenzen in de zichtbare periode. Verlengingen nemen de gekozen fase over op aangrenzende dagen; inkorten maakt de vrijgekomen dagen leeg. Wedstrijddagen vormen een grens. Slepen geeft direct een voorbeeld, loslaten slaat de volledige wijziging atomair op; Escape annuleert en bij een opslagfout wordt het voorbeeld teruggedraaid. Atleten blijven alleen-lezen.
 
 - Race filter biedt naast Group en Athlete ook Race Type met All en de zes racetypes. Het typefilter combineert met de overige filters en blijft behouden bij periode-/jaarnavigatie en opslaan; Show all races toont uitsluitend races van het gekozen type.
