@@ -3849,6 +3849,16 @@ class TrainerPlanningListTests(TestCase):
 
 
 class YearPlannerTests(TestCase):
+    def test_season_runs_from_october_through_september(self):
+        self._coach_and_athlete()
+        for year in (2026, 2027):
+            page = self.client.get(f"/planning/year/?year={year}&period=season")
+            self.assertEqual(page.status_code, 200)
+            self.assertEqual(page.context["days"][0], date(year, 10, 1))
+            self.assertEqual(page.context["days"][-1], date(year + 1, 9, 30))
+            self.assertEqual(page.context["period_label"], f"{year}/{str(year + 1)[-2:]}")
+            self.assertNotIn("full_season", [option["key"] for option in page.context["period_options"]])
+
     def test_multiday_race_marks_and_protects_full_range_across_year_boundary(self):
         import json
         coach, athlete = self._coach_and_athlete()
@@ -3994,7 +4004,7 @@ class YearPlannerTests(TestCase):
         )
 
         page = self.client.get(
-            f"/planning/year/?year=2026&period=season&coaches={editable_coach.id}&coaches={view_only_coach.id}"
+            f"/planning/year/?year=2026&period=full&coaches={editable_coach.id}&coaches={view_only_coach.id}"
         )
         self.assertContains(page, "editable-coach")
         self.assertContains(page, "view-only-coach")
@@ -4091,7 +4101,7 @@ class YearPlannerTests(TestCase):
         response = self.client.get(f"/planning/year/?year=2026&period=season&layout=stack&zoom=3&athletes={athlete.id}")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sep 2026 - Nov 2026")
+        self.assertContains(response, "Oct 2026 - Dec 2026")
         self.assertContains(response, "year-layout-stack")
 
     def test_athlete_year_planner_is_hidden_by_default(self):
@@ -4174,7 +4184,7 @@ class YearPlannerTests(TestCase):
         self.client.force_login(athlete_user)
 
         response = self.client.get(
-            f"/planning/year/?year=2026&period=season&coaches={related_coach.id}"
+            f"/planning/year/?year=2026&period=full&coaches={related_coach.id}"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -4284,7 +4294,7 @@ class YearPlannerTests(TestCase):
             whereabouts_type="camp",
             note="Altitude camp",
         ).exists())
-        page = self.client.get(f"/planning/year/?year=2026&period=season&athletes={athlete.id}")
+        page = self.client.get(f"/planning/year/?year=2026&period=full&athletes={athlete.id}")
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "Altitude camp")
 
@@ -4314,7 +4324,7 @@ class YearPlannerTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete).count(), 2)
         self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach, athlete=athlete, whereabouts_type="camp").exists())
-        page = self.client.get(f"/planning/year/?year=2026&period=season&athletes={athlete.id}")
+        page = self.client.get(f"/planning/year/?year=2026&period=full&athletes={athlete.id}")
         self.assertContains(page, "Blood test")
 
     def test_year_planner_saves_whereabout_ranges_in_batch(self):

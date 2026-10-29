@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- De bestaande seizoensperiode in Year Planner (`2026/27`, intern `season`) loopt van 1 oktober van het gekozen jaar t/m 30 september van het volgende jaar.
+
 - RaceEvent heeft een optionele inclusieve `end_date`; leeg betekent één dag op `date`. Een ingevulde einddatum mag niet vóór de start liggen. Periodefilters in Race Calendar en Year Planner gebruiken overlap met het wedstrijdbereik. Iedere geselecteerde wedstrijddag blokkeert periodisatie. De evenementduur creëert geen extra AYC/Flex-trainingsafstanden.
 
 - Year Planner leidt wedstrijddagen live af uit RaceEntry met Trainer, Athlete of Target geselecteerd voor de betreffende atleet en coach. De RaceEvent-datum en het racetype bepalen de Training-markering. Er wordt geen trainingsfase of whereabouts-record voor aangemaakt; fasewijzigingen op zulke dagen worden geweigerd, inclusief wissen. Uitvinken/verwijderen maakt een eerder opgeslagen fase weer zichtbaar.

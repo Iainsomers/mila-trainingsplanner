@@ -6674,8 +6674,8 @@ def year_planner_view(request):
         period_mode = "full"
     if period_mode == "season":
         period = {
-            "start_date": date(year, 9, 1),
-            "end_date": date(year + 1, 8, 31),
+            "start_date": date(year, 10, 1),
+            "end_date": date(year + 1, 9, 30),
             "label": f"{year}/{str(year + 1)[-2:]}",
             "previous_year": year - 1,
             "next_year": year + 1,
