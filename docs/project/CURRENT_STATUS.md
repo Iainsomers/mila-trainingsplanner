@@ -102,6 +102,12 @@ Bijgewerkt: 29 oktober 2026.
 - Polar/watch suggestions, vooral automatische workoutmatching zonder handmatige laps, hebben verdere testgevallen en verfijning nodig.
 - E-mail-, WhatsApp- of pushreminders voor openstaande evaluaties zijn nog niet gebouwd; de huidige herinnering is alleen de AYC-popup.
 
+## Laatste overdracht — 29 oktober 2026
+
+- Flex Planner week kopiëren/plakken is afgerond in commit `fcb0b49`. De acties `c` en `p` staan per atleet/week; kopiëren gebruikt de zichtbare week, plakken blijft binnen dezelfde atleet en laat racecellen ongemoeid. Cel- en rijhoogtes groeien mee met de trainingsinhoud.
+- De wijziging is lokaal gecontroleerd met `manage.py check`, template-compilatie en 12 gerichte Flex Planner-tests.
+- De actuele Render-status moet na de door de eigenaar gemelde HTTP 500/rollback apart worden gecontroleerd. Een Render-dashboard-rollback kan autodeploy uitschakelen; bevestig daarom eerst de live deploy voordat nieuwe wijzigingen worden gepusht.
+
 ## Afgerond in main, 11–12 oktober 2026
 
 - Polar Integration bevat A/B/C/D: ruwe rondes, samples, tempoverwerking en één overzicht met kilometers per tempozone en HR-zone.
@@ -110,7 +116,7 @@ Bijgewerkt: 29 oktober 2026.
 - Type D heeft eigen opgeslagen HR-grenzen per atleet en migratie `0096_polar_analysis_settings`. AI-toelichting gebruikt de bestaande API-configuratie en heeft een zichtbare terugval als die ontbreekt.
 - Polar-knoppen hebben witte tekst op gevulde achtergronden. AYC-, Flex- en Trainer Planning-popups staan buiten de teambekleding; ook de AYC-`today`-popup wordt direct onder `document.body` geplaatst zodat de Bootstrap-backdrop de dialoog niet afdekt.
 - DCO Other heeft werkende Vitals, behoud van het geopende blok en Show NA-filter.
-- Laatste applicatiecommit vóór deze documentatieronde: `9198f0c`. Pushes staan op main; de daadwerkelijke Render-deploystatus is bij deze documentatieronde niet apart bevestigd.
+- Laatste applicatiecommit vóór deze documentatieronde: `fcb0b49`. De documentatie-overdracht wordt op `main` bijgewerkt; de daadwerkelijke Render-deploystatus moet na een eventuele rollback nog worden bevestigd.
 
 ## Validatie en resterende beperkingen
 

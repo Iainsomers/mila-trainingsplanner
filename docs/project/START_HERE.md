@@ -1,16 +1,24 @@
 # Start Here
 
-Bijgewerkt: 12 oktober 2026.
+Bijgewerkt: 29 oktober 2026.
 
 ## Project in één minuut
 
 MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers maken trainer-, base- en flexplanning; atleten zien hun eigen AYC, wedstrijden, evaluaties en waar toegestaan hun Year Planner. Productie draait op Render vanaf GitHub-branch `main`.
 
-- Repository: `C:\Users\iains\mila_app\mila`
-- Lokale Python: `C:\Users\iains\mila_app\venv\Scripts\python.exe`
-- Basale controle: `python manage.py check`
+- Repository: `C:\Users\iains\mila-trainingsplanner`
+- Lokale Python: `C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe`
+- Basale controle: `& '.\\.venv\\Scripts\\python.exe' manage.py check`
 - Interface en communicatie: Engels in de app, Nederlands met de projecteigenaar.
 - Voltooide wijzigingen worden normaal direct gecommit en naar `main` gepusht, tenzij de gebruiker expliciet lokaal werk vraagt.
+
+## Handoff voor een nieuwe chat — 29 oktober 2026
+
+- De laatste afgeronde wijziging is commit `fcb0b49` (`Add Flex Planner week copy and paste`).
+- Flex Planner heeft per geselecteerde atleet en week een compacte `c`- en `p`-actie. `c` kopieert de zichtbare week; `p` plakt die week naar een andere week van dezelfde atleet. Racecellen worden niet overschreven. Rijen groeien mee zodat langere trainingen volledig zichtbaar blijven.
+- Lokaal gevalideerd: `manage.py check`, template-compilatie en 12 gerichte `FlexPlannerAltTotalsTests` slagen.
+- De eigenaar meldde na een latere Render-deploy een HTTP 500 en wil die deploy mogelijk terugdraaien. Controleer in Render eerst welke deploy live staat voordat je verder pusht. Een dashboard-rollback kan autodeploy tijdelijk uitschakelen; ga dus niet alleen op de Git-status af.
+- Ongecommitteerde lokale handleidingen, render-uitvoer en tijdelijke Office-bestanden zijn bewust buiten de wijziging gehouden en mogen niet worden meegestaged.
 
 ## Leesvolgorde voor nieuw werk
 
@@ -55,8 +63,8 @@ MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers m
 ## Handige commando's
 
 ```powershell
-& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py check
-& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py test core
+& 'C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe' manage.py check
+& 'C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe' manage.py test core
 ```
 
 Bij modelwijzigingen: maak migraties, voer ze lokaal uit en laat Render daarna migreren via de bestaande deploystap. Zie `DEVELOPMENT.md` voor de volledige werkwijze.
