@@ -1133,6 +1133,112 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
     return resp
 
 
+def _week_segment_payload(slot):
+    if not slot:
+        return []
+    return [{
+        "type": seg.type,
+        "order": int(getattr(seg, "order", 0) or 0),
+        "text": seg.text or "",
+        "zone": seg.zone or "",
+        "reps": int(seg.reps or 1),
+        "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
+        "duration_s": int(seg.duration_s) if seg.duration_s is not None else None,
+        "norm_distance_m": int(seg.norm_distance_m) if seg.norm_distance_m is not None else None,
+        "parse_ok": bool(getattr(seg, "parse_ok", False)),
+        "parse_message": getattr(seg, "parse_message", "") or "",
+        "special": getattr(seg, "special", "") or "",
+        "t_type": getattr(seg, "t_type", "") or "",
+        "standard_strength_program_id": getattr(seg, "standard_strength_program_id", None),
+    } for seg in slot.segments.order_by("order", "id")]
+
+
+@require_http_methods(["POST"])
+def flex_week_copy(request):
+    """Store one displayed athlete week for later paste in Flex Planner."""
+    athlete = _get_flex_athlete_from_request(request, None)
+    if not athlete:
+        return HttpResponse("Athlete required", status=400)
+    payload_raw = request.POST.get("payload") or ""
+    try:
+        payload = json.loads(payload_raw)
+    except (TypeError, ValueError):
+        return HttpResponse("Invalid week clipboard", status=400)
+    if not isinstance(payload, dict) or not isinstance(payload.get("days"), list):
+        return HttpResponse("Invalid week clipboard", status=400)
+    request.session["flex_week_clipboard"] = {
+        "athlete_id": athlete.id,
+        "source_week_start": request.POST.get("source_week_start") or "",
+        "days": payload["days"],
+    }
+    request.session.modified = True
+    return HttpResponse("")
+
+
+@require_http_methods(["POST"])
+def flex_week_paste(request):
+    clipboard = request.session.get("flex_week_clipboard")
+    if not isinstance(clipboard, dict) or not isinstance(clipboard.get("days"), list):
+        return HttpResponse("No week clipboard", status=400)
+    athlete = _get_flex_athlete_from_request(request, None)
+    if not athlete:
+        return HttpResponse("Athlete required", status=400)
+    try:
+        target_start = date_cls.fromisoformat(request.POST.get("target_week_start") or "")
+    except ValueError:
+        return HttpResponse("Invalid target week", status=400)
+
+    write_plan = _flex_edit_plan_for_request(request, None, athlete)
+    forbid = _forbid_if_not_plan_owner(request, write_plan)
+    if forbid:
+        return forbid
+    days = clipboard["days"]
+    now = timezone.now()
+    for offset, day_data in enumerate(days[:7]):
+        if not isinstance(day_data, dict):
+            continue
+        day = target_start + timedelta(days=offset)
+        for slot_index in (1, 2):
+            item = day_data.get(str(slot_index), day_data.get(slot_index))
+            if not isinstance(item, dict) or item.get("skip"):
+                continue
+            slot, _ = TrainingSlot.objects.get_or_create(
+                date=day, slot_index=slot_index, plan=write_plan, athlete=athlete
+            )
+            slot.segments.all().delete()
+            slot.source = "planned"
+            slot.watch_loads = []
+            slot.save(update_fields=["source", "watch_loads", "updated_at"])
+            for segment in item.get("segments") or []:
+                if not isinstance(segment, dict):
+                    continue
+                seg = slot.segments.create(
+                    type=segment.get("type") or "CORE",
+                    text=segment.get("text") or "",
+                    order=int(segment.get("order") or 0),
+                )
+                seg.zone = segment.get("zone") or ""
+                seg.reps = int(segment.get("reps") or 1)
+                seg.distance_m = segment.get("distance_m")
+                seg.duration_s = segment.get("duration_s")
+                seg.norm_distance_m = segment.get("norm_distance_m")
+                seg.parse_ok = bool(segment.get("parse_ok"))
+                seg.parse_message = segment.get("parse_message") or ""
+                seg.special = segment.get("special") or ""
+                if hasattr(seg, "t_type"):
+                    seg.t_type = segment.get("t_type") or ""
+                strength_id = segment.get("standard_strength_program_id")
+                if strength_id:
+                    seg.standard_strength_program = _standard_strength_for_user(request, strength_id)
+                seg.parsed_at = now
+                seg.save()
+            save_processed_main_reps(slot)
+    _bump_stats_version()
+    request.session.pop("flex_week_clipboard", None)
+    request.session.modified = True
+    return HttpResponse("", headers={"HX-Refresh": "true"})
+
+
 @require_http_methods(["POST"])
 def slot_clipboard_clear(request):
     request.session.pop("training_clipboard", None)

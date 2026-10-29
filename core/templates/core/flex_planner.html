@@ -122,10 +122,11 @@
     }
 
     .flex-day-cell {
-      height: 48px;
+      min-height: 48px;
+      height: auto;
       padding: 0 !important;
       position: relative;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .flex-slot-label {
@@ -143,12 +144,11 @@
     }
 
     .flex-cell {
-      position: absolute;
-      inset: 0;
+      position: relative;
       width: 100%;
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
+      min-height: 48px;
+      height: auto;
+      overflow: visible;
       display: block;
       box-sizing: border-box;
       color: #000;
@@ -200,10 +200,10 @@
     }
 
     .flex-celltext {
-      position: absolute;
-      inset: 0;
-      padding: 2px 3px;
-      overflow-y: auto;
+      position: relative;
+      min-height: 48px;
+      padding: 2px 3px 18px;
+      overflow: visible;
       overflow-x: hidden;
       font-size: 11px;
       line-height: 1.2;
@@ -216,6 +216,37 @@
       height: 0;
       display: none;
     }
+
+    .flex-athlete-name-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 3px;
+    }
+
+    .flex-week-actions {
+      display: inline-flex;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .flex-week-btn {
+      width: 17px;
+      height: 17px;
+      padding: 0;
+      border: 1px solid #8aa0b8;
+      border-radius: 3px;
+      background: #fff;
+      font-size: 10px;
+      line-height: 15px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .flex-week-copy-btn { color: #0b5ed7; }
+    .flex-week-paste-btn { color: #0b7a22; display: none; }
+    .flex-week-paste-mode .flex-week-copy-btn { display: none; }
+    .flex-week-paste-mode .flex-week-paste-btn { display: inline-block; }
 
     .flex-session-km-label {
       color: #000;
@@ -452,7 +483,7 @@
     }
 
     document.addEventListener("click", (event) => {
-      if (event.target.closest("[data-flex-copy-btn], [data-flex-paste-btn], [data-flex-delete-btn], [data-flex-report-btn], [data-strength-href]")) {
+      if (event.target.closest("[data-flex-copy-btn], [data-flex-paste-btn], [data-flex-week-copy-btn], [data-flex-week-paste-btn], [data-flex-delete-btn], [data-flex-report-btn], [data-strength-href]")) {
         return;
       }
       const flexCell = event.target.closest(".flex-cell[hx-get]");
@@ -1024,6 +1055,7 @@
     let flexDragCopyUrl = "";
     const flexClickPasteActiveKey = "mila:flex-click-paste-active";
     const flexClickCopyUrlKey = "mila:flex-click-copy-url";
+    const flexWeekPasteActiveKey = "mila:flex-week-paste-active";
 
     function flexPost(url, body) {
       const token = getCookie("csrftoken");
@@ -1085,6 +1117,42 @@
       const copyUrl = flexStorageGet(flexClickCopyUrlKey);
       if (!copyUrl) return;
       setFlexClickPasteMode(copyUrl);
+    }
+
+    function clearFlexWeekPasteMode() {
+      document.body.classList.remove("flex-week-paste-mode");
+      flexStorageRemove(flexWeekPasteActiveKey);
+    }
+
+    function setFlexWeekPasteMode() {
+      document.body.classList.add("flex-week-paste-mode");
+      flexStorageSet(flexWeekPasteActiveKey, "1");
+    }
+
+    function restoreFlexWeekPasteMode() {
+      if (flexStorageGet(flexWeekPasteActiveKey) === "1") setFlexWeekPasteMode();
+    }
+
+    function handleFlexWeekCopyButton(copyBtn) {
+      const copyUrl = copyBtn.getAttribute("data-flex-week-copy-url") || "";
+      if (!copyUrl) return;
+      const body = new URLSearchParams();
+      body.set("source_week_start", copyBtn.getAttribute("data-flex-week-source-start") || "");
+      body.set("payload", copyBtn.getAttribute("data-flex-week-payload") || "");
+      flexPost(copyUrl, body)
+        .then(() => setFlexWeekPasteMode())
+        .catch(() => alert("Copy week failed."));
+    }
+
+    function handleFlexWeekPasteButton(pasteBtn) {
+      if (flexStorageGet(flexWeekPasteActiveKey) !== "1") return;
+      const pasteUrl = pasteBtn.getAttribute("data-flex-week-paste-url") || "";
+      if (!pasteUrl) return;
+      const body = new URLSearchParams();
+      body.set("target_week_start", pasteBtn.getAttribute("data-flex-week-target-start") || "");
+      flexPost(pasteUrl, body)
+        .then(() => { clearFlexWeekPasteMode(); window.location.reload(); })
+        .catch(() => alert("Paste week failed."));
     }
 
     function initFlexReportAndDeleteButtons() {
@@ -1190,6 +1258,22 @@
     }
 
     document.addEventListener("click", (event) => {
+      const weekCopyBtn = event.target.closest("[data-flex-week-copy-btn]");
+      if (weekCopyBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleFlexWeekCopyButton(weekCopyBtn);
+        return;
+      }
+
+      const weekPasteBtn = event.target.closest("[data-flex-week-paste-btn]");
+      if (weekPasteBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleFlexWeekPasteButton(weekPasteBtn);
+        return;
+      }
+
       const copyBtn = event.target.closest("[data-flex-copy-btn]");
       if (copyBtn) {
         event.preventDefault();
@@ -1234,7 +1318,10 @@
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") clearFlexClickPasteMode();
+      if (event.key === "Escape") {
+        clearFlexClickPasteMode();
+        clearFlexWeekPasteMode();
+      }
     });
 
     window.addEventListener("pagehide", clearFlexClickPasteMode);
@@ -1298,6 +1385,7 @@
       initFlexDragCopy();
       initFlexCopyPasteButtons();
       restoreFlexClickPasteMode();
+      restoreFlexWeekPasteMode();
       initFlexReportAndDeleteButtons();
     });
     document.addEventListener("htmx:afterSwap", () => {
@@ -1306,6 +1394,7 @@
       initFlexDragCopy();
       initFlexCopyPasteButtons();
       restoreFlexClickPasteMode();
+      restoreFlexWeekPasteMode();
       initFlexReportAndDeleteButtons();
     });
   </script>
@@ -1411,7 +1500,13 @@
             {% for row in week.athlete_rows %}
               <tr class="flex-athlete-row-start" data-flex-zone-speeds="{{ row.zone_speeds_json|escape }}" data-flex-pause-mode="{{ row.pause_mode }}">
                 <td class="flex-athlete-col {% if row.week_phase %}phase-{{ row.week_phase }}{% endif %}" rowspan="2" {% if row.week_phase_style %}style="{{ row.week_phase_style }}"{% endif %}>
-                  <div>{{ row.athlete.name }}</div>
+                  <div class="flex-athlete-name-row">
+                    <span>{{ row.athlete.name }}</span>
+                    <span class="flex-week-actions">
+                      <button type="button" class="flex-week-btn flex-week-copy-btn" data-flex-week-copy-btn data-flex-week-copy-url="{% url 'flex_week_copy' %}?athlete={{ row.athlete.id }}&source=flex" data-flex-week-source-start="{{ week.week_start|date:'Y-m-d' }}" data-flex-week-payload="{{ row.flex_week_payload|escape }}" title="Copy week">c</button>
+                      <button type="button" class="flex-week-btn flex-week-paste-btn" data-flex-week-paste-btn data-flex-week-paste-url="{% url 'flex_week_paste' %}?athlete={{ row.athlete.id }}&source=flex" data-flex-week-target-start="{{ week.week_start|date:'Y-m-d' }}" title="Paste week">p</button>
+                    </span>
+                  </div>
                 </td>
                 <td class="flex-total-col" rowspan="2" data-flex-total-cell>
                   <div class="flex-total-content" title="{{ row.sum_pct_tooltip|default:'' }}">

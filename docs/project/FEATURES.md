@@ -269,3 +269,7 @@ AYC, Flex Planner en Trainer Planning plaatsen hun trainingspopups onder `docume
 Een expliciete persoonlijke training (zoals een gekopieerde trainertraining) heeft voorrang op `Rest` in Base Planning. `Rest` verbergt nog steeds de gedeelde trainerplanning, maar wist/verbergt geen expliciet geplaatste atleettraining.
 
 Bij het openen van een AYC-training gebruikt de popup de training die de kalendercel toont, ook wanneer het bewerkplan een gedeeld Flex-slot bevat. Een bestaande persoonlijke Flex-override blijft leidend; zonder die override wordt de celprefill gebruikt, met Base Planning als terugval voor rechtstreeks geopende popups.
+
+## Flex Planner — week kopiëren en plakken
+
+Naast iedere geselecteerde atleet staat per week een compacte `c`- en `p`-actie. `c` kopieert de zichtbare week; daarna kan `p` de volledige week naar een andere week van dezelfde atleet plakken. De bestaande Flex-rechten, overrides en racebescherming blijven gelden. Celhoogtes groeien mee met langere trainingen zodat de volledige inhoud zichtbaar blijft.

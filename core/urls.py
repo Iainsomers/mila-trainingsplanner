@@ -107,6 +107,8 @@ from core.views.slots import (
     week_copy,
     week_paste,
     week_clipboard_clear,
+    flex_week_copy,
+    flex_week_paste,
 )
 
 from core.views.stats_debug import stats_debug_view
@@ -269,6 +271,8 @@ urlpatterns = [
     path("week-copy/<int:yyyy>/<int:mm>/<int:dd>/", week_copy, name="week_copy"),
     path("week-paste/<int:yyyy>/<int:mm>/<int:dd>/", week_paste, name="week_paste"),
     path("week-clipboard-clear/", week_clipboard_clear, name="week_clipboard_clear"),
+    path("flex-week-copy/", flex_week_copy, name="flex_week_copy"),
+    path("flex-week-paste/", flex_week_paste, name="flex_week_paste"),
 
     # Stats debug
     path("stats-debug/", stats_debug_view, name="stats_debug"),

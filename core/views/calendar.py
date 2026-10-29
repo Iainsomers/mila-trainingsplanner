@@ -1524,6 +1524,41 @@ def flex_planner_view(request):
                         "whereabouts": whereabouts_dots.get((athlete.id, day), []),
                     })
 
+            # Keep a compact copy of exactly what is displayed in this week.
+            # The Flex week clipboard uses this payload so copying a week
+            # follows the same source/override resolution as the grid.
+            flex_week_days = []
+            for offset, day in enumerate(days):
+                day_payload = {}
+                for slot_index, source_cells in ((1, am_cells), (2, pm_cells)):
+                    source_cell = source_cells[offset]
+                    source_slot = source_cell.get("slot")
+                    segments = []
+                    if source_slot:
+                        segments = [
+                            {
+                                "type": seg.type,
+                                "order": int(getattr(seg, "order", 0) or 0),
+                                "text": seg.text or "",
+                                "zone": seg.zone or "",
+                                "reps": int(seg.reps or 1),
+                                "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
+                                "duration_s": int(seg.duration_s) if seg.duration_s is not None else None,
+                                "norm_distance_m": int(seg.norm_distance_m) if seg.norm_distance_m is not None else None,
+                                "parse_ok": bool(getattr(seg, "parse_ok", False)),
+                                "parse_message": getattr(seg, "parse_message", "") or "",
+                                "special": getattr(seg, "special", "") or "",
+                                "t_type": getattr(seg, "t_type", "") or "",
+                                "standard_strength_program_id": getattr(seg, "standard_strength_program_id", None),
+                            }
+                            for seg in source_slot.segments.order_by("order", "id")
+                        ]
+                    day_payload[str(slot_index)] = {
+                        "skip": bool(source_cell.get("has_race")),
+                        "segments": segments,
+                    }
+                flex_week_days.append(day_payload)
+
             week_phase_style, week_phase = week_training_style(athlete.id, days)
 
             athlete_rows.append({
@@ -1532,6 +1567,7 @@ def flex_planner_view(request):
                 "pause_mode": getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
                 "am_cells": am_cells,
                 "pm_cells": pm_cells,
+                "flex_week_payload": json.dumps({"days": flex_week_days}),
                 "week_phase": week_phase,
                 "week_phase_style": week_phase_style,
             })
