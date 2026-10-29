@@ -8791,6 +8791,39 @@ class SegmentRepTimeDisplayTests(TestCase):
 
 
 class RaceSelectDisplayTests(TestCase):
+    def test_race_delete_requires_no_selected_athletes_even_outside_filter(self):
+        coach = get_user_model().objects.create_user(username="deletecoach", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Linked athlete", birth_year=2000, gender="X")
+        other = Athlete.objects.create(owner=coach, name="Filter athlete", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+        for flag in ("coach_selected", "athlete_selected", "target_selected"):
+            with self.subTest(flag=flag):
+                race = RaceEvent.objects.create(owner=coach, name="Protected meeting", date="2026-07-16")
+                distance = RaceEventDistance.objects.create(race=race, distance="1500")
+                entry = RaceEntry.objects.create(race_distance=distance, athlete=athlete, **{flag: True})
+                page = self.client.get(f"/race-calendar/?year=2026&view=year_list&race_athlete=athlete:{other.id}&show_all=1")
+                row = next(row for row in page.context["race_rows"] if row["race"].id == race.id)
+                self.assertFalse(row["can_delete"])
+                response = self.client.post(f"/race-calendar/{race.id}/delete/")
+                self.assertEqual(response.status_code, 409)
+                self.assertTrue(RaceEvent.objects.filter(id=race.id).exists())
+                self.assertTrue(RaceEntry.objects.filter(id=entry.id).exists())
+                saved = self.client.post(f"/race-calendar/{race.id}/entries/save/", {
+                    "athletes": str(athlete.id),
+                }, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+                self.assertEqual(saved.status_code, 200)
+                if flag == "athlete_selected":
+                    # A coach cannot clear the athlete's own checkbox.
+                    self.assertFalse(saved.json()["can_delete"])
+                    RaceEntry.objects.filter(id=entry.id).update(athlete_selected=False)
+                    saved = self.client.post(f"/race-calendar/{race.id}/entries/save/", {
+                        "athletes": str(athlete.id),
+                    }, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+                self.assertTrue(saved.json()["can_delete"])
+                deleted = self.client.post(f"/race-calendar/{race.id}/delete/", {"view": "year_list"})
+                self.assertEqual(deleted.status_code, 302)
+                self.assertFalse(RaceEvent.objects.filter(id=race.id).exists())
+
     def test_race_type_defaults_saves_and_colors_list(self):
         coach = get_user_model().objects.create_user(username="typecoach", is_staff=True)
         other = get_user_model().objects.create_user(username="typeother", is_staff=True)
@@ -8913,7 +8946,7 @@ class RaceSelectDisplayTests(TestCase):
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
         self.assertEqual(auto_save_response.status_code, 200)
-        self.assertEqual(auto_save_response.json(), {"ok": True})
+        self.assertEqual(auto_save_response.json(), {"ok": True, "can_delete": False})
         self.assertTrue(RaceEntry.objects.get(race_distance=distance, athlete=athlete).athlete_selected)
 
         add_from_list = self.client.post(
@@ -9134,7 +9167,7 @@ class RaceSelectDisplayTests(TestCase):
             HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
         self.assertEqual(trainer_auto_save.status_code, 200)
-        self.assertEqual(trainer_auto_save.json(), {"ok": True})
+        self.assertEqual(trainer_auto_save.json(), {"ok": True, "can_delete": False})
         saved_entry = RaceEntry.objects.get(race_distance=distance, athlete=athlete)
         self.assertTrue(saved_entry.coach_selected)
         self.assertTrue(saved_entry.target_selected)

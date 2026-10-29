@@ -345,14 +345,14 @@
             </div>
             <div class="modal-footer">
               {% if not is_athlete_user %}
-              <form method="post" action="{% url 'race_calendar_delete' race.id %}" onsubmit="return confirm('Delete this race?');">
+              <form method="post" class="me-auto" action="{% url 'race_calendar_delete' race.id %}" onsubmit="return confirm('Delete this race?');">
                 {% csrf_token %}
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
                 <input type="hidden" name="race_athlete" value="{{ race_athlete }}">
                 <input type="hidden" name="show_all" value="{% if show_all_races %}1{% else %}0{% endif %}">
-                <button type="submit" class="btn btn-sm btn-outline-danger">Delete race</button>
+                <button type="submit" class="btn btn-sm btn-outline-danger" data-race-delete {% if not row.can_delete %}disabled title="Remove all athlete selections before deleting this race."{% endif %}>Delete race</button>
               </form>
               {% endif %}
               <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -514,6 +514,8 @@
     var status = form.querySelector(".race-auto-save-status");
     var editableInputs = form.querySelectorAll('.race-entry-distance input[type="checkbox"]:not([data-role-locked="1"])');
     var payload = new FormData(form);
+    var deleteButton = form.closest('.modal').querySelector('[data-race-delete]');
+    if (deleteButton) deleteButton.disabled = true;
     editableInputs.forEach(function(item) { item.disabled = true; });
     if (status) status.textContent = "Saving…";
     fetch(form.action, {
@@ -522,6 +524,12 @@
       headers: {"X-Requested-With": "XMLHttpRequest"}
     }).then(function(response) {
       if (!response.ok) throw new Error("save failed");
+      return response.json();
+    }).then(function(data) {
+      if (deleteButton) {
+        deleteButton.disabled = !data.can_delete;
+        deleteButton.title = data.can_delete ? '' : 'Remove all athlete selections before deleting this race.';
+      }
       editableInputs.forEach(function(item) { item.dataset.previousChecked = item.checked ? "1" : "0"; });
       if (status) status.textContent = "Saved";
     }).catch(function() {

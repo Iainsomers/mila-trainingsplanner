@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Een race kan alleen verwijderd worden als er geen atleet meer aan gekoppeld is via Trainer-, Athlete- of Target-selectie. Deze controle geldt voor alle atleten, los van filters, en wordt server-side afgedwongen. De Delete race-knop staat linksonder en wordt na opslaan van selecties direct bijgewerkt.
+
 - Geselecteerde Race Calendar-wedstrijden (Trainer, Athlete of Target aangevinkt) verschijnen per atleet op de Training-laag van Year Planner in hun Race Type-kleur, nooit als Whereabouts. Meerdere afstanden van dezelfde wedstrijd tellen als één markering; bij meerdere wedstrijden op één dag delen de kleuren de cel. De wedstrijdnaam staat vast in de cel; hover toont de voor die atleet geselecteerde afstand(en). Wedstrijddagen hebben geen fasekeuze en zijn ook server-side tegen fasewijzigingen beschermd. Bestaande fases blijven onder de wedstrijd bewaard en verschijnen weer na uitvinken. Terugkeren vanuit Race Calendar ververst de planner met behoud van de URL-selectie.
 
 - Races hebben een opgeslagen Race Type: Championship, Race Other, Diamond League, Race Gold, Race Zilver of Race Bronze. Bestaande en nieuwe races beginnen als Race Other. Coaches wijzigen dit direct onder Manage distances; de keuze slaat automatisch op en de lijstomlijning volgt direct de Year Planner-legendakleur. Atleten kunnen het gedeelde racetype alleen lezen.

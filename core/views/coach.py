@@ -9000,6 +9000,11 @@ def race_calendar_view(request):
     elif race_athlete != "all":
         race_athlete = "all"
 
+    linked_race_ids = set(
+        RaceEntry.objects.filter(race_distance__race__in=races)
+        .filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True))
+        .values_list("race_distance__race_id", flat=True)
+    )
     race_rows = []
     for race in races:
         distances = _sorted_race_distances(race)
@@ -9053,6 +9058,7 @@ def race_calendar_view(request):
             "distances": distances,
             "distance_rows": distance_rows,
             "participant_count": scoped_participant_count,
+            "can_delete": race.id not in linked_race_ids,
             "calendar_status_class": {
                 0: "race-calendar-none",
                 1: "race-calendar-pending",
@@ -9162,10 +9168,18 @@ def race_calendar_type_save_view(request, race_id: int):
     return JsonResponse({"ok": True, "race_type": race.race_type})
 
 
+def _race_has_selected_athletes(race):
+    return RaceEntry.objects.filter(race_distance__race=race).filter(
+        Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True)
+    ).exists()
+
+
 @login_required
 @require_http_methods(["POST"])
 def race_calendar_delete_view(request, race_id: int):
     race = get_object_or_404(RaceEvent.objects.filter(owner=_active_coach_user(request)), id=race_id)
+    if _race_has_selected_athletes(race):
+        return HttpResponse("Cannot delete this race while athletes are linked. Remove all athlete selections first.", status=409)
     year = race.date.year
     view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
     period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
@@ -9320,7 +9334,7 @@ def race_calendar_entries_save_view(request, race_id: int):
         _sync_race_training_override(athlete, race)
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return JsonResponse({"ok": True})
+        return JsonResponse({"ok": True, "can_delete": not _race_has_selected_athletes(race)})
 
     view_mode = (request.POST.get("view") or "list").strip()
     period_mode = (request.POST.get("period") or "full").strip()
