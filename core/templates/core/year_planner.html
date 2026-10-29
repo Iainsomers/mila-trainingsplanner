@@ -1108,7 +1108,7 @@
   function refreshTrainingWrap(wrap) {
     if (!wrap) return;
     if (wrap.dataset.yearRaceLocked) { wrap.classList.add("has-value"); return; }
-    const value = wrap.querySelector("[data-year-training]")?.value || wrap.dataset.yearTrainingValue || "";
+    const value = wrap.querySelector("[data-year-training]")?.value ?? wrap.dataset.yearTrainingValue ?? "";
     wrap.dataset.yearTrainingValue = value;
     wrap.classList.toggle("has-value", !!value);
     const fill = wrap.querySelector("[data-year-training-fill]");
@@ -1128,12 +1128,12 @@
       const items = Array.from(row.querySelectorAll("[data-year-training-wrap]"));
       items.forEach((item, index) => {
         item.classList.remove("same-prev", "same-next");
-        const value = item.querySelector("[data-year-training]")?.value || item.dataset.yearTrainingValue || "";
+        const value = item.querySelector("[data-year-training]")?.value ?? item.dataset.yearTrainingValue ?? "";
         if (!value) return;
         const prev = items[index - 1];
         const next = items[index + 1];
-        const prevValue = prev?.querySelector("[data-year-training]")?.value || prev?.dataset.yearTrainingValue || "";
-        const nextValue = next?.querySelector("[data-year-training]")?.value || next?.dataset.yearTrainingValue || "";
+        const prevValue = prev?.querySelector("[data-year-training]")?.value ?? prev?.dataset.yearTrainingValue ?? "";
+        const nextValue = next?.querySelector("[data-year-training]")?.value ?? next?.dataset.yearTrainingValue ?? "";
         if (prev && prevValue === value) item.classList.add("same-prev");
         if (next && nextValue === value) item.classList.add("same-next");
       });

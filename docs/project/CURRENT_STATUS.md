@@ -106,6 +106,8 @@ Bijgewerkt: 29 oktober 2026.
 
 ## Laatste overdracht — 29 oktober 2026
 
+- Een periodisatiedag naar `—` wijzigen verwijdert nu ook direct de kleur en sleepgrepen van een leeg blok. Een lege dropdownwaarde viel eerder onterecht terug op de oude fasekleur; de lege keuze blijft nu leidend.
+
 - Meerdaagse races gebruiken de optionele inclusieve einddatum uit migratie `0127_raceevent_end_date`. Add race toont standaard één datum; `Multiple days` opent `Until`. Race Calendar en Year Planner ondersteunen overlap met de zichtbare periode en blokkeren periodisatie op iedere geselecteerde wedstrijddag. Neem migratie 0127 mee bij de Render-deploy.
 
 - Race Calendar heeft Race Type met omlijningen volgens de Year Planner-legenda. Migratie `0126_raceevent_race_type` geeft alle bestaande races Race Other en moet bij de Render-deploy worden uitgevoerd. De dropdown onder Manage distances slaat automatisch op; atleten kunnen het gedeelde type alleen lezen.
