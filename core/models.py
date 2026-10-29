@@ -471,6 +471,8 @@ class Athlete(models.Model):
     garmin_fit_upload_enabled = models.BooleanField(default=False)
     # Coach-only permission for the athlete to connect an Oura account.
     oura_connection_enabled = models.BooleanField(default=False)
+    # Coach-only permission for the athlete to access Polar features.
+    polar_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.
     pause_mode = models.CharField(
         max_length=24,

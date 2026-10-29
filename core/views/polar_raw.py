@@ -18,6 +18,7 @@ from .coach import (
     _closest_watch_label,
     _polar_json_request,
     _polar_targets_for_user,
+    _polar_access_allowed,
     _refresh_polar_v4_token,
     _threshold_watch_label,
     _watch_t_reference_speeds,
@@ -1016,6 +1017,9 @@ def translate_model_b(payload, interval, athlete=None):
 @login_required
 @require_http_methods(["GET", "POST"])
 def polar_raw_view(request):
+    if not _polar_access_allowed(request):
+        from django.shortcuts import redirect
+        return redirect("dashboard")
     targets = [target for target in _polar_targets_for_user(request.user)
                if target.get("athlete") is not None or target.get("user") == request.user]
     data = request.POST if request.method == "POST" else request.GET

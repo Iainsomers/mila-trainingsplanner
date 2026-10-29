@@ -213,6 +213,7 @@
   </div>
   {% elif is_athlete_user %}
   <div class="row g-4">
+    {% if polar_enabled %}
     <div class="col-md-6 col-lg-4">
       <a href="{% url 'polar_integration' %}" class="card h-100 dashboard-tile">
         <div class="card-body d-flex flex-column">
@@ -221,6 +222,7 @@
         </div>
       </a>
     </div>
+    {% endif %}
     {% if garmin_upload_athlete_count %}
     <div class="col-md-6 col-lg-4">
       <a href="{% url 'garmin_uploads' %}" class="card h-100 dashboard-tile">

@@ -6,6 +6,7 @@
 - De Oura-koppeling ondersteunt OAuth-autorisatie; automatische data-import is nog niet beschikbaar. Oura-data wordt volgens de gepubliceerde verklaring alleen na autorisatie verwerkt; eerder gesynchroniseerde gegevens blijven staan tot accountverwijdering of een verwijderverzoek.
 - De Engelstalige Terms of Service is openbaar beschikbaar via `/terms/`, met links naar de privacyverklaring. Beide documenten zijn bereikbaar vanaf de loginpagina.
 - Atleten hebben alleen wanneer hun coach `Allow Oura connection` inschakelt een apart dashboardblok `Hardware settings` met de optionele Oura OAuth-koppeling. De verbinding is per eigen atleetaccount, vraagt expliciete wellness-toestemming en een bevestiging van volwassenheid/ouderlijke toestemming, vraagt alleen `daily` en `heartrate`, en kan vanuit hetzelfde blok worden losgekoppeld. Uitschakelen door de coach trekt de token in (waar mogelijk) en verwijdert de lokaal opgeslagen koppeling. Automatische import naar Daily Vitals is nog niet actief.
+- De coach kan per atleet `Allow Polar access` inschakelen; standaard staat dit uit. Alleen met toestemming ziet de atleet de Polar-tegel en Polar A/B-knoppen in de AYC. Polar-pagina's en data-endpoints controleren dezelfde toestemming; coachgebruik blijft beschikbaar.
 
 Bijgewerkt: 29 oktober 2026.
 

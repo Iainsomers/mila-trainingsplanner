@@ -2013,8 +2013,10 @@
     </div>
     <div style="text-align:right; margin-top:10px;">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
+      {% if show_polar_tools %}
       <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Polar A</button>
       <button type="button" id="suggestInputBtnB" class="btn btn-sm btn-outline-primary">Polar B</button>
+      {% endif %}
       <button type="button" id="suggestInputBtnC" class="btn btn-sm btn-outline-primary">Garmin C</button>
       <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger" style="display:none;">Delete input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary evaluation-ok-btn" disabled>OK</button>
@@ -2374,7 +2376,8 @@
   }
   function hideSuggestInputPlaceholder() {
     document.getElementById("suggestInputPlaceholder").style.display = "none";
-    document.getElementById("suggestInputBtn").focus();
+    var returnFocusButton = document.getElementById("suggestInputBtn") || document.getElementById("suggestInputBtnC");
+    if (returnFocusButton) returnFocusButton.focus();
   }
   var evaluationPainEnabled = {{ evaluation_pain_enabled|yesno:"true,false" }};
   function painWasChanged(prefix){ return evaluationPainEnabled && val(prefix+"Pain") && val(prefix+"Pain") !== "no_pain"; }
@@ -2479,8 +2482,10 @@
       startVoiceComment(btn);
     });
   });
-  document.getElementById("suggestInputBtn").addEventListener("click", function() { showWatchModel("A"); });
-  document.getElementById("suggestInputBtnB").addEventListener("click", function() { showWatchModel("B"); });
+  var polarButtonA = document.getElementById("suggestInputBtn");
+  var polarButtonB = document.getElementById("suggestInputBtnB");
+  if (polarButtonA) polarButtonA.addEventListener("click", function() { showWatchModel("A"); });
+  if (polarButtonB) polarButtonB.addEventListener("click", function() { showWatchModel("B"); });
   document.getElementById("suggestInputBtnC").addEventListener("click", function() { showWatchModel("C"); });
   document.getElementById("suggestInputPlaceholderClose").addEventListener("click", hideSuggestInputPlaceholder);
   document.getElementById("suggestInputPlaceholder").addEventListener("click", function(event) {

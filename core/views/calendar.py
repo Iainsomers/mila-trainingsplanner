@@ -4234,6 +4234,7 @@ def athlete_year_calendar_view(request):
             "athletes": athletes,
             "selected_athlete_id": str(selected_athlete_id or ""),
             "selected_athlete": selected_athlete,
+            "show_polar_tools": bool(is_ayc_coach or (selected_athlete and getattr(selected_athlete, "polar_enabled", False))),
             "show_session_km": bool(selected_athlete and getattr(selected_athlete, "see_session_km", True)),
             "show_session_zones": bool(selected_athlete and getattr(selected_athlete, "see_session_zones", True)),
             "show_training_reports": show_training_reports,

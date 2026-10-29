@@ -412,6 +412,14 @@ def _polar_targets_for_user(user):
     }]
 
 
+def _polar_access_allowed(request, athlete=None):
+    """Coaches retain Polar access; athlete accounts need coach permission."""
+    if _is_coach_user(request.user):
+        return True
+    athlete = athlete or _athlete_for_user(request.user)
+    return not athlete or bool(getattr(athlete, "polar_enabled", False))
+
+
 def _selected_polar_target(request):
     targets = _polar_targets_for_user(request.user)
     requested_key = (request.GET.get("polar_target") or request.POST.get("polar_target") or request.session.get("polar_target") or "").strip()
@@ -545,6 +553,7 @@ def dashboard_view(request):
         "garmin_upload_athlete_count": garmin_upload_athlete_count,
         "oura_connection": oura_connection,
         "oura_connection_enabled": oura_connection_enabled,
+        "polar_enabled": bool(is_athlete_user and getattr(athlete, "polar_enabled", False)),
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
         "oura_status": request.GET.get("oura", ""),
     })
@@ -4099,6 +4108,8 @@ def _polar_json_request(url, *, method="GET", data=None, headers=None):
 @login_required
 @require_GET
 def polar_integration_view(request):
+    if not _polar_access_allowed(request):
+        return redirect("dashboard")
     config = _polar_config()
     selected_target, polar_targets = _selected_polar_target(request)
     is_coach_polar_view = bool(request.user.is_staff or request.user.is_superuser)
@@ -4125,6 +4136,8 @@ def polar_integration_view(request):
 @login_required
 @require_GET
 def polar_connect_view(request):
+    if not _polar_access_allowed(request):
+        return redirect("dashboard")
     config = _polar_config()
     missing = _polar_missing_config(config)
     if missing:
@@ -4145,6 +4158,8 @@ def polar_connect_view(request):
 @login_required
 @require_GET
 def polar_v4_connect_view(request):
+    if not _polar_access_allowed(request):
+        return redirect("dashboard")
     config = _polar_config()
     missing = _polar_missing_config(config)
     if missing:
@@ -4284,6 +4299,8 @@ def polar_callback_view(request):
     expected_state = request.session.pop("polar_oauth_state", "")
     oauth_flow = request.session.pop("polar_oauth_flow", "")
     received_state = request.GET.get("state", "")
+    if not _polar_access_allowed(request):
+        return redirect("dashboard")
     if not expected_state or received_state != expected_state:
         return redirect(f"{reverse('polar_integration')}?{urlencode({'error': 'Polar authorization state did not match.'})}")
 
@@ -4375,6 +4392,8 @@ def polar_callback_view(request):
 @login_required
 @require_http_methods(["POST"])
 def polar_sync_test_view(request):
+    if not _polar_access_allowed(request):
+        return redirect("dashboard")
     selected_target, _targets = _selected_polar_target(request)
     connection = selected_target["connection"] if selected_target else None
     if not connection or not connection.access_token:
@@ -4445,6 +4464,8 @@ def polar_sync_test_view(request):
 @login_required
 @require_http_methods(["POST"])
 def polar_steps_view(request):
+    if not _polar_access_allowed(request):
+        return redirect("dashboard")
     selected_target, _targets = _selected_polar_target(request)
     connection = selected_target["connection"] if selected_target else None
     if not connection or not connection.access_token:
@@ -4517,6 +4538,8 @@ def polar_steps_view(request):
 @login_required
 @require_http_methods(["POST"])
 def polar_splits_view(request):
+    if not _polar_access_allowed(request):
+        return redirect("dashboard")
     selected_target, _targets = _selected_polar_target(request)
     connection = selected_target["connection"] if selected_target else None
     if not connection or not connection.access_token:
@@ -4565,6 +4588,8 @@ def polar_splits_view(request):
 @login_required
 @require_http_methods(["POST"])
 def polar_v4_laps_test_view(request):
+    if not _polar_access_allowed(request):
+        return redirect("dashboard")
     selected_target, _targets = _selected_polar_target(request)
     connection = selected_target["connection"] if selected_target else None
     if not connection or not connection.access_token:
@@ -5392,6 +5417,8 @@ def polar_activity_suggestions_view(request):
     athlete, connection = _polar_connection_for_athlete_request(request, athlete_id)
     if not athlete:
         return JsonResponse({"ok": False, "message": "Athlete not found.", "activities": []}, status=404)
+    if not _polar_access_allowed(request, athlete):
+        return JsonResponse({"ok": False, "message": "Polar access is disabled for this athlete.", "activities": []}, status=403)
     if not connection or not connection.access_token:
         return JsonResponse({"ok": False, "message": "No watch is connected for this athlete.", "activities": []})
 
@@ -5523,6 +5550,8 @@ def polar_type_a_ayc_view(request):
     athlete, connection = _polar_connection_for_athlete_request(request, athlete_id)
     if not athlete:
         return JsonResponse({"ok": False, "message": "Athlete not found."}, status=404)
+    if not _polar_access_allowed(request, athlete):
+        return JsonResponse({"ok": False, "message": "Polar access is disabled for this athlete."}, status=403)
     if not connection or not connection.v4_access_token:
         return JsonResponse({"ok": False, "message": "No Polar v4 connection for this athlete."})
 
@@ -10673,6 +10702,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "see_desired_improvement_points": getattr(athlete, "see_desired_improvement_points", False),
         "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
         "oura_connection_enabled": getattr(athlete, "oura_connection_enabled", False),
+        "polar_enabled": getattr(athlete, "polar_enabled", False),
         "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
@@ -10735,6 +10765,10 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["oura_connection_enabled"] = getattr(athlete, "oura_connection_enabled", False)
         else:
             form["oura_connection_enabled"] = (request.POST.get("oura_connection_enabled") == "on")
+        if self_view:
+            form["polar_enabled"] = getattr(athlete, "polar_enabled", False)
+        else:
+            form["polar_enabled"] = (request.POST.get("polar_enabled") == "on")
         if self_view:
             form["pause_mode"] = effective_pause_mode
         else:
@@ -10945,6 +10979,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
                 if previous_oura_enabled and not athlete.oura_connection_enabled:
                     from core.views.oura import revoke_oura_connection
                     revoke_oura_connection(athlete)
+                athlete.polar_enabled = form["polar_enabled"]
             if not self_view:
                 # Keep a blank override following the coach. A different
                 # choice is stored per athlete and takes precedence.

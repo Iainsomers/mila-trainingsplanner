@@ -651,6 +651,17 @@
           <label class="form-check-label" for="oura_connection_enabled">Allow Oura connection</label>
           <div class="form-text">Show Oura settings on the athlete dashboard. Turning this off disconnects Oura and removes the stored connection. This setting is coach-only.</div>
         </div>
+        <div class="mb-3 form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="polar_enabled"
+            name="polar_enabled"
+            {% if form.polar_enabled %}checked{% endif %}
+          >
+          <label class="form-check-label" for="polar_enabled">Allow Polar access</label>
+          <div class="form-text">Show Polar tools and allow Polar access for this athlete. This setting is coach-only.</div>
+        </div>
         {% endif %}
         {% endif %}
 
