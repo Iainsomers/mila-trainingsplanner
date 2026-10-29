@@ -6772,7 +6772,12 @@ def year_planner_view(request):
     for race_entry in selected_races:
         race = race_entry.race_distance.race
         day_races = race_days.setdefault((race_entry.athlete_id, race.date), {})
-        day_races[race.id] = race
+        displayed_race = day_races.setdefault(race.id, race)
+        if not hasattr(displayed_race, "selected_distances"):
+            displayed_race.selected_distances = []
+        distance_label = race_entry.race_distance.display_distance
+        if distance_label not in displayed_race.selected_distances:
+            displayed_race.selected_distances.append(distance_label)
     entry_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
         entry_scope_filter |= Q(athlete__isnull=True, basis_plan=selected_filter_plan)

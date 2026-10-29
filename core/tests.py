@@ -3860,13 +3860,18 @@ class YearPlannerTests(TestCase):
         # Multiple selected distances must not duplicate the same race.
         second = RaceEventDistance.objects.create(race=race, distance="5000")
         RaceEntry.objects.create(race_distance=second, athlete=athlete, coach_selected=True)
+        RaceEventDistance.objects.create(race=race, distance="custom", custom_distance_m=8500)
         url = f"/planning/year/?year=2026&period=full&athletes={athlete.id}"
         page = self.client.get(url)
         cell = next(cell for cell in page.context["rows"][0]["cells"] if cell["date"] == day)
         self.assertEqual([item.id for item in cell["races"]], [race.id])
+        self.assertEqual(cell["races"][0].selected_distances, ["1500m", "5000m"])
         self.assertEqual(cell["where_ranges"], [])
         self.assertContains(page, 'data-year-race-locked="1"')
         self.assertContains(page, 'year-fill year-where-championship')
+        self.assertContains(page, 'year-where-championship">National championship</span>')
+        self.assertContains(page, 'title="1500m, 5000m"')
+        self.assertNotContains(page, 'title="National championship (Championship)"')
         for value in ("specific", "intense", ""):
             response = self.client.post("/planning/year/entry/", json.dumps({
                 "scope": f"athlete-{athlete.id}", "date": day.isoformat(), "training": value,

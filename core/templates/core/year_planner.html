@@ -280,7 +280,21 @@
     overflow: hidden;
     border-radius: inherit;
   }
-  .year-race-colors .year-fill { position: static; flex: 1; border-radius: 0; }
+  .year-race-colors .year-fill {
+    position: static;
+    flex: 1;
+    min-width: 0;
+    border-radius: 0;
+    padding: 1px 2px;
+    font-size: 9px;
+    line-height: 1.2;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .year-race-colors .year-where-championship { color: #fff; }
+  .year-planner-page.year-read-only [data-year-race-locked] { pointer-events: auto; }
 
   .year-select {
     position: relative;
@@ -903,11 +917,11 @@
                       {% if show_training and not row.is_coach %}
                         <div class="year-layer-wrap year-layer-training"
                              data-year-training-wrap
-                             {% if cell.races %}data-year-race-locked="1" title="{% for race in cell.races %}{{ race.name }} ({{ race.get_race_type_display }}){% if not forloop.last %}; {% endif %}{% endfor %}"{% endif %}
+                             {% if cell.races %}data-year-race-locked="1" title="{% for race in cell.races %}{{ race.selected_distances|join:', ' }}{% if not forloop.last %}; {% endif %}{% endfor %}"{% endif %}
                              data-year-training-value="{% if not cell.races %}{{ cell.payload.training }}{% endif %}">
                           {% if cell.races %}
-                            <div class="year-race-colors" role="img" aria-label="{% for race in cell.races %}{{ race.name }} ({{ race.get_race_type_display }}){% if not forloop.last %}; {% endif %}{% endfor %}">
-                              {% for race in cell.races %}<span class="year-fill year-where-{{ race.race_type }}"></span>{% endfor %}
+                            <div class="year-race-colors" aria-label="{% for race in cell.races %}{{ race.name }}: {{ race.selected_distances|join:', ' }}{% if not forloop.last %}; {% endif %}{% endfor %}">
+                              {% for race in cell.races %}<span class="year-fill year-where-{{ race.race_type }}">{{ race.name }}</span>{% endfor %}
                             </div>
                           {% else %}
                           <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
