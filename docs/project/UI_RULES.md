@@ -78,7 +78,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Year Planner
 
-- Plaats de `Race Calendar`-knop naast de legenda; op smalle schermen mag hij naar een volgende regel. De knop wisselt tussen planner en de geïntegreerde racelijst, zonder de plannerselectie te wissen. Binnen deze racelijst is geen Calendar-keuze beschikbaar.
+- Plaats de `Race Calendar`-knop naast de legenda; op smalle schermen mag hij naar een volgende regel. Bij de geopende racelijst heet de knop `Back to Yearplanner`. De knop wisselt tussen planner en de geïntegreerde racelijst, zonder de plannerselectie te wissen. Binnen deze racelijst is geen Calendar-keuze beschikbaar.
 - Stacked layout is standaard; één, drie of twaalf maanden bepalen de breedte van een stuk.
 - Toon na keuze van een Trainer Planning-groep de aparte `Basis - groepsnaam`-planningsrij direct onder `All`; deze keuze is alleen voor trainers zichtbaar. Toon bij de algemene groepskeuze `All` geen gedeelde Basis.
 - Houd atleetnamen klein en rijen stabiel van hoogte. Gebruik geen lege placeholder-strepen.

@@ -964,6 +964,7 @@
     races.hidden = !opening;
     planning.hidden = opening;
     this.setAttribute("aria-expanded", String(opening));
+    this.textContent = opening ? "Back to Yearplanner" : "Race Calendar";
     this.classList.toggle("btn-primary", opening);
     this.classList.toggle("btn-outline-primary", !opening);
   });
