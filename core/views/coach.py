@@ -9100,6 +9100,7 @@ def race_calendar_view(request):
         "race_rows_by_id": race_rows_by_id,
         "month_rows": month_rows,
         "distance_choices": RaceEventDistance.DISTANCE_CHOICES,
+        "race_type_choices": RaceEvent.RACE_TYPE_CHOICES,
         "trainer_plans": trainer_plans,
         "race_athletes": race_athletes,
         "race_group_options": race_group_options,
@@ -9117,6 +9118,20 @@ def race_calendar_view(request):
         response["X-Frame-Options"] = "SAMEORIGIN"
     return response
 
+
+
+@login_required
+@require_http_methods(["POST"])
+def race_calendar_type_save_view(request, race_id: int):
+    if _athlete_for_user(request.user) and not request.user.is_staff and not request.user.is_superuser:
+        return HttpResponse("Not allowed", status=403)
+    race = get_object_or_404(RaceEvent.objects.filter(owner=_active_coach_user(request)), id=race_id)
+    race_type = request.POST.get("race_type", "")
+    if race_type not in dict(RaceEvent.RACE_TYPE_CHOICES):
+        return HttpResponse("Invalid race type", status=400)
+    race.race_type = race_type
+    race.save(update_fields=["race_type", "updated_at"])
+    return JsonResponse({"ok": True, "race_type": race.race_type})
 
 
 @login_required

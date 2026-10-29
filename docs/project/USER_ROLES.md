@@ -4,6 +4,7 @@ Bijgewerkt: 12 oktober 2026.
 
 ## Trainer
 
+- Coaches wijzigen het gedeelde Race Type van eigen/toegankelijke wedstrijden met editrechten; atleten kunnen het racetype alleen lezen.
 Een trainer is doorgaans staff- of superuser en kan:
 
 - atleten en groepen beheren;

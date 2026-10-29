@@ -75,6 +75,7 @@ from core.views.coach import (
     standard_strength_delete_view,
     standard_strength_detail_view,
     race_calendar_view,
+    race_calendar_type_save_view,
     race_calendar_delete_view,
     race_calendar_distance_add_view,
     race_calendar_distance_delete_view,
@@ -240,6 +241,7 @@ urlpatterns = [
 
     # Race calendar
     path("race-calendar/", race_calendar_view, name="race_calendar"),
+    path("race-calendar/<int:race_id>/type/", race_calendar_type_save_view, name="race_calendar_type_save"),
     path("race-calendar/<int:race_id>/delete/", race_calendar_delete_view, name="race_calendar_delete"),
     path("race-calendar/<int:race_id>/distances/add/", race_calendar_distance_add_view, name="race_calendar_distance_add"),
     path("race-calendar/<int:race_id>/distances/<int:distance_id>/delete/", race_calendar_distance_delete_view, name="race_calendar_distance_delete"),

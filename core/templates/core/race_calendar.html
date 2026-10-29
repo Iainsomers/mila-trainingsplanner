@@ -182,7 +182,7 @@
           <div class="race-list">
             {% for row in race_rows %}
               {% with race=row.race distances=row.distances %}
-                <button type="button" class="race-list-item"
+                <button type="button" class="race-list-item race-type-{{ race.race_type }}"
                         data-race-id="{{ race.id }}"
                         data-bs-toggle="modal" data-bs-target="#raceModal{{ race.id }}">
                   <span class="race-list-date">{{ race.date|date:"d-m-Y" }}</span>
@@ -269,6 +269,16 @@
                 </div>
               </form>
               </details>
+              <form method="post" action="{% url 'race_calendar_type_save' race.id %}" class="race-type-form mt-3" data-race-id="{{ race.id }}">
+                {% csrf_token %}
+                <label class="form-label small mb-1" for="raceType{{ race.id }}">Race Type</label>
+                <select id="raceType{{ race.id }}" name="race_type" class="form-select form-select-sm" {% if is_athlete_user %}disabled{% endif %}>
+                  {% for value, label in race_type_choices %}
+                    <option value="{{ value }}" {% if race.race_type == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <span class="race-type-status small text-muted" role="status"></span>
+              </form>
               <hr class="my-4">
 
               <form method="post" action="{% url 'race_calendar_entries_save' race.id %}" class="race-entry-form" data-auto-save="1">
@@ -536,6 +546,34 @@
 })();
 </script>
 
+<script>
+  document.querySelectorAll('.race-type-form').forEach(function (form) {
+    var select = form.querySelector('select');
+    var savedValue = select.value;
+    form.addEventListener('submit', function (event) { event.preventDefault(); });
+    select.addEventListener('change', function () {
+      var status = form.querySelector('.race-type-status');
+      var payload = new FormData(form);
+      select.disabled = true;
+      status.textContent = 'Saving…';
+      fetch(form.action, {method: 'POST', body: payload}).then(function (response) {
+        if (!response.ok) throw new Error('Save failed');
+        return response.json();
+      }).then(function (data) {
+        var row = document.querySelector('.race-list-item[data-race-id="' + form.dataset.raceId + '"]');
+        if (row) {
+          row.classList.remove('race-type-' + savedValue);
+          row.classList.add('race-type-' + data.race_type);
+        }
+        savedValue = data.race_type;
+        status.textContent = 'Saved';
+      }).catch(function () {
+        select.value = savedValue;
+        status.textContent = 'Could not save';
+      }).finally(function () { select.disabled = false; });
+    });
+  });
+</script>
 <style>
   .year-calendar-grid {
     display: grid;
@@ -652,14 +690,18 @@
     width: 100%;
     min-height: 42px;
     padding: 6px 12px;
-    border: 0;
-    border-bottom: 1px solid #e9ecef;
+    border: 2px solid #ff7a00;
     background: #ffffff;
     color: inherit;
     text-align: left;
   }
 
-  .race-list-item:last-child { border-bottom: 0; }
+  .race-list-item.race-type-championship { border-color: #cc0000; }
+  .race-list-item.race-type-diamond_l { border-color: #ff8ac8; }
+  .race-list-item.race-type-race_gold { border-color: #d4af37; }
+  .race-list-item.race-type-race_silver { border-color: #c0c0c0; }
+  .race-list-item.race-type-race_bronze { border-color: #cd7f32; }
+  .race-list-item.race-type-race_other { border-color: #ff7a00; }
   .race-list-item:hover { background: #fff8ec; }
   .race-list-date { color: #6c757d; font-size: .86rem; }
   .race-list-main {

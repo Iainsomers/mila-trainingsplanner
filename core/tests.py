@@ -8738,6 +8738,36 @@ class SegmentRepTimeDisplayTests(TestCase):
 
 
 class RaceSelectDisplayTests(TestCase):
+    def test_race_type_defaults_saves_and_colors_list(self):
+        coach = get_user_model().objects.create_user(username="typecoach", is_staff=True)
+        other = get_user_model().objects.create_user(username="typeother", is_staff=True)
+        race = RaceEvent.objects.create(owner=coach, name="Typed meeting", date="2026-07-16")
+        self.assertEqual(race.race_type, "race_other")
+        self.client.force_login(coach)
+        for value, label in RaceEvent.RACE_TYPE_CHOICES:
+            response = self.client.post(f"/race-calendar/{race.id}/type/", {"race_type": value})
+            self.assertEqual(response.status_code, 200)
+            race.refresh_from_db()
+            self.assertEqual(race.race_type, value)
+            page = self.client.get("/race-calendar/?year=2026&view=year_list")
+            self.assertContains(page, f'race-list-item race-type-{value}')
+            self.assertContains(page, label)
+        invalid = self.client.post(f"/race-calendar/{race.id}/type/", {"race_type": "invalid"})
+        self.assertEqual(invalid.status_code, 400)
+        self.client.force_login(other)
+        self.assertEqual(self.client.post(f"/race-calendar/{race.id}/type/", {"race_type": "race_gold"}).status_code, 404)
+
+    def test_athlete_cannot_change_shared_race_type(self):
+        coach = get_user_model().objects.create_user(username="typeowner", is_staff=True)
+        user = get_user_model().objects.create_user(username="typeathlete")
+        Athlete.objects.create(owner=coach, name="typeathlete", birth_year=2000, gender="X")
+        race = RaceEvent.objects.create(owner=coach, name="Shared typed meeting", date="2026-07-16")
+        self.client.force_login(user)
+        response = self.client.post(f"/race-calendar/{race.id}/type/", {"race_type": "championship"})
+        self.assertEqual(response.status_code, 403)
+        race.refresh_from_db()
+        self.assertEqual(race.race_type, "race_other")
+
     def test_year_planner_embeds_working_race_list_and_preserves_mode_after_add(self):
         coach = get_user_model().objects.create_user(username="yearracecoach", is_staff=True)
         other = get_user_model().objects.create_user(username="otherracecoach", is_staff=True)
@@ -9020,7 +9050,7 @@ class RaceSelectDisplayTests(TestCase):
         list_section = source.split('<div class="race-list">', 1)[1].split(
             '<div class="modal fade"', 1
         )[0]
-        self.assertIn('class="race-list-item"', list_section)
+        self.assertIn('class="race-list-item race-type-race_other"', list_section)
         self.assertIn(f'data-bs-target="#raceModal{race.id}"', list_section)
         self.assertIn("1500m", list_section)
         self.assertNotIn('name="distances"', list_section)

@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Races hebben een opgeslagen Race Type: Championship, Race Other, Diamond League, Race Gold, Race Zilver of Race Bronze. Bestaande en nieuwe races beginnen als Race Other. Coaches wijzigen dit direct onder Manage distances; de keuze slaat automatisch op en de lijstomlijning volgt direct de Year Planner-legendakleur. Atleten kunnen het gedeelde racetype alleen lezen.
+
 - Year Planner heeft naast de legenda een `Race Calendar`-knop die de bestaande werkende racelijst binnen de pagina opent. Dezelfde knop keert terug naar de ongewijzigde planner met behoud van de selectie. De geïntegreerde weergave biedt alleen de lijst, inclusief perioden, filters, toevoegen, afstanden en wedstrijdkeuzes; de losse Race Calendar behoudt List/Calendar. Bestaande coach-/atleetrechten blijven gelden.
 
 ## Privacyverklaring

@@ -106,6 +106,8 @@ Bijgewerkt: 29 oktober 2026.
 
 ## Laatste overdracht — 29 oktober 2026
 
+- Race Calendar heeft Race Type met omlijningen volgens de Year Planner-legenda. Migratie `0126_raceevent_race_type` geeft alle bestaande races Race Other en moet bij de Render-deploy worden uitgevoerd. De dropdown onder Manage distances slaat automatisch op; atleten kunnen het gedeelde type alleen lezen.
+
 - De HTTP 500 in Flex Planner is lokaal gereproduceerd en hersteld: het weekclipboard leest nu de al geordende segmenten van virtuele weergaveslots via `all()`. Een paginatest met gevulde AM- en PM-trainingen controleert dat de pagina opent en de weekinhoud bevat. De dynamische rijhoogte met minimum 48 px blijft behouden. De live Render-status na de rollback is nog niet bevestigd.
 - Validatie van deze reparatie: alle 104 tests in `FlexPlannerAltTotalsTests` en `SlotModalSaveTests` slagen, evenals `manage.py check`.
 

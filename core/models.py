@@ -1235,6 +1235,14 @@ class StandardStrengthExercise(models.Model):
 
 
 class RaceEvent(models.Model):
+    RACE_TYPE_CHOICES = [
+        ("championship", "Championship"),
+        ("race_other", "Race Other"),
+        ("diamond_l", "Diamond League"),
+        ("race_gold", "Race Gold"),
+        ("race_silver", "Race Zilver"),
+        ("race_bronze", "Race Bronze"),
+    ]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -1245,6 +1253,7 @@ class RaceEvent(models.Model):
 
     name = models.CharField(max_length=160)
     date = models.DateField()
+    race_type = models.CharField(max_length=20, choices=RACE_TYPE_CHOICES, default="race_other")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
