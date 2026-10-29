@@ -78,6 +78,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Year Planner
 
+- Recovery in de periodisatie gebruikt lichtpaars (`#e4d4f4`) in zowel de kalender als de legenda.
 - Toon onder iedere datum in de tabelkop de eerste Engelse weekdagletter: M, T, W, T, F, S, S; hover op de kop toont de volledige Engelse dagnaam en datum.
 - Alleen periodisatieblokken hebben links en rechts een compacte sleepgreep om de begin-/einddatum aan te passen. De grepen ondersteunen muis en aanraking, tonen tijdens slepen de nieuwe omvang en stoppen bij wedstrijden. Racecellen krijgen geen sleepgrepen. De bestaande fasekeuze en Whereabouts-bediening blijven beschikbaar.
 - De zichtbaarheidsschakelaar naast `Whereabouts` heet `Periodisation/Races`; intern blijft deze laag `training`.
