@@ -511,6 +511,7 @@ def calendar_view(request):
         "aerobe": "Aerobe",
         "specific": "Specific",
         "intense": "Intense",
+        "racing": "Racing",
         "taper": "Taper",
     }
 
@@ -1290,6 +1291,7 @@ def flex_planner_view(request):
         "aerobe": "#f06f5f",
         "specific": "#bfe7bf",
         "intense": "#b7d7ff",
+        "racing": "#4a90d9",
         "taper": "#f2c200",
     }
 
@@ -3699,6 +3701,7 @@ def athlete_year_calendar_view(request):
         "aerobe": "Aerobe",
         "specific": "Specific",
         "intense": "Intense",
+        "racing": "Racing",
         "taper": "Taper",
     }
 
@@ -3720,6 +3723,7 @@ def athlete_year_calendar_view(request):
         "aerobe": "#f06f5f",
         "specific": "#bfe7bf",
         "intense": "#b7d7ff",
+        "racing": "#4a90d9",
         "taper": "#f2c200",
     }
 

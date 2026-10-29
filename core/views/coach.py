@@ -7495,6 +7495,7 @@ def trainer_planning_detail_view(request, plan_id: int):
         "aerobe": "#f06f5f",
         "specific": "#bfe7bf",
         "intense": "#b7d7ff",
+        "racing": "#4a90d9",
         "taper": "#f2c200",
     }
 

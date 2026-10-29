@@ -3849,6 +3849,21 @@ class TrainerPlanningListTests(TestCase):
 
 
 class YearPlannerTests(TestCase):
+    def test_racing_periodisation_saves_copies_and_resizes(self):
+        import json
+        coach, athlete = self._coach_and_athlete()
+        cell = {"scope": f"athlete-{athlete.id}", "date": "2026-10-01", "training": "racing"}
+        self.assertEqual(self.client.post("/planning/year/entry/", json.dumps(cell), content_type="application/json").status_code, 200)
+        cell["date"] = "2026-10-02"
+        self.assertEqual(self.client.post("/planning/year/training/batch/", json.dumps({"cells": [cell]}), content_type="application/json").status_code, 200)
+        resize = {"scope": cell["scope"], "training": "racing", "source_start": "2026-10-01", "source_end": "2026-10-02", "start": "2026-10-01", "end": "2026-10-03"}
+        self.assertEqual(self.client.post("/planning/year/training/resize/", json.dumps(resize), content_type="application/json").status_code, 200)
+        self.assertEqual(YearPlannerEntry.objects.filter(athlete=athlete, training_type="racing").count(), 3)
+        page = self.client.get(f"/planning/year/?year=2026&period=season&athletes={athlete.id}")
+        self.assertContains(page, 'value="racing"')
+        self.assertContains(page, 'year-training-racing text-dark">Racing')
+        self.assertContains(page, '#4a90d9')
+
     def test_full_year_periodisation_paste_is_saved_in_one_batch_and_preserves_races(self):
         import json
         from django.db import connection

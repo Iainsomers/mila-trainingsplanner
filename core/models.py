@@ -727,7 +727,7 @@ class AthleteWeekPhaseOverride(models.Model):
 
 
 class YearPlannerEntry(models.Model):
-    TRAINING_CHOICES = PlanWeekPhase.PHASE_CHOICES
+    TRAINING_CHOICES = PlanWeekPhase.PHASE_CHOICES + [("racing", "Racing")]
     WHEREABOUTS_CHOICES = [
         ("", "—"),
         ("camp", "Camp"),

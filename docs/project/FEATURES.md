@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Year Planner-periodisatie biedt naast Recovery, Aerobe, Specific, Intense en Taper ook Racing (mediumblauw). Racing ondersteunt kiezen, leegmaken, slepen en rij-kopiëren; de fasekleur loopt mee in de weekkleuren van Flex Planner, AYC en Trainer Planning. Het blijft losstaan van echte Race Calendar-wedstrijden.
+
 - Periodisatierijen kopiëren/plakken in Year Planner slaat de hele zichtbare rij met één batchverzoek en één databasetransactie op, ook bij 12 maanden. De kopie wordt pas na succesvolle opslag getoond; fouten laten geen gedeeltelijke rij achter. Opeenvolgende opslagacties worden geserialiseerd en de planner wacht tijdens opslaan met nieuwe bediening. Wedstrijddagen worden server-side overgeslagen en blijven beschermd. Ook schilderen gebruikt batchopslag in plaats van losse verzoeken per dag.
 
 - Add race vraagt standaard alleen een datum. `Multiple days` klapt een optionele `Until`-einddatum open; uitschakelen maakt de wedstrijd weer eendaags. De einddatum is inclusief en mag niet vóór de start liggen. De lijst en popup tonen het datumbereik. Race Calendar en de Training-laag van Year Planner tonen alle wedstrijddagen, ook over maand-/jaargrenzen; alle dagen blokkeren fasewijzigingen. Bestaande races blijven eendaags. Bestaande AYC/Flex-raceafstanden blijven gekoppeld aan de startdatum; de duur van het evenement verdubbelt de trainingsafstand niet automatisch.
