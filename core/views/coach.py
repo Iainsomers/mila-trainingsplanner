@@ -11833,7 +11833,6 @@ def daily_overview_view(request):
         for athlete in athletes
         if evaluation_visibility_for_request(request, athlete.owner)["training"]
     }
-
     check_map = {}
     for check in AthleteDayCheck.objects.filter(date=d, athlete_id__in=athlete_ids):
         if check.athlete_id in training_visible_athlete_ids:
@@ -12076,6 +12075,21 @@ def daily_overview_other_view(request):
         for athlete in athletes
         if evaluation_visibility_for_request(request, athlete.owner)["training"]
     }
+    visible_vital_athlete_ids = {
+        athlete.id
+        for athlete in athletes
+        if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
+    }
+    vital_completion_counts = {}
+    if visible_vital_athlete_ids:
+        for vital in AthleteDailyVital.objects.filter(
+            athlete_id__in=visible_vital_athlete_ids,
+            date__range=(window_start, window_end),
+        ).only("athlete_id", "sleep_hours", "sleep_quality", "morning_hr", "hrv"):
+            vital_completion_counts[vital.athlete_id] = vital_completion_counts.get(vital.athlete_id, 0) + sum(
+                getattr(vital, field) is not None
+                for field in ("sleep_hours", "sleep_quality", "morning_hr", "hrv")
+            )
 
     plans = list(
         _filter_owned(TrainingPlan.objects.order_by("name"), request)
@@ -12230,6 +12244,8 @@ def daily_overview_other_view(request):
             evaluation_percentage = None
             evaluation_tooltip = ""
             color = evaluated_color = ""
+        can_view_vitals = athlete.id in visible_vital_athlete_ids
+        vitals_filled = vital_completion_counts.get(athlete.id, 0) if can_view_vitals else None
         counts.append({
             "athlete": athlete,
             "pending_count": pending_count,
@@ -12239,6 +12255,10 @@ def daily_overview_other_view(request):
             "evaluation_percentage": evaluation_percentage,
             "evaluation_total": total_sessions if can_view_evaluations else None,
             "evaluation_tooltip": evaluation_tooltip,
+            "vitals_filled": vitals_filled,
+            "vitals_total": 40 if can_view_vitals else None,
+            "vitals_percentage": round(vitals_filled * 100 / 40) if can_view_vitals else None,
+            "vitals_tooltip": f"Filled: {vitals_filled} / 40" if can_view_vitals else "",
         })
 
     vital_options = [
@@ -12256,11 +12276,6 @@ def daily_overview_other_view(request):
         vital_options[0],
     )
     vitals_window_start = today - timedelta(days=13)
-    visible_vital_athlete_ids = {
-        athlete.id
-        for athlete in athletes
-        if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
-    }
     vital_values = {}
     if visible_vital_athlete_ids and selected_vital["field"]:
         for vital in AthleteDailyVital.objects.filter(

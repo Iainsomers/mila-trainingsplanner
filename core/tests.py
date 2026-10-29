@@ -1429,6 +1429,43 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "title=\"Open: 2 · Evaluated: 1\"", html=False)
         self.assertNotContains(response, "Open evaluations")
 
+    def test_daily_overview_other_shows_ten_day_vitals_completion_percentage(self):
+        coach = get_user_model().objects.create_user(
+            username="vitals-quality-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Vitals Quality Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        today = date.today()
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=today - timedelta(days=9), sleep_hours=8
+        )
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=today - timedelta(days=5), sleep_quality=7.5
+        )
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=today - timedelta(days=1), morning_hr=48, hrv=72
+        )
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=today - timedelta(days=10), sleep_hours=7
+        )
+
+        self.client.force_login(coach)
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+
+        self.assertEqual(response.status_code, 200)
+        row = response.context["athlete_rows"][0]
+        self.assertEqual(row["vitals_filled"], 4)
+        self.assertEqual(row["vitals_total"], 40)
+        self.assertEqual(row["vitals_percentage"], 10)
+        self.assertEqual(row["vitals_tooltip"], "Filled: 4 / 40")
+        self.assertContains(response, "Vitals")
+        self.assertContains(response, "title=\"Filled: 4 / 40\"", html=False)
+        self.assertContains(response, "10%")
+
     def test_daily_overview_other_counts_ten_days_and_unlocks_today_sessions_at_noon_and_21(self):
         coach = get_user_model().objects.create_user(
             username="evaluation-window-coach", password="secret", is_staff=True
@@ -1556,6 +1593,8 @@ class PlanningOverviewTests(TestCase):
         row = response.context["athlete_rows"][0]
         self.assertIsNone(row["pending_count"])
         self.assertIsNone(row["evaluated_count"])
+        self.assertIsNone(row["vitals_filled"])
+        self.assertIsNone(row["vitals_total"])
 
     def test_daily_overview_other_uses_active_coach_flex_overrides_in_view_as_mode(self):
         owner = get_user_model().objects.create_user(

@@ -14,7 +14,7 @@ Een trainer is doorgaans staff- of superuser en kan:
 - standaard krachtprogramma's beheren;
 - rapportages en zichtbaarheid per atleet instellen;
 - in Coach Settings `Pain in training evaluations` beheren. Deze instelling is standaard aan en geldt voor de atleten van die coach, ook wanneer een bevoegde gedelegeerde trainer namens die coach werkt;
-- in Staff Team Overview Information Quality het percentage geëvalueerde trainingen zien over de laatste tien kalenderdagen (inclusief vandaag; AM vanaf 12:00 en PM vanaf 21:00). Hover toont open en geëvalueerde aantallen; bij nul trainingen staat `NA`. Als de trainer geen recht heeft om evaluaties te zien of evaluaties voor de atleet zijn uitgeschakeld, blijven de gegevens verborgen;
+- in Staff Team Overview Information Quality het percentage geëvalueerde trainingen zien over de laatste tien kalenderdagen (inclusief vandaag; AM vanaf 12:00 en PM vanaf 21:00). Hover toont open en geëvalueerde aantallen; bij nul trainingen staat `NA`. De weergave toont ook het percentage ingevulde waarden van de vier dagelijkse vitals over die tien dagen, mits de trainer vitals mag inzien. Bij ontbrekende rechten worden vitalsgegevens niet getoond;
 - voor een geselecteerde atleet vitals en training reports vastleggen, ook wanneer een trainer vooruit werkt;
 - in de AYC tussen toegankelijke atleten schakelen;
 - in Athlete Input alfabetisch tussen atleten van de actieve coachweergave navigeren; de selectie blijft beperkt tot atleten die de trainer daar mag zien;
