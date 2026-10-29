@@ -3,8 +3,15 @@
 {% block title %}Race Calendar{% endblock %}
 
 {% block content %}
+{% if embedded_in_year_planner %}
+<style>
+  .mila-logout { display: none; }
+  .race-calendar-page { padding: 0 !important; }
+</style>
+{% endif %}
 <div class="container-fluid py-4 race-calendar-page">
 
+  {% if not embedded_in_year_planner %}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h1 class="mb-1">Race Calendar</h1>
@@ -16,6 +23,7 @@
     </div>
   </div>
 
+  {% endif %}
   <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
     <div class="d-flex align-items-center gap-2">
       {% if period_mode != "current_next" %}
@@ -24,10 +32,12 @@
       {% endif %}
     </div>
 
+    {% if not embedded_in_year_planner %}
     <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
       <a href="?year={{ year }}&view=list&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
       <a href="?year={{ year }}&view=calendar&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
     </div>
+    {% endif %}
   </div>
 
   <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">

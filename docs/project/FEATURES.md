@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Year Planner heeft naast de legenda een `Race Calendar`-knop die de bestaande werkende racelijst binnen de pagina opent. Dezelfde knop keert terug naar de ongewijzigde planner met behoud van de selectie. De geïntegreerde weergave biedt alleen de lijst, inclusief perioden, filters, toevoegen, afstanden en wedstrijdkeuzes; de losse Race Calendar behoudt List/Calendar. Bestaande coach-/atleetrechten blijven gelden.
+
 ## Privacyverklaring
 
 - De openbare Engelstalige privacyverklaring is beschikbaar via `/privacy/` en gelinkt vanaf de loginpagina. De tekst beschrijft de gegevenscategorieën, doeleinden, coach-/atleetzichtbaarheid, bewaartermijnen, beveiligingsmaatregelen, minderjarigen en externe diensten (Render, Oura en jsDelivr).

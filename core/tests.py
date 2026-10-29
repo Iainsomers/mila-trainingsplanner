@@ -8738,6 +8738,52 @@ class SegmentRepTimeDisplayTests(TestCase):
 
 
 class RaceSelectDisplayTests(TestCase):
+    def test_year_planner_embeds_working_race_list_and_preserves_mode_after_add(self):
+        coach = get_user_model().objects.create_user(username="yearracecoach", is_staff=True)
+        other = get_user_model().objects.create_user(username="otherracecoach", is_staff=True)
+        RaceEvent.objects.create(owner=other, name="Private other race", date="2026-07-16")
+        self.client.force_login(coach)
+        planner = self.client.get("/planning/year/?year=2026")
+        self.assertContains(planner, 'id="yearRaceToggle"')
+        self.assertContains(planner, "view=year_list")
+
+        response = self.client.post("/race-calendar/?view=year_list&year=2026", {
+            "view": "year_list", "period": "full", "name": "Embedded meeting", "date": "2026-07-16",
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["view_mode"], "year_list")
+        self.assertEqual(response["X-Frame-Options"], "SAMEORIGIN")
+        self.assertContains(response, "Embedded meeting")
+        self.assertNotContains(response, "Private other race")
+        self.assertNotContains(response, 'aria-label="View mode"')
+        self.assertNotContains(response, "view=calendar")
+        self.assertContains(response, 'name="view" value="year_list"')
+        race = RaceEvent.objects.get(owner=coach, name="Embedded meeting")
+        added = self.client.post(f"/race-calendar/{race.id}/distances/add/", {
+            "view": "year_list", "period": "full", "distances": "1500",
+        }, follow=True)
+        self.assertEqual(added.status_code, 200)
+        self.assertEqual(added.context["view_mode"], "year_list")
+        self.assertTrue(race.distances.filter(distance="1500").exists())
+
+        standalone = self.client.get("/race-calendar/?year=2026&view=calendar")
+        self.assertContains(standalone, 'aria-label="View mode"')
+        self.assertEqual(standalone["X-Frame-Options"], "DENY")
+
+    def test_embedded_race_list_keeps_athlete_selection_private(self):
+        coach = get_user_model().objects.create_user(username="embeddedowner", is_staff=True)
+        user = get_user_model().objects.create_user(username="embeddedathlete")
+        Athlete.objects.create(owner=coach, name="embeddedathlete", birth_year=2000, gender="X")
+        Athlete.objects.create(owner=coach, name="Private teammate", birth_year=2000, gender="X")
+        race = RaceEvent.objects.create(owner=coach, name="Athlete meeting", date="2026-07-16")
+        RaceEventDistance.objects.create(race=race, distance="1500")
+        self.client.force_login(user)
+        response = self.client.get("/race-calendar/?year=2026&view=year_list")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Athlete meeting")
+        self.assertNotContains(response, "Private teammate")
+        self.assertNotContains(response, 'aria-label="View mode"')
+
     def test_athlete_uses_race_calendar_with_own_selection_controls(self):
         coach = get_user_model().objects.create_user(
             username="calendarowner", password="secret", is_staff=True

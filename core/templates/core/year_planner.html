@@ -620,6 +620,7 @@
     <div>
       <h1 class="mb-1">Year Planner</h1>
       <div class="text-muted">{{ period_label }}</div>
+      <div class="d-flex flex-wrap align-items-center gap-3">
       <div class="year-legend year-title-legend">
         {% if show_training %}
         <div class="year-legend-group">
@@ -649,6 +650,9 @@
         </div>
         {% endif %}
       </div>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="yearRaceToggle"
+              aria-expanded="false" aria-controls="yearRacePanel">Race Calendar</button>
+      </div>
     </div>
     <div class="d-flex gap-2">
       <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Planner</a>
@@ -656,6 +660,12 @@
     </div>
   </div>
 
+  <section id="yearRacePanel" hidden>
+    <iframe title="Race Calendar" id="yearRaceFrame"
+            data-src="{% url 'race_calendar' %}?view=year_list&amp;year={{ year }}&amp;period=full"
+            style="width:100%;height:75vh;min-height:480px;border:0;"></iframe>
+  </section>
+  <div id="yearPlanningPanel">
   <form method="get" class="mb-3" id="yearPlannerFilterForm">
     <div class="d-flex flex-wrap align-items-end year-toolbar">
       <div class="btn-group" role="group" aria-label="Period">
@@ -940,9 +950,24 @@
     {% endfor %}
   </div>
 </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+  document.getElementById("yearRaceToggle").addEventListener("click", function () {
+    const races = document.getElementById("yearRacePanel");
+    const planning = document.getElementById("yearPlanningPanel");
+    const frame = document.getElementById("yearRaceFrame");
+    const opening = races.hidden;
+    if (opening && !frame.hasAttribute("src")) frame.src = frame.dataset.src;
+    races.hidden = !opening;
+    planning.hidden = opening;
+    this.setAttribute("aria-expanded", String(opening));
+    this.classList.toggle("btn-primary", opening);
+    this.classList.toggle("btn-outline-primary", !opening);
+  });
+</script>
 <script>
   function getCookie(name) {
     const value = `; ${document.cookie}`;

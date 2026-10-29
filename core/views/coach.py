@@ -8478,7 +8478,7 @@ def standard_strength_detail_view(request, program_id: int):
 
 
 def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full", race_scope="all", show_all_races=True, race_group=None, race_athlete=None):
-    view_mode = "calendar" if view_mode == "calendar" else "list"
+    view_mode = view_mode if view_mode in ("calendar", "year_list") else "list"
     allowed_periods = {"full", "outdoor", "indoor", "current_next"}
     period_mode = period_mode if period_mode in allowed_periods else "full"
     if race_group is None or race_athlete is None:
@@ -8846,8 +8846,9 @@ def race_calendar_view(request):
         year = today.year
 
     default_view_mode = "list" if is_athlete_user else "calendar"
+    # year_list reuses the list inside Year Planner and survives form redirects.
     view_mode = (request.GET.get("view") or request.POST.get("view") or default_view_mode).strip().lower()
-    if view_mode not in ("list", "calendar"):
+    if view_mode not in ("list", "calendar", "year_list"):
         view_mode = "list"
 
     period_mode = (request.GET.get("period") or request.POST.get("period") or "full").strip().lower()
@@ -9086,7 +9087,8 @@ def race_calendar_view(request):
         {"key": "full", "label": f"Full year {year}", "year": year},
     ]
 
-    return render(request, "core/race_calendar.html", {
+    response = render(request, "core/race_calendar.html", {
+        "embedded_in_year_planner": view_mode == "year_list",
         "year": year,
         "previous_year": period["previous_year"],
         "next_year": period["next_year"],
@@ -9111,6 +9113,9 @@ def race_calendar_view(request):
         "errors": errors,
         "today": today,
     })
+    if view_mode == "year_list":
+        response["X-Frame-Options"] = "SAMEORIGIN"
+    return response
 
 
 
