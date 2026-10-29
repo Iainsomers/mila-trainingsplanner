@@ -8844,10 +8844,12 @@ class RaceSelectDisplayTests(TestCase):
         self.assertEqual(single.status_code, 302)
         self.assertIsNone(RaceEvent.objects.get(name="Single meeting").end_date)
         multi = self.client.post("/race-calendar/?year=2026&view=year_list", {
-            "name": "Three day nationals", "date": "2026-07-16", "multiple_days": "1", "end_date": "2026-07-18", "view": "year_list",
+            "name": "Three day nationals", "date": "2026-07-16", "multiple_days": "1", "end_date": "2026-07-18", "view": "year_list", "race_type": "championship",
         }, follow=True)
         self.assertEqual(multi.status_code, 200)
         self.assertEqual(RaceEvent.objects.get(name="Three day nationals").end_date, date(2026, 7, 18))
+        self.assertEqual(RaceEvent.objects.get(name="Three day nationals").race_type, "championship")
+        self.assertEqual(RaceEvent.objects.get(name="Single meeting").race_type, "race_other")
         self.assertContains(multi, "18-07-2026")
         for end_date in ("2026-07-15", ""):
             invalid = self.client.post("/race-calendar/?year=2026&view=year_list", {

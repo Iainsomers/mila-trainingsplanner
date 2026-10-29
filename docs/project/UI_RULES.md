@@ -97,6 +97,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Race Calendar
 
+- Add race heeft een Race Type-dropdown met de bestaande zes categorieën; standaard is Race Other geselecteerd. Het type wordt direct bij het aanmaken opgeslagen.
 - Add race toont standaard één Date-veld met daaronder de compacte optie `Multiple days`. Inschakelen toont `Until`; dit veld is alleen dan verplicht. Toon bij meerdaagse races start- en einddatum in de lijst/popup, zonder extra velden voor gewone eendaagse races.
 - Plaats Group, Athlete en Race Type naast elkaar in het racefilter; op telefoonbreedte staan ze onder elkaar. Race Type heeft All en de bestaande zes categorieën.
 - `Delete race` staat linksonder in de wedstrijdpopup; `Close` blijft rechts. Verwijderen is uitgeschakeld zolang Trainer, Athlete of Target bij een atleet is aangevinkt, onafhankelijk van de zichtbare filters. De knop wordt na automatisch opslaan bijgewerkt.

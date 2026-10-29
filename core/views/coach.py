@@ -8967,6 +8967,9 @@ def race_calendar_view(request):
             errors.append("Date is invalid.")
 
         race_end_date = None
+        new_race_type = request.POST.get("race_type", "race_other")
+        if new_race_type not in dict(RaceEvent.RACE_TYPE_CHOICES):
+            errors.append("Invalid race type.")
         if request.POST.get("multiple_days") == "1":
             try:
                 race_end_date = date.fromisoformat(request.POST.get("end_date") or "")
@@ -8986,6 +8989,7 @@ def race_calendar_view(request):
                 name=name,
                 date=race_date,
                 end_date=race_end_date,
+                race_type=new_race_type,
             )
             return _race_calendar_redirect_for_year(year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 

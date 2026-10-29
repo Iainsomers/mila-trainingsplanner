@@ -84,7 +84,15 @@
         <div class="col-12 col-md-3">
           <button type="submit" class="btn btn-primary w-100">Add</button>
         </div>
-        <div class="col-12">
+        <div class="col-12 col-md-6">
+          <label class="form-label small mb-1" for="newRaceType">Race Type</label>
+          <select id="newRaceType" name="race_type" class="form-select form-select-sm">
+            {% for value, label in race_type_choices %}
+              <option value="{{ value }}" {% if request.POST.race_type == value or not request.POST.race_type and value == 'race_other' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-6 align-self-end">
           <label class="form-check small mb-0">
             <input type="checkbox" class="form-check-input" name="multiple_days" value="1" data-race-multiple-days {% if request.POST.multiple_days == '1' %}checked{% endif %}>
             <span class="form-check-label">Multiple days</span>
@@ -415,6 +423,14 @@
               <input type="checkbox" class="form-check-input" name="multiple_days" value="1" data-race-multiple-days>
               <span class="form-check-label">Multiple days</span>
             </label>
+            <div class="mb-3">
+              <label class="form-label" for="newRaceModalType">Race Type</label>
+              <select id="newRaceModalType" name="race_type" class="form-select form-select-sm">
+                {% for value, label in race_type_choices %}
+                  <option value="{{ value }}" {% if value == 'race_other' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
             <div data-race-end-wrap hidden>
               <label class="form-label">Until</label>
               <input type="date" name="end_date" class="form-control" disabled>
