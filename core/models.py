@@ -230,6 +230,7 @@ class EvaluationResponse(models.Model):
         related_name="evaluation_responses",
     )
     answers = models.JSONField(default=dict, blank=True)
+    coach_feedback = models.JSONField(default=dict, blank=True)
     submitted_at = models.DateTimeField(auto_now=True)
 
     class Meta:

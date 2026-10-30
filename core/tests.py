@@ -289,6 +289,72 @@ class NewPlansWishesTests(TestCase):
         self.assertEqual(plan.urgency, PlannedChange.URGENCY_GOLD)
 
 
+class EvaluationFeedbackTests(TestCase):
+    def setUp(self):
+        self.coach = get_user_model().objects.create_user(username="Honore_Hoedt", is_staff=True)
+        self.athlete_user = get_user_model().objects.create_user(username="feedbackathlete")
+        self.athlete = Athlete.objects.create(owner=self.coach, name="feedbackathlete", birth_year=2000, gender="X")
+        self.form = EvaluationQuestionnaire.objects.create(owner=self.coach, title="Evaluatie seizoen 2025-2026")
+        self.text = EvaluationQuestion.objects.create(questionnaire=self.form, text="How was training?")
+        self.matrix = EvaluationQuestion.objects.create(questionnaire=self.form, text="Development", question_type="matrix", matrix_columns=["2026"], matrix_rows=["Strength", "Endurance"])
+        self.response = EvaluationResponse.objects.create(questionnaire=self.form, athlete=self.athlete, answers={str(self.text.id): "Good", str(self.matrix.id): {"0:0": "Improving"}})
+        self.url = f"/evaluations/response/{self.response.id}/feedback/"
+        self.client.force_login(self.coach)
+
+    def test_feedback_saves_per_question_and_matrix_row_without_changing_answers(self):
+        answers, submitted = self.response.answers, self.response.submitted_at
+        for key, field, value in ((str(self.text.id), "coach_comment", "Coach advice"), (str(self.text.id), "plan", "Next steps"), (f"{self.matrix.id}:0", "plan", "Strength plan"), (f"{self.matrix.id}:1", "coach_comment", "Endurance advice")):
+            saved = self.client.post(self.url, {"key": key, "field": field, "value": value})
+            self.assertEqual(saved.status_code, 200)
+        self.response.refresh_from_db()
+        self.assertEqual(self.response.answers, answers)
+        self.assertEqual(self.response.submitted_at, submitted)
+        self.assertEqual(self.response.coach_feedback[str(self.text.id)], {"coach_comment": "Coach advice", "plan": "Next steps"})
+        page = self.client.get(f"/evaluations/?filled={self.form.id}&response={self.response.id}")
+        for value in ("Coach comment", "Plan", "Coach advice", "Strength plan", "Endurance advice", "Good", "Improving"):
+            self.assertContains(page, value)
+        self.client.force_login(self.athlete_user)
+        fill = self.client.get(f"/evaluations/{self.form.id}/")
+        self.assertNotContains(fill, "Coach advice")
+        self.client.post(f"/evaluations/{self.form.id}/", {f"question_{self.text.id}": "Updated answer"})
+        self.response.refresh_from_db()
+        self.assertEqual(self.response.coach_feedback[str(self.text.id)]["plan"], "Next steps")
+
+    def test_feedback_rejects_invalid_rows_and_unauthorized_users(self):
+        for key, field in ((f"{self.matrix.id}:8", "plan"), (str(self.text.id), "answers")):
+            self.assertEqual(self.client.post(self.url, {"key": key, "field": field, "value": "Invalid"}).status_code, 400)
+        self.client.force_login(self.athlete_user)
+        self.assertEqual(self.client.post(self.url, {"key": str(self.text.id), "field": "plan", "value": "Unauthorized"}).status_code, 403)
+        other = get_user_model().objects.create_user(username="feedbackother", is_staff=True)
+        self.client.force_login(other)
+        self.assertEqual(self.client.post(self.url, {"key": str(self.text.id), "field": "plan", "value": "Unauthorized"}).status_code, 404)
+        self.response.refresh_from_db()
+        self.assertEqual(self.response.coach_feedback, {})
+
+    def test_feedback_is_limited_to_named_form_and_requires_edit_access(self):
+        other_form = EvaluationQuestionnaire.objects.create(owner=self.coach, title="Another evaluation")
+        question = EvaluationQuestion.objects.create(questionnaire=other_form, text="Other question")
+        response = EvaluationResponse.objects.create(questionnaire=other_form, athlete=self.athlete, answers={str(question.id): "Other answer"})
+        other_url = f"/evaluations/response/{response.id}/feedback/"
+        self.assertEqual(self.client.post(other_url, {"key": str(question.id), "field": "plan", "value": "No"}).status_code, 403)
+        page = self.client.get("/evaluations/")
+        self.assertNotContains(page, f'class="evaluation-feedback-form" action="{other_url}"')
+        self.assertContains(page, "Other answer")
+        delegate = get_user_model().objects.create_user(username="feedbackdelegate", is_staff=True)
+        access = CoachAccess.objects.create(owner=self.coach, grantee=delegate, can_edit=False)
+        self.client.force_login(delegate)
+        session = self.client.session
+        session["active_coach_owner_id"] = self.coach.id
+        session.save()
+        payload = {"key": str(self.text.id), "field": "plan", "value": "Delegated plan"}
+        self.assertEqual(self.client.post(self.url, payload).status_code, 403)
+        page = self.client.get("/evaluations/")
+        self.assertContains(page, "readonly")
+        access.can_edit = True
+        access.save()
+        self.assertEqual(self.client.post(self.url, payload).status_code, 200)
+
+
 class TrackTimerTests(TestCase):
     def test_timer_page_is_available_from_dashboard(self):
         user = get_user_model().objects.create_user(username="timer-user", password="secret")

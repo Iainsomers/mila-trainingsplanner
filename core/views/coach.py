@@ -9,6 +9,7 @@ import os
 import re
 import secrets
 import struct
+import unicodedata
 from urllib.parse import urlencode, urlsplit
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -880,6 +881,17 @@ def coach_tools_view(request):
     return render(request, "core/coach_tools.html")
 
 
+def _evaluation_coach_feedback_enabled(questionnaire):
+    def normalized(value):
+        value = unicodedata.normalize("NFKD", value or "").encode("ascii", "ignore").decode().lower()
+        return re.sub(r"[^a-z0-9]", "", value)
+    owner = questionnaire.owner
+    return (
+        "honorehoedt" in {normalized(owner.username), normalized(owner.get_full_name())}
+        and normalized(questionnaire.title) == "evaluatieseizoen20252026"
+    )
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def evaluations_view(request):
@@ -1075,7 +1087,7 @@ def evaluations_view(request):
     responses = list(
         EvaluationResponse.objects
         .filter(questionnaire__owner=owner)
-        .select_related("questionnaire", "athlete")
+        .select_related("questionnaire__owner", "athlete")
         .prefetch_related("questionnaire__questions")
         .order_by("-submitted_at", "athlete__name")
     )
@@ -1084,15 +1096,23 @@ def evaluations_view(request):
         response_counts[response.questionnaire_id] = response_counts.get(response.questionnaire_id, 0) + 1
     for response in responses:
         response.answer_rows = []
+        response.coach_feedback_enabled = _evaluation_coach_feedback_enabled(response.questionnaire)
+        feedback = response.coach_feedback or {}
         for question in response.questionnaire.questions.all():
             answer = (response.answers or {}).get(str(question.id), "")
-            row = {"question": question, "answer": answer}
+            question_key = str(question.id)
+            notes = feedback.get(question_key, {})
+            row = {"question": question, "answer": answer, "feedback_key": question_key,
+                   "coach_comment": notes.get("coach_comment", ""), "plan": notes.get("plan", "")}
             if question.question_type == EvaluationQuestion.TYPE_MATRIX:
                 answer = answer if isinstance(answer, dict) else {}
                 row["matrix_rows"] = [
                     {
                         "label": label,
                         "cells": [answer.get(f"{row_index}:{column_index}", "") for column_index, _ in enumerate(question.matrix_columns)],
+                        "feedback_key": f"{question.id}:{row_index}",
+                        "coach_comment": feedback.get(f"{question.id}:{row_index}", {}).get("coach_comment", ""),
+                        "plan": feedback.get(f"{question.id}:{row_index}", {}).get("plan", ""),
                     }
                     for row_index, label in enumerate(question.matrix_rows)
                 ]
@@ -1137,6 +1157,47 @@ def evaluations_view(request):
         "filled_responses": filled_responses,
         "selected_response": selected_response,
     })
+
+
+@login_required
+@require_http_methods(["POST"])
+def evaluation_feedback_save_view(request, response_id):
+    athlete = _athlete_for_user(request.user)
+    if (athlete and not request.user.is_staff and not request.user.is_superuser) or is_coach_tools_only_user(request.user):
+        return HttpResponse("Forbidden", status=403)
+    if _active_coach_access_label(request) == "view":
+        return HttpResponse("Forbidden", status=403)
+    owner = _active_coach_user(request)
+    settings = CoachSettings.objects.filter(user=owner).first()
+    if settings is not None and not settings.evaluations_enabled:
+        return HttpResponse("Forbidden", status=403)
+    field = request.POST.get("field")
+    key = request.POST.get("key")
+    if field not in {"coach_comment", "plan"}:
+        return HttpResponse("Invalid feedback field", status=400)
+    with transaction.atomic():
+        response = get_object_or_404(
+            EvaluationResponse.objects.select_for_update().select_related("questionnaire"),
+            id=response_id, questionnaire__owner=owner,
+        )
+        if not _evaluation_coach_feedback_enabled(response.questionnaire):
+            return HttpResponse("Feedback is not enabled for this questionnaire", status=403)
+        valid_keys = set()
+        for question in response.questionnaire.questions.all():
+            if question.question_type == EvaluationQuestion.TYPE_MATRIX:
+                valid_keys.update(f"{question.id}:{index}" for index in range(len(question.matrix_rows)))
+            else:
+                valid_keys.add(str(question.id))
+        if key not in valid_keys:
+            return HttpResponse("Invalid feedback row", status=400)
+        feedback = dict(response.coach_feedback or {})
+        notes = dict(feedback.get(key, {}))
+        notes[field] = (request.POST.get("value") or "").strip()
+        feedback[key] = notes
+        response.coach_feedback = feedback
+        # Coaching notes must not change athlete answers or their submission date.
+        response.save(update_fields=["coach_feedback"])
+    return JsonResponse({"ok": True})
 
 
 @login_required

@@ -1,0 +1,6 @@
+<td class="evaluation-feedback-cell">
+  <textarea class="form-control form-control-sm" rows="2" aria-label="Coach comment" data-feedback-key="{{ feedback.feedback_key }}" data-feedback-field="coach_comment" {% if not can_edit %}readonly{% endif %}>{{ feedback.coach_comment }}</textarea>
+</td>
+<td class="evaluation-feedback-cell">
+  <textarea class="form-control form-control-sm" rows="2" aria-label="Plan" data-feedback-key="{{ feedback.feedback_key }}" data-feedback-field="plan" {% if not can_edit %}readonly{% endif %}>{{ feedback.plan }}</textarea>
+</td>

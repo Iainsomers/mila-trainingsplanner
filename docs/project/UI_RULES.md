@@ -120,6 +120,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Formulieren
 
+- Bij het ingevulde formulier `Evaluatie seizoen 2025-2026` van Honoré Hoedt staan `Coach comment` en `Plan` als twee compacte tekstkolommen naast iedere antwoordregel, inclusief matrixregels. Sla op bij verlaten van het veld en toon Saving/Saved/foutstatus per formulier. Brede tabellen mogen op mobiel horizontaal scrollen.
 - Zet vaste scheidingstekens voor tijdformaten visueel vast waar mogelijk.
 - Toon invoerformaten bij complexe PR-velden.
 - Behoud ingevoerde waarden na validatiefouten.

@@ -3,6 +3,12 @@
 {% block title %}Evaluaties{% endblock %}
 
 {% block content %}
+<style>
+  .evaluation-answer-table { min-width: 760px; }
+  .evaluation-answer-text { white-space: normal; overflow-wrap: anywhere; min-width: 140px; }
+  .evaluation-feedback-cell { min-width: 180px; width: 23%; vertical-align: top; }
+  .evaluation-feedback-cell textarea { min-height: 58px; resize: vertical; }
+</style>
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
     <div>
@@ -259,6 +265,34 @@
                               class="collapse mt-2 {% if selected_response and selected_response.id == response.id %}show{% endif %}"
                               id="responseCollapse{{ response.id }}"
                             >
+                              {% if response.coach_feedback_enabled %}
+                              <form class="evaluation-feedback-form" action="{% url 'evaluation_feedback_save' response.id %}" method="post">
+                                {% csrf_token %}
+                                <div class="table-responsive">
+                                  <table class="table table-bordered table-sm small mb-0 evaluation-answer-table">
+                                    <thead class="table-light"><tr><th scope="col">Question</th><th scope="col">Answer</th><th scope="col">Coach comment</th><th scope="col">Plan</th></tr></thead>
+                                    <tbody>
+                                    {% for row in response.answer_rows %}
+                                      {% if row.question.question_type == "matrix" %}
+                                        <tr><th colspan="4">{{ row.question.text }}</th></tr>
+                                        <tr><td colspan="4" class="p-0">
+                                          <div class="table-responsive">
+                                            <table class="table table-bordered table-sm mb-0">
+                                              <thead class="table-light"><tr><th scope="col">Question</th>{% for column in row.question.matrix_columns %}<th scope="col">{{ column }}</th>{% endfor %}<th scope="col">Coach comment</th><th scope="col">Plan</th></tr></thead>
+                                              <tbody>{% for matrix_row in row.matrix_rows %}<tr><th scope="row" class="fw-normal">{{ matrix_row.label }}</th>{% for cell in matrix_row.cells %}<td class="evaluation-answer-text">{{ cell|default:"-"|linebreaksbr }}</td>{% endfor %}{% include "core/partials/evaluation_feedback_cells.html" with feedback=matrix_row %}</tr>{% endfor %}</tbody>
+                                            </table>
+                                          </div>
+                                        </td></tr>
+                                      {% else %}
+                                        <tr><th scope="row" class="fw-normal">{{ row.question.text }}</th><td class="evaluation-answer-text">{{ row.answer|default:"-"|linebreaksbr }}</td>{% include "core/partials/evaluation_feedback_cells.html" with feedback=row %}</tr>
+                                      {% endif %}
+                                    {% endfor %}
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div class="small text-muted mt-1 evaluation-feedback-status" role="status"></div>
+                              </form>
+                              {% else %}
                               <dl class="row small mb-0 border rounded">
                                 {% for row in response.answer_rows %}
                                   {% if row.question.question_type == "matrix" %}
@@ -277,6 +311,7 @@
                                   {% endif %}
                                 {% endfor %}
                               </dl>
+                              {% endif %}
                             </div>
                           </div>
                         {% endfor %}
@@ -297,6 +332,33 @@
   {% endif %}
 </div>
 {% if not is_athlete_user %}
+<script>
+  document.querySelectorAll('.evaluation-feedback-form').forEach(function(form) {
+    const status = form.querySelector('.evaluation-feedback-status');
+    let queue = Promise.resolve();
+    form.addEventListener('submit', function(event) { event.preventDefault(); });
+    form.querySelectorAll('[data-feedback-field]').forEach(function(field) {
+      if (field.readOnly) return;
+      field.addEventListener('change', function() {
+        const payload = new FormData();
+        payload.set('csrfmiddlewaretoken', form.querySelector('[name="csrfmiddlewaretoken"]').value);
+        payload.set('key', field.dataset.feedbackKey);
+        payload.set('field', field.dataset.feedbackField);
+        payload.set('value', field.value);
+        status.textContent = 'Saving…';
+        queue = queue.then(async function() {
+          try {
+            const response = await fetch(form.action, {method: 'POST', body: payload});
+            if (!response.ok) throw new Error('Save failed');
+            status.textContent = 'Saved';
+          } catch (error) {
+            status.textContent = 'Could not save. Change the field to try again.';
+          }
+        });
+      });
+    });
+  });
+</script>
 <template id="matrix-question-template">
   <div class="matrix-question border rounded p-3 mb-3">
     <div class="d-flex justify-content-between gap-2 mb-2"><strong>Matrix</strong><button type="button" class="btn btn-outline-danger btn-sm remove-matrix">Remove</button></div>
