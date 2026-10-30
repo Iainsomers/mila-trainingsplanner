@@ -1183,10 +1183,10 @@
           <div class="text-muted d-none" id="ouraVitalsImportEmpty">No new Oura values are available for days with a readiness record.</div>
           <div class="table-responsive d-none" id="ouraVitalsImportTableWrap">
             <table class="table table-sm table-striped align-middle mb-0">
-              <thead><tr><th>Date</th><th>Sleep hours</th><th>Sleep quality</th><th>HRV</th><th></th></tr></thead>
+              <thead><tr><th>Date</th><th>Sleep hours</th><th>Sleep quality</th><th>Morning HR</th><th>HRV</th><th></th></tr></thead>
               <tbody id="ouraVitalsImportRows"></tbody>
             </table>
-            <p class="small text-muted mt-2 mb-0">Readiness is used only to select eligible days. Morning heart rate is not imported because Oura's lowest sleep heart rate is a different measurement.</p>
+            <p class="small text-muted mt-2 mb-0">Readiness is used only to select eligible days. Morning HR uses Oura's lowest heart rate during sleep, rounded to the nearest bpm.</p>
           </div>
           <div class="alert alert-success d-none mt-3 mb-0" id="ouraVitalsImportSuccess" role="status"></div>
         </div>
@@ -1258,6 +1258,7 @@
         appendCell(row, parts.length === 3 ? parts[2] + "-" + parts[1] + "-" + parts[0] : item.day);
         appendCell(row, item.sleep_hours);
         appendCell(row, item.sleep_quality);
+        appendCell(row, item.morning_hr);
         appendCell(row, item.hrv);
         var removeCell = document.createElement("td");
         var removeButton = document.createElement("button");

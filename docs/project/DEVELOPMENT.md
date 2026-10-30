@@ -49,8 +49,8 @@ pagina. De atleet kan in de AYC afzonderlijk een importpreview opvragen en na
 het verwijderen van ongewenste dagen `Use all` kiezen. Readiness is alleen een
 verborgen voorwaarde; alleen lege slaapuren-, slaapkwaliteit- en HRV-velden
 worden bijgewerkt. De importer haalt bij het opslaan de data opnieuw op en
-controleert nogmaals op bestaande waarden. Oura's laagste slaap-HR wordt niet
-naar ochtendhartslag vertaald.
+controleert nogmaals op bestaande waarden. Oura's laagste slaap-HR vult Morning
+HR en wordt afgerond op hele bpm.
 API-verzoeken gebruiken een herkenbare `User-Agent`; OAuth-refresh bewaart het
 vervangen refresh-token.
 

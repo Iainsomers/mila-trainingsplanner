@@ -114,7 +114,7 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 - De importer verwerkt de afgelopen veertien dagen. Een dag wordt alleen voorgesteld als er een Oura-readinessrecord voor die dag bestaat; de readiness-score zelf wordt niet getoond of opgeslagen.
 - Alleen lege Daily Vitals-velden worden voorgesteld en opgeslagen. Bij een gedeeltelijk ingevulde dag kunnen uitsluitend de lege velden worden aangevuld; bestaande waarden blijven leidend. De atleet kan dagen uit de lijst verwijderen voordat `Use all` wordt gekozen.
 - Oura-slaapduur in seconden wordt naar uren omgerekend en op twee decimalen afgerond; de slaapscore wordt door 10 gedeeld en op één decimaal afgerond; gemiddelde slaap-HRV wordt naar hele ms afgerond.
-- De laagste hartslag tijdens slaap wordt niet als ochtendhartslag opgeslagen. Readiness wordt evenmin als vital opgeslagen. Het opslaan haalt Oura-data opnieuw op en controleert de bestaande waarden opnieuw om overschrijven te voorkomen.
+- De laagste hartslag tijdens slaap vult Morning HR en wordt naar de dichtstbijzijnde hele bpm afgerond. Readiness wordt niet als vital opgeslagen. Het opslaan haalt Oura-data opnieuw op en controleert de bestaande waarden opnieuw om overschrijven te voorkomen.
 
 ## Polar: ruwe samples en tempoverwerking
 

@@ -229,9 +229,17 @@ def build_oura_vitals_suggestions(connection, athlete, *, today=None):
         else:
             row["hrv"] = None
 
-        # Oura's lowest sleep heart rate is not the same measurement as a
-        # morning heart-rate reading, so it is deliberately not suggested.
-        if any(row[field] is not None for field in ("sleep_hours", "sleep_quality", "hrv")):
+        lowest_heart_rate = item["lowest_heart_rate"]
+        if (not vital or vital.morning_hr is None) and lowest_heart_rate is not None:
+            try:
+                morning_hr = round(float(lowest_heart_rate))
+                row["morning_hr"] = morning_hr if 1 <= morning_hr <= 300 else None
+            except (TypeError, ValueError):
+                row["morning_hr"] = None
+        else:
+            row["morning_hr"] = None
+
+        if any(row[field] is not None for field in ("sleep_hours", "sleep_quality", "morning_hr", "hrv")):
             suggestions.append(row)
     return suggestions
 
@@ -288,7 +296,7 @@ def oura_vitals_import_view(request):
             if vital is None:
                 vital = AthleteDailyVital(athlete=athlete, date=day)
             changed_fields = []
-            for field in ("sleep_hours", "sleep_quality", "hrv"):
+            for field in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
                 value = item.get(field)
                 if value is not None and getattr(vital, field) is None:
                     setattr(vital, field, value)

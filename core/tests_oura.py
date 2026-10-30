@@ -265,7 +265,7 @@ class OuraDashboardAndOAuthTests(TestCase):
                 "day": day,
                 "type": "long_sleep",
                 "total_sleep_duration": 27000,
-                "lowest_heart_rate": 46,
+                "lowest_heart_rate": 47.6,
                 "average_hrv": 72.4,
             } for day in days], "next_token": None},
             {"data": [{"day": day, "score": 82} for day in days], "next_token": None},
@@ -298,22 +298,33 @@ class OuraDashboardAndOAuthTests(TestCase):
         )
         self._oura_collections(
             mocked_get,
-            days=["2026-10-29", "2026-10-28"],
-            readiness_days=["2026-10-29"],
+            days=["2026-10-29", "2026-10-28", "2026-10-27"],
+            readiness_days=["2026-10-29", "2026-10-28"],
         )
 
         response = self.client.post(reverse("oura_vitals_import"), {"action": "preview"})
 
         self.assertEqual(response.status_code, 200)
         items = response.json()["items"]
-        self.assertEqual(items, [{
-            "day": "2026-10-29",
-            "sleep_hours": None,
-            "sleep_quality": 8.2,
-            "hrv": 72,
-        }])
+        self.assertEqual(items, [
+            {
+                "day": "2026-10-29",
+                "sleep_hours": None,
+                "sleep_quality": 8.2,
+                "hrv": 72,
+                "morning_hr": None,
+            },
+            {
+                "day": "2026-10-28",
+                "sleep_hours": 7.5,
+                "sleep_quality": 8.2,
+                "hrv": 72,
+                "morning_hr": 48,
+            },
+        ])
         self.assertIsNone(AthleteDailyVital.objects.get(athlete=self.athlete, date="2026-10-29").sleep_quality)
         self.assertNotIn("readiness_score", response.json()["items"][0])
+        self.assertNotIn("2026-10-27", [item["day"] for item in items])
 
     @patch("core.views.oura.timezone.localdate", return_value=date(2026, 10, 30))
     @patch("core.views.oura.requests.get")
@@ -332,21 +343,26 @@ class OuraDashboardAndOAuthTests(TestCase):
             sleep_hours=6.5,
             morning_hr=51,
         )
-        self._oura_collections(mocked_get, days=["2026-10-29", "2026-10-28"])
+        self._oura_collections(mocked_get, days=["2026-10-29", "2026-10-28", "2026-10-27"])
 
         response = self.client.post(
             reverse("oura_vitals_import"),
-            {"action": "apply", "selected_days": '["2026-10-29"]'},
+            {"action": "apply", "selected_days": '["2026-10-29", "2026-10-28"]'},
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["saved_count"], 1)
+        self.assertEqual(response.json()["saved_count"], 2)
         vital.refresh_from_db()
         self.assertEqual(vital.sleep_hours, 6.5)
         self.assertEqual(float(vital.sleep_quality), 8.2)
         self.assertEqual(vital.morning_hr, 51)
         self.assertEqual(vital.hrv, 72)
-        self.assertFalse(AthleteDailyVital.objects.filter(athlete=self.athlete, date="2026-10-28").exists())
+        imported = AthleteDailyVital.objects.get(athlete=self.athlete, date="2026-10-28")
+        self.assertEqual(imported.sleep_hours, 7.5)
+        self.assertEqual(float(imported.sleep_quality), 8.2)
+        self.assertEqual(imported.morning_hr, 48)
+        self.assertEqual(imported.hrv, 72)
+        self.assertFalse(AthleteDailyVital.objects.filter(athlete=self.athlete, date="2026-10-27").exists())
         self.assertEqual(mocked_get.call_count, 3)
 
     def test_oura_vitals_import_is_unavailable_to_coaches(self):
