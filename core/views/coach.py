@@ -8617,6 +8617,14 @@ def standard_strength_detail_view(request, program_id: int):
     })
 
 
+def _race_calendar_return_year(request, fallback):
+    try:
+        year = int(request.POST.get("year") or request.GET.get("year") or fallback)
+    except (TypeError, ValueError):
+        return fallback
+    return year if 2000 <= year <= 2100 else fallback
+
+
 def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full", race_scope="all", show_all_races=True, race_group=None, race_athlete=None, race_type_filter="all"):
     view_mode = view_mode if view_mode in ("calendar", "year_list") else "list"
     allowed_periods = {"full", "outdoor", "indoor", "current_next"}
@@ -9320,7 +9328,7 @@ def race_calendar_delete_view(request, race_id: int):
     race = get_object_or_404(RaceEvent.objects.filter(owner=_active_coach_user(request)), id=race_id)
     if _race_has_selected_athletes(race):
         return HttpResponse("Cannot delete this race while athletes are linked. Remove all athlete selections first.", status=409)
-    year = race.date.year
+    year = _race_calendar_return_year(request, race.date.year)
     view_mode = (request.POST.get("view") or request.GET.get("view") or "list").strip().lower()
     period_mode = (request.POST.get("period") or request.GET.get("period") or "full").strip().lower()
     race_group = (request.POST.get("race_group") or "all").strip().lower()
@@ -9378,7 +9386,7 @@ def race_calendar_distance_add_view(request, race_id: int):
     race_group = (request.POST.get("race_group") or "all").strip().lower()
     race_athlete = (request.POST.get("race_athlete") or "all").strip().lower()
     show_all_races = request.POST.get("show_all") == "1"
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
+    return _race_calendar_redirect_for_year(_race_calendar_return_year(request, race.date.year), view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
 
 @login_required
@@ -9392,7 +9400,7 @@ def race_calendar_distance_delete_view(request, race_id: int, distance_id: int):
     race_athlete = (request.POST.get("race_athlete") or "all").strip().lower()
     show_all_races = request.POST.get("show_all") == "1"
     distance.delete()
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
+    return _race_calendar_redirect_for_year(_race_calendar_return_year(request, race.date.year), view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
 
 @login_required
@@ -9481,7 +9489,7 @@ def race_calendar_entries_save_view(request, race_id: int):
     race_group = (request.POST.get("race_group") or "all").strip().lower()
     race_athlete = (request.POST.get("race_athlete") or "all").strip().lower()
     show_all_races = request.POST.get("show_all") == "1"
-    return _race_calendar_redirect_for_year(race.date.year, view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
+    return _race_calendar_redirect_for_year(_race_calendar_return_year(request, race.date.year), view_mode, period_mode, show_all_races=show_all_races, race_group=race_group, race_athlete=race_athlete, race_type_filter=request.POST.get("race_type_filter", "all"))
 
 
 @login_required

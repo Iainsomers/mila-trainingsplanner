@@ -8902,6 +8902,23 @@ class SegmentRepTimeDisplayTests(TestCase):
 
 
 class RaceSelectDisplayTests(TestCase):
+    def test_save_distances_keeps_indoor_season_anchor_year(self):
+        coach = get_user_model().objects.create_user(username="indoorreturncoach", is_staff=True)
+        race = RaceEvent.objects.create(owner=coach, name="January indoor meeting", date="2027-01-16")
+        self.client.force_login(coach)
+        page = self.client.get("/race-calendar/?year=2026&view=year_list&period=indoor")
+        self.assertContains(page, 'name="year" value="2026"')
+        response = self.client.post(f"/race-calendar/{race.id}/distances/add/", {
+            "year": "2026", "view": "year_list", "period": "indoor", "distances": "1500",
+            "race_type_filter": "race_other", "show_all": "1",
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["year"], 2026)
+        self.assertEqual(response.context["period_mode"], "indoor")
+        self.assertEqual(response.context["view_mode"], "year_list")
+        self.assertContains(response, "January indoor meeting")
+        self.assertTrue(race.distances.filter(distance="1500").exists())
+
     def test_multiday_race_creation_and_validation_keep_single_day_default(self):
         coach = get_user_model().objects.create_user(username="multidaycoach", is_staff=True)
         self.client.force_login(coach)

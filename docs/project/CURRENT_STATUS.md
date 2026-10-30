@@ -106,6 +106,8 @@ Bijgewerkt: 30 oktober 2026.
 
 ## Laatste overdracht — 29 oktober 2026
 
+- Race Calendar bewaart bij Save distances en overige popupterugkeren het gekozen kalenderjaar. Bij Indoor 2026/27 sprong een bewerking van een wedstrijd in januari 2027 eerder naar Indoor 2027/28 doordat het wedstrijdjaar als terugkeerjaar werd gebruikt.
+
 - Aanvullende dropdownreparatie: de select zelf start ook geen schilderactie meer. Een open native optiemenu kan mouseenter/mouseup naar onderliggende kalendercellen sturen; die leidden met de achtergebleven schilderstatus alsnog tot opslaan en dichtklappen. Randgrepen blijven de manier om periodisatieblokken te verlengen/verkorten.
 
 - Het openen van de periodisatiedropdown veroorzaakt geen opslagactie meer. Een gebubbelde mousedown markeerde het startvak onterecht als gewijzigd; de nieuwe opslagblokkade sloot daardoor het keuzemenu voordat een fase gekozen kon worden. Opslaan gebeurt nu na een echte keuze of schilderactie.

@@ -67,6 +67,7 @@
 
       <form method="post" class="row g-2 align-items-end">
         {% csrf_token %}
+        <input type="hidden" name="year" value="{{ year }}">
         <input type="hidden" name="view" value="{{ view_mode }}">
         <input type="hidden" name="period" value="{{ period_mode }}">
         <input type="hidden" name="race_group" value="{{ race_group }}">
@@ -257,6 +258,7 @@
                 <summary>Manage distances <span class="text-muted">({{ distances|length }})</span></summary>
               <form method="post" action="{% url 'race_calendar_distance_add' race.id %}">
                 {% csrf_token %}
+                <input type="hidden" name="year" value="{{ year }}">
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
@@ -313,6 +315,7 @@
 
               <form method="post" action="{% url 'race_calendar_entries_save' race.id %}" class="race-entry-form" data-auto-save="1">
                 {% csrf_token %}
+                <input type="hidden" name="year" value="{{ year }}">
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
@@ -378,6 +381,7 @@
               {% if not is_athlete_user %}
               <form method="post" class="me-auto" action="{% url 'race_calendar_delete' race.id %}" onsubmit="return confirm('Delete this race?');">
                 {% csrf_token %}
+                <input type="hidden" name="year" value="{{ year }}">
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
@@ -400,6 +404,7 @@
       <div class="modal-content">
         <form method="post">
           {% csrf_token %}
+                <input type="hidden" name="year" value="{{ year }}">
                 <input type="hidden" name="view" value="{{ view_mode }}">
                 <input type="hidden" name="period" value="{{ period_mode }}">
                 <input type="hidden" name="race_group" value="{{ race_group }}">
