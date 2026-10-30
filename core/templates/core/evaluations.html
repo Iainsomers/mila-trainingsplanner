@@ -8,8 +8,17 @@
   .evaluation-answer-text { white-space: normal; overflow-wrap: anywhere; min-width: 140px; }
   .evaluation-feedback-cell { min-width: 180px; width: 23%; vertical-align: top; }
   .evaluation-feedback-cell textarea { min-height: 58px; resize: vertical; }
+  .container.evaluation-wide { max-width: 1800px; }
+  @media (min-width: 992px) {
+    .evaluation-wide .evaluation-questionnaires-column,
+    .evaluation-wide .evaluation-filled-column { width: 100%; }
+  }
+  @media (min-width: 1200px) {
+    .evaluation-wide .evaluation-questionnaires-column { width: 25%; }
+    .evaluation-wide .evaluation-filled-column { width: 75%; }
+  }
 </style>
-<div class="container py-4">
+<div class="container py-4{% if has_coach_feedback %} evaluation-wide{% endif %}">
   <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
     <div>
       <h1 class="mb-1">Evaluaties</h1>
@@ -55,7 +64,7 @@
     </div>
   {% else %}
     <div class="row g-4">
-      <div class="col-lg-5">
+      <div class="col-lg-5 evaluation-questionnaires-column">
         <div class="card mb-4">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
@@ -136,7 +145,7 @@
         </div>
       </div>
 
-      <div class="col-lg-7">
+      <div class="col-lg-7 evaluation-filled-column">
         {% if can_edit and show_new or can_edit and edit_questionnaire %}
           <div class="card mb-4">
             <div class="card-body">

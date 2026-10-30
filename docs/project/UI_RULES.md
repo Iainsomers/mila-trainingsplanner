@@ -120,6 +120,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Formulieren
 
+- De evaluatiepagina met Honoré Hoedts coachkolommen gebruikt op brede schermen maximaal 1800 px: circa 25% voor Questionnaires en 75% voor Filled forms, zodat Plan naast Coach comment past. Op smallere schermen komen deze blokken onder elkaar; tabellen blijven mobiel scrollbaar.
 - Bij het ingevulde formulier `Evaluatie seizoen 2025-2026` van Honoré Hoedt staan `Coach comment` en `Plan` als twee compacte tekstkolommen naast iedere antwoordregel, inclusief matrixregels. Sla op bij verlaten van het veld en toon Saving/Saved/foutstatus per formulier. Brede tabellen mogen op mobiel horizontaal scrollen.
 - Zet vaste scheidingstekens voor tijdformaten visueel vast waar mogelijk.
 - Toon invoerformaten bij complexe PR-velden.

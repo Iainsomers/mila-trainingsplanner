@@ -1156,6 +1156,7 @@ def evaluations_view(request):
         "selected_filled_questionnaire": selected_filled_questionnaire,
         "filled_responses": filled_responses,
         "selected_response": selected_response,
+        "has_coach_feedback": any(response.coach_feedback_enabled for response in responses),
     })
 
 
