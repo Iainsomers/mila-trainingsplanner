@@ -1,6 +1,6 @@
 # Functionele onderdelen
 
-- Alleen het formulier `Evaluatie seizoen 2025-2026` van Honoré Hoedt krijgt bij Filled forms de kolommen `Coach comment` en `Plan`, per gewone vraag en per matrixregel. Ze zijn alleen voor coaches zichtbaar; bevoegde edit-coaches kunnen wijzigen, view-only coaches alleen lezen. Wijzigingen slaan automatisch op bij verlaten van het veld. Deze notities staan apart van de atleetantwoorden in EvaluationResponse.coach_feedback en wijzigen de antwoorden of submitted_at niet. Bestaande ingevulde formulieren krijgen lege coachvelden; andere vragenlijsten behouden hun weergave.
+- Alleen het formulier `Evaluatie seizoen 2025-2026` van Honoré Hoedt krijgt bij Filled forms de kolommen `Coach comment` en `Plan`, per gewone vraag en per matrixregel. Bevoegde edit-coaches kunnen wijzigen; view-only coaches en de betreffende atleet kunnen alleen lezen. De atleet ziet de velden bij het eigen ingevulde formulier. Wijzigingen slaan automatisch op bij verlaten van het veld. Deze notities staan apart van de atleetantwoorden in EvaluationResponse.coach_feedback en wijzigen de antwoorden of submitted_at niet. Bestaande ingevulde formulieren krijgen lege coachvelden; andere vragenlijsten behouden hun weergave.
 
 - Flex Planner toont het rode verwijderkruisje ook bij handmatig ingevoerde races, in AM en PM. Een verwijderde handmatige race uit een bronplanning blijft met een lege persoonlijke override onderdrukt. Races met een actieve Race Calendar-koppeling behouden hun bescherming.
 

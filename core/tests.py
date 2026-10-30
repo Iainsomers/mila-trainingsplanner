@@ -290,6 +290,22 @@ class NewPlansWishesTests(TestCase):
 
 
 class EvaluationFeedbackTests(TestCase):
+    def test_athlete_reads_only_own_coach_feedback(self):
+        self.response.coach_feedback = {str(self.text.id): {"coach_comment": "Own coach comment", "plan": "Own plan"}}
+        self.response.save(update_fields=["coach_feedback"])
+        other = Athlete.objects.create(owner=self.coach, name="Other feedback athlete", birth_year=2000, gender="X")
+        EvaluationResponse.objects.create(questionnaire=self.form, athlete=other, coach_feedback={str(self.text.id): {"plan": "Private other plan"}})
+        self.client.force_login(self.athlete_user)
+        page = self.client.get(f"/evaluations/{self.form.id}/?athlete={other.id}&response={self.response.id}")
+        self.assertContains(page, "Own coach comment")
+        self.assertContains(page, "Own plan")
+        self.assertNotContains(page, "Private other plan")
+        self.assertNotContains(page, 'data-feedback-field=')
+        denied = self.client.post(self.url, {"key": str(self.text.id), "field": "plan", "value": "Changed plan"})
+        self.assertEqual(denied.status_code, 403)
+        self.response.refresh_from_db()
+        self.assertEqual(self.response.coach_feedback[str(self.text.id)]["plan"], "Own plan")
+
     def setUp(self):
         self.coach = get_user_model().objects.create_user(username="Honore_Hoedt", is_staff=True)
         self.athlete_user = get_user_model().objects.create_user(username="feedbackathlete")
@@ -315,7 +331,10 @@ class EvaluationFeedbackTests(TestCase):
             self.assertContains(page, value)
         self.client.force_login(self.athlete_user)
         fill = self.client.get(f"/evaluations/{self.form.id}/")
-        self.assertNotContains(fill, "Coach advice")
+        self.assertContains(fill, "Coach advice")
+        self.assertContains(fill, "Strength plan")
+        self.assertContains(fill, "Endurance advice")
+        self.assertNotContains(fill, 'data-feedback-field=')
         self.client.post(f"/evaluations/{self.form.id}/", {f"question_{self.text.id}": "Updated answer"})
         self.response.refresh_from_db()
         self.assertEqual(self.response.coach_feedback[str(self.text.id)]["plan"], "Next steps")

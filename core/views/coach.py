@@ -1249,13 +1249,20 @@ def evaluation_fill_view(request, questionnaire_id):
         return redirect("evaluations")
 
     answers = response.answers if response else {}
+    show_coach_feedback = bool(response and _evaluation_coach_feedback_enabled(questionnaire))
+    feedback = (response.coach_feedback or {}) if show_coach_feedback else {}
     for question in questionnaire.questions.all():
+        notes = feedback.get(str(question.id), {})
+        question.coach_comment = notes.get("coach_comment", "")
+        question.coach_plan = notes.get("plan", "")
         current_answer = answers.get(str(question.id), "")
         if question.question_type == EvaluationQuestion.TYPE_MATRIX:
             current_answer = current_answer if isinstance(current_answer, dict) else {}
             question.current_matrix_rows = [
                 {
                     "label": label,
+                    "coach_comment": feedback.get(f"{question.id}:{row_index}", {}).get("coach_comment", ""),
+                    "plan": feedback.get(f"{question.id}:{row_index}", {}).get("plan", ""),
                     "cells": [
                         {
                             "row_index": row_index,
@@ -1273,6 +1280,7 @@ def evaluation_fill_view(request, questionnaire_id):
     return render(request, "core/evaluation_fill.html", {
         "questionnaire": questionnaire,
         "response": response,
+        "show_coach_feedback": show_coach_feedback,
     })
 
 

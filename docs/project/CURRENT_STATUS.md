@@ -106,7 +106,7 @@ Bijgewerkt: 30 oktober 2026.
 
 ## Laatste overdracht — 29 oktober 2026
 
-- Ingevulde formulieren `Evaluatie seizoen 2025-2026` van Honoré Hoedt hebben coach-only Coach comment/Plan per antwoordregel. Migratie `0129_evaluationresponse_coach_feedback` voegt aparte lege JSON-opslag toe zonder bestaande antwoorden te wijzigen. De productievragenlijst staat niet in de lokale database; de functie wordt begrensd op genormaliseerde coachnaam en formuliertitel. Zes gerichte evaluatietests slagen, inclusief behoud van antwoorden/indieningsdatum en edit-/view-onlyrechten. De bredere TrackTimerTests-run bevat twee niet-gerelateerde bestaande dashboardlabelasserties die falen.
+- Ingevulde formulieren `Evaluatie seizoen 2025-2026` van Honoré Hoedt hebben Coach comment/Plan per antwoordregel: coaches kunnen bewerken, de betreffende atleet kan deze bij de eigen antwoorden lezen. Migratie `0129_evaluationresponse_coach_feedback` voegt aparte lege JSON-opslag toe zonder bestaande antwoorden te wijzigen. De productievragenlijst staat niet in de lokale database; de functie wordt begrensd op genormaliseerde coachnaam en formuliertitel. Zes gerichte evaluatietests slagen, inclusief behoud van antwoorden/indieningsdatum en edit-/view-onlyrechten. De bredere TrackTimerTests-run bevat twee niet-gerelateerde bestaande dashboardlabelasserties die falen.
 
 - Race Calendar bewaart bij Save distances en overige popupterugkeren het gekozen kalenderjaar. Bij Indoor 2026/27 sprong een bewerking van een wedstrijd in januari 2027 eerder naar Indoor 2027/28 doordat het wedstrijdjaar als terugkeerjaar werd gebruikt.
 

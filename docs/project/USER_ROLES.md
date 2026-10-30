@@ -4,7 +4,7 @@ Bijgewerkt: 12 oktober 2026.
 
 ## Trainer
 
-- Voor Honoré Hoedts `Evaluatie seizoen 2025-2026` kunnen de eigenaar en gedelegeerde edit-coaches per antwoordregel `Coach comment` en `Plan` invullen. View-only coaches kunnen de velden alleen lezen; atleten zien of wijzigen deze interne coachvelden niet.
+- Voor Honoré Hoedts `Evaluatie seizoen 2025-2026` kunnen de eigenaar en gedelegeerde edit-coaches per antwoordregel `Coach comment` en `Plan` invullen. View-only coaches en de betreffende atleet kunnen de velden alleen lezen; een atleet ziet uitsluitend de coachvelden bij de eigen antwoorden en kan ze niet wijzigen.
 - Coaches wijzigen het gedeelde Race Type van eigen/toegankelijke wedstrijden met editrechten; atleten kunnen het racetype alleen lezen.
 Een trainer is doorgaans staff- of superuser en kan:
 
