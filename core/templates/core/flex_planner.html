@@ -1630,7 +1630,7 @@
                           title="View report"
                         >{{ cell.check.icon }}</button>
                       {% endif %}
-                      {% if cell.slot and not cell.has_race %}
+                      {% if cell.slot and not cell.calendar_race_locked %}
                         <button
                           type="button"
                           class="flex-delete-btn"
@@ -1717,7 +1717,7 @@
                           title="View report"
                         >{{ cell.check.icon }}</button>
                       {% endif %}
-                      {% if cell.slot and not cell.has_race %}
+                      {% if cell.slot and not cell.calendar_race_locked %}
                         <button
                           type="button"
                           class="flex-delete-btn"

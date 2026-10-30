@@ -10048,6 +10048,42 @@ class WatchProcessedMainRepTests(TestCase):
 
 
 class FlexPlannerAltTotalsTests(TestCase):
+    def test_manual_races_have_delete_action_and_stay_deleted_in_flex(self):
+        coach = get_user_model().objects.create_user(username="manualracecoach", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Manual race athlete", birth_year=2000, gender="X")
+        monday = date(2026, 10, 26)
+        plan = TrainingPlan.objects.create(owner=coach, name="Manual race source")
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        for index in (1, 2):
+            slot = TrainingSlot.objects.create(plan=plan, date=monday, slot_index=index)
+            slot.segments.create(type="CORE", text="Cross 3500m Race", special="RACE")
+        self.client.force_login(coach)
+        url = f"/flex-planner/?start={monday.isoformat()}&weeks=1&athletes={athlete.id}"
+        page = self.client.get(url)
+        row = page.context["week_rows"][0]["athlete_rows"][0]
+        for index, key in ((1, "am_cells"), (2, "pm_cells")):
+            self.assertTrue(row[key][0]["has_race"])
+            self.assertFalse(row[key][0]["calendar_race_locked"])
+            self.assertContains(page, f'data-flex-delete-url="/slot-modal/2026/10/26/{index}/')
+            response = self.client.post(f"/slot-modal/2026/10/26/{index}/?plan={plan.id}&athlete={athlete.id}&source=flex", {"action": "delete", "plan": str(plan.id), "athlete": str(athlete.id), "source": "flex"})
+            self.assertEqual(response.status_code, 200)
+        page = self.client.get(url)
+        row = page.context["week_rows"][0]["athlete_rows"][0]
+        self.assertIsNone(row["am_cells"][0]["slot"])
+        self.assertIsNone(row["pm_cells"][0]["slot"])
+
+    def test_race_calendar_race_keeps_delete_protection_in_flex(self):
+        coach = get_user_model().objects.create_user(username="linkedracecoach", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Linked race athlete", birth_year=2000, gender="X")
+        race = RaceEvent.objects.create(owner=coach, name="Calendar race", date="2026-10-26")
+        distance = RaceEventDistance.objects.create(race=race, distance="1500")
+        RaceEntry.objects.create(athlete=athlete, race_distance=distance, coach_selected=True)
+        self.client.force_login(coach)
+        page = self.client.get(f"/flex-planner/?start=2026-10-26&weeks=1&athletes={athlete.id}")
+        row = page.context["week_rows"][0]["athlete_rows"][0]
+        self.assertTrue(row["pm_cells"][0]["calendar_race_locked"])
+        self.assertNotContains(page, 'data-flex-delete-url="/slot-modal/2026/10/26/2/')
+
     def test_flex_week_payload_accepts_display_slots_for_both_sessions(self):
         import json
 

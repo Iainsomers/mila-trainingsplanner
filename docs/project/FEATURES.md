@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Flex Planner toont het rode verwijderkruisje ook bij handmatig ingevoerde races, in AM en PM. Een verwijderde handmatige race uit een bronplanning blijft met een lege persoonlijke override onderdrukt. Races met een actieve Race Calendar-koppeling behouden hun bescherming.
+
 - Year Planner-periodisatie biedt naast Recovery, Aerobe, Specific, Intense en Taper ook Racing (mediumblauw). Racing ondersteunt kiezen, leegmaken, slepen en rij-kopiëren; de fasekleur loopt mee in de weekkleuren van Flex Planner, AYC en Trainer Planning. Het blijft losstaan van echte Race Calendar-wedstrijden.
 
 - Periodisatierijen kopiëren/plakken in Year Planner slaat de hele zichtbare rij met één batchverzoek en één databasetransactie op, ook bij 12 maanden. De kopie wordt pas na succesvolle opslag getoond; fouten laten geen gedeeltelijke rij achter. Opeenvolgende opslagacties worden geserialiseerd en de planner wacht tijdens opslaan met nieuwe bediening. Wedstrijddagen worden server-side overgeslagen en blijven beschermd. Ook schilderen gebruikt batchopslag in plaats van losse verzoeken per dag.

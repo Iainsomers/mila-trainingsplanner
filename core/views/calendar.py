@@ -1397,6 +1397,7 @@ def flex_planner_view(request):
                 day_plan = plan_for_athlete_day.get((athlete.id, day))
 
                 for slot_index, target_cells in ((1, am_cells), (2, pm_cells)):
+                    calendar_race_day = slot_index == 2 and bool(race_entries_by_athlete_day.get((athlete.id, day)))
                     plan = day_plan
                     base_planning_slot = _base_planning_slot_for_day(
                         base_blocks_by_athlete, athlete.id, day, slot_index
@@ -1437,7 +1438,7 @@ def flex_planner_view(request):
                         flex_override_slot = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
                         if flex_override_slot is not None:
                             if _slot_is_visually_empty(flex_override_slot):
-                                if not _slot_has_race(slot):
+                                if not calendar_race_day:
                                     slot = None
                                     plan = flex_plan
                                     flex_blocks_base = True
@@ -1511,6 +1512,7 @@ def flex_planner_view(request):
                         ),
                         "slot": None if _slot_is_visually_empty(slot) else slot,
                         "has_race": _slot_has_race(slot),
+                        "calendar_race_locked": calendar_race_day and _slot_has_race(slot),
                         "is_override": is_override,
                         "no_plan": no_plan,
                         "check": _flex_check_payload(check_lookup.get((athlete.id, day, slot_index))),
