@@ -27,6 +27,7 @@ from core.models import (
     AthleteWeekPhaseOverride,
     AthleteWeekReport,
     AthleteDailyVital,
+    OuraConnection,
     CoachAccess,
     CoachSettings,
     RaceEntry,
@@ -3522,6 +3523,12 @@ def athlete_year_calendar_view(request):
         and getattr(selected_athlete, "daily_vitals_enabled", False)
         and evaluation_visibility["vitals"]
     )
+    show_oura_vitals_import = bool(
+        athlete_self_view
+        and show_daily_vitals
+        and selected_athlete.oura_connection_enabled
+        and OuraConnection.objects.filter(athlete=selected_athlete).exists()
+    )
     ayc_rowspan = 2 + (1 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
     is_coach_user = is_ayc_coach
     coach_can_edit_training = bool(
@@ -4245,6 +4252,7 @@ def athlete_year_calendar_view(request):
             "evaluation_pain_enabled": evaluation_pain_enabled,
             "show_week_reports": show_week_reports,
             "show_daily_vitals": show_daily_vitals,
+            "show_oura_vitals_import": show_oura_vitals_import,
             "ayc_rowspan": ayc_rowspan,
             "is_coach_user": is_coach_user,
             "coach_can_edit_training": coach_can_edit_training,

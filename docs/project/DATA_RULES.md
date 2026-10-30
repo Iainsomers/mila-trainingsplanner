@@ -108,6 +108,14 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 - Weekgemiddelde pas tonen bij minimaal drie bruikbare waarden.
 - Mobiel worden dezelfde vier gemiddelden gebruikt als desktop; er bestaat geen aparte mobiele berekening.
 
+### Oura-import naar Daily Vitals
+
+- Alleen de atleet zelf kan de Oura-import vanuit de AYC uitvoeren, en alleen als de coach Oura heeft toegestaan, Oura actief verbonden is en Daily Vitals zichtbaar is.
+- De importer verwerkt de afgelopen veertien dagen. Een dag wordt alleen voorgesteld als er een Oura-readinessrecord voor die dag bestaat; de readiness-score zelf wordt niet getoond of opgeslagen.
+- Alleen lege Daily Vitals-velden worden voorgesteld en opgeslagen. Bij een gedeeltelijk ingevulde dag kunnen uitsluitend de lege velden worden aangevuld; bestaande waarden blijven leidend. De atleet kan dagen uit de lijst verwijderen voordat `Use all` wordt gekozen.
+- Oura-slaapduur in seconden wordt naar uren omgerekend en op twee decimalen afgerond; de slaapscore wordt door 10 gedeeld en op één decimaal afgerond; gemiddelde slaap-HRV wordt naar hele ms afgerond.
+- De laagste hartslag tijdens slaap wordt niet als ochtendhartslag opgeslagen. Readiness wordt evenmin als vital opgeslagen. Het opslaan haalt Oura-data opnieuw op en controleert de bestaande waarden opnieuw om overschrijven te voorkomen.
+
 ## Polar: ruwe samples en tempoverwerking
 
 - A berekent min/km uit afstand en duur van iedere afzonderlijke ronde; duur blijft tot milliseconden zichtbaar. Naast de oorspronkelijke afstand wordt de rondeafstand rekenkundig afgerond naar het dichtstbijzijnde veelvoud van 50 meter; een exact half veelvoud wordt naar boven afgerond. De afzonderlijke Zx- en Tx-kolommen gebruiken het exacte rondetempo: Zx is de dichtstbijzijnde ingestelde zonesnelheid en Tx is het snelste PR-tempo dat met de rondesnelheid wordt bereikt. Ontbrekende instellingen of PR's worden niet geschat en verschijnen als NA.

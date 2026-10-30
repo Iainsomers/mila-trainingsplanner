@@ -954,6 +954,9 @@
     </select>
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">zones/times</button>
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#todayTrainingModal">today</button>
+    {% if show_oura_vitals_import %}
+    <button type="button" class="btn btn-sm btn-outline-primary" data-oura-import-open>Use Oura data</button>
+    {% endif %}
   </form>
 
   <div class="ayc-mobile">
@@ -974,6 +977,9 @@
         <div class="ayc-mobile-week-title" id="aycMobileWeekTitle"></div>
         <button type="button" class="btn btn-sm btn-outline-secondary" id="aycMobileNext" aria-label="Next week">&rsaquo;</button>
       </div>
+      {% if show_oura_vitals_import %}
+      <button type="button" class="btn btn-sm btn-outline-primary" data-oura-import-open>Use Oura data</button>
+      {% endif %}
     </div>
 
     {% for w in week_rows %}
@@ -1157,6 +1163,181 @@
       </form>
     </div>
   </div>
+  {% endif %}
+
+  {% if show_oura_vitals_import %}
+  <div class="modal fade" id="ouraVitalsImportModal" tabindex="-1" aria-hidden="true" data-import-url="{% url 'oura_vitals_import' %}">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+      <div class="modal-content">
+        {% csrf_token %}
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0">Use Oura data</h5>
+            <div class="small text-muted">Review suggested values. Existing values are never replaced.</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger d-none" id="ouraVitalsImportError" role="alert"></div>
+          <div class="text-muted" id="ouraVitalsImportLoading">Loading Oura data…</div>
+          <div class="text-muted d-none" id="ouraVitalsImportEmpty">No new Oura values are available for days with a readiness record.</div>
+          <div class="table-responsive d-none" id="ouraVitalsImportTableWrap">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead><tr><th>Date</th><th>Sleep hours</th><th>Sleep quality</th><th>HRV</th><th></th></tr></thead>
+              <tbody id="ouraVitalsImportRows"></tbody>
+            </table>
+            <p class="small text-muted mt-2 mb-0">Readiness is used only to select eligible days. Morning heart rate is not imported because Oura's lowest sleep heart rate is a different measurement.</p>
+          </div>
+          <div class="alert alert-success d-none mt-3 mb-0" id="ouraVitalsImportSuccess" role="status"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="ouraVitalsImportApply" disabled>Use all</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if show_oura_vitals_import %}
+  <script>
+  (function() {
+    var modalEl = document.getElementById("ouraVitalsImportModal");
+    var rowsEl = document.getElementById("ouraVitalsImportRows");
+    var tableWrap = document.getElementById("ouraVitalsImportTableWrap");
+    var loadingEl = document.getElementById("ouraVitalsImportLoading");
+    var emptyEl = document.getElementById("ouraVitalsImportEmpty");
+    var errorEl = document.getElementById("ouraVitalsImportError");
+    var successEl = document.getElementById("ouraVitalsImportSuccess");
+    var applyButton = document.getElementById("ouraVitalsImportApply");
+    if (!modalEl || !rowsEl || !applyButton) return;
+
+    function cookie(name) {
+      var prefix = name + "=";
+      var found = document.cookie.split(";").map(function(part) { return part.trim(); }).find(function(part) { return part.indexOf(prefix) === 0; });
+      return found ? decodeURIComponent(found.substring(prefix.length)) : "";
+    }
+
+    function setBusy(busy) {
+      loadingEl.classList.toggle("d-none", !busy);
+      applyButton.disabled = busy || rowsEl.querySelectorAll("tr").length === 0;
+    }
+
+    function showError(message) {
+      errorEl.textContent = message || "Oura data could not be loaded. Please try again.";
+      errorEl.classList.remove("d-none");
+    }
+
+    function post(action, extra) {
+      var body = new URLSearchParams(Object.assign({action: action, csrfmiddlewaretoken: cookie("csrftoken")}, extra || {}));
+      return fetch(modalEl.dataset.importUrl, {
+        method: "POST",
+        body: body,
+        headers: {"X-Requested-With": "XMLHttpRequest"},
+        credentials: "same-origin"
+      }).then(function(response) {
+        return response.json().then(function(data) {
+          if (!response.ok) throw new Error(data.error || "Oura request failed.");
+          return data;
+        });
+      });
+    }
+
+    function appendCell(row, value) {
+      var cell = document.createElement("td");
+      cell.textContent = value == null ? "—" : String(value);
+      row.appendChild(cell);
+    }
+
+    function showItems(items) {
+      rowsEl.replaceChildren();
+      (items || []).forEach(function(item) {
+        var row = document.createElement("tr");
+        row.dataset.day = item.day;
+        var parts = item.day.split("-");
+        appendCell(row, parts.length === 3 ? parts[2] + "-" + parts[1] + "-" + parts[0] : item.day);
+        appendCell(row, item.sleep_hours);
+        appendCell(row, item.sleep_quality);
+        appendCell(row, item.hrv);
+        var removeCell = document.createElement("td");
+        var removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "btn btn-sm btn-outline-danger";
+        removeButton.textContent = "×";
+        removeButton.setAttribute("aria-label", "Remove " + item.day);
+        removeButton.title = "Remove this day";
+        removeButton.addEventListener("click", function() {
+          row.remove();
+          setBusy(false);
+          emptyEl.classList.toggle("d-none", rowsEl.querySelectorAll("tr").length > 0);
+          tableWrap.classList.toggle("d-none", rowsEl.querySelectorAll("tr").length === 0);
+        });
+        removeCell.appendChild(removeButton);
+        row.appendChild(removeCell);
+        rowsEl.appendChild(row);
+      });
+      tableWrap.classList.toggle("d-none", rowsEl.querySelectorAll("tr").length === 0);
+      emptyEl.classList.toggle("d-none", rowsEl.querySelectorAll("tr").length > 0);
+      setBusy(false);
+    }
+
+    function resetModal() {
+      rowsEl.replaceChildren();
+      tableWrap.classList.add("d-none");
+      emptyEl.classList.add("d-none");
+      errorEl.classList.add("d-none");
+      successEl.classList.add("d-none");
+      successEl.textContent = "";
+      applyButton.textContent = "Use all";
+      applyButton.classList.remove("d-none");
+      setBusy(true);
+      document.body.appendChild(modalEl);
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      post("preview").then(function(data) {
+        showItems(data.items || []);
+      }).catch(function(error) {
+        loadingEl.classList.add("d-none");
+        showError(error.message);
+        applyButton.disabled = true;
+      });
+    }
+
+    document.querySelectorAll("[data-oura-import-open]").forEach(function(button) {
+      button.addEventListener("click", resetModal);
+    });
+
+    applyButton.addEventListener("click", function() {
+      applyButton.disabled = true;
+      errorEl.classList.add("d-none");
+      var selectedDays = Array.from(rowsEl.querySelectorAll("tr")).map(function(row) { return row.dataset.day; });
+      post("apply", {selected_days: JSON.stringify(selectedDays)}).then(function(data) {
+        successEl.textContent = "Saved Oura values for " + data.saved_count + (data.saved_count === 1 ? " day." : " days.");
+        successEl.classList.remove("d-none");
+        applyButton.classList.add("d-none");
+        window.setTimeout(function() {
+          var cleaned = false;
+          function cleanupAndRefresh() {
+            if (cleaned) return;
+            cleaned = true;
+            document.querySelectorAll(".modal-backdrop").forEach(function(backdrop) { backdrop.remove(); });
+            document.body.classList.remove("modal-open");
+            document.body.style.removeProperty("overflow");
+            document.body.style.removeProperty("padding-right");
+            modalEl.style.display = "none";
+            modalEl.setAttribute("aria-hidden", "true");
+            window.location.reload();
+          }
+          modalEl.addEventListener("hidden.bs.modal", cleanupAndRefresh, {once: true});
+          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+          window.setTimeout(cleanupAndRefresh, 700);
+        }, 500);
+      }).catch(function(error) {
+        applyButton.disabled = false;
+        showError(error.message);
+      });
+    });
+  })();
+  </script>
   {% endif %}
 
   <script>

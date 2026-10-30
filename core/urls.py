@@ -116,7 +116,7 @@ from core.views.slots import (
 
 from core.views.stats_debug import stats_debug_view
 from core.views.coros import coros_status_view, coros_workout_push_view
-from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view
+from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view, oura_vitals_import_view
 
 
 urlpatterns = [
@@ -124,6 +124,7 @@ urlpatterns = [
     path("integrations/oura/callback/", oura_callback_view, name="oura_callback"),
     path("integrations/oura/disconnect/", oura_disconnect_view, name="oura_disconnect"),
     path("integrations/oura/test/", oura_test_view, name="oura_test"),
+    path("integrations/oura/vitals-import/", oura_vitals_import_view, name="oura_vitals_import"),
     path(
         "privacy/",
         TemplateView.as_view(template_name="core/privacy_policy.html"),

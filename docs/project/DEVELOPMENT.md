@@ -45,7 +45,12 @@ De optionele Oura-OAuth-koppeling gebruikt Render-omgevingsvariabelen
 De OAuth-flow vraagt alleen `daily` aan en slaat de tokenrespons niet als ruwe
 diagnostiek op. De Oura-testpagina haalt op verzoek maximaal 14 dagen aan
 slaap- en readiness-samenvattingen op en toont die uitsluitend tijdelijk in de
-pagina. Resultaten worden niet opgeslagen en veranderen Daily Vitals niet.
+pagina. De atleet kan in de AYC afzonderlijk een importpreview opvragen en na
+het verwijderen van ongewenste dagen `Use all` kiezen. Readiness is alleen een
+verborgen voorwaarde; alleen lege slaapuren-, slaapkwaliteit- en HRV-velden
+worden bijgewerkt. De importer haalt bij het opslaan de data opnieuw op en
+controleert nogmaals op bestaande waarden. Oura's laagste slaap-HR wordt niet
+naar ochtendhartslag vertaald.
 API-verzoeken gebruiken een herkenbare `User-Agent`; OAuth-refresh bewaart het
 vervangen refresh-token.
 

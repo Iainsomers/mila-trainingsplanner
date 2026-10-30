@@ -1,3 +1,4 @@
+from datetime import date
 from urllib.parse import parse_qs, urlsplit
 from unittest.mock import Mock, patch
 
@@ -29,6 +30,7 @@ class OuraDashboardAndOAuthTests(TestCase):
             birth_year=2010,
             gender="V",
             oura_connection_enabled=True,
+            daily_vitals_enabled=True,
         )
         self.client.force_login(self.athlete_user)
 
@@ -39,6 +41,20 @@ class OuraDashboardAndOAuthTests(TestCase):
         self.assertContains(response, "Hardware settings")
         self.assertContains(response, "Oura connection")
         self.assertContains(response, reverse("oura_connect"))
+
+    def test_oura_import_button_is_shown_on_the_athletes_ayc_when_vitals_are_available(self):
+        OuraConnection.objects.create(
+            athlete=self.athlete,
+            access_token="access-token",
+            scope="daily",
+            health_data_consent_at="2026-10-29T08:00:00+00:00",
+        )
+
+        response = self.client.get(reverse("athlete_year_calendar"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Use Oura data")
+        self.assertContains(response, reverse("oura_vitals_import"))
 
     def test_oura_settings_are_hidden_and_connect_is_blocked_when_coach_disables_them(self):
         self.athlete.oura_connection_enabled = False
@@ -241,3 +257,115 @@ class OuraDashboardAndOAuthTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(OuraConnection.objects.exists())
+
+    def _oura_collections(self, mocked_get, *, days, readiness_days=None):
+        readiness_days = readiness_days if readiness_days is not None else days
+        payloads = [
+            {"data": [{
+                "day": day,
+                "type": "long_sleep",
+                "total_sleep_duration": 27000,
+                "lowest_heart_rate": 46,
+                "average_hrv": 72.4,
+            } for day in days], "next_token": None},
+            {"data": [{"day": day, "score": 82} for day in days], "next_token": None},
+            {"data": [{"day": day, "score": 78} for day in readiness_days], "next_token": None},
+        ]
+        responses = []
+        for payload in payloads:
+            response = Mock()
+            response.raise_for_status.return_value = None
+            response.json.return_value = payload
+            responses.append(response)
+        mocked_get.side_effect = responses
+
+    @patch("core.views.oura.timezone.localdate", return_value=date(2026, 10, 30))
+    @patch("core.views.oura.requests.get")
+    def test_athlete_oura_vitals_preview_uses_readiness_as_hidden_gate_and_only_suggests_empty_fields(
+        self, mocked_get, _mocked_today
+    ):
+        OuraConnection.objects.create(
+            athlete=self.athlete,
+            access_token="access-token",
+            scope="daily",
+            health_data_consent_at="2026-10-29T08:00:00+00:00",
+        )
+        AthleteDailyVital.objects.create(
+            athlete=self.athlete,
+            date="2026-10-29",
+            sleep_hours=6.5,
+            morning_hr=51,
+        )
+        self._oura_collections(
+            mocked_get,
+            days=["2026-10-29", "2026-10-28"],
+            readiness_days=["2026-10-29"],
+        )
+
+        response = self.client.post(reverse("oura_vitals_import"), {"action": "preview"})
+
+        self.assertEqual(response.status_code, 200)
+        items = response.json()["items"]
+        self.assertEqual(items, [{
+            "day": "2026-10-29",
+            "sleep_hours": None,
+            "sleep_quality": 8.2,
+            "hrv": 72,
+        }])
+        self.assertIsNone(AthleteDailyVital.objects.get(athlete=self.athlete, date="2026-10-29").sleep_quality)
+        self.assertNotIn("readiness_score", response.json()["items"][0])
+
+    @patch("core.views.oura.timezone.localdate", return_value=date(2026, 10, 30))
+    @patch("core.views.oura.requests.get")
+    def test_athlete_can_remove_days_then_use_all_without_overwriting_or_importing_morning_hr(
+        self, mocked_get, _mocked_today
+    ):
+        OuraConnection.objects.create(
+            athlete=self.athlete,
+            access_token="access-token",
+            scope="daily",
+            health_data_consent_at="2026-10-29T08:00:00+00:00",
+        )
+        vital = AthleteDailyVital.objects.create(
+            athlete=self.athlete,
+            date="2026-10-29",
+            sleep_hours=6.5,
+            morning_hr=51,
+        )
+        self._oura_collections(mocked_get, days=["2026-10-29", "2026-10-28"])
+
+        response = self.client.post(
+            reverse("oura_vitals_import"),
+            {"action": "apply", "selected_days": '["2026-10-29"]'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["saved_count"], 1)
+        vital.refresh_from_db()
+        self.assertEqual(vital.sleep_hours, 6.5)
+        self.assertEqual(float(vital.sleep_quality), 8.2)
+        self.assertEqual(vital.morning_hr, 51)
+        self.assertEqual(vital.hrv, 72)
+        self.assertFalse(AthleteDailyVital.objects.filter(athlete=self.athlete, date="2026-10-28").exists())
+        self.assertEqual(mocked_get.call_count, 3)
+
+    def test_oura_vitals_import_is_unavailable_to_coaches(self):
+        self.client.force_login(self.coach)
+
+        response = self.client.post(reverse("oura_vitals_import"), {"action": "preview"})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(AthleteDailyVital.objects.filter(athlete=self.athlete).exists())
+
+    def test_oura_vitals_import_requires_daily_vitals_to_be_enabled(self):
+        OuraConnection.objects.create(
+            athlete=self.athlete,
+            access_token="access-token",
+            health_data_consent_at="2026-10-29T08:00:00+00:00",
+        )
+        self.athlete.daily_vitals_enabled = False
+        self.athlete.save(update_fields=["daily_vitals_enabled"])
+
+        response = self.client.post(reverse("oura_vitals_import"), {"action": "preview"})
+
+        self.assertEqual(response.status_code, 403)

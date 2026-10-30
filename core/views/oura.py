@@ -2,18 +2,21 @@ import base64
 import hashlib
 import secrets
 from datetime import date, datetime, timedelta
+import json
 from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.db import transaction
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
-from core.models import Athlete, OuraConnection
+from core.access import evaluation_visibility_for_request
+from core.models import Athlete, AthleteDailyVital, OuraConnection
 from core.views.athlete_identity import _athlete_for_user, _is_ayc_coach_user
 from core.views.common import _filter_owned
 
@@ -179,6 +182,128 @@ def build_oura_test_data(connection, *, today=None):
             "average_hrv": item.get("average_hrv"),
         })
     return preview
+
+
+def build_oura_vitals_suggestions(connection, athlete, *, today=None):
+    """Return only readiness-backed Oura values for still-empty Daily Vitals fields."""
+    today = today or timezone.localdate()
+    preview = build_oura_test_data(connection, today=today)
+    existing = {
+        vital.date: vital
+        for vital in AthleteDailyVital.objects.filter(
+            athlete=athlete,
+            date__gte=today - timedelta(days=13),
+            date__lte=today,
+        )
+    }
+    suggestions = []
+    for item in preview:
+        if item["readiness_score"] is None:
+            continue
+        vital = existing.get(item["day"])
+        row = {"day": item["day"].isoformat()}
+
+        sleep_hours = item["sleep_hours"]
+        if (not vital or vital.sleep_hours is None) and sleep_hours is not None and 0 < sleep_hours <= 24:
+            row["sleep_hours"] = sleep_hours
+        else:
+            row["sleep_hours"] = None
+
+        sleep_score = item["sleep_score"]
+        if (not vital or vital.sleep_quality is None) and sleep_score is not None:
+            try:
+                score = float(sleep_score)
+                row["sleep_quality"] = round(score / 10, 1) if 1 <= score <= 100 else None
+            except (TypeError, ValueError):
+                row["sleep_quality"] = None
+        else:
+            row["sleep_quality"] = None
+
+        average_hrv = item["average_hrv"]
+        if (not vital or vital.hrv is None) and average_hrv is not None:
+            try:
+                hrv = round(float(average_hrv))
+                row["hrv"] = hrv if 0 <= hrv <= 65535 else None
+            except (TypeError, ValueError):
+                row["hrv"] = None
+        else:
+            row["hrv"] = None
+
+        # Oura's lowest sleep heart rate is not the same measurement as a
+        # morning heart-rate reading, so it is deliberately not suggested.
+        if any(row[field] is not None for field in ("sleep_hours", "sleep_quality", "hrv")):
+            suggestions.append(row)
+    return suggestions
+
+
+def _oura_import_athlete(request):
+    athlete = _athlete_user(request)
+    if not athlete or not athlete.oura_connection_enabled or not athlete.daily_vitals_enabled:
+        return None
+    visibility = evaluation_visibility_for_request(request, athlete.owner, athlete_self=True)
+    if not visibility["vitals"]:
+        return None
+    if not OuraConnection.objects.filter(athlete=athlete).exists():
+        return None
+    return athlete
+
+
+@login_required
+@require_POST
+def oura_vitals_import_view(request):
+    """Preview or explicitly apply readiness-backed values to the athlete's own vitals."""
+    athlete = _oura_import_athlete(request)
+    if athlete is None:
+        return JsonResponse({"error": "Oura import is not available for this account."}, status=403)
+    connection = OuraConnection.objects.filter(athlete=athlete).first()
+    action = request.POST.get("action")
+    if action not in {"preview", "apply"}:
+        return JsonResponse({"error": "Unknown Oura import action."}, status=400)
+
+    selected_days = None
+    if action == "apply":
+        try:
+            raw_selected = json.loads(request.POST.get("selected_days", "[]"))
+            if not isinstance(raw_selected, list) or any(not isinstance(value, str) for value in raw_selected):
+                raise ValueError
+            selected_days = {date.fromisoformat(value) for value in raw_selected}
+        except (TypeError, ValueError):
+            return JsonResponse({"error": "The selected dates were not valid."}, status=400)
+
+    try:
+        suggestions = build_oura_vitals_suggestions(connection, athlete)
+    except (requests.RequestException, ValueError, KeyError):
+        return JsonResponse({"error": "Oura data could not be fetched. Please try again or reconnect Oura."}, status=502)
+
+    if action == "preview":
+        return JsonResponse({"items": suggestions})
+
+    saved = []
+    with transaction.atomic():
+        for item in suggestions:
+            day = date.fromisoformat(item["day"])
+            if day not in selected_days:
+                continue
+            vital = AthleteDailyVital.objects.select_for_update().filter(athlete=athlete, date=day).first()
+            if vital is None:
+                vital = AthleteDailyVital(athlete=athlete, date=day)
+            changed_fields = []
+            for field in ("sleep_hours", "sleep_quality", "hrv"):
+                value = item.get(field)
+                if value is not None and getattr(vital, field) is None:
+                    setattr(vital, field, value)
+                    changed_fields.append(field)
+            if changed_fields:
+                vital.updated_by = request.user
+                vital.save()
+                saved.append({
+                    "day": day.isoformat(),
+                    "sleep_hours": vital.sleep_hours,
+                    "sleep_quality": vital.sleep_quality,
+                    "morning_hr": vital.morning_hr,
+                    "hrv": vital.hrv,
+                })
+    return JsonResponse({"items": saved, "saved_count": len(saved)})
 
 
 @login_required
