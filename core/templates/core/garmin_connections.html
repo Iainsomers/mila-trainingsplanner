@@ -11,8 +11,10 @@
   </div>
   <ul class="list-group">
     {% for athlete in connected_athletes %}
-      <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
-        <span>{{ athlete.name }}</span><span class="badge text-bg-success">Connected</span>
+      <li class="list-group-item p-0">
+        <a href="{% url 'garmin_athlete_activities' athlete.id %}" class="d-flex justify-content-between align-items-center gap-2 p-3 text-decoration-none">
+          <span>{{ athlete.name }}</span><span class="badge text-bg-success">Connected</span>
+        </a>
       </li>
     {% empty %}
       <li class="list-group-item text-muted">No athletes connected yet.</li>

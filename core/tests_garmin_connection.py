@@ -167,6 +167,44 @@ class GarminConnectionTests(TestCase):
                 "zone_method": "manual", "z1_pace": "6:00", "z2_pace": "5:30",
                 "z3_pace": "5:00", "z4_pace": "4:30", "z5_pace": "4:00"}
 
+    def test_connected_athlete_opens_all_available_activities_newest_first(self):
+        from core.models import GarminActivity
+        self.enable()
+        GarminConnection.objects.create(athlete=self.athlete, access_token="secret-token", data_consent_at=timezone.now())
+        earlier = timezone.now() - timezone.timedelta(days=2)
+        for index, start in enumerate((earlier, timezone.now())):
+            GarminActivity.objects.create(athlete=self.athlete, activity_start=start,
+                original_filename="private-file.fit", file_hash=str(index), raw_file=b"private raw data",
+                parsed_data={"human": {"distance": f"{index + 5}.00 km"}})
+        self.client.force_login(self.coach)
+        url = reverse("garmin_athlete_activities", args=[self.athlete.pk])
+        self.assertContains(self.client.get(reverse("garmin_connections")), f'href="{url}"')
+        page = self.client.get(url)
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, earlier.strftime("%d-%m-%Y"))
+        self.assertContains(page, "5.00 km")
+        self.assertContains(page, "6.00 km")
+        self.assertLess(page.content.index(b"6.00 km"), page.content.index(b"5.00 km"))
+        for secret in ("secret-token", "private-file.fit", "private raw data"):
+            self.assertNotContains(page, secret)
+
+    def test_activities_page_enforces_coach_ownership_and_active_connection(self):
+        self.enable()
+        connection = GarminConnection.objects.create(athlete=self.athlete, access_token="token", data_consent_at=timezone.now())
+        url = reverse("garmin_athlete_activities", args=[self.athlete.pk])
+        self.assertEqual(self.client.get(url).status_code, 403)
+        other_coach = get_user_model().objects.create_user(username="unrelated-coach", is_staff=True)
+        self.client.force_login(other_coach)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.client.force_login(self.coach)
+        self.assertContains(self.client.get(url), "No Garmin activities available")
+        self.athlete.garmin_connection_enabled = False
+        self.athlete.save()
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.enable()
+        connection.delete()
+        self.assertEqual(self.client.get(url).status_code, 404)
+
     @patch("core.views.garmin.requests.delete")
     def test_coach_switch_saves_and_off_disconnects(self, delete):
         self.client.force_login(self.coach)

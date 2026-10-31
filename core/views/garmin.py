@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import HttpResponseForbidden
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -159,3 +159,20 @@ def garmin_connections_view(request):
         garmin_connection_enabled=True, garmin_connection__isnull=False,
     ), request).only("id", "name").order_by("name", "id")
     return render(request, "core/garmin_connections.html", {"connected_athletes": athletes})
+
+
+@login_required
+@require_GET
+def garmin_athlete_activities_view(request, athlete_id):
+    from core.access import is_coach_tools_only_user
+    from core.models import GarminActivity
+    from core.views.common import _is_coach_user, _filter_owned
+    if _athlete_user(request) or not _is_coach_user(request.user) or is_coach_tools_only_user(request.user):
+        return HttpResponseForbidden()
+    athlete = get_object_or_404(_filter_owned(Athlete.objects.filter(
+        garmin_connection_enabled=True, garmin_connection__isnull=False,
+    ), request), pk=athlete_id)
+    activities = GarminActivity.objects.filter(athlete=athlete).defer("raw_file")
+    return render(request, "core/garmin_athlete_activities.html", {
+        "athlete": athlete, "activities": activities,
+    })
