@@ -40,6 +40,8 @@ class GarminPushTests(TestCase):
         page = self.client.get(reverse("garmin_athlete_activities", args=[self.athlete.pk]))
         self.assertContains(page, "31-10-2026")
         self.assertContains(page, "12.35 km")
+        self.assertIsNotNone(page.context["last_received_at"])
+        self.assertContains(page, "Last received from Garmin:")
         self.assertNotContains(page, "must-not-be-stored")
         self.assertNotContains(page, "private-access")
 
@@ -119,18 +121,15 @@ class GarminPushTests(TestCase):
         self.assertEqual(page["Cache-Control"], "private, no-store")
 
     @patch("core.views.garmin.requests.get")
-    def test_admin_can_copy_resolved_user_id_but_coach_cannot_see_it(self, get):
+    def test_authorized_coach_can_copy_resolved_user_id_without_seeing_tokens(self, get):
         self.connection.garmin_user_id = None
         self.connection.save()
         get.return_value = Mock(json=lambda: {"userId": "resolved-garmin-id"})
         self.client.force_login(self.coach)
         url = reverse("garmin_athlete_activities", args=[self.athlete.pk])
         page = self.client.get(url)
-        self.assertNotContains(page, 'id="garmin-user-id"')
-        get.assert_not_called()
-        self.coach.is_superuser = True
-        self.coach.save()
-        page = self.client.get(url)
+        self.assertContains(page, 'id="garmin-user-id"')
+        get.assert_called_once()
         self.assertContains(page, 'value="resolved-garmin-id"')
         self.assertContains(page, "Summary Resender")
         self.assertNotContains(page, "private-access")

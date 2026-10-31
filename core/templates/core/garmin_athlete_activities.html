@@ -18,6 +18,10 @@
   {% elif identity_error %}
   <p class="alert alert-warning">The Garmin User ID could not be retrieved. Refresh this page to try again.</p>
   {% endif %}
+  <p class="small text-muted">
+    {% if last_received_at %}Last received from Garmin: {{ last_received_at|date:"d-m-Y H:i" }}.
+    {% else %}No automatically delivered Garmin activities have been saved yet. An activity already uploaded to Garmin Connect may need to be sent again using Summary Resender.{% endif %}
+  </p>
   <div class="card">
     <div class="table-responsive">
       <table class="table table-sm mb-0">

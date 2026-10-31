@@ -312,16 +312,16 @@ def garmin_athlete_activities_view(request, athlete_id):
     athlete = get_object_or_404(_filter_owned(Athlete.objects.filter(
         garmin_connection_enabled=True, garmin_connection__isnull=False,
     ), request), pk=athlete_id)
-    from core.views.coach import _is_product_admin
-    can_view_garmin_id = request.user.is_superuser or _is_product_admin(request.user)
+    # Athlete ownership/access has already been checked above. Coaches may
+    # retrieve this identifier for resending; OAuth tokens remain private.
     garmin_user_id = None
     identity_error = False
-    if can_view_garmin_id:
-        try:
-            garmin_user_id = ensure_user_id(GarminConnection.objects.get(athlete=athlete))
-        except (requests.RequestException, ValueError, KeyError, TypeError, OverflowError,
-                GarminConnection.DoesNotExist, IntegrityError):
-            identity_error = True
+    try:
+        garmin_user_id = ensure_user_id(GarminConnection.objects.get(athlete=athlete))
+    except (requests.RequestException, ValueError, KeyError, TypeError, OverflowError,
+            GarminConnection.DoesNotExist, IntegrityError):
+        identity_error = True
+    last_received_at = GarminActivitySummary.objects.filter(athlete=athlete).order_by("-received_at").values_list("received_at", flat=True).first()
     activities = []
     for activity in GarminActivity.objects.filter(athlete=athlete).only("activity_start", "parsed_data"):
         activities.append({"activity_start": activity.activity_start,
@@ -333,7 +333,7 @@ def garmin_athlete_activities_view(request, athlete_id):
     activities.sort(key=lambda row: row["activity_start"].timestamp() if row["activity_start"] else float("-inf"), reverse=True)
     response = render(request, "core/garmin_athlete_activities.html", {
         "athlete": athlete, "activities": activities,
-        "garmin_user_id": garmin_user_id, "identity_error": identity_error,
+        "garmin_user_id": garmin_user_id, "identity_error": identity_error, "last_received_at": last_received_at,
     })
     response["Cache-Control"] = "private, no-store"
     return response
