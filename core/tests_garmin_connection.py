@@ -125,6 +125,38 @@ class GarminConnectionTests(TestCase):
         self.client.force_login(self.coach)
         self.assertContains(self.client.get(reverse("coach_athlete_edit", args=[self.athlete.pk])), "Allow Garmin Connection")
 
+    def test_coach_dashboard_lists_only_connected_athletes_of_active_coach(self):
+        from core.models import CoachAccess
+        self.enable()
+        GarminConnection.objects.create(athlete=self.athlete, access_token="private-token", data_consent_at=timezone.now())
+        other_coach = get_user_model().objects.create_user(username="other-coach", is_staff=True)
+        other = Athlete.objects.create(owner=other_coach, name="Other connected runner", birth_year=2000, gender="V", garmin_connection_enabled=True)
+        GarminConnection.objects.create(athlete=other, access_token="other-token", data_consent_at=timezone.now())
+        self.client.force_login(self.coach)
+        page = self.client.get(reverse("dashboard"))
+        self.assertContains(page, 'id="coach-garmin-heading"')
+        self.assertContains(page, "under construction")
+        self.assertEqual([a.pk for a in page.context["garmin_connected_athletes"]], [self.athlete.pk])
+        self.assertNotContains(page, "Other connected runner")
+        self.assertNotContains(page, "private-token")
+        CoachAccess.objects.create(owner=other_coach, grantee=self.coach, can_edit=False)
+        session = self.client.session
+        session["active_coach_owner_id"] = other_coach.pk
+        session.save()
+        page = self.client.get(reverse("dashboard"))
+        self.assertEqual([a.pk for a in page.context["garmin_connected_athletes"]], [other.pk])
+
+    def test_coach_garmin_tile_empty_and_hidden_from_athlete(self):
+        self.client.force_login(self.coach)
+        page = self.client.get(reverse("dashboard"))
+        self.assertContains(page, "No athletes connected yet.")
+        self.enable()  # Permission alone is not a connection.
+        self.assertEqual(self.client.get(reverse("dashboard")).context["garmin_connected_athletes"], [])
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("dashboard"))
+        self.assertNotContains(page, 'id="coach-garmin-heading"')
+        self.assertEqual(page.context["garmin_connected_athletes"], [])
+
     def settings_data(self):
         return {"name": self.athlete.name, "gender": "V", "birth_year": "2000",
                 "zone_method": "manual", "z1_pace": "6:00", "z2_pace": "5:30",
