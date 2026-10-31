@@ -158,6 +158,10 @@ Bijgewerkt: 30 oktober 2026.
 
 ## Garmin — 31 oktober 2026
 
-Trainer-only `Allow Garmin Connection`, de eigen dashboardtegel, OAuth2 PKCE, optionele AI-toestemming en `Withdraw AI permission` zijn toegevoegd. Intrekken blokkeert Garmin-AI en ontkoppelt; trainer uitschakelen doet hetzelfde. Garmin C valt zonder toestemming terug op vaste herkenning. De privacyverklaring beschrijft deze concrete werking. Render heeft de Garmin-appsleutels nodig voordat echt verbinden beschikbaar is. Automatische import is nog niet geïmplementeerd.
+Trainer-only `Allow Garmin Connection`, de eigen dashboardtegel, OAuth2 PKCE, optionele AI-toestemming en `Withdraw AI permission` zijn toegevoegd. Intrekken blokkeert Garmin-AI en ontkoppelt; trainer uitschakelen doet hetzelfde. Garmin C valt zonder toestemming terug op vaste herkenning. De privacyverklaring beschrijft deze concrete werking. Render heeft de Garmin-appsleutels nodig voordat echt verbinden beschikbaar is. Activity Summary Push-ontvangst is nu geïmplementeerd; externe activering en een echte Garmin-push moeten nog worden bevestigd.
 
 Validatie Garmin: 28 gerichte Garmin/Oura-tests geslaagd; `manage.py check`, migratiecontrole en lokale migratie geslaagd. De uitgebreidere `core.tests_polar_raw`-controle heeft vier bestaande fouten door SimpleNamespace-gebruikers in de toegangscontrole; alle vier zijn ook met de ongewijzigde HEAD-versie van polar_raw.py gereproduceerd. Overige Polar-raw-tests slagen.
+
+## Garmin-ontvangst — 31 oktober 2026
+
+De minimale Push-ontvanger, stabiele user-ID-koppeling en gecombineerde lijst (datum/afstand) zijn gebouwd. Migratie 0131 is vereist. De privé-URL staat voor beheerders op Garmin Connections onder Garmin receiving setup. De huidige API Tools-pagina was niet toegankelijk via computerbediening; de gebruiker moet de URL daar voor Activity Summaries/Push invullen en een activiteit synchroniseren. De automatische stroom is pas end-to-end bevestigd na die echte levering; synthetische tests bewaken nu identiteit, toegangsrechten, ongeldige batches, herhalingen en ontkoppeling.

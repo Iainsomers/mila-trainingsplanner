@@ -1501,11 +1501,26 @@ class AthleteDailyVital(models.Model):
 
 class GarminConnection(models.Model):
     athlete = models.OneToOneField(Athlete, on_delete=models.CASCADE, related_name="garmin_connection")
+    garmin_user_id = models.CharField(max_length=128, null=True, blank=True, unique=True)
     access_token = models.TextField()
     refresh_token = models.TextField(blank=True, default="")
     token_expires_at = models.DateTimeField(null=True, blank=True)
     connected_at = models.DateTimeField(auto_now_add=True)
     data_consent_at = models.DateTimeField()
+
+
+class GarminActivitySummary(models.Model):
+    """Minimal activity summary received through Garmin Push; no raw tokens/GPS."""
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="garmin_activity_summaries")
+    activity_id = models.CharField(max_length=128)
+    activity_start = models.DateTimeField(db_index=True)
+    activity_date = models.DateField(db_index=True)
+    distance_m = models.FloatField(null=True, blank=True)
+    received_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-activity_start", "-id"]
+        constraints = [models.UniqueConstraint(fields=["athlete", "activity_id"], name="unique_garmin_summary_per_athlete")]
 
 
 class OuraConnection(models.Model):

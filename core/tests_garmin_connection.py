@@ -14,6 +14,9 @@ from core.views.garmin import CONSENT_VERSION, ai_allowed
                    GARMIN_REDIRECT_URI="https://example.org/integrations/garmin/callback/")
 class GarminConnectionTests(TestCase):
     def setUp(self):
+        identity = patch("core.views.garmin.requests.get", return_value=Mock(json=lambda: {"userId": "test-garmin-user"}))
+        identity.start()
+        self.addCleanup(identity.stop)
         users = get_user_model()
         self.coach = users.objects.create_user(username="coach", is_staff=True)
         self.user = users.objects.create_user(username="runner", first_name="Runner", last_name="One")
@@ -80,6 +83,14 @@ class GarminConnectionTests(TestCase):
         self.callback(post, ai=False)
         self.assertTrue(GarminConnection.objects.exists())
         self.assertFalse(ai_allowed(self.athlete))
+
+    @patch("core.views.garmin.requests.post")
+    def test_reconnecting_resolves_new_garmin_account_instead_of_reusing_old_identity(self, post):
+        self.enable()
+        GarminConnection.objects.create(athlete=self.athlete, garmin_user_id="old-garmin-account",
+            access_token="old-token", data_consent_at=timezone.now())
+        self.callback(post)
+        self.assertEqual(GarminConnection.objects.get(athlete=self.athlete).garmin_user_id, "test-garmin-user")
 
     @patch("core.views.garmin.requests.post")
     def test_invalid_state_and_disabled_permission_reject_callback(self, post):
