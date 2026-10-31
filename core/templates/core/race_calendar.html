@@ -78,12 +78,9 @@
           <label class="form-label">Name</label>
           <input type="text" name="name" class="form-control" value="{{ request.POST.name }}" required>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-6">
           <label class="form-label">Date</label>
           <input type="date" name="date" class="form-control" value="{% if request.POST.date %}{{ request.POST.date }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" required>
-        </div>
-        <div class="col-12 col-md-3">
-          <button type="submit" class="btn btn-primary w-100">Add</button>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label small mb-1" for="newRaceType">Race Type</label>
@@ -93,11 +90,14 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-12 col-md-6 align-self-end">
+        <div class="col-12 col-md-3 align-self-end">
           <label class="form-check small mb-0">
             <input type="checkbox" class="form-check-input" name="multiple_days" value="1" data-race-multiple-days {% if request.POST.multiple_days == '1' %}checked{% endif %}>
             <span class="form-check-label">Multiple days</span>
           </label>
+        </div>
+        <div class="col-12 col-md-3">
+          <button type="submit" class="btn btn-primary w-100">Add</button>
         </div>
         <div class="col-12 col-md-6" data-race-end-wrap {% if request.POST.multiple_days != '1' %}hidden{% endif %}>
           <label class="form-label small mb-1">Until</label>

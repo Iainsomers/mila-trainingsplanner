@@ -179,3 +179,5 @@ Race Calendar-lijst gebruikt op brede schermen drie gelijkmatig gevulde kolommen
 Race Calendar-popup: Athlete, Attend, Distance, Trainer, Athlete, Target gebruiken gedeelde gridbreedtes op desktop en mobiel. Attend staat eenmaal op de eerste afstandsrij (ook bruikbaar zonder afstanden); Distance-kop en afstandswaarden zijn gecentreerd op dezelfde kolom.
 
 Race Calendar toont tussen wedstrijdnaam en afstanden het aantal Attend-selecties zonder geselecteerde afstand als hetzelfde groene bolletje als de afstandsaantallen. Nul wordt verborgen. De telling volgt de actieve groep-/atleetfilter en wijzigt direct na opslaan van selecties.
+
+Add race: naam en begindatum krijgen elk een halve rij; Add staat op de volgende rij naast Race Type en Multiple days. Hierdoor blijft de volledige begindatum leesbaar. Op mobiel stapelen de velden en knop.
