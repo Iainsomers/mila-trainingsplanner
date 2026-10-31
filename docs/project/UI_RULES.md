@@ -183,3 +183,5 @@ Race Calendar toont tussen wedstrijdnaam en afstanden het aantal Attend-selectie
 Add race: naam en begindatum krijgen elk een halve rij; Add staat op de volgende rij naast Race Type en Multiple days. Hierdoor blijft de volledige begindatum leesbaar. Op mobiel stapelen de velden en knop.
 
 Year Planner toont aaneengesloten dagen van dezelfde wedstrijd als één doorlopende pil met één naam per zichtbare kalenderstrook. Bij een maand-/strookgrens begint een nieuwe pil; de dagelijkse raceblokkade en afstand-hover blijven bestaan.
+
+De wisselknop Race Calendar / Back to Yearplanner staat gecentreerd naast de legenda, heeft in beide standen dezelfde breedte (196px), donker MiLa-blauw (#17324d), witte semibold tekst en een richtingspijl. Op mobiel mag hij onder de legenda afbreken en is hij minimaal 44px hoog.
