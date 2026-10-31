@@ -118,6 +118,39 @@ class GarminPushTests(TestCase):
         self.assertContains(page, self.url)
         self.assertEqual(page["Cache-Control"], "private, no-store")
 
+    @patch("core.views.garmin.requests.get")
+    def test_admin_can_copy_resolved_user_id_but_coach_cannot_see_it(self, get):
+        self.connection.garmin_user_id = None
+        self.connection.save()
+        get.return_value = Mock(json=lambda: {"userId": "resolved-garmin-id"})
+        self.client.force_login(self.coach)
+        url = reverse("garmin_athlete_activities", args=[self.athlete.pk])
+        page = self.client.get(url)
+        self.assertNotContains(page, 'id="garmin-user-id"')
+        get.assert_not_called()
+        self.coach.is_superuser = True
+        self.coach.save()
+        page = self.client.get(url)
+        self.assertContains(page, 'value="resolved-garmin-id"')
+        self.assertContains(page, "Summary Resender")
+        self.assertNotContains(page, "private-access")
+        self.assertEqual(page["Cache-Control"], "private, no-store")
+        self.connection.refresh_from_db()
+        self.assertEqual(self.connection.garmin_user_id, "resolved-garmin-id")
+
+    @patch("core.views.garmin.requests.get")
+    def test_identity_failure_keeps_connection_and_activity_page_available(self, get):
+        self.connection.garmin_user_id = None
+        self.connection.save()
+        get.return_value = Mock(json=lambda: {})
+        self.coach.is_superuser = True
+        self.coach.save()
+        self.client.force_login(self.coach)
+        page = self.client.get(reverse("garmin_athlete_activities", args=[self.athlete.pk]))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "could not be retrieved")
+        self.assertTrue(GarminConnection.objects.filter(pk=self.connection.pk).exists())
+
     def test_push_never_crosses_athletes_even_with_misleading_athlete_id(self):
         other = Athlete.objects.create(owner=self.coach, name="Other Push Runner", birth_year=2000,
             gender="X", garmin_connection_enabled=True)

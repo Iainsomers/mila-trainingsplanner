@@ -9,6 +9,15 @@
     </div>
     <a href="{% url 'garmin_connections' %}" class="btn btn-outline-secondary">Back</a>
   </div>
+  {% if garmin_user_id %}
+  <div class="card card-body mb-3">
+    <label class="form-label" for="garmin-user-id">Garmin User ID</label>
+    <input id="garmin-user-id" class="form-control form-control-sm" value="{{ garmin_user_id }}" readonly onclick="this.select()">
+    <div class="form-text">Copy this ID into User ID in Garmin API Tools → Summary Resender. Select Activity and the required time range.</div>
+  </div>
+  {% elif identity_error %}
+  <p class="alert alert-warning">The Garmin User ID could not be retrieved. Refresh this page to try again.</p>
+  {% endif %}
   <div class="card">
     <div class="table-responsive">
       <table class="table table-sm mb-0">
