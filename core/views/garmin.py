@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import HttpResponseForbidden
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -146,3 +146,16 @@ def garmin_withdraw_view(request):
     request.session.pop(SESSION_KEY, None)
     remote_ok = revoke_connection(athlete)
     return _dashboard("disconnected" if remote_ok else "disconnected_remote_pending")
+
+
+@login_required
+@require_GET
+def garmin_connections_view(request):
+    from core.access import is_coach_tools_only_user
+    from core.views.common import _is_coach_user, _filter_owned
+    if _athlete_user(request) or not _is_coach_user(request.user) or is_coach_tools_only_user(request.user):
+        return HttpResponseForbidden()
+    athletes = _filter_owned(Athlete.objects.filter(
+        garmin_connection_enabled=True, garmin_connection__isnull=False,
+    ), request).only("id", "name").order_by("name", "id")
+    return render(request, "core/garmin_connections.html", {"connected_athletes": athletes})

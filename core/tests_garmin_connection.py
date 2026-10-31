@@ -136,29 +136,31 @@ class GarminConnectionTests(TestCase):
         page = self.client.get(reverse("dashboard"))
         self.assertContains(page, 'id="coach-garmin-heading"')
         self.assertContains(page, "under construction")
-        self.assertContains(page, '<details class="card h-100" id="coach-garmin-connections">')
-        self.assertNotContains(page, 'id="coach-garmin-connections" open')
+        self.assertContains(page, f'href="{reverse("garmin_connections")}"')
+        self.assertNotContains(page, "Runner One")
         self.assertGreater(page.content.index(b'id="coach-garmin-connections"'), page.content.index(b'Polar (under development)'))
-        self.assertEqual([a.pk for a in page.context["garmin_connected_athletes"]], [self.athlete.pk])
+        page = self.client.get(reverse("garmin_connections"))
+        self.assertEqual([a.pk for a in page.context["connected_athletes"]], [self.athlete.pk])
         self.assertNotContains(page, "Other connected runner")
         self.assertNotContains(page, "private-token")
         CoachAccess.objects.create(owner=other_coach, grantee=self.coach, can_edit=False)
         session = self.client.session
         session["active_coach_owner_id"] = other_coach.pk
         session.save()
-        page = self.client.get(reverse("dashboard"))
-        self.assertEqual([a.pk for a in page.context["garmin_connected_athletes"]], [other.pk])
+        page = self.client.get(reverse("garmin_connections"))
+        self.assertEqual([a.pk for a in page.context["connected_athletes"]], [other.pk])
 
     def test_coach_garmin_tile_empty_and_hidden_from_athlete(self):
         self.client.force_login(self.coach)
         page = self.client.get(reverse("dashboard"))
-        self.assertContains(page, "No athletes connected yet.")
+        self.assertNotContains(page, "No athletes connected yet.")
+        self.assertContains(self.client.get(reverse("garmin_connections")), "No athletes connected yet.")
         self.enable()  # Permission alone is not a connection.
-        self.assertEqual(self.client.get(reverse("dashboard")).context["garmin_connected_athletes"], [])
+        self.assertEqual(list(self.client.get(reverse("garmin_connections")).context["connected_athletes"]), [])
         self.client.force_login(self.user)
         page = self.client.get(reverse("dashboard"))
         self.assertNotContains(page, 'id="coach-garmin-heading"')
-        self.assertEqual(page.context["garmin_connected_athletes"], [])
+        self.assertEqual(self.client.get(reverse("garmin_connections")).status_code, 403)
 
     def settings_data(self):
         return {"name": self.athlete.name, "gender": "V", "birth_year": "2000",

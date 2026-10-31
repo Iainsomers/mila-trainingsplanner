@@ -117,11 +117,12 @@ from core.views.slots import (
 
 from core.views.stats_debug import stats_debug_view
 from core.views.coros import coros_status_view, coros_workout_push_view
-from core.views.garmin import garmin_connect_view, garmin_callback_view, garmin_withdraw_view
+from core.views.garmin import garmin_connect_view, garmin_callback_view, garmin_withdraw_view, garmin_connections_view
 from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view, oura_vitals_import_view
 
 
 urlpatterns = [
+    path("coach/garmin/", garmin_connections_view, name="garmin_connections"),
     path("integrations/garmin/connect/", garmin_connect_view, name="garmin_connect"),
     path("integrations/garmin/callback/", garmin_callback_view, name="garmin_callback"),
     path("integrations/garmin/withdraw-ai/", garmin_withdraw_view, name="garmin_withdraw"),

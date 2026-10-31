@@ -548,11 +548,6 @@ def dashboard_view(request):
     from core.views.garmin import configured as garmin_configured
     from core.models import GarminConnection
     garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
-    garmin_connected_athletes = []
-    if is_trainer_user and not coach_tools_only:
-        garmin_connected_athletes = list(_filter_owned(
-            Athlete.objects.filter(garmin_connection_enabled=True, garmin_connection__isnull=False), request
-        ).only("id", "name").order_by("name", "id"))
 
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
@@ -566,7 +561,6 @@ def dashboard_view(request):
         "is_product_admin": _is_product_admin(request.user),
         "is_llg_team": is_llg_team,
         "garmin_upload_athlete_count": garmin_upload_athlete_count,
-        "garmin_connected_athletes": garmin_connected_athletes,
         "garmin_connection_enabled": bool(is_athlete_user and athlete.garmin_connection_enabled),
         "garmin_connection": garmin_connection,
         "garmin_configured": garmin_configured(),
