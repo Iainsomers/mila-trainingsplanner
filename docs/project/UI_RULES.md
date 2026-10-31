@@ -173,3 +173,5 @@ Information Quality toont `Last active in MiLa` als datum en tijd. De compacte p
 Information Quality reserveert 28% voor de atleetnaam en verdeelt de vier informatiekolommen gelijkmatig (elk 18%). Koppen, pills en NA zijn per informatiekolom gecentreerd. Op mobiel blijft de tabel horizontaal bereikbaar via de bestaande scrollcontainer.
 
 De AYC controleert voor de atleet na een uur zonder interactie opnieuw op openstaande evaluaties, ook bij terugkeer uit de achtergrond. De popup gebruikt verse gegevens zonder paginareload; een geopende evaluatiepopup wordt niet onderbroken.
+
+Race Calendar-lijst gebruikt op brede schermen drie gelijkmatig gevulde kolommen, chronologisch eerst omlaag en dan naar rechts. Extra wedstrijden komen eerst links (22 wordt 8/7/7). Onder 1200px staan de kolommen onder elkaar in dezelfde volgorde. De periodekeuze bevat ook seizoen (1 oktober t/m 30 september).

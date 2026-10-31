@@ -8767,7 +8767,7 @@ def _race_calendar_return_year(request, fallback):
 
 def _race_calendar_redirect_for_year(year, view_mode="calendar", period_mode="full", race_scope="all", show_all_races=True, race_group=None, race_athlete=None, race_type_filter="all"):
     view_mode = view_mode if view_mode in ("calendar", "year_list") else "list"
-    allowed_periods = {"full", "outdoor", "indoor", "current_next"}
+    allowed_periods = {"season", "full", "outdoor", "indoor", "current_next"}
     period_mode = period_mode if period_mode in allowed_periods else "full"
     if race_group is None or race_athlete is None:
         race_group = race_scope if str(race_scope).startswith("plan:") else "all"
@@ -9071,7 +9071,13 @@ def _add_months(d, months):
 
 
 def _race_calendar_period_bounds(year, period_mode, today):
-    if period_mode == "outdoor":
+    if period_mode == "season":
+        start_date = date(year, 10, 1)
+        end_date = date(year + 1, 9, 30)
+        label = f"{year}/{str(year + 1)[-2:]}"
+        previous_year = year - 1
+        next_year = year + 1
+    elif period_mode == "outdoor":
         start_date = date(year, 4, 1)
         end_date = date(year, 10, 31)
         label = f"Outdoor {year}"
@@ -9141,7 +9147,7 @@ def race_calendar_view(request):
         view_mode = "list"
 
     period_mode = (request.GET.get("period") or request.POST.get("period") or "full").strip().lower()
-    allowed_periods = {"full", "outdoor", "indoor", "current_next"}
+    allowed_periods = {"season", "full", "outdoor", "indoor", "current_next"}
     if period_mode not in allowed_periods:
         period_mode = "full"
 
@@ -9368,6 +9374,14 @@ def race_calendar_view(request):
     # selection; the dropdown can still be changed to All or any group.
     popup_initial_filter = "participating"
 
+    column_size, extra_rows = divmod(len(race_rows), 3)
+    race_columns = []
+    column_start = 0
+    for column_index in range(3):
+        column_end = column_start + column_size + (1 if column_index < extra_rows else 0)
+        race_columns.append(race_rows[column_start:column_end])
+        column_start = column_end
+
     race_rows_by_id = {row["race"].id: row for row in race_rows}
     races_by_date = {}
     for row in race_rows:
@@ -9402,6 +9416,7 @@ def race_calendar_view(request):
         })
 
     period_options = [
+        {"key": "season", "label": f"{year}/{str(year + 1)[-2:]}", "year": year},
         {"key": "current_next", "label": "Current / next month", "year": today.year},
         {"key": "outdoor", "label": f"Outdoor {year}", "year": year},
         {"key": "indoor", "label": f"Indoor {year}/{str(year + 1)[-2:]}", "year": year},
@@ -9418,6 +9433,7 @@ def race_calendar_view(request):
         "period_label": period["label"],
         "period_options": period_options,
         "race_rows": race_rows,
+        "race_columns": race_columns,
         "race_rows_by_id": race_rows_by_id,
         "month_rows": month_rows,
         "distance_choices": RaceEventDistance.DISTANCE_CHOICES,
@@ -9650,7 +9666,7 @@ def race_select_view(request):
         view_mode = "list"
 
     period_mode = (request.GET.get("period") or request.POST.get("period") or "full").strip().lower()
-    allowed_periods = {"full", "outdoor", "indoor", "current_next"}
+    allowed_periods = {"season", "full", "outdoor", "indoor", "current_next"}
     if period_mode not in allowed_periods:
         period_mode = "full"
 
@@ -9893,6 +9909,7 @@ def race_select_view(request):
         })
 
     period_options = [
+        {"key": "season", "label": f"{year}/{str(year + 1)[-2:]}", "year": year},
         {"key": "current_next", "label": "Current / next month", "year": today.year},
         {"key": "outdoor", "label": f"Outdoor {year}", "year": year},
         {"key": "indoor", "label": f"Indoor {year}/{str(year + 1)[-2:]}", "year": year},

@@ -208,8 +208,10 @@
         <h5 class="card-title">Races</h5>
 
         {% if race_rows %}
-          <div class="race-list">
-            {% for row in race_rows %}
+          <div class="race-list-columns">
+            {% for column in race_columns %}
+            <div class="race-list">
+            {% for row in column %}
               {% with race=row.race distances=row.distances %}
                 <button type="button" class="race-list-item race-type-{{ race.race_type }}"
                         data-show-counts="{% if not is_athlete_user %}1{% else %}0{% endif %}"
@@ -232,6 +234,8 @@
                   <span class="race-list-open" aria-hidden="true">›</span>
                 </button>
               {% endwith %}
+            {% endfor %}
+            </div>
             {% endfor %}
           </div>
         {% else %}
@@ -786,10 +790,15 @@
   .race-calendar-event:hover { filter: brightness(.96); }
 
   .race-list-card {
-    width: 40%;
-    min-width: min(640px, 100%);
+    width: 100%;
+    min-width: 0;
   }
 
+  .race-list-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .race-list:empty { display: none; }
+  @media (max-width: 1199.98px) {
+    .race-list-columns { grid-template-columns: 1fr; gap: 0; }
+  }
   .race-list {
     border: 1px solid #dee2e6;
     border-radius: 8px;
@@ -798,7 +807,7 @@
 
   .race-list-item {
     display: grid;
-    grid-template-columns: 112px minmax(0, 1fr) auto;
+    grid-template-columns: 94px minmax(0, 1fr) auto;
     gap: 12px;
     align-items: center;
     width: 100%;
@@ -821,12 +830,12 @@
   .race-list-date { color: #6c757d; font-size: .86rem; }
   .race-list-main {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
     align-items: center;
     min-width: 0;
   }
-  .race-list-name { min-width: 0; }
+  .race-list-name { min-width: 0; overflow-wrap: anywhere; }
   .race-list-distances { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }

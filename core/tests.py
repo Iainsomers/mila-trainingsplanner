@@ -9489,7 +9489,7 @@ class RaceSelectDisplayTests(TestCase):
         self.assertIn("1500m", list_section)
         self.assertNotIn('name="distances"', list_section)
         self.assertNotIn("Save distances", list_section)
-        self.assertContains(response, "grid-template-columns: 220px minmax(0, 1fr)", html=False)
+        self.assertContains(response, "race-list-columns", html=False)
         self.assertContains(response, 'class="race-distance-management"', html=False)
         self.assertContains(response, 'class="race-entry-athlete"', html=False)
         self.assertNotContains(response, "Save selections")
