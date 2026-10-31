@@ -1324,6 +1324,15 @@ class RaceEventDistance(models.Model):
     def __str__(self) -> str:
         return f"{self.race} · {self.display_distance}"
 
+class RaceAttendance(models.Model):
+    """Attendance without a selected distance; displayed as a race without kilometres."""
+    race = models.ForeignKey(RaceEvent, on_delete=models.CASCADE, related_name="attendances")
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name="race_attendances")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["race", "athlete"], name="unique_race_attendance")]
+
+
 class RaceEntry(models.Model):
     race_distance = models.ForeignKey(
         RaceEventDistance,

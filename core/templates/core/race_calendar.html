@@ -318,6 +318,7 @@
               <hr class="my-4">
 
               <form method="post" action="{% url 'race_calendar_entries_save' race.id %}" class="race-entry-form" data-auto-save="1">
+                <input type="hidden" name="attendance_fields" value="1">
                 {% csrf_token %}
                 <input type="hidden" name="year" value="{{ year }}">
                 <input type="hidden" name="view" value="{{ view_mode }}">
@@ -353,7 +354,7 @@
 
                 <div class="race-entry-list">
                   <div class="race-entry-head">
-                    <span>Athlete</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>
+                    <span>Athlete</span><span>Attend</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>
                   </div>
                   {% for athlete_row in row.athlete_rows %}
                     <details class="race-entry-athlete" data-race-count-scope="{% if athlete_row.in_count_scope %}1{% else %}0{% endif %}" data-plan-ids="{{ athlete_row.plan_ids }}" data-participating="{% if athlete_row.participating %}1{% else %}0{% endif %}" {% if is_athlete_user %}open{% endif %}>
@@ -365,14 +366,18 @@
                         {% for distance_entry in athlete_row.distance_entries %}
                           {% with distance=distance_entry.distance entry=distance_entry.entry %}
                           <div class="race-entry-distance" data-distance-id="{{ distance.id }}" data-distance-label="{{ distance.display_distance }}">
-                            <span>{{ distance.display_distance }}</span>
+                            <label>{% if forloop.first %}<input type="checkbox" data-race-attend name="attend_{{ athlete_row.athlete.id }}" value="1" aria-label="Attend {{ race.name }}: {{ athlete_row.athlete.name }}" {% if athlete_row.attend %}checked{% endif %}>{% endif %}</label>
+                            <span class="race-entry-distance-value">{{ distance.display_distance }}</span>
                             <label><input type="checkbox" data-race-role="coach" name="coach_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.coach_selected %}checked{% endif %} {% if is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
                             <label><input type="checkbox" data-race-role="athlete" name="athlete_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.athlete_selected %}checked{% endif %} {% if not is_athlete_user %}disabled data-role-locked="1"{% endif %}></label>
                             <label><input type="checkbox" data-race-role="target" name="target_{{ athlete_row.athlete.id }}_{{ distance.id }}" value="1" {% if entry.target_selected %}checked{% endif %}></label>
                           </div>
                           {% endwith %}
                         {% empty %}
-                          <div class="text-muted small race-entry-no-distances">No distances yet.</div>
+                          <div class="race-entry-distance">
+                            <label><input type="checkbox" data-race-attend name="attend_{{ athlete_row.athlete.id }}" value="1" aria-label="Attend {{ race.name }}: {{ athlete_row.athlete.name }}" {% if athlete_row.attend %}checked{% endif %}></label>
+                            <span class="text-muted small">No distances yet.</span>
+                          </div>
                         {% endfor %}
                       </div>
                     </details>
@@ -535,7 +540,8 @@
   });
 
   function refreshRaceSummary(athleteRow) {
-    var participating = false;
+    var attend = athleteRow.querySelector("[data-race-attend]");
+    var participating = !!(attend && attend.checked);
     athleteRow.querySelectorAll(".race-entry-distance").forEach(function(distanceRow) {
       var coach = distanceRow.querySelector('[data-race-role="coach"]');
       var athlete = distanceRow.querySelector('[data-race-role="athlete"]');
@@ -868,8 +874,8 @@
   }
 
   .race-entry-list {
-    --race-entry-grid-columns: minmax(180px, 1fr) 160px 70px 70px 70px;
-    --race-entry-distance-columns: 160px 70px 70px 70px;
+    --race-entry-grid-columns: minmax(130px, 1fr) 54px 130px 64px 64px 64px;
+    --race-entry-distance-columns: 54px 130px 64px 64px 64px;
     border: 1px solid #dee2e6;
     border-radius: 7px;
     overflow: hidden;
@@ -912,7 +918,7 @@
     font-size: .84rem;
   }
   .race-entry-no-distances { min-height: 32px; display: flex; align-items: center; }
-  .race-entry-distance label { text-align: center; }
+  .race-entry-distance label, .race-entry-distance-value { text-align: center; }
   .race-distance-management { border: 1px solid #dee2e6; border-radius: 7px; padding: 0 10px 10px; }
   .race-distance-management > summary { cursor: pointer; font-weight: 700; padding: 9px 0; }
   .race-distance-management:not([open]) { padding-bottom: 0; }
@@ -941,8 +947,8 @@
     }
 
     .race-entry-list {
-      --race-entry-grid-columns: minmax(100px, 1fr) 88px 42px 42px 42px;
-      --race-entry-distance-columns: 88px 42px 42px 42px;
+      --race-entry-grid-columns: minmax(0, 1fr) 36px 52px 36px 36px 36px;
+      --race-entry-distance-columns: 36px 52px 36px 36px 36px;
     }
     .race-entry-head { gap: 2px; }
     .race-entry-head { font-size: .65rem; padding-inline: 5px; }

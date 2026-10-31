@@ -110,3 +110,5 @@ Alleen de eigenaar-trainer of een bevoegde edit-coach kan `Allow Garmin Connecti
 Een bevoegde coach mag op de Garmin-trainingslijst de Garmin User ID van de geselecteerde toegankelijke atleet lezen/kopiëren voor Summary Resender. Dit geeft geen toegang tot OAuth-tokens of de private appbrede ontvangst-URL; die URL blijft beheerder-only.
 
 Bevoegde coaches zien in Information Quality het laatste geregistreerde interactieve MiLa-gebruik van hun toegankelijke atleten. Bekijken of bewerken door een coach verandert die atleetactiviteit niet. Atleetregistratie gebruikt dezelfde accountidentificatie als de eigen AYC; er wordt alleen een laatste tijdstip bewaard, geen volledig gedragslog.
+
+Attend volgt de bestaande Race Calendar-rechten: bevoegde coaches bewerken hun toegankelijke atleten en een atleet uitsluitend zichzelf. Een ingestuurde andere atleet-ID verleent geen extra toegang.

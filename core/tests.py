@@ -9578,11 +9578,11 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotRegex(response.content.decode(), r'name="show_all" value="1" checked')
         self.assertContains(response, 'class="form-check-input race-expand-toggle"', html=False)
         self.assertRegex(response.content.decode(), r'class="form-check-input race-expand-toggle"[^>]*checked')
-        self.assertContains(response, '<span>Athlete</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>', html=False)
+        self.assertContains(response, '<span>Athlete</span><span>Attend</span><span>Distance</span><span>Trainer</span><span>Athlete</span><span>Target</span>', html=False)
         self.assertContains(response, 'class="race-entry-distance-list"', html=False)
         self.assertContains(
             response,
-            '--race-entry-grid-columns: minmax(180px, 1fr) 160px 70px 70px 70px;',
+            '--race-entry-grid-columns: minmax(130px, 1fr) 54px 130px 64px 64px 64px;',
             html=False,
         )
         self.assertContains(response, 'grid-template-columns: var(--race-entry-grid-columns)', html=False)
@@ -9591,15 +9591,15 @@ class RaceSelectDisplayTests(TestCase):
             'grid-template-columns: var(--race-entry-distance-columns)',
             html=False,
         )
-        self.assertContains(response, '--race-entry-distance-columns: 160px 70px 70px 70px;', html=False)
+        self.assertContains(response, '--race-entry-distance-columns: 54px 130px 64px 64px 64px;', html=False)
         self.assertContains(
             response,
-            '--race-entry-grid-columns: minmax(100px, 1fr) 88px 42px 42px 42px;',
+            '--race-entry-grid-columns: minmax(0, 1fr) 36px 52px 36px 36px 36px;',
             html=False,
         )
         self.assertContains(
             response,
-            '--race-entry-distance-columns: 88px 42px 42px 42px;',
+            '--race-entry-distance-columns: 36px 52px 36px 36px 36px;',
             html=False,
         )
         self.assertContains(response, 'row.open = toggle.checked', html=False)

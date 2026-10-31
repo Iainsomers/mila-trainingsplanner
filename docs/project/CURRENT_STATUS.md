@@ -169,3 +169,5 @@ De minimale Push-ontvanger, stabiele user-ID-koppeling en gecombineerde lijst (d
 Garmin C ziet vanaf migratie 0132 ook ontvangen activiteiten. Automatische Activities-ontvangst is op 31 oktober met een echte testactiviteit bevestigd door de eigenaar. Voor C-lapherkenning moet de eigenaar nu ook `ACTIVITY – Activity Details` inschakelen met dezelfde URL; dit deel is met synthetische push-/C-integratietests gecontroleerd en wacht nog op echte detailaanlevering.
 
 Last active in MiLa is toegevoegd als kolom in Information Quality. Migratie 0133 voegt een leeg tijdstempelveld toe; AthleteLastActiveMiddleware registreert vanaf de uitrol interactief atleetgebruik. Er is geen historische backfill.
+
+Migratie 0134 voegt RaceAttendance toe zonder bestaande RaceEntry-selecties te wijzigen. Attend verschijnt zonder afstand in Year Planner, AYC en Flex. AYC toont nu ook rechtstreeks gekoppelde afstandselecties onafhankelijk van het gekozen bronplan.

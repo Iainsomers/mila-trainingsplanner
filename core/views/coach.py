@@ -37,7 +37,7 @@ from core.focus_point_import import (
 )
 from core.fit_reader import fit_bytes_from_upload, json_safe_fit_data, parse_fit
 from core.models import GarminActivity
-from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, AthleteFocusPoint, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, AthleteFocusPoint, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, RaceAttendance, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -6779,6 +6779,12 @@ def _year_planner_entry_payload(entry):
     }
 
 
+def _year_planner_attendances(athlete_ids, owner, start_date, end_date):
+    return RaceAttendance.objects.filter(
+        athlete_id__in=athlete_ids, race__owner=owner, race__date__lte=end_date,
+    ).filter(Q(race__end_date__gte=start_date) | Q(race__end_date__isnull=True, race__date__gte=start_date)).select_related("race")
+
+
 def _year_planner_selected_races(athlete_ids, owner, start_date, end_date):
     return (
         RaceEntry.objects.filter(
@@ -6928,6 +6934,14 @@ def year_planner_view(request):
             distance_label = race_entry.race_distance.display_distance
             if distance_label not in displayed_race.selected_distances:
                 displayed_race.selected_distances.append(distance_label)
+    for attendance in _year_planner_attendances(selected_ids, owner, start_date, end_date):
+        race = attendance.race
+        first_day, last_day = max(race.date, start_date), min(race.last_date, end_date)
+        for offset in range((last_day - first_day).days + 1):
+            day_races = race_days.setdefault((attendance.athlete_id, first_day + timedelta(days=offset)), {})
+            if race.id not in day_races:
+                race.selected_distances = []
+                day_races[race.id] = race
     entry_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
         entry_scope_filter |= Q(athlete__isnull=True, basis_plan=selected_filter_plan)
@@ -7195,8 +7209,9 @@ def year_planner_training_batch_view(request):
         for scope, (athlete_obj, basis_plan) in scopes.items():
             days = {day: value for (key, day), value in changes.items() if key == scope}
             if athlete_obj:
-                for entry in _year_planner_selected_races([athlete_obj.id], owner, min(days), max(days)):
-                    race = entry.race_distance.race
+                protected_races = [entry.race_distance.race for entry in _year_planner_selected_races([athlete_obj.id], owner, min(days), max(days))]
+                protected_races += [entry.race for entry in _year_planner_attendances([athlete_obj.id], owner, min(days), max(days))]
+                for race in protected_races:
                     days = {day: value for day, value in days.items() if not race.date <= day <= race.last_date}
             if not days:
                 continue
@@ -7250,7 +7265,7 @@ def year_planner_training_resize_view(request):
     except LookupError:
         return JsonResponse({"ok": False}, status=404)
     owner = _active_coach_user(request)
-    if athlete_obj and _year_planner_selected_races([athlete_obj.id], owner, min(start, source_start), max(end, source_end)).exists():
+    if athlete_obj and (_year_planner_selected_races([athlete_obj.id], owner, min(start, source_start), max(end, source_end)).exists() or _year_planner_attendances([athlete_obj.id], owner, min(start, source_start), max(end, source_end)).exists()):
         return JsonResponse({"ok": False, "error": "Race days cannot be resized"}, status=409)
     with transaction.atomic():
         entries = YearPlannerEntry.objects.select_for_update().filter(owner=owner, athlete=athlete_obj, basis_plan=basis_plan)
@@ -7296,7 +7311,7 @@ def year_planner_entry_save_view(request):
 
     training_type = (payload.get("training") or "").strip()
 
-    if athlete_obj and _year_planner_selected_races([athlete_obj.id], owner, entry_date, entry_date).exists():
+    if athlete_obj and (_year_planner_selected_races([athlete_obj.id], owner, entry_date, entry_date).exists() or _year_planner_attendances([athlete_obj.id], owner, entry_date, entry_date).exists()):
         return JsonResponse({"ok": False, "error": "Race day: training phase cannot be changed"}, status=409)
 
     allowed_training = {choice[0] for choice in YearPlannerEntry.TRAINING_CHOICES}
@@ -9243,6 +9258,7 @@ def race_calendar_view(request):
             ).order_by("name")
         )
 
+    attending = set(RaceAttendance.objects.filter(race__in=races, athlete__in=race_athletes).values_list("race_id", "athlete_id"))
     all_distances = [distance for race in races for distance in _sorted_race_distances(race)]
     entry_map = {
         (entry.race_distance_id, entry.athlete_id): entry
@@ -9294,6 +9310,7 @@ def race_calendar_view(request):
         .filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True))
         .values_list("race_distance__race_id", flat=True)
     )
+    linked_race_ids.update(race_id for race_id, athlete_id in RaceAttendance.objects.filter(race__in=races).values_list("race_id", "athlete_id"))
     race_rows = []
     for race in races:
         distances = _sorted_race_distances(race)
@@ -9302,7 +9319,8 @@ def race_calendar_view(request):
         athlete_rows = []
         for athlete in race_athletes:
             distance_entries = []
-            participating = False
+            attend = (race.id, athlete.id) in attending
+            participating = attend
             for distance in distances:
                 entry = entry_map.get((distance.id, athlete.id))
                 participating = participating or bool(
@@ -9318,6 +9336,7 @@ def race_calendar_view(request):
                 distance_entries.append({"distance": distance, "entry": entry})
             athlete_rows.append({
                 "athlete": athlete,
+                "attend": attend,
                 "distance_entries": distance_entries,
                 "participating": participating,
                 "in_count_scope": athlete.id in scoped_athlete_ids,
@@ -9473,7 +9492,7 @@ def race_calendar_type_save_view(request, race_id: int):
 
 
 def _race_has_selected_athletes(race):
-    return RaceEntry.objects.filter(race_distance__race=race).filter(
+    return RaceAttendance.objects.filter(race=race).exists() or RaceEntry.objects.filter(race_distance__race=race).filter(
         Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True)
     ).exists()
 
@@ -9607,6 +9626,11 @@ def race_calendar_entries_save_view(request, race_id: int):
             if len(selected_states) > 3:
                 return HttpResponse("Select at most three distances per athlete.", status=400)
 
+            if request.POST.get("attendance_fields") == "1":
+                if request.POST.get(f"attend_{athlete.id}") == "1":
+                    RaceAttendance.objects.get_or_create(race=race, athlete=athlete)
+                else:
+                    RaceAttendance.objects.filter(race=race, athlete=athlete).delete()
             athlete_changed = False
             for distance, entry, coach_selected, athlete_selected, target_selected in states:
                 old_state = (

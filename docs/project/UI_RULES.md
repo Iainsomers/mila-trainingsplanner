@@ -175,3 +175,5 @@ Information Quality reserveert 28% voor de atleetnaam en verdeelt de vier inform
 De AYC controleert voor de atleet na een uur zonder interactie opnieuw op openstaande evaluaties, ook bij terugkeer uit de achtergrond. De popup gebruikt verse gegevens zonder paginareload; een geopende evaluatiepopup wordt niet onderbroken.
 
 Race Calendar-lijst gebruikt op brede schermen drie gelijkmatig gevulde kolommen, chronologisch eerst omlaag en dan naar rechts. Extra wedstrijden komen eerst links (22 wordt 8/7/7). Onder 1200px staan de kolommen onder elkaar in dezelfde volgorde. De periodekeuze bevat ook seizoen (1 oktober t/m 30 september).
+
+Race Calendar-popup: Athlete, Attend, Distance, Trainer, Athlete, Target gebruiken gedeelde gridbreedtes op desktop en mobiel. Attend staat eenmaal op de eerste afstandsrij (ook bruikbaar zonder afstanden); Distance-kop en afstandswaarden zijn gecentreerd op dezelfde kolom.

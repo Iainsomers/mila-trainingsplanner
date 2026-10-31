@@ -31,6 +31,7 @@ from core.models import (
     CoachAccess,
     CoachSettings,
     RaceEntry,
+    RaceAttendance,
     StandardStrengthProgram,
     YearPlannerEntry,
     YearPlannerWhereabout,
@@ -978,7 +979,7 @@ def _race_distance_m_from_entry(entry):
     return int(match.group(0)) if match else None
 
 
-def _virtual_race_slot_from_entries(entries):
+def _virtual_race_slot_from_entries(entries, attendances=()):
     segments = []
     for entry in entries:
         count = _race_entry_count(entry)
@@ -1003,7 +1004,25 @@ def _virtual_race_slot_from_entries(entries):
             distance_m=distance_m,
             norm_distance_m=distance_m,
         ))
+    selected_race_ids = {entry.race_distance.race_id for entry in entries if _race_entry_count(entry) > 0}
+    for attendance in attendances:
+        if attendance.race_id not in selected_race_ids:
+            segments.append(_VirtualSegment(text=f'"{attendance.race.name}" Race', type="CORE", special="RACE_PENDING"))
     return _VirtualSlot(segments) if segments else None
+
+
+def _calendar_race_slots(athlete_ids, start, end):
+    entries_by_day, attendance_by_day = {}, {}
+    for entry in RaceEntry.objects.filter(
+        athlete_id__in=athlete_ids, race_distance__race__date__gte=start, race_distance__race__date__lt=end,
+    ).filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True)).select_related("race_distance__race").order_by("race_distance__race__date", "race_distance__race__name", "race_distance__id"):
+        entries_by_day.setdefault((entry.athlete_id, entry.race_distance.race.date), []).append(entry)
+    for attendance in RaceAttendance.objects.filter(
+        athlete_id__in=athlete_ids, race__date__gte=start, race__date__lt=end,
+    ).select_related("race").order_by("race__date", "race__name", "race_id"):
+        attendance_by_day.setdefault((attendance.athlete_id, attendance.race.date), []).append(attendance)
+    return {key: _virtual_race_slot_from_entries(entries_by_day.get(key, []), attendance_by_day.get(key, []))
+            for key in entries_by_day.keys() | attendance_by_day.keys()}
 
 
 def _month_day_index_for_flex(day):
@@ -1365,24 +1384,7 @@ def flex_planner_view(request):
                     (trainer_slot.plan_id, trainer_slot.athlete_id, trainer_slot.date, trainer_slot.slot_index)
                 ] = trainer_slot
 
-    race_entries_by_athlete_day = {}
-    if selected_athlete_ids:
-        race_entry_qs = (
-            RaceEntry.objects
-            .filter(
-                athlete_id__in=selected_athlete_ids,
-                race_distance__race__date__gte=start,
-                race_distance__race__date__lt=end,
-            )
-            .filter(Q(coach_selected=True) | Q(athlete_selected=True) | Q(target_selected=True))
-            .select_related("race_distance", "race_distance__race")
-            .order_by("race_distance__race__date", "race_distance__race__name", "race_distance__id")
-        )
-        for entry in race_entry_qs:
-            race_entries_by_athlete_day.setdefault(
-                (entry.athlete_id, entry.race_distance.race.date),
-                [],
-            ).append(entry)
+    calendar_race_slots = _calendar_race_slots(selected_athlete_ids, start, end)
 
     week_rows = []
     for week_start in week_starts:
@@ -1397,7 +1399,7 @@ def flex_planner_view(request):
                 day_plan = plan_for_athlete_day.get((athlete.id, day))
 
                 for slot_index, target_cells in ((1, am_cells), (2, pm_cells)):
-                    calendar_race_day = slot_index == 2 and bool(race_entries_by_athlete_day.get((athlete.id, day)))
+                    calendar_race_day = slot_index == 2 and bool(calendar_race_slots.get((athlete.id, day)))
                     plan = day_plan
                     base_planning_slot = _base_planning_slot_for_day(
                         base_blocks_by_athlete, athlete.id, day, slot_index
@@ -1449,9 +1451,9 @@ def flex_planner_view(request):
                                 is_override = True
                                 no_plan = False
 
-                    if slot_index == 2 and not is_override:
-                        race_slot = _virtual_race_slot_from_entries(race_entries_by_athlete_day.get((athlete.id, day), []))
-                        if race_slot:
+                    if slot_index == 2:
+                        race_slot = calendar_race_slots.get((athlete.id, day))
+                        if race_slot and not _slot_has_race(slot):
                             slot = race_slot
                             if flex_plan:
                                 plan = flex_plan
@@ -3584,6 +3586,7 @@ def athlete_year_calendar_view(request):
     )
 
     owner = _active_coach_user(request)
+    calendar_race_slots = _calendar_race_slots([selected_athlete.id], start, end + timedelta(days=1)) if selected_athlete else {}
     slot_lookup = {}
     has_fix_keys = set()
     flex_plan = None
@@ -3968,6 +3971,12 @@ def athlete_year_calendar_view(request):
                         slot2 = None
                     if slot2 and flex_plan:
                         plan2 = flex_plan
+
+            calendar_race_slot = calendar_race_slots.get((selected_athlete.id, day)) if selected_athlete else None
+            if calendar_race_slot and not _slot_has_race(slot2):
+                slot2 = calendar_race_slot
+                plan2 = flex_plan or day_plan
+                has_fix_keys.add(k2)
 
             if athlete_self_view and visible_until_date and day > visible_until_date:
                 if not _slot_has_race(slot1):
