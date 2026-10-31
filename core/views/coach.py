@@ -5700,11 +5700,36 @@ def garmin_type_c_ayc_view(request):
 
     day_start = timezone.make_aware(datetime.combine(target_date, time.min), timezone.get_current_timezone())
     day_end = day_start + timedelta(days=1)
-    saved_activities = GarminActivity.objects.filter(
+    saved_activities = list(GarminActivity.objects.filter(
         athlete=athlete,
         activity_start__gte=day_start,
         activity_start__lt=day_end,
-    ).only("id", "activity_start", "original_filename", "parsed_data", "raw_file").order_by("activity_start", "id")
+    ).only("id", "activity_start", "original_filename", "parsed_data", "raw_file").order_by("activity_start", "id"))
+    from core.models import GarminActivitySummary
+    from types import SimpleNamespace
+    from .polar_raw import duration as watch_duration
+    summary_results = []
+    uploaded_activities = tuple(saved_activities)
+    for received in GarminActivitySummary.objects.filter(athlete=athlete, activity_date=target_date).order_by("activity_start", "id"):
+        # Prefer full FIT data when the same recording was also uploaded manually.
+        if any(saved.activity_start and abs((saved.activity_start - received.activity_start).total_seconds()) < 1
+               and received.distance_m is not None
+               and (saved.parsed_data or {}).get("total_distance_m") is not None
+               and abs(float(saved.parsed_data["total_distance_m"]) - received.distance_m) <= 1
+               for saved in uploaded_activities):
+            continue
+        parsed = received.analysis_data or {}
+        if parsed.get("laps"):
+            saved_activities.append(SimpleNamespace(activity_start=received.activity_start,
+                original_filename=f"Garmin activity {received.activity_id}", parsed_data=parsed, raw_file=b""))
+        else:
+            summary_results.append({"name": f"Garmin activity {received.activity_id}",
+                "start": timezone.localtime(received.activity_start).isoformat(),
+                "distance": f"{received.distance_m:g}" if received.distance_m is not None else "NA",
+                "duration": watch_duration(received.duration_s * 1000) if received.duration_s is not None else "NA",
+                "parts": [{"description_label": "Activity summary",
+                           "description": "Activity received from Garmin. Lap details are not available yet; enable Activity Details delivery in Garmin API Tools for Garmin C analysis.",
+                           "manual": [], "auto": []}]})
     sessions = []
     session_exercises = []
     for saved in saved_activities:
@@ -5799,8 +5824,8 @@ def garmin_type_c_ayc_view(request):
     if not sessions:
         return JsonResponse({
             "ok": True,
-            "message": "No Garmin FIT activities with lap data found for this day.",
-            "results": [],
+            "message": "" if summary_results else "No Garmin activities found for this day.",
+            "results": summary_results,
             "model": "C",
         })
 
@@ -5860,9 +5885,10 @@ def garmin_type_c_ayc_view(request):
                     "display_candidate": display_candidate,
                     "final_main": final_main,
                 }
+    results.extend(summary_results)
     return JsonResponse({
         "ok": True,
-        "message": "" if results else "No Garmin FIT activities found for this day.",
+        "message": "" if results else "No Garmin activities found for this day.",
         "results": results,
         "model": "C",
     })

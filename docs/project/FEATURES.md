@@ -323,3 +323,7 @@ In Garmin Connections opent een klik op een verbonden atleet een afzonderlijke l
 - Uitschakelen/ontkoppelen blokkeert nieuwe ontvangst; de ontvanger controleert de actieve koppeling bij iedere opslag. AI is niet betrokken bij deze ontvangst. Bestaande FIT-uploads en ontvangen samenvattingen blijven behouden na ontkoppelen en verschijnen op datum gesorteerd in de eenvoudige lijst.
 
 Op de Garmin-trainingslijst ziet iedere bevoegde coach de kopieerbare Garmin User ID van die atleet voor Summary Resender. Bij oude verbindingen haalt MiLa de ID rechtstreeks bij Garmin op. Een fout wist de koppeling niet; de coach kan opnieuw laden. Andere atleten en niet-toegankelijke coaches zien de ID niet. De pagina toont ook wanneer de laatste automatische Garmin-training is opgeslagen; deze tijdstempel bevestigt geen mislukte of nog niet aangeboden berichten.
+
+## Garmin C — automatisch ontvangen activiteiten
+
+Garmin C leest voor de geselecteerde atleet/datum zowel FIT-uploads als automatisch ontvangen activiteitensamenvattingen. Samenvattingen zonder rondes zijn zichtbaar met afstand/duur voor zover bekend, maar zonder Use AM/PM of AI-analyse. Activity Details leveren gemeten rondes en HR aan dezelfde bestaande C-herkenning; hiervoor moet bij Garmin `ACTIVITY – Activity Details` met dezelfde privé-URL worden ingeschakeld. Migratie 0132 bewaart duur en genormaliseerde detaildata. Herhaalde gewone summaries wissen bestaande details niet. Er worden geen GPS-coördinaten of ruwe tokens uit details bewaard.

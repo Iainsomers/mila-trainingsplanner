@@ -2431,7 +2431,7 @@
     var popup = document.getElementById("suggestInputPlaceholder");
     var body = document.getElementById("suggestInputPlaceholderBody");
     popup.style.display = "flex";
-    var sourceName = model === "C" ? "Garmin FIT" : "Polar";
+    var sourceName = model === "C" ? "Garmin" : "Polar";
     document.getElementById("suggestInputPlaceholderText").textContent = model === "C" ? "Garmin C" : "Polar " + model;
     document.getElementById("suggestInputPlaceholderClose").focus();
     body.textContent = "Loading " + (model === "C" ? "Garmin C" : "Polar " + model) + "...";
@@ -2516,7 +2516,7 @@
           }
           box.appendChild(description);
         }
-        renderTypeALaps(box, "Manual laps", part.manual, model === "B" || model === "C");
+        renderTypeALaps(box, model === "C" ? "Recorded laps" : "Manual laps", part.manual, model === "B" || model === "C");
         renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C");
       });
       parent.appendChild(box);

@@ -75,10 +75,16 @@ def ensure_user_id(connection):
     return user_id
 
 
-def _push_activity(item):
+def _push_activity(item, *, details=False):
     """Validate and minimise data before any record is written."""
     if not isinstance(item, dict):
         raise ValueError()
+    source = item
+    if details:
+        summary = item.get("summary")
+        if not isinstance(summary, dict):
+            raise ValueError()
+        item = {**summary, **{key: item[key] for key in ("userId", "activityId", "summaryId") if key in item}}
     user_id = item.get("userId")
     activity_id = item.get("activityId") or item.get("summaryId")
     if not isinstance(user_id, str) or not user_id or len(user_id) > 128:
@@ -100,8 +106,22 @@ def _push_activity(item):
         distance = float(distance)
         if not math.isfinite(distance) or distance < 0:
             raise ValueError()
-    return user_id, str(activity_id), {"activity_start": start,
-        "activity_date": (start + timedelta(seconds=offset)).date(), "distance_m": distance}
+    duration = item.get("durationInSeconds")
+    if duration is not None:
+        if isinstance(duration, bool):
+            raise ValueError()
+        duration = float(duration)
+        if not math.isfinite(duration) or duration < 0:
+            raise ValueError()
+    fields = {"activity_start": start, "activity_date": (start + timedelta(seconds=offset)).date()}
+    if distance is not None:
+        fields["distance_m"] = distance
+    if duration is not None:
+        fields["duration_s"] = duration
+    if details:
+        from core.garmin_details import lap_data
+        fields["analysis_data"] = lap_data(source)
+    return user_id, str(activity_id), fields
 
 
 @csrf_exempt
@@ -113,15 +133,21 @@ def garmin_activity_push_view(request, key):
     if not expected or not secrets.compare_digest(key.encode(), expected.encode()):
         return HttpResponseForbidden()
     try:
-        body = request.body
-        if len(body) > 1_000_000:
+        body = request.read(8_000_001)
+        if len(body) > 8_000_000:
+            return JsonResponse({"error": "Payload too large"}, status=413)
+        if len(body) > 1_000_000 and not body.lstrip().startswith(b'{'):
             return JsonResponse({"error": "Payload too large"}, status=413)
         payload = json.loads(body)
-        if not isinstance(payload, dict) or set(payload) != {"activities"}:
+        if not isinstance(payload, dict) or not payload or not set(payload).issubset({"activities", "activityDetails"}):
             raise ValueError()
-        if not isinstance(payload["activities"], list) or len(payload["activities"]) > 500:
-            raise ValueError()
-        items = [_push_activity(item) for item in payload["activities"]]
+        if "activityDetails" not in payload and len(body) > 1_000_000:
+            return JsonResponse({"error": "Payload too large"}, status=413)
+        items = []
+        for kind, records in payload.items():
+            if not isinstance(records, list) or len(records) > 500:
+                raise ValueError()
+            items.extend(_push_activity(item, details=kind == "activityDetails") for item in records)
     except RequestDataTooBig:
         return JsonResponse({"error": "Payload too large"}, status=413)
     except (ValueError, TypeError, KeyError, OverflowError, OSError):

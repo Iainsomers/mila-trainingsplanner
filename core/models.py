@@ -1516,6 +1516,8 @@ class GarminActivitySummary(models.Model):
     activity_start = models.DateTimeField(db_index=True)
     activity_date = models.DateField(db_index=True)
     distance_m = models.FloatField(null=True, blank=True)
+    duration_s = models.FloatField(null=True, blank=True)
+    analysis_data = models.JSONField(default=dict, blank=True)
     received_at = models.DateTimeField(auto_now=True)
 
     class Meta:
