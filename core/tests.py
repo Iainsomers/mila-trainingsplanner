@@ -1508,11 +1508,34 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(row["evaluated_color"], "orange")
         self.assertEqual(row["evaluation_total"], 3)
         self.assertEqual(row["evaluation_percentage"], 33)
-        self.assertEqual(row["evaluation_tooltip"], "Open: 2 · Evaluated: 1")
+        self.assertEqual(row["evaluation_tooltip"], f"Open: 2 · Evaluated: 1 · Last: {(today - timedelta(days=1)):%d-%m-%Y}")
         self.assertContains(response, "evaluation-percentage-red")
         self.assertContains(response, "Evaluated")
-        self.assertContains(response, "title=\"Open: 2 · Evaluated: 1\"", html=False)
+        self.assertContains(response, f'title="Open: 2 · Evaluated: 1 · Last: {(today - timedelta(days=1)):%d-%m-%Y}"', html=False)
         self.assertNotContains(response, "Open evaluations")
+
+    def test_information_quality_last_dates_include_history_but_skip_blank_and_future(self):
+        coach = get_user_model().objects.create_user(username="last-quality-coach", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Last Quality", birth_year=2000, gender="X")
+        today = date.today()
+        last = today - timedelta(days=20)
+        AthleteDailyVital.objects.create(athlete=athlete, date=last, hrv=0)
+        AthleteDailyVital.objects.create(athlete=athlete, date=today)
+        AthleteDailyVital.objects.create(athlete=athlete, date=today + timedelta(days=1), hrv=80)
+        AthleteDayCheck.objects.create(athlete=athlete, date=last, rpe=0, updated_by=coach)
+        AthleteDayCheck.objects.create(athlete=athlete, date=today, comment="   ", updated_by=coach)
+        AthleteDayCheck.objects.create(athlete=athlete, date=today + timedelta(days=1), checked=True, updated_by=coach)
+        self.client.force_login(coach)
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        row = response.context["athlete_rows"][0]
+        self.assertEqual(row["vitals_tooltip"], f"Filled: 0 / 40 · Last: {last:%d-%m-%Y}")
+        self.assertEqual(row["evaluation_tooltip"], f"Open: 0 · Evaluated: 0 · Last: {last:%d-%m-%Y}")
+        AthleteDailyVital.objects.filter(athlete=athlete).delete()
+        AthleteDayCheck.objects.filter(athlete=athlete).delete()
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        row = response.context["athlete_rows"][0]
+        self.assertTrue(row["vitals_tooltip"].endswith("Last: —"))
+        self.assertTrue(row["evaluation_tooltip"].endswith("Last: —"))
 
     def test_daily_overview_other_shows_ten_day_vitals_completion_percentage(self):
         coach = get_user_model().objects.create_user(
@@ -1546,9 +1569,9 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(row["vitals_filled"], 4)
         self.assertEqual(row["vitals_total"], 40)
         self.assertEqual(row["vitals_percentage"], 10)
-        self.assertEqual(row["vitals_tooltip"], "Filled: 4 / 40")
+        self.assertEqual(row["vitals_tooltip"], f"Filled: 4 / 40 · Last: {(today - timedelta(days=1)):%d-%m-%Y}")
         self.assertContains(response, "Vitals")
-        self.assertContains(response, "title=\"Filled: 4 / 40\"", html=False)
+        self.assertContains(response, f'title="Filled: 4 / 40 · Last: {(today - timedelta(days=1)):%d-%m-%Y}"', html=False)
         self.assertContains(response, "10%")
 
     def test_daily_overview_other_counts_ten_days_and_unlocks_today_sessions_at_noon_and_21(self):

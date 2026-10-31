@@ -22,10 +22,10 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
-from django.db.models.functions import Lower
+from django.db.models.functions import Lower, Trim
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import Case, IntegerField, Prefetch, Q, When
+from django.db.models import Case, IntegerField, Max, Prefetch, Q, When
 from django.utils.dateparse import parse_time
 from django.utils import timezone
 
@@ -12436,6 +12436,28 @@ def daily_overview_other_view(request):
         for athlete in athletes
         if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
     }
+    # Last filled calendar date, including entries older than the ten-day score window.
+    last_vital_dates = dict(
+        AthleteDailyVital.objects.filter(
+            athlete_id__in=visible_vital_athlete_ids, date__lte=today,
+        ).filter(
+            Q(sleep_hours__isnull=False) | Q(sleep_quality__isnull=False)
+            | Q(morning_hr__isnull=False) | Q(hrv__isnull=False)
+        ).values("athlete_id").annotate(last=Max("date")).values_list("athlete_id", "last")
+    )
+    last_evaluation_dates = dict(
+        AthleteDayCheck.objects.filter(
+            athlete_id__in=training_visible_athlete_ids, date__lte=today,
+        ).annotate(clean_comment=Trim("comment")).filter(
+            Q(checked=True) | ~Q(status="") | Q(rpe__isnull=False)
+            | ~Q(pain="") | ~Q(clean_comment="")
+        ).values("athlete_id").annotate(last=Max("date")).values_list("athlete_id", "last")
+    )
+
+    def last_date_label(dates, athlete_id):
+        last = dates.get(athlete_id)
+        return last.strftime("%d-%m-%Y") if last else "—"
+
     vital_completion_counts = {}
     if visible_vital_athlete_ids:
         for vital in AthleteDailyVital.objects.filter(
@@ -12578,7 +12600,7 @@ def daily_overview_other_view(request):
             pending_count = pending
             evaluated_count = evaluated
             evaluation_percentage = round(evaluated * 100 / total_sessions) if total_sessions else None
-            evaluation_tooltip = f"Open: {pending} · Evaluated: {evaluated}"
+            evaluation_tooltip = f"Open: {pending} · Evaluated: {evaluated} · Last: {last_date_label(last_evaluation_dates, athlete.id)}"
             if pending == 0:
                 color = "green"
             elif pending == 1:
@@ -12614,7 +12636,7 @@ def daily_overview_other_view(request):
             "vitals_filled": vitals_filled,
             "vitals_total": 40 if can_view_vitals else None,
             "vitals_percentage": round(vitals_filled * 100 / 40) if can_view_vitals else None,
-            "vitals_tooltip": f"Filled: {vitals_filled} / 40" if can_view_vitals else "",
+            "vitals_tooltip": f"Filled: {vitals_filled} / 40 · Last: {last_date_label(last_vital_dates, athlete.id)}" if can_view_vitals else "",
         })
 
     vital_options = [
