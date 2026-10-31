@@ -308,3 +308,5 @@ Naast iedere geselecteerde atleet staat per week een compacte `c`- en `p`-actie.
 - Traineruitschakeling ontkoppelt eveneens en maakt lopende OAuth-pogingen ongeldig. AI-toestemmingsdatum, tekstversie en laatste intrekkingsdatum blijven bewaard.
 
 Information Quality toont in beide hoverteksten `Last: dd-mm-yyyy`: de recentste kalenderdatum met ingevulde vitals respectievelijk een trainingsevaluatie, ook buiten het tien-dagenvenster. Lege en toekomstige records tellen niet mee; zonder gegevens staat `Last: —`. Bestaande inzagerechten blijven gelden.
+
+Honoré Hoedts `Evaluatie seizoen 2025-2026`: verbeterpunten tonen bij alle bestaande en nieuwe antwoorden de extra rijen Algemeen (bovenaan), Atletische vorming en Kracht (na Z4-5). De extra rijen gebruiken vaste tekstsleutels; oorspronkelijke rijnummers, antwoorden, coachfeedback en inzenddatums worden niet gemigreerd of herschreven. Tekstvakken voor antwoorden en coachfeedback groeien mee bij openen, typen en vensterwijzigingen; hun compacte minimum blijft behouden.

@@ -900,6 +900,27 @@ def _evaluation_coach_feedback_enabled(questionnaire):
     )
 
 
+def _evaluation_matrix_display_rows(question):
+    """Add named rows without changing any existing positional storage keys."""
+    rows = list(enumerate(question.matrix_rows))
+    if not _evaluation_coach_feedback_enabled(question.questionnaire) or "verbeterpunten" not in question.text.lower():
+        return rows
+    def normalized(label):
+        return re.sub(r"[^a-z0-9]", "", label.lower())
+    labels = {normalized(label) for _, label in rows}
+    if "algemeen" not in labels:
+        rows.insert(0, ("extra_algemeen", "Algemeen"))
+    for position, (_, label) in enumerate(rows):
+        if "z45" in normalized(label):
+            additions = [(key, label) for key, label in (
+                ("extra_atletische_vorming", "Atletische vorming"),
+                ("extra_kracht", "Kracht"),
+            ) if normalized(label) not in labels]
+            rows[position + 1:position + 1] = additions
+            break
+    return rows
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def evaluations_view(request):
@@ -1122,7 +1143,7 @@ def evaluations_view(request):
                         "coach_comment": feedback.get(f"{question.id}:{row_index}", {}).get("coach_comment", ""),
                         "plan": feedback.get(f"{question.id}:{row_index}", {}).get("plan", ""),
                     }
-                    for row_index, label in enumerate(question.matrix_rows)
+                    for row_index, label in _evaluation_matrix_display_rows(question)
                 ]
             response.answer_rows.append(row)
     responses_by_questionnaire = {}
@@ -1194,7 +1215,7 @@ def evaluation_feedback_save_view(request, response_id):
         valid_keys = set()
         for question in response.questionnaire.questions.all():
             if question.question_type == EvaluationQuestion.TYPE_MATRIX:
-                valid_keys.update(f"{question.id}:{index}" for index in range(len(question.matrix_rows)))
+                valid_keys.update(f"{question.id}:{index}" for index, _ in _evaluation_matrix_display_rows(question))
             else:
                 valid_keys.add(str(question.id))
         if key not in valid_keys:
@@ -1241,7 +1262,7 @@ def evaluation_fill_view(request, questionnaire_id):
         for question in questionnaire.questions.all():
             if question.question_type == EvaluationQuestion.TYPE_MATRIX:
                 matrix_answer = {}
-                for row_index, _ in enumerate(question.matrix_rows):
+                for row_index, _ in _evaluation_matrix_display_rows(question):
                     for column_index, _ in enumerate(question.matrix_columns):
                         value = (request.POST.get(f"question_{question.id}_{row_index}_{column_index}") or "").strip()
                         if value:
@@ -1280,7 +1301,7 @@ def evaluation_fill_view(request, questionnaire_id):
                         for column_index, _ in enumerate(question.matrix_columns)
                     ],
                 }
-                for row_index, label in enumerate(question.matrix_rows)
+                for row_index, label in _evaluation_matrix_display_rows(question)
             ]
         else:
             question.current_answer = current_answer

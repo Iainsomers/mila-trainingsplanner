@@ -77,19 +77,5 @@
     </div>
   </form>
 </div>
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    function resizeMatrixAnswer(field) {
-      field.style.height = "auto";
-      field.style.height = field.scrollHeight + "px";
-    }
-
-    document.querySelectorAll(".evaluation-matrix-answer").forEach(function (field) {
-      resizeMatrixAnswer(field);
-      field.addEventListener("input", function () {
-        resizeMatrixAnswer(field);
-      });
-    });
-  });
-</script>
+{% include "core/partials/evaluation_autosize.html" %}
 {% endblock %}

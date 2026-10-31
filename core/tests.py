@@ -339,6 +339,61 @@ class EvaluationFeedbackTests(TestCase):
         self.response.refresh_from_db()
         self.assertEqual(self.response.coach_feedback[str(self.text.id)]["plan"], "Next steps")
 
+    def test_improvement_rows_preserve_every_existing_response_and_feedback_key(self):
+        from core.views.coach import _evaluation_matrix_display_rows
+        self.matrix.text = "Verbeterpunten-Geef korte input in kernwoorden"
+        self.matrix.matrix_rows = ["Uithoudingsvermogen Z1-2-3,", "Uithoudingsvermogen Z4-5,", "Snelheid,", "Andere verbeterpunten"]
+        self.matrix.save()
+        other = Athlete.objects.create(owner=self.coach, name="Second filled athlete", birth_year=2000, gender="X")
+        second = EvaluationResponse.objects.create(questionnaire=self.form, athlete=other)
+        snapshots = {}
+        for response in (self.response, second):
+            response.answers = {str(self.matrix.id): {f"{r}:0": f"Answer {response.id}-{r}" for r in range(4)}}
+            response.coach_feedback = {f"{self.matrix.id}:{r}": {"coach_comment": f"Comment {response.id}-{r}", "plan": f"Plan {response.id}-{r}"} for r in range(4)}
+            response.save()
+            snapshots[response.id] = (response.answers, response.coach_feedback, response.submitted_at)
+        rows = _evaluation_matrix_display_rows(self.matrix)
+        self.assertEqual([label for _, label in rows], ["Algemeen", "Uithoudingsvermogen Z1-2-3,", "Uithoudingsvermogen Z4-5,", "Atletische vorming", "Kracht", "Snelheid,", "Andere verbeterpunten"])
+        page = self.client.get("/evaluations/")
+        for response in page.context["responses"]:
+            matrix = next(row for row in response.answer_rows if row["question"].pk == self.matrix.pk)
+            self.assertEqual(len(matrix["matrix_rows"]), 7)
+            for row in matrix["matrix_rows"]:
+                key = row["feedback_key"]
+                if key in snapshots[response.pk][1]:
+                    original_index = key.split(":")[1]
+                    self.assertEqual(row["cells"], [snapshots[response.pk][0][str(self.matrix.pk)][original_index+":0"]])
+                    self.assertEqual(row["plan"], snapshots[response.pk][1][key]["plan"])
+            response.refresh_from_db()
+            self.assertEqual((response.answers, response.coach_feedback, response.submitted_at), snapshots[response.pk])
+        key = f"{self.matrix.pk}:extra_kracht"
+        self.assertEqual(self.client.post(self.url, {"key": key, "field": "plan", "value": "New strength plan"}).status_code, 200)
+        self.response.refresh_from_db()
+        self.assertEqual(self.response.answers, snapshots[self.response.pk][0])
+        for old_key, value in snapshots[self.response.pk][1].items():
+            self.assertEqual(self.response.coach_feedback[old_key], value)
+        self.client.force_login(self.athlete_user)
+        page = self.client.get(f"/evaluations/{self.form.pk}/")
+        self.assertContains(page, "New strength plan")
+        self.assertContains(page, f'name="question_{self.matrix.pk}_extra_algemeen_0"')
+        data = {f"question_{self.matrix.pk}_{r}_0": f"Answer {self.response.pk}-{r}" for r in range(4)}
+        data[f"question_{self.matrix.pk}_extra_algemeen_0"] = "General athlete answer"
+        self.client.post(f"/evaluations/{self.form.pk}/", data)
+        self.response.refresh_from_db()
+        for old_key, value in snapshots[self.response.pk][0][str(self.matrix.pk)].items():
+            self.assertEqual(self.response.answers[str(self.matrix.pk)][old_key], value)
+        self.assertEqual(self.response.coach_feedback[key]["plan"], "New strength plan")
+
+    def test_extra_rows_do_not_affect_other_forms_or_duplicate_existing_labels(self):
+        from core.views.coach import _evaluation_matrix_display_rows
+        self.matrix.text = "Verbeterpunten"
+        self.matrix.matrix_rows = ["Algemeen", "Uithoudingsvermogen Z4-5", "Atletische vorming", "Kracht"]
+        self.assertEqual(_evaluation_matrix_display_rows(self.matrix), list(enumerate(self.matrix.matrix_rows)))
+        self.form.title = "Another form"
+        self.form.save()
+        self.matrix.matrix_rows = ["Uithoudingsvermogen Z4-5"]
+        self.assertEqual(_evaluation_matrix_display_rows(self.matrix), list(enumerate(self.matrix.matrix_rows)))
+
     def test_feedback_rejects_invalid_rows_and_unauthorized_users(self):
         for key, field in ((f"{self.matrix.id}:8", "plan"), (str(self.text.id), "answers")):
             self.assertEqual(self.client.post(self.url, {"key": key, "field": field, "value": "Invalid"}).status_code, 400)

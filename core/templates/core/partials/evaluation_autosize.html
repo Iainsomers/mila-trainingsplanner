@@ -1,0 +1,27 @@
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const fields = document.querySelectorAll('.evaluation-feedback-cell textarea, .evaluation-matrix-answer, textarea[name^="question_"]');
+  function resizeMatrixAnswer(field) {
+    if (!field.getClientRects().length) return;
+    field.style.height = 'auto';
+    const style = getComputedStyle(field);
+    const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+    field.style.height = Math.max(field.scrollHeight + border, field.dataset.minimumHeight || 0) + 'px';
+  }
+  fields.forEach(function (field) {
+    field.style.overflowY = 'hidden';
+    field.addEventListener('input', function () { resizeMatrixAnswer(field); });
+  });
+  function resizeAll() {
+    fields.forEach(function (field) {
+      if (!field.getClientRects().length) return;
+      if (!field.dataset.minimumHeight) field.dataset.minimumHeight = field.getBoundingClientRect().height;
+      resizeMatrixAnswer(field);
+    });
+  }
+  resizeAll();
+  document.addEventListener('shown.bs.collapse', resizeAll);
+  window.addEventListener('resize', resizeAll);
+  if (document.fonts) document.fonts.ready.then(resizeAll);
+});
+</script>
