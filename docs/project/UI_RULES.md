@@ -177,3 +177,5 @@ De AYC controleert voor de atleet na een uur zonder interactie opnieuw op openst
 Race Calendar-lijst gebruikt op brede schermen drie gelijkmatig gevulde kolommen, chronologisch eerst omlaag en dan naar rechts. Extra wedstrijden komen eerst links (22 wordt 8/7/7). Onder 1200px staan de kolommen onder elkaar in dezelfde volgorde. De periodekeuze bevat ook seizoen (1 oktober t/m 30 september).
 
 Race Calendar-popup: Athlete, Attend, Distance, Trainer, Athlete, Target gebruiken gedeelde gridbreedtes op desktop en mobiel. Attend staat eenmaal op de eerste afstandsrij (ook bruikbaar zonder afstanden); Distance-kop en afstandswaarden zijn gecentreerd op dezelfde kolom.
+
+Race Calendar toont tussen wedstrijdnaam en afstanden het aantal Attend-selecties zonder geselecteerde afstand als hetzelfde groene bolletje als de afstandsaantallen. Nul wordt verborgen. De telling volgt de actieve groep-/atleetfilter en wijzigt direct na opslaan van selecties.

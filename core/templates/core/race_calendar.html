@@ -220,6 +220,7 @@
                   <span class="race-list-date">{{ race.date|date:"d-m-Y" }}{% if race.end_date %}<br>– {{ race.end_date|date:"d-m-Y" }}{% endif %}</span>
                   <span class="race-list-main">
                     <strong class="race-list-name">{{ race.name }}</strong>
+                    <span class="race-distance-count race-attendance-count" data-attendance-count title="Attend without distance" {% if is_athlete_user or not row.attendance_only_count %}hidden{% endif %}>{{ row.attendance_only_count }}</span>
                     <span class="race-list-distances">
                       {% for distance_row in row.distance_rows %}
                         <span class="race-list-distance-wrap{% if is_athlete_user and not distance_row.selection_class %} d-none{% endif %}" data-distance-id="{{ distance_row.distance.id }}">
@@ -579,7 +580,10 @@
     var listRow = document.querySelector('.race-list-item[data-race-id="' + modal.dataset.raceId + '"]');
     if (!listRow || listRow.dataset.showCounts !== '1') return;
     var counts = {};
+    var attendanceOnly = 0;
     modal.querySelectorAll('.race-entry-athlete[data-race-count-scope="1"]').forEach(function(athleteRow) {
+      var attend = athleteRow.querySelector('[data-race-attend]');
+      if (attend && attend.checked && !athleteRow.querySelector('input[data-race-role]:checked')) attendanceOnly += 1;
       athleteRow.querySelectorAll('.race-entry-distance').forEach(function(distanceRow) {
         if (distanceRow.querySelector('input[data-race-role]:checked')) {
           var id = distanceRow.dataset.distanceId;
@@ -587,6 +591,11 @@
         }
       });
     });
+    var attendanceBadge = listRow.querySelector('[data-attendance-count]');
+    if (attendanceBadge) {
+      attendanceBadge.textContent = String(attendanceOnly);
+      attendanceBadge.hidden = attendanceOnly === 0;
+    }
     listRow.querySelectorAll('.race-list-distance-wrap').forEach(function(wrapper) {
       var count = counts[wrapper.dataset.distanceId] || 0;
       var badge = wrapper.querySelector('.race-distance-count');
@@ -836,7 +845,7 @@
   .race-list-date { color: #6c757d; font-size: .86rem; }
   .race-list-main {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 15px minmax(0, 1fr);
     gap: 8px;
     align-items: center;
     min-width: 0;
@@ -872,6 +881,10 @@
     font-weight: 700;
     line-height: 1;
   }
+
+  .race-attendance-count { position: static; justify-self: center; }
+  .race-attendance-count[hidden] { display: none; }
+  .race-list-distances { grid-column: 3; }
 
   .race-entry-list {
     --race-entry-grid-columns: minmax(130px, 1fr) 54px 130px 64px 64px 64px;
@@ -942,7 +955,7 @@
     }
 
     .race-list-main {
-      grid-template-columns: minmax(110px, .8fr) minmax(0, 1.2fr);
+      grid-template-columns: minmax(0, .8fr) 15px minmax(0, 1.2fr);
       gap: 6px;
     }
 

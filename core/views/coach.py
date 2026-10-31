@@ -9342,6 +9342,12 @@ def race_calendar_view(request):
                 "in_count_scope": athlete.id in scoped_athlete_ids,
                 "plan_ids": ",".join(plan_ids_by_athlete.get(athlete.id, [])),
             })
+        attendance_only_count = sum(
+            1 for athlete_row in athlete_rows
+            if athlete_row["in_count_scope"] and athlete_row["attend"]
+            and not any(item["entry"] and (item["entry"].coach_selected or item["entry"].athlete_selected or item["entry"].target_selected)
+                        for item in athlete_row["distance_entries"])
+        )
         scoped_participant_count = sum(
             1 for athlete_row in athlete_rows
             if athlete_row["athlete"].id in scoped_athlete_ids and athlete_row["participating"]
@@ -9366,6 +9372,7 @@ def race_calendar_view(request):
             "race": race,
             "distances": distances,
             "distance_rows": distance_rows,
+            "attendance_only_count": attendance_only_count,
             "participant_count": scoped_participant_count,
             "can_delete": race.id not in linked_race_ids,
             "calendar_status_class": {

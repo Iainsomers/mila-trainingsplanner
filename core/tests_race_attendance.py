@@ -85,3 +85,20 @@ class RaceAttendanceTests(TestCase):
         slots = _calendar_race_slots([self.athlete.id], date(2026, 11, 1), date(2026, 12, 1))
         self.assertEqual(len(slots[(self.athlete.id, self.race.date)].segments.all()), 1)
         self.assert_calendar_race(distance=1500)
+
+    def test_attendance_badge_counts_only_scoped_attendees_without_distance(self):
+        RaceAttendance.objects.create(race=self.race, athlete=self.athlete)
+        other = Athlete.objects.create(owner=self.coach, name="Selected Runner", birth_year=2000, gender="X")
+        RaceAttendance.objects.create(race=self.race, athlete=other)
+        entry = RaceEntry.objects.create(race_distance=self.distance, athlete=other, target_selected=True)
+        url = "/race-calendar/?year=2026&view=year_list&race_group=all&show_all=1"
+        response = self.client.get(url)
+        self.assertEqual(response.context["race_rows"][0]["attendance_only_count"], 1)
+        self.assertContains(response, 'data-attendance-count title="Attend without distance" >1</span>', html=False)
+        response = self.client.get(url + f"&race_athlete=athlete:{other.id}")
+        self.assertEqual(response.context["race_rows"][0]["attendance_only_count"], 0)
+        self.assertContains(response, 'data-attendance-count title="Attend without distance" hidden>0</span>', html=False)
+        entry.delete()
+        response = self.client.get(url)
+        self.assertEqual(response.context["race_rows"][0]["attendance_only_count"], 2)
+        self.assertEqual(response.context["race_rows"][0]["distance_rows"][0]["participant_count"], 0)
