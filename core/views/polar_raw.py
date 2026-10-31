@@ -976,7 +976,7 @@ def translate(payload, interval, mode="A", athlete=None):
     return result
 
 
-def translate_model_b(payload, interval, athlete=None):
+def translate_model_b(payload, interval, athlete=None, *, allow_ai=True):
     """Model B starts as an isolated copy of the stable Model A output.
 
     Keep this entry point separate so future Model B recognition changes do
@@ -1005,7 +1005,7 @@ def translate_model_b(payload, interval, athlete=None):
             laps_container = laps_container if isinstance(laps_container, dict) else {}
             manual_laps = laps_container.get("laps") or laps_container.get("manualLaps") or laps_container.get("manual-laps") or []
             if manual_laps:
-                description = _model_b_ai_description(manual_laps, athlete) or type_b_description(manual_laps, athlete)
+                description = (_model_b_ai_description(manual_laps, athlete) if allow_ai else "") or type_b_description(manual_laps, athlete)
                 if description:
                     result_parts[result_index]["description"] = description
                     result_parts[result_index]["description_label"] = "Generated description"

@@ -472,6 +472,10 @@ class Athlete(models.Model):
     garmin_fit_upload_enabled = models.BooleanField(default=False)
     # Coach-only permission for the athlete to connect an Oura account.
     oura_connection_enabled = models.BooleanField(default=False)
+    garmin_connection_enabled = models.BooleanField(default=False)
+    garmin_ai_consent_at = models.DateTimeField(null=True, blank=True)
+    garmin_ai_withdrawn_at = models.DateTimeField(null=True, blank=True)
+    garmin_ai_consent_version = models.CharField(max_length=40, blank=True, default="")
     # Coach-only permission for the athlete to access Polar features.
     polar_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.
@@ -1493,6 +1497,15 @@ class AthleteDailyVital(models.Model):
 
     def __str__(self):
         return f"{self.athlete} - vitals {self.date}"
+
+
+class GarminConnection(models.Model):
+    athlete = models.OneToOneField(Athlete, on_delete=models.CASCADE, related_name="garmin_connection")
+    access_token = models.TextField()
+    refresh_token = models.TextField(blank=True, default="")
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    connected_at = models.DateTimeField(auto_now_add=True)
+    data_consent_at = models.DateTimeField()
 
 
 class OuraConnection(models.Model):

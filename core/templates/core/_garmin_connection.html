@@ -1,0 +1,45 @@
+{% if is_athlete_user and not coach_tools_only and garmin_connection_enabled %}
+<section class="mb-5" aria-labelledby="garmin-heading">
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h3 class="h5 card-title" id="garmin-heading">Garmin connection</h3>
+          {% if garmin_status == 'connected' %}
+            <p class="alert alert-success py-2" role="status">Garmin account connected.</p>
+          {% elif garmin_status == 'disconnected' or garmin_status == 'disconnected_remote_pending' %}
+            <p class="alert alert-info py-2" role="status">AI permission withdrawn. Garmin is disabled in MiLa Planner.</p>
+            {% if garmin_status == 'disconnected_remote_pending' %}<p class="small">Garmin could not confirm disconnection. Please also remove MiLa Planner in your Garmin Connect account settings.</p>{% endif %}
+          {% elif garmin_status == 'consent_required' %}
+            <p class="alert alert-warning py-2" role="alert">Please confirm permission to process Garmin activity data.</p>
+          {% elif garmin_status == 'authorization_failed' %}
+            <p class="alert alert-warning py-2" role="alert">Garmin could not be connected. Please try again.</p>
+          {% endif %}
+          {% if garmin_connection %}
+            <p>Your Garmin account is connected.</p>
+          {% else %}
+            <form method="post" action="{% url 'garmin_connect' %}">
+              {% csrf_token %}
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="consent_garmin_data" id="garmin-data-consent" required>
+                <label class="form-check-label small" for="garmin-data-consent">I explicitly consent to MiLa Planner processing my Garmin activity data for training planning and sharing it with my authorised coaches, as described in the <a href="{% url 'privacy_policy' %}" target="_blank" rel="noopener">Privacy Policy</a>.</label>
+              </div>
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="consent_garmin_ai" id="garmin-ai-consent">
+                <label class="form-check-label small" for="garmin-ai-consent">I explicitly agree to optional AI analysis using OpenAI to interpret my workout structure. Selected lap distances, durations, pace and heart-rate data may be processed. I can withdraw this permission below; doing so also disables my Garmin connection.</label>
+              </div>
+              <button class="btn btn-outline-primary" type="submit" {% if not garmin_configured %}disabled{% endif %}>Connect Garmin</button>
+              {% if not garmin_configured %}<p class="small text-muted mt-2">Garmin connection is not available yet.</p>{% endif %}
+            </form>
+          {% endif %}
+          <form method="post" action="{% url 'garmin_withdraw' %}" class="mt-3">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">Withdraw AI permission</button>
+            <div class="form-text">Stops future Garmin AI analysis and disconnects Garmin. Previously imported activities remain available.</div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}

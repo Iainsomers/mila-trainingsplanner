@@ -141,3 +141,9 @@ Doe ongeveer maandelijks of na een grotere feature een korte documentatiecontrol
 ## Documentatie op Render
 
 De projectdocumentatie is bronmateriaal in `docs/project/` en wordt met main naar dezelfde Render-checkout uitgerold. Er bestaat geen aparte publieke documentatiepagina in deze app. Een Git-push bevestigt de repositorywijziging, niet zelfstandig de voltooiing van de Render-deploy.
+
+## Garmin OAuth-configuratie
+
+Migratie `0130` voegt de Garmin-rechten, laatste AI-toestemming/intrekking en aparte tokenopslag toe. Stel op Render `GARMIN_CLIENT_ID` en `GARMIN_CLIENT_SECRET` in; `GARMIN_REDIRECT_URI` is optioneel en standaard `https://mila-trainingsplanner.onrender.com/integrations/garmin/callback/`. Registreer exact die callback bij Garmin. Zonder configuratie blijft Connect Garmin uitgeschakeld en doet de server geen autorisatieverzoek.
+
+OAuth volgt Garmins officiële OAuth2 PKCE-specificatie: https://developerportal.garmin.com/sites/default/files/OAuth2PKCE_1.pdf. State, gebruikers-/atleetbinding, eenmalige callback, tien minuten geldigheid en wijzigingen van toestemming worden gecontroleerd. Deze wijziging realiseert verbinden/ontkoppelen; automatische activiteitensynchronisatie via push/ping wordt hiermee nog niet toegevoegd. Externe OAuth en ontkoppeling zijn met gemockte HTTP-responses getest; een echte Garmin-test vereist geconfigureerde sleutels.

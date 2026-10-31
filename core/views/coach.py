@@ -545,6 +545,10 @@ def dashboard_view(request):
             Athlete.objects.filter(oura_connection_enabled=True, oura_connection__isnull=False), request
         ).exists()
 
+    from core.views.garmin import configured as garmin_configured
+    from core.models import GarminConnection
+    garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
+
     return render(request, "core/dashboard.html", {
         "is_athlete_user": is_athlete_user,
         "is_trainer_user": is_trainer_user,
@@ -557,6 +561,10 @@ def dashboard_view(request):
         "is_product_admin": _is_product_admin(request.user),
         "is_llg_team": is_llg_team,
         "garmin_upload_athlete_count": garmin_upload_athlete_count,
+        "garmin_connection_enabled": bool(is_athlete_user and athlete.garmin_connection_enabled),
+        "garmin_connection": garmin_connection,
+        "garmin_configured": garmin_configured(),
+        "garmin_status": request.GET.get("garmin", ""),
         "oura_connection": oura_connection,
         "oura_connection_enabled": oura_connection_enabled,
         "oura_preview_available": oura_preview_available,
@@ -5776,7 +5784,8 @@ def garmin_type_c_ayc_view(request):
         })
 
     from .polar_raw import translate_model_b, type_a_watch_loads
-    results = translate_model_b(sessions, 5, athlete)
+    from core.views.garmin import ai_allowed
+    results = translate_model_b(sessions, 5, athlete, allow_ai=ai_allowed(athlete))
     for session, result in zip(session_exercises, results):
         for part in result.get("parts") or []:
             watch_loads = type_a_watch_loads(session, athlete)
@@ -10984,6 +10993,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "see_session_zones": getattr(athlete, "see_session_zones", True),
         "see_desired_improvement_points": getattr(athlete, "see_desired_improvement_points", False),
         "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
+        "garmin_connection_enabled": getattr(athlete, "garmin_connection_enabled", False),
         "oura_connection_enabled": getattr(athlete, "oura_connection_enabled", False),
         "polar_enabled": getattr(athlete, "polar_enabled", False),
         "pause_mode": effective_pause_mode,
@@ -11044,6 +11054,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["garmin_fit_upload_enabled"] = getattr(athlete, "garmin_fit_upload_enabled", False)
         else:
             form["garmin_fit_upload_enabled"] = (request.POST.get("garmin_fit_upload_enabled") == "on")
+        form["garmin_connection_enabled"] = athlete.garmin_connection_enabled if self_view else request.POST.get("garmin_connection_enabled") == "on"
         if self_view:
             form["oura_connection_enabled"] = getattr(athlete, "oura_connection_enabled", False)
         else:
@@ -11257,6 +11268,11 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
                 athlete.see_desired_improvement_points = form["see_desired_improvement_points"]
             if not self_view:
                 athlete.garmin_fit_upload_enabled = form["garmin_fit_upload_enabled"]
+                if athlete.garmin_connection_enabled and not form["garmin_connection_enabled"]:
+                    from core.views.garmin import revoke_connection
+                    revoke_connection(athlete)
+                    athlete.refresh_from_db(fields=["garmin_ai_withdrawn_at"])
+                athlete.garmin_connection_enabled = form["garmin_connection_enabled"]
                 previous_oura_enabled = bool(getattr(athlete, "oura_connection_enabled", False))
                 athlete.oura_connection_enabled = form["oura_connection_enabled"]
                 if previous_oura_enabled and not athlete.oura_connection_enabled:

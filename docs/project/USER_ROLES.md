@@ -102,3 +102,7 @@ Meeting requests zijn alleen door de gekoppelde atleet zelf aan te maken of te a
 - Een eigenaar/bevoegde trainer of de betreffende atleet mag de eigen Type D-HR-grenzen en Estimated-vlag opslaan. View-only coachtoegang geeft wel inzage/analyse maar geen recht om grenzen te bewaren.
 - Een ongeldig atleetdoel wordt vóór opslag geweigerd. Een formulier met HR-waarden voor de vorige atleet wordt niet op de nieuw gekozen atleet toegepast.
 - Het lezen of analyseren van Polar-data wijzigt geen planning of trainingsevaluatie.
+
+## Garmin-toestemming
+
+Alleen de eigenaar-trainer of een bevoegde edit-coach kan `Allow Garmin Connection` wijzigen. Atleten kunnen dit recht niet via een POST inschakelen. Alleen de gekoppelde atleet kan de eigen Garmin-verbinding autoriseren en AI-toestemming geven/intrekken; trainers kunnen dit niet namens een atleet doen. Alleen het eigen dashboard en de eigen instellingen tonen de intrekknop.

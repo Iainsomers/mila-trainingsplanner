@@ -640,6 +640,11 @@
           <label class="form-check-label" for="garmin_fit_upload_enabled">Allow Garmin FIT uploads</label>
           <div class="form-text">Show this athlete in the coach's Garmin upload tab. This setting is coach-only.</div>
         </div>
+        <div class="mb-3 form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="garmin_connection_enabled" name="garmin_connection_enabled" {% if form.garmin_connection_enabled %}checked{% endif %}>
+          <label class="form-check-label" for="garmin_connection_enabled">Allow Garmin Connection</label>
+          <div class="form-text">Show the Garmin connection tile on this athlete's dashboard. Turning this off disconnects Garmin. The athlete controls AI consent.</div>
+        </div>
         <div class="mb-3 form-check">
           <input
             class="form-check-input"
@@ -846,6 +851,13 @@
           <a href="{% if self_view %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
         </div>
       </form>
+      {% if self_view and athlete.garmin_connection_enabled %}
+      <form method="post" action="{% url 'garmin_withdraw' %}" class="mt-3">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger">Withdraw AI permission</button>
+        <div class="form-text">Stops future Garmin AI analysis and disconnects Garmin.</div>
+      </form>
+      {% endif %}
       {% if mode == "edit" and athlete %}
         <script>
           document.addEventListener("DOMContentLoaded", function () {

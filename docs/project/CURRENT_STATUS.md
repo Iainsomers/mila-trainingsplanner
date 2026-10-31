@@ -155,3 +155,9 @@ Bijgewerkt: 30 oktober 2026.
 - C blijft een eerste versie: tempopieken rond stops en hervatten zijn niet altijd betrouwbaar te corrigeren. Type D gebruikt daarom bij voorkeur rondegemiddelden; zonder bruikbare rondes blijft de sampleanalyse conservatief.
 - De HR-preset is geschat en moet per atleet beoordeeld worden. Een hoogste gemeten trainingshartslag is niet automatisch HRmax.
 - Type D staat los van planning en evaluatie: automatische overname naar AYC is niet gebouwd. AI-uitvoer is een interpretatie, geen vastgestelde uitvoering of medische drempelmeting.
+
+## Garmin — 31 oktober 2026
+
+Trainer-only `Allow Garmin Connection`, de eigen dashboardtegel, OAuth2 PKCE, optionele AI-toestemming en `Withdraw AI permission` zijn toegevoegd. Intrekken blokkeert Garmin-AI en ontkoppelt; trainer uitschakelen doet hetzelfde. Garmin C valt zonder toestemming terug op vaste herkenning. De privacyverklaring beschrijft deze concrete werking. Render heeft de Garmin-appsleutels nodig voordat echt verbinden beschikbaar is. Automatische import is nog niet geïmplementeerd.
+
+Validatie Garmin: 28 gerichte Garmin/Oura-tests geslaagd; `manage.py check`, migratiecontrole en lokale migratie geslaagd. De uitgebreidere `core.tests_polar_raw`-controle heeft vier bestaande fouten door SimpleNamespace-gebruikers in de toegangscontrole; alle vier zijn ook met de ongewijzigde HEAD-versie van polar_raw.py gereproduceerd. Overige Polar-raw-tests slagen.

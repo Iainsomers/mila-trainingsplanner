@@ -299,3 +299,10 @@ Bij het openen van een AYC-training gebruikt de popup de training die de kalende
 ## Flex Planner — week kopiëren en plakken
 
 Naast iedere geselecteerde atleet staat per week een compacte `c`- en `p`-actie. `c` kopieert de zichtbare week; daarna kan `p` de volledige week naar een andere week van dezelfde atleet plakken. De bestaande Flex-rechten, overrides en racebescherming blijven gelden. Celhoogtes groeien mee met langere trainingen zodat de volledige inhoud zichtbaar blijft.
+
+## Garmin-verbinding en AI-toestemming
+
+- Trainer-only `Allow Garmin Connection` in Athlete settings staat standaard uit. Alleen toegestane atleten zien onderaan het dashboard de Garmin-tegel. Dit staat los van `Allow Garmin FIT uploads`.
+- De atleet autoriseert Garmin via OAuth2 PKCE. Datatoestemming is vereist; het afzonderlijke OpenAI-vinkje is optioneel en standaard uit. Alleen de atleet kan toestemming geven. Zonder AI-toestemming gebruikt Garmin C uitsluitend vaste lapherkenning.
+- `Withdraw AI permission` staat op het eigen dashboard en in Athlete settings wanneer Garmin is toegestaan. Dit registreert intrekking, blokkeert nieuwe Garmin-AI-analyse, wist lokale tokens en probeert Garmin uit te schrijven. Bij een Garmin-fout meldt het dashboard hoe de atleet de koppeling ook in Garmin Connect kan verwijderen. De trainerinstelling blijft aan zodat bewust opnieuw verbinden mogelijk is. Reeds geïmporteerde activiteiten blijven behouden.
+- Traineruitschakeling ontkoppelt eveneens en maakt lopende OAuth-pogingen ongeldig. AI-toestemmingsdatum, tekstversie en laatste intrekkingsdatum blijven bewaard.

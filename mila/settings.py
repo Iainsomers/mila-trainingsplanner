@@ -47,6 +47,12 @@ CSRF_COOKIE_SAMESITE = "Lax"
 # Oura OAuth application configuration. Keep the client secret in the host's
 # secret environment settings; never place it in source control.
 OURA_CLIENT_ID = os.environ.get("OURA_CLIENT_ID", "").strip()
+GARMIN_CLIENT_ID = os.environ.get("GARMIN_CLIENT_ID", "").strip()
+GARMIN_CLIENT_SECRET = os.environ.get("GARMIN_CLIENT_SECRET", "").strip()
+GARMIN_REDIRECT_URI = os.environ.get(
+    "GARMIN_REDIRECT_URI",
+    "https://mila-trainingsplanner.onrender.com/integrations/garmin/callback/",
+).strip()
 OURA_CLIENT_SECRET = os.environ.get("OURA_CLIENT_SECRET", "").strip()
 OURA_REDIRECT_URI = os.environ.get(
     "OURA_REDIRECT_URI",

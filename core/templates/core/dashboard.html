@@ -167,6 +167,8 @@
   </section>
   {% endif %}
 
+  {% include "core/_garmin_connection.html" %}
+
   {% if not is_athlete_user and not coach_tools_only %}
   <div class="row g-4 mt-auto pt-5">
     {% if is_product_admin %}
