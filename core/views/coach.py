@@ -7163,7 +7163,12 @@ def year_planner_view(request):
                 cells[index]["race_span_extra"] = stop - index - 1
                 index = stop
 
+    show_detailed_camps = (
+        bool(getattr(athlete, "year_planner_whereabouts_enabled", False)) if is_athlete_user
+        else CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
+    )
     return render(request, "core/year_planner.html", {
+        "show_detailed_camps": show_detailed_camps,
         "athletes": visible_athletes,
         "trainer_plans": trainer_plans,
         "group_filter": group_filter,

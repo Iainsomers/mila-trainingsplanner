@@ -674,7 +674,7 @@
     border: 1px solid #17324d;
     border-radius: 7px;
     background: #17324d;
-    color: #fff;
+    color: #f2c200;
     font-size: .85rem;
     font-weight: 600;
     line-height: 1.2;
@@ -682,7 +682,7 @@
   }
   .year-race-toggle::before { content: "→"; font-size: 1.1rem; }
   .year-race-toggle[aria-expanded="true"]::before { content: "←"; }
-  .year-race-toggle:hover, .year-race-toggle:active { background: #244b6f; border-color: #244b6f; color: #fff; }
+  .year-race-toggle:hover, .year-race-toggle:active { background: #244b6f; border-color: #244b6f; color: #f2c200; }
   .year-race-toggle:focus-visible { outline: 3px solid #a8c5dd; outline-offset: 3px; }
   @media (max-width: 575.98px) {
     .year-legend-navigation { align-items: flex-start; }
@@ -737,8 +737,11 @@
         </div>
         {% endif %}
       </div>
+      <div class="d-flex flex-wrap gap-2">
       <button type="button" class="btn year-race-toggle" id="yearRaceToggle"
               aria-expanded="false" aria-controls="yearRacePanel">Race Calendar</button>
+      {% if show_detailed_camps %}<a href="{% url 'detailed_camps' %}" class="btn year-race-toggle">Details Camps</a>{% endif %}
+      </div>
       </div>
     </div>
     <div class="d-flex gap-2">

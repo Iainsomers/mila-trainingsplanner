@@ -184,4 +184,6 @@ Add race: naam en begindatum krijgen elk een halve rij; Add staat op de volgende
 
 Year Planner toont aaneengesloten dagen van dezelfde wedstrijd als één doorlopende pil met één naam per zichtbare kalenderstrook. Bij een maand-/strookgrens begint een nieuwe pil; de dagelijkse raceblokkade en afstand-hover blijven bestaan.
 
-De wisselknop Race Calendar / Back to Yearplanner staat gecentreerd naast de legenda, heeft in beide standen dezelfde breedte (196px), donker MiLa-blauw (#17324d), witte semibold tekst en een richtingspijl. Op mobiel mag hij onder de legenda afbreken en is hij minimaal 44px hoog.
+De wisselknop Race Calendar / Back to Yearplanner staat gecentreerd naast de legenda, heeft in beide standen dezelfde breedte (196px), donker MiLa-blauw (#17324d), gele semibold tekst en een richtingspijl. Op mobiel mag hij onder de legenda afbreken en is hij minimaal 44px hoog.
+
+Year Planner-wisselknop gebruikt gele tekst (#f2c200) op donkerblauw, ook bij hover. Daarnaast staat een gelijkvormige Details Camps-knop voor gebruikers die campdetails mogen zien. De trainerplanning heeft geen losse Races-tegel meer; Details Camps blijft staan. De eigen Races-ingang voor atleten blijft beschikbaar.
