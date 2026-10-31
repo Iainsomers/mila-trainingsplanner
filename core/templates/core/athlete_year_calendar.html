@@ -2623,6 +2623,7 @@
       validate();
     }, true);
   });
+  function showPendingEvaluations() {
   var pendingEvaluationModal = document.getElementById("pendingEvaluationModal");
   if (pendingEvaluationModal) {
     pendingEvaluationModal.classList.add("is-visible");
@@ -2645,6 +2646,44 @@
       });
     });
   }
+  }
+  showPendingEvaluations();
+  {% if enable_idle_evaluation_reminders %}
+  // Refresh reminders after an idle hour without reloading unsaved forms.
+  var reminderLastInteraction = Date.now();
+  var reminderChecking = false;
+  var reminderIdleMs = 60 * 60 * 1000;
+  function checkIdleEvaluations() {
+    if (document.hidden || reminderChecking || Date.now() - reminderLastInteraction < reminderIdleMs) return;
+    if (document.querySelector('.modal.show') || document.getElementById("commentModal").style.display === "flex") return;
+    reminderChecking = true;
+    fetch(window.location.href, {credentials: "same-origin", headers: {"X-Requested-With": "XMLHttpRequest"}, cache: "no-store"})
+      .then(function(response) { if (!response.ok || response.redirected) throw new Error("Reminder check unavailable"); return response.text(); })
+      .then(function(html) {
+        var refreshed = new DOMParser().parseFromString(html, "text/html");
+        if (!refreshed.getElementById("commentModal") || document.hidden) return;
+        if (document.querySelector(".modal.show") || document.getElementById("commentModal").style.display === "flex") return;
+        var previous = document.getElementById("pendingEvaluationModal");
+        if (previous) previous.remove();
+        var next = refreshed.getElementById("pendingEvaluationModal");
+        if (next) { document.body.appendChild(document.importNode(next, true)); showPendingEvaluations(); }
+        reminderLastInteraction = Date.now();
+      })
+      .catch(function() { /* Retry on the next idle check. */ })
+      .finally(function() { reminderChecking = false; });
+  }
+  function reminderInteraction() {
+    checkIdleEvaluations();
+    reminderLastInteraction = Date.now();
+  }
+  ["pointerdown", "keydown", "scroll", "touchstart"].forEach(function(name) {
+    document.addEventListener(name, reminderInteraction, {passive: true, capture: true});
+  });
+  document.addEventListener("visibilitychange", checkIdleEvaluations);
+  window.addEventListener("focus", checkIdleEvaluations);
+  window.addEventListener("pageshow", checkIdleEvaluations);
+  window.setInterval(checkIdleEvaluations, 30000);
+  {% endif %}
   document.querySelectorAll(".report-field").forEach(function(el){ el.addEventListener("input", validate); el.addEventListener("change", validate); });
   [["reportT1Status", "reportT1Rpe"], ["reportT2Status", "reportT2Rpe"]].forEach(function(fields){
     document.getElementById(fields[0]).addEventListener("change", function(){

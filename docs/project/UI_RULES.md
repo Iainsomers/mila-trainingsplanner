@@ -171,3 +171,5 @@ In de Year Planner scheidt een 2px grijze lijn de opeenvolgende atleet-/coachrij
 Information Quality toont `Last active in MiLa` als datum en tijd. De compacte pill is groen bij vandaag, oranje bij gisteren en rood bij oudere kalenderdagen, volgens Europe/Amsterdam. Zonder registratie staat NA zonder kleur. De bestaande responsive tabel blijft behouden.
 
 Information Quality reserveert 28% voor de atleetnaam en verdeelt de vier informatiekolommen gelijkmatig (elk 18%). Koppen, pills en NA zijn per informatiekolom gecentreerd. Op mobiel blijft de tabel horizontaal bereikbaar via de bestaande scrollcontainer.
+
+De AYC controleert voor de atleet na een uur zonder interactie opnieuw op openstaande evaluaties, ook bij terugkeer uit de achtergrond. De popup gebruikt verse gegevens zonder paginareload; een geopende evaluatiepopup wordt niet onderbroken.

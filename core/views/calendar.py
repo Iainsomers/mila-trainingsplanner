@@ -4263,5 +4263,6 @@ def athlete_year_calendar_view(request):
             ),
             "zones_times_rows": _build_zones_times_rows(selected_athlete),
             "pending_evaluation_reminders": pending_evaluation_reminders,
+            "enable_idle_evaluation_reminders": bool(athlete_self_view and show_training_reports),
         },
     )
