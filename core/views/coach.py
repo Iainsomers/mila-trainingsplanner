@@ -7146,6 +7146,23 @@ def year_planner_view(request):
             ],
         })
 
+    # Join adjacent race days within each visible calendar row/chunk.
+    for chunk in chunks:
+        for row in chunk["rows"]:
+            cells = row["cells"]
+            index = 0
+            while index < len(cells):
+                race_ids = tuple(race.id for race in cells[index].get("races", []))
+                if not race_ids:
+                    index += 1
+                    continue
+                stop = index + 1
+                while stop < len(cells) and tuple(race.id for race in cells[stop].get("races", [])) == race_ids:
+                    stop += 1
+                cells[index]["race_span"] = stop - index
+                cells[index]["race_span_extra"] = stop - index - 1
+                index = stop
+
     return render(request, "core/year_planner.html", {
         "athletes": visible_athletes,
         "trainer_plans": trainer_plans,

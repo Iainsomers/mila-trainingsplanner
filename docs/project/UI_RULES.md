@@ -181,3 +181,5 @@ Race Calendar-popup: Athlete, Attend, Distance, Trainer, Athlete, Target gebruik
 Race Calendar toont tussen wedstrijdnaam en afstanden het aantal Attend-selecties zonder geselecteerde afstand als hetzelfde groene bolletje als de afstandsaantallen. Nul wordt verborgen. De telling volgt de actieve groep-/atleetfilter en wijzigt direct na opslaan van selecties.
 
 Add race: naam en begindatum krijgen elk een halve rij; Add staat op de volgende rij naast Race Type en Multiple days. Hierdoor blijft de volledige begindatum leesbaar. Op mobiel stapelen de velden en knop.
+
+Year Planner toont aaneengesloten dagen van dezelfde wedstrijd als één doorlopende pil met één naam per zichtbare kalenderstrook. Bij een maand-/strookgrens begint een nieuwe pil; de dagelijkse raceblokkade en afstand-hover blijven bestaan.

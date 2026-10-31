@@ -102,3 +102,20 @@ class RaceAttendanceTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.context["race_rows"][0]["attendance_only_count"], 2)
         self.assertEqual(response.context["race_rows"][0]["distance_rows"][0]["participant_count"], 0)
+
+    def test_multiday_year_race_is_one_pill_per_visible_chunk(self):
+        self.race.date = date(2027, 9, 11)
+        self.race.end_date = date(2027, 9, 19)
+        self.race.save()
+        RaceAttendance.objects.create(race=self.race, athlete=self.athlete)
+        response = self.client.get(f"/planning/year/?year=2026&period=season&zoom=1&athletes={self.athlete.id}")
+        cells = [cell for chunk in response.context["chunks"] for row in chunk["rows"] for cell in row["cells"] if cell.get("races")]
+        self.assertEqual(len(cells), 9)
+        self.assertEqual([cell.get("race_span") for cell in cells], [9] + [None] * 8)
+        self.assertContains(response, "width: calc(100% * 9 + 8px)")
+        self.assertEqual(response.content.decode().count('>Attend Meeting</span>'), 1)
+        self.race.date, self.race.end_date = date(2027, 8, 31), date(2027, 9, 2)
+        self.race.save()
+        response = self.client.get(f"/planning/year/?year=2026&period=season&zoom=1&athletes={self.athlete.id}")
+        spans = [cell["race_span"] for chunk in response.context["chunks"] for row in chunk["rows"] for cell in row["cells"] if cell.get("race_span")]
+        self.assertEqual(spans, [1, 2])

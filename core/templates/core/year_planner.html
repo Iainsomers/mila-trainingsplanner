@@ -279,6 +279,7 @@
     border-bottom-right-radius: 0;
   }
 
+  .year-layer-wrap[data-year-race-locked] { overflow: visible; z-index: 3; }
   .year-race-colors {
     position: absolute;
     inset: 1px 0;
@@ -947,9 +948,11 @@
                              {% if cell.races %}data-year-race-locked="1" title="{% for race in cell.races %}{{ race.selected_distances|join:', ' }}{% if not forloop.last %}; {% endif %}{% endfor %}"{% endif %}
                              data-year-training-value="{% if not cell.races %}{{ cell.payload.training }}{% endif %}">
                           {% if cell.races %}
-                            <div class="year-race-colors" aria-label="{% for race in cell.races %}{{ race.name }}: {{ race.selected_distances|join:', ' }}{% if not forloop.last %}; {% endif %}{% endfor %}">
+                            {% if cell.race_span %}
+                            <div class="year-race-colors" style="width: calc(100% * {{ cell.race_span }} + {{ cell.race_span_extra }}px);" aria-label="{% for race in cell.races %}{{ race.name }}: {{ race.selected_distances|join:', ' }}{% if not forloop.last %}; {% endif %}{% endfor %}">
                               {% for race in cell.races %}<span class="year-fill year-where-{{ race.race_type }}">{{ race.name }}</span>{% endfor %}
                             </div>
+                            {% endif %}
                           {% else %}
                           <div class="year-fill year-training-{{ cell.payload.training }}" data-year-training-fill></div>
                           {% if zoom_mode != "1" or year_planner_read_only %}
