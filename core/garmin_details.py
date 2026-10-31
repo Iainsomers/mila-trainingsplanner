@@ -71,7 +71,14 @@ def lap_data(item):
         if hr_end > hr_start:
             lap["avg_heart_rate"] = (hr_sums[hr_end] - hr_sums[hr_start]) / (hr_end - hr_start)
         normalized_laps.append(lap)
-    if len(normalized_laps) != len(boundaries) or (boundaries and boundaries[0] != start):
+    if not boundaries:
+        lap_status = "no_lap_markers"
+    elif len(normalized_laps) != len(boundaries) or boundaries[0] != start:
+        lap_status = "incomplete_lap_coverage"
         normalized_laps = []  # Do not offer an incomplete activity as a complete workout.
+    else:
+        lap_status = "available"
     return {"laps": normalized_laps, "heart_rate_samples": heart_samples,
-            "total_distance_m": distance, "total_elapsed_s": end - start}
+            "total_distance_m": distance, "total_elapsed_s": end - start,
+            "lap_data_status": lap_status, "received_lap_count": len(laps),
+            "received_sample_count": len(samples)}

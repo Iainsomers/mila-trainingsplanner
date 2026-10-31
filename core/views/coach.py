@@ -5723,12 +5723,25 @@ def garmin_type_c_ayc_view(request):
             saved_activities.append(SimpleNamespace(activity_start=received.activity_start,
                 original_filename=f"Garmin activity {received.activity_id}", parsed_data=parsed, raw_file=b""))
         else:
+            if parsed:
+                detail_message = "Activity Details have been received, but usable lap data is missing."
+                if parsed.get("lap_data_status") == "no_lap_markers":
+                    detail_message = "Activity Details have been received. Garmin supplied no recorded lap boundaries for this activity."
+                elif parsed.get("lap_data_status") == "incomplete_lap_coverage":
+                    detail_message = "Activity Details have been received, but the measured samples do not cover all lap boundaries. No incomplete workout analysis is offered."
+                if parsed.get("details_received_at"):
+                    detail_message += " Last detail delivery: " + str(parsed["details_received_at"]) + "."
+                detail_status = "details_without_usable_laps"
+            else:
+                detail_message = "Only the activity summary is stored for this recording. No Activity Details have been stored yet, including after any resend request."
+                detail_status = "summary_only"
             summary_results.append({"name": f"Garmin activity {received.activity_id}",
+                "detail_status": detail_status,
                 "start": timezone.localtime(received.activity_start).isoformat(),
                 "distance": f"{received.distance_m:g}" if received.distance_m is not None else "NA",
                 "duration": watch_duration(received.duration_s * 1000) if received.duration_s is not None else "NA",
                 "parts": [{"description_label": "Activity summary",
-                           "description": "Activity received from Garmin. Lap details are not available yet; enable Activity Details delivery in Garmin API Tools for Garmin C analysis.",
+                           "description": detail_message,
                            "manual": [], "auto": []}]})
     sessions = []
     session_exercises = []
@@ -5886,6 +5899,7 @@ def garmin_type_c_ayc_view(request):
                     "final_main": final_main,
                 }
     results.extend(summary_results)
+    results.sort(key=lambda result: str(result.get("start") or ""))
     return JsonResponse({
         "ok": True,
         "message": "" if results else "No Garmin activities found for this day.",

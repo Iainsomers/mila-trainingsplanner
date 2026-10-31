@@ -69,7 +69,7 @@ class GarminCPushTests(TestCase):
         self.send({"activities": [self.summary]})
         self.send({"activityDetails": [self.details()]})
         self.assertEqual(GarminActivitySummary.objects.count(), 1)
-        self.assertEqual(GarminActivitySummary.objects.get().analysis_data, before)
+        self.assertEqual(GarminActivitySummary.objects.get().analysis_data["laps"], before["laps"])
 
     def test_missing_sample_coverage_does_not_invent_intermediate_laps(self):
         details = self.details()
@@ -104,3 +104,33 @@ class GarminCPushTests(TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["name"], "run.fit")
         self.assertEqual(len(results[0]["parts"][0]["manual"]), 2)
+
+    def test_details_without_laps_are_not_misreported_as_missing_delivery(self):
+        details = self.details()
+        details["laps"] = []
+        self.send({"activityDetails": [details]})
+        result = self.read_c().json()["results"][0]
+        self.assertEqual(result["detail_status"], "details_without_usable_laps")
+        description = result["parts"][0]["description"]
+        self.assertIn("have been received", description)
+        self.assertIn("no recorded lap boundaries", description)
+        self.assertNotIn("enable Activity Details", description)
+        self.assertIn("Last detail delivery:", description)
+
+    def test_resend_replaces_summary_status_and_keeps_all_three_runs_in_time_order(self):
+        first = {**self.summary, "activityId": 111, "startTimeInSeconds": self.start - 600}
+        self.send({"activities": [first]})
+        self.send({"activityDetails": [self.details()]})
+        third = {**self.summary, "activityId": 999, "startTimeInSeconds": self.start + 600}
+        self.send({"activities": [third]})
+        results = self.read_c().json()["results"]
+        self.assertEqual([r["name"] for r in results], ["Garmin activity 111", "Garmin activity 456", "Garmin activity 999"])
+        self.assertEqual(results[0]["detail_status"], "summary_only")
+        details = self.details()
+        details["activityId"] = 111
+        details["summary"] = {**self.summary, "startTimeInSeconds": self.start - 600}
+        details["laps"] = []
+        self.send({"activityDetails": [details]})
+        results = self.read_c().json()["results"]
+        self.assertEqual(len(results), 3)
+        self.assertEqual(results[0]["detail_status"], "details_without_usable_laps")

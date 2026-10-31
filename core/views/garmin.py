@@ -121,6 +121,7 @@ def _push_activity(item, *, details=False):
     if details:
         from core.garmin_details import lap_data
         fields["analysis_data"] = lap_data(source)
+        fields["analysis_data"]["details_received_at"] = timezone.now().isoformat()
     return user_id, str(activity_id), fields
 
 
