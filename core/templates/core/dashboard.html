@@ -98,23 +98,6 @@
       </a>
     </div>
 
-    {% if is_trainer_user and not coach_tools_only %}
-    <div class="col-md-6 col-lg-4">
-      <section class="card h-100" aria-labelledby="coach-garmin-heading">
-        <div class="card-body">
-          <h5 class="card-title" id="coach-garmin-heading">Garmin <span class="small text-muted">(under construction)</span></h5>
-          <p class="card-text mb-2">Connected athletes</p>
-          <ul class="list-unstyled mb-0">
-            {% for athlete in garmin_connected_athletes %}
-              <li class="py-1">{{ athlete.name }} <span class="badge text-bg-success">Connected</span></li>
-            {% empty %}
-              <li class="text-muted">No athletes connected yet.</li>
-            {% endfor %}
-          </ul>
-        </div>
-      </section>
-    </div>
-    {% endif %}
 
     {% if is_trainer_user and not coach_tools_only %}
     <div class="col-md-6 col-lg-4">
@@ -241,6 +224,26 @@
           <p class="card-text">Temporarily retrieve recent Oura summaries for a connected athlete.</p>
         </div>
       </a>
+    </div>
+    {% endif %}
+    {% if is_trainer_user %}
+    <div class="col-md-6 col-xl-3">
+      <details class="card h-100" id="coach-garmin-connections">
+        <summary class="card-body dashboard-tile" style="cursor: pointer;" aria-labelledby="coach-garmin-heading">
+          <h5 class="card-title" id="coach-garmin-heading">Garmin (under construction)</h5>
+          <p class="card-text mb-0">View connected athletes.</p>
+        </summary>
+        <div class="card-body border-top">
+          <p class="fw-semibold mb-2">Connected athletes</p>
+          <ul class="list-unstyled mb-0">
+            {% for athlete in garmin_connected_athletes %}
+              <li class="py-1">{{ athlete.name }} <span class="badge text-bg-success">Connected</span></li>
+            {% empty %}
+              <li class="text-muted">No athletes connected yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </details>
     </div>
     {% endif %}
   </div>
