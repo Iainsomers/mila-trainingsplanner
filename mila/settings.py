@@ -91,6 +91,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.middleware.AthleteLastActiveMiddleware",
     "core.middleware.CoachToolsOnlyMiddleware",
     "core.middleware.CoachViewEditAccessMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

@@ -42,6 +42,7 @@
   .evaluation-percentage-orange { background: #d97706; }
   .evaluation-percentage-red { background: #c62828; }
   .evaluation-percentage-zero { background: #111; }
+  .last-active-badge { color: #fff; white-space: nowrap; font-size: .8rem; }
   .pending-green { background: #b7e4c7; }
   .pending-yellow { background: #ffe69c; }
   .pending-orange { background: #f7b267; }
@@ -92,7 +93,7 @@
       <p class="text-muted small">Training evaluations and daily vitals from {{ window_start|date:"d-m-Y" }} through {{ window_end|date:"d-m-Y" }}. Today's AM session is included from 12:00 and PM from 21:00.</p>
       <div class="table-responsive">
         <table class="table table-sm info-quality-table mb-0">
-          <thead><tr><th>Athlete</th><th class="text-end">Evaluated</th><th class="text-end">Vitals</th><th class="text-end">Meeting request</th></tr></thead>
+          <thead><tr><th>Athlete</th><th class="text-end">Evaluated</th><th class="text-end">Vitals</th><th class="text-end">Last active in MiLa</th><th class="text-end">Meeting request</th></tr></thead>
           <tbody>
             {% for row in athlete_rows %}
               <tr>
@@ -107,6 +108,11 @@
                   {% else %}<span class="pending-badge evaluation-percentage {% if row.vitals_percentage == 0 %}evaluation-percentage-zero{% elif row.vitals_percentage >= 95 %}evaluation-percentage-dark-green{% elif row.vitals_percentage >= 80 %}evaluation-percentage-light-green{% elif row.vitals_percentage >= 60 %}evaluation-percentage-orange{% else %}evaluation-percentage-red{% endif %}" title="{{ row.vitals_tooltip }}">{{ row.vitals_percentage }}%</span>{% endif %}
                 </td>
                 <td class="text-end">
+                  {% if row.last_active_at %}
+                    <span class="pending-badge last-active-badge evaluation-percentage-{% if row.last_active_color == 'green' %}dark-green{% else %}{{ row.last_active_color }}{% endif %}" title="Last active in MiLa: {{ row.last_active_at|date:'d-m-Y H:i' }}">{{ row.last_active_at|date:"d-m-Y H:i" }}</span>
+                  {% else %}NA{% endif %}
+                </td>
+                <td class="text-end">
                   {% for athlete in meeting_requests %}
                     {% if athlete.id == row.athlete.id %}
                       <button type="button" class="btn btn-sm btn-{% if athlete.meeting_request_color == 'green' %}success{% elif athlete.meeting_request_color == 'orange' %}warning{% else %}danger{% endif %}" disabled>Meeting requested · {{ athlete.meeting_request_age_days }}d</button>
@@ -115,7 +121,7 @@
                 </td>
               </tr>
             {% empty %}
-              <tr><td colspan="4" class="text-muted">No athletes found.</td></tr>
+              <tr><td colspan="5" class="text-muted">No athletes found.</td></tr>
             {% endfor %}
           </tbody>
         </table>

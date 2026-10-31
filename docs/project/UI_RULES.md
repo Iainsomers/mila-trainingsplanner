@@ -167,3 +167,5 @@ Polar Integration en de Type A/B/C/D-dataweergave gebruiken witte knoptekst op g
 - DCO Other toont naast de vier gemiddelden een `HR zones`-knop met een compacte tabel: atleten verticaal, Z1–Z5 horizontaal. Niet-aansluitende, zelf ingevoerde grenzen krijgen rode tekst; `Show NA` werkt ook voor deze tabel.
 
 In de Year Planner scheidt een 2px grijze lijn de opeenvolgende atleet-/coachrijen. Het raster en de scheiding tussen Periodisation/Races en Whereabouts binnen één atleet blijven dun.
+
+Information Quality toont `Last active in MiLa` als datum en tijd. De compacte pill is groen bij vandaag, oranje bij gisteren en rood bij oudere kalenderdagen, volgens Europe/Amsterdam. Zonder registratie staat NA zonder kleur. De bestaande responsive tabel blijft behouden.

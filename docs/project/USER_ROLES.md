@@ -108,3 +108,5 @@ Meeting requests zijn alleen door de gekoppelde atleet zelf aan te maken of te a
 Alleen de eigenaar-trainer of een bevoegde edit-coach kan `Allow Garmin Connection` wijzigen. Atleten kunnen dit recht niet via een POST inschakelen. Alleen de gekoppelde atleet kan de eigen Garmin-verbinding autoriseren en AI-toestemming geven/intrekken; trainers kunnen dit niet namens een atleet doen. Alleen het eigen dashboard en de eigen instellingen tonen de intrekknop.
 
 Een bevoegde coach mag op de Garmin-trainingslijst de Garmin User ID van de geselecteerde toegankelijke atleet lezen/kopiëren voor Summary Resender. Dit geeft geen toegang tot OAuth-tokens of de private appbrede ontvangst-URL; die URL blijft beheerder-only.
+
+Bevoegde coaches zien in Information Quality het laatste geregistreerde interactieve MiLa-gebruik van hun toegankelijke atleten. Bekijken of bewerken door een coach verandert die atleetactiviteit niet. Atleetregistratie gebruikt dezelfde accountidentificatie als de eigen AYC; er wordt alleen een laatste tijdstip bewaard, geen volledig gedragslog.

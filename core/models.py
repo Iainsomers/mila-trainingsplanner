@@ -473,6 +473,7 @@ class Athlete(models.Model):
     # Coach-only permission for the athlete to connect an Oura account.
     oura_connection_enabled = models.BooleanField(default=False)
     garmin_connection_enabled = models.BooleanField(default=False)
+    last_active_at = models.DateTimeField(null=True, blank=True)
     garmin_ai_consent_at = models.DateTimeField(null=True, blank=True)
     garmin_ai_withdrawn_at = models.DateTimeField(null=True, blank=True)
     garmin_ai_consent_version = models.CharField(max_length=40, blank=True, default="")

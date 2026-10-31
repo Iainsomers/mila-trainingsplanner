@@ -12685,8 +12685,12 @@ def daily_overview_other_view(request):
             color = evaluated_color = ""
         can_view_vitals = athlete.id in visible_vital_athlete_ids
         vitals_filled = vital_completion_counts.get(athlete.id, 0) if can_view_vitals else None
+        active_date = timezone.localtime(athlete.last_active_at).date() if athlete.last_active_at else None
+        last_active_color = "green" if active_date == today else "orange" if active_date == today - timedelta(days=1) else "red"
         counts.append({
             "athlete": athlete,
+            "last_active_at": athlete.last_active_at,
+            "last_active_color": last_active_color,
             "pending_count": pending_count,
             "color": color,
             "evaluated_count": evaluated_count,
