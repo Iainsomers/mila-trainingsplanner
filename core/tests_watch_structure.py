@@ -26,6 +26,32 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_split_half_laps_produce_full_rep_times_and_hr(self):
+        from types import SimpleNamespace
+        from core.watch_processing import processed_main_reps
+        loads = []
+        for i in range(3):
+            loads.extend([
+                {"segment": "CORE", "zone": "2", "meters": 504, "seconds": 100,
+                 "average_hr": 150, "average_hr_last_15": 155},
+                {"segment": "CORE", "zone": "3", "meters": 512, "seconds": 98,
+                 "average_hr": 170, "average_hr_last_15": 175}])
+            if i < 2:
+                loads.append({"segment": "CORE", "zone": "1", "meters": 200, "seconds": 90})
+        segment = SimpleNamespace(type="CORE", text="3×1000 m Z2>Z3 (3:15) p90", distance_m=1000, reps=3, order=1)
+        slot = SimpleNamespace(source="watch_c", segments=SimpleNamespace(all=lambda: [segment]), watch_loads=loads)
+        result = processed_main_reps(slot)
+        self.assertEqual(len(result), 3)
+        for row in result:
+            self.assertEqual(row["distance_m"], 1000)
+            self.assertEqual(row["seconds"], round(198 * 1000 / 1016, 2))
+            self.assertEqual(row["measured_seconds"], 198)
+            self.assertEqual(row["average_hr"], 160)
+            self.assertEqual(row["average_hr_last_15"], 175)
+        # A stop/recovery between the half-laps must not become a work rep.
+        loads.insert(1, {"segment": "CORE", "zone": "1", "meters": 200, "seconds": 90})
+        self.assertEqual(processed_main_reps(slot), [])
+
     def test_combined_outer_recordings_do_not_change_main_rep_matching(self):
         from types import SimpleNamespace
         from core.watch_processing import structured_segment_loads

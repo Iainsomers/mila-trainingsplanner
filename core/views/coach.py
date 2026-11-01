@@ -5902,6 +5902,11 @@ def garmin_type_c_ayc_view(request):
                 main_text = ordered_main if ordered_main is not None else str(fields.get("main", ""))
                 merged_main = _watch_c_merge_same_distance_sequence(main_text, watch_loads)
                 final_main = merged_main or main_text
+                # Several zone/recovery groups may first collapse to one half-lap
+                # sequence. Validate that sequence against the measured laps too.
+                final_main = (_watch_c_merge_half_laps_from_raw(final_main, raw_laps)
+                              or _watch_c_merge_half_laps_from_raw(final_main, part.get("manual") or [])
+                              or final_main)
             if final_main != str(fields.get("main", "")):
                 fields["main"] = final_main
                 part["training_fields"] = fields
@@ -5937,6 +5942,13 @@ def _watch_c_merge_half_laps_from_raw(main_text, raw_laps):
         r"(?:\s+\([^)]*\))?(?:\s+p\d+)?$",
         re.IGNORECASE,
     )
+    pieces = [piece.strip() for piece in str(main_text or "").split("+")]
+    if len(pieces) > 1:
+        groups = [pattern.fullmatch(piece) for piece in pieces]
+        if all(groups) and len({group.group(2) for group in groups}) == 1:
+            zones = [int(zone) for group in groups for zone in re.findall(r"\d", group.group(3))]
+            zone = f"Z{min(zones)}" if min(zones) == max(zones) else f"Z{min(zones)}>Z{max(zones)}"
+            main_text = f"{sum(int(group.group(1)) for group in groups)}×{groups[0].group(2)} m {zone}"
     match = pattern.fullmatch(str(main_text or "").strip())
     if not match:
         return ""

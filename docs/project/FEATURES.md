@@ -368,3 +368,5 @@ MiLa bewaart de IANA-tijdzone van het eigen apparaat van de atleet. Coaches vera
 ## Garmin C — activiteiten samenvoegen
 
 Selecteer twee of drie activiteiten van dezelfde atleet/dag in Garmin C en kies per activiteit WU, Main of CD. Combine maakt bovenaan een nieuwe preview met Use AM/PM; er is precies één Main en iedere rol komt maximaal eenmaal voor, in chronologische volgorde. Alleen activiteiten met bruikbare analyse en laps zijn selecteerbaar. Een bestaande WU/CD in Main mag niet dubbel worden toegevoegd. Losse activiteiten blijven behouden; opslaan gebeurt pas bij Use AM/PM en behoudt de bestaande Watch/Plan-wissel.
+
+Garmin C controleert ook na het samenvoegen van meerdere zone-/herstelgroepen of snelle opeenvolgende halve autolaps volledige reps vormen. Zo worden 24×500m-delen met herstel na ieder paar als 12×1000m beschreven. Het klokje gebruikt de opgetelde tijd, tijdgewogen Avg HR en Last 15s HR van de tweede helft; hersteltijd telt niet mee in de rep.

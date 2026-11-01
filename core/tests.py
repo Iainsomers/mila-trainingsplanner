@@ -3738,7 +3738,7 @@ class PolarPlanMismatchTests(TestCase):
             },
         )
         self.client.force_login(coach)
-        old_main = "24×500 m Z2>Z3 (3:14)"
+        old_main = "8×500 m Z2>Z3 (3:19) p85 + 4×500 m Z2>Z3 (3:16) p83 + 4×500 m Z2>Z3 (3:16) p96 + 4×500 m Z2 (3:18) p86 + 4×500 m Z2 (3:17) p88"
         translated = [{"parts": [{
             "description": f"WU: none · Main: {old_main} · CD: none",
             "training_fields": {"wu": "", "main": old_main, "cd": ""},

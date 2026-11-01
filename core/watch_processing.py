@@ -34,6 +34,24 @@ def structured_segment_loads(segment, raw_loads):
                  "zone": str(load.get("zone") or "")} for load in loads]
     except (TypeError, ValueError):
         return None
+    # A nominal rep may consist of two uninterrupted auto-laps. Reuse the
+    # conservative work/work/recovery check used by Garmin C's description.
+    text = str(getattr(segment, "text", "") or "")
+    match = re.fullmatch(r"\s*(\d+)\s*[x×*]\s*(\d+)\s*m\b.*", text, re.IGNORECASE)
+    if match:
+        count, distance = map(int, match.groups())
+        if count >= 3 and 700 <= distance <= 1600:
+            from core.views.coach import _watch_c_merge_half_laps_from_raw
+            half = distance // 2
+            verified = _watch_c_merge_half_laps_from_raw(f"{count * 2}×{half} m Z1", laps)
+            if verified.startswith(f"{count}×{distance} m "):
+                work = [load for load in loads if abs(float(load["meters"]) - half) <= max(75, half * .12)]
+                return [{"matched_rep": True,
+                         "meters": sum(float(item["meters"]) for item in work[i:i+2]),
+                         "seconds": sum(float(item["seconds"]) for item in work[i:i+2]),
+                         "average_hr": _block_average_hr(work[i:i+2]),
+                         "average_hr_last_15": work[i+1].get("average_hr_last_15")}
+                        for i in range(0, len(work), 2)]
     structure = short_sets_and_continuous(laps, lambda lap: "Z" + lap["zone"])
     if not structure:
         continuous = continuous_kilometre_run(laps, lambda lap: "Z" + lap["zone"])
