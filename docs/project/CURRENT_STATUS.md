@@ -179,6 +179,8 @@ Garmin-detailbatchfout gereproduceerd met door eigenaar aangeleverde Data Viewer
 Diagnose tweede Garmin-training: de aangeleverde activiteit met 27 lapmarkeringen wordt lokaal verwerkt tot 26 bruikbare rondes, maar live ontbrak nog de detailsontvangst. Ontvanger logt nu na commit per activiteit een gehashte activity_ref, summary_stored/details_stored/ignored en rondeaantallen. Eigen Garmin-logger op INFO maakt ook succesvolle afleveringen zichtbaar in Render; geen ruwe data of IDs. Root cause van de ontbrekende live-aflevering is nog niet vastgesteld.
 # Garmin-diagnostiek — 1 november 2026
 
+HR-correctie samengevoegd Main-blok: het 3750m-blok na de korte series neemt nu de laatste-15-seconden-HR van zijn laatste bronlap over. De korte 12s-rep behield al correct haar samplegemiddelde; het ontbrekende veld zat bij het samengestelde lange blok. Tests bewaken beide waarden en houden ontbrekende HR onbekend.
+
 Last 15s HR is toegevoegd aan de AYC-klokjespopup voor reps en afstandssplits. Nieuwe Use AM/PM-overnames bewaren de bestaande sampleberekening in loads, afgeleide details en Watch-momentopname. Regressietests bewaken bronberekening, ontbrekende meetdekking, de korte laatste split en behoud bij Watch/Plan-wisselen. Eerdere overnames zonder opgeslagen HR moeten eenmaal opnieuw worden overgenomen om die kolom te vullen; resenden is niet vereist. Visuele controle door de eigenaar.
 
 De duurloopregel is uitgebreid naar 500m-splits. Een anoniem numeriek voorbeeld met tien gelijkmatige 500m-laps plus 22 m wordt één blok; de klokjespopup behoudt alle elf splits. Een terugkerend snel/langzaam-patroon blijft uitgesloten van de duurloopregel. Visuele controle door de eigenaar.

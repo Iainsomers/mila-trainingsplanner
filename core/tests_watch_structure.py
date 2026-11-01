@@ -145,6 +145,25 @@ class ShortSetsStructureTests(SimpleTestCase):
                 self.assertEqual(processed[5]["seconds"], round(12 * 100 / 63, 2))
             self.assertEqual(slot.watch_loads, loads)
 
+    def test_continuous_block_uses_tail_hr_of_last_source_lap(self):
+        from types import SimpleNamespace
+        from core.watch_processing import processed_main_reps
+        laps = workout(True)
+        loads = [{"segment": "CD" if index >= 26 else "CORE", "zone": "2",
+                  "meters": lap["distanceMeters"], "seconds": lap["durationMillis"] / 1000,
+                  "average_hr_last_15": 110 if index == 10 else 150}
+                 for index, lap in enumerate(laps)]
+        loads[25]["average_hr_last_15"] = 184
+        short = SimpleNamespace(type="CORE", text="2*(5*100m z2) p45", reps=10, distance_m=100, order=1)
+        continuous = SimpleNamespace(type="CORE", text="3750m z2", reps=1, distance_m=3750, order=2)
+        slot = SimpleNamespace(source="watch_c", watch_loads=loads,
+                               segments=SimpleNamespace(all=lambda: [short, continuous]))
+        result = processed_main_reps(slot)
+        self.assertEqual(result[5]["average_hr_last_15"], 110)
+        self.assertEqual(result[-1]["average_hr_last_15"], 184)
+        loads[25].pop("average_hr_last_15")
+        self.assertIsNone(processed_main_reps(slot)[-1]["average_hr_last_15"])
+
     def test_rep_time_is_scaled_using_exact_measured_distance_after_import(self):
         from types import SimpleNamespace
         from core.watch_processing import processed_main_reps

@@ -44,7 +44,9 @@ def structured_segment_loads(segment, raw_loads):
         start = next(index for index, lap in enumerate(laps) if lap["distanceMeters"] >= 950)
         block = loads[start:structure["cooldown_start"]]
         return [{"matched_rep": True, "meters": sum(float(load["meters"]) for load in block),
-                 "seconds": sum(float(load["seconds"]) for load in block)}]
+                 "seconds": sum(float(load["seconds"]) for load in block),
+                 "average_hr_last_15": block[-1].get("average_hr_last_15")
+                    if float(block[-1]["seconds"]) >= 15 else None}]
     return None
 
 
