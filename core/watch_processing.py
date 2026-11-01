@@ -6,6 +6,40 @@ import re
 WATCH_SOURCES = {"watch_a", "watch_b", "watch_c"}
 
 
+def structured_segment_loads(segment, raw_loads):
+    """Assign measured short-set laps and the following continuous block.
+
+    Reconstruct from existing raw loads too, so saved Watch slots need no
+    reimport. Return None when this conservative structure does not apply.
+    """
+    from core.watch_structure import short_sets_and_continuous
+    if str(getattr(segment, "type", "")).upper() != "CORE":
+        return None
+    loads = [load for load in raw_loads if isinstance(load, dict)
+             and str(load.get("segment") or "CORE").upper() in {"CORE", "CD"}]
+    try:
+        laps = [{"distanceMeters": float(load.get("meters") or 0),
+                 "durationMillis": float(load.get("seconds") or 0) * 1000,
+                 "zone": str(load.get("zone") or "")} for load in loads]
+    except (TypeError, ValueError):
+        return None
+    structure = short_sets_and_continuous(laps, lambda lap: "Z" + lap["zone"])
+    if not structure:
+        return None
+    text = str(getattr(segment, "text", "") or "")
+    continuous_m = int(structure["main"].split("//")[1].split("m")[0])
+    if re.search(r"\b100\s*m\b", text, re.IGNORECASE):
+        # Work/recovery pairs precede the first long lap.
+        end = next(index for index, lap in enumerate(laps) if lap["distanceMeters"] >= 950)
+        return [dict(load, matched_rep=True) for load in loads[:end:2]]
+    if re.search(rf"\b{continuous_m}\s*m\b", text, re.IGNORECASE):
+        start = next(index for index, lap in enumerate(laps) if lap["distanceMeters"] >= 950)
+        block = loads[start:structure["cooldown_start"]]
+        return [{"matched_rep": True, "meters": sum(float(load["meters"]) for load in block),
+                 "seconds": sum(float(load["seconds"]) for load in block)}]
+    return None
+
+
 def processed_main_reps(slot):
     """Match raw Main laps to planned rep distances without changing raw loads.
 
@@ -42,6 +76,16 @@ def processed_main_reps(slot):
         segments.sort(key=lambda seg: (getattr(seg, "order", 0), getattr(seg, "id", 0) or 0))
 
     for segment in segments:
+        structured = structured_segment_loads(segment, raw_loads)
+        if structured is not None:
+            for load in structured:
+                meters, seconds = float(load["meters"]), float(load["seconds"])
+                distance_match = re.search(r"(\d+)\s*m\b", str(segment.text), re.IGNORECASE)
+                output.append({"rep": len(output) + 1,
+                    "distance_m": int(distance_match.group(1)),
+                    "measured_distance_m": round(meters, 1), "seconds": round(seconds, 2),
+                    "pace_seconds_per_km": round(seconds * 1000 / meters, 2)})
+            continue
         try:
             reps = max(1, int(getattr(segment, "reps", 1) or 1))
             distance = float(getattr(segment, "distance_m", None) or 0)

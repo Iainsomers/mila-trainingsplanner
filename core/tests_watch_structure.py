@@ -26,6 +26,43 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_saved_segment_times_and_processed_reps_use_their_own_laps(self):
+        from types import SimpleNamespace
+        from core.watch_processing import processed_main_reps
+        from core.views.calendar import _watch_segment_loads, _watch_actual_time_label, _annotate_slot_segment_display_times
+        for cooldown in (False, True):
+            laps = workout(cooldown)
+            loads = [{"segment": "CD" if index >= 26 else "CORE",
+                      "meters": lap["distanceMeters"], "seconds": lap["durationMillis"] / 1000,
+                      "zone": "4" if index < 20 and index % 2 == 0 else "2"}
+                     for index, lap in enumerate(laps)]
+            slot = SimpleNamespace(source="watch_c", watch_loads=loads)
+            short = SimpleNamespace(slot=slot, type="CORE", text="2*(5*100m z4) p45",
+                                    reps=10, distance_m=100, zone="4", order=1, id=1)
+            continuous = SimpleNamespace(slot=slot, type="CORE", text="3750m z2",
+                                         reps=1, distance_m=3750, zone="2", order=2, id=2)
+            slot.segments = SimpleNamespace(all=lambda: [short, continuous])
+            short_loads = _watch_segment_loads(short)
+            long_loads = _watch_segment_loads(continuous)
+            self.assertEqual(len(short_loads), 10)
+            self.assertEqual([load["seconds"] for load in short_loads],
+                             [lap["durationMillis"] / 1000 for lap in laps[:20:2]])
+            self.assertEqual(len(long_loads), 1)
+            self.assertEqual(long_loads[0]["seconds"], 1122)
+            self.assertIn("18:42", _watch_actual_time_label(long_loads, continuous))
+            self.assertNotIn("44:30", _watch_actual_time_label(long_loads, continuous))
+            processed = processed_main_reps(slot)
+            self.assertEqual(len(processed), 11)
+            self.assertEqual([rep["distance_m"] for rep in processed], [100] * 10 + [3750])
+            self.assertEqual(processed[-1]["seconds"], 1122)
+            slot.watch_main_reps = []
+            _annotate_slot_segment_display_times(slot, None)
+            self.assertEqual(len(slot.watch_main_reps), 11)
+            self.assertIn("18:42", continuous.display_text)
+            if cooldown:
+                self.assertIn("0:12", short.display_text)  # Keep the GPS-shortened work rep.
+            self.assertEqual(slot.watch_loads, loads)
+
     def test_both_recording_styles_preserve_facts_and_recognize_same_main(self):
         for cooldown in (False, True):
             laps = workout(cooldown)

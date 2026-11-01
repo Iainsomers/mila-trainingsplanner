@@ -2156,6 +2156,10 @@ def _watch_segment_loads(seg):
     watch_loads = getattr(slot, "watch_loads", None)
     if not isinstance(watch_loads, list):
         return []
+    from core.watch_processing import structured_segment_loads
+    structured = structured_segment_loads(seg, watch_loads)
+    if structured is not None:
+        return structured
     segment_type = str(getattr(seg, "type", "") or "CORE").upper()
     loads = []
     for load in watch_loads:
@@ -2391,7 +2395,7 @@ def _watch_actual_time_label(actual_loads, seg=None):
         reps = int(getattr(seg, "reps", None) or 1)
     except Exception:
         reps = 1
-    if len(expected_distances) == 1 and reps > 1:
+    if len(expected_distances) == 1 and reps > 1 and not all(load.get("matched_rep") for load in actual_loads):
         target_distance = expected_distances[0]
         # A Watch slot can contain multiple Main sets (for example 10x200 m
         # followed by 4x150 m) in the same CORE bucket. Keep each pill's
@@ -2444,6 +2448,10 @@ def _annotate_slot_segment_display_times(slot, athlete):
         segments = slot.segments.all()
     except Exception:
         return slot
+
+    if str(getattr(slot, "source", "")) in {"watch_a", "watch_b", "watch_c"}:
+        from core.watch_processing import processed_main_reps
+        slot.watch_main_reps = processed_main_reps(slot)
 
     for seg in segments:
         text = getattr(seg, "text", "") or ""
