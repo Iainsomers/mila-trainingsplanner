@@ -214,18 +214,18 @@
             {% for row in column %}
               {% with race=row.race distances=row.distances %}
                 <button type="button" class="race-list-item race-type-{{ race.race_type }}"
-                        data-show-counts="{% if not is_athlete_user %}1{% else %}0{% endif %}"
+                        data-show-counts="1"
                         data-race-id="{{ race.id }}"
                         data-bs-toggle="modal" data-bs-target="#raceModal{{ race.id }}">
                   <span class="race-list-date">{{ race.date|date:"d-m-Y" }}{% if race.end_date %}<br>– {{ race.end_date|date:"d-m-Y" }}{% endif %}</span>
                   <span class="race-list-main">
                     <strong class="race-list-name">{{ race.name }}</strong>
-                    <span class="race-distance-count race-attendance-count" data-attendance-count title="Attend without distance" {% if is_athlete_user or not row.attendance_only_count %}hidden{% endif %}>{{ row.attendance_only_count }}</span>
+                    <span class="race-distance-count race-attendance-count" data-attendance-count title="Attend without distance" {% if not row.attendance_only_count %}hidden{% endif %}>{{ row.attendance_only_count }}</span>
                     <span class="race-list-distances">
                       {% for distance_row in row.distance_rows %}
                         <span class="race-list-distance-wrap{% if is_athlete_user and not distance_row.selection_class %} d-none{% endif %}" data-distance-id="{{ distance_row.distance.id }}">
                           <span class="badge {% if is_athlete_user %}race-choice-pill {{ distance_row.selection_class }}{% else %}text-bg-light border{% endif %}">{{ distance_row.distance.display_distance }}</span>
-                          {% if not is_athlete_user and distance_row.participant_count %}<span class="race-distance-count">{{ distance_row.participant_count }}</span>{% endif %}
+                          {% if distance_row.participant_count %}<span class="race-distance-count">{{ distance_row.participant_count }}</span>{% endif %}
                         </span>
                       {% empty %}
                         <span class="text-muted small">No distances yet.</span>

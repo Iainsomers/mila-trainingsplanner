@@ -187,3 +187,5 @@ Year Planner toont aaneengesloten dagen van dezelfde wedstrijd als één doorlop
 De wisselknop Race Calendar / Back to Yearplanner staat gecentreerd naast de legenda, heeft in beide standen dezelfde breedte (196px), donker MiLa-blauw (#17324d), gele semibold tekst en een richtingspijl. Op mobiel mag hij onder de legenda afbreken en is hij minimaal 44px hoog.
 
 Year Planner-wisselknop gebruikt gele tekst (#f2c200) op donkerblauw, ook bij hover. Daarnaast staat een gelijkvormige Details Camps-knop voor gebruikers die campdetails mogen zien. De trainerplanning heeft geen losse Races-tegel meer; Details Camps blijft staan. De eigen Races-ingang voor atleten blijft beschikbaar.
+
+De atleetweergave van Race Calendar toont dezelfde groene deelnamebolletjes bij de eigen geselecteerde afstanden en eigen Attend zonder afstand (waarde 1). Ook deze bolletjes verversen na opslaan. Deelname van andere atleten telt daar niet mee en wordt niet getoond.

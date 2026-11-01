@@ -119,3 +119,25 @@ class RaceAttendanceTests(TestCase):
         response = self.client.get(f"/planning/year/?year=2026&period=season&zoom=1&athletes={self.athlete.id}")
         spans = [cell["race_span"] for chunk in response.context["chunks"] for row in chunk["rows"] for cell in row["cells"] if cell.get("race_span")]
         self.assertEqual(spans, [1, 2])
+
+    def test_athlete_sees_own_green_badges_without_other_athlete_counts(self):
+        user = get_user_model().objects.create_user(username="Attend_Runner")
+        other = Athlete.objects.create(owner=self.coach, name="Private Other", birth_year=2000, gender="X")
+        RaceAttendance.objects.create(race=self.race, athlete=self.athlete)
+        RaceAttendance.objects.create(race=self.race, athlete=other)
+        RaceEntry.objects.create(race_distance=self.distance, athlete=other, coach_selected=True)
+        self.client.force_login(user)
+        url = "/race-calendar/?year=2026&view=list"
+        response = self.client.get(url)
+        row = response.context["race_rows"][0]
+        self.assertEqual(row["attendance_only_count"], 1)
+        self.assertEqual(row["distance_rows"][0]["participant_count"], 0)
+        self.assertContains(response, 'data-attendance-count title="Attend without distance" >1</span>', html=False)
+        self.assertNotContains(response, "Private Other")
+        RaceEntry.objects.create(race_distance=self.distance, athlete=self.athlete, coach_selected=True)
+        response = self.client.get(url)
+        row = response.context["race_rows"][0]
+        self.assertEqual(row["attendance_only_count"], 0)
+        self.assertEqual(row["distance_rows"][0]["participant_count"], 1)
+        self.assertContains(response, '<span class="race-distance-count">1</span>', html=False)
+        self.assertContains(response, 'data-show-counts="1"', html=False)
