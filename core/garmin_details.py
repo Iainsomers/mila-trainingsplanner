@@ -35,6 +35,25 @@ def lap_data(item):
                     for sample in samples if isinstance(sample, dict)
                     and number(sample.get("startTimeInSeconds")) is not None
                     and number(sample.get("totalDistanceInMeters")) is not None)
+    timing_points = {}
+    for field in ("clockDurationInSeconds", "timerDurationInSeconds", "movingDurationInSeconds"):
+        timing_points[field] = sorted((number(sample.get("startTimeInSeconds")), number(sample.get(field)))
+            for sample in samples if isinstance(sample, dict)
+            and number(sample.get("startTimeInSeconds")) is not None and number(sample.get(field)) is not None)
+        if any(right[1] < left[1] for left, right in zip(timing_points[field], timing_points[field][1:])):
+            timing_points[field] = []
+
+    def timing_at(field, timestamp):
+        values = timing_points[field]
+        index = bisect.bisect_left(values, (timestamp, float("-inf")))
+        if index < len(values) and values[index][0] == timestamp:
+            return values[index][1]
+        if index == 0 or index >= len(values):
+            return None
+        left, right = values[index - 1], values[index]
+        if right[1] < left[1]:
+            return None  # A reset counter cannot provide a reliable duration.
+        return left[1] + (right[1] - left[1]) * (timestamp - left[0]) / (right[0] - left[0])
     end = max(start + duration, points[-1][0] if points else start + duration)
     boundaries = sorted({number(lap.get("startTimeInSeconds")) for lap in laps if isinstance(lap, dict)
                          and number(lap.get("startTimeInSeconds")) is not None
@@ -74,6 +93,14 @@ def lap_data(item):
         hr_start, hr_end = bisect.bisect_left(hr_times, timestamp), bisect.bisect_left(hr_times, lap_end)
         lap = {"start_time": datetime.fromtimestamp(timestamp, timezone.utc).isoformat(),
                "distance": last - first, "elapsed_time": lap_end - timestamp}
+        for field, key in (("clockDurationInSeconds", "clock_time"),
+                           ("timerDurationInSeconds", "timer_time"),
+                           ("movingDurationInSeconds", "moving_time")):
+            first_time, last_time = timing_at(field, timestamp), timing_at(field, lap_end)
+            if first_time is not None and last_time is not None and 0 <= last_time - first_time <= lap_end - timestamp + 1:
+                lap[key] = last_time - first_time
+        if "timer_time" in lap:
+            lap["paused_time"] = max(0, lap["elapsed_time"] - lap["timer_time"])
         if hr_end > hr_start:
             lap["avg_heart_rate"] = (hr_sums[hr_end] - hr_sums[hr_start]) / (hr_end - hr_start)
         normalized_laps.append(lap)

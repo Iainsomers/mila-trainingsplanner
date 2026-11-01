@@ -3,6 +3,42 @@ import math
 from statistics import median
 
 
+def continuous_kilometre_run(laps, zone_for_lap):
+    """Kilometre splits need additional work/recovery evidence to imply reps."""
+    if not isinstance(laps, list) or len(laps) < 3:
+        return None
+    rows = []
+    for lap in laps:
+        try:
+            meters, seconds = float(lap["distanceMeters"]), float(lap["durationMillis"]) / 1000
+            pause = float(lap.get("pausedDurationMillis") or 0) / 1000
+        except (TypeError, KeyError, ValueError):
+            return None
+        if not math.isfinite(meters + seconds + pause) or meters <= 0 or seconds <= 0:
+            return None
+        rows.append((meters, seconds, pause))
+    full = rows[:-1] if rows[-1][0] < 950 else rows
+    if len(full) < 3 or any(not 950 <= m <= 1050 for m, _, _ in full) or rows[-1][0] > 1050:
+        return None
+    threshold = max(3, math.ceil(len(full) * 0.25))
+    if sum(p >= 15 for _, _, p in full) >= threshold:
+        return None
+    paces = sorted(s / m for m, s, _ in full)
+    running_pace = median(paces[:max(1, (len(paces) + 1) // 2)])
+    if sum(s / m >= running_pace * 1.6 for m, s, _ in full) >= threshold:
+        return None
+    if any(lap.get("lapIntensity") in {1, 4, 5} for lap in laps):
+        return None  # FIT explicitly marks rest, recovery or interval laps.
+    zones = {}
+    for lap, (meters, _, _) in zip(laps, rows):
+        zone = zone_for_lap(lap)
+        if zone in {"Z1", "Z2", "Z3", "Z4", "Z5"}:
+            zones[zone] = zones.get(zone, 0) + meters
+    zone = max(zones, key=zones.get) if zones else ""
+    distance = math.floor(sum(m for m, _, _ in rows) / 50 + 0.5) * 50
+    return f"WU: none · Main: {distance} m{(' ' + zone) if zone else ''} · CD: none"
+
+
 def short_sets_and_continuous(laps, zone_for_lap):
     """Recognize repeated short sets followed by consistently split running loops.
 

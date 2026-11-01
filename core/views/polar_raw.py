@@ -497,6 +497,9 @@ def type_b_description(laps, athlete=None):
     structured = _short_sets_structure(laps, athlete)
     if structured:
         return structured["description"]
+    continuous = _continuous_km_description(laps, athlete)
+    if continuous:
+        return continuous
     rows = []
     elapsed = 0.0
     for index, lap in enumerate(laps):
@@ -633,6 +636,12 @@ def _short_sets_structure(laps, athlete=None):
         lap["distanceMeters"], lap["durationMillis"], athlete)[0])
 
 
+def _continuous_km_description(laps, athlete=None):
+    from core.watch_structure import continuous_kilometre_run
+    return continuous_kilometre_run(laps, lambda lap: lap_zone_paces(
+        lap["distanceMeters"], lap["durationMillis"], athlete)[0])
+
+
 def _model_b_ai_description(laps, athlete=None):
     """Ask the language model to identify nested interval structure for Watch B.
 
@@ -645,6 +654,9 @@ def _model_b_ai_description(laps, athlete=None):
     structured = _short_sets_structure(laps, athlete) if isinstance(laps, list) else None
     if structured:
         return structured["description"]
+    continuous = _continuous_km_description(laps, athlete)
+    if continuous:
+        return continuous
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key or not isinstance(laps, list):
         return ""
@@ -667,6 +679,10 @@ def _model_b_ai_description(laps, athlete=None):
             "pace": pace(duration_ms / 1000, distance_m),
             "zone": z_label if z_label != "NA" else "",
             "elapsed_s": round(elapsed_s, 3),
+            "timer_s": number(lap.get("timerDurationMillis")) / 1000 if number(lap.get("timerDurationMillis")) is not None else None,
+            "paused_s": number(lap.get("pausedDurationMillis")) / 1000 if number(lap.get("pausedDurationMillis")) is not None else None,
+            "lap_trigger": lap.get("lapTrigger"),
+            "lap_intensity": lap.get("lapIntensity"),
         })
         elapsed_s += duration_ms / 1000
     if len(facts) < 6:
@@ -674,7 +690,7 @@ def _model_b_ai_description(laps, athlete=None):
 
     prompt = {
         "task": (
-            "Recognize the performed running workout from manual laps. Find nested "
+            "Recognize the performed running workout from recorded laps. Find nested "
             "repeated structures such as 2 sets of (3x500m + 5x400m + 6x200m). "
             "Short slow laps are recoveries, not work. Include only clearly observed "
             "warmup, main work and cooldown. Do not force every lap into a block."
@@ -687,6 +703,11 @@ def _model_b_ai_description(laps, athlete=None):
             "to Z2. Do not discard short reps in favour of the dominant kilometre laps. "
             "If the schema cannot express a repeated set followed once by continuous "
             "work, return confidence below 0.65 rather than repeating that work per set."
+            " Equal kilometre laps alone are not interval evidence. Require repeated "
+            "work/recovery transitions, repeated timer pauses or workout-step markers. "
+            "One or two isolated stops during a long easy run do not establish intervals. "
+            "Low zones support an easy run but never prove it. Timer duration excludes "
+            "pauses; missing timer data is unknown, not zero pause."
         ),
         "laps": facts,
         "output_schema": {

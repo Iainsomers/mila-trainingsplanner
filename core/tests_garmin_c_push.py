@@ -38,6 +38,45 @@ class GarminCPushTests(TestCase):
                     (0, 0, 100), (100, 400, 140), (150, 500, 150), (200, 600, 160), (290, 980, 170), (300, 1000, 170))],
             "laps": [{"startTimeInSeconds": self.start}, {"startTimeInSeconds": self.start + 150}]}
 
+    @patch("core.views.polar_raw.translate_model_b", return_value=[])
+    def test_timer_pause_facts_survive_push_and_reach_recognition(self, translate):
+        details = self.details()
+        for sample, timer in zip(details["samples"], (0, 100, 120, 170, 260, 270)):
+            sample["clockDurationInSeconds"] = sample["startTimeInSeconds"] - self.start
+            sample["timerDurationInSeconds"] = timer
+            sample["movingDurationInSeconds"] = timer
+        self.assertEqual(self.send({"activityDetails": [details]}).status_code, 200)
+        saved = GarminActivitySummary.objects.get().analysis_data
+        self.assertEqual(saved["laps"][0]["timer_time"], 120)
+        self.assertEqual(saved["laps"][0]["paused_time"], 30)
+        self.assertEqual(saved["laps"][1]["paused_time"], 0)
+        self.assertNotIn("latitudeInDegree", json.dumps(saved))
+        self.read_c()
+        laps = translate.call_args.args[0][0]["laps"]["laps"]
+        self.assertEqual(laps[0]["pausedDurationMillis"], 30000)
+        self.assertEqual(laps[0]["timerDurationMillis"], 120000)
+
+    def test_unknown_or_reset_timer_is_not_reported_as_zero_pause(self):
+        for reset in (False, True):
+            details = self.details()
+            if reset:
+                for sample, timer in zip(details["samples"], (0, 100, 20, 70, 160, 170)):
+                    sample["timerDurationInSeconds"] = timer
+            self.send({"activityDetails": [details]})
+            for lap in GarminActivitySummary.objects.get().analysis_data["laps"]:
+                self.assertNotIn("paused_time", lap)
+
+    @patch("core.views.polar_raw.lap_zone_paces", return_value=("Z1", "NA"))
+    def test_long_run_with_two_slow_kilometres_is_one_block_in_garmin_c(self, zones):
+        laps = [{"distance": 1000, "elapsed_time": 600 if index in (9, 18) else 260} for index in range(27)]
+        laps.append({"distance": 300, "elapsed_time": 80})
+        GarminActivitySummary.objects.create(athlete=self.athlete, activity_id="long-run",
+            activity_start=datetime.fromtimestamp(self.start, dt_timezone.utc), activity_date="2026-10-31",
+            distance_m=27300, analysis_data={"laps": laps})
+        result = self.read_c().json()["results"][0]["parts"][0]
+        self.assertEqual(result["training_fields"]["main"], "27300 m Z1")
+        self.assertEqual(len(result["manual"]), 28)
+
     @patch("core.views.polar_raw._model_b_ai_description")
     def test_old_received_summary_is_visible_without_invented_laps_or_use_actions(self, ai):
         GarminActivitySummary.objects.create(athlete=self.athlete, activity_id="short-test",

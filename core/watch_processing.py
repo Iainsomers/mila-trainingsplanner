@@ -12,7 +12,7 @@ def structured_segment_loads(segment, raw_loads):
     Reconstruct from existing raw loads too, so saved Watch slots need no
     reimport. Return None when this conservative structure does not apply.
     """
-    from core.watch_structure import short_sets_and_continuous
+    from core.watch_structure import short_sets_and_continuous, continuous_kilometre_run
     if str(getattr(segment, "type", "")).upper() != "CORE":
         return None
     loads = [load for load in raw_loads if isinstance(load, dict)
@@ -25,6 +25,13 @@ def structured_segment_loads(segment, raw_loads):
         return None
     structure = short_sets_and_continuous(laps, lambda lap: "Z" + lap["zone"])
     if not structure:
+        continuous = continuous_kilometre_run(laps, lambda lap: "Z" + lap["zone"])
+        if continuous:
+            total = int(continuous.split("Main: ")[1].split(" m")[0])
+            text = str(getattr(segment, "text", "") or "")
+            if re.fullmatch(rf"\s*{total}\s*m(?:\s+Z[1-5])?\s*", text, re.IGNORECASE):
+                return [{"matched_rep": True, "meters": sum(lap["distanceMeters"] for lap in laps),
+                         "seconds": sum(lap["durationMillis"] for lap in laps) / 1000}]
         return None
     text = str(getattr(segment, "text", "") or "")
     continuous_m = int(structure["main"].split("//")[1].split("m")[0])

@@ -6,6 +6,15 @@ from core.fit_reader import FIT_EPOCH, parse_fit
 
 
 class FitRecordParsingTests(unittest.TestCase):
+    def test_lap_trigger_and_intensity_use_separate_fit_fields(self):
+        data = bytearray((0x40, 0, 0, 19, 0, 2, 23, 1, 0, 24, 1, 0, 0, 5, 2))
+        header = bytearray((14, 0x10, 0, 0))
+        header.extend(struct.pack("<I", len(data)))
+        header.extend(b".FIT\0\0")
+        lap = parse_fit(bytes(header + data))["laps"][0]
+        self.assertEqual(lap["intensity"], 5)
+        self.assertEqual(lap["lap_trigger"], 2)
+
     def test_record_hr_and_compressed_timestamps_are_decoded(self):
         timestamp = 1_162_028_787
         data = bytearray()

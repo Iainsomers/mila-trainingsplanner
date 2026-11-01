@@ -26,6 +26,44 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_kilometre_splits_alone_are_a_continuous_run(self):
+        from core.watch_structure import continuous_kilometre_run
+        laps = [{"distanceMeters": 1000, "durationMillis": 600000 if index in (9, 18) else 260000}
+                for index in range(27)]
+        laps.append({"distanceMeters": 300, "durationMillis": 80000})
+        self.assertEqual(continuous_kilometre_run(laps, lambda lap: "Z1"),
+                         "WU: none · Main: 27300 m Z1 · CD: none")
+        self.assertEqual(continuous_kilometre_run(laps, lambda lap: "NA"),
+                         "WU: none · Main: 27300 m · CD: none")
+        from types import SimpleNamespace
+        from core.views.calendar import _watch_segment_loads, _watch_actual_time_label
+        slot = SimpleNamespace(source="watch_c", watch_loads=[
+            {"segment": "CORE", "zone": "1", "meters": lap["distanceMeters"],
+             "seconds": lap["durationMillis"] / 1000} for lap in laps])
+        segment = SimpleNamespace(slot=slot, type="CORE", text="27300 m Z1", reps=1, distance_m=27300)
+        loads = _watch_segment_loads(segment)
+        self.assertEqual(len(loads), 1)
+        self.assertEqual(loads[0]["seconds"], sum(lap["durationMillis"] for lap in laps) / 1000)
+        self.assertNotIn("-->", _watch_actual_time_label(loads, segment))
+
+    def test_repeated_pauses_recovery_laps_or_explicit_intervals_block_continuous_rule(self):
+        from core.watch_structure import continuous_kilometre_run
+        paused = [{"distanceMeters": 1000, "durationMillis": 300000, "pausedDurationMillis": 60000}] * 6
+        alternating = [{"distanceMeters": 1000, "durationMillis": seconds * 1000} for seconds in (240, 480) * 4]
+        short_recovery = [{"distanceMeters": meters, "durationMillis": seconds * 1000}
+                          for meters, seconds in ((1000, 240), (100, 60)) * 5]
+        explicit = [{"distanceMeters": 1000, "durationMillis": 300000, "lapIntensity": 5}] * 6
+        for laps in (paused, alternating, short_recovery, explicit):
+            self.assertIsNone(continuous_kilometre_run(laps, lambda lap: "Z1"))
+
+    @patch("core.views.polar_raw.urlopen")
+    @patch("core.views.polar_raw.lap_zone_paces", return_value=("Z1", "NA"))
+    def test_ai_cannot_replace_clear_continuous_kilometres_with_reps(self, zones, request):
+        laps = [{"distanceMeters": 1000, "durationMillis": 300000}] * 10
+        self.assertEqual(type_b_description(laps), _model_b_ai_description(laps))
+        self.assertIn("Main: 10000 m Z1", _model_b_ai_description(laps))
+        request.assert_not_called()
+
     def test_saved_segment_times_and_processed_reps_use_their_own_laps(self):
         from types import SimpleNamespace
         from core.watch_processing import processed_main_reps

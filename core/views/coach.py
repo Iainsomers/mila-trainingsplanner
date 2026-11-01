@@ -5783,6 +5783,18 @@ def garmin_type_c_ayc_view(request):
                 "durationMillis": duration_ms,
                 "splitTimeMillis": elapsed_ms,
             }
+            for source_key, target_key in (("timer_time", "timerDurationMillis"),
+                                           ("moving_time", "movingDurationMillis"),
+                                           ("paused_time", "pausedDurationMillis")):
+                value = lap.get(source_key)
+                if isinstance(value, (int, float)) and math.isfinite(value) and 0 <= value <= duration_s:
+                    normalized_lap[target_key] = round(value * 1000)
+            if "timerDurationMillis" in normalized_lap:
+                normalized_lap["pausedDurationMillis"] = max(0, duration_ms - normalized_lap["timerDurationMillis"])
+            if lap.get("lap_trigger") is not None:
+                normalized_lap["lapTrigger"] = lap["lap_trigger"]
+            if lap.get("intensity") is not None:
+                normalized_lap["lapIntensity"] = lap["intensity"]
             if lap.get("avg_heart_rate") is not None:
                 normalized_lap["heartRate"] = lap["avg_heart_rate"]
             lap_start = lap.get("start_time")
