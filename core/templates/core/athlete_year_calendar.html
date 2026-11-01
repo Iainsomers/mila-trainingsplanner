@@ -2218,6 +2218,7 @@
   <div style="background:#fff; width:520px; max-width:100%; max-height:90vh; overflow:auto; border-radius:8px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
     <div class="d-flex align-items-center justify-content-between mb-2">
       <h5 id="watchMainRepsTitle" class="mb-0">Measured Main reps</h5>
+      <button type="button" id="watchRestorePlan" class="btn btn-sm btn-outline-secondary ms-auto me-2" title="Restore original plan" aria-label="Restore original plan" style="display:none">p</button>
       <button type="button" id="watchMainRepsClose" class="btn btn-sm btn-outline-secondary" aria-label="Close">×</button>
     </div>
     <div id="watchMainRepsBody" class="small"></div>
@@ -3131,6 +3132,23 @@
     var body = document.getElementById("watchMainRepsBody");
     title.textContent = "Measured Main reps — " + (button.getAttribute("data-watch-model") || "Watch");
     body.replaceChildren();
+    var restoreButton = document.getElementById("watchRestorePlan");
+    var restoreUrl = button.getAttribute("data-watch-restore-url") || "";
+    restoreButton.style.display = restoreUrl && aycTrainingIsEditable(button.getAttribute("data-watch-date")) ? "" : "none";
+    restoreButton.disabled = false;
+    restoreButton.onclick = function() {
+      restoreButton.disabled = true;
+      var data = new FormData();
+      data.append("action", "restore_watch_plan");
+      fetch(restoreUrl, {method: "POST", body: data, credentials: "same-origin",
+        headers: {"X-CSRFToken": getCookie("csrftoken")}}).then(function(response) {
+          if (!response.ok) throw new Error("Restore failed");
+          window.location.reload();
+        }).catch(function() {
+          restoreButton.disabled = false;
+          window.alert("The original plan could not be restored. Refresh and try again.");
+        });
+    };
     var reps = [];
     try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
     if (!Array.isArray(reps) || !reps.length) {

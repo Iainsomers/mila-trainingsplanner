@@ -1005,6 +1005,7 @@ class TrainingSlot(models.Model):
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="planned")
     watch_loads = models.JSONField(default=list, blank=True)
     watch_main_reps = models.JSONField(default=list, blank=True)
+    watch_plan_snapshot = models.JSONField(null=True, blank=True, default=None)
 
     athletes = models.ManyToManyField(Athlete, blank=True, related_name="training_slots")
     groups = models.ManyToManyField(Group, blank=True, related_name="training_slots")

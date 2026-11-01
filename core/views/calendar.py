@@ -901,6 +901,7 @@ def _clone_slot_for_display(slot):
         watch_main_reps=getattr(slot, "watch_main_reps", []),
         slot_id=getattr(slot, "id", None),
     )
+    clone.watch_plan_snapshot = getattr(slot, "watch_plan_snapshot", None)
     for segment in segments:
         segment.slot = clone
     return clone

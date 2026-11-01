@@ -179,6 +179,8 @@ Garmin-detailbatchfout gereproduceerd met door eigenaar aangeleverde Data Viewer
 Diagnose tweede Garmin-training: de aangeleverde activiteit met 27 lapmarkeringen wordt lokaal verwerkt tot 26 bruikbare rondes, maar live ontbrak nog de detailsontvangst. Ontvanger logt nu na commit per activiteit een gehashte activity_ref, summary_stored/details_stored/ignored en rondeaantallen. Eigen Garmin-logger op INFO maakt ook succesvolle afleveringen zichtbaar in Render; geen ruwe data of IDs. Root cause van de ontbrekende live-aflevering is nog niet vastgesteld.
 # Garmin-diagnostiek — 1 november 2026
 
+Use AM/PM bewaart vanaf migratie 0135 het oorspronkelijke plan in een aparte momentopname. De klokjespopup kan dat via `p` herstellen met de bestaande trainingbewerkrechten. AM/PM, herhaalde overnames, lege slots, atleetisolatie en coachrechten zijn getest. De 100 gerichte slot-/Watch-tests en vijf aanvullende snapshottests slagen, evenals manage.py check. Visuele controle wordt op verzoek door de eigenaar uitgevoerd. Eerder overschreven plannen kunnen niet automatisch uit deze nieuwe opslag worden teruggehaald.
+
 Reptijden na Use AM/PM: de korte series en het doorlopende blok krijgen nu hun eigen gemeten laps. Het doorlopende blok toont de opgetelde bloktijd in plaats van de tijd-/temporange van alle Main- en herstellaps. De repdetailweergave wordt bij bestaande opgeslagen Watch-trainingen bij het lezen vernieuwd. Gerichte tests bewaken beide opnamevormen, uitsluiting van herstel/CD en behoud van ruwe loads.
 
 Aanvulling korte series: de beschrijving toont nu ook de zone/het zonebereik van de 100m-werk-laps, afzonderlijk van herstel en het doorlopende blok. Gerichte regressietests bewaken gemengde werkzones, één bekende zone en ontbrekende zonegegevens.

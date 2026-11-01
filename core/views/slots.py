@@ -10,6 +10,7 @@ from django.utils.html import escape
 from django.views.decorators.http import require_GET, require_http_methods
 from django.core.cache import cache
 from django.db.models import Q
+from django.db import transaction
 
 from core.models import (
     TrainingSlot,
@@ -1308,6 +1309,7 @@ def slot_reset_override(request, yyyy, mm, dd, slot_index):
 # Slot modal (training builder)
 # -----------------------------
 @require_http_methods(["GET", "POST"])
+@transaction.atomic
 def slot_modal(request, yyyy, mm, dd, slot_index):
     selected_plan = _get_selected_plan(request)
     is_athlete_year_calendar = (request.GET.get("source") == "athlete_year") or (request.POST.get("source") == "athlete_year")
@@ -1521,6 +1523,25 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     action = (request.POST.get("action") or "").strip().lower()
 
+    if action == "restore_watch_plan":
+        if not athlete:
+            return HttpResponse("Athlete required", status=400)
+        restore_slot = TrainingSlot.objects.select_for_update().filter(
+            plan=selected_plan, athlete=athlete, date=d, slot_index=slot_index).first()
+        snapshot = getattr(restore_slot, "watch_plan_snapshot", None)
+        if not restore_slot or not isinstance(snapshot, dict):
+            return HttpResponse("No saved original plan", status=409)
+        restore_slot.segments.all().delete()
+        for item in snapshot.get("segments", []):
+            restore_slot.segments.create(**item)
+        restore_slot.source = "planned"
+        restore_slot.watch_loads = []
+        restore_slot.watch_main_reps = []
+        restore_slot.watch_plan_snapshot = None
+        restore_slot.save(update_fields=["source", "watch_loads", "watch_main_reps", "watch_plan_snapshot", "updated_at"])
+        _bump_stats_version()
+        return HttpResponse(status=204)
+
     # Fallback for direct-loaded slot modals where HTMX is not present.
     # Resolve the owner's Flex plan before removing the personal override.
     if action == "reset_to_plan" and athlete:
@@ -1607,6 +1628,17 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         return resp
 
     # POST: maak slot (base/override)
+    original_watch_plan = None
+    if (request.POST.get("watch_origin") or "").strip().lower() in {"watch_a", "watch_b", "watch_c"}:
+        original_slot = visible_slot
+        if not has_athlete_override and athlete and _is_flex_planner_plan(selected_plan):
+            base_slot = _base_planning_slot_for_slot_reset(athlete, d, slot_index)
+            if base_slot:
+                original_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
+            elif not original_slot:
+                original_slot = _get_effective_slot(display_plan, athlete, d, slot_index, prefetch_segments=True)["visible_slot"] if display_plan else None
+        if str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c"}:
+            original_watch_plan = {"segments": _week_segment_payload(original_slot)}
     if athlete:
         slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=athlete)
         is_override = True
@@ -1955,6 +1987,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         )
 
     now = timezone.now()
+
+    if original_watch_plan is not None and slot.watch_plan_snapshot is None:
+        slot.watch_plan_snapshot = original_watch_plan
+        slot.save(update_fields=["watch_plan_snapshot"])
 
     watch_loads = []
     if watch_origin in {"watch_a", "watch_b", "watch_c"}:

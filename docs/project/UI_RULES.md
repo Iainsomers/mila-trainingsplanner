@@ -4,6 +4,8 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
 
+- De AYC-klokjespopup toont een compacte `p`-knop naast sluiten als er een bewaard oorspronkelijk plan is en de gebruiker deze training mag bewerken. Tooltip en toegankelijke naam: `Restore original plan`.
+
 - Flex Planner-rijen groeien mee met de training, met 48 px als minimum. Gebruik rondom de training slechts 2 px verticale padding; reserveer geen lege strook onderaan.
 - Compact, functioneel en rustig; planningsinformatie krijgt voorrang op uitlegtekst.
 - Gebruik bestaande Bootstrap-componenten en de huidige MiLa-visuele taal.
