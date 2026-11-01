@@ -193,5 +193,8 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {"garmin_console": {"class": "logging.StreamHandler", "level": "INFO"}},
-    "loggers": {"core.views.garmin": {"handlers": ["garmin_console"], "level": "INFO", "propagate": False}},
+    "loggers": {
+        "core.views.garmin": {"handlers": ["garmin_console"], "level": "INFO", "propagate": False},
+        "core.oura_sync": {"handlers": ["garmin_console"], "level": "INFO", "propagate": False},
+    },
 }

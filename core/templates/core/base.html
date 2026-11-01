@@ -190,6 +190,27 @@
       </script>
     {% endif %}
     {% block extra_js %}{% endblock %}
+    {% if user.is_authenticated and not user.is_staff and not user.is_superuser %}
+    <script>
+    (function() {
+      function updateDeviceTimeZone() {
+        try {
+          var zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          if (!zone) return;
+          var previous = JSON.parse(sessionStorage.getItem('mila-device-time-zone-{{ user.pk }}') || 'null');
+          if (previous && previous.zone === zone && Date.now() - previous.at < 1800000) return;
+          var data = new FormData(); data.append('time_zone', zone);
+          fetch("{% url 'oura_device_timezone' %}", {method:'POST', credentials:'same-origin',
+            headers:{'X-CSRFToken':'{{ csrf_token }}'}, body:data}).then(function(response) {
+              if (response.ok) sessionStorage.setItem('mila-device-time-zone-{{ user.pk }}', JSON.stringify({zone:zone,at:Date.now()}));
+            }).catch(function() {});
+        } catch (_) {}
+      }
+      updateDeviceTimeZone();
+      document.addEventListener('visibilitychange', function() { if (!document.hidden) updateDeviceTimeZone(); });
+    })();
+    </script>
+    {% endif %}
   </body>
 </html>
 

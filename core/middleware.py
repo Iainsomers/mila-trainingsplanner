@@ -23,7 +23,7 @@ class AthleteLastActiveMiddleware:
                 or request.method not in {"GET", "POST"} or not 200 <= response.status_code < 400):
             return response
         path = request.path_info
-        if path.startswith(("/static/", "/admin/", "/integrations/garmin/activities/", "/integrations/coros/")):
+        if path.startswith(("/static/", "/admin/", "/integrations/garmin/activities/", "/integrations/coros/", "/integrations/oura/device-timezone/")):
             return response
         purpose = (request.headers.get("Purpose", "") + request.headers.get("Sec-Purpose", "")).lower()
         if "prefetch" in purpose or "prerender" in purpose:

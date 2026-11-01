@@ -617,6 +617,13 @@
           <label class="form-check-label" for="start_on_ayc">Start op AYC</label>
           <div class="form-text">Open your Athlete Year Calendar after login instead of the dashboard.</div>
         </div>
+        <div class="mb-3 form-check">
+          <input class="form-check-input" type="checkbox" id="oura_auto_import_enabled" name="oura_auto_import_enabled" {% if form.oura_auto_import_enabled %}checked{% endif %}>
+          <label class="form-check-label" for="oura_auto_import_enabled">Automatically import Oura vitals</label>
+          <div class="form-text">Requires an allowed, connected Oura account. Checks every 10 minutes from 06:30 through 08:00, otherwise hourly, in your device's last known time zone. Imports only when Readiness is available and fills empty fields only.</div>
+          <div class="form-text">Time zone: {{ athlete.device_time_zone|default:"Waiting for the athlete to open MiLa on their device" }}.</div>
+          {% if athlete.oura_last_check_at %}<div class="form-text">Last automatic check: {{ athlete.oura_last_check_at|timesince }} ago.</div>{% endif %}
+        </div>
         {% if not self_view %}
         <div class="mb-3 form-check">
           <input

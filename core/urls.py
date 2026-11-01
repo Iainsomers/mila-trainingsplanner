@@ -118,7 +118,7 @@ from core.views.slots import (
 from core.views.stats_debug import stats_debug_view
 from core.views.coros import coros_status_view, coros_workout_push_view
 from core.views.garmin import garmin_connect_view, garmin_callback_view, garmin_withdraw_view, garmin_connections_view, garmin_athlete_activities_view, garmin_activity_push_view
-from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view, oura_vitals_import_view
+from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view, oura_vitals_import_view, oura_device_timezone_view
 
 
 urlpatterns = [
@@ -133,6 +133,7 @@ urlpatterns = [
     path("integrations/oura/disconnect/", oura_disconnect_view, name="oura_disconnect"),
     path("integrations/oura/test/", oura_test_view, name="oura_test"),
     path("integrations/oura/vitals-import/", oura_vitals_import_view, name="oura_vitals_import"),
+    path("integrations/oura/device-timezone/", oura_device_timezone_view, name="oura_device_timezone"),
     path(
         "privacy/",
         TemplateView.as_view(template_name="core/privacy_policy.html"),

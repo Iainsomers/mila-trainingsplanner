@@ -11148,6 +11148,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
         "garmin_connection_enabled": getattr(athlete, "garmin_connection_enabled", False),
         "oura_connection_enabled": getattr(athlete, "oura_connection_enabled", False),
+        "oura_auto_import_enabled": getattr(athlete, "oura_auto_import_enabled", False),
         "polar_enabled": getattr(athlete, "polar_enabled", False),
         "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
@@ -11199,6 +11200,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["see_session_km"] = (request.POST.get("see_session_km") == "on")
         form["see_session_zones"] = (request.POST.get("see_session_zones") == "on")
         form["start_on_ayc"] = (request.POST.get("start_on_ayc") == "on")
+        form["oura_auto_import_enabled"] = request.POST.get("oura_auto_import_enabled") == "on"
         if self_view:
             form["see_desired_improvement_points"] = getattr(athlete, "see_desired_improvement_points", False)
         else:
@@ -11417,6 +11419,9 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.see_session_km = form["see_session_km"]
             athlete.see_session_zones = form["see_session_zones"]
             athlete.start_on_ayc = form["start_on_ayc"]
+            if athlete.oura_auto_import_enabled != form["oura_auto_import_enabled"]:
+                athlete.oura_next_check_at = None
+            athlete.oura_auto_import_enabled = form["oura_auto_import_enabled"]
             if not self_view:
                 athlete.see_desired_improvement_points = form["see_desired_improvement_points"]
             if not self_view:

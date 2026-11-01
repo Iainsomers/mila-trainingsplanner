@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import secrets
+import math
 from datetime import date, datetime, timedelta
 import json
 from urllib.parse import urlencode
@@ -198,7 +199,11 @@ def build_oura_vitals_suggestions(connection, athlete, *, today=None):
     }
     suggestions = []
     for item in preview:
-        if item["readiness_score"] is None:
+        try:
+            readiness = float(item["readiness_score"])
+        except (TypeError, ValueError):
+            continue
+        if isinstance(item["readiness_score"], bool) or not math.isfinite(readiness) or not 0 <= readiness <= 100:
             continue
         vital = existing.get(item["day"])
         row = {"day": item["day"].isoformat()}
@@ -286,11 +291,18 @@ def oura_vitals_import_view(request):
     if action == "preview":
         return JsonResponse({"items": suggestions})
 
+    saved = apply_oura_vitals_suggestions(athlete, suggestions, actor=request.user, selected_days=selected_days)
+    return JsonResponse({"items": saved, "saved_count": len(saved)})
+
+
+def apply_oura_vitals_suggestions(athlete, suggestions, *, actor=None, selected_days=None):
+    """Shared manual/automatic writer: serialize per athlete and fill blanks only."""
     saved = []
     with transaction.atomic():
+        Athlete.objects.select_for_update().get(pk=athlete.pk)
         for item in suggestions:
             day = date.fromisoformat(item["day"])
-            if day not in selected_days:
+            if selected_days is not None and day not in selected_days:
                 continue
             vital = AthleteDailyVital.objects.select_for_update().filter(athlete=athlete, date=day).first()
             if vital is None:
@@ -302,7 +314,7 @@ def oura_vitals_import_view(request):
                     setattr(vital, field, value)
                     changed_fields.append(field)
             if changed_fields:
-                vital.updated_by = request.user
+                vital.updated_by = actor
                 vital.save()
                 saved.append({
                     "day": day.isoformat(),
@@ -311,7 +323,27 @@ def oura_vitals_import_view(request):
                     "morning_hr": vital.morning_hr,
                     "hrv": vital.hrv,
                 })
-    return JsonResponse({"items": saved, "saved_count": len(saved)})
+    return saved
+
+
+@login_required
+@require_POST
+def oura_device_timezone_view(request):
+    """Only an athlete's own device may update their scheduling time zone."""
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+    athlete = _athlete_user(request)
+    if not athlete:
+        return HttpResponseForbidden()
+    value = request.POST.get("time_zone", "")
+    try:
+        if not value or len(value) > 64:
+            raise ValueError
+        ZoneInfo(value)
+    except (ValueError, ZoneInfoNotFoundError):
+        return JsonResponse({"ok": False}, status=400)
+    if athlete.device_time_zone != value:
+        Athlete.objects.filter(pk=athlete.pk).update(device_time_zone=value, oura_next_check_at=None)
+    return JsonResponse({"ok": True})
 
 
 @login_required

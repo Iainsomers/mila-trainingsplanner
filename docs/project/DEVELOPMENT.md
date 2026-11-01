@@ -140,6 +140,8 @@ Doe ongeveer maandelijks of na een grotere feature een korte documentatiecontrol
 
 ## Documentatie op Render
 
+Automatische Oura-vitals: migratie 0137 voegt opt-in, apparaattijdzone en laatste/volgende controle toe. In Render start WSGI automatisch een lichte achtergrondthread per webproces (`RENDER=true`); databaseclaims voorkomen dubbele controles bij meerdere workers of overlappende deploys. De thread controleert iedere 30 seconden op verschuldigde atleten en blijft onafhankelijk van browserbezoeken actief zolang de webservice draait. De webservice moet continu draaien: een slapende Free-service voert geen achtergrondwerk uit (https://render.com/docs/free). Er wordt geen extra betaalde service aangemaakt. Bij een aparte scheduler kan `OURA_AUTO_IMPORT_WORKER=0` worden gezet en `python manage.py sync_oura` iedere minuut draaien. Buiten Render staat de thread standaard uit; lokaal alleen expliciet met `OURA_AUTO_IMPORT_WORKER=1`. Mislukkingen loggen uitsluitend fouttypen; tokens, API-responses, namen en gezondheidswaarden niet. Gerichte tests: `manage.py test core.tests_oura_auto core.tests_oura`. De eigenaar doet de visuele controle.
+
 De projectdocumentatie is bronmateriaal in `docs/project/` en wordt met main naar dezelfde Render-checkout uitgerold. Er bestaat geen aparte publieke documentatiepagina in deze app. Een Git-push bevestigt de repositorywijziging, niet zelfstandig de voltooiing van de Render-deploy.
 
 ## Garmin OAuth-configuratie

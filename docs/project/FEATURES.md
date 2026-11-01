@@ -358,3 +358,9 @@ Het coachoverzicht met Garmin-activiteiten toont per training starttijd, laatste
 ## Information Quality — ALL
 
 Boven de atleten staat ALL met het gemiddelde van de zichtbare atleetpercentages voor Evaluated en Vitals. NA en niet-toegankelijke gegevens tellen niet mee; 0% telt wel mee. Zonder beschikbare percentages staat NA.
+
+## Automatische Oura-vitals
+
+Athlete Settings > General bevat Automatically import Oura vitals, standaard uit, instelbaar door de atleet zelf en bevoegde trainers. Dit vereist toegestane en verbonden Oura plus ingeschakelde dagelijkse vitals. Een geldige Readiness-score is voorwaarde; alleen lege slaapduur-, slaapkwaliteit-, Morning HR- en HRV-velden worden aangevuld. Bestaande waarden blijven behouden. Readiness zelf wordt niet geïmporteerd.
+
+MiLa bewaart de IANA-tijdzone van het eigen apparaat van de atleet. Coaches veranderen die niet met hun apparaat. Zolang de tijdzone onbekend is, wacht de automatische import. Het schema is lokaal 06:30 t/m 08:00 iedere tien minuten, daarbuiten ieder heel uur, inclusief zomer-/wintertijd. Na reizen volgt de nieuwe tijdzone zodra de atleet MiLa daar opent. De achtergrondcontrole draait op Render zonder geopende browser; de uitvoercontrole gebeurt iedere 30 seconden en gemiste controles worden bij hervatten ingehaald. Athlete Settings toont de bekende tijdzone en tijd sinds de laatste controle.

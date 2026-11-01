@@ -4,6 +4,8 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
 
+- Athlete Settings > General heeft `Automatically import Oura vitals` met uitleg over het lokale controleschema, de bekende apparaattijdzone en de laatste controle. Het vinkje is standaard uit en beschikbaar voor de atleet zelf en bevoegde trainers.
+
 - De klokjespopup heeft achter min/km de kolommen `Avg HR` en `Last 15s HR`, in die volgorde. Ontbrekende gegevens tonen `NA`.
 
 - De AYC-klokjespopup toont achter min/km ook `Last 15s HR`, voor zowel reps als afstandssplits. Ontbrekende metingen worden als `NA` getoond.

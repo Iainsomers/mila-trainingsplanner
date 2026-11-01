@@ -208,3 +208,7 @@ Het coachoverzicht toont nu ontvangst en detailontvangst per activiteit plus bru
 ## Information Quality — gemiddelde
 
 ALL-rij toegevoegd boven de atleten, als ongewogen gemiddelde van de getoonde percentages per kolom, afgerond op hele procenten. NA/afgeschermde waarden worden overgeslagen; nul telt mee. Twee gerichte paginatests en manage.py check slagen. Visuele controle door de eigenaar.
+
+## Automatische Oura-import — 1 november 2026
+
+Gebouwd met opt-in in Athlete Settings, automatische opslag van de eigen apparaattijdzone en een Render-achtergrondcontrole. Het lokale schema is 06:30–08:00 iedere tien minuten en daarbuiten ieder heel uur. Readiness moet numeriek geldig zijn; uitsluitend lege vitalsvelden worden gevuld met de bestaande importregels. De schrijver is gedeeld met de handmatige import en vergrendelt de atleet om gelijktijdige writes te serialiseren. Databaseclaims voorkomen dubbele automatische pulls; toestemming, koppeling en opt-in worden vóór schrijven opnieuw gecontroleerd. De tijdzone-update en achtergrondimport veranderen Last active niet. Migratie 0137 lokaal uitgevoerd; Django-check en migratiecontrole slagen. Oura- en schematests slagen. De achtergrondthread start bij Render-WSGI; continue uitvoering vereist een niet-slapende webservice. Live automatische import moet na deploy en opt-in nog worden bevestigd. De eigenaar doet de visuele controle.

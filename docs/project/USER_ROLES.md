@@ -48,6 +48,8 @@ Iedere gebruiker kan eigen actieve wishes indienen en bewerken. Alleen de produc
 
 ## Atleet
 
+De atleet kan in de eigen Athlete Settings automatische Oura-vitals aan/uit zetten; bevoegde edit-coaches kunnen dit eveneens. Dit verleent geen Oura-koppelrecht: de coach-only Allow Oura connection en de OAuth-toestemming blijven vereist. Alleen het eigen ingelogde atleetapparaat kan de opgeslagen tijdzone bijwerken. De achtergrondimport schrijft uitsluitend eigen lege vitals en telt niet als interactief MiLa-gebruik.
+
 Een persoonlijk trainingsplan op naam van het atleetaccount maakt dat account in de AYC niet tot trainer; de eigen AYC en de beperkingen voor toekomstige trainingen blijven gelden.
 
 Een atleetaccount is aan één `Athlete` gekoppeld. Een atleet kan uitsluitend zien en gebruiken:
