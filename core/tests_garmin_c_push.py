@@ -28,7 +28,15 @@ class GarminCPushTests(TestCase):
         response = self.client.get(reverse("athlete_year_calendar"), {"athlete": self.athlete.pk, "year": 2026})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["show_oura_vitals_import"])
-        self.assertContains(response, '<script src="/static/core/garmin_combine.js"></script>')
+        self.assertContains(response, 'root.combineGarminActivities = combine;')
+        self.assertNotContains(response, 'src="/static/core/garmin_combine.js"')
+        # Execute the delivered function, rather than only checking a script URL.
+        import subprocess
+        script = response.content.decode().split('/* Compose already analysed recordings', 1)[1].split('  function renderTypeAResults', 1)[0]
+        script = '/* Compose already analysed recordings' + script
+        check = subprocess.run(['node', '-e', 'global.window = {};\n' + script + '\nif (typeof window.combineGarminActivities !== "function") process.exit(1);'],
+            capture_output=True, text=True, timeout=10)
+        self.assertEqual(check.returncode, 0, check.stderr)
 
     def send(self, payload):
         return self.client.post(self.push_url, json.dumps(payload), content_type="application/json")

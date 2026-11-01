@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const combine = require('./static/core/garmin_combine.js');
+const combine = require('./templates/core/partials/garmin_combine.js');
 function session(start, distance, duration, main) {
   return {start, distance, duration, parts: [{training_fields: {wu: '', main, cd: ''},
     watch_loads: [{segment: 'CORE', meters: distance, seconds: 20, zone: '2', average_hr: 155, average_hr_last_15: 160}]}]};

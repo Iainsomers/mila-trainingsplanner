@@ -1,5 +1,4 @@
 {% extends "core/base.html" %}
-{% load static %}
 
 {% block title %}Athlete Year Calendar
 
@@ -1201,7 +1200,6 @@
   </div>
   {% endif %}
 
-  <script src="{% static 'core/garmin_combine.js' %}"></script>
   {% if show_oura_vitals_import %}
 <script>
   (function() {
@@ -2498,6 +2496,7 @@
     tableScroller.appendChild(table);
     parent.appendChild(tableScroller);
   }
+  {% include "core/partials/garmin_combine.js" %}
   function renderTypeAResults(parent, results, message, model, combinedPreview) {
     parent.innerHTML = "";
     if (!results.length) { parent.textContent = message || "No Polar training found for this day."; return; }

@@ -218,3 +218,5 @@ Garmin C ondersteunt nu samenvoegen van twee of drie afzonderlijke opnames via e
 Garmin Combine: het benodigde script wordt onafhankelijk van de Oura-import geladen. Een echte AYC-paginatest zonder Oura bewaakt dat de functie beschikbaar blijft.
 
 Render-timeout bij het openen van Garmin C op 1 november: traceback wachtte tijdens URL-initialisatie op de modulelock van requests, terwijl Oura kort na de WSGI-start achtergrondimports uitvoert. WSGI initialiseert nu de URL/view-modules vóór het starten van de poller; een afzonderlijk Python-proces test de koude importvolgorde. Sara’s drie aangeleverde activiteiten zijn lokaal daarnaast zonder externe AI-aanroep verwerkt (3/26/3 laps).
+
+Garmin Combine wordt nu in hetzelfde paginascript als de Garmin-bediening opgenomen, zonder afzonderlijke static-aanvraag. De AYC-regressietest voert de daadwerkelijk gerenderde functie uit in JavaScript; alleen een aanwezige script-URL gold eerder ten onrechte als voldoende controle.
