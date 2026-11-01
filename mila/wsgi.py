@@ -15,6 +15,13 @@ application = get_wsgi_application()
 # Render web workers poll independently of athlete page visits. A separate
 # scheduler can instead call `manage.py sync_oura` with this worker disabled.
 if os.environ.get("OURA_AUTO_IMPORT_WORKER", "1" if os.environ.get("RENDER") == "true" else "0") == "1":
+    # Django resolves URLs lazily on the first request. Finish importing the
+    # complete view graph on this thread before the poller imports Oura views.
+    # Otherwise the request and poller can wait on each other's module locks
+    # (notably requests), until Gunicorn kills the request worker.
+    from django.urls import get_resolver
+
+    get_resolver().url_patterns
     from core.oura_sync import start_worker
     start_worker()
 
