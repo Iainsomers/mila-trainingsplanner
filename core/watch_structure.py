@@ -82,8 +82,17 @@ def short_sets_and_continuous(laps, zone_for_lap):
         if zone in {"Z1", "Z2", "Z3", "Z4", "Z5"}:
             zone_distances[zone] = zone_distances.get(zone, 0) + meters
     zone = max(zone_distances, key=zone_distances.get) if zone_distances else ""
+    # Only the even-positioned work laps contribute to the short-rep range.
+    # Slow recoveries and the continuous block must not dilute these zones.
+    work_zones = {zone_for_lap(lap) for lap in laps[:continuous_start:2]}
+    work_zones = sorted(value.lower() for value in work_zones
+                        if value in {"Z1", "Z2", "Z3", "Z4", "Z5"})
+    work_zone = ""
+    if work_zones:
+        work_zone = " " + (work_zones[0] if len(work_zones) == 1
+                            else f"{work_zones[0]}>{work_zones[-1]}")
     recovery = int(math.floor(median(recoveries) / 5 + 0.5) * 5)
-    main = f"{len(sets)}*({len(sets[0])}*{nominal}m) p{recovery}//{len(loops) * loop_m}m"
+    main = f"{len(sets)}*({len(sets[0])}*{nominal}m{work_zone}) p{recovery}//{len(loops) * loop_m}m"
     if zone:
         main += " " + zone.lower()
     cd = f"{round(sum(m for m, _ in tail) / 100) * 100}m" if tail else ""

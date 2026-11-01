@@ -31,14 +31,28 @@ class ShortSetsStructureTests(SimpleTestCase):
             laps = workout(cooldown)
             before = deepcopy(laps)
             result = short_sets_and_continuous(laps, lambda lap: "Z2")
-            self.assertEqual(result["main"], "2*(5*100m) p45//3750m z2")
+            self.assertEqual(result["main"], "2*(5*100m z2) p45//3750m z2")
             self.assertEqual(result["cd"], "2000m" if cooldown else "")
             self.assertEqual(result["cooldown_start"], 26)
             self.assertEqual(laps, before)
 
     def test_does_not_invent_zone_without_athlete_settings(self):
         result = short_sets_and_continuous(workout(), lambda lap: "NA")
-        self.assertTrue(result["main"].endswith("//3750m"))
+        self.assertEqual(result["main"], "2*(5*100m) p45//3750m")
+
+    def test_short_rep_zone_range_excludes_recoveries_and_continuous_block(self):
+        laps = workout()
+        for index, lap in enumerate(laps):
+            lap["test_zone"] = ("Z4" if index < 8 else "Z5") if index < 20 and index % 2 == 0 else ("Z1" if index < 20 else "Z2")
+        result = short_sets_and_continuous(laps, lambda lap: lap["test_zone"])
+        self.assertEqual(result["main"], "2*(5*100m z4>z5) p45//3750m z2")
+
+    def test_single_known_work_zone_and_unknown_laps(self):
+        laps = workout(True)
+        for index, lap in enumerate(laps):
+            lap["test_zone"] = "Z4" if index in (2, 4, 6) else "NA"
+        result = short_sets_and_continuous(laps, lambda lap: lap["test_zone"])
+        self.assertEqual(result["main"], "2*(5*100m z4) p45//3750m")
 
     def test_rejects_continuous_laps_missing_recoveries_and_unequal_sets(self):
         continuous = [{"distanceMeters": 1000, "durationMillis": 300000}] * 10
@@ -61,5 +75,5 @@ class ShortSetsStructureTests(SimpleTestCase):
             fixed = type_b_description(workout(cooldown))
             proposed = _model_b_ai_description(workout(cooldown))
             self.assertEqual(fixed, proposed)
-            self.assertIn("Main: 2*(5*100m) p45//3750m z2", fixed)
+            self.assertIn("Main: 2*(5*100m z2) p45//3750m z2", fixed)
         request.assert_not_called()

@@ -147,6 +147,8 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 
 ## Garmin FIT-uploadpreview
 
+- Bij korte herhaalseries krijgt het werkblok zijn eigen zone of zonebereik uit uitsluitend de gemeten werk-laps (bijvoorbeeld `2*(5*100m z4>z5) p45//3750m z2`). Herstel- en doorlopende laps tellen niet mee voor die werkzone. Ontbrekende zones worden niet ingevuld; een bereik beschrijft de waargenomen werkzones, niet noodzakelijk een progressief uitgevoerde training. Dit wijzigt geen lapzones of gemeten totalen.
+
 - Watch B/C herkent ook gelijke series korte werk/herstelparen gevolgd door een doorlopend blok met gemengde kilometer-autolaps en handmatige rondegrenzen. Hiervoor zijn minstens twee gelijke series, langere seriepauzes en minstens twee consistente kilometer/rest-paren vereist. Relatieve snelheid en volgorde zijn leidend; één ondergemeten korte herhaling mag de nominale afstand uit de overige herhalingen volgen. Herstel wordt op vijf seconden samengevat. Het doorlopende blok gebruikt de consistente rondeafstand afgerond op 250 m (maximaal 5% afwijking per ronde); het wordt niet als herhaalde kilometertraining weergegeven. Een duidelijke vertraging na dit blok kan CD starten, ook als een volgende CD-lap weer Z2 is. De nominale CD-afstand wordt op 100 m afgerond. Dit zijn beschrijvingsregels: gemeten afstand, tijd, HR, tempo en zonetotalen blijven behouden. Zonder zonegegevens wordt geen zone verzonnen. Sterke structurele herkenning gaat vóór AI; de AI-instructies benoemen korte herhalingen, gemengde lapgrenzen en beperkingen van het herhaalsetschema.
 
 - FIT-bestanden worden gelezen en per ingeschakelde atleet opgeslagen; er wordt nog geen TrainingSlot aangemaakt of gewijzigd.

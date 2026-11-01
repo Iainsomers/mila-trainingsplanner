@@ -82,7 +82,7 @@ class GarminCPushTests(TestCase):
                     "analysis_data": {"laps": [{"distance": row["distanceMeters"],
                         "elapsed_time": row["durationMillis"] / 1000} for row in rows]}})
             part = self.read_c().json()["results"][0]["parts"][0]
-            self.assertEqual(part["training_fields"]["main"], "2*(5*100m) p45//3750m z2")
+            self.assertEqual(part["training_fields"]["main"], "2*(5*100m z2) p45//3750m z2")
             self.assertEqual(part["training_fields"]["cd"], "2000m" if cooldown else "")
             self.assertEqual(len(part["manual"]), len(rows))
             loads = part["watch_loads"]
