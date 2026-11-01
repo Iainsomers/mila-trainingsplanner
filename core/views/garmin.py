@@ -17,6 +17,7 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 
@@ -394,13 +395,25 @@ def garmin_athlete_activities_view(request, athlete_id):
         identity_error = True
     last_received_at = GarminActivitySummary.objects.filter(athlete=athlete).order_by("-received_at").values_list("received_at", flat=True).first()
     activities = []
-    for activity in GarminActivity.objects.filter(athlete=athlete).only("activity_start", "parsed_data"):
+    for activity in GarminActivity.objects.filter(athlete=athlete).only("activity_start", "parsed_data", "uploaded_at"):
         activities.append({"activity_start": activity.activity_start,
                            "date": timezone.localtime(activity.activity_start).date() if activity.activity_start else None,
-                           "distance": (activity.parsed_data.get("human") or {}).get("distance") or "—"})
+                           "distance": (activity.parsed_data.get("human") or {}).get("distance") or "—",
+                           "is_fit_upload": True, "received_at": activity.uploaded_at,
+                           "usable_lap_count": len(activity.parsed_data.get("laps") or [])})
     for activity in GarminActivitySummary.objects.filter(athlete=athlete):
+        analysis = activity.analysis_data or {}
+        details_timestamp = analysis.get("details_received_at")
+        try:
+            details_received_at = parse_datetime(details_timestamp) if details_timestamp else None
+        except (ValueError, TypeError):
+            details_received_at = None
         activities.append({"activity_start": activity.activity_start, "date": activity.activity_date,
-                           "distance": f"{activity.distance_m / 1000:.2f} km" if activity.distance_m is not None else "—"})
+                           "distance": f"{activity.distance_m / 1000:.2f} km" if activity.distance_m is not None else "—",
+                           "received_at": activity.received_at,
+                           "details_received": bool(details_timestamp),
+                           "details_received_at": details_received_at,
+                           "usable_lap_count": len(analysis.get("laps") or [])})
     activities.sort(key=lambda row: row["activity_start"].timestamp() if row["activity_start"] else float("-inf"), reverse=True)
     response = render(request, "core/garmin_athlete_activities.html", {
         "athlete": athlete, "activities": activities,

@@ -53,6 +53,44 @@ class GarminPushTests(TestCase):
         self.assertEqual(GarminActivitySummary.objects.count(), 1)
         self.assertEqual(GarminActivitySummary.objects.get().distance_m, 15000)
 
+    def test_activity_diagnostics_distinguish_summary_details_and_fit_upload(self):
+        from core.models import GarminActivity
+        self.push()
+        self.client.force_login(self.coach)
+        url = reverse("garmin_athlete_activities", args=[self.athlete.pk])
+        page = self.client.get(url)
+        self.assertContains(page, "Details: not received")
+        self.assertContains(page, "Usable laps: 0")
+        saved = GarminActivitySummary.objects.get()
+        detail_time = "2026-11-01T12:53:30+00:00"
+        saved.analysis_data = {"details_received_at": detail_time,
+            "laps": [{"distance": 500, "elapsed_time": 150}] * 26, "received_lap_count": 27}
+        saved.save()
+        # A repeated summary updates received_at but preserves the detail receipt.
+        self.push()
+        page = self.client.get(url)
+        self.assertContains(page, "received 01-11-2026 13:53:30")
+        self.assertContains(page, "Usable laps: 26")
+        row = page.context["activities"][0]
+        self.assertEqual(row["details_received_at"].isoformat(), detail_time)
+        self.assertGreater(row["received_at"], row["details_received_at"])
+        saved.refresh_from_db()
+        saved.analysis_data["laps"] = []
+        saved.save()
+        page = self.client.get(url)
+        self.assertContains(page, "received 01-11-2026 13:53:30")
+        self.assertContains(page, "Usable laps: 0")
+        GarminActivitySummary.objects.all().delete()
+        GarminActivity.objects.create(athlete=self.athlete, activity_start=saved.activity_start,
+            original_filename="private.fit", file_hash="diagnostic-fit", raw_file=b"private",
+            parsed_data={"laps": [{"distance": 500}], "human": {"distance": "0.50 km"}})
+        page = self.client.get(url)
+        self.assertContains(page, "FIT upload:")
+        self.assertContains(page, "Details: from FIT file")
+        self.assertContains(page, "Usable laps: 1")
+        self.assertNotContains(page, "Last received:")
+        self.assertNotContains(page, "private.fit")
+
     def test_receiver_requires_private_key_and_does_not_require_browser_csrf(self):
         wrong = reverse("garmin_activity_push", args=["wrong-key"])
         self.assertEqual(self.push(url=wrong).status_code, 403)

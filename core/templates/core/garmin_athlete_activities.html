@@ -22,6 +22,7 @@
     {% if last_received_at %}Last received from Garmin: {{ last_received_at|date:"d-m-Y H:i" }}.
     {% else %}No automatically delivered Garmin activities have been saved yet. An activity already uploaded to Garmin Connect may need to be sent again using Summary Resender.{% endif %}
   </p>
+  <p class="small text-muted">Last received includes repeated summaries; it does not confirm receipt of details. All times are local.</p>
   <div class="card">
     <div class="table-responsive">
       <table class="table table-sm mb-0">
@@ -29,7 +30,19 @@
         <tbody>
           {% for activity in activities %}
           <tr>
-            <td>{{ activity.date|date:"d-m-Y"|default:"—" }}</td>
+            <td>
+              {{ activity.date|date:"d-m-Y"|default:"—" }} <span class="text-muted">{{ activity.activity_start|date:"H:i" }}</span>
+              <div class="small text-muted">
+                {% if activity.is_fit_upload %}
+                  <div>FIT upload: {{ activity.received_at|date:"d-m-Y H:i:s" }}</div>
+                  <div>Details: from FIT file</div>
+                {% else %}
+                  <div>Last received: {{ activity.received_at|date:"d-m-Y H:i:s" }}</div>
+                  <div>Details: {% if activity.details_received %}received{% if activity.details_received_at %} {{ activity.details_received_at|date:"d-m-Y H:i:s" }}{% else %} (time unavailable){% endif %}{% else %}not received{% endif %}</div>
+                {% endif %}
+                <div>Usable laps: {{ activity.usable_lap_count }}</div>
+              </div>
+            </td>
             <td class="text-end">{{ activity.distance|default:"—" }}</td>
           </tr>
           {% empty %}
