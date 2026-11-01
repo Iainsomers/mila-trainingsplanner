@@ -23,6 +23,13 @@ class GarminCPushTests(TestCase):
             "startTimeInSeconds": self.start, "distanceInMeters": 1000, "durationInSeconds": 300}
         self.push_url = reverse("garmin_activity_push", args=[receiver_key()])
 
+    def test_calendar_loads_combiner_without_oura_import(self):
+        self.client.force_login(self.coach)
+        response = self.client.get(reverse("athlete_year_calendar"), {"athlete": self.athlete.pk, "year": 2026})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["show_oura_vitals_import"])
+        self.assertContains(response, '<script src="/static/core/garmin_combine.js"></script>')
+
     def send(self, payload):
         return self.client.post(self.push_url, json.dumps(payload), content_type="application/json")
 
