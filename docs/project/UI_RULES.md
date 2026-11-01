@@ -4,7 +4,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
 
-- De AYC-klokjespopup toont een compacte `p`-knop naast sluiten als er een bewaard oorspronkelijk plan is en de gebruiker deze training mag bewerken. Tooltip en toegankelijke naam: `Restore original plan`.
+- Na Use AM/PM staat naast het AYC-klokje een compacte `p/w`-knop. Die opent een kleine popup met `Watch` en `Plan`; de actieve versie is gemarkeerd. Het klokje toont in beide standen de bewaarde Watch-reptijden. De keuzepopup volgt de bestaande trainingsbewerkrechten en staat buiten de team-stackingcontext.
 
 - Flex Planner-rijen groeien mee met de training, met 48 px als minimum. Gebruik rondom de training slechts 2 px verticale padding; reserveer geen lege strook onderaan.
 - Compact, functioneel en rustig; planningsinformatie krijgt voorrang op uitlegtekst.

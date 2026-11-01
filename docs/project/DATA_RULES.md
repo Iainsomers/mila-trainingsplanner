@@ -147,6 +147,8 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 
 ## Garmin FIT-uploadpreview
 
+- Use AM/PM bewaart afzonderlijke Plan- en Watch-momentopnamen. Wisselen via `p/w` vervangt de actieve segmenten, bron, loads en reptijden atomair. Plan gebruikt eigen planafstanden; Watch gebruikt de opgeslagen gemeten loads. De klokweergave blijft de bewaarde Watch-reptijden tonen, ook wanneer Plan actief is. Een volgende expliciete Watch-overname vernieuwt de Watch-momentopname, zonder de bewaarde Plan-momentopname te wissen.
+
 - Bij de herkende combinatie van korte series en een doorlopend blok worden AYC-reptijden per Main-segment gekoppeld: alleen de korte werk-laps voor de series, en de opgetelde tijd/afstand van alle aaneengesloten lange-bloklaps voor het doorlopende segment. Herstel en CD blijven buiten deze tijden, maar behouden hun ruwe loads en totalen. De afgeleide repweergave wordt ook bij het lezen van bestaande Watch-slots vernieuwd; opnieuw importeren is niet vereist. Een structureel herkende maar door GPS ondergemeten herhaling behoudt haar gemeten tijd/tempo.
 
 - Bij korte herhaalseries krijgt het werkblok zijn eigen zone of zonebereik uit uitsluitend de gemeten werk-laps (bijvoorbeeld `2*(5*100m z4>z5) p45//3750m z2`). Herstel- en doorlopende laps tellen niet mee voor die werkzone. Ontbrekende zones worden niet ingevuld; een bereik beschrijft de waargenomen werkzones, niet noodzakelijk een progressief uitgevoerde training. Dit wijzigt geen lapzones of gemeten totalen.

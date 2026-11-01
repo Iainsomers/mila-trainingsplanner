@@ -49,12 +49,54 @@ class WatchOriginalPlanTests(TestCase):
             self.assertEqual(list(slot.segments.values("type", "text", "order", "distance_m", "reps", "zone")), before)
             self.assertEqual(slot.source, "planned")
             self.assertEqual(slot.watch_loads, [])
-            self.assertIsNone(slot.watch_plan_snapshot)
+            self.assertEqual(slot.watch_plan_snapshot, snapshot)
 
     def test_empty_original_can_be_restored(self):
         self.assertEqual(self.import_watch().status_code, 200)
         self.assertEqual(self.client.post(self.url(), {"action": "restore_watch_plan"}).status_code, 204)
         self.assertFalse(TrainingSlot.objects.get().segments.exists())
+
+    def test_switch_both_ways_keeps_watch_training_laps_and_clock_results(self):
+        for index in (1, 2):
+            slot = self.original(index)
+            self.import_watch(index)
+            slot.refresh_from_db()
+            watch = slot.watch_training_snapshot
+            self.assertTrue(watch["watch_main_reps"])
+            for version in ("plan", "watch", "plan", "watch"):
+                self.assertEqual(self.client.post(self.url(index), {
+                    "action": "select_watch_version", "version": version}).status_code, 204)
+                slot.refresh_from_db()
+                self.assertEqual(slot.watch_training_snapshot, watch)
+                clone = _clone_slot_for_display(slot)
+                self.assertEqual(clone.watch_main_reps, watch["watch_main_reps"])
+                self.assertEqual(clone.watch_display_source, "watch_c")
+                if version == "watch":
+                    self.assertEqual(slot.watch_loads, watch["watch_loads"])
+                    self.assertEqual(slot.source, "watch_c")
+                    self.assertEqual(slot.watch_main_reps, watch["watch_main_reps"])
+                    self.assertEqual([seg.text for seg in slot.segments.all()], [seg["text"] for seg in watch["segments"]])
+                else:
+                    self.assertEqual(slot.source, "planned")
+                    self.assertEqual(slot.watch_loads, [])
+                    html = render_to_string("core/partials/ayc_slot_segments.html", {
+                        "cell": {"slot": clone, "day": self.day, "slot_index": index, "plan_id": self.plan.pk},
+                        "selected_athlete_id": self.athlete.pk})
+                    self.assertIn("watch-source-indicator", html)
+                    self.assertIn('data-current-version="plan"', html)
+                    self.assertIn(">p/w</button>", html)
+
+    def test_existing_watch_import_archives_results_on_first_switch(self):
+        slot = self.original()
+        self.import_watch()
+        slot.refresh_from_db()
+        results = slot.watch_main_reps
+        slot.watch_training_snapshot = None  # Simulate an import before migration 0136.
+        slot.save()
+        self.assertEqual(self.client.post(self.url(), {"action": "select_watch_version", "version": "plan"}).status_code, 204)
+        self.assertEqual(self.client.post(self.url(), {"action": "select_watch_version", "version": "watch"}).status_code, 204)
+        slot.refresh_from_db()
+        self.assertEqual(slot.watch_main_reps, results)
 
     def test_restore_requires_snapshot_and_edit_access(self):
         self.original()
@@ -98,4 +140,4 @@ class WatchOriginalPlanTests(TestCase):
         html = render_to_string("core/partials/ayc_slot_segments.html", {
             "cell": {"slot": clone, "day": self.day, "slot_index": 2, "plan_id": self.plan.pk},
             "selected_athlete_id": self.athlete.pk})
-        self.assertIn('data-watch-restore-url="/slot-modal/2026/10/30/2/', html)
+        self.assertIn('data-version-url="/slot-modal/2026/10/30/2/', html)

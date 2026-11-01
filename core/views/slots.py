@@ -1154,6 +1154,11 @@ def _week_segment_payload(slot):
     } for seg in slot.segments.order_by("order", "id")]
 
 
+def _watch_version_payload(slot):
+    return {"segments": _week_segment_payload(slot), "source": slot.source,
+            "watch_loads": slot.watch_loads, "watch_main_reps": slot.watch_main_reps}
+
+
 @require_http_methods(["POST"])
 def flex_week_copy(request):
     """Store one displayed athlete week for later paste in Flex Planner."""
@@ -1523,22 +1528,34 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     action = (request.POST.get("action") or "").strip().lower()
 
-    if action == "restore_watch_plan":
+    if action in {"restore_watch_plan", "select_watch_version"}:
         if not athlete:
             return HttpResponse("Athlete required", status=400)
+        version = "plan" if action == "restore_watch_plan" else request.POST.get("version")
+        if version not in {"plan", "watch"}:
+            return HttpResponse("Invalid version", status=400)
         restore_slot = TrainingSlot.objects.select_for_update().filter(
             plan=selected_plan, athlete=athlete, date=d, slot_index=slot_index).first()
-        snapshot = getattr(restore_slot, "watch_plan_snapshot", None)
-        if not restore_slot or not isinstance(snapshot, dict):
+        if not restore_slot or not isinstance(restore_slot.watch_plan_snapshot, dict):
             return HttpResponse("No saved original plan", status=409)
+        is_watch = restore_slot.source in {"watch_a", "watch_b", "watch_c"}
+        if (version == "watch") == is_watch:
+            return HttpResponse(status=204)
+        if is_watch:
+            restore_slot.watch_training_snapshot = _watch_version_payload(restore_slot)
+            snapshot = restore_slot.watch_plan_snapshot
+        else:
+            snapshot = restore_slot.watch_training_snapshot
+            if not isinstance(snapshot, dict):
+                return HttpResponse("No saved Watch training", status=409)
+            restore_slot.watch_plan_snapshot = {"segments": _week_segment_payload(restore_slot)}
         restore_slot.segments.all().delete()
         for item in snapshot.get("segments", []):
             restore_slot.segments.create(**item)
-        restore_slot.source = "planned"
-        restore_slot.watch_loads = []
-        restore_slot.watch_main_reps = []
-        restore_slot.watch_plan_snapshot = None
-        restore_slot.save(update_fields=["source", "watch_loads", "watch_main_reps", "watch_plan_snapshot", "updated_at"])
+        restore_slot.source = snapshot.get("source", "planned")
+        restore_slot.watch_loads = snapshot.get("watch_loads", [])
+        restore_slot.watch_main_reps = snapshot.get("watch_main_reps", [])
+        restore_slot.save(update_fields=["source", "watch_loads", "watch_main_reps", "watch_plan_snapshot", "watch_training_snapshot", "updated_at"])
         _bump_stats_version()
         return HttpResponse(status=204)
 
@@ -2164,6 +2181,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     save_processed_main_reps(slot)
     sync_athlete_auto_wucd_overrides(slot, selected_plan, core_text)
+    if watch_origin in {"watch_a", "watch_b", "watch_c"}:
+        slot.watch_training_snapshot = _watch_version_payload(slot)
+        slot.save(update_fields=["watch_training_snapshot"])
     _bump_stats_version()
 
     if _is_flex_source(request):

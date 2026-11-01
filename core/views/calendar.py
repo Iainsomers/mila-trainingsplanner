@@ -902,6 +902,12 @@ def _clone_slot_for_display(slot):
         slot_id=getattr(slot, "id", None),
     )
     clone.watch_plan_snapshot = getattr(slot, "watch_plan_snapshot", None)
+    clone.watch_training_snapshot = getattr(slot, "watch_training_snapshot", None)
+    if clone.source == "planned" and isinstance(clone.watch_training_snapshot, dict):
+        clone.watch_main_reps = clone.watch_training_snapshot.get("watch_main_reps", [])
+        clone.watch_display_source = clone.watch_training_snapshot.get("source", "")
+    else:
+        clone.watch_display_source = clone.source
     for segment in segments:
         segment.slot = clone
     return clone

@@ -1006,6 +1006,7 @@ class TrainingSlot(models.Model):
     watch_loads = models.JSONField(default=list, blank=True)
     watch_main_reps = models.JSONField(default=list, blank=True)
     watch_plan_snapshot = models.JSONField(null=True, blank=True, default=None)
+    watch_training_snapshot = models.JSONField(null=True, blank=True, default=None)
 
     athletes = models.ManyToManyField(Athlete, blank=True, related_name="training_slots")
     groups = models.ManyToManyField(Group, blank=True, related_name="training_slots")

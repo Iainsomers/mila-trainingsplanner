@@ -198,6 +198,7 @@
   }
 
   .watch-source-indicator:hover { color: #0d6efd; }
+  .watch-version-switch { border:1px solid #adb5bd; border-radius:3px; padding:0 3px; background:white; color:#52606d; font-size:10px; line-height:15px; flex-shrink:0; }
   .watch-source-indicator:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; border-radius: 3px; }
 
   .watch-source-indicator svg {
@@ -2218,10 +2219,23 @@
   <div style="background:#fff; width:520px; max-width:100%; max-height:90vh; overflow:auto; border-radius:8px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
     <div class="d-flex align-items-center justify-content-between mb-2">
       <h5 id="watchMainRepsTitle" class="mb-0">Measured Main reps</h5>
-      <button type="button" id="watchRestorePlan" class="btn btn-sm btn-outline-secondary ms-auto me-2" title="Restore original plan" aria-label="Restore original plan" style="display:none">p</button>
       <button type="button" id="watchMainRepsClose" class="btn btn-sm btn-outline-secondary" aria-label="Close">×</button>
     </div>
     <div id="watchMainRepsBody" class="small"></div>
+  </div>
+</div>
+
+<div id="watchVersionPopup" role="dialog" aria-modal="true" aria-labelledby="watchVersionTitle" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10002; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:white; width:280px; max-width:100%; border-radius:8px; padding:16px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 id="watchVersionTitle" class="mb-0">Watch / Plan</h5>
+      <button type="button" id="watchVersionClose" class="btn btn-sm btn-outline-secondary" aria-label="Close">×</button>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-primary flex-fill" data-select-watch-version="watch">Watch</button>
+      <button type="button" class="btn btn-outline-primary flex-fill" data-select-watch-version="plan">Plan</button>
+    </div>
+    <div id="watchVersionError" class="small text-danger mt-2" role="alert"></div>
   </div>
 </div>
 
@@ -3096,6 +3110,13 @@
   });
 
   document.addEventListener("click", function(event) {
+    var versionButton = event.target.closest(".watch-version-switch");
+    if (versionButton) {
+      event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
+      if (!aycTrainingIsEditable(versionButton.getAttribute("data-watch-date"))) return;
+      showWatchVersionPopup(versionButton);
+      return;
+    }
     var watchRepButton = event.target.closest(".watch-source-indicator");
     if (watchRepButton) {
       event.preventDefault();
@@ -3126,29 +3147,53 @@
     openSlotModal(slotBox);
   }, true);
 
+  var watchVersionUrl = "";
+  document.querySelectorAll(".watch-version-switch").forEach(function(button) {
+    button.hidden = !aycTrainingIsEditable(button.getAttribute("data-watch-date"));
+  });
+  function showWatchVersionPopup(button) {
+    watchVersionUrl = button.getAttribute("data-version-url") || "";
+    var current = button.getAttribute("data-current-version");
+    document.getElementById("watchVersionError").textContent = "";
+    document.querySelectorAll("[data-select-watch-version]").forEach(function(choice) {
+      choice.disabled = false;
+      var selected = choice.getAttribute("data-select-watch-version") === current;
+      choice.classList.toggle("active", selected);
+      choice.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    document.getElementById("watchVersionPopup").style.display = "flex";
+    document.querySelector("[data-select-watch-version='" + current + "']").focus();
+  }
+  var watchVersionPopup = document.getElementById("watchVersionPopup");
+  document.body.appendChild(watchVersionPopup);
+  document.getElementById("watchVersionClose").onclick = function() { watchVersionPopup.style.display = "none"; };
+  watchVersionPopup.addEventListener("click", function(event) {
+    if (event.target === watchVersionPopup) watchVersionPopup.style.display = "none";
+    var choice = event.target.closest("[data-select-watch-version]");
+    if (!choice || !watchVersionUrl) return;
+    document.querySelectorAll("[data-select-watch-version]").forEach(function(button) { button.disabled = true; });
+    var data = new FormData();
+    data.append("action", "select_watch_version");
+    data.append("version", choice.getAttribute("data-select-watch-version"));
+    fetch(watchVersionUrl, {method:"POST", body:data, credentials:"same-origin",
+      headers:{"X-CSRFToken": getCookie("csrftoken")}}).then(function(response) {
+        if (!response.ok) throw new Error("Selection failed");
+        window.location.reload();
+      }).catch(function() {
+        document.querySelectorAll("[data-select-watch-version]").forEach(function(button) { button.disabled = false; });
+        document.getElementById("watchVersionError").textContent = "Could not change the training. Refresh and try again.";
+      });
+  });
+  document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") watchVersionPopup.style.display = "none";
+  });
+
   function showStoredWatchMainReps(button) {
     var popup = document.getElementById("watchMainRepsPopup");
     var title = document.getElementById("watchMainRepsTitle");
     var body = document.getElementById("watchMainRepsBody");
     title.textContent = "Measured Main reps — " + (button.getAttribute("data-watch-model") || "Watch");
     body.replaceChildren();
-    var restoreButton = document.getElementById("watchRestorePlan");
-    var restoreUrl = button.getAttribute("data-watch-restore-url") || "";
-    restoreButton.style.display = restoreUrl && aycTrainingIsEditable(button.getAttribute("data-watch-date")) ? "" : "none";
-    restoreButton.disabled = false;
-    restoreButton.onclick = function() {
-      restoreButton.disabled = true;
-      var data = new FormData();
-      data.append("action", "restore_watch_plan");
-      fetch(restoreUrl, {method: "POST", body: data, credentials: "same-origin",
-        headers: {"X-CSRFToken": getCookie("csrftoken")}}).then(function(response) {
-          if (!response.ok) throw new Error("Restore failed");
-          window.location.reload();
-        }).catch(function() {
-          restoreButton.disabled = false;
-          window.alert("The original plan could not be restored. Refresh and try again.");
-        });
-    };
     var reps = [];
     try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
     if (!Array.isArray(reps) || !reps.length) {
