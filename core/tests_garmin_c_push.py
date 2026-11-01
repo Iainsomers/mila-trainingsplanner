@@ -149,3 +149,30 @@ class GarminCPushTests(TestCase):
         for secret in ("PRIVATE TRAINING NAME", "PRIVATE TOKEN", "runner-id", receiver_key()):
             self.assertNotIn(secret, output)
         self.assertFalse(GarminActivitySummary.objects.exists())
+
+    def test_detail_without_distance_does_not_block_other_activities_in_batch(self):
+        from copy import deepcopy
+        stationary = deepcopy(self.details())
+        stationary["activityId"] = 111
+        stationary["summary"].pop("distanceInMeters")
+        response = self.send({"activityDetails": [stationary, self.details()]})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(GarminActivitySummary.objects.count(), 2)
+        missing = GarminActivitySummary.objects.get(activity_id="111")
+        self.assertIsNone(missing.distance_m)
+        self.assertEqual(missing.analysis_data["lap_data_status"], "missing_distance")
+        self.assertEqual(missing.analysis_data["laps"], [])
+        self.assertTrue(missing.analysis_data["details_received_at"])
+        usable = GarminActivitySummary.objects.get(activity_id="456")
+        self.assertEqual([lap["distance"] for lap in usable.analysis_data["laps"]], [500, 500])
+        results = self.read_c().json()["results"]
+        self.assertTrue(any("no total distance" in result["parts"][0]["description"] for result in results if result.get("detail_status")))
+
+    def test_missing_distance_detail_preserves_existing_summary_distance(self):
+        self.send({"activities": [self.summary]})
+        details = self.details()
+        details["summary"].pop("distanceInMeters")
+        self.assertEqual(self.send({"activityDetails": [details]}).status_code, 200)
+        saved = GarminActivitySummary.objects.get()
+        self.assertEqual(saved.distance_m, 1000)
+        self.assertEqual(saved.analysis_data["laps"], [])

@@ -19,12 +19,18 @@ def lap_data(item):
     start = number(summary.get("startTimeInSeconds"))
     distance = number(summary.get("distanceInMeters"))
     duration = number(summary.get("durationInSeconds"))
-    if start is None or distance is None or duration is None or distance < 0 or duration <= 0:
+    if start is None or duration is None or (distance is not None and distance < 0) or duration <= 0:
         raise ValueError("Missing activity totals")
     samples = item.get("samples") or []
     laps = item.get("laps") or []
     if not isinstance(samples, list) or not isinstance(laps, list) or len(samples) > 100000 or len(laps) > 10000:
         raise ValueError("Invalid activity details")
+    if distance is None:
+        # Garmin can omit distance on stationary/short activities. This is not
+        # a malformed batch: preserve the receipt without inventing lap metres.
+        return {"laps": [], "heart_rate_samples": [], "total_distance_m": None,
+                "total_elapsed_s": duration, "lap_data_status": "missing_distance",
+                "received_lap_count": len(laps), "received_sample_count": len(samples)}
     points = sorted((number(sample.get("startTimeInSeconds")), number(sample.get("totalDistanceInMeters")))
                     for sample in samples if isinstance(sample, dict)
                     and number(sample.get("startTimeInSeconds")) is not None

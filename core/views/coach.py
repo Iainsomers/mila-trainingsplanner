@@ -5727,6 +5727,8 @@ def garmin_type_c_ayc_view(request):
                 detail_message = "Activity Details have been received, but usable lap data is missing."
                 if parsed.get("lap_data_status") == "no_lap_markers":
                     detail_message = "Activity Details have been received. Garmin supplied no recorded lap boundaries for this activity."
+                elif parsed.get("lap_data_status") == "missing_distance":
+                    detail_message = "Activity Details have been received, but Garmin supplied no total distance. No lap distances are estimated."
                 elif parsed.get("lap_data_status") == "incomplete_lap_coverage":
                     detail_message = "Activity Details have been received, but the measured samples do not cover all lap boundaries. No incomplete workout analysis is offered."
                 if parsed.get("details_received_at"):
