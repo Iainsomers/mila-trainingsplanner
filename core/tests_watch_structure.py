@@ -60,8 +60,35 @@ class ShortSetsStructureTests(SimpleTestCase):
             self.assertEqual(len(slot.watch_main_reps), 11)
             self.assertIn("18:42", continuous.display_text)
             if cooldown:
-                self.assertIn("0:12", short.display_text)  # Keep the GPS-shortened work rep.
+                self.assertNotIn("0:12", short.display_text)
+                self.assertEqual(processed[5]["measured_seconds"], 12)
+                self.assertEqual(processed[5]["seconds"], round(12 * 100 / 63, 2))
             self.assertEqual(slot.watch_loads, loads)
+
+    def test_rep_time_is_scaled_using_exact_measured_distance_after_import(self):
+        from types import SimpleNamespace
+        from core.watch_processing import processed_main_reps
+        from core.views.calendar import _watch_segment_loads, _watch_actual_time_label
+        laps = workout(True)
+        laps[10]["distanceMeters"] = 62.95
+        loads = [{"segment": "CD" if index >= 26 else "CORE", "zone": "4",
+                  "meters": lap["distanceMeters"], "seconds": lap["durationMillis"] / 1000}
+                 for index, lap in enumerate(laps)]
+        before = deepcopy(loads)
+        slot = SimpleNamespace(source="watch_c", watch_loads=loads)
+        segment = SimpleNamespace(slot=slot, type="CORE", text="2*(5*100m z4) p45",
+                                  distance_m=100, reps=10, zone="4", order=1, id=1)
+        slot.segments = SimpleNamespace(all=lambda: [segment])
+        output = processed_main_reps(slot)
+        self.assertEqual(output[5]["seconds"], 19.06)
+        self.assertEqual(output[5]["measured_seconds"], 12)
+        self.assertEqual(output[5]["measured_distance_m"], 62.95)
+        self.assertEqual(output[0]["seconds"], round(23 * 100 / 82, 2))
+        self.assertEqual(output[5]["pace_seconds_per_km"], round(12 * 1000 / 62.95, 2))
+        label = _watch_actual_time_label(_watch_segment_loads(segment), segment)
+        self.assertNotIn("0:12", label)
+        self.assertIn("0:19", label)
+        self.assertEqual(loads, before)
 
     def test_both_recording_styles_preserve_facts_and_recognize_same_main(self):
         for cooldown in (False, True):

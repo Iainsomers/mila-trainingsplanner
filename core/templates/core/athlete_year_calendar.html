@@ -3202,6 +3202,10 @@
       empty.textContent = "No processed Main rep data is available for this training.";
       body.appendChild(empty);
     } else {
+      var explanation = document.createElement("div");
+      explanation.className = "small text-muted mb-2";
+      explanation.textContent = "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
+      body.appendChild(explanation);
       var table = document.createElement("table");
       table.className = "table table-sm table-striped mb-0";
       var thead = document.createElement("thead");

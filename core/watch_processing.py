@@ -83,7 +83,9 @@ def processed_main_reps(slot):
                 distance_match = re.search(r"(\d+)\s*m\b", str(segment.text), re.IGNORECASE)
                 output.append({"rep": len(output) + 1,
                     "distance_m": int(distance_match.group(1)),
-                    "measured_distance_m": round(meters, 1), "seconds": round(seconds, 2),
+                    "measured_distance_m": round(meters, 4),
+                    "measured_seconds": round(seconds, 4),
+                    "seconds": round(seconds * int(distance_match.group(1)) / meters, 2) if len(structured) > 1 else round(seconds, 2),
                     "pace_seconds_per_km": round(seconds * 1000 / meters, 2)})
             continue
         try:
@@ -121,8 +123,9 @@ def processed_main_reps(slot):
                 # drift such as 190 or 250 m. Pace remains based on measured
                 # meters, which are retained separately for transparency.
                 "distance_m": round(distance),
-                "measured_distance_m": round(meters, 1),
-                "seconds": round(seconds, 2),
+                "measured_distance_m": round(meters, 4),
+                "measured_seconds": round(seconds, 4),
+                "seconds": round(seconds * distance / meters, 2) if reps > 1 else round(seconds, 2),
                 "pace_seconds_per_km": round(seconds * 1000.0 / meters, 2),
             })
     return output

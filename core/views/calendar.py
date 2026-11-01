@@ -904,7 +904,12 @@ def _clone_slot_for_display(slot):
     clone.watch_plan_snapshot = getattr(slot, "watch_plan_snapshot", None)
     clone.watch_training_snapshot = getattr(slot, "watch_training_snapshot", None)
     if clone.source == "planned" and isinstance(clone.watch_training_snapshot, dict):
-        clone.watch_main_reps = clone.watch_training_snapshot.get("watch_main_reps", [])
+        from types import SimpleNamespace
+        from core.watch_processing import processed_main_reps
+        archived = clone.watch_training_snapshot
+        archived_slot = _VirtualSlot([SimpleNamespace(**item) for item in archived.get("segments", [])],
+                                     source=archived.get("source"), watch_loads=archived.get("watch_loads", []))
+        clone.watch_main_reps = processed_main_reps(archived_slot)
         clone.watch_display_source = clone.watch_training_snapshot.get("source", "")
     else:
         clone.watch_display_source = clone.source
@@ -2438,7 +2443,10 @@ def _watch_actual_time_label(actual_loads, seg=None):
         except (TypeError, ValueError):
             continue
         if meters > 0 and seconds > 0:
-            duration_values.append(seconds)
+            normalized = seconds
+            if len(expected_distances) == 1 and reps > 1:
+                normalized = seconds * expected_distances[0] / meters
+            duration_values.append(normalized)
             pace_values.append(seconds / (meters / 1000.0))
     duration_label = _format_rep_time_range(duration_values)
     pace_label = _format_min_km_range(pace_values)
