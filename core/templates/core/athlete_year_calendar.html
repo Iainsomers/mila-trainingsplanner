@@ -3196,6 +3196,16 @@
     body.replaceChildren();
     var reps = [];
     try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
+    var hasSplits = Array.isArray(reps) && reps.some(function(rep) { return Array.isArray(rep.splits) && rep.splits.length; });
+    if (hasSplits) {
+      title.textContent = "Kilometre splits — " + (button.getAttribute("data-watch-model") || "Watch");
+      var splitRows = [];
+      reps.forEach(function(rep) {
+        if (Array.isArray(rep.splits) && rep.splits.length) splitRows.push.apply(splitRows, rep.splits);
+        else splitRows.push(rep);
+      });
+      reps = splitRows;
+    }
     if (!Array.isArray(reps) || !reps.length) {
       var empty = document.createElement("div");
       empty.className = "text-muted";
@@ -3204,13 +3214,13 @@
     } else {
       var explanation = document.createElement("div");
       explanation.className = "small text-muted mb-2";
-      explanation.textContent = "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
+      explanation.textContent = hasSplits ? "Kilometre times are adjusted to 1000 m. The final short lap keeps its measured time. Stops remain included." : "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
       body.appendChild(explanation);
       var table = document.createElement("table");
       table.className = "table table-sm table-striped mb-0";
       var thead = document.createElement("thead");
       var header = document.createElement("tr");
-      ["Rep", "Distance", "Time", "min/km"].forEach(function(label) {
+      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km"].forEach(function(label) {
         var th = document.createElement("th"); th.scope = "col"; th.textContent = label; header.appendChild(th);
       });
       thead.appendChild(header); table.appendChild(thead);

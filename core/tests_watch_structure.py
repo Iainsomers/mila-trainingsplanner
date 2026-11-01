@@ -45,6 +45,17 @@ class ShortSetsStructureTests(SimpleTestCase):
         self.assertEqual(len(loads), 1)
         self.assertEqual(loads[0]["seconds"], sum(lap["durationMillis"] for lap in laps) / 1000)
         self.assertNotIn("-->", _watch_actual_time_label(loads, segment))
+        from core.watch_processing import processed_main_reps
+        slot.segments = SimpleNamespace(all=lambda: [segment])
+        processed = processed_main_reps(slot)
+        self.assertEqual(len(processed), 1)  # One continuous block in the calendar.
+        self.assertEqual(len(processed[0]["splits"]), 28)
+        self.assertEqual(processed[0]["splits"][9]["seconds"], 600)
+        self.assertEqual(processed[0]["splits"][-1]["distance_m"], 300)
+        self.assertEqual(processed[0]["splits"][-1]["seconds"], 80)
+        slot.watch_loads[0]["meters"] = 1007.71
+        updated = processed_main_reps(slot)[0]["splits"][0]
+        self.assertEqual(updated["seconds"], round(260 * 1000 / 1007.71, 2))
 
     def test_repeated_pauses_recovery_laps_or_explicit_intervals_block_continuous_rule(self):
         from core.watch_structure import continuous_kilometre_run
