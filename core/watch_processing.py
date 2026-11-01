@@ -6,6 +6,17 @@ import re
 WATCH_SOURCES = {"watch_a", "watch_b", "watch_c"}
 
 
+def _block_average_hr(loads):
+    """Time-weighted lap averages; incomplete HR coverage remains unknown."""
+    try:
+        values = [(float(load["average_hr"]), float(load["seconds"])) for load in loads]
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not values or any(hr <= 0 or seconds <= 0 for hr, seconds in values):
+        return None
+    return round(sum(hr * seconds for hr, seconds in values) / sum(seconds for _, seconds in values))
+
+
 def structured_segment_loads(segment, raw_loads):
     """Assign measured short-set laps and the following continuous block.
 
@@ -32,6 +43,7 @@ def structured_segment_loads(segment, raw_loads):
             if re.fullmatch(rf"\s*{total}\s*m(?:\s+Z[1-5])?\s*", text, re.IGNORECASE):
                 return [{"matched_rep": True, "meters": sum(lap["distanceMeters"] for lap in laps),
                          "seconds": sum(lap["durationMillis"] for lap in laps) / 1000,
+                         "average_hr": _block_average_hr(loads),
                          "split_loads": loads}]
         return None
     text = str(getattr(segment, "text", "") or "")
@@ -45,6 +57,7 @@ def structured_segment_loads(segment, raw_loads):
         block = loads[start:structure["cooldown_start"]]
         return [{"matched_rep": True, "meters": sum(float(load["meters"]) for load in block),
                  "seconds": sum(float(load["seconds"]) for load in block),
+                 "average_hr": _block_average_hr(block),
                  "average_hr_last_15": block[-1].get("average_hr_last_15")
                     if float(block[-1]["seconds"]) >= 15 else None}]
     return None
@@ -98,6 +111,7 @@ def processed_main_reps(slot):
                     "seconds": round(seconds * int(distance_match.group(1)) / meters, 2) if len(structured) > 1 else round(seconds, 2),
                     "pace_seconds_per_km": round(seconds * 1000 / meters, 2),
                     "average_hr_last_15": load.get("average_hr_last_15")})
+                output[-1]["average_hr"] = load.get("average_hr")
                 if load.get("split_loads"):
                     splits = []
                     for index, split in enumerate(load["split_loads"], 1):
@@ -109,6 +123,7 @@ def processed_main_reps(slot):
                             "seconds": round(split_s * target / split_m, 2) if full_split else split_s,
                             "pace_seconds_per_km": round(split_s * 1000 / split_m, 2),
                             "average_hr_last_15": split.get("average_hr_last_15")})
+                        splits[-1]["average_hr"] = split.get("average_hr")
                     output[-1]["splits"] = splits
             continue
         try:
@@ -151,6 +166,7 @@ def processed_main_reps(slot):
                 "seconds": round(seconds * distance / meters, 2) if reps > 1 else round(seconds, 2),
                 "pace_seconds_per_km": round(seconds * 1000.0 / meters, 2),
                 "average_hr_last_15": raw_loads[raw_index].get("average_hr_last_15"),
+                "average_hr": raw_loads[raw_index].get("average_hr"),
             })
     return output
 

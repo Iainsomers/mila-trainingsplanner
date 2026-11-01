@@ -101,6 +101,7 @@ class GarminCPushTests(TestCase):
         self.assertEqual(len(data["results"][0]["parts"][0]["manual"]), 2)
         self.assertEqual(data["results"][0]["parts"][0]["manual"][0]["distance"], "500")
         self.assertEqual(data["results"][0]["parts"][0]["watch_loads"][1]["average_hr_last_15"], 170)
+        self.assertEqual(data["results"][0]["parts"][0]["watch_loads"][1]["average_hr"], 160)
         self.assertNotIn("average_hr_last_15", data["results"][0]["parts"][0]["watch_loads"][0])
         ai.assert_not_called()  # Data consent alone never enables OpenAI.
 

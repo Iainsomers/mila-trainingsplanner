@@ -147,6 +147,8 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 
 ## Garmin FIT-uploadpreview
 
+- Nieuwe Watch-overnames bewaren ook average_hr uit dezelfde lapberekening als de brontabel. Reps en afstandssplits nemen hun eigen lapgemiddelde over; samengevoegde blokken gebruiken een met gemeten lapduur gewogen gemiddelde, uitsluitend bij volledige HR-dekking van de bronlaps. De weergave rondt af op hele bpm. Nominale afstands-/tijdcorrecties veranderen HR niet. Voor eerdere overnames zonder average_hr is eenmaal opnieuw Use AM/PM nodig; Last 15s HR wordt niet als gemiddelde gebruikt.
+
 - Bij het samengevoegde doorlopende blok na korte series komt Last 15s HR uit de laatste bronlap van dat blok, mits die minstens 15 s duurt. HR uit uitlopen of herstel wordt niet gebruikt. Ontbreekt de bronmeting of omvat de laatste bronlap minder dan 15 s van het langere blok, dan blijft de waarde onbekend. Losse korte reps gebruiken ongewijzigd hun gemiddelde over de volledige gemeten repduur.
 
 - Use AM/PM bewaart `average_hr_last_15` bij de gemeten Watch-loads en geeft dit door aan de afgeleide reps/splits en de bewaarde Watch-versie. De waarde gebruikt dezelfde sampleberekening als de ruwe Garmin C-/Polar-laptabel, gebaseerd op de laatste vijftien werkelijk gemeten seconden (bij kortere laps de hele lap). Omrekening van de reptijd naar een nominale afstand verandert de HR-waarde niet. Zonder samples blijft de waarde onbekend; een lapgemiddelde wordt niet als vervanging gebruikt. Bestaande overnames zonder dit veld tonen NA totdat de training opnieuw met Use AM/PM is overgenomen; de bronactiviteit hoeft niet opnieuw door Garmin te worden verstuurd.

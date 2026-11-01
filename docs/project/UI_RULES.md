@@ -4,6 +4,8 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
 
+- De klokjespopup heeft achter min/km de kolommen `Avg HR` en `Last 15s HR`, in die volgorde. Ontbrekende gegevens tonen `NA`.
+
 - De AYC-klokjespopup toont achter min/km ook `Last 15s HR`, voor zowel reps als afstandssplits. Ontbrekende metingen worden als `NA` getoond.
 
 - Het AYC-klokje toont bij een duurloop met kilometerlaps de titel `Recorded splits`, met Lap, Distance, Time en min/km. Het laatste korte restant krijgt een eigen regel. Herhaaltrainingen behouden de repweergave.

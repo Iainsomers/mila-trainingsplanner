@@ -154,15 +154,23 @@ class ShortSetsStructureTests(SimpleTestCase):
                   "average_hr_last_15": 110 if index == 10 else 150}
                  for index, lap in enumerate(laps)]
         loads[25]["average_hr_last_15"] = 184
+        for index in range(20, 26):
+            loads[index]["average_hr"] = 160 if index < 25 else 175
+        loads[10]["average_hr"] = 108
         short = SimpleNamespace(type="CORE", text="2*(5*100m z2) p45", reps=10, distance_m=100, order=1)
         continuous = SimpleNamespace(type="CORE", text="3750m z2", reps=1, distance_m=3750, order=2)
         slot = SimpleNamespace(source="watch_c", watch_loads=loads,
                                segments=SimpleNamespace(all=lambda: [short, continuous]))
         result = processed_main_reps(slot)
         self.assertEqual(result[5]["average_hr_last_15"], 110)
+        self.assertEqual(result[5]["average_hr"], 108)
         self.assertEqual(result[-1]["average_hr_last_15"], 184)
+        expected_hr = round(sum(load["average_hr"] * load["seconds"] for load in loads[20:26]) / sum(load["seconds"] for load in loads[20:26]))
+        self.assertEqual(result[-1]["average_hr"], expected_hr)
         loads[25].pop("average_hr_last_15")
         self.assertIsNone(processed_main_reps(slot)[-1]["average_hr_last_15"])
+        loads[20].pop("average_hr")
+        self.assertIsNone(processed_main_reps(slot)[-1]["average_hr"])
 
     def test_rep_time_is_scaled_using_exact_measured_distance_after_import(self):
         from types import SimpleNamespace

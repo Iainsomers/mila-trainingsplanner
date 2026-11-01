@@ -448,6 +448,7 @@ def type_a_watch_loads(exercise, athlete=None):
             "zone": zone,
             "t_key": _watch_t_key(t_pace),
             "average_hr_last_15": number(lap_average_hr_last_15(lap, start_ms, elapsed_ms, exercise.get("samples"))),
+            "average_hr": number(lap_average_hr(lap, start_ms, elapsed_ms, exercise.get("samples"))),
         })
     if not rows:
         return []
@@ -494,6 +495,8 @@ def type_a_watch_loads(exercise, athlete=None):
         })
         if row["average_hr_last_15"] is not None:
             loads[-1]["average_hr_last_15"] = row["average_hr_last_15"]
+        if row["average_hr"] is not None:
+            loads[-1]["average_hr"] = row["average_hr"]
     return loads
 
 

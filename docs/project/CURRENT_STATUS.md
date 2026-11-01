@@ -179,6 +179,8 @@ Garmin-detailbatchfout gereproduceerd met door eigenaar aangeleverde Data Viewer
 Diagnose tweede Garmin-training: de aangeleverde activiteit met 27 lapmarkeringen wordt lokaal verwerkt tot 26 bruikbare rondes, maar live ontbrak nog de detailsontvangst. Ontvanger logt nu na commit per activiteit een gehashte activity_ref, summary_stored/details_stored/ignored en rondeaantallen. Eigen Garmin-logger op INFO maakt ook succesvolle afleveringen zichtbaar in Render; geen ruwe data of IDs. Root cause van de ontbrekende live-aflevering is nog niet vastgesteld.
 # Garmin-diagnostiek — 1 november 2026
 
+Avg HR is toegevoegd vóór Last 15s HR in de klokjespopup. De gemiddelde HR wordt bij nieuwe overnames bewaard in loads/reps/splits en Watch-versie. Tests controleren afzonderlijke HR-gemiddelden, tijdweging bij het 3750m-blok en onbekend blijven bij ontbrekende dekking. De eigenaar doet de visuele controle.
+
 HR-correctie samengevoegd Main-blok: het 3750m-blok na de korte series neemt nu de laatste-15-seconden-HR van zijn laatste bronlap over. De korte 12s-rep behield al correct haar samplegemiddelde; het ontbrekende veld zat bij het samengestelde lange blok. Tests bewaken beide waarden en houden ontbrekende HR onbekend.
 
 Last 15s HR is toegevoegd aan de AYC-klokjespopup voor reps en afstandssplits. Nieuwe Use AM/PM-overnames bewaren de bestaande sampleberekening in loads, afgeleide details en Watch-momentopname. Regressietests bewaken bronberekening, ontbrekende meetdekking, de korte laatste split en behoud bij Watch/Plan-wisselen. Eerdere overnames zonder opgeslagen HR moeten eenmaal opnieuw worden overgenomen om die kolom te vullen; resenden is niet vereist. Visuele controle door de eigenaar.
