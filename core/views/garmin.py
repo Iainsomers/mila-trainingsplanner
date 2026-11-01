@@ -4,6 +4,7 @@ import hashlib
 import secrets
 import json
 import math
+import logging
 import hmac
 from datetime import datetime, timedelta, timezone as datetime_timezone
 from urllib.parse import urlencode
@@ -21,6 +22,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from core.models import Athlete, GarminConnection, GarminActivitySummary
 from core.views.oura import _athlete_user
+
+logger = logging.getLogger(__name__)
 
 CONSENT_VERSION = "garmin-ai-2026-10-31"
 SESSION_KEY = "garmin_oauth_pending"
@@ -125,6 +128,22 @@ def _push_activity(item, *, details=False):
     return user_id, str(activity_id), fields
 
 
+def _push_schema_hint(record):
+    """Log only known field presence/types/counts, never supplied values or keys."""
+    if not isinstance(record, dict):
+        return "record_not_object"
+    summary = record.get("summary")
+    fields = summary if isinstance(summary, dict) else record
+    hints = ["summary_object=" + str(isinstance(summary, dict))]
+    for name in ("userId", "activityId", "summaryId", "startTimeInSeconds", "distanceInMeters", "durationInSeconds"):
+        value = record.get(name, fields.get(name))
+        hints.append(name + "=" + ("missing" if value is None else type(value).__name__))
+    for name in ("laps", "samples"):
+        value = record.get(name)
+        hints.append(name + "=" + (str(len(value)) if isinstance(value, list) else "not_list"))
+    return " ".join(hints)
+
+
 @csrf_exempt
 @require_POST
 def garmin_activity_push_view(request, key):
@@ -133,13 +152,17 @@ def garmin_activity_push_view(request, key):
     expected = receiver_key()
     if not expected or not secrets.compare_digest(key.encode(), expected.encode()):
         return HttpResponseForbidden()
+    stage, kind, record_index, schema, body_size = "read", "unknown", -1, "none", 0
     try:
         body = request.read(8_000_001)
+        body_size = len(body)
         if len(body) > 8_000_000:
             return JsonResponse({"error": "Payload too large"}, status=413)
         if len(body) > 1_000_000 and not body.lstrip().startswith(b'{'):
             return JsonResponse({"error": "Payload too large"}, status=413)
+        stage = "json"
         payload = json.loads(body)
+        stage = "envelope"
         if not isinstance(payload, dict) or not payload or not set(payload).issubset({"activities", "activityDetails"}):
             raise ValueError()
         if "activityDetails" not in payload and len(body) > 1_000_000:
@@ -148,10 +171,20 @@ def garmin_activity_push_view(request, key):
         for kind, records in payload.items():
             if not isinstance(records, list) or len(records) > 500:
                 raise ValueError()
-            items.extend(_push_activity(item, details=kind == "activityDetails") for item in records)
+            stage = "record"
+            for record_index, item in enumerate(records):
+                schema = _push_schema_hint(item)
+                items.append(_push_activity(item, details=kind == "activityDetails"))
     except RequestDataTooBig:
         return JsonResponse({"error": "Payload too large"}, status=413)
-    except (ValueError, TypeError, KeyError, OverflowError, OSError):
+    except (ValueError, TypeError, KeyError, OverflowError, OSError) as exc:
+        # Never log exception text: it can contain the rejected input value.
+        reason = str(exc.args[0]) if exc.args and exc.args[0] in (
+            "Missing activity totals", "Invalid activity details", "startTimeInSeconds",
+        ) else type(exc).__name__
+        safe_kind = kind if kind in ("activities", "activityDetails") else "unsupported"
+        logger.warning("Garmin push rejected status=400 stage=%s kind=%s record=%s bytes=%s reason=%s schema=%s",
+                       stage, safe_kind, record_index, body_size, reason, schema)
         return JsonResponse({"error": "Invalid activity push"}, status=400)
 
     known_ids = set(GarminConnection.objects.filter(athlete__garmin_connection_enabled=True)

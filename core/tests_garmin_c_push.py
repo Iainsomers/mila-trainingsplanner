@@ -134,3 +134,18 @@ class GarminCPushTests(TestCase):
         results = self.read_c().json()["results"]
         self.assertEqual(len(results), 3)
         self.assertEqual(results[0]["detail_status"], "details_without_usable_laps")
+
+    def test_rejected_detail_logs_safe_schema_not_personal_values(self):
+        details = self.details()
+        details["summary"].pop("durationInSeconds")
+        details["summary"]["activityName"] = "PRIVATE TRAINING NAME"
+        details["userAccessToken"] = "PRIVATE TOKEN"
+        with self.assertLogs("core.views.garmin", level="WARNING") as logs:
+            self.assertEqual(self.send({"activityDetails": [details]}).status_code, 400)
+        output = " ".join(logs.output)
+        self.assertIn("kind=activityDetails", output)
+        self.assertIn("reason=Missing activity totals", output)
+        self.assertIn("durationInSeconds=missing", output)
+        for secret in ("PRIVATE TRAINING NAME", "PRIVATE TOKEN", "runner-id", receiver_key()):
+            self.assertNotIn(secret, output)
+        self.assertFalse(GarminActivitySummary.objects.exists())

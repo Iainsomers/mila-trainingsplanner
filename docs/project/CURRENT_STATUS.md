@@ -171,3 +171,5 @@ Garmin C ziet vanaf migratie 0132 ook ontvangen activiteiten. Automatische Activ
 Last active in MiLa is toegevoegd als kolom in Information Quality. Migratie 0133 voegt een leeg tijdstempelveld toe; AthleteLastActiveMiddleware registreert vanaf de uitrol interactief atleetgebruik. Er is geen historische backfill.
 
 Migratie 0134 voegt RaceAttendance toe zonder bestaande RaceEntry-selecties te wijzigen. Attend verschijnt zonder afstand in Year Planner, AYC en Flex. AYC toont nu ook rechtstreeks gekoppelde afstandselecties onafhankelijk van het gekozen bronplan.
+
+1 november: eigenaar toont echte Garmin POST met HTTP 400 terwijl summaries binnenkomen. De specifieke afwijsreden is nog onbekend. Afgewezen pushes loggen voortaan validatiefase, ondersteund berichttype, bytegrootte en uitsluitend bekende veldtypen/aanwezigheid en sample-/lapaantallen; geen inhoud, user-ID, token of ontvangst-URL. Een nieuwe ActivityDetail-resend na deploy is nodig voor de concrete diagnose.
