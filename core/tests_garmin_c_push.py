@@ -176,3 +176,15 @@ class GarminCPushTests(TestCase):
         saved = GarminActivitySummary.objects.get()
         self.assertEqual(saved.distance_m, 1000)
         self.assertEqual(saved.analysis_data["laps"], [])
+
+    def test_successful_details_receipt_reports_laps_with_private_reference(self):
+        import hashlib
+        with self.assertLogs("core.views.garmin", level="INFO") as logs:
+            response = self.send({"activityDetails": [self.details()]})
+        self.assertEqual(response.status_code, 200)
+        output = " ".join(logs.output)
+        self.assertIn("activity_ref=" + hashlib.sha256(b"456").hexdigest()[:12], output)
+        self.assertIn("outcome=details_stored usable_laps=2 supplied_laps=2", output)
+        self.assertNotIn("runner-id", output)
+        self.assertNotIn("private-token", output)
+        self.assertNotIn(receiver_key(), output)

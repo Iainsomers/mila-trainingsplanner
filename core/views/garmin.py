@@ -202,16 +202,27 @@ def garmin_activity_push_view(request, key):
             if GarminConnection.objects.filter(garmin_user_id=None, athlete__garmin_connection_enabled=True).exists():
                 return JsonResponse({"error": "Preparing existing connections"}, status=503)
 
+    receipts = []
     with transaction.atomic():
         for user_id, activity_id, fields in items:
             # Serialize with disconnect/coach saves on the athlete row.
             athlete = Athlete.objects.select_for_update().filter(
                 garmin_connection_enabled=True, garmin_connection__garmin_user_id=user_id,
             ).first()
+            ref = hashlib.sha256(activity_id.encode()).hexdigest()[:12]
             if athlete is None:
+                receipts.append((ref, "ignored_unknown_or_disabled", 0, 0))
                 continue  # Revoked/unknown users must not acquire new data.
             GarminActivitySummary.objects.update_or_create(athlete=athlete,
                 activity_id=activity_id, defaults=fields)
+            analysis = fields.get("analysis_data")
+            receipts.append((ref, "details_stored" if analysis is not None else "summary_stored",
+                             len((analysis or {}).get("laps", [])), (analysis or {}).get("received_lap_count", 0)))
+    # Emit only after the batch committed. References are hashes, never user IDs,
+    # names, tokens, coordinates, payloads, or the private receiver URL.
+    for ref, outcome, usable, supplied in receipts:
+        logger.info("Garmin receipt activity_ref=%s outcome=%s usable_laps=%s supplied_laps=%s",
+                    ref, outcome, usable, supplied)
     return JsonResponse({"ok": True})
 
 

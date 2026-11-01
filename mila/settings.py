@@ -187,3 +187,11 @@ LOGOUT_REDIRECT_URL = "/login/"
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
+
+# Garmin delivery diagnostics deliberately contain only hashed references/counts.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"garmin_console": {"class": "logging.StreamHandler", "level": "INFO"}},
+    "loggers": {"core.views.garmin": {"handlers": ["garmin_console"], "level": "INFO", "propagate": False}},
+}
