@@ -204,3 +204,7 @@ Aanvulling korte series: de beschrijving toont nu ook de zone/het zonebereik van
 De eigenaar heeft succesvolle detailontvangst en Garmin C-weergave bevestigd voor de drie gemelde activiteiten, inclusief 26 bruikbare laps van de hoofdtraining. Het oorspronkelijke afleverprobleem is voor deze activiteiten hersteld; welke herhaalpoging ze afleverde is niet vastgesteld. Vervolgwijziging: korte werk/herstelseries plus een doorlopend blok en eventueel CD worden structureel herkend vóór de AI/oudere dominante-afstandregels. Anonieme numerieke regressievoorbeelden bewaken beide opnamevormen en behoud van gemeten laps/loadtotalen. De bredere Polar-raw-suite houdt de vier reeds gedocumenteerde SimpleNamespace-fouten in de toegangscontrole; de overige 24 tests slagen.
 
 Het coachoverzicht toont nu ontvangst en detailontvangst per activiteit plus bruikbare laps; FIT-uploads zijn afzonderlijk gelabeld. Dit maakt ontbrekende detailaflevering te onderscheiden van ontvangen details zonder bruikbare laps. De oorzaak van de ontbrekende details van de gemelde hoofdtraining is hiermee nog niet vastgesteld; deze wijziging verandert de ontvangst/opslag niet.
+
+## Information Quality — gemiddelde
+
+ALL-rij toegevoegd boven de atleten, als ongewogen gemiddelde van de getoonde percentages per kolom, afgerond op hele procenten. NA/afgeschermde waarden worden overgeslagen; nul telt mee. Twee gerichte paginatests en manage.py check slagen. Visuele controle door de eigenaar.

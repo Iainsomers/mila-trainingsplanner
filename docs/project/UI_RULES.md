@@ -197,3 +197,7 @@ De wisselknop Race Calendar / Back to Yearplanner staat gecentreerd naast de leg
 Year Planner-wisselknop gebruikt gele tekst (#f2c200) op donkerblauw, ook bij hover. Daarnaast staat een gelijkvormige Details Camps-knop voor gebruikers die campdetails mogen zien. De trainerplanning heeft geen losse Races-tegel meer; Details Camps blijft staan. De eigen Races-ingang voor atleten blijft beschikbaar.
 
 De atleetweergave van Race Calendar toont dezelfde groene deelnamebolletjes bij de eigen geselecteerde afstanden en eigen Attend zonder afstand (waarde 1). Ook deze bolletjes verversen na opslaan. Deelname van andere atleten telt daar niet mee en wordt niet getoond.
+
+## Information Quality — ALL-rij
+
+De eerste tabelrij heet ALL en toont de gemiddelde Evaluated- en Vitals-percentages met dezelfde kleurpillen als de atleetrijen. Last active en Meeting request blijven in deze rij leeg.

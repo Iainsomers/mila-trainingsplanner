@@ -354,3 +354,7 @@ Bij Use AM/PM vanuit Polar A/B of Garmin C wordt het oorspronkelijke plan vóór
 Garmin C herkent korte herhaalseries gevolgd door een doorlopend blok, ook als kilometer-autolaps de handmatig gemarkeerde rondjes opdelen. Bij voldoende structuur wordt bijvoorbeeld `2*(5*100m) p45//3750m z2` voorgesteld. Uitlopen binnen dezelfde opname kan als CD worden onderscheiden; apart opgenomen activiteiten blijven afzonderlijk. De ruwe rondetabel verandert niet. Dezelfde conservatieve herkenning is beschikbaar in Watch B; AI mag deze duidelijk gemeten structuur niet vervangen door alleen de langere laps.
 
 Het coachoverzicht met Garmin-activiteiten toont per training starttijd, laatste ontvangsttijd, of details ontvangen zijn met hun afzonderlijke ontvangsttijd, en het aantal opgeslagen bruikbare laps. Een herhaalde summary kan de laatste ontvangsttijd wijzigen zonder nieuwe details. Ontvangen details met nul bruikbare laps blijven herkenbaar als ontvangen. Handmatige FIT-bestanden tonen hun uploadtijd, bron en lapaantal afzonderlijk. De compacte diagnostiek staat onder de trainingsdatum en behoudt de bestaande coachrechten.
+
+## Information Quality — ALL
+
+Boven de atleten staat ALL met het gemiddelde van de zichtbare atleetpercentages voor Evaluated en Vitals. NA en niet-toegankelijke gegevens tellen niet mee; 0% telt wel mee. Zonder beschikbare percentages staat NA.

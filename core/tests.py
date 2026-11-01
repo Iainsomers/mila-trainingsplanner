@@ -1569,6 +1569,16 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, f'title="Open: 2 · Evaluated: 1 · Last: {(today - timedelta(days=1)):%d-%m-%Y}"', html=False)
         self.assertNotContains(response, "Open evaluations")
 
+        Athlete.objects.create(owner=coach, name="Quality without sessions", birth_year=2000, gender="X")
+        zero = Athlete.objects.create(owner=coach, name="Quality zero evaluations", birth_year=2000, gender="X")
+        PlanMembership.objects.create(plan=plan, athlete=zero)
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        percentages = [item["evaluation_percentage"] for item in response.context["athlete_rows"]]
+        self.assertIn(None, percentages)
+        self.assertIn(0, percentages)
+        self.assertEqual(response.context["information_quality_all"]["evaluation_percentage"], 16)
+        self.assertContains(response, '<th scope="row">ALL</th>', html=True)
+
     def test_information_quality_last_dates_include_history_but_skip_blank_and_future(self):
         coach = get_user_model().objects.create_user(username="last-quality-coach", is_staff=True)
         athlete = Athlete.objects.create(owner=coach, name="Last Quality", birth_year=2000, gender="X")
@@ -1628,6 +1638,11 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Vitals")
         self.assertContains(response, f'title="Filled: 4 / 40 · Last: {(today - timedelta(days=1)):%d-%m-%Y}"', html=False)
         self.assertContains(response, "10%")
+
+        Athlete.objects.create(owner=coach, name="Quality zero vitals", birth_year=2000, gender="X")
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        self.assertEqual(response.context["information_quality_all"]["vitals_percentage"], 5)
+        self.assertIsNone(response.context["information_quality_all"]["evaluation_percentage"])
 
     def test_daily_overview_other_counts_ten_days_and_unlocks_today_sessions_at_noon_and_21(self):
         coach = get_user_model().objects.create_user(

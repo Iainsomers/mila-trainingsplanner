@@ -12796,6 +12796,11 @@ def daily_overview_other_view(request):
             "vitals_tooltip": f"Filled: {vitals_filled} / 40 · Last: {last_date_label(last_vital_dates, athlete.id)}" if can_view_vitals else "",
         })
 
+    information_quality_all = {}
+    for key in ("evaluation_percentage", "vitals_percentage"):
+        values = [row[key] for row in counts if row[key] is not None]
+        information_quality_all[key] = round(sum(values) / len(values)) if values else None
+
     vital_options = [
         {"key": "sleep_hours", "label": "Sleep length", "field": "sleep_hours", "suffix": " h", "decimals": 1},
         {"key": "sleep_quality", "label": "Sleep quality", "field": "sleep_quality", "suffix": "", "decimals": 1},
@@ -12907,6 +12912,7 @@ def daily_overview_other_view(request):
 
     return render(request, "core/daily_overview_other.html", {
         "athlete_rows": counts,
+        "information_quality_all": information_quality_all,
         "window_start": window_start,
         "window_end": window_end,
         "vital_rows": vital_rows,
