@@ -4,7 +4,7 @@ from statistics import median
 
 
 def continuous_kilometre_run(laps, zone_for_lap):
-    """Kilometre splits need additional work/recovery evidence to imply reps."""
+    """Regular 500 m / kilometre splits alone do not establish repetitions."""
     if not isinstance(laps, list) or len(laps) < 3:
         return None
     rows = []
@@ -17,8 +17,10 @@ def continuous_kilometre_run(laps, zone_for_lap):
         if not math.isfinite(meters + seconds + pause) or meters <= 0 or seconds <= 0:
             return None
         rows.append((meters, seconds, pause))
-    full = rows[:-1] if rows[-1][0] < 950 else rows
-    if len(full) < 3 or any(not 950 <= m <= 1050 for m, _, _ in full) or rows[-1][0] > 1050:
+    step = min((500, 1000), key=lambda value: abs(median(m for m, _, _ in rows[:-1]) - value))
+    lower, upper = step * 0.95, step * 1.05
+    full = rows[:-1] if rows[-1][0] < lower else rows
+    if len(full) < 3 or any(not lower <= m <= upper for m, _, _ in full) or rows[-1][0] > upper:
         return None
     threshold = max(3, math.ceil(len(full) * 0.25))
     if sum(p >= 15 for _, _, p in full) >= threshold:

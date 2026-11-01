@@ -26,6 +26,31 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    @patch("core.views.polar_raw.lap_zone_paces", return_value=("Z1", "NA"))
+    def test_regular_half_kilometre_laps_form_one_run_with_split_details(self, zones):
+        from types import SimpleNamespace
+        from core.watch_processing import processed_main_reps
+        from core.watch_structure import continuous_kilometre_run
+        values = [(506.91, 163), (499.463, 164), (500.077, 164), (497.228, 169),
+                  (501.802, 172), (500.362, 169), (498.847, 164), (500.225, 171),
+                  (500.478, 174), (498.662, 164), (22.3851, 11)]
+        laps = [{"distanceMeters": m, "durationMillis": s * 1000} for m, s in values]
+        description = type_b_description(laps)
+        self.assertEqual(description, "WU: none · Main: 5050 m Z1 · CD: none")
+        self.assertEqual(description, _model_b_ai_description(laps))
+        segment = SimpleNamespace(type="CORE", text="5050 m Z1", distance_m=5050, reps=1, order=1)
+        slot = SimpleNamespace(source="watch_c", segments=SimpleNamespace(all=lambda: [segment]),
+            watch_loads=[{"segment": "CORE", "zone": "1", "meters": m, "seconds": s} for m, s in values])
+        result = processed_main_reps(slot)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result[0]["splits"]), 11)
+        self.assertEqual(result[0]["splits"][0]["distance_m"], 500)
+        self.assertEqual(result[0]["splits"][0]["seconds"], round(163 * 500 / 506.91, 2))
+        self.assertEqual(result[0]["splits"][-1]["seconds"], 11)
+        for index in (1, 3, 5, 7, 9):
+            laps[index]["durationMillis"] *= 2
+        self.assertIsNone(continuous_kilometre_run(laps, lambda lap: "Z1"))
+
     def test_kilometre_splits_alone_are_a_continuous_run(self):
         from core.watch_structure import continuous_kilometre_run
         laps = [{"distanceMeters": 1000, "durationMillis": 600000 if index in (9, 18) else 260000}

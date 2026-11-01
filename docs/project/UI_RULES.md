@@ -4,7 +4,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
 
-- Het AYC-klokje toont bij een duurloop met kilometerlaps de titel `Kilometre splits`, met Lap, Distance, Time en min/km. Het laatste korte restant krijgt een eigen regel. Herhaaltrainingen behouden de repweergave.
+- Het AYC-klokje toont bij een duurloop met kilometerlaps de titel `Recorded splits`, met Lap, Distance, Time en min/km. Het laatste korte restant krijgt een eigen regel. Herhaaltrainingen behouden de repweergave.
 
 - Na Use AM/PM staat naast het AYC-klokje een compacte `p/w`-knop. Die opent een kleine popup met `Watch` en `Plan`; de actieve versie is gemarkeerd. Het klokje toont in beide standen de bewaarde Watch-reptijden. De keuzepopup volgt de bestaande trainingsbewerkrechten en staat buiten de team-stackingcontext.
 

@@ -703,7 +703,7 @@ def _model_b_ai_description(laps, athlete=None):
             "to Z2. Do not discard short reps in favour of the dominant kilometre laps. "
             "If the schema cannot express a repeated set followed once by continuous "
             "work, return confidence below 0.65 rather than repeating that work per set."
-            " Equal kilometre laps alone are not interval evidence. Require repeated "
+            " Equal 500 m or kilometre laps alone are not interval evidence. Require repeated "
             "work/recovery transitions, repeated timer pauses or workout-step markers. "
             "One or two isolated stops during a long easy run do not establish intervals. "
             "Low zones support an easy run but never prove it. Timer duration excludes "

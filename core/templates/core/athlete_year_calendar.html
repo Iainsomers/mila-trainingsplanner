@@ -3198,7 +3198,7 @@
     try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
     var hasSplits = Array.isArray(reps) && reps.some(function(rep) { return Array.isArray(rep.splits) && rep.splits.length; });
     if (hasSplits) {
-      title.textContent = "Kilometre splits — " + (button.getAttribute("data-watch-model") || "Watch");
+      title.textContent = "Recorded splits — " + (button.getAttribute("data-watch-model") || "Watch");
       var splitRows = [];
       reps.forEach(function(rep) {
         if (Array.isArray(rep.splits) && rep.splits.length) splitRows.push.apply(splitRows, rep.splits);
@@ -3214,7 +3214,7 @@
     } else {
       var explanation = document.createElement("div");
       explanation.className = "small text-muted mb-2";
-      explanation.textContent = hasSplits ? "Kilometre times are adjusted to 1000 m. The final short lap keeps its measured time. Stops remain included." : "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
+      explanation.textContent = hasSplits ? "Split times are adjusted to the shown distance. The final short lap keeps its measured time. Stops remain included." : "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
       body.appendChild(explanation);
       var table = document.createElement("table");
       table.className = "table table-sm table-striped mb-0";

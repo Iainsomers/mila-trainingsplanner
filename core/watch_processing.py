@@ -99,11 +99,11 @@ def processed_main_reps(slot):
                     splits = []
                     for index, split in enumerate(load["split_loads"], 1):
                         split_m, split_s = float(split["meters"]), float(split["seconds"])
-                        full_km = 950 <= split_m <= 1050
-                        target = 1000 if full_km else round(split_m)
+                        full_split = 950 <= split_m <= 1050 or 475 <= split_m <= 525
+                        target = (1000 if split_m >= 950 else 500) if full_split else round(split_m)
                         splits.append({"rep": index, "distance_m": target,
                             "measured_distance_m": split_m, "measured_seconds": split_s,
-                            "seconds": round(split_s * target / split_m, 2) if full_km else split_s,
+                            "seconds": round(split_s * target / split_m, 2) if full_split else split_s,
                             "pace_seconds_per_km": round(split_s * 1000 / split_m, 2)})
                     output[-1]["splits"] = splits
             continue

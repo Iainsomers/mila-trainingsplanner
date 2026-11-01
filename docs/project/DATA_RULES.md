@@ -147,6 +147,8 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 
 ## Garmin FIT-uploadpreview
 
+- De regel voor doorlopende automatische afstandssplits ondersteunt zowel 500 m (475–525 m) als 1000 m (950–1050 m). Herhaald herstel of timerpauzes blijft een reden om geen duurloop te concluderen. Het klokje toont de aangeleverde splits op hun eigen 500m-/1000m-afstand en het korte laatste restant met gemeten duur. De titel is `Recorded splits`; de oorspronkelijke laps en totalen blijven bewaard.
+
 - De afgeleide rep van een volledige duurloop bewaart onder `splits` ook de oorspronkelijke kilometerlaps en het laatste restant voor het klokje. De kalender gebruikt uitsluitend de totale bloktijd. Laps van 950–1050 m worden in deze detailweergave met hun naar 1000 m omgerekende tijd getoond; het laatste korte restant toont gemeten duur/afstand. Gemeten tempo, pauzes en loads blijven behouden. Dit werkt ook voor eerder opgeslagen Watch-data en via de bewaarde Watch-versie bij actieve Plan-weergave.
 
 - Minstens drie opeenvolgende kilometerlaps (950–1050 m, met eventueel een kort laatste restant) zijn zonder aanvullend herstelbewijs één doorlopend blok. Enkele geïsoleerde trage kilometers maken daarvan geen herhalingsreeks. Minstens drie en ten minste 25% laps met timerpauzes vanaf 15 s, een herhaald duidelijk trager herstelpatroon of expliciete FIT rest/recovery/interval-intensity houden de intervalherkenning beschikbaar. De zone ondersteunt het label maar bewijst geen trainingsvorm; zonder zonegegevens blijft de zone leeg. Bij overname wordt het doorlopende blok met opgetelde gemeten tijd/afstand weergegeven. Deze regel geldt vóór de AI en ook voor oudere activiteiten zonder timergegevens.
