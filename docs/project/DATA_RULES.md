@@ -147,6 +147,8 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 
 ## Garmin FIT-uploadpreview
 
+- Use AM/PM bewaart `average_hr_last_15` bij de gemeten Watch-loads en geeft dit door aan de afgeleide reps/splits en de bewaarde Watch-versie. De waarde gebruikt dezelfde sampleberekening als de ruwe Garmin C-/Polar-laptabel, gebaseerd op de laatste vijftien werkelijk gemeten seconden (bij kortere laps de hele lap). Omrekening van de reptijd naar een nominale afstand verandert de HR-waarde niet. Zonder samples blijft de waarde onbekend; een lapgemiddelde wordt niet als vervanging gebruikt. Bestaande overnames zonder dit veld tonen NA totdat de training opnieuw met Use AM/PM is overgenomen; de bronactiviteit hoeft niet opnieuw door Garmin te worden verstuurd.
+
 - De regel voor doorlopende automatische afstandssplits ondersteunt zowel 500 m (475–525 m) als 1000 m (950–1050 m). Herhaald herstel of timerpauzes blijft een reden om geen duurloop te concluderen. Het klokje toont de aangeleverde splits op hun eigen 500m-/1000m-afstand en het korte laatste restant met gemeten duur. De titel is `Recorded splits`; de oorspronkelijke laps en totalen blijven bewaard.
 
 - De afgeleide rep van een volledige duurloop bewaart onder `splits` ook de oorspronkelijke kilometerlaps en het laatste restant voor het klokje. De kalender gebruikt uitsluitend de totale bloktijd. Laps van 950–1050 m worden in deze detailweergave met hun naar 1000 m omgerekende tijd getoond; het laatste korte restant toont gemeten duur/afstand. Gemeten tempo, pauzes en loads blijven behouden. Dit werkt ook voor eerder opgeslagen Watch-data en via de bewaarde Watch-versie bij actieve Plan-weergave.

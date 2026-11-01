@@ -47,6 +47,12 @@ class ShortSetsStructureTests(SimpleTestCase):
         self.assertEqual(result[0]["splits"][0]["distance_m"], 500)
         self.assertEqual(result[0]["splits"][0]["seconds"], round(163 * 500 / 506.91, 2))
         self.assertEqual(result[0]["splits"][-1]["seconds"], 11)
+        self.assertIsNone(result[0]["splits"][0]["average_hr_last_15"])
+        slot.watch_loads[0]["average_hr_last_15"] = 122
+        slot.watch_loads[-1]["average_hr_last_15"] = 141
+        hr_result = processed_main_reps(slot)[0]["splits"]
+        self.assertEqual(hr_result[0]["average_hr_last_15"], 122)
+        self.assertEqual(hr_result[-1]["average_hr_last_15"], 141)
         for index in (1, 3, 5, 7, 9):
             laps[index]["durationMillis"] *= 2
         self.assertIsNone(continuous_kilometre_run(laps, lambda lap: "Z1"))

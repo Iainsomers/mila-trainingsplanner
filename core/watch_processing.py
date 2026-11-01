@@ -94,7 +94,8 @@ def processed_main_reps(slot):
                     "measured_distance_m": round(meters, 4),
                     "measured_seconds": round(seconds, 4),
                     "seconds": round(seconds * int(distance_match.group(1)) / meters, 2) if len(structured) > 1 else round(seconds, 2),
-                    "pace_seconds_per_km": round(seconds * 1000 / meters, 2)})
+                    "pace_seconds_per_km": round(seconds * 1000 / meters, 2),
+                    "average_hr_last_15": load.get("average_hr_last_15")})
                 if load.get("split_loads"):
                     splits = []
                     for index, split in enumerate(load["split_loads"], 1):
@@ -104,7 +105,8 @@ def processed_main_reps(slot):
                         splits.append({"rep": index, "distance_m": target,
                             "measured_distance_m": split_m, "measured_seconds": split_s,
                             "seconds": round(split_s * target / split_m, 2) if full_split else split_s,
-                            "pace_seconds_per_km": round(split_s * 1000 / split_m, 2)})
+                            "pace_seconds_per_km": round(split_s * 1000 / split_m, 2),
+                            "average_hr_last_15": split.get("average_hr_last_15")})
                     output[-1]["splits"] = splits
             continue
         try:
@@ -146,6 +148,7 @@ def processed_main_reps(slot):
                 "measured_seconds": round(seconds, 4),
                 "seconds": round(seconds * distance / meters, 2) if reps > 1 else round(seconds, 2),
                 "pace_seconds_per_km": round(seconds * 1000.0 / meters, 2),
+                "average_hr_last_15": raw_loads[raw_index].get("average_hr_last_15"),
             })
     return output
 

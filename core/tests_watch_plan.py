@@ -22,7 +22,7 @@ class WatchOriginalPlanTests(TestCase):
 
     def import_watch(self, index=2, main="10*100m z4 p45"):
         return self.client.post(self.url(index), {"core_text": main, "watch_origin": "watch_c",
-            "watch_loads": json.dumps([{"segment": "CORE", "meters": 100, "seconds": 20, "zone": "4"}])})
+            "watch_loads": json.dumps([{"segment": "CORE", "meters": 100, "seconds": 20, "zone": "4", "average_hr_last_15": 148}])})
 
     def original(self, index=2):
         slot = TrainingSlot.objects.create(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=index)
@@ -63,6 +63,7 @@ class WatchOriginalPlanTests(TestCase):
             slot.refresh_from_db()
             watch = slot.watch_training_snapshot
             self.assertTrue(watch["watch_main_reps"])
+            self.assertEqual(watch["watch_main_reps"][0]["average_hr_last_15"], 148)
             for version in ("plan", "watch", "plan", "watch"):
                 self.assertEqual(self.client.post(self.url(index), {
                     "action": "select_watch_version", "version": version}).status_code, 204)

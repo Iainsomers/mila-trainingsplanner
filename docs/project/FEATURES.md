@@ -337,6 +337,8 @@ Race Calendar ondersteunt periode `season`: 1 oktober van het gekozen jaar t/m 3
 Race Calendar heeft per atleet een onafhankelijke Attend-keuze zonder afstand. Attend telt mee als deelname en verhindert verwijderen van een gekoppelde wedstrijd. De Year Planner toont naam en racetypekleur; AYC en Flex tonen de wedstrijd zonder afstand/kilometers. Afstandselecties blijven onafhankelijk en vervangen de afstandloze weergave zonder dubbele wedstrijd. Beide kalenders lezen de racekoppelingen rechtstreeks, zodat AYC deze ook toont zonder trainerplanlidmaatschap.
 # Garmin-ontvangst per training — 1 november 2026
 
+De klokjespopup toont Last 15s HR achter min/km. Deze meting blijft bij nieuwe overnames ook behouden bij wisselen tussen Watch en Plan. Eerder overgenomen trainingen zonder opgeslagen laatste-15-seconden-HR tonen NA; opnieuw Use AM/PM bewaart de beschikbare waarde uit de bestaande bronactiviteit.
+
 Ook regelmatige 500m-laps zonder aanvullend herstelbewijs worden als één duurloopblok voorgesteld. De klokjespopup houdt de 500m-tussentijden en het laatste korte restant beschikbaar.
 
 Bij een als één duurloopblok herkende kilometerreeks toont het AYC-klokje de afzonderlijke kilometerlaps en het laatste korte restant. De kalender houdt één blok met de totale gemeten tijd. Kilometerreptijden worden naar 1000 m omgerekend; het laatste restant houdt zijn gemeten duur. Stops blijven inbegrepen.

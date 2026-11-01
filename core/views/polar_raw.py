@@ -428,11 +428,15 @@ def type_a_watch_loads(exercise, athlete=None):
         }]
 
     rows = []
+    elapsed_ms = 0
     for index, lap in enumerate(source_laps, 1):
         if not isinstance(lap, dict):
             continue
         distance_m = number(lap.get("distanceMeters"))
         duration_ms = number(lap.get("durationMillis"))
+        start_ms = elapsed_ms
+        split_ms = number(lap.get("splitTimeMillis"))
+        elapsed_ms = split_ms if split_ms is not None and split_ms >= start_ms else start_ms + (duration_ms or 0)
         if distance_m is None or distance_m <= 0 or duration_ms is None or duration_ms <= 0:
             continue
         z_pace, t_pace = lap_zone_paces(distance_m, duration_ms, athlete)
@@ -443,6 +447,7 @@ def type_a_watch_loads(exercise, athlete=None):
             "seconds": duration_ms / 1000.0,
             "zone": zone,
             "t_key": _watch_t_key(t_pace),
+            "average_hr_last_15": number(lap_average_hr_last_15(lap, start_ms, elapsed_ms, exercise.get("samples"))),
         })
     if not rows:
         return []
@@ -487,6 +492,8 @@ def type_a_watch_loads(exercise, athlete=None):
             "t_key": row["t_key"],
             "race": False,
         })
+        if row["average_hr_last_15"] is not None:
+            loads[-1]["average_hr_last_15"] = row["average_hr_last_15"]
     return loads
 
 

@@ -3220,7 +3220,7 @@
       table.className = "table table-sm table-striped mb-0";
       var thead = document.createElement("thead");
       var header = document.createElement("tr");
-      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km"].forEach(function(label) {
+      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Last 15s HR"].forEach(function(label) {
         var th = document.createElement("th"); th.scope = "col"; th.textContent = label; header.appendChild(th);
       });
       thead.appendChild(header); table.appendChild(thead);
@@ -3234,7 +3234,8 @@
           String(rep.rep || index + 1),
           Number.isFinite(distance) ? Math.round(distance) + " m" : "—",
           formatWatchDuration(seconds),
-          formatWatchPace(pace)
+          formatWatchPace(pace),
+          Number(rep.average_hr_last_15) > 0 ? String(Math.round(Number(rep.average_hr_last_15))) : "NA"
         ];
         values.forEach(function(value) { var td = document.createElement("td"); td.textContent = value; tr.appendChild(td); });
         tbody.appendChild(tr);
