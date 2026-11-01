@@ -5865,6 +5865,14 @@ def garmin_type_c_ayc_view(request):
             # a watch can label every lap Z1 when the athlete has no usable pace
             # zones, while the 500 m + 500 m + recovery structure is still clear.
             raw_laps = (session.get("laps") or {}).get("laps") or []
+            from .polar_raw import _short_sets_structure, type_a_training_fields
+            structured = _short_sets_structure(raw_laps, athlete)
+            if structured:
+                part["description"] = structured["description"]
+                part["training_fields"] = type_a_training_fields(structured["description"])
+                for index, load in enumerate(watch_loads):
+                    load["segment"] = "CD" if index >= structured["cooldown_start"] else "CORE"
+                continue
             main_before = fields.get("main", "")
             source_candidate = _watch_c_merge_half_laps_from_raw(main_before, raw_laps)
             # The translated Garmin C result is the exact lap list shown in the

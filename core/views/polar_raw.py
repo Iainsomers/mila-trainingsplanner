@@ -494,6 +494,9 @@ def type_b_description(laps, athlete=None):
     """Model B: recognize repeated distance reps split by short/long recoveries."""
     if not isinstance(laps, list):
         return ""
+    structured = _short_sets_structure(laps, athlete)
+    if structured:
+        return structured["description"]
     rows = []
     elapsed = 0.0
     for index, lap in enumerate(laps):
@@ -624,6 +627,12 @@ def type_b_description(laps, athlete=None):
     return " · ".join(parts)
 
 
+def _short_sets_structure(laps, athlete=None):
+    from core.watch_structure import short_sets_and_continuous
+    return short_sets_and_continuous(laps, lambda lap: lap_zone_paces(
+        lap["distanceMeters"], lap["durationMillis"], athlete)[0])
+
+
 def _model_b_ai_description(laps, athlete=None):
     """Ask the language model to identify nested interval structure for Watch B.
 
@@ -631,6 +640,11 @@ def _model_b_ai_description(laps, athlete=None):
     server validates the numeric ranges and builds the displayed description,
     so a model response cannot alter measured distance or time calculations.
     """
+    # Strong measured structure wins over an AI proposal which can omit short
+    # reps or repeat the following continuous block inside every set.
+    structured = _short_sets_structure(laps, athlete) if isinstance(laps, list) else None
+    if structured:
+        return structured["description"]
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key or not isinstance(laps, list):
         return ""
@@ -664,6 +678,15 @@ def _model_b_ai_description(laps, athlete=None):
             "repeated structures such as 2 sets of (3x500m + 5x400m + 6x200m). "
             "Short slow laps are recoveries, not work. Include only clearly observed "
             "warmup, main work and cooldown. Do not force every lap into a block."
+            " Laps can mix automatic kilometre splits and manual boundaries. "
+            "Use relative speed and alternating recovery to find short repetitions, "
+            "even when GPS undermeasures a rep or its zone is low. Long recovery "
+            "can separate equal sets. Consecutive running laps at similar speeds "
+            "without recovery form continuous work, not necessarily repetitions. "
+            "A clear late slowdown can begin cooldown even if a later lap returns "
+            "to Z2. Do not discard short reps in favour of the dominant kilometre laps. "
+            "If the schema cannot express a repeated set followed once by continuous "
+            "work, return confidence below 0.65 rather than repeating that work per set."
         ),
         "laps": facts,
         "output_schema": {

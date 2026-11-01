@@ -71,6 +71,25 @@ class GarminCPushTests(TestCase):
         self.assertEqual(GarminActivitySummary.objects.count(), 1)
         self.assertEqual(GarminActivitySummary.objects.get().analysis_data["laps"], before["laps"])
 
+    @patch("core.views.polar_raw.lap_zone_paces", return_value=("Z2", "NA"))
+    def test_short_sets_continuous_block_and_cooldown_reach_c_with_measured_loads(self, zones):
+        from core.tests_watch_structure import workout
+        for cooldown in (False, True):
+            rows = workout(cooldown)
+            GarminActivitySummary.objects.update_or_create(athlete=self.athlete, activity_id="structure",
+                defaults={"activity_start": datetime.fromtimestamp(self.start, dt_timezone.utc),
+                    "activity_date": "2026-10-31", "distance_m": sum(row["distanceMeters"] for row in rows),
+                    "analysis_data": {"laps": [{"distance": row["distanceMeters"],
+                        "elapsed_time": row["durationMillis"] / 1000} for row in rows]}})
+            part = self.read_c().json()["results"][0]["parts"][0]
+            self.assertEqual(part["training_fields"]["main"], "2*(5*100m) p45//3750m z2")
+            self.assertEqual(part["training_fields"]["cd"], "2000m" if cooldown else "")
+            self.assertEqual(len(part["manual"]), len(rows))
+            loads = part["watch_loads"]
+            self.assertEqual(sum(load["meters"] for load in loads), sum(row["distanceMeters"] for row in rows))
+            self.assertTrue(all(load["segment"] == "CORE" for load in loads[:26]))
+            self.assertTrue(all(load["segment"] == "CD" for load in loads[26:]))
+
     def test_missing_sample_coverage_does_not_invent_intermediate_laps(self):
         details = self.details()
         details["samples"] = []
