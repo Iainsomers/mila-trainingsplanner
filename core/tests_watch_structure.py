@@ -26,6 +26,20 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_combined_outer_recordings_do_not_change_main_rep_matching(self):
+        from types import SimpleNamespace
+        from core.watch_processing import structured_segment_loads
+        laps = workout()
+        loads = [{"segment": "CORE", "zone": "4" if i < 20 and i % 2 == 0 else "2",
+                  "meters": lap["distanceMeters"], "seconds": lap["durationMillis"] / 1000,
+                  "average_hr": 150, "average_hr_last_15": 160} for i, lap in enumerate(laps)]
+        combined = [{"segment": "WU", "meters": 2700, "seconds": 800, "combined_outer": True}] + loads + [
+            {"segment": "CD", "meters": 2050, "seconds": 600, "combined_outer": True}]
+        for text in ("2*(5*100m z4>z5) p45", "3750m z2"):
+            segment = SimpleNamespace(type="CORE", text=text)
+            self.assertEqual(structured_segment_loads(segment, combined), structured_segment_loads(segment, loads))
+        self.assertEqual(len(structured_segment_loads(SimpleNamespace(type="CORE", text="2*(5*100m z4>z5) p45"), combined)), 10)
+
     @patch("core.views.polar_raw.lap_zone_paces", return_value=("Z1", "NA"))
     def test_regular_half_kilometre_laps_form_one_run_with_split_details(self, zones):
         from types import SimpleNamespace

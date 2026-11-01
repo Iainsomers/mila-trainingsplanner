@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}Athlete Year Calendar
 
@@ -1201,7 +1202,8 @@
   {% endif %}
 
   {% if show_oura_vitals_import %}
-  <script>
+  <script src="{% static 'core/garmin_combine.js' %}"></script>
+<script>
   (function() {
     var modalEl = document.getElementById("ouraVitalsImportModal");
     var rowsEl = document.getElementById("ouraVitalsImportRows");
@@ -2496,11 +2498,69 @@
     tableScroller.appendChild(table);
     parent.appendChild(tableScroller);
   }
-  function renderTypeAResults(parent, results, message, model) {
+  function renderTypeAResults(parent, results, message, model, combinedPreview) {
     parent.innerHTML = "";
     if (!results.length) { parent.textContent = message || "No Polar training found for this day."; return; }
-    results.forEach(function(session) {
+    var selections = [];
+    var combinedHost = document.createElement("div");
+    var combineButton;
+    if (model === "C" && !combinedPreview && results.length > 1) {
+      var toolbar = document.createElement("div");
+      toolbar.className = "d-flex flex-wrap align-items-center gap-2 mb-2";
+      var hint = document.createElement("span");
+      hint.textContent = "Select 2–3 activities and choose WU / Main / CD.";
+      toolbar.appendChild(hint);
+      combineButton = document.createElement("button");
+      combineButton.type = "button";
+      combineButton.className = "btn btn-sm btn-outline-primary";
+      combineButton.textContent = "Combine";
+      combineButton.disabled = true;
+      var errorText = document.createElement("span");
+      errorText.className = "text-danger small";
+      combineButton.addEventListener("click", function() {
+        errorText.textContent = "";
+        try {
+          var selected = selections.filter(function(item) { return item.check.checked; });
+          var combined = combineGarminActivities(selected.map(function(item) { return {session: item.session, role: item.role.value}; }));
+          renderTypeAResults(combinedHost, [combined], "", "C", true);
+        } catch (error) { errorText.textContent = error.message; }
+      });
+      toolbar.appendChild(combineButton);
+      toolbar.appendChild(errorText);
+      parent.appendChild(toolbar);
+      parent.appendChild(combinedHost);
+    }
+    results.forEach(function(session, sessionIndex) {
       var box = document.createElement("div"); box.className = "border rounded p-2 mb-2";
+      if (combineButton && (session.parts || []).length === 1 && session.parts[0].training_fields && session.parts[0].training_fields.main && (session.parts[0].watch_loads || []).length) {
+        var controls = document.createElement("div");
+        controls.className = "d-flex flex-wrap align-items-center gap-2 mb-1";
+        var label = document.createElement("label");
+        var check = document.createElement("input");
+        check.type = "checkbox";
+        check.className = "form-check-input me-1";
+        label.appendChild(check);
+        label.appendChild(document.createTextNode("Combine"));
+        var role = document.createElement("select");
+        role.className = "form-select form-select-sm w-auto";
+        role.setAttribute("aria-label", "Role for " + (session.name || "activity"));
+        [["wu", "WU"], ["main", "Main"], ["cd", "CD"]].forEach(function(pair) {
+          var option = document.createElement("option"); option.value = pair[0]; option.textContent = pair[1]; role.appendChild(option);
+        });
+        role.value = results.length === 3 ? ["wu", "main", "cd"][sessionIndex] : "main";
+        role.disabled = true;
+        selections.push({session: session, check: check, role: role});
+        function invalidateCombined() {
+          combinedHost.innerHTML = "";
+          errorText.textContent = "";
+          var count = selections.filter(function(item) { return item.check.checked; }).length;
+          combineButton.disabled = count < 2 || count > 3;
+          role.disabled = !check.checked;
+        }
+        check.addEventListener("change", invalidateCombined);
+        role.addEventListener("change", invalidateCombined);
+        controls.appendChild(label); controls.appendChild(role); box.appendChild(controls);
+      }
       var title = document.createElement("div"); title.className = "fw-bold";
       title.textContent = (session.name || "Training session") + (session.start ? " — " + session.start : ""); box.appendChild(title);
       var meta = document.createElement("div"); meta.className = "text-muted mb-2";
@@ -2508,7 +2568,7 @@
       (session.parts || []).forEach(function(part) {
         if (part.description) {
           var description = document.createElement("div");
-          description.className = "alert alert-light border py-2 mb-2 d-flex align-items-start justify-content-between gap-2";
+          description.className = "alert alert-light border py-2 mb-2 d-flex flex-wrap align-items-start justify-content-between gap-2";
           var descriptionText = document.createElement("div");
           descriptionText.textContent = (part.description_label || "Description") + ": " + part.description;
           description.appendChild(descriptionText);

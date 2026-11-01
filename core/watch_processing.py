@@ -26,7 +26,7 @@ def structured_segment_loads(segment, raw_loads):
     from core.watch_structure import short_sets_and_continuous, continuous_kilometre_run
     if str(getattr(segment, "type", "")).upper() != "CORE":
         return None
-    loads = [load for load in raw_loads if isinstance(load, dict)
+    loads = [load for load in raw_loads if isinstance(load, dict) and not load.get("combined_outer")
              and str(load.get("segment") or "CORE").upper() in {"CORE", "CD"}]
     try:
         laps = [{"distanceMeters": float(load.get("meters") or 0),

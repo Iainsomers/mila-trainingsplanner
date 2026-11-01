@@ -203,3 +203,5 @@ De atleetweergave van Race Calendar toont dezelfde groene deelnamebolletjes bij 
 ## Information Quality — ALL-rij
 
 De eerste tabelrij heet ALL en toont de gemiddelde Evaluated- en Vitals-percentages met dezelfde kleurpillen als de atleetrijen. Last active en Meeting request blijven in deze rij leeg.
+
+Garmin C toont bij bruikbare activiteiten een Combine-vinkje en compacte WU/Main/CD-keuze. De bovenste Combine-knop werkt bij twee of drie selecties en toont rolproblemen bij de knop. De gecombineerde preview staat bovenaan; wijzigen van een selectie/rol verwijdert de oude preview. Bediening en beschrijvingsknoppen lopen op smalle schermen door naar de volgende regel; laptabellen blijven horizontaal scrollbaar.
