@@ -1954,7 +1954,7 @@ class PlanningOverviewTests(TestCase):
             AthleteDailyVital.objects.create(
                 athlete=athlete,
                 date=today - timedelta(days=offset),
-                sleep_hours=value,
+                sleep_hours=value, sleep_quality=value - 1, morning_hr=50 + offset * 5, hrv=60 + offset * 20,
             )
         for offset, value in enumerate((7, 8)):
             AthleteDailyVital.objects.create(
@@ -1972,20 +1972,37 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Not Enough Vital Athlete")
         self.assertContains(response, "8.0 h")
         self.assertContains(response, "NA")
-        for key in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
-            self.assertContains(response, f"vital={key}")
+        for label in ("Sleep length", "Sleep quality", "Morning HR", "HRV"):
+            self.assertContains(response, label)
+        for expected in ("7.0–9.0", "6.0–8.0", "50.0–60.0", "60.0–100.0"):
+            self.assertContains(response, expected)
+        self.assertContains(response, "vital=summary")
+        self.assertContains(response, "vital=hr_zones")
+        self.assertEqual(len(response.context["vital_options"]), 2)
 
         filtered = self.client.get("/coach/daily-overview-other/?vital=sleep_hours")
         self.assertEqual([row["athlete"].id for row in filtered.context["vital_rows"]], [athlete.id])
         self.assertFalse(filtered.context["show_na"])
         self.assertTrue(response.context["show_na"])
+        self.assertContains(response, 'vital=summary&amp;show_na=1')
+        # Links to any of the former four tabs now open the same combined view.
         for key in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
-            self.assertContains(response, f'vital={key}&amp;show_na=1')
-        no_values = self.client.get("/coach/daily-overview-other/?vital=hrv")
-        self.assertEqual(no_values.context["vital_rows"], [])
-        shown_na = self.client.get("/coach/daily-overview-other/?vital=hrv&show_na=1")
+            combined = self.client.get(f"/coach/daily-overview-other/?vital={key}")
+            self.assertEqual(combined.context["selected_vital"]["key"], "summary")
+            self.assertEqual([row["athlete"].id for row in combined.context["vital_rows"]], [athlete.id])
+        shown_na = self.client.get("/coach/daily-overview-other/?vital=summary&show_na=1")
         self.assertEqual(len(shown_na.context["vital_rows"]), 2)
-        self.assertTrue(all(row["value"] == "NA" for row in shown_na.context["vital_rows"]))
+        na_row = next(row for row in shown_na.context["vital_rows"] if row["athlete"].id == second_athlete.id)
+        self.assertTrue(all(cell["value"] == "NA" and cell["range"] == "" for cell in na_row["values"]))
+        # One old outlier and missing values do not alter the fourteen-day range.
+        AthleteDailyVital.objects.create(athlete=athlete, date=today - timedelta(days=14), sleep_hours=20)
+        AthleteDailyVital.objects.create(athlete=athlete, date=today - timedelta(days=4), hrv=0)
+        combined = self.client.get("/coach/daily-overview-other/?view=vitals")
+        cells = combined.context["vital_rows"][0]["values"]
+        self.assertEqual(cells[0]["range"], "7.0–9.0")
+        self.assertEqual(cells[0]["sample_count"], 3)
+        self.assertEqual(cells[3]["value"], "60.0")
+        self.assertEqual(cells[3]["range"], "0.0–100.0")
 
     def test_daily_overview_other_shows_hr_zone_matrix_and_hides_empty_athletes(self):
         coach = get_user_model().objects.create_user(

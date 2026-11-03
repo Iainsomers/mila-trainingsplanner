@@ -213,3 +213,5 @@ Garmin D staat naast Garmin C in de evaluatiepopup en gebruikt dezelfde compacte
 Garmin C en D tonen bij gemeten WU/CD alleen het gemiddelde tempo in min/km: totale gemeten duur gedeeld door totale gemeten afstand. Deel-/laptijden en temporanges verschijnen daar niet meer achter. De Main-repweergave en klokdetails blijven behouden.
 
 Bij Garmin C én D tonen Main-blokken op tijd (minuten/seconden) achter de training uitsluitend het gemeten tempo of temporange in min/km. Main-blokken op afstand tonen zowel reptijd(en) als tempo. WU/CD behouden hun ene gemiddelde tempo. De klokdetails veranderen niet.
+
+De vier losse dagelijkse-vitaltabs zijn samengevoegd tot Daily vitals; HR zones blijft apart. De compacte tabel heeft Athlete plus vier vitalkolommen met gemiddelde (low–high). Ranges staan gedempt tussen haakjes. De bestaande table-responsive-container houdt het overzicht op mobiel horizontaal scrollbaar. Show NA blijft bij tabwisselen behouden.

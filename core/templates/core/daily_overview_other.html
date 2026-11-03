@@ -53,7 +53,9 @@
   .pending-red { background: #f28b82; color: #5b1111; }
   .vital-selector { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
   .vital-selector .btn { min-width: 9rem; }
+  .vital-table { min-width: 650px; }
   .vital-table th, .vital-table td { vertical-align: middle; }
+  .vital-table td:not(:first-child) { white-space: nowrap; }
   .staff-overview-athletes { columns: 2; column-gap: 2rem; }
   .staff-overview-athletes li { break-inside: avoid; padding: .2rem 0; }
   @media (max-width: 575.98px) { .staff-overview-athletes { columns: 1; } }
@@ -177,15 +179,15 @@
         </table>
       </div>
       {% else %}
-      <p class="text-muted small">Average from {{ vitals_window_start|date:"d-m-Y" }} through {{ vitals_window_end|date:"d-m-Y" }}. At least three entries are required.</p>
+      <p class="text-muted small">Average from {{ vitals_window_start|date:"d-m-Y" }} through {{ vitals_window_end|date:"d-m-Y" }}. At least three entries per vital are required. Values show average (low–high).</p>
       <div class="table-responsive">
         <table class="table table-sm vital-table mb-0">
-          <thead><tr><th>Athlete</th><th class="text-end">{{ selected_vital.label }}</th></tr></thead>
+          <thead><tr><th>Athlete</th>{% for column in vital_columns %}<th class="text-end">{{ column.label }}</th>{% endfor %}</tr></thead>
           <tbody>
             {% for row in vital_rows %}
-              <tr><td>{{ row.athlete.name }}</td><td class="text-end">{{ row.value }}</td></tr>
+              <tr><td>{{ row.athlete.name }}</td>{% for cell in row.values %}<td class="text-end" title="{{ cell.sample_count }} entries">{{ cell.value }}{% if cell.range %} <span class="text-muted">({{ cell.range }})</span>{% endif %}</td>{% endfor %}</tr>
             {% empty %}
-              <tr><td colspan="2" class="text-muted">No athletes found.</td></tr>
+              <tr><td colspan="5" class="text-muted">No athletes found.</td></tr>
             {% endfor %}
           </tbody>
         </table>

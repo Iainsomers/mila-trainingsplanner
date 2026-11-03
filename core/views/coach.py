@@ -12838,30 +12838,28 @@ def daily_overview_other_view(request):
         values = [row[key] for row in counts if row[key] is not None]
         information_quality_all[key] = round(sum(values) / len(values)) if values else None
 
-    vital_options = [
-        {"key": "sleep_hours", "label": "Sleep length", "field": "sleep_hours", "suffix": " h", "decimals": 1},
-        {"key": "sleep_quality", "label": "Sleep quality", "field": "sleep_quality", "suffix": "", "decimals": 1},
-        {"key": "morning_hr", "label": "Morning HR", "field": "morning_hr", "suffix": "", "decimals": 1},
-        {"key": "hrv", "label": "HRV", "field": "hrv", "suffix": "", "decimals": 1},
-        {"key": "hr_zones", "label": "HR zones", "field": None, "suffix": "", "decimals": 0},
+    vital_columns = [
+        {"key": "sleep_hours", "label": "Sleep length", "suffix": " h"},
+        {"key": "sleep_quality", "label": "Sleep quality", "suffix": ""},
+        {"key": "morning_hr", "label": "Morning HR", "suffix": ""},
+        {"key": "hrv", "label": "HRV", "suffix": ""},
     ]
-    selected_vital_key = request.GET.get("vital", "sleep_hours")
+    vital_options = [{"key": "summary", "label": "Daily vitals"}, {"key": "hr_zones", "label": "HR zones"}]
+    selected_vital_key = request.GET.get("vital", "summary")
     vitals_open = bool(request.GET.get("vital"))
     show_na = request.GET.get("show_na") == "1"
-    selected_vital = next(
-        (option for option in vital_options if option["key"] == selected_vital_key),
-        vital_options[0],
-    )
+    selected_vital = next((option for option in vital_options if option["key"] == selected_vital_key), vital_options[0])
     vitals_window_start = today - timedelta(days=13)
     vital_values = {}
-    if visible_vital_athlete_ids and selected_vital["field"]:
+    if visible_vital_athlete_ids and selected_vital["key"] != "hr_zones":
         for vital in AthleteDailyVital.objects.filter(
             athlete_id__in=visible_vital_athlete_ids,
             date__range=(vitals_window_start, today),
-        ).only("athlete_id", selected_vital["field"]):
-            value = getattr(vital, selected_vital["field"], None)
-            if value is not None:
-                vital_values.setdefault(vital.athlete_id, []).append(float(value))
+        ).only("athlete_id", *(column["key"] for column in vital_columns)):
+            for column in vital_columns:
+                value = getattr(vital, column["key"], None)
+                if value is not None:
+                    vital_values.setdefault(vital.athlete_id, {}).setdefault(column["key"], []).append(float(value))
 
     vital_rows = []
     hr_zone_rows = []
@@ -12926,14 +12924,18 @@ def daily_overview_other_view(request):
                 })
     else:
         for athlete in athletes:
-            values = vital_values.get(athlete.id, [])
-            if len(values) < 3:
-                display_value = "NA"
-            else:
-                average = sum(values) / len(values)
-                display_value = f"{average:.{selected_vital['decimals']}f}{selected_vital['suffix']}"
-            if show_na or len(values) >= 3:
-                vital_rows.append({"athlete": athlete, "value": display_value, "sample_count": len(values)})
+            if athlete.id not in visible_vital_athlete_ids:
+                continue
+            cells = []
+            for column in vital_columns:
+                values = vital_values.get(athlete.id, {}).get(column["key"], [])
+                cell = {"key": column["key"], "value": "NA", "range": "", "sample_count": len(values)}
+                if len(values) >= 3:
+                    cell["value"] = f"{sum(values) / len(values):.1f}{column['suffix']}"
+                    cell["range"] = f"{min(values):.1f}–{max(values):.1f}"
+                cells.append(cell)
+            if show_na or any(cell["sample_count"] >= 3 for cell in cells):
+                vital_rows.append({"athlete": athlete, "values": cells})
 
     # Meeting requests are private to the athlete's main coach. Delegated
     # coaches may see only the standard data permitted by their access level.
@@ -12954,6 +12956,7 @@ def daily_overview_other_view(request):
         "window_end": window_end,
         "vital_rows": vital_rows,
         "vital_options": vital_options,
+        "vital_columns": vital_columns,
         "selected_vital": selected_vital,
         "vitals_open": vitals_open,
         "show_na": show_na,
