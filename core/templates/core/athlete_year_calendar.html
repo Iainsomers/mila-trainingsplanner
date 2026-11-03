@@ -2531,7 +2531,7 @@
     }
     results.forEach(function(session, sessionIndex) {
       var box = document.createElement("div"); box.className = "border rounded p-2 mb-2";
-      if (combineButton && (session.parts || []).length === 1 && session.parts[0].training_fields && session.parts[0].training_fields.main && (session.parts[0].watch_loads || []).length) {
+      if (combineButton && (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length) {
         var controls = document.createElement("div");
         controls.className = "d-flex flex-wrap align-items-center gap-2 mb-1";
         var label = document.createElement("label");
@@ -2544,9 +2544,12 @@
         role.className = "form-select form-select-sm w-auto";
         role.setAttribute("aria-label", "Role for " + (session.name || "activity"));
         [["wu", "WU"], ["main", "Main"], ["cd", "CD"]].forEach(function(pair) {
-          var option = document.createElement("option"); option.value = pair[0]; option.textContent = pair[1]; role.appendChild(option);
+          var option = document.createElement("option"); option.value = pair[0]; option.textContent = pair[1];
+          if (pair[0] === "main" && !(session.parts[0].training_fields || {}).main) option.disabled = true;
+          role.appendChild(option);
         });
-        role.value = results.length === 3 ? ["wu", "main", "cd"][sessionIndex] : "main";
+        role.value = !(session.parts[0].training_fields || {}).main ? "wu" :
+          (results.length === 3 ? ["wu", "main", "cd"][sessionIndex] : "main");
         role.disabled = true;
         selections.push({session: session, check: check, role: role});
         function invalidateCombined() {

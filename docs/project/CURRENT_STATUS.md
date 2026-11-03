@@ -236,3 +236,5 @@ Wojtek-regressie: losse opname met twaalf werk/herstelparen wordt 5×200m + 7×1
 Nathan-regressie: vijf ongeveer acht minuten durende werkblokken, ieder opgesplitst in 1000+1000+rest met circa 90s herstel, worden als 5×8′ beschreven. Klokreps voegen de drie werklaps samen. Regressies bewaken 480/483/477/482/483s, exacte gemeten sessiemeters onafhankelijk van gewijzigde zonesnelheden en afwijzen van ongelijke tijdsblokken of ontbrekend herstel. Eerdere korte-repherkenning blijft getest.
 
 Nathan-uitloop met twee kilometerlaps en een restlap van 155m viel onder de oude minimumgrens van drie volledige autolaps. Herkenning accepteert nu twee volledige autolaps plus restant; nominale beschrijving 2150m Z1, drie splits en 2162.83m gemeten blijven behouden. Expliciete herstel-/pauzefeiten worden nog steeds gecontroleerd.
+
+Garmin-opname van circa 1480m met twee laps was onterecht niet combineerbaar doordat de UI ook voor WU/CD een Main-beschrijving vereiste. WU/CD vereisen nu uitsluitend gemeten laps en bruikbare totalen; de gegenereerde Main-eis geldt alleen voor de Main-rol. Combinatietests dekken onbekende structuur als WU/CD en weigering als Main.

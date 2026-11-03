@@ -27,3 +27,13 @@ embeddedCd.parts[0].training_fields.cd = '1000m';
 assert.throws(() => combine([{session: embeddedCd, role: 'main'}, {session: cd, role: 'cd'}]));
 assert.throws(() => combine([{session: {...wu, parts: []}, role: 'wu'}, {session: main, role: 'main'}]));
 console.log('Garmin composition checks passed.');
+
+// Warmup/cooldown need measured laps, not successful Main recognition.
+const unrecognised = session('2026-11-01T09:35:00+01:00', 1479.89, '00:06:31.000', '');
+const shortWarmup = combine([{session: unrecognised, role: 'wu'}, {session: main, role: 'main'}]);
+assert.equal(shortWarmup.parts[0].training_fields.wu, '1500m z2');
+assert.equal(shortWarmup.parts[0].training_fields.main, main.parts[0].training_fields.main);
+const unknownCd = structuredClone(unrecognised);
+unknownCd.start = '2026-11-01T10:45:00+01:00';
+assert.equal(combine([{session: main, role: 'main'}, {session: unknownCd, role: 'cd'}]).parts[0].training_fields.cd, '1500m z2');
+assert.throws(() => combine([{session: wu, role: 'wu'}, {session: unrecognised, role: 'main'}]));

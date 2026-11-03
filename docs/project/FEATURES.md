@@ -384,3 +384,5 @@ Een los opgenomen Main met uitsluitend afwisselende korte werk-/herstelparen geb
 Garmin C/Watch B herkennen gelijke tijdsherhalingen die door kilometer-autolaps zijn opgesplitst, bijvoorbeeld 5×8′ p90. De beschrijving blijft tijdsgebaseerd. Het klokje toont per volledige herhaling de opgetelde gemeten tijd, afstand en HR. Sessie- en weekkilometers komen uitsluitend uit de gemeten laps, met de bestaande wandeluitsluiting; zonesnelheden schatten geen extra afstand.
 
 Ook twee volledige kilometer-autolaps met een kort reststuk vormen zonder herstelbewijs één doorlopend blok (bijvoorbeeld 2162.83m → 2150m Z1). Het klokje bewaart beide kilometers en het reststuk; sessiekilometers blijven gemeten.
+
+Garmin Combine: een activiteit met bruikbare gemeten laps maar zonder herkende Main-beschrijving kan als WU of CD worden geselecteerd. Alleen de activiteit in de Main-rol vereist een gegenereerde training; de Main-optie is uitgeschakeld bij niet-herkende activiteiten. Summary-only activiteiten blijven uitgesloten.

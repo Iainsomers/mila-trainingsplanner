@@ -14,7 +14,8 @@
     var fields = {wu: "", main: "", cd: ""}, loads = [], distance = 0, seconds = 0;
     entries.forEach(function(entry) {
       var session = entry.session, part = (session.parts || [])[0];
-      if (!part || !part.training_fields || !part.training_fields.main || !(part.watch_loads || []).length) throw new Error("Each activity needs usable lap data.");
+      if (!part || !(part.watch_loads || []).length) throw new Error("Each activity needs usable lap data.");
+      if (entry.role === "main" && (!part.training_fields || !part.training_fields.main)) throw new Error("Choose an activity with a generated training description as Main.");
       var meters = Number(session.distance);
       var duration = String(session.duration).split(":").map(Number);
       if (!(meters > 0) || duration.length !== 3 || duration.some(function(n) { return !Number.isFinite(n); })) throw new Error("Activity totals are unavailable.");
