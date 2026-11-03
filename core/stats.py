@@ -15,7 +15,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v19"
+STATS_SCHEMA_VERSION = "v20"
 
 
 def active_pause_distance_m(text, reps, speed_mps, pause_mode):
@@ -66,6 +66,7 @@ def active_pause_distance_m(text, reps, speed_mps, pause_mode):
 
 
 def _watch_loads_for_slot(slot):
+    from core.watch_processing import is_walking_load
     if str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c"}:
         return []
     raw_loads = getattr(slot, "watch_loads", None)
@@ -84,6 +85,7 @@ def _watch_loads_for_slot(slot):
         if meters <= 0 or seconds <= 0 or zone not in {"1", "2", "3", "4", "5", "6"}:
             continue
         loads.append({
+            "walking": is_walking_load(meters, seconds),
             "zone": zone,
             "meters": meters,
             "seconds": seconds,
@@ -832,6 +834,8 @@ def athlete_week_stats(plan, athlete, week_start: date_cls, pause_mode=None):
         if not loads:
             return False
         for load in loads:
+            if load.get("walking"):
+                continue
             zone = load["zone"]
             meters = load["meters"]
             seconds = load["seconds"]

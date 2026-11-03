@@ -59,6 +59,31 @@ class GarminCPushTests(TestCase):
         self.assertEqual(part["watch_loads"][2]["segment"], "CORE")
         self.assertEqual(sum(load["meters"] for load in part["watch_loads"]), sum(m for m, _ in values))
 
+    def test_watch_walking_is_excluded_from_weekly_running_totals(self):
+        from core.models import TrainingPlan, TrainingSlot
+        from core.stats import athlete_week_stats
+        from django.core.cache import cache
+        plan = TrainingPlan.objects.create(owner=self.coach, name="Walking threshold")
+        day = datetime.fromtimestamp(self.start, dt_timezone.utc).date()
+        loads = [{"segment": "CORE", "zone": zone, "meters": meters, "seconds": seconds}
+                 for zone, meters, seconds in [("1",1000,600),("1",200,121),("2",1000,300),("5",200,200)]]
+        slot = TrainingSlot.objects.create(plan=plan, athlete=self.athlete, date=day, slot_index=1,
+                                          source="watch_c", watch_loads=loads)
+        slot.segments.create(type="CORE", text="5000 m Z1", distance_m=5000, zone="1")
+        cache.clear()
+        result = athlete_week_stats(plan, self.athlete, day)
+        self.assertEqual(result["zones"]["1"]["distance_m"], 1000)
+        self.assertEqual(result["zones"]["1"]["duration_s"], 600)
+        self.assertEqual(result["zones"]["2"]["distance_m"], 1000)
+        self.assertEqual(result["zones"]["5"]["distance_m"], 0)
+        slot.watch_loads = [loads[1]]
+        slot.save(update_fields=["watch_loads"])
+        cache.clear()
+        result = athlete_week_stats(plan, self.athlete, day)
+        self.assertEqual(sum(zone["distance_m"] for zone in result["zones"].values()), 0)
+        slot.refresh_from_db()
+        self.assertEqual(slot.watch_loads, [loads[1]])
+
     def send(self, payload):
         return self.client.post(self.push_url, json.dumps(payload), content_type="application/json")
 

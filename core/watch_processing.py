@@ -6,6 +6,11 @@ import re
 WATCH_SOURCES = {"watch_a", "watch_b", "watch_c"}
 
 
+def is_walking_load(meters, seconds):
+    """Measured pace strictly slower than 10:00/km is walking, not running."""
+    return meters > 0 and seconds > meters * 0.6
+
+
 def align_watch_loads(loads, wu_text="", cd_text=""):
     """Match explicit WU/CD to measured boundary laps, never add distance."""
     result = [dict(load) for load in loads if isinstance(load, dict)]

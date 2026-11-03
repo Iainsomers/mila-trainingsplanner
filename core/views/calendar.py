@@ -2701,7 +2701,7 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
     if watch_source:
         watch_loads = getattr(slot, "watch_loads", None)
         if isinstance(watch_loads, list):
-            from core.watch_processing import align_watch_loads
+            from core.watch_processing import align_watch_loads, is_walking_load
             boundary_text = {str(seg.type).upper(): str(seg.text or "") for seg in slot.segments.all()
                              if str(seg.type).upper() in {"WU", "CD"}}
             watch_loads = align_watch_loads(watch_loads, boundary_text.get("WU", ""), boundary_text.get("CD", ""))
@@ -2726,7 +2726,9 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
                 })
             if actual:
                 actual_segment_types = {load["segment"] for load in actual}
-                loads = actual
+                # Keep segment coverage even when every lap is walking: the
+                # planned text must not add the excluded distance back again.
+                loads = [load for load in actual if not is_walking_load(load["meters"], load["seconds"])]
             else:
                 loads = []
         else:

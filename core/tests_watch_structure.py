@@ -26,6 +26,21 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_walking_threshold_and_all_walking_never_restore_plan_distance(self):
+        from types import SimpleNamespace
+        from core.watch_processing import is_walking_load
+        from core.views.calendar import _ayc_slot_loads_for_totals
+        self.assertFalse(is_walking_load(1000, 600))
+        self.assertTrue(is_walking_load(1000, 600.001))
+        self.assertFalse(is_walking_load(200, 120))
+        self.assertTrue(is_walking_load(200, 121))
+        segments = [SimpleNamespace(type="WU", text="1000 m Z1"), SimpleNamespace(type="CORE", text="200 m Z1")]
+        loads = [{"segment": "WU", "zone": "1", "meters": 1000, "seconds": 700},
+                 {"segment": "CORE", "zone": "1", "meters": 200, "seconds": 121}]
+        slot = SimpleNamespace(source="watch_c", watch_loads=loads, segments=SimpleNamespace(all=lambda: segments))
+        self.assertEqual(_ayc_slot_loads_for_totals(slot), [])
+        self.assertEqual(slot.watch_loads, loads)
+
     def test_compact_short_groups_keep_final_rep_and_cooldown(self):
         from core.watch_structure import mixed_short_repetitions
         values = [(5521,1785),(44,680),(2420,1083),(180,1156)]
@@ -120,8 +135,8 @@ class ShortSetsStructureTests(SimpleTestCase):
         segments = [SimpleNamespace(type=kind, text=fields[key]) for kind, key in [("WU", "wu"), ("CORE", "main"), ("CD", "cd")]]
         slot = SimpleNamespace(source="watch_c", watch_loads=loads, segments=SimpleNamespace(all=lambda: segments))
         total_loads = _ayc_slot_loads_for_totals(slot)
-        self.assertAlmostEqual(sum(load["meters"] for load in total_loads), sum(m for m, _, _ in values))
-        self.assertEqual(len(total_loads), len(values))
+        self.assertAlmostEqual(sum(load["meters"] for load in total_loads), sum(m for m, seconds, _ in values if seconds <= m * .6))
+        self.assertEqual(len(total_loads), sum(seconds <= m * .6 for m, seconds, _ in values))
         self.assertEqual(loads[0]["segment"], "CORE")  # read-time repair is non-destructive
         # Existing descriptions containing long work must not gain duplicate work.
         existing = dict(fields, main="2400 m Z2 + 4×50 m Z5")
