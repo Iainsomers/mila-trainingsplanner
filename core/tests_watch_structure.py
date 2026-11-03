@@ -26,6 +26,45 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_known_short_recoveries_are_not_selected_as_work_at_same_distance(self):
+        from types import SimpleNamespace
+        from core.watch_processing import processed_main_reps
+        loads = [{"segment": "CORE", "meters": 200, "seconds": seconds, "zone": "1", "work_rep": work}
+                 for seconds, work in [(31, True), (90, False), (30, True), (100, False)]]
+        segment = SimpleNamespace(type="CORE", text="2×200 m Z1", reps=2, distance_m=200, order=1)
+        slot = SimpleNamespace(source="watch_c", watch_loads=loads, segments=SimpleNamespace(all=lambda: [segment]))
+        self.assertEqual([row["seconds"] for row in processed_main_reps(slot)], [31, 30])
+
+    def test_kilometre_warmup_cannot_hide_later_short_work(self):
+        from core.watch_structure import mixed_short_repetitions
+        values = [(1007.58,322),(999.99,282),(997.053,274),(999.457,270),(963.85,1506),
+                  (37.02,7),(117.04,118),(27.0698,6),(207.8,164),
+                  (191.77,31),(204.23,90),(145.32,23),(203.05,85),
+                  (200.72,31),(204.35,89),(148.72,23),(194.15,246),
+                  (198.38,31),(201.93,94),(6.4502,595),(175.34,25),(195.03,92),
+                  (142.73,23),(204.31,96),(186.88,29),(223.339,104),
+                  (146.271,21),(97.9199,126),(889.77,340)]
+        laps = [{"distanceMeters": m, "durationMillis": seconds * 1000,
+                 "zone": "Z5" if seconds < 60 else "Z1"} for m, seconds in values]
+        result = mixed_short_repetitions(laps, lambda lap: lap["zone"])
+        self.assertEqual(result["wu_end"], 5)
+        self.assertEqual(result["cooldown_start"], 27)
+        self.assertIn("WU: 4950 m Z1", result["description"])
+        self.assertIn("2×50 m", result["main"])
+        self.assertEqual(result["main"].count("200 m"), 5)
+        self.assertEqual(result["main"].count("150 m"), 4)
+        self.assertIn("CD: 1000 m Z1", result["description"])
+        self.assertNotIn("1000 m", result["main"])
+        # Strong measured short work must win before an AI call or km grouping.
+        with patch("core.views.polar_raw.lap_zone_paces", side_effect=lambda m, ms, athlete=None: ("Z5" if ms < 60000 else "Z1", "NA")):
+            self.assertEqual(type_b_description(laps), result["description"])
+            with patch("core.views.polar_raw.urlopen", side_effect=AssertionError("AI not needed")):
+                self.assertEqual(_model_b_ai_description(laps), result["description"])
+        # Equal-duration running laps do not establish short work/recovery.
+        for lap in laps[5:]:
+            lap["durationMillis"] = lap["distanceMeters"] * 300
+        self.assertIsNone(mixed_short_repetitions(laps, lambda lap: lap["zone"]))
+
     def test_missing_long_block_and_boundary_laps_do_not_invent_distance(self):
         from types import SimpleNamespace
         from core.watch_processing import align_watch_loads, preserve_long_main_laps

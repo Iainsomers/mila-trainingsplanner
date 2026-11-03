@@ -2177,6 +2177,8 @@ def _watch_segment_loads(seg):
     for load in watch_loads:
         if not isinstance(load, dict) or str(load.get("segment") or "CORE").upper() != segment_type:
             continue
+        if segment_type == "CORE" and load.get("work_rep") is False:
+            continue
         try:
             meters = float(load.get("meters") or 0)
             seconds = float(load.get("seconds") or 0)

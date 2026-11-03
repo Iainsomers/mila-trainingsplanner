@@ -163,6 +163,8 @@ def processed_main_reps(slot):
     for index, load in enumerate(raw_loads):
         if not isinstance(load, dict) or str(load.get("segment") or "CORE").upper() != "CORE":
             continue
+        if load.get("work_rep") is False:
+            continue
         try:
             meters = float(load.get("meters") or 0)
             seconds = float(load.get("seconds") or 0)
@@ -220,7 +222,7 @@ def processed_main_reps(slot):
         if segment_zone:
             expected_zones.add(segment_zone)
 
-        tolerance = max(20.0, distance * 0.25)
+        tolerance = max(25.0 if distance <= 50 else 20.0, distance * 0.25)
         for _ in range(reps):
             match = next(
                 (

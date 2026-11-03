@@ -507,6 +507,9 @@ def type_b_description(laps, athlete=None):
     structured = _short_sets_structure(laps, athlete)
     if structured:
         return structured["description"]
+    mixed = _mixed_short_structure(laps, athlete)
+    if mixed:
+        return mixed["description"]
     continuous = _continuous_km_description(laps, athlete)
     if continuous:
         return continuous
@@ -646,6 +649,12 @@ def _short_sets_structure(laps, athlete=None):
         lap["distanceMeters"], lap["durationMillis"], athlete)[0])
 
 
+def _mixed_short_structure(laps, athlete=None):
+    from core.watch_structure import mixed_short_repetitions
+    return mixed_short_repetitions(laps, lambda lap: lap_zone_paces(
+        lap["distanceMeters"], lap["durationMillis"], athlete)[0])
+
+
 def _continuous_km_description(laps, athlete=None):
     from core.watch_structure import continuous_kilometre_run
     return continuous_kilometre_run(laps, lambda lap: lap_zone_paces(
@@ -664,6 +673,9 @@ def _model_b_ai_description(laps, athlete=None):
     structured = _short_sets_structure(laps, athlete) if isinstance(laps, list) else None
     if structured:
         return structured["description"]
+    mixed = _mixed_short_structure(laps, athlete)
+    if mixed:
+        return mixed["description"]
     continuous = _continuous_km_description(laps, athlete)
     if continuous:
         return continuous

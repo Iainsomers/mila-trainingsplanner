@@ -3,6 +3,82 @@ import math
 from statistics import median
 
 
+def mixed_short_repetitions(laps, zone_for_lap):
+    """Keep short work/recovery laps visible after an easy lead-in.
+
+    Relative speed establishes work; a kilometre warmup must not dominate
+    recognition. Never infer missing repetitions or treat stopped time as work.
+    """
+    if not isinstance(laps, list):
+        return None
+    rows = []
+    for lap in laps:
+        try:
+            m, s = float(lap['distanceMeters']), float(lap['durationMillis']) / 1000
+        except (KeyError, TypeError, ValueError):
+            return None
+        if not math.isfinite(m + s) or m < 0 or s <= 0:
+            return None
+        rows.append((m, s))
+    work = []
+    for i, (m, s) in enumerate(rows[:-1]):
+        rm, rs = rows[i + 1]
+        if (25 <= m <= 250 and 3 <= s <= 60 and rs >= 30
+                and rm <= 300 and m / s >= 2.5 and m / s >= 1.5 * rm / rs):
+            work.append(i)
+    if len(work) < 4:
+        return None
+    # Every intervening lap must be recovery: no hidden unanalysed work block.
+    if any(m > 300 or (m / s >= 2.5 and s < 60)
+           for i, (m, s) in enumerate(rows[work[0]:work[-1] + 1], work[0]) if i not in work):
+        return None
+    prefix = rows[:work[0]]
+    long_prefix = [i for i, (m, _) in enumerate(prefix) if m >= 800]
+    if not long_prefix or long_prefix[0] != 0:
+        return None
+    if any(zone_for_lap(laps[i]) not in {'Z1', '', 'NA'} for i in range(work[0])):
+        return None
+    # Similar automatic splits belong to one warmup. Distinct long laps after
+    # one warmup remain separate Main work, even if elapsed pace includes stops.
+    long_distances = [rows[i][0] for i in long_prefix]
+    wu_end = work[0] if max(long_distances) <= min(long_distances) * 1.25 else 1
+    def distance_label(m):
+        return int(math.floor(m / 50 + .5) * 50)
+    def zone_label(indices):
+        zones = sorted({zone_for_lap(laps[i]) for i in indices} & {'Z1','Z2','Z3','Z4','Z5'})
+        return (' ' + (zones[0] if len(zones) == 1 else zones[0] + '>' + zones[-1])) if zones else ''
+    main = [f'{distance_label(rows[i][0])} m{zone_label([i])}'
+            for i in range(wu_end, work[0]) if rows[i][0] >= 800]
+    groups = []
+    for i in work:
+        nominal = distance_label(rows[i][0])
+        gap = sum(s for _, s in rows[groups[-1][-1] + 1:i]) if groups else 0
+        if not groups or nominal != distance_label(rows[groups[-1][0]][0]) or gap >= 180:
+            groups.append([])
+        groups[-1].append(i)
+    for group in groups:
+        nominal = distance_label(rows[group[0]][0])
+        label = (f'{len(group)}×' if len(group) > 1 else '') + f'{nominal} m' + zone_label(group)
+        # Use the recovery immediately following each work lap; a separate
+        # near-stationary lap must not inflate its typical rep recovery.
+        recovery = [rows[i + 1][1] for i in group if rows[i + 1][1] < 180]
+        if recovery:
+            label += f' p{int(math.floor(median(recovery) + .5))}'
+        main.append(label)
+    cooldown_start = work[-1] + 1
+    tail = rows[cooldown_start:]
+    cd_m = sum(m for m, _ in tail)
+    # Keep one clear trailing run as CD; short final recoveries alone are not CD.
+    has_cd = any(m >= 500 for m, _ in tail) and all(zone_for_lap(laps[i]) in {'Z1', '', 'NA'}
+                  for i in range(cooldown_start, len(rows)))
+    wu = f'{distance_label(sum(m for m, _ in rows[:wu_end]))} m' + zone_label(list(range(wu_end)))
+    cd = f'{distance_label(cd_m)} m' + zone_label(list(range(cooldown_start, len(rows)))) if has_cd else ''
+    main_text = ' + '.join(main)
+    return {'description': f'WU: {wu} · Main: {main_text} · CD: {cd or "none"}',
+            'main': main_text, 'wu_end': wu_end, 'work_indices': work,
+            'cooldown_start': cooldown_start if has_cd else len(rows)}
+
+
 def continuous_kilometre_run(laps, zone_for_lap):
     """Regular 500 m / kilometre splits alone do not establish repetitions."""
     if not isinstance(laps, list) or len(laps) < 3:
