@@ -10595,6 +10595,31 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_chart_stacks_measured_zones_bottom_up_and_excludes_walking(self):
+        trainer = get_user_model().objects.create_user(username="zonestats", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Zones", birth_year=2000, gender="X")
+        day = date.today() - timedelta(days=date.today().weekday())
+        plan = TrainingPlan.objects.create(owner=trainer, name="Zones", start_date=day, end_date=day + timedelta(days=6))
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=1, source="watch_d", watch_loads=[
+            {"segment":"CORE", "zone":"1", "meters":2000, "seconds":600},
+            {"segment":"CORE", "zone":"2", "meters":3000, "seconds":800},
+            {"segment":"CORE", "zone":"5", "meters":500, "seconds":100},
+            {"segment":"CORE", "zone":"1", "meters":200, "seconds":200},
+        ])
+        TrainingSegment.objects.create(slot=slot, type="CORE", text="5*8' z2", zone="2", norm_distance_m=15000)
+        self.client.force_login(trainer)
+        response = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=1")
+        week = response.context["weeks"][-1]
+        self.assertEqual(week["zone_km"], {"1":2, "2":3, "5":.5})
+        self.assertEqual(week["km"], 5.5)
+        self.assertEqual([stack["label"] for stack in week["stacks"]], ["Z1", "Z2", "Z5"])
+        self.assertGreater(week["stacks"][0]["y"], week["stacks"][1]["y"])
+        self.assertAlmostEqual(sum(stack["height"] for stack in week["stacks"]), week["height"])
+        self.assertEqual([stack["color"] for stack in week["stacks"]], ["#f8f8f0", "#f7c6d0", "#b7d7ff"])
+        self.assertContains(response, 'aria-label="Zone colours"')
+        self.assertContains(response, 'Total: 5.5 km')
+
     def test_athlete_name_links_to_six_month_weekly_distance_chart(self):
         trainer = get_user_model().objects.create_user(username="chartcoach", password="secret", is_staff=True)
         athlete = Athlete.objects.create(owner=trainer, name="Chart Athlete", birth_year=2000, gender="X")

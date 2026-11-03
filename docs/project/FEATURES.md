@@ -399,3 +399,6 @@ Garmin C/D bieden bij herhaalde lange intervalgroepen die zowel bij vaste afstan
 
 
 Garmin C/D gebruiken End HR: laatste 10% van de volledige gemeten repduur, minimaal 15s; onder 15s Avg HR. Dit geldt ook voor gereconstrueerde reps en D-zonecontrole. Eerder gebruikte lange Watch-reps zonder opgeslagen HR-samples moeten opnieuw via Use AM/PM worden overgenomen om de nieuwe eind-HR te tonen; opnieuw verzenden vanuit Garmin is niet nodig als details al beschikbaar zijn.
+
+
+Stats: de wekelijkse afstandsgrafiek is gestapeld per Z1–Z6, met de bestaande MiLa-zonekleuren en Z1 onderaan. Legenda en tooltip tonen zone/zonekilometers plus weektotaal. Dezelfde effectieve loads bepalen totalen en zoneverdeling; wandelen en Alternative blijven uitgesloten. Onbekende zones krijgen zo nodig een grijs Other-deel zodat de totale balkhoogte behouden blijft.

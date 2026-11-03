@@ -7,8 +7,9 @@
   .weekly-distance-chart { min-width: 680px; }
   .weekly-distance-chart .grid-line { stroke: #dee2e6; stroke-width: 1; }
   .weekly-distance-chart .axis-label { fill: #6c757d; font-size: 12px; }
-  .weekly-distance-chart .week-bar { fill: #f57c20; }
-  .weekly-distance-chart .week-bar:hover { fill: #d9650e; }
+  .weekly-distance-chart .week-bar { stroke: #adb5bd; stroke-width: .5; }
+  .weekly-distance-chart .week-bar:hover { filter: brightness(.92); }
+  .zone-key { display: inline-block; width: 12px; height: 12px; border: 1px solid #adb5bd; border-radius: 2px; }
   .stats-period-select { width: 125px; }
   .stats-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .stats-summary-value { font-size: 1.35rem; font-weight: 600; }
@@ -57,14 +58,19 @@
           {% endfor %}
           <text class="axis-label" x="12" y="18">km</text>
           {% for week in weeks %}
-            <rect class="week-bar" x="{{ week.x }}" y="{{ week.y }}" width="{{ week.width }}" height="{{ week.height }}" rx="2">
-              <title>Week from {{ week.week_start|date:"d M Y" }}: {{ week.km_label }} km</title>
-            </rect>
+            {% for stack in week.stacks %}
+              <rect class="week-bar" x="{{ week.x }}" y="{{ stack.y }}" width="{{ week.width }}" height="{{ stack.height }}" fill="{{ stack.color }}">
+                <title>Week from {{ week.week_start|date:"d M Y" }} · {{ stack.label }}: {{ stack.km_label }} km · Total: {{ week.km_label }} km</title>
+              </rect>
+            {% endfor %}
             {% if week.show_label %}
               <text class="axis-label" x="{{ week.label_x }}" y="{{ plot_bottom_y|add:'22' }}" text-anchor="middle">{{ week.week_start|date:"d M" }}</text>
             {% endif %}
           {% endfor %}
         </svg>
+      </div>
+      <div class="d-flex flex-wrap gap-3 small mt-2" aria-label="Zone colours">
+        {% for zone in zone_legend %}<span class="d-inline-flex align-items-center gap-1"><span class="zone-key" style="background-color: {{ zone.color }};"></span>{{ zone.label }}</span>{% endfor %}
       </div>
       <div class="small text-muted mt-2">Each bar represents a Monday–Sunday training week. The current week may still be incomplete.</div>
       <div class="stats-summary mt-4">

@@ -224,3 +224,6 @@ Details Camps heeft vooraan een smalle #-telkolom. De telling volgt uitsluitend 
 
 
 Garmin C/D tonen End HR in de rondetabel en klokpopup; de klok legt uit: laatste 10% van de gemeten repduur, minimaal 15s, Avg HR onder 15s. Avg HR blijft een aparte kolom. Polar behoudt Last 15s HR. De bestaande compacte, scrollbare tabellen blijven behouden.
+
+
+Stats-weekbalken tonen Z1 onderaan gevolgd door Z2–Z6 in de AYC-zonekleuren. Een dunne rand houdt het lichte Z1 zichtbaar; de compacte legenda kan afbreken en de grafiek blijft op mobiel horizontaal scrollbaar. Hover toont zonekilometers en het weektotaal.

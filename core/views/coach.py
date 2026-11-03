@@ -11808,7 +11808,7 @@ from core.views.calendar import (
 )
 
 
-def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None):
+def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None, zone_totals=None):
     end = week_start + timedelta(days=14)
     days = [week_start + timedelta(days=offset) for offset in range(14)]
     non_trainer_plans = [
@@ -11906,22 +11906,31 @@ def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None):
             target_week = week_start if day < week_start + timedelta(days=7) else week_start + timedelta(days=7)
             for load in _ayc_slot_loads_for_totals(slot, athlete, pause_mode):
                 if load.get("kind") != "alt":
-                    totals[target_week] += float(load.get("meters") or 0)
+                    meters = float(load.get("meters") or 0)
+                    totals[target_week] += meters
+                    if zone_totals is not None:
+                        zone = str(load.get("zone") or "")
+                        zone = zone if zone in {"1", "2", "3", "4", "5", "6"} else "other"
+                        bucket = zone_totals.setdefault(target_week, {})
+                        bucket[zone] = bucket.get(zone, 0.0) + meters
     return totals
 
 
 def _athlete_week_distance_history(athlete, plans, last_week_start, week_count=26, pause_mode=None):
     first_week_start = last_week_start - timedelta(days=7 * (week_count - 1))
     totals_by_week = {}
+    zones_by_week = {}
     for offset in range(0, week_count, 2):
         pair_start = first_week_start + timedelta(days=7 * offset)
-        pair_totals = _effective_week_distance_m(athlete, plans, pair_start, pause_mode)
+        pair_totals = _effective_week_distance_m(athlete, plans, pair_start, pause_mode, zone_totals=zones_by_week)
         totals_by_week.update(pair_totals)
 
     return [
         {
             "week_start": first_week_start + timedelta(days=7 * offset),
             "km": totals_by_week.get(first_week_start + timedelta(days=7 * offset), 0.0) / 1000.0,
+            "zone_km": {zone: meters / 1000.0 for zone, meters in zones_by_week.get(
+                first_week_start + timedelta(days=7 * offset), {}).items()},
         }
         for offset in range(week_count)
     ]
@@ -12142,7 +12151,22 @@ def trainer_athlete_stats_view(request, athlete_id):
     column_width = plot_width / len(weeks)
     bar_width = column_width * 0.68
 
+    zone_legend = [
+        {"key": str(zone), "label": f"Z{zone}", "color": color}
+        for zone, color in enumerate(("#f8f8f0", "#f7c6d0", "#f06f5f", "#bfe7bf", "#b7d7ff", "#f2c200"), 1)
+    ]
+    if any(week["zone_km"].get("other", 0) for week in weeks):
+        zone_legend.append({"key": "other", "label": "Other", "color": "#adb5bd"})
     for index, week in enumerate(weeks):
+        cumulative_km = 0.0
+        week["stacks"] = []
+        for zone in zone_legend:
+            km = week["zone_km"].get(zone["key"], 0.0)
+            cumulative_km += km
+            if km > 0:
+                week["stacks"].append({**zone, "km_label": f"{km:.1f}",
+                    "y": plot_top + plot_height - cumulative_km / axis_max_km * plot_height,
+                    "height": km / axis_max_km * plot_height})
         bar_height = (week["km"] / axis_max_km) * plot_height
         week.update({
             "km_label": f'{week["km"]:.1f}',
@@ -12177,6 +12201,7 @@ def trainer_athlete_stats_view(request, athlete_id):
             if period_index > 0 else ""
         ),
         "y_ticks": y_ticks,
+        "zone_legend": zone_legend,
         "chart_width": chart_width,
         "chart_height": chart_height,
         "plot_left": plot_left,

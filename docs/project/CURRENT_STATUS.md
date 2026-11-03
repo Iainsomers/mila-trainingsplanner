@@ -255,3 +255,6 @@ Camp details heeft een doorlopende rijtelling voor alle deelnemers, inclusief co
 
 
 Garmin C/D End HR is aangepast naar laatste 10% van de gemeten repduur (minimaal 15s, onder 15s Avg HR). Volledige samengestelde reps tellen als één tijdvenster. Gerichte regressies dekken venstergrenzen, meerdere laps, korte reps, ontbrekende oudere samples en D-zonecontrole; Polar-weergave blijft ongewijzigd.
+
+
+Stats-atleetgrafiek toont nu gestapelde weekafstanden per zone met Z1 onderaan, zonekleuren, legenda en tooltips. Regressie bewaakt gemeten Watch-kilometers, uitgesloten wandelen, zonevolgorde en gelijke som van stapelhoogtes en totaal.
