@@ -66,3 +66,6 @@ PAC (Pro Athletic Coach) is een zelfstandig Django-project voor coachhulpmiddele
 - `core/views/polar_analysis_settings.py`: laden, valideren en bevoegd opslaan van HR-analysegrenzen; wisselen van atleet mag geen oude formulierwaarden naar de nieuwe atleet schrijven.
 - Migratie `0096_polar_analysis_settings` maakt de afzonderlijke instellingentabel. Berekeningen blijven beschikbaar zonder AI-configuratie; ontbrekende of onbetrouwbare dekking blijft zichtbaar.
 - De analyse is op aanvraag en schrijft geen trainingsslots of evaluaties. API-tokens en volledige persoonsgebonden sampledata gaan niet mee naar de AI; alleen compacte numerieke rondegegevens voor de toelichting.
+
+
+Mob/Tech-foto’s staan als verkleinde privé-JPEG plus thumbnail in TrainingPhoto (database). TrainingSegment bewaart UUID-referenties; kopieën en snapshots delen de onveranderlijke foto. Een geauthenticeerde downloadroute controleert toegang via het verwijzende trainingssegment; er is geen openbare media-opslag nodig.

@@ -25,3 +25,5 @@
 {% else %}
   <span data-flex-segment data-flex-zone="{{ seg.zone|default:'' }}" data-flex-t="{{ seg.t_type|default:'' }}" data-flex-special="{{ seg.special|default:'' }}" data-flex-type="{{ seg.type|default:'' }}" data-flex-reps="{{ seg.reps|default:'' }}" data-flex-distance="{{ seg.distance_m|default:'' }}" data-flex-duration="{{ seg.duration_s|default:'' }}" data-flex-norm="{{ seg.norm_distance_m|default:'' }}" data-flex-source-text="{{ seg.text|default:'' }}" data-flex-actual-loads="{{ seg.flex_actual_loads_json|default:''|escape }}">{{ seg.display_text|default:seg.text }}</span>
 {% endif %}
+
+{% if seg.type == "MOB" and seg.photo_ids %}{% include "core/partials/mob_photos.html" with mob_photos=seg.photo_items editable=False %}{% endif %}

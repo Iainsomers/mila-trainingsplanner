@@ -7,6 +7,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.utils.html import escape
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Q, Prefetch
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
@@ -891,6 +892,8 @@ def _clone_slot_for_display(slot):
             standard_strength_program=getattr(seg, "standard_strength_program", None),
         )
         clone.display_text = getattr(seg, "display_text", clone.text) or clone.text
+        clone.photo_ids = list(getattr(seg, "photo_ids", []) or [])
+        clone.photo_items = getattr(seg, "photo_items", [])
         segments.append(clone)
 
     clone = _VirtualSlot(
@@ -1559,6 +1562,7 @@ def flex_planner_view(request):
                                 "type": seg.type,
                                 "order": int(getattr(seg, "order", 0) or 0),
                                 "text": seg.text or "",
+                                "photo_ids": list(getattr(seg, "photo_ids", []) or []),
                                 "zone": seg.zone or "",
                                 "reps": int(seg.reps or 1),
                                 "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
@@ -2894,6 +2898,7 @@ def _ayc_slot_session_zones(slot, athlete=None, pause_mode=None):
     ]
 
 
+@transaction.atomic
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     def base_trainer_plan_assigned_for_day(plan):
         if not plan:
@@ -3023,11 +3028,26 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
                 selected_plan = plan
                 break
 
+    if selected_plan and not existing_override and not base_slot:
+        existing_override = TrainingSlot.objects.filter(
+            plan=selected_plan, athlete=athlete, date=d, slot_index=slot_index).first()
+        base_slot = TrainingSlot.objects.filter(
+            plan=selected_plan, athlete__isnull=True, date=d, slot_index=slot_index).first()
     source_slot = existing_override or base_slot
     if watch_source and selected_plan and selected_plan.id == watch_source.plan_id and not source_slot:
         source_slot = watch_source
     if not source_slot and not selected_plan:
         return
+
+    from core.views.training_photos import prepare_photo
+    from core.models import TrainingPhoto
+    source_mob = source_slot.segments.filter(type="MOB").first() if source_slot else None
+    photo_ids = [key for key in getattr(source_mob, "photo_ids", []) or []
+                 if key not in request.POST.getlist("remove_mob_photo")]
+    uploads = request.FILES.getlist("mob_photos")
+    if len(photo_ids) + len(uploads) > 5:
+        raise ValueError("You can attach up to 5 photos per training.")
+    prepared_photos = [prepare_photo(upload) for upload in uploads]
 
     watch_sources = {"watch_a", "watch_b", "watch_c", "watch_d"}
     original_source = str(getattr(source_slot, "source", "") or "")
@@ -3072,6 +3092,9 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         override_slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
     override_slot.segments.all().delete()
+    for prepared in prepared_photos:
+        photo = TrainingPhoto.objects.create(owner=override_slot.plan.owner, **prepared)
+        photo_ids.append(str(photo.pk))
 
     fields = [
         ("WU", request.POST.get("wu_text", ""), "1"),
@@ -3092,7 +3115,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             .first()
         )
 
-    has_field_text = any((value or "").strip() for _, value, _ in fields) or bool(selected_standard_strength)
+    has_field_text = any((value or "").strip() for _, value, _ in fields) or bool(selected_standard_strength or photo_ids)
 
     if not has_field_text and (slot_text or "").strip():
         fields = [("CORE", slot_text, "1")]
@@ -3117,7 +3140,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
     for segment_type, value, default_zone in fields:
         raw_text = (value or "").strip()
-        if not raw_text and not (segment_type == "MOB" and selected_standard_strength):
+        if not raw_text and not (segment_type == "MOB" and (selected_standard_strength or photo_ids)):
             continue
 
         if segment_type == "CORE":
@@ -3211,8 +3234,10 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             type=segment_type,
             text=raw_text,
         )
-        if segment_type == "MOB" and selected_standard_strength:
-            seg.standard_strength_program = selected_standard_strength
+        if segment_type == "MOB":
+            seg.photo_ids = photo_ids
+            if selected_standard_strength:
+                seg.standard_strength_program = selected_standard_strength
 
         if parsed and parsed.ok:
             _apply_parse_to_segment(seg, parsed)
@@ -3306,7 +3331,10 @@ def athlete_year_calendar_view(request):
                     except Exception:
                         slot_index = 1
 
-                    _save_athlete_slot_override(request, athlete, d, slot_index, slot_text)
+                    try:
+                        _save_athlete_slot_override(request, athlete, d, slot_index, slot_text)
+                    except ValueError as error:
+                        return HttpResponse(str(error), status=400, content_type="text/plain")
                     _invalidate_stats_cache()
 
                 elif week_report_submit is not None:

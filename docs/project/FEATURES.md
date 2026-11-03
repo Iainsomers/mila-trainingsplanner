@@ -402,3 +402,6 @@ Garmin C/D gebruiken End HR: laatste 10% van de volledige gemeten repduur, minim
 
 
 Stats: de wekelijkse afstandsgrafiek is gestapeld per Z1–Z6, met de bestaande MiLa-zonekleuren en Z1 onderaan. Legenda en tooltip tonen zone/zonekilometers plus weektotaal. Dezelfde effectieve loads bepalen totalen en zoneverdeling; wandelen en Alternative blijven uitgesloten. Onbekende zones krijgen zo nodig een grijs Other-deel zodat de totale balkhoogte behouden blijft.
+
+
+Mob/Tech in de trainingspopup ondersteunt maximaal vijf foto’s naast vrije tekst of Standard Strength. Add photos opent de camera/bibliotheekkeuze van de browser; geselecteerde foto’s krijgen direct een preview. Save bewaart ze, Remove verwijdert de koppeling bij Save. Een thumbnail opent de volledige JPEG in een nieuw tabblad voor zoomen. Beschikbaar in Trainer/Flex en AYC, volgens bestaande bewerkrechten; ook een foto zonder tekst is een geldige Mob/Tech-training. Dag-/weekkopieën en Watch/Plan-snapshots nemen fotoreferenties mee. Saved Trainings blijven tekstsjablonen.

@@ -76,6 +76,8 @@
       <div class="modal-body py-2">
             <form
               method="post"
+              enctype="multipart/form-data"
+              hx-encoding="multipart/form-data"
               hx-post="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/"
               hx-target="#modal-container"
               hx-swap="innerHTML"
@@ -125,6 +127,19 @@
                 </select>
                 <textarea name="mob_text" class="form-control" rows="2"
                   placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ mob_text }}</textarea>
+                {% if not is_athlete_year_calendar or athlete_year_can_edit_training %}
+                  <label class="btn btn-sm btn-outline-secondary mt-1 mb-0">
+                    📷 Add photos
+                    <input type="file" name="mob_photos" accept="image/jpeg,image/png,image/webp" multiple class="visually-hidden" onchange="window.milaPhotoPreview(this)">
+                  </label>
+                  <span class="small text-muted">Up to 5 photos · camera or library</span>
+                  {% include "core/partials/mob_photos.html" with editable=True %}
+                {% else %}
+                  {% include "core/partials/mob_photos.html" with editable=False %}
+                {% endif %}
+                <div data-photo-preview class="d-flex flex-wrap gap-2 mt-1"></div>
+                <div id="mobPhotoError" class="small text-danger" role="status" aria-live="polite"></div>
+
               </div>
               {% endif %}
 

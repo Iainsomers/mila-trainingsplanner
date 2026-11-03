@@ -3442,6 +3442,10 @@
       formData.append("standard_strength_id", strengthField.value || "");
     }
 
+    var photoField = form.querySelector('[name="mob_photos"]');
+    Array.from(photoField ? photoField.files : []).forEach(function(file) { formData.append("mob_photos", file); });
+    form.querySelectorAll('[name="remove_mob_photo"]:checked').forEach(function(field) { formData.append(field.name, field.value); });
+
     fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
       method: "POST",
       body: formData,
@@ -3450,7 +3454,7 @@
       },
       credentials: "same-origin"
     }).then(function(response) {
-      if (!response.ok) throw new Error("Training could not be saved.");
+      if (!response.ok) return response.text().then(function(message) { throw new Error(message || "Training could not be saved."); });
 
       var modalEl = document.getElementById("slotModal");
       try {
@@ -3462,7 +3466,9 @@
       }
     }).catch(function(error) {
       if (window.console) console.error(error);
-      window.alert("Training could not be saved. Please try again.");
+      var photoError = form.querySelector("#mobPhotoError");
+      if (photoError) photoError.textContent = error.message;
+      else window.alert("Training could not be saved. Please try again.");
     });
   }, true);
 })();

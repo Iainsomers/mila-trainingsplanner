@@ -26,6 +26,8 @@ from core.models import (
 from core.parser import parse_segment_text
 from core.training_text import normalize_watch_main_text, split_main_segments
 from core.watch_processing import save_processed_main_reps
+from core.views.training_photos import prepare_photo, copy_photo_ids
+from core.models import TrainingPhoto
 from core.wucd import apply_auto_wucd_texts, sync_athlete_auto_wucd_overrides
 
 from .common import (
@@ -823,6 +825,7 @@ def week_copy(request, yyyy, mm, dd):
                     "type": seg.type,
                     "order": int(seg.order or 0),
                     "text": seg.text or "",
+                    "photo_ids": list(getattr(seg, "photo_ids", []) or []),
                     "zone": (seg.zone or ""),
                     "reps": int(seg.reps or 1),
                     "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
@@ -892,6 +895,7 @@ def week_paste(request, yyyy, mm, dd):
                     text=item.get("text") or "",
                     order=int(item.get("order") or 0),
                 )
+                seg.photo_ids = copy_photo_ids(request, item.get("photo_ids"))
                 seg.zone = (item.get("zone") or "")
                 seg.reps = int(item.get("reps") or 1)
                 seg.distance_m = item.get("distance_m", None)
@@ -1013,6 +1017,7 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
                 "type": seg.type,
                 "order": int(getattr(seg, "order", 0) or 0),
                 "text": seg.text or "",
+                "photo_ids": list(getattr(seg, "photo_ids", []) or []),
                 "zone": (seg.zone or ""),
                 "reps": int(seg.reps or 1),
                 "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
@@ -1104,6 +1109,7 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
             text=item.get("text") or "",
             order=int(item.get("order") or 0),
         )
+        seg.photo_ids = copy_photo_ids(request, item.get("photo_ids"))
         seg.zone = (item.get("zone") or "")
         seg.reps = int(item.get("reps") or 1)
         seg.distance_m = item.get("distance_m", None)
@@ -1141,6 +1147,7 @@ def _week_segment_payload(slot):
         "type": seg.type,
         "order": int(getattr(seg, "order", 0) or 0),
         "text": seg.text or "",
+        "photo_ids": list(getattr(seg, "photo_ids", []) or []),
         "zone": seg.zone or "",
         "reps": int(seg.reps or 1),
         "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
@@ -1223,6 +1230,7 @@ def flex_week_paste(request):
                     text=segment.get("text") or "",
                     order=int(segment.get("order") or 0),
                 )
+                seg.photo_ids = copy_photo_ids(request, segment.get("photo_ids"))
                 seg.zone = segment.get("zone") or ""
                 seg.reps = int(segment.get("reps") or 1)
                 seg.distance_m = segment.get("distance_m")
@@ -1464,6 +1472,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     ):
         return HttpResponse("Only existing training can be edited.", status=403)
 
+    visible_mob = visible_slot.segments.filter(type="MOB").first() if visible_slot else None
+    mob_photos = getattr(visible_mob, "photo_items", [])
     if request.method == "GET":
         wu_seg = visible_slot.segments.filter(type="WU").order_by("order", "id").first() if visible_slot else None
         mob_seg = visible_slot.segments.filter(type="MOB").order_by("order", "id").first() if visible_slot else None
@@ -1488,6 +1498,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": (wu_seg.text if (wu_seg and tb_show_wu) else ""),
                 "mob_text": (mob_seg.text if (mob_seg and tb_show_mob) else ""),
+                "mob_photos": mob_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": str(getattr(mob_seg, "standard_strength_program_id", "") or ""),
                 "sprint_text": (sprint_seg.text if (sprint_seg and tb_show_sprint) else ""),
@@ -1644,6 +1655,19 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         resp["HX-Trigger"] = "closeModal"
         return resp
 
+    kept_photo_ids = list(getattr(visible_mob, "photo_ids", []) or [])
+    removed = set(request.POST.getlist("remove_mob_photo"))
+    kept_photo_ids = [key for key in kept_photo_ids if key not in removed]
+    prepared_photos = []
+    if tb_show_mob and action not in {"save_template", "load_template"}:
+        uploads = request.FILES.getlist("mob_photos")
+        try:
+            if len(kept_photo_ids) + len(uploads) > 5:
+                raise ValueError("You can attach up to 5 photos per training.")
+            prepared_photos = [prepare_photo(upload) for upload in uploads]
+        except ValueError as error:
+            return HttpResponse(escape(str(error)), headers={"HX-Retarget":"#mobPhotoError", "HX-Reswap":"innerHTML"})
+
     # POST: maak slot (base/override)
     original_watch_plan = None
     if (request.POST.get("watch_origin") or "").strip().lower() in {"watch_a", "watch_b", "watch_c", "watch_d"}:
@@ -1707,7 +1731,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                     "tb_show_cd": tb_show_cd,
 
                     "wu_text": wu_text,
-                    "mob_text": mob_text,
+                    "mob_text": mob_text, "mob_photos": mob_photos,
                     "standard_strength_programs": _standard_strength_programs_for_user(request),
                     "selected_standard_strength_id": selected_standard_strength_id,
                     "sprint_text": sprint_text,
@@ -1762,7 +1786,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "tb_show_cd": tb_show_cd,
 
                 "wu_text": wu_text,
-                "mob_text": mob_text,
+                "mob_text": mob_text, "mob_photos": mob_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
@@ -1837,7 +1861,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         )
 
     # validatie: Core, Mob/Tech of Alt moet gevuld zijn
-    has_mob_content = bool(mob_text or selected_standard_strength)
+    has_mob_content = bool(mob_text or selected_standard_strength or kept_photo_ids or prepared_photos)
 
     if not core_text and not has_mob_content and not alt_text:
         return render(
@@ -1854,7 +1878,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "tb_show_cd": tb_show_cd,
 
                 "wu_text": wu_text,
-                "mob_text": mob_text,
+                "mob_text": mob_text, "mob_photos": mob_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
@@ -1897,7 +1921,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "tb_show_cd": tb_show_cd,
 
                 "wu_text": wu_text,
-                "mob_text": mob_text,
+                "mob_text": mob_text, "mob_photos": mob_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
@@ -1975,7 +1999,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "tb_show_cd": tb_show_cd,
 
                 "wu_text": wu_text,
-                "mob_text": mob_text,
+                "mob_text": mob_text, "mob_photos": mob_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
@@ -2037,7 +2061,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if wu_seg:
             wu_seg.delete()
 
-    # Save MOB
+    # Save MOB; binaries are stored once, copies keep private references.
     if has_mob_content:
         if mob_seg:
             mob_seg.order = 1
@@ -2052,6 +2076,13 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     else:
         if mob_seg:
             mob_seg.delete()
+
+    if mob_seg and has_mob_content:
+        for prepared in prepared_photos:
+            photo = TrainingPhoto.objects.create(owner=selected_plan.owner, **prepared)
+            kept_photo_ids.append(str(photo.pk))
+        mob_seg.photo_ids = kept_photo_ids
+        mob_seg.save(update_fields=["photo_ids"])
 
     # Save SPRINT
     if sprint_text:

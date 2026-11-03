@@ -214,3 +214,6 @@ Alternatieve lange intervalbeschrijvingen: complete werk/herstelparen, werk 800�
 
 
 Garmin C/D End HR vervangt het vaste laatste-15s-venster: gemiddelde van geldige HR-samples over de laatste 10% van de gemeten repduur, met minimaal 15 seconden. Bij een rep korter dan 15s wordt Avg HR gebruikt. Samengestelde reps berekenen het venster over alle bijbehorende laps samen, vóór afstandsnormalisatie. Garmin D gebruikt deze waarde voor zijn bestaande 400m-of-50s-zonecontrole. HR-samples met relatieve tijd worden in Watch-loads bewaard. Oud opgeslagen laatste-15s-HR is alleen bruikbaar wanneer het nieuwe venster exact 15s is; langere vensters zonder samples blijven NA.
+
+
+Trainingsfoto’s: maximaal vijf per Mob/Tech-segment, maximaal 15 MB en 40 megapixel per inkomend bestand. Pillow decodeert echte rasterafbeeldingen, draait volgens EXIF, converteert naar JPEG, verkleint tot maximaal 2200px en maakt een thumbnail van maximaal 240px. EXIF/GPS en originele bestandsnamen worden niet opgeslagen. TrainingPhoto bevat privébinaries in de database; TrainingSegment.photo_ids bewaart UUID-referenties. Kopieën delen de onveranderlijke foto en verwijderen alleen hun eigen referentie. Afbeeldingen tellen niet mee als loopafstand.

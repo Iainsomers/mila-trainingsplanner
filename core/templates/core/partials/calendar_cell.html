@@ -93,14 +93,14 @@
               {% endfor %}
               {% if not slot.core_text %}
                 {% for seg in slot.segments.all %}
-                  {% if seg.type == "MOB" and seg.text or seg.type == "MOB" and seg.standard_strength_program %}
+                  {% if seg.type == "MOB" and seg.text or seg.type == "MOB" and seg.standard_strength_program or seg.type == "MOB" and seg.photo_ids %}
                     <div>{% include "core/partials/segment_display.html" with seg=seg %}</div>
                   {% endif %}
                 {% endfor %}
               {% endif %}
             {% else %}
               {% for seg in slot.segments.all %}
-                {% if seg.type != "CORE2" and seg.text or seg.type != "CORE2" and seg.standard_strength_program %}
+                {% if seg.type != "CORE2" and seg.text or seg.type != "CORE2" and seg.standard_strength_program or seg.type != "CORE2" and seg.photo_ids %}
                   {% if seg.type == "CORE" %}
                     <div class="core-line" data-zone="{{ seg.zone|default:'' }}" data-t-type="{{ seg.t_type|default:'' }}"><strong style="color: inherit;">{{ seg.text }}</strong></div>
                   {% else %}

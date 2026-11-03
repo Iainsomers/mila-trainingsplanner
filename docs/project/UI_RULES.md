@@ -230,3 +230,6 @@ Stats-weekbalken tonen Z1 onderaan gevolgd door Z2–Z6 in de AYC-zonekleuren. E
 
 
 DCO Training gebruikt dezelfde gedeelde pillenkleuring als Flex Planner. Progressieve zones (zoals z2>z3), meerdere zones binnen samengestelde reps en T-bereiken krijgen dezelfde diagonale, gelijk verdeelde kleurvlakken. Gewone éénzonepillen behouden hun bestaande achtergrond. Dit geldt voor AM/PM, mobiel en de printweergave.
+
+
+Mob/Tech-foto’s: compacte Add photos-knop, maximaal vijf, thumbnails van 64px onder het tekstveld. De browser biedt foto maken/kiezen waar ondersteund. Iedere bestaande thumbnail heeft bij bewerken een Remove-vinkje; wijzigingen worden met Save opgeslagen. Klikken opent de grote foto met browserzoom. Dezelfde thumbnails staan bij Mob/Tech in de trainingsweergaven en DCO; ze stoppen doorklikken op de achterliggende trainingscel. Bestandsfouten verschijnen bij het veld.

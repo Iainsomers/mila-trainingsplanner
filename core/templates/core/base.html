@@ -211,6 +211,21 @@
     })();
     </script>
     {% endif %}
-  </body>
+  <script>
+window.milaPhotoPreview = function(input) {
+  const box = input.closest('.compact-field').querySelector('[data-photo-preview]');
+  box.querySelectorAll('img').forEach(img => URL.revokeObjectURL(img.src));
+  box.replaceChildren();
+  Array.from(input.files || []).forEach(file => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file); img.alt = 'New training photo';
+    img.style.cssText = 'width:64px;height:64px;object-fit:contain;border:1px solid #dee2e6;border-radius:4px;';
+    const link = document.createElement('a');
+    link.href = img.src; link.target = '_blank'; link.rel = 'noopener'; link.title = 'Open new training photo';
+    link.appendChild(img); box.appendChild(link);
+  });
+};
+</script>
+</body>
 </html>
 

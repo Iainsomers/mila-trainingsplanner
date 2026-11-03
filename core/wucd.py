@@ -84,6 +84,7 @@ def _copy_segment_to_slot(source_seg, target_slot, order):
         text=source_seg.text or "",
         order=order,
     )
+    seg.photo_ids = list(getattr(source_seg, "photo_ids", []) or [])
     seg.zone = source_seg.zone or ""
     seg.reps = int(source_seg.reps or 1)
     seg.distance_m = source_seg.distance_m if source_seg.distance_m is not None else None

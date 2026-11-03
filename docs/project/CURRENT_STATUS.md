@@ -264,3 +264,6 @@ Year Planner: groeps-Basis-periodisering kan weer worden uitgerekt/ingekort en i
 
 
 DCO-meerzonepillen: de Flex-kleurroutine is verplaatst naar een gedeelde templatepartial en wordt nu ook in DCO toegepast. Regressies bewaken Robins z2>z3-voorbeeld, omgekeerde ranges, samengestelde zones, T-ranges en éénzonepillen.
+
+
+Mob/Tech-foto’s toegevoegd in de trainingspopup, met uploadpreview, verwijderen bij Save en privé thumbnails/groot openen. Opslag en verkleinen via Pillow/database; migratie 0140 vereist. Tests dekken upload, invalid files, aantallimiet, toegangsrechten, AYC-persoonlijke kopie, toekomstige bewerkgrens, foto zonder tekst, dagkopie en behoud bij tekstwijziging.

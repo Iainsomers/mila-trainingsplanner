@@ -114,3 +114,6 @@ Een bevoegde coach mag op de Garmin-trainingslijst de Garmin User ID van de gese
 Bevoegde coaches zien in Information Quality het laatste geregistreerde interactieve MiLa-gebruik van hun toegankelijke atleten. Bekijken of bewerken door een coach verandert die atleetactiviteit niet. Atleetregistratie gebruikt dezelfde accountidentificatie als de eigen AYC; er wordt alleen een laatste tijdstip bewaard, geen volledig gedragslog.
 
 Attend volgt de bestaande Race Calendar-rechten: bevoegde coaches bewerken hun toegankelijke atleten en een atleet uitsluitend zichzelf. Een ingestuurde andere atleet-ID verleent geen extra toegang.
+
+
+Mob/Tech-foto’s volgen dezelfde trainingsbewerkrechten, inclusief bestaande AYC-datumgrenzen en extended edit rights. De downloadroute vereist login en een segment dat de foto daadwerkelijk bevat. Coaches zien foto’s uitsluitend uit eigen/toegankelijke plannen; atleten zien uitsluitend eigen overrides of gedeelde plannen die op hen zijn gericht/toegewezen. De privéroute geeft geen openbare opslag-URL en gebruikt private/no-store caching.

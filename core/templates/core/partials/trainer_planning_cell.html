@@ -46,7 +46,7 @@
     {% if slot %}
       <div class="trainer-celltext">
         {% for seg in slot.segments.all %}
-          {% if seg.text or seg.standard_strength_program %}
+          {% if seg.text or seg.standard_strength_program or seg.photo_ids %}
             {% include "core/partials/segment_display.html" with seg=seg %}
           {% endif %}
         {% endfor %}
