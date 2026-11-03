@@ -626,3 +626,19 @@ class AlternatingMediumRepsTests(SimpleTestCase):
             reps = processed_main_reps(slot)
             self.assertEqual([rep['distance_m'] for rep in reps], [400,300]*6 + [300])
             self.assertEqual(reps[-1]['measured_distance_m'],297.53)
+
+    def test_clock_zone_range_includes_middle_zone_and_explicit_rep_identity(self):
+        from types import SimpleNamespace
+        from core.views.calendar import _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+        segment = _virtual_segment_from_text('CORE','7×300 m Z3>Z5 p63')
+        zones = ['5','3','4','3','3','4','3']
+        for source in ['watch_c','watch_d']:
+            loads = [{'segment':'CORE','zone':zone,'meters':300+i,'seconds':70+i} for i,zone in enumerate(zones)]
+            slot = SimpleNamespace(source=source, watch_loads=loads, segments=SimpleNamespace(all=lambda:[segment]))
+            reps = processed_main_reps(slot)
+            self.assertEqual(len(reps),7)
+            self.assertEqual([rep['measured_distance_m'] for rep in reps],list(range(300,307)))
+            for load in loads:
+                load.update(work_rep=True, nominal_rep_m=300, zone='2')
+            self.assertEqual(len(processed_main_reps(slot)),7)

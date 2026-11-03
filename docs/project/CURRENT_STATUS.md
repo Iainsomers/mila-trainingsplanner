@@ -276,3 +276,6 @@ Garmin C/D missen geen 300m-reps meer bij volledige afwisselende 400/300m-opname
 
 
 De exacte 5480m/32:32-regressie bevat zes 400m-reps, zeven 300m-reps, een gesplitst herstel voor de laatste rep en geen eindherstel. De middelgrote-repregel gebruikt 1.4 als relatieve snelheidsgrens (de gemeten hersteljogs vielen net onder 1.5). Alle dertien werkreps blijven in C/D-klokvolgorde staan; er wordt geen ontbrekende 400m-rep bij verzonnen.
+
+
+Klokfix voor gemengde Garmin-reps: de twee Z4-laps binnen 7×300m Z3>Z5 werden ten onrechte overgeslagen doordat alleen bereikseindpunten werden gematcht. Volledige zonebereiken en expliciete nominale repidentiteit zijn hersteld voor C/D; bestaande Watch-trainingen profiteren bij herladen zonder opnieuw importeren.

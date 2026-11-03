@@ -248,6 +248,8 @@ def processed_main_reps(slot):
             continue
 
         expected_zones = set(re.findall(r"\bz\s*([1-6])\b", str(getattr(segment, "text", "") or ""), re.IGNORECASE))
+        for first, last in re.findall(r"\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b", str(getattr(segment, "text", "") or ""), re.IGNORECASE):
+            expected_zones.update(str(zone) for zone in range(min(int(first), int(last)), max(int(first), int(last)) + 1))
         segment_zone = str(getattr(segment, "zone", "") or "").strip()
         if segment_zone:
             expected_zones.add(segment_zone)
@@ -261,7 +263,10 @@ def processed_main_reps(slot):
                     if index not in used_indices
                     and (float(raw_loads[index]["nominal_rep_m"]) == distance
                          if raw_loads[index].get("nominal_rep_m") else abs(meters - distance) <= tolerance)
-                    and (not expected_zones or not zone or zone in expected_zones)
+                    # Explicit structure metadata identifies the rep even if
+                    # model D later assigns a different HR zone to that lap.
+                    and ((raw_loads[index].get("work_rep") is True and raw_loads[index].get("nominal_rep_m"))
+                         or not expected_zones or not zone or zone in expected_zones)
                 ),
                 None,
             )

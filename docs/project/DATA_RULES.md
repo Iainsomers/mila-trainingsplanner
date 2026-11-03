@@ -220,3 +220,6 @@ Trainingsfoto’s: maximaal vijf per Mob/Tech-segment, maximaal 15 MB en 40 mega
 
 
 Afwisselende middelgrote afstandsreps worden apart herkend vóór dominante-afstandsselectie: een volledige reeks werk/herstelparen, minstens vier werkreps, exact twee afwisselende nominale 50m-afstanden. Werk is 275–650m, 50–240s en minstens 2.5m/s; herstelblok maximaal 500m, 30–600s, met werksnelheid minstens 1.4 maal de gemiddelde herstelsnelheid. Aaneengesloten herstel-laps worden samen genomen. Een laatste werkrep mag zonder afsluitend herstel eindigen; één extra gemeten rep van de laatste afstand na de afwisseling blijft behouden. Beide afstanden blijven beschreven met eigen zones en typische herstelduur (herstel vanaf 180s buiten die mediaan). Nominale repkoppeling bewaart alle klokreps in bronvolgorde; gemeten meters/tijden veranderen niet. Onvolledige of niet-aantoonbaar tragere patronen vallen buiten deze regel.
+
+
+Klokreps behandelen zonebereiken inclusief alle tussenliggende zones: Z3>Z5 bevat Z3, Z4 én Z5, ook bij dalende notatie. Voor expliciet bevestigde work_rep/nominal_rep_m-lapkoppelingen is de nominale afstand leidend; een latere HR-zonecorrectie mag de gemeten rep niet uit de klokfilter verwijderen. Zonder die metadata blijft de zonefilter met volledig bereik gelden.
