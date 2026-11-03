@@ -34,14 +34,18 @@ def mixed_short_repetitions(laps, zone_for_lap):
         return None
     prefix = rows[:work[0]]
     long_prefix = [i for i, (m, _) in enumerate(prefix) if m >= 800]
-    if not long_prefix or long_prefix[0] != 0:
+    # A separately recorded Main has no warmup prefix. Only accept a fully
+    # alternating work/recovery recording here; retain ordinary 50m rounding
+    # instead of the lead-in branch's GPS cluster correction.
+    main_only = not prefix and work == list(range(0, len(rows), 2)) and len(rows) == len(work) * 2
+    if not main_only and (not long_prefix or long_prefix[0] != 0):
         return None
     if any(zone_for_lap(laps[i]) not in {'Z1', '', 'NA'} for i in range(work[0])):
         return None
     # Similar automatic splits belong to one warmup. Distinct long laps after
     # one warmup remain separate Main work, even if elapsed pace includes stops.
     long_distances = [rows[i][0] for i in long_prefix]
-    wu_end = work[0] if max(long_distances) <= min(long_distances) * 1.25 else 1
+    wu_end = 0 if main_only else (work[0] if max(long_distances) <= min(long_distances) * 1.25 else 1)
     def distance_label(m):
         return int(math.floor(m / 50 + .5) * 50)
     def zone_label(indices):
@@ -56,7 +60,7 @@ def mixed_short_repetitions(laps, zone_for_lap):
     longer = sorted((rows[i][0], i) for i in work if rows[i][0] >= 100)
     gaps = [(longer[j + 1][0] - longer[j][0], j + 1) for j in range(1, len(longer) - 2)]
     gap, split = max(gaps, default=(0, 0))
-    if gap >= 15:
+    if gap >= 15 and not main_only:
         clusters = [longer[:split], longer[split:]]
         targets = [distance_label(cluster[min(len(cluster) - 1, int(len(cluster) * .75))][0]) for cluster in clusters]
         if targets[1] - targets[0] >= 50:
@@ -82,7 +86,7 @@ def mixed_short_repetitions(laps, zone_for_lap):
     # Keep one clear trailing run as CD; short final recoveries alone are not CD.
     has_cd = any(m >= 500 for m, _ in tail) and all(zone_for_lap(laps[i]) in {'Z1', '', 'NA'}
                   for i in range(cooldown_start, len(rows)))
-    wu = f'{distance_label(sum(m for m, _ in rows[:wu_end]))} m' + zone_label(list(range(wu_end)))
+    wu = (f'{distance_label(sum(m for m, _ in rows[:wu_end]))} m' + zone_label(list(range(wu_end)))) if wu_end else 'none'
     cd = f'{distance_label(cd_m)} m' + zone_label(list(range(cooldown_start, len(rows)))) if has_cd else ''
     main_text = ' + '.join(main)
     return {'description': f'WU: {wu} · Main: {main_text} · CD: {cd or "none"}',

@@ -26,6 +26,29 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_separate_main_uses_only_fast_laps_and_keeps_175m_boundary(self):
+        from core.watch_structure import mixed_short_repetitions
+        pairs = [(184.26,34,192.65,131),(141.84,26,167.39,116),
+                 (180.1,32,197.89,135),(145.47,25,173.94,299),
+                 (177.57,33,192.52,131),(140.4,25,164.22,120),
+                 (182.11,32,192.49,130),(140.18,23,189.06,309),
+                 (177.47,30,193.27,141),(144.15,24,165.09,126),
+                 (174.91,29,196.72,135),(141.53,24,167.27,218)]
+        values = [(m, seconds) for m, seconds, rm, rs in pairs for m, seconds in [(m,seconds),(rm,rs)]]
+        laps = [{"distanceMeters": m, "durationMillis": seconds * 1000,
+                 "zone": "Z4" if i % 2 == 0 else "Z1"} for i, (m, seconds) in enumerate(values)]
+        result = mixed_short_repetitions(laps, lambda lap: lap["zone"])
+        self.assertEqual(result["description"], "WU: none · Main: 5×200 m Z4 p131 + 7×150 m Z4 p123 · CD: none")
+        self.assertEqual(result["work_indices"], list(range(0,24,2)))
+        self.assertEqual(result["work_distances"][20], 150)
+        self.assertEqual(len(result["work_indices"]), 12)
+        self.assertEqual(result["wu_end"], 0)
+        with patch("core.views.polar_raw.lap_zone_paces", side_effect=lambda m, ms, athlete=None: ("Z4" if ms < 60000 else "Z1", "NA")):
+            self.assertEqual(type_b_description(laps), result["description"])
+            self.assertEqual(_model_b_ai_description(laps), result["description"])
+        # An unexplained extra lap is not a complete work/recovery recording.
+        self.assertIsNone(mixed_short_repetitions(laps + [dict(laps[-1])], lambda lap: lap["zone"]))
+
     def test_walking_threshold_and_all_walking_never_restore_plan_distance(self):
         from types import SimpleNamespace
         from core.watch_processing import is_walking_load

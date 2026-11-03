@@ -230,3 +230,5 @@ Gemengde Garmin-opname met 29 laps: een reeks kilometer-aanlooplaps maskeerde de
 Korte gemengde Garmin-trainingen zijn compacter: afstandsgroepen vervangen losse segmenten per rep, met behoud van de klokvolgorde. Josefine-regressie bewaakt 2400m + 4×50m + 6×200m + 6×150m en 1850m CD, inclusief de laatste snelle rep vóór CD. Djamell behoudt zijn gemeten vijf 200m- en vier 150m-reps en twee versnellingen; de afzonderlijke lange stop blijft buiten de werkreps.
 
 Watch-terugwandelen telt niet langer als Z1/hardloopafstand: gemeten laptempo strikt trager dan 10:00/km wordt uitgesloten van AYC-sessie/week- en gedeelde trainingsstatistieken. Bestaande Watch-overname hoeft niet opnieuw geïmporteerd. Stats-cacheversie vernieuwd. Regressies bewaken de exacte grens, andere zones, ongewijzigde ruwe data en nul kilometers zonder planterugval wanneer alle laps wandelen zijn.
+
+Wojtek-regressie: losse opname met twaalf werk/herstelparen wordt 5×200m + 7×150m, inclusief 174.91m als 150m. De uitbreiding is beperkt tot complete afwisselende Main-opnames zonder aanloop; Josefine- en Djamell-regressies blijven slagen.
