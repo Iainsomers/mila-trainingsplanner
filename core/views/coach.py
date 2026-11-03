@@ -5871,6 +5871,12 @@ def garmin_type_c_ayc_view(request):
                 for load in watch_loads:
                     if load.get("segment") == "WU":
                         load["segment"] = "CORE"
+            from core.watch_processing import align_watch_loads, preserve_long_main_laps
+            watch_loads = align_watch_loads(watch_loads, fields.get("wu", ""), fields.get("cd", ""))
+            fields = preserve_long_main_laps(fields, watch_loads)
+            part["training_fields"] = fields
+            if fields.get("main"):
+                part["description"] = f"WU: {fields.get('wu') or 'none'} · Main: {fields['main']} · CD: {fields.get('cd') or 'none'}"
             part["watch_loads"] = watch_loads
             # Detect half-lap recording directly from the measured Garmin/Coros
             # laps. This deliberately runs before the zone-based ordering layer:

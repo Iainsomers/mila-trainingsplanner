@@ -2696,6 +2696,10 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
     if watch_source:
         watch_loads = getattr(slot, "watch_loads", None)
         if isinstance(watch_loads, list):
+            from core.watch_processing import align_watch_loads
+            boundary_text = {str(seg.type).upper(): str(seg.text or "") for seg in slot.segments.all()
+                             if str(seg.type).upper() in {"WU", "CD"}}
+            watch_loads = align_watch_loads(watch_loads, boundary_text.get("WU", ""), boundary_text.get("CD", ""))
             actual = []
             for load in watch_loads:
                 if not isinstance(load, dict):

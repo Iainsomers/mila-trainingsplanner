@@ -38,6 +38,27 @@ class GarminCPushTests(TestCase):
             capture_output=True, text=True, timeout=10)
         self.assertEqual(check.returncode, 0, check.stderr)
 
+    def test_long_work_before_short_reps_is_retained_and_boundaries_are_measured(self):
+        from core.models import GarminActivity
+        values = [(5521, 1785), (44, 680), (2420, 1083), (180, 1156),
+                  (50, 9), (87, 98), (150, 28), (170, 120), (1842, 925)]
+        GarminActivity.objects.create(athlete=self.athlete,
+            activity_start=datetime.fromtimestamp(self.start, dt_timezone.utc), original_filename="anonymous.fit",
+            file_hash="x" * 64, raw_file=b"", parsed_data={
+                "total_distance_m": sum(m for m, _ in values), "total_elapsed_s": sum(s for _, s in values),
+                "laps": [{"distance": m, "elapsed_time": seconds} for m, seconds in values]})
+        fields = {"wu": "5500 m Z1", "main": "4×50 m Z5 p99 + 12×150 m Z4>Z5 p168", "cd": "1850 m Z1"}
+        translated = [{"parts": [{"training_fields": fields, "description": "WU: 5500 m Z1 · Main: " + fields["main"] + " · CD: 1850 m Z1"}]}]
+        with patch("core.views.polar_raw.translate_model_b", return_value=translated):
+            response = self.read_c()
+        self.assertEqual(response.status_code, 200)
+        part = response.json()["results"][0]["parts"][0]
+        self.assertIn("2400 m Z1", part["training_fields"]["main"])
+        self.assertEqual(part["watch_loads"][0]["segment"], "WU")
+        self.assertEqual(part["watch_loads"][-1]["segment"], "CD")
+        self.assertEqual(part["watch_loads"][2]["segment"], "CORE")
+        self.assertEqual(sum(load["meters"] for load in part["watch_loads"]), sum(m for m, _ in values))
+
     def send(self, payload):
         return self.client.post(self.push_url, json.dumps(payload), content_type="application/json")
 

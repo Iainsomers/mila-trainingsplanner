@@ -26,6 +26,30 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_missing_long_block_and_boundary_laps_do_not_invent_distance(self):
+        from types import SimpleNamespace
+        from core.watch_processing import align_watch_loads, preserve_long_main_laps
+        from core.views.calendar import _ayc_slot_loads_for_totals
+        fields = {"wu": "5500 m Z1", "main": "4×50 m Z5 p99 + 12×150 m Z4>Z5 p168", "cd": "1850 m Z1"}
+        values = [(5521.23, 1785, "1"), (44.4902, 680, "1"), (2420.01, 1083, "1"),
+                  (179.91, 1156, "1"), (49.6597, 9, "5"), (86.5801, 98, "1"),
+                  (147.311, 28, "4"), (1842.42, 925, "1")]
+        loads = [{"segment": "CORE", "meters": m, "seconds": seconds, "zone": zone} for m, seconds, zone in values]
+        aligned = align_watch_loads(loads, fields["wu"], fields["cd"])
+        self.assertEqual([load["segment"] for load in aligned], ["WU"] + ["CORE"] * 6 + ["CD"])
+        corrected = preserve_long_main_laps(fields, aligned)
+        self.assertTrue(corrected["main"].startswith("2400 m Z1 + 4×50"))
+        self.assertEqual(preserve_long_main_laps(corrected, aligned), corrected)
+        segments = [SimpleNamespace(type=kind, text=fields[key]) for kind, key in [("WU", "wu"), ("CORE", "main"), ("CD", "cd")]]
+        slot = SimpleNamespace(source="watch_c", watch_loads=loads, segments=SimpleNamespace(all=lambda: segments))
+        total_loads = _ayc_slot_loads_for_totals(slot)
+        self.assertAlmostEqual(sum(load["meters"] for load in total_loads), sum(m for m, _, _ in values))
+        self.assertEqual(len(total_loads), len(values))
+        self.assertEqual(loads[0]["segment"], "CORE")  # read-time repair is non-destructive
+        # Existing descriptions containing long work must not gain duplicate work.
+        existing = dict(fields, main="2400 m Z2 + 4×50 m Z5")
+        self.assertEqual(preserve_long_main_laps(existing, aligned), existing)
+
     def test_split_half_laps_produce_full_rep_times_and_hr(self):
         from types import SimpleNamespace
         from core.watch_processing import processed_main_reps

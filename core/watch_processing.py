@@ -6,6 +6,69 @@ import re
 WATCH_SOURCES = {"watch_a", "watch_b", "watch_c"}
 
 
+def align_watch_loads(loads, wu_text="", cd_text=""):
+    """Match explicit WU/CD to measured boundary laps, never add distance."""
+    result = [dict(load) for load in loads if isinstance(load, dict)]
+    for kind, text, reverse in (("WU", wu_text, False), ("CD", cd_text, True)):
+        match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*m(?:\s+z[1-6])?(?:\s*\([^)]*\))?\s*", str(text), re.I)
+        if not match:
+            if not str(text).strip():
+                for load in result:
+                    if load.get("segment") == kind:
+                        load["segment"] = "CORE"
+            continue
+        target = float(match.group(1))
+        total, candidates = 0, []
+        indices = list(range(len(result)))
+        if reverse:
+            indices.reverse()
+        for index in indices:
+            try:
+                total += float(result[index].get("meters") or 0)
+            except (TypeError, ValueError):
+                break
+            candidates.append((abs(total - target), index))
+            if total > target + 75:
+                break
+        if not candidates:
+            continue
+        error, boundary = min(candidates)
+        if error > 75:
+            continue
+        for index, load in enumerate(result):
+            if load.get("segment") == kind:
+                load["segment"] = "CORE"
+            if (index >= boundary if reverse else index <= boundary):
+                load["segment"] = kind
+    return result
+
+
+def preserve_long_main_laps(fields, loads):
+    """Do not silently omit long Main laps when only short reps were described."""
+    fields = dict(fields)
+    main = str(fields.get("main") or "")
+    distances = re.findall(r"(\d+(?:\.\d+)?)\s*m\b", main, re.I)
+    if not distances or any(float(distance) > 800 for distance in distances):
+        return fields
+    # Only restore leading long work before the short rep sequence; trailing
+    # long laps could be a cooldown and need their own structural evidence.
+    additions = []
+    for load in loads:
+        if load.get("segment") != "CORE":
+            continue
+        meters = float(load.get("meters") or 0)
+        seconds = float(load.get("seconds") or 0)
+        if meters >= 1000:
+            nominal = int((meters + 25) // 50 * 50)
+            zone = str(load.get("zone") or "")
+            additions.append(f"{nominal} m" + (f" Z{zone}" if zone in {"1", "2", "3", "4", "5", "6"} else ""))
+        elif meters >= 25 and seconds > 0 and meters / seconds >= 2.5:
+            break
+    if additions:
+        fields["main"] = " + ".join(additions + [main])
+    return fields
+
+
 def _block_average_hr(loads):
     """Time-weighted lap averages; incomplete HR coverage remains unknown."""
     try:
