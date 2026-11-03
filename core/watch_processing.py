@@ -120,6 +120,17 @@ def structured_segment_loads(segment, raw_loads):
                          "average_hr": _block_average_hr(work[i:i+2]),
                          "average_hr_last_15": work[i+1].get("average_hr_last_15")}
                         for i in range(0, len(work), 2)]
+    from core.watch_structure import kilometre_split_timed_intervals
+    timed = kilometre_split_timed_intervals(laps, lambda lap: "Z" + lap["zone"])
+    if timed and re.match(rf"^\s*{len(timed['blocks'])}\s*[x×*]\s*{timed['minutes']}\s*['′]", text):
+        output = []
+        for indices in timed["blocks"]:
+            block = [loads[i] for i in indices]
+            output.append({"matched_rep": True, "meters": sum(float(load["meters"]) for load in block),
+                "seconds": sum(float(load["seconds"]) for load in block),
+                "average_hr": _block_average_hr(block),
+                "average_hr_last_15": block[-1].get("average_hr_last_15")})
+        return output
     structure = short_sets_and_continuous(laps, lambda lap: "Z" + lap["zone"])
     if not structure:
         continuous = continuous_kilometre_run(laps, lambda lap: "Z" + lap["zone"])
@@ -192,11 +203,12 @@ def processed_main_reps(slot):
             for load in structured:
                 meters, seconds = float(load["meters"]), float(load["seconds"])
                 distance_match = re.search(r"(\d+)\s*m\b", str(segment.text), re.IGNORECASE)
+                target_m = int(distance_match.group(1)) if distance_match else round(meters)
                 output.append({"rep": len(output) + 1,
-                    "distance_m": int(distance_match.group(1)),
+                    "distance_m": target_m,
                     "measured_distance_m": round(meters, 4),
                     "measured_seconds": round(seconds, 4),
-                    "seconds": round(seconds * int(distance_match.group(1)) / meters, 2) if len(structured) > 1 else round(seconds, 2),
+                    "seconds": round(seconds * target_m / meters, 2) if distance_match and len(structured) > 1 else round(seconds, 2),
                     "pace_seconds_per_km": round(seconds * 1000 / meters, 2),
                     "average_hr_last_15": load.get("average_hr_last_15")})
                 output[-1]["average_hr"] = load.get("average_hr")

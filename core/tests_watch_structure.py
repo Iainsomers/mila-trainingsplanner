@@ -26,6 +26,50 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_eight_minute_reps_with_kilometre_autolaps_keep_time_structure(self):
+        from types import SimpleNamespace
+        from core.watch_structure import kilometre_split_timed_intervals
+        from core.watch_processing import processed_main_reps
+        values = [(1011.91,214),(994.44,203),(324.64,63),(340.93,90),
+                  (1004.49,196),(1006.5,204),(455.37,83),(323.65,90),
+                  (1002.56,210),(998.86,187),(387.69,80),(285.79,90),
+                  (1001.21,194),(1007.78,217),(390.689,71),(332.73,92),
+                  (1004.22,206),(998.76,198),(381.851,79),(17.3097,5)]
+        laps = [{"distanceMeters": m, "durationMillis": seconds * 1000,
+                 "zone": "Z1" if i % 4 == 3 else "Z2"} for i, (m, seconds) in enumerate(values)]
+        laps[9]["zone"] = "Z3"
+        result = kilometre_split_timed_intervals(laps, lambda lap: lap["zone"])
+        self.assertEqual(result["description"], "WU: none · Main: 5×8' Z2>Z3 p90 · CD: none")
+        segment = SimpleNamespace(type="CORE", text=result["main"], order=1)
+        loads = [{"segment": "CORE", "meters": lap["distanceMeters"], "seconds": lap["durationMillis"] / 1000,
+                  "zone": lap["zone"][1:], "average_hr": 160, "average_hr_last_15": 170} for lap in laps]
+        slot = SimpleNamespace(source="watch_c", watch_loads=loads, segments=SimpleNamespace(all=lambda: [segment]))
+        reps = processed_main_reps(slot)
+        self.assertEqual([row["seconds"] for row in reps], [480,483,477,482,483])
+        self.assertEqual(len(reps), 5)
+        self.assertEqual(reps[0]["distance_m"], 2331)
+        from core.views.calendar import _ayc_slot_loads_for_totals, _ayc_slot_session_km
+        from core.parser import parse_segment_text
+        parsed = parse_segment_text(result["main"])
+        self.assertEqual(parsed.reps, 5)
+        self.assertEqual(parsed.duration_s, 5 * 480)
+        self.assertAlmostEqual(sum(load["meters"] for load in _ayc_slot_loads_for_totals(slot)), sum(m for m, _ in values))
+        session_km = _ayc_slot_session_km(slot)
+        # Changing zone speeds must never change the measured session distance.
+        for speed in (1, 10):
+            athlete = SimpleNamespace(get_zone_speed_mps=lambda: {str(i): speed for i in range(1,7)})
+            self.assertAlmostEqual(sum(load["meters"] for load in _ayc_slot_loads_for_totals(slot, athlete)), sum(m for m, _ in values))
+            self.assertEqual(_ayc_slot_session_km(slot, athlete), session_km)
+        self.assertTrue(all(row["average_hr"] == 160 and row["average_hr_last_15"] == 170 for row in reps))
+        # Unequal timed efforts and non-recovering continuous laps must fall back.
+        broken = deepcopy(laps)
+        broken[0]["durationMillis"] += 20000
+        self.assertIsNone(kilometre_split_timed_intervals(broken, lambda lap: lap["zone"]))
+        broken = deepcopy(laps)
+        broken[3]["durationMillis"] = 60000
+        broken[3]["zone"] = "Z3"
+        self.assertIsNone(kilometre_split_timed_intervals(broken, lambda lap: lap["zone"]))
+
     def test_separate_main_uses_only_fast_laps_and_keeps_175m_boundary(self):
         from core.watch_structure import mixed_short_repetitions
         pairs = [(184.26,34,192.65,131),(141.84,26,167.39,116),

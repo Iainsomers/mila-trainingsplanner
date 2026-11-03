@@ -232,3 +232,5 @@ Korte gemengde Garmin-trainingen zijn compacter: afstandsgroepen vervangen losse
 Watch-terugwandelen telt niet langer als Z1/hardloopafstand: gemeten laptempo strikt trager dan 10:00/km wordt uitgesloten van AYC-sessie/week- en gedeelde trainingsstatistieken. Bestaande Watch-overname hoeft niet opnieuw geïmporteerd. Stats-cacheversie vernieuwd. Regressies bewaken de exacte grens, andere zones, ongewijzigde ruwe data en nul kilometers zonder planterugval wanneer alle laps wandelen zijn.
 
 Wojtek-regressie: losse opname met twaalf werk/herstelparen wordt 5×200m + 7×150m, inclusief 174.91m als 150m. De uitbreiding is beperkt tot complete afwisselende Main-opnames zonder aanloop; Josefine- en Djamell-regressies blijven slagen.
+
+Nathan-regressie: vijf ongeveer acht minuten durende werkblokken, ieder opgesplitst in 1000+1000+rest met circa 90s herstel, worden als 5×8′ beschreven. Klokreps voegen de drie werklaps samen. Regressies bewaken 480/483/477/482/483s, exacte gemeten sessiemeters onafhankelijk van gewijzigde zonesnelheden en afwijzen van ongelijke tijdsblokken of ontbrekend herstel. Eerdere korte-repherkenning blijft getest.

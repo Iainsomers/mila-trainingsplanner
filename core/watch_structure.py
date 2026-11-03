@@ -3,6 +3,51 @@ import math
 from statistics import median
 
 
+def kilometre_split_timed_intervals(laps, zone_for_lap):
+    """Recognize equal timed efforts split into two kilometre laps + remainder."""
+    if not isinstance(laps, list):
+        return None
+    try:
+        rows = [(float(lap['distanceMeters']), float(lap['durationMillis']) / 1000) for lap in laps]
+    except (KeyError, TypeError, ValueError):
+        return None
+    if any(not math.isfinite(m + s) or m <= 0 or s <= 0 for m, s in rows):
+        return None
+    blocks, recoveries = [], []
+    cursor = 0
+    while cursor + 2 < len(rows):
+        block = rows[cursor:cursor + 3]
+        if not (all(950 <= m <= 1050 for m, _ in block[:2]) and 250 <= block[2][0] <= 600):
+            return None
+        indices = list(range(cursor, cursor + 3))
+        blocks.append(indices)
+        speed = sum(m for m, _ in block) / sum(s for _, s in block)
+        cursor += 3
+        if cursor == len(rows):
+            break
+        m, s = rows[cursor]
+        if cursor == len(rows) - 1 and m <= 50 and s <= 30:
+            cursor += 1
+            break  # final stop remainder
+        if not (100 <= m <= 500 and 60 <= s <= 180 and speed >= 1.2 * m / s
+                and zone_for_lap(laps[cursor]) in {'Z1', '', 'NA'}):
+            return None
+        recoveries.append(s)
+        cursor += 1
+    if cursor != len(rows) or len(blocks) < 3 or len(recoveries) != len(blocks) - 1:
+        return None
+    durations = [sum(rows[i][1] for i in block) for block in blocks]
+    minutes = int(math.floor(median(durations) / 60 + .5))
+    if minutes < 5 or any(abs(s - minutes * 60) > 5 for s in durations):
+        return None
+    zones = sorted({zone_for_lap(laps[i]) for block in blocks for i in block} & {'Z1','Z2','Z3','Z4','Z5'})
+    zone = (' ' + (zones[0] if len(zones) == 1 else zones[0] + '>' + zones[-1])) if zones else ''
+    recovery = int(math.floor(median(recoveries) + .5))
+    main = f"{len(blocks)}×{minutes}'{zone} p{recovery}"
+    return {'description': f'WU: none · Main: {main} · CD: none', 'main': main,
+            'blocks': blocks, 'minutes': minutes, 'cooldown_start': len(rows)}
+
+
 def mixed_short_repetitions(laps, zone_for_lap):
     """Keep short work/recovery laps visible after an easy lead-in.
 

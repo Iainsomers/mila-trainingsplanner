@@ -380,3 +380,5 @@ Gemengde korte Garmin-reps worden compact per nominale afstand gegroepeerd met h
 Gemeten Watch-laps trager dan 10:00 min/km gelden als wandelen en tellen niet mee in zonekilometers, sessieafstand en weektotalen. Precies 10:00 telt nog mee. Ruwe laps, gemeten duur/afstand en HR blijven beschikbaar; ook bestaande Watch-overnames gebruiken deze totalenregel zonder nieuwe import. Dit geldt voor Watch A/B en Garmin C, niet voor berekende geplande trainingen.
 
 Een los opgenomen Main met uitsluitend afwisselende korte werk-/herstelparen gebruikt dezelfde compacte afstandsgroepen, maar behoudt de gewone afronding op 50 m. Een snelle lap onder 175 m blijft hier 150 m; herstel-laps tellen niet als reps. De bestaande herkenning met aanloop en GPS-afstandsclusters blijft ongewijzigd.
+
+Garmin C/Watch B herkennen gelijke tijdsherhalingen die door kilometer-autolaps zijn opgesplitst, bijvoorbeeld 5×8′ p90. De beschrijving blijft tijdsgebaseerd. Het klokje toont per volledige herhaling de opgetelde gemeten tijd, afstand en HR. Sessie- en weekkilometers komen uitsluitend uit de gemeten laps, met de bestaande wandeluitsluiting; zonesnelheden schatten geen extra afstand.

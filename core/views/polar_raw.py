@@ -510,6 +510,9 @@ def type_b_description(laps, athlete=None):
     mixed = _mixed_short_structure(laps, athlete)
     if mixed:
         return mixed["description"]
+    timed = _km_timed_structure(laps, athlete)
+    if timed:
+        return timed["description"]
     continuous = _continuous_km_description(laps, athlete)
     if continuous:
         return continuous
@@ -655,6 +658,12 @@ def _mixed_short_structure(laps, athlete=None):
         lap["distanceMeters"], lap["durationMillis"], athlete)[0])
 
 
+def _km_timed_structure(laps, athlete=None):
+    from core.watch_structure import kilometre_split_timed_intervals
+    return kilometre_split_timed_intervals(laps, lambda lap: lap_zone_paces(
+        lap["distanceMeters"], lap["durationMillis"], athlete)[0])
+
+
 def _continuous_km_description(laps, athlete=None):
     from core.watch_structure import continuous_kilometre_run
     return continuous_kilometre_run(laps, lambda lap: lap_zone_paces(
@@ -676,6 +685,9 @@ def _model_b_ai_description(laps, athlete=None):
     mixed = _mixed_short_structure(laps, athlete)
     if mixed:
         return mixed["description"]
+    timed = _km_timed_structure(laps, athlete)
+    if timed:
+        return timed["description"]
     continuous = _continuous_km_description(laps, athlete)
     if continuous:
         return continuous
