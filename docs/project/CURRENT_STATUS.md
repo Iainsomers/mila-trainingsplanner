@@ -261,3 +261,6 @@ Stats-atleetgrafiek toont nu gestapelde weekafstanden per zone met Z1 onderaan, 
 
 
 Year Planner: groeps-Basis-periodisering kan weer worden uitgerekt/ingekort en in batches opgeslagen. De lockqueries sorteren expliciet op datum, zodat de nullable atleetnaam uit de standaardmodelsortering geen outer join veroorzaakt die PostgreSQL bij SELECT FOR UPDATE weigert. Regressie controleert Basis-opslag, verlengen, inkorten, gescheiden atleetdata en SQL zonder nullable atleetjoin.
+
+
+DCO-meerzonepillen: de Flex-kleurroutine is verplaatst naar een gedeelde templatepartial en wordt nu ook in DCO toegepast. Regressies bewaken Robins z2>z3-voorbeeld, omgekeerde ranges, samengestelde zones, T-ranges en éénzonepillen.

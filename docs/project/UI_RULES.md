@@ -227,3 +227,6 @@ Garmin C/D tonen End HR in de rondetabel en klokpopup; de klok legt uit: laatste
 
 
 Stats-weekbalken tonen Z1 onderaan gevolgd door Z2–Z6 in de AYC-zonekleuren. Een dunne rand houdt het lichte Z1 zichtbaar; de compacte legenda kan afbreken en de grafiek blijft op mobiel horizontaal scrollbaar. Hover toont zonekilometers en het weektotaal.
+
+
+DCO Training gebruikt dezelfde gedeelde pillenkleuring als Flex Planner. Progressieve zones (zoals z2>z3), meerdere zones binnen samengestelde reps en T-bereiken krijgen dezelfde diagonale, gelijk verdeelde kleurvlakken. Gewone éénzonepillen behouden hun bestaande achtergrond. Dit geldt voor AM/PM, mobiel en de printweergave.
