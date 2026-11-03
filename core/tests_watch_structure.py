@@ -26,6 +26,16 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_long_recovery_cannot_truncate_later_work(self):
+        from core.views.polar_raw import type_a_description
+        values = [(2970.31,611),(203.83,106),(3001.14,598),(105.59,283),
+                  (2967.94,591),(117.671,224),(1001.82,184),(131.431,88),(997.329,178),(119.4,295)]
+        laps = [{"distanceMeters": m, "durationMillis": seconds * 1000} for m, seconds in values]
+        with patch("core.views.polar_raw.lap_zone_paces", side_effect=lambda m, ms, athlete=None: ("Z2" if m > 500 else "Z1", "NA")):
+            description = type_a_description(laps)
+        self.assertIn("1000 m", description)
+        self.assertNotIn("Main: 611s", description)
+
     def test_garmin_timed_blocks_show_pace_and_distance_blocks_keep_rep_times(self):
         from types import SimpleNamespace
         from core.views.calendar import _watch_actual_time_label, _virtual_segment_from_text

@@ -5937,6 +5937,8 @@ def garmin_type_c_ayc_view(request, model="C"):
                     "display_candidate": display_candidate,
                     "final_main": final_main,
                 }
+    from core.watch_alternatives import add_training_alternatives
+    add_training_alternatives(results)
     if model == "D":
         from core.garmin_d import apply_garmin_d
         results = apply_garmin_d(results, athlete)

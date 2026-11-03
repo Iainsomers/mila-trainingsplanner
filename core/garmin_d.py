@@ -117,5 +117,11 @@ def apply_garmin_d(results, athlete):
                 row['pace_z_pace'] = row.get('z_pace')
                 if str(load.get('zone')) in {'1','2','3','4','5'}:
                     row['z_pace'] = 'Z' + str(load['zone'])
+            if part.get('training_alternatives'):
+                converted = []
+                for alternative in part['training_alternatives']:
+                    candidate = {**alternative, 'watch_loads': deepcopy(original)}
+                    converted.append({**apply_garmin_d([{'parts':[candidate]}], athlete)[0]['parts'][0], 'label': alternative['label']})
+                part['training_alternatives'] = converted
             part['analysis_note'] = 'D: Last 15s HR takes precedence at 400 m or 50 s; otherwise pace zones apply. Reconstructed reps use their final lap HR. Missing HR or configured limits keeps the pace zone.'
     return results

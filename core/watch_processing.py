@@ -120,6 +120,15 @@ def structured_segment_loads(segment, raw_loads):
                          "average_hr": _block_average_hr(work[i:i+2]),
                          "average_hr_last_15": work[i+1].get("average_hr_last_15")}
                         for i in range(0, len(work), 2)]
+    from core.watch_alternatives import long_interval_options
+    alternatives = long_interval_options(laps, lambda lap: "Z" + lap["zone"])
+    if alternatives:
+        match_time = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*['′]", text)
+        if match_time:
+            for group in alternatives["groups"]:
+                minutes = round(sum(float(loads[i]["seconds"]) for i in group) / len(group) / 60)
+                if len(group) == int(match_time.group(1)) and minutes == int(match_time.group(2)):
+                    return [dict(loads[i], matched_rep=True) for i in group]
     from core.watch_structure import kilometre_split_timed_intervals
     timed = kilometre_split_timed_intervals(laps, lambda lap: "Z" + lap["zone"])
     if timed and re.match(rf"^\s*{len(timed['blocks'])}\s*[x×*]\s*{timed['minutes']}\s*['′]", text):

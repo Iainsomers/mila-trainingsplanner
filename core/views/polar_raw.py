@@ -220,6 +220,8 @@ def type_a_description(laps, athlete=None):
         and len(timed_recoveries) >= len(timed_work) - 1
         and timed_work[0]["rounded_m"] <= distance_median * 1.7
         and timed_work[0]["duration_s"] <= duration_median * 1.7
+        # A long recovery must not make a prefix look like the whole session.
+        and not any(row["rounded_m"] >= 400 for row in parsed[cursor:])
     )
     if looks_like_timed_blocks:
         def timed_label(row):

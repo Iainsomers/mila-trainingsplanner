@@ -217,3 +217,5 @@ Bij Garmin C én D tonen Main-blokken op tijd (minuten/seconden) achter de train
 De vier losse dagelijkse-vitaltabs zijn samengevoegd tot Daily vitals; HR zones blijft apart. De compacte tabel heeft Athlete plus vier vitalkolommen met gemiddelde (low–high). Ranges staan gedempt tussen haakjes. De bestaande table-responsive-container houdt het overzicht op mobiel horizontaal scrollbaar. Show NA blijft bij tabwisselen behouden.
 
 Camp details: Comments staat direct na Accommodation, als compact tekstvak van één regel dat verticaal vergroot kan worden. De kolom is sorteerbaar en blijft onderdeel van de horizontaal scrollbare deelnemerstabel op mobiel.
+
+Bij dubbelzinnige lange Garmin-intervalgroepen staan twee compacte knoppen Distance en Time boven de gegenereerde beschrijving, met de actieve keuze gevuld. Wisselen past de preview en de Use AM/PM-inhoud aan en verwijdert een eerder gecombineerde preview, zodat geen verouderde keuze wordt opgeslagen. De knoppen lopen op mobiel naar een volgende regel door.

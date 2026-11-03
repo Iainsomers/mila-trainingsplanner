@@ -2580,6 +2580,29 @@
           descriptionText.textContent = (part.description_label || "Description") + ": " + part.description;
           description.appendChild(descriptionText);
           var fields = part.training_fields || {};
+          if ((part.training_alternatives || []).length > 1) {
+            var alternatives = document.createElement("div");
+            alternatives.className = "d-flex flex-wrap gap-1 mb-2";
+            var hint = document.createElement("span"); hint.className = "small text-muted me-2";
+            hint.textContent = "Both distance and time fit these laps. Choose:";
+            alternatives.appendChild(hint);
+            part.training_alternatives.forEach(function(option, index) {
+              var choice = document.createElement("button"); choice.type = "button";
+              choice.className = "btn btn-sm " + (index === 0 ? "btn-primary" : "btn-outline-primary");
+              choice.textContent = option.label;
+              choice.addEventListener("click", function() {
+                fields = option.training_fields;
+                part.training_fields = fields; part.watch_loads = option.watch_loads;
+                part.description = option.description;
+                descriptionText.textContent = "Generated description: " + option.description;
+                combinedHost.innerHTML = "";
+                alternatives.querySelectorAll("button").forEach(function(button) { button.className = "btn btn-sm btn-outline-primary"; });
+                choice.className = "btn btn-sm btn-primary";
+              });
+              alternatives.appendChild(choice);
+            });
+            box.appendChild(alternatives);
+          }
           if (fields.main) {
             var actions = document.createElement("div");
             actions.className = "d-flex flex-wrap gap-1 flex-shrink-0";
