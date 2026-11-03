@@ -2944,6 +2944,9 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(first_range.camp_comments, "Late arrival\nPlease keep dinner")
         detail = self.client.get("/planning/detailed-camps/camp/?camp=font+r")
         self.assertContains(detail, 'name="camp_comments"')
+        self.assertContains(detail, 'aria-label="Row number"')
+        for number in range(1, len(detail.context["camp"]["participants"]) + 1):
+            self.assertContains(detail, f'<td data-camp-row-number>{number}</td>', count=1)
         self.assertContains(detail, "Comments")
         self.assertContains(detail, "Please keep dinner")
 

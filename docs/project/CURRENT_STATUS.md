@@ -250,3 +250,5 @@ Staff Team Overview bundelt Sleep length, Sleep quality, Morning HR en HRV in é
 Camp details heeft Comments na Accommodation, met automatische opslag en bestaande deelnemerrechten en Copy/Paste. Migratie 0139 voegt camp_comments toe aan de whereabout. Gerichte coach-/atleetopslagtests en toegangsregressie slagen.
 
 Kane-regressie: lange herstelpauze liet de oorspronkelijke herkenning na twee werkblokken stoppen en verborg een derde circa 3000m-lap en twee 1000m-laps. Prefixafkapping is geblokkeerd. Voor deze complete herhaalde werk/herstelreeks verschijnen nu Distance (3×3000m + 2×1000m) en Time (3×10′ + 2×3′), beide met alle meetgegevens en C/D-zoneverwerking. Tests bewaken beide previews, vijf klokreps en identieke meetkilometers.
+
+Camp details heeft een doorlopende rijtelling voor alle deelnemers, inclusief coaches. De nummers worden na iedere sortering opnieuw vanaf 1 bepaald; geen model- of identiteitswijziging.
