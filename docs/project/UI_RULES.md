@@ -208,7 +208,7 @@ Garmin C toont bij bruikbare activiteiten een Combine-vinkje en compacte WU/Main
 
 Garmin Combine blijft zichtbaar bij bruikbare lapdata zonder herkende trainingsstructuur. Zo’n activiteit biedt WU en CD, met Main uitgeschakeld; standaard wordt WU gekozen.
 
-Garmin D staat naast Garmin C in de evaluatiepopup en gebruikt dezelfde compacte/mobile bediening. De D-tabel toont Pace Zx naast de effectieve Zx en Last 15s HR. Een korte toelichting benoemt de grens 400m of 50s en fallback bij ontbrekende HR/limieten. Opgeslagen D-resultaten tonen Garmin D bij het klokje en ondersteunen dezelfde p/w-wissel en combineren.
+Garmin D staat naast Garmin C in de evaluatiepopup en gebruikt dezelfde compacte/mobile bediening. De D-tabel toont Pace Zx naast HR Zx (kolom 7, de effectieve zone) en End HR. Een korte toelichting benoemt de grens 400m of 50s en fallback bij ontbrekende HR/limieten. Opgeslagen D-resultaten tonen Garmin D bij het klokje en ondersteunen dezelfde p/w-wissel en combineren.
 
 Garmin C en D tonen bij gemeten WU/CD alleen het gemiddelde tempo in min/km: totale gemeten duur gedeeld door totale gemeten afstand. Deel-/laptijden en temporanges verschijnen daar niet meer achter. De Main-repweergave en klokdetails blijven behouden.
 

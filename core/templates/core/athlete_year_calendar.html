@@ -2477,7 +2477,7 @@
     var head = document.createElement("tr");
     var headers = ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km"];
     if (showPaceZone) headers.push("Pace Zx");
-    headers.push("Zx", "Tx", "Avg HR");
+    headers.push(showPaceZone ? "HR Zx" : "Zx", "Tx", "Avg HR");
     if (showLast15Hr) headers.push(useEndHr ? "End HR" : "Last 15s HR");
     headers.forEach(function(label) {
       var cell = document.createElement("th"); cell.textContent = label; head.appendChild(cell);
