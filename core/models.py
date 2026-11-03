@@ -1122,7 +1122,7 @@ class TrainingSegment(models.Model):
     @property
     def photo_items(self):
         from django.urls import reverse
-        return [{"id": key, "url": reverse("training_photo", args=[self.pk, key])}
+        return [{"id": key, "url": reverse("training_slot_photo", args=[self.slot_id, key])}
                 for key in self.photo_ids] if self.pk else []
 
 

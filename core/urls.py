@@ -1,4 +1,4 @@
-from core.views.training_photos import training_photo
+from core.views.training_photos import training_photo, training_slot_photo
 from core.views.polar_raw import polar_raw_view
 from django.urls import path
 from django.contrib.auth import views as auth_views
@@ -124,6 +124,7 @@ from core.views.oura import oura_connect_view, oura_callback_view, oura_disconne
 
 
 urlpatterns = [
+    path("training-photos/slot/<int:slot_id>/<uuid:photo_id>/", training_slot_photo, name="training_slot_photo"),
     path("training-photos/<int:segment_id>/<uuid:photo_id>/", training_photo, name="training_photo"),
     path("coach/garmin/<int:athlete_id>/activities/", garmin_athlete_activities_view, name="garmin_athlete_activities"),
     path("integrations/garmin/activities/<str:key>/", garmin_activity_push_view, name="garmin_activity_push"),

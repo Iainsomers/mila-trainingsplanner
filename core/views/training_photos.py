@@ -7,7 +7,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 
-from core.models import TrainingPhoto, TrainingSegment
+from core.models import TrainingPhoto, TrainingSegment, TrainingSlot, Athlete
 from .athlete_identity import _athlete_for_user, _is_ayc_coach_user
 from .common import _filter_owned
 
@@ -40,9 +40,24 @@ def training_photo(request, segment_id, photo_id):
     segment = get_object_or_404(TrainingSegment.objects.select_related('slot__plan'), pk=segment_id, type='MOB')
     if str(photo_id) not in segment.photo_ids:
         raise Http404
-    slot = segment.slot
+    return _serve_photo(request, segment.slot, photo_id)
+
+
+@login_required
+@require_GET
+def training_slot_photo(request, slot_id, photo_id):
+    slot = get_object_or_404(TrainingSlot.objects.select_related("plan"), pk=slot_id)
+    if not any(str(photo_id) in segment.photo_ids for segment in slot.segments.filter(type="MOB")):
+        raise Http404
+    return _serve_photo(request, slot, photo_id)
+
+
+def _serve_photo(request, slot, photo_id):
     if _is_ayc_coach_user(request.user):
-        allowed = _filter_owned(type(slot.plan).objects.all(), request.user).filter(pk=slot.plan_id).exists()
+        if slot.athlete_id:
+            allowed = _filter_owned(Athlete.objects.all(), request.user).filter(pk=slot.athlete_id).exists()
+        else:
+            allowed = _filter_owned(type(slot.plan).objects.all(), request.user).filter(pk=slot.plan_id).exists()
     else:
         athlete = _athlete_for_user(request.user)
         # A trainer-plan assignment is specific to the effective base block,

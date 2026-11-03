@@ -75,12 +75,39 @@ class TrainingPhotoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         own = TrainingSlot.objects.get(athlete=self.athlete, date=self.day, slot_index=1).segments.get(type='MOB')
         self.assertEqual(len(own.photo_ids), 2)
+        self.assertEqual(self.client.get(own.photo_items[0]['url']).status_code, 200)
         self.assertEqual(self.slot.segments.get(type='MOB').photo_ids, original.photo_ids)
         response = self.client.post(f'/athlete/year/?year={self.day.year}', {
             'date':self.day.isoformat(), 'slot_index':'1', 'slot_text':'Strength',
             'plan':self.plan.pk, 'mob_text':'My strength', 'remove_mob_photo':own.photo_ids})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(own.slot.segments.get(type='MOB').photo_ids, [])
+
+    def test_photo_link_survives_ayc_segment_recreation(self):
+        self.upload()
+        self.client.force_login(self.login)
+        payload = {'date':self.day.isoformat(), 'slot_index':'1', 'slot_text':'Strength',
+                   'plan':self.plan.pk, 'mob_text':'My strength'}
+        url = f'/athlete/year/?year={self.day.year}'
+        self.client.post(url, payload)
+        slot = TrainingSlot.objects.get(athlete=self.athlete, date=self.day, slot_index=1)
+        segment = slot.segments.get(type='MOB')
+        photo_url = segment.photo_items[0]['url']
+        self.client.post(url, dict(payload, mob_text='Changed notes'))
+        self.assertNotEqual(slot.segments.get(type='MOB').pk, segment.pk)
+        self.assertEqual(self.client.get(photo_url).status_code, 200)
+        self.assertEqual(self.client.get(photo_url + '?thumb=1').status_code, 200)
+
+    def test_coach_can_read_own_athlete_photo_in_personal_plan(self):
+        seg = self.upload()
+        other = get_user_model().objects.create_user(username='personal-plan-owner')
+        self.slot.plan = TrainingPlan.objects.create(owner=other, name='Personal plan')
+        self.slot.athlete = self.athlete
+        self.slot.save()
+        url = seg.photo_items[0]['url']
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.client.force_login(other)
+        self.assertEqual(self.client.get(url).status_code, 404)
 
     def test_invalid_photo_and_limit_do_not_replace_training(self):
         seg = self.upload()

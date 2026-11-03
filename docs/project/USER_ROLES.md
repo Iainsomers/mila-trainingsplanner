@@ -117,3 +117,6 @@ Attend volgt de bestaande Race Calendar-rechten: bevoegde coaches bewerken hun t
 
 
 Mob/Tech-foto’s volgen dezelfde trainingsbewerkrechten, inclusief bestaande AYC-datumgrenzen en extended edit rights. De downloadroute vereist login en een segment dat de foto daadwerkelijk bevat. Coaches zien foto’s uitsluitend uit eigen/toegankelijke plannen; atleten zien uitsluitend eigen overrides of gedeelde plannen die op hen zijn gericht/toegewezen. De privéroute geeft geen openbare opslag-URL en gebruikt private/no-store caching.
+
+
+Foto’s in een persoonlijk trainingsslot volgen coachtoegang tot de betreffende atleet, ook als de eigenaar van het opslagplan verschilt. Alleen eigenaar zijn van zo’n opslagplan geeft geen toegang tot foto’s van een ontoegankelijke atleet. Gedeelde trainingsfoto’s blijven de plantoegang volgen.

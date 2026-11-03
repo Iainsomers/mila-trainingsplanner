@@ -167,3 +167,6 @@ YearPlannerEntry heeft standaard ordering via athlete__name. Gebruik bij select_
 
 
 Mob/Tech-foto’s vereisen Pillow==13.0.0 en migratie 0140_trainingsegment_photo_ids_trainingphoto. Binaries staan in de productiedatabase (dus geen vluchtige Render-schijf of extra storage-account). Dag/weekkopieën en snapshots bewaren alleen UUID-referenties; kopieer nooit de foto-bytes naar sessies of JSON. Gerichte tests: core.tests_training_photos en core.tests_watch_plan. AYC verstuurt eigen multipart-FormData; Trainer/Flex gebruikt hx-encoding=multipart/form-data. Beide opslagroutes moeten foto’s behouden.
+
+
+Genereer fotolinks via training_slot_photo (slot-id + foto-UUID), niet via de vluchtige segment-id. De route controleert steeds de actuele MOB-segmenten van dat slot. Coachrechten voor persoonlijke slots volgen de atleet; gedeelde slots volgen het plan. De oude segmentroute blijft beschikbaar voor nog bestaande segmenten.

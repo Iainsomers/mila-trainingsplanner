@@ -267,3 +267,6 @@ DCO-meerzonepillen: de Flex-kleurroutine is verplaatst naar een gedeelde templat
 
 
 Mob/Tech-foto’s toegevoegd in de trainingspopup, met uploadpreview, verwijderen bij Save en privé thumbnails/groot openen. Opslag en verkleinen via Pillow/database; migratie 0140 vereist. Tests dekken upload, invalid files, aantallimiet, toegangsrechten, AYC-persoonlijke kopie, toekomstige bewerkgrens, foto zonder tekst, dagkopie en behoud bij tekstwijziging.
+
+
+Mob/Tech-fotolinks zijn nu gekoppeld aan de stabiele TrainingSlot-id. AYC maakt segmenten bij opslaan opnieuw aan; oude segmentlinks konden daardoor 404 geven. Persoonlijke foto’s volgen coachtoegang tot de atleet, ook bij een persoonlijk plan met een andere eigenaar. Tests dekken herhaald opslaan met dezelfde foto-URL, thumbnails en deze toegangsgrens.
