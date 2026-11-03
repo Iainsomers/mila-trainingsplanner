@@ -26,6 +26,25 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_garmin_timed_blocks_show_pace_and_distance_blocks_keep_rep_times(self):
+        from types import SimpleNamespace
+        from core.views.calendar import _watch_actual_time_label, _virtual_segment_from_text
+        for source in ("watch_c", "watch_d"):
+            slot = SimpleNamespace(source=source)
+            for text in ("5×8' Z2 p90", '5×50s Z2 p90'):
+                segment = _virtual_segment_from_text("CORE", text)
+                segment.slot = slot
+                loads = [{"matched_rep": True, "meters": 2400, "seconds": 483},
+                         {"matched_rep": True, "meters": 2400, "seconds": 477}]
+                self.assertEqual(_watch_actual_time_label(loads, segment), "3:21-->3:19 min/km")
+            segment = _virtual_segment_from_text("CORE", "5×500m Z2 p90")
+            segment.slot = slot
+            loads = [{"matched_rep": True, "meters": 500, "seconds": 100},
+                     {"matched_rep": True, "meters": 500, "seconds": 105}]
+            label = _watch_actual_time_label(loads, segment)
+            self.assertIn("1:45-->1:40", label)
+            self.assertIn("3:30-->3:20 min/km", label)
+
     def test_garmin_warmup_and_cooldown_show_only_weighted_average_pace(self):
         from types import SimpleNamespace
         from core.views.calendar import _watch_actual_time_label, _annotate_slot_segment_display_times

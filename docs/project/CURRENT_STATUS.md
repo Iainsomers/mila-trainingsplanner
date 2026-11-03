@@ -242,3 +242,5 @@ Garmin-opname van circa 1480m met twee laps was onterecht niet combineerbaar doo
 Garmin D toegevoegd als afzonderlijk model met dezelfde C-structuur en gemeten kilometers, maar HR-zonecontrole vanaf 400m of 50s. Nathan-regressie maakt 5×8′ Z2 van de C-zone Z2>Z3 op basis van de eind-HR per volledig blok. Grenswaarden, ontbrekende data, korte reps, meetafstand, toegang en Watch/Plan-rondegang zijn getest. Migratie 0138 voegt watch_d als bronkeuze toe.
 
 WU/CD-weergave in Garmin C én D vereenvoudigd tot één afstandgewogen gemiddeld tempo; geen deel-tijdranges of deel-temporanges meer in de kalenderpillen. Dit geldt direct voor bestaande overnames. De blijvende afspraak dat algemene Garmin-wijzigingen beide modellen volgen staat in AGENTS.md.
+
+Garmin C/D-weergave afgestemd op trainingsbasis: tijdsblokken tonen alleen tempo, afstandsblokken reptijd plus tempo. Dit werkt bij bestaande opgeslagen Watch-trainingen door de pagina opnieuw te laden. Regressies testen minuten, seconden en afstandsreps in beide modellen.

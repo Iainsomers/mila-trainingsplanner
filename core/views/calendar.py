@@ -2467,6 +2467,9 @@ def _watch_actual_time_label(actual_loads, seg=None):
             pace_values.append(seconds / (meters / 1000.0))
     duration_label = _format_rep_time_range(duration_values)
     pace_label = _format_min_km_range(pace_values)
+    if (str(getattr(getattr(seg, "slot", None), "source", "")) in {"watch_c", "watch_d"}
+            and not expected_distances and getattr(seg, "duration_s", None)):
+        return pace_label
     if duration_label and pace_label:
         return f"{duration_label} ({pace_label})"
     return pace_label or duration_label
