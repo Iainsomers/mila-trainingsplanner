@@ -679,7 +679,7 @@ def _continuous_km_description(laps, athlete=None):
         lap["distanceMeters"], lap["durationMillis"], athlete)[0])
 
 
-def _model_b_ai_description(laps, athlete=None):
+def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
     """Ask the language model to identify nested interval structure for Watch B.
 
     The model only proposes structure from compact numeric lap facts.  The
@@ -749,11 +749,23 @@ def _model_b_ai_description(laps, athlete=None):
             " Equal 500 m or kilometre laps alone are not interval evidence. Require repeated "
             "work/recovery transitions, repeated timer pauses or workout-step markers. "
             "One or two isolated stops during a long easy run do not establish intervals. "
+            "Prefer lap_structure whenever reps span multiple automatic laps or multiple time groups exist. "
+            "Assign every lap exactly once to warmup_laps, cooldown_laps, recovery_laps, stop_laps or a rep. "
+            "Each rep is a consecutive list of original one-based lap numbers. Do not sum over a recovery. "
+            "A long nearly stationary lap is a stop, not an interval or work distance. "
+            "For example 215s + 211s + 56s without recovery can form one 8-minute rep; "
+            "another 481s lap can be its second rep. A later 253s rep can belong to a group near 4 minutes. "
+            "Propose whole-minute target_seconds; counts, distances, zones and pauses will be derived in code. "
             "Low zones support an easy run but never prove it. Timer duration excludes "
             "pauses; missing timer data is unknown, not zero pause."
         ),
         "laps": facts,
         "output_schema": {
+            "lap_structure": {
+                "warmup_laps": ["lap number"], "cooldown_laps": ["lap number"],
+                "recovery_laps": ["lap number"], "stop_laps": ["lap number"],
+                "groups": [{"target_seconds":"whole-minute duration in seconds", "reps":[["consecutive lap numbers"]]}],
+            },
             "warmup_m": "integer or null",
             "cooldown_m": "integer or null",
             "sets": "positive integer",
@@ -763,17 +775,27 @@ def _model_b_ai_description(laps, athlete=None):
             "confidence": "number from 0 to 1",
         },
     }
+    if not allow_lap_structure:
+        prompt["output_schema"].pop("lap_structure", None)
+        task = prompt["task"]
+        first, last = task.index("Prefer lap_structure"), task.index("Low zones support")
+        prompt["task"] = task[:first] + task[last:]
     body = json.dumps({
         "model": (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip(),
         "temperature": 0.1,
         "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": (
+                ("Use the legacy segments/sets schema only. " if not allow_lap_structure else "") +
                 "You are a conservative running-workout structure recognizer. "
                 "Return only valid JSON matching the requested schema. Use measured "
-                "lap facts, never invent distances, counts or a cooldown. The segments "
-                "describe one repeated set; sets describes how many times that sequence "
-                "is repeated. Use null for unknown recovery."
+                "lap facts, never invent distances, counts or a cooldown. Prefer lap_structure "
+                "for long time intervals: every source lap must appear exactly once, reps "
+                "contain consecutive original lap numbers and groups are chronological. "
+                "Use the legacy segments/sets schema only when a lap-based time-group "
+                "proposal is unsuitable; those segments describe one repeated set. "
+                "Use null for unknown recovery. If uncertain, lower confidence rather than "
+                "discarding inconvenient laps or inventing a workout."
             )},
             {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
         ],
@@ -792,6 +814,12 @@ def _model_b_ai_description(laps, athlete=None):
 
     if not isinstance(data, dict):
         return ""
+    if "lap_structure" in data:
+        if not allow_lap_structure:
+            return ""
+        from core.watch_ai_structure import validate_lap_structure, ValidatedDescription
+        structure = validate_lap_structure(data, facts)
+        return ValidatedDescription(structure) if structure else ""
     try:
         sets = int(data.get("sets") or 1)
         warmup_m = int(data["warmup_m"]) if data.get("warmup_m") is not None else 0
@@ -1063,7 +1091,7 @@ def translate(payload, interval, mode="A", athlete=None):
     return result
 
 
-def translate_model_b(payload, interval, athlete=None, *, allow_ai=True):
+def translate_model_b(payload, interval, athlete=None, *, allow_ai=True, allow_lap_structure=False):
     """Model B starts as an isolated copy of the stable Model A output.
 
     Keep this entry point separate so future Model B recognition changes do
@@ -1092,9 +1120,11 @@ def translate_model_b(payload, interval, athlete=None, *, allow_ai=True):
             laps_container = laps_container if isinstance(laps_container, dict) else {}
             manual_laps = laps_container.get("laps") or laps_container.get("manualLaps") or laps_container.get("manual-laps") or []
             if manual_laps:
-                description = (_model_b_ai_description(manual_laps, athlete) if allow_ai else "") or type_b_description(manual_laps, athlete)
+                description = (_model_b_ai_description(manual_laps, athlete, allow_lap_structure=allow_lap_structure) if allow_ai else "") or type_b_description(manual_laps, athlete)
                 if description:
-                    result_parts[result_index]["description"] = description
+                    if getattr(description, "structure", None):
+                        result_parts[result_index]["validated_lap_structure"] = description.structure
+                    result_parts[result_index]["description"] = str(description)
                     result_parts[result_index]["description_label"] = "Generated description"
                     result_parts[result_index]["training_fields"] = type_a_training_fields(description)
             result_index += 1

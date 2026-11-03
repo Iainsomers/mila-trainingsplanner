@@ -97,6 +97,23 @@ def structured_segment_loads(segment, raw_loads):
         return None
     loads = [load for load in raw_loads if isinstance(load, dict) and not load.get("combined_outer")
              and str(load.get("segment") or "CORE").upper() in {"CORE", "CD"}]
+    ai_groups = {}
+    for load in loads:
+        if (all(type(load.get(key)) is int for key in ("ai_rep", "ai_group", "ai_target_seconds", "ai_nominal_m"))
+                and load["ai_rep"] > 0 and load["ai_group"] >= 0
+                and load["ai_target_seconds"] > 0 and load["ai_nominal_m"] > 0):
+            ai_groups.setdefault(load["ai_group"], {}).setdefault(load["ai_rep"], []).append(load)
+    for reps in ai_groups.values():
+        first = next(iter(reps.values()))[0]
+        text = str(getattr(segment, "text", "") or "")
+        distance = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*m\b", text, re.I)
+        timed = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*['′]", text)
+        matches = (distance and int(distance[1]) == len(reps) and int(distance[2]) == first["ai_nominal_m"]
+                   or timed and int(timed[1]) == len(reps) and int(timed[2])*60 == first["ai_target_seconds"])
+        if matches:
+            return [{"matched_rep":True, "meters":sum(float(l["meters"]) for l in block),
+                     "seconds":sum(float(l["seconds"]) for l in block),
+                     "average_hr":_block_average_hr(block), "hr_tail":tail_hr(block)} for block in reps.values()]
     try:
         laps = [{"distanceMeters": float(load.get("meters") or 0),
                  "durationMillis": float(load.get("seconds") or 0) * 1000,

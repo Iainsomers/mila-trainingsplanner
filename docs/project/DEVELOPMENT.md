@@ -170,3 +170,6 @@ Mob/Tech-foto’s vereisen Pillow==13.0.0 en migratie 0140_trainingsegment_photo
 
 
 Genereer fotolinks via training_slot_photo (slot-id + foto-UUID), niet via de vluchtige segment-id. De route controleert steeds de actuele MOB-segmenten van dat slot. Coachrechten voor persoonlijke slots volgen de atleet; gedeelde slots volgen het plan. De oude segmentroute blijft beschikbaar voor nog bestaande segmenten.
+
+
+Nieuwe AI-lapvoorstellen in polar_raw worden door core/watch_ai_structure.py gevalideerd voordat Garmin C/D ze gebruiken. Het bestaande API-verzoek bevat alleen numerieke lapfeiten en markers; geen extra HR/GPS/persoonsgegevens. Geen extra AI-aanroep of scopes. Unit/integratietests core.tests_watch_ai_structure gebruiken gemockte AI-responses, inclusief consent-uitgeschakeld, kwaadaardige/ongeldige indelingen, twee previews, zes klokreps en onveranderde meetkilometers. De oudere AI-responsevorm blijft compatibel; zonder geldig voorstel volgt vaste herkenning.

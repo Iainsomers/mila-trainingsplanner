@@ -223,3 +223,6 @@ Afwisselende middelgrote afstandsreps worden apart herkend vóór dominante-afst
 
 
 Klokreps behandelen zonebereiken inclusief alle tussenliggende zones: Z3>Z5 bevat Z3, Z4 én Z5, ook bij dalende notatie. Voor expliciet bevestigde work_rep/nominal_rep_m-lapkoppelingen is de nominale afstand leidend; een latere HR-zonecorrectie mag de gemeten rep niet uit de klokfilter verwijderen. Zonder die metadata blijft de zonefilter met volledig bereik gelden.
+
+
+AI-lapstructuur: minimaal 0.75 confidence; elke bronlap exact één keer toegewezen aan WU, CD, herstel, stop of werkrep. Werkrep bestaat uit opeenvolgende lapnummers, met minimaal 2m/s per lap; groepen hebben 2–30 reps met hele-minutendoel 120–1800s. Gemeten repduur mag maximaal 15s of 6% afwijken. Herstel tussen reps is 30–600s, maximaal 600m en minimaal 1.4 keer trager dan beide aangrenzende reps. Stop is minimaal 600s met minder dan 1m/s; WU/CD mogen geen langzame stop bevatten. Afstandsoptie volgt groepsmediaan op 100m afgerond, binnen 8% voor elke rep. Alle labels/zones/pauzes worden uit bronfeiten afgeleid, geen door AI bedachte meters. Unieke groepsbinding voorkomt dubbelzinnige klokmatches. Opgeslagen ai_rep/ai_group/ai_target_seconds/ai_nominal_m koppelen de echte laps aan beide opties; HR gebruikt het volledige repvenster en kilometers blijven gemeten.

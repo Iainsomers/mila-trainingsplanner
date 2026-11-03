@@ -5859,10 +5859,14 @@ def garmin_type_c_ayc_view(request, model="C"):
 
     from .polar_raw import translate_model_b, type_a_watch_loads
     from core.views.garmin import ai_allowed
-    results = translate_model_b(sessions, 5, athlete, allow_ai=ai_allowed(athlete))
+    results = translate_model_b(sessions, 5, athlete, allow_ai=ai_allowed(athlete), allow_lap_structure=True)
     for session, result in zip(session_exercises, results):
         for part in result.get("parts") or []:
             watch_loads = type_a_watch_loads(session, athlete)
+            from core.watch_ai_structure import apply_lap_structure
+            structure = part.pop("validated_lap_structure", None)
+            if structure and apply_lap_structure(part, watch_loads, structure):
+                continue
             fields = part.get("training_fields") if isinstance(part.get("training_fields"), dict) else {}
             # Watch B's text recognizer and Type A's load classifier use
             # different WU heuristics. For Watch C, the recognized training

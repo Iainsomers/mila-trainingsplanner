@@ -408,3 +408,6 @@ Mob/Tech in de trainingspopup ondersteunt maximaal vijf foto’s naast vrije tek
 
 
 Garmin C/D herkennen een volledige afwisseling van twee middelgrote repafstanden met trager herstel als beide afstandsgroepen, bijvoorbeeld 6×400m + 6×300m. Beide groepen behouden hun eigen zones/pauzes en alle gemeten reps blijven zichtbaar in de klokpopup.
+
+
+Garmin C/D kunnen een door AI voorgestelde lapindeling gebruiken voor lange tijdsintervallen met automatische splits en verschillende repduren. De AI verwijst naar originele lapnummers; de server controleert volledige dekking, unieke/toenemende reps, werk/herstelcontrast en nabijheid van hele minuten. Een geldig voorstel levert Distance en Time met dezelfde meetloads. Voorbeeld: drie doorlopende laps samen 8:02, gevolgd door 8:01 en vier circa 4-minutenreps. De bestaande AI-toestemming en vaste fallback blijven gelden.

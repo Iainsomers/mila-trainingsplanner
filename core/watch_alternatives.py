@@ -43,6 +43,8 @@ def long_interval_options(laps, zone_for_lap):
 def add_training_alternatives(results):
     for session in results:
         for part in session.get('parts') or []:
+            if part.get('training_alternatives'):
+                continue
             loads = part.get('watch_loads') or []
             core = [l for l in loads if l.get('segment') == 'CORE']
             laps = [{'distanceMeters':l['meters'], 'durationMillis':l['seconds']*1000,

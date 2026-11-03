@@ -279,3 +279,6 @@ De exacte 5480m/32:32-regressie bevat zes 400m-reps, zeven 300m-reps, een gespli
 
 
 Klokfix voor gemengde Garmin-reps: de twee Z4-laps binnen 7×300m Z3>Z5 werden ten onrechte overgeslagen doordat alleen bereikseindpunten werden gematcht. Volledige zonebereiken en expliciete nominale repidentiteit zijn hersteld voor C/D; bestaande Watch-trainingen profiteren bij herladen zonder opnieuw importeren.
+
+
+AI-herkenning uitgebreid met gevalideerde bronlapgroepen voor Garmin C/D. De 18-lap-regressie ondersteunt 2×8′ + 4×4′ ondanks een eerste rep over drie laps, een 4:13-rep en een lange voorafgaande stop. Distance/Time, samengestelde End HR en gemeten totalen zijn getest met gemockte AI-output; de echte modelrespons is niet op productie aangeroepen. Gerichte regressies: 72 tests, manage.py check en migratiecontrole slagen; geen migratie nodig.
