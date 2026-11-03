@@ -1082,14 +1082,14 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
     slot.segments.all().delete()
     watch_origin = (request.POST.get("watch_origin") or "").strip().lower()
     watch_loads = []
-    if watch_origin in {"watch_a", "watch_b", "watch_c"}:
+    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         try:
             decoded_loads = json.loads(request.POST.get("watch_loads") or "[]")
             if isinstance(decoded_loads, list):
                 watch_loads = [item for item in decoded_loads if isinstance(item, dict)]
         except (TypeError, ValueError):
             watch_loads = []
-    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c"} else "planned"
+    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"} else "planned"
     slot.watch_loads = watch_loads
     slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
@@ -1509,7 +1509,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "is_watch_slot": bool(
                     visible_slot
                     and str(getattr(visible_slot, "source", "") or "")
-                    in {"watch_a", "watch_b", "watch_c"}
+                    in {"watch_a", "watch_b", "watch_c", "watch_d"}
                 ),
                 "has_athlete_override": has_athlete_override,
                 "is_flex_source": _is_flex_source(request),
@@ -1538,7 +1538,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             plan=selected_plan, athlete=athlete, date=d, slot_index=slot_index).first()
         if not restore_slot or not isinstance(restore_slot.watch_plan_snapshot, dict):
             return HttpResponse("No saved original plan", status=409)
-        is_watch = restore_slot.source in {"watch_a", "watch_b", "watch_c"}
+        is_watch = restore_slot.source in {"watch_a", "watch_b", "watch_c", "watch_d"}
         if (version == "watch") == is_watch:
             return HttpResponse(status=204)
         if is_watch:
@@ -1646,7 +1646,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     # POST: maak slot (base/override)
     original_watch_plan = None
-    if (request.POST.get("watch_origin") or "").strip().lower() in {"watch_a", "watch_b", "watch_c"}:
+    if (request.POST.get("watch_origin") or "").strip().lower() in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         original_slot = visible_slot
         if not has_athlete_override and athlete and _is_flex_planner_plan(selected_plan):
             base_slot = _base_planning_slot_for_slot_reset(athlete, d, slot_index)
@@ -1654,7 +1654,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 original_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
             elif not original_slot:
                 original_slot = _get_effective_slot(display_plan, athlete, d, slot_index, prefetch_segments=True)["visible_slot"] if display_plan else None
-        if str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c"}:
+        if str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
             original_watch_plan = {"segments": _week_segment_payload(original_slot)}
     if athlete:
         slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=athlete)
@@ -1684,7 +1684,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     core2_text = (request.POST.get("core2_text") or "").strip() if tb_show_core2 else ""
     alt_text = (request.POST.get("alt_text") or "").strip()
     cd_text = (request.POST.get("cd_text") or "").strip() if tb_show_cd else ""
-    if watch_origin in {"watch_a", "watch_b", "watch_c"}:
+    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         core_text = normalize_watch_main_text(core_text)
     if core_text:
         wu_text, cd_text = apply_auto_wucd_texts(athlete, selected_plan, core_text, wu_text, cd_text)
@@ -2010,14 +2010,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         slot.save(update_fields=["watch_plan_snapshot"])
 
     watch_loads = []
-    if watch_origin in {"watch_a", "watch_b", "watch_c"}:
+    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         try:
             decoded_loads = json.loads(request.POST.get("watch_loads") or "[]")
             if isinstance(decoded_loads, list):
                 watch_loads = [item for item in decoded_loads if isinstance(item, dict)]
         except (TypeError, ValueError):
             watch_loads = []
-    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c"} else "planned"
+    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"} else "planned"
     slot.watch_loads = watch_loads
     slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
@@ -2181,7 +2181,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     save_processed_main_reps(slot)
     sync_athlete_auto_wucd_overrides(slot, selected_plan, core_text)
-    if watch_origin in {"watch_a", "watch_b", "watch_c"}:
+    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         slot.watch_training_snapshot = _watch_version_payload(slot)
         slot.save(update_fields=["watch_training_snapshot"])
     _bump_stats_version()

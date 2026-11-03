@@ -5678,7 +5678,7 @@ def polar_type_a_ayc_view(request):
 
 @login_required
 @require_GET
-def garmin_type_c_ayc_view(request):
+def garmin_type_c_ayc_view(request, model="C"):
     """Use this athlete's saved Garmin FIT laps with Watch B's matcher."""
     athlete_id = (request.GET.get("athlete") or "").strip()
     day = (request.GET.get("date") or "").strip()
@@ -5853,7 +5853,7 @@ def garmin_type_c_ayc_view(request):
             "ok": True,
             "message": "" if summary_results else "No Garmin activities found for this day.",
             "results": summary_results,
-            "model": "C",
+            "model": model,
         })
 
     from .polar_raw import translate_model_b, type_a_watch_loads
@@ -5937,14 +5937,22 @@ def garmin_type_c_ayc_view(request):
                     "display_candidate": display_candidate,
                     "final_main": final_main,
                 }
+    if model == "D":
+        from core.garmin_d import apply_garmin_d
+        results = apply_garmin_d(results, athlete)
     results.extend(summary_results)
     results.sort(key=lambda result: str(result.get("start") or ""))
     return JsonResponse({
         "ok": True,
         "message": "" if results else "No Garmin activities found for this day.",
         "results": results,
-        "model": "C",
+        "model": model,
     })
+
+
+@login_required
+def garmin_type_d_ayc_view(request):
+    return garmin_type_c_ayc_view(request, model="D")
 
 
 def _watch_c_merge_half_laps_from_raw(main_text, raw_laps):

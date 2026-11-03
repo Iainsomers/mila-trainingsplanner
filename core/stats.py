@@ -67,7 +67,7 @@ def active_pause_distance_m(text, reps, speed_mps, pause_mode):
 
 def _watch_loads_for_slot(slot):
     from core.watch_processing import is_walking_load
-    if str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c"}:
+    if str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         return []
     raw_loads = getattr(slot, "watch_loads", None)
     if not isinstance(raw_loads, list):

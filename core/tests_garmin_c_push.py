@@ -84,6 +84,18 @@ class GarminCPushTests(TestCase):
         slot.refresh_from_db()
         self.assertEqual(slot.watch_loads, [loads[1]])
 
+    def test_garmin_d_has_same_access_as_c_and_separate_model(self):
+        self.assertEqual(self.send({"activityDetails":[self.details()]}).status_code,200)
+        self.client.force_login(self.coach)
+        response = self.client.get(reverse("garmin_type_d_ayc"), {"athlete":self.athlete.pk,"date":"2026-10-31"})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json()["model"],"D")
+        self.assertIn("analysis_note",response.json()["results"][0]["parts"][0])
+        other = get_user_model().objects.create_user(username="other-d-coach",is_staff=True)
+        self.client.force_login(other)
+        response = self.client.get(reverse("garmin_type_d_ayc"), {"athlete":self.athlete.pk,"date":"2026-10-31"})
+        self.assertEqual(response.status_code,404)
+
     def send(self, payload):
         return self.client.post(self.push_url, json.dumps(payload), content_type="application/json")
 

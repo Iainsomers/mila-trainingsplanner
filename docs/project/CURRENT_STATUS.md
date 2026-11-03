@@ -238,3 +238,5 @@ Nathan-regressie: vijf ongeveer acht minuten durende werkblokken, ieder opgespli
 Nathan-uitloop met twee kilometerlaps en een restlap van 155m viel onder de oude minimumgrens van drie volledige autolaps. Herkenning accepteert nu twee volledige autolaps plus restant; nominale beschrijving 2150m Z1, drie splits en 2162.83m gemeten blijven behouden. Expliciete herstel-/pauzefeiten worden nog steeds gecontroleerd.
 
 Garmin-opname van circa 1480m met twee laps was onterecht niet combineerbaar doordat de UI ook voor WU/CD een Main-beschrijving vereiste. WU/CD vereisen nu uitsluitend gemeten laps en bruikbare totalen; de gegenereerde Main-eis geldt alleen voor de Main-rol. Combinatietests dekken onbekende structuur als WU/CD en weigering als Main.
+
+Garmin D toegevoegd als afzonderlijk model met dezelfde C-structuur en gemeten kilometers, maar HR-zonecontrole vanaf 400m of 50s. Nathan-regressie maakt 5×8′ Z2 van de C-zone Z2>Z3 op basis van de eind-HR per volledig blok. Grenswaarden, ontbrekende data, korte reps, meetafstand, toegang en Watch/Plan-rondegang zijn getest. Migratie 0138 voegt watch_d als bronkeuze toe.

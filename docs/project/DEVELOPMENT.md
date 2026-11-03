@@ -157,3 +157,5 @@ Garmin C gebruikt vanaf migratie 0132 ook de pushgegevens. Details-payloads zijn
 Bij de WSGI-start met automatische Oura-controle wordt de URL/view-importgraaf eerst op de hoofdthread geladen. Start geen achtergrondthread die views importeert voordat die initialisatie klaar is: gelijktijdige eerste imports kunnen op modulelocks vastlopen en andere endpoints blokkeren. Koude-startregressie: `manage.py test core.tests_wsgi_startup`.
 
 De kleine Garmin-combinatiehelper staat als JavaScript-templatepartial naast de kalender en wordt direct in het AYC-script opgenomen. `node core/tests_garmin_combine.js` test dezelfde bron; de AYC-paginatest controleert bovendien dat de gerenderde functie uitvoerbaar is.
+
+Garmin D vereist migratie 0138 (TrainingSlot.source-keuze). Gerichte controles: core.tests_garmin_d, core.tests_garmin_c_push, core.tests_watch_structure en core.tests_watch_plan. HR-controle draait lokaal op bestaande lapfeiten; er is geen extra Garmin-scope, HR-schatting of AI-aanroep voor deze controle.

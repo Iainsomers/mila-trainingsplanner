@@ -986,6 +986,7 @@ class TrainingSlot(models.Model):
         ("watch_a", "Polar A"),
         ("watch_b", "Polar B"),
         ("watch_c", "Garmin C"),
+        ("watch_d", "Garmin D"),
     ]
 
     date = models.DateField()

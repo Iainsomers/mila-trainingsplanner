@@ -2201,6 +2201,7 @@
       <button type="button" id="suggestInputBtnB" class="btn btn-sm btn-outline-primary">Polar B</button>
       {% endif %}
       <button type="button" id="suggestInputBtnC" class="btn btn-sm btn-outline-primary">Garmin C</button>
+      <button type="button" id="suggestInputBtnD" class="btn btn-sm btn-outline-primary">Garmin D</button>
       <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger" style="display:none;">Delete input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary evaluation-ok-btn" disabled>OK</button>
     </div>
@@ -2446,26 +2447,26 @@
     var popup = document.getElementById("suggestInputPlaceholder");
     var body = document.getElementById("suggestInputPlaceholderBody");
     popup.style.display = "flex";
-    var sourceName = model === "C" ? "Garmin" : "Polar";
-    document.getElementById("suggestInputPlaceholderText").textContent = model === "C" ? "Garmin C" : "Polar " + model;
+    var sourceName = (model === "C" || model === "D") ? "Garmin" : "Polar";
+    document.getElementById("suggestInputPlaceholderText").textContent = (model === "C" || model === "D") ? "Garmin " + model : "Polar " + model;
     document.getElementById("suggestInputPlaceholderClose").focus();
-    body.textContent = "Loading " + (model === "C" ? "Garmin C" : "Polar " + model) + "...";
-    var endpoint = model === "C" ? "/integrations/garmin/type-c-ayc/" : "/integrations/polar/type-a-ayc/";
+    body.textContent = "Loading " + ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + "...";
+    var endpoint = (model === "C" || model === "D") ? "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/" : "/integrations/polar/type-a-ayc/";
     var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate);
-    if (model !== "C") query += "&model=" + encodeURIComponent(model);
+    if (model !== "C" && model !== "D") query += "&model=" + encodeURIComponent(model);
     fetch(endpoint + query, {
       headers: {"Accept": "application/json"}
     }).then(function(response) { return response.json(); }).then(function(data) {
       if (!data.ok) {
-        body.textContent = data.message || (model === "C" ? "Garmin C" : "Polar " + model) + " could not be loaded.";
+        body.textContent = data.message || ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
         return;
       }
       renderTypeAResults(body, data.results || [], data.message || "", model);
     }).catch(function() {
-      body.textContent = (model === "C" ? "Garmin C" : "Polar " + model) + " could not be loaded.";
+      body.textContent = ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
     });
   }
-  function renderTypeALaps(parent, title, rows, showLast15Hr) {
+  function renderTypeALaps(parent, title, rows, showLast15Hr, showPaceZone) {
     if (!rows || !rows.length) return;
     var heading = document.createElement("div");
     heading.className = "fw-semibold mt-2";
@@ -2474,7 +2475,9 @@
     var table = document.createElement("table");
     table.className = "table table-sm mb-2 text-nowrap";
     var head = document.createElement("tr");
-    var headers = ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km", "Zx", "Tx", "Avg HR"];
+    var headers = ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km"];
+    if (showPaceZone) headers.push("Pace Zx");
+    headers.push("Zx", "Tx", "Avg HR");
     if (showLast15Hr) headers.push("Last 15s HR");
     headers.forEach(function(label) {
       var cell = document.createElement("th"); cell.textContent = label; head.appendChild(cell);
@@ -2483,7 +2486,9 @@
     var tbody = document.createElement("tbody");
     rows.forEach(function(row) {
       var tr = document.createElement("tr");
-      var values = [row.index, row.distance, row.distance_rounded_50, row.duration, row.pace, row.z_pace, row.t_pace, row.average_hr];
+      var values = [row.index, row.distance, row.distance_rounded_50, row.duration, row.pace];
+      if (showPaceZone) values.push(row.pace_z_pace || row.z_pace);
+      values.push(row.z_pace, row.t_pace, row.average_hr);
       if (showLast15Hr) values.push(row.average_hr_last_15);
       values.forEach(function(value) {
         var cell = document.createElement("td"); cell.textContent = value == null ? "NA" : value; tr.appendChild(cell);
@@ -2503,7 +2508,7 @@
     var selections = [];
     var combinedHost = document.createElement("div");
     var combineButton;
-    if (model === "C" && !combinedPreview && results.length > 1) {
+    if ((model === "C" || model === "D") && !combinedPreview && results.length > 1) {
       var toolbar = document.createElement("div");
       toolbar.className = "d-flex flex-wrap align-items-center gap-2 mb-2";
       var hint = document.createElement("span");
@@ -2521,7 +2526,7 @@
         try {
           var selected = selections.filter(function(item) { return item.check.checked; });
           var combined = combineGarminActivities(selected.map(function(item) { return {session: item.session, role: item.role.value}; }));
-          renderTypeAResults(combinedHost, [combined], "", "C", true);
+          renderTypeAResults(combinedHost, [combined], "", model, true);
         } catch (error) { errorText.textContent = error.message; }
       });
       toolbar.appendChild(combineButton);
@@ -2593,8 +2598,12 @@
           }
           box.appendChild(description);
         }
-        renderTypeALaps(box, model === "C" ? "Recorded laps" : "Manual laps", part.manual, model === "B" || model === "C");
-        renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C");
+        if (part.analysis_note) {
+          var note = document.createElement("div"); note.className = "small text-muted mb-2";
+          note.textContent = part.analysis_note; box.appendChild(note);
+        }
+        renderTypeALaps(box, (model === "C" || model === "D") ? "Recorded laps" : "Manual laps", part.manual, model === "B" || model === "C" || model === "D", model === "D");
+        renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C" || model === "D", model === "D");
       });
       parent.appendChild(box);
     });
@@ -2785,6 +2794,7 @@
   if (polarButtonA) polarButtonA.addEventListener("click", function() { showWatchModel("A"); });
   if (polarButtonB) polarButtonB.addEventListener("click", function() { showWatchModel("B"); });
   document.getElementById("suggestInputBtnC").addEventListener("click", function() { showWatchModel("C"); });
+  document.getElementById("suggestInputBtnD").addEventListener("click", function() { showWatchModel("D"); });
   document.getElementById("suggestInputPlaceholderClose").addEventListener("click", hideSuggestInputPlaceholder);
   document.getElementById("suggestInputPlaceholder").addEventListener("click", function(event) {
     if (event.target === this) hideSuggestInputPlaceholder();

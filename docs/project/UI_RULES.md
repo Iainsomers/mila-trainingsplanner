@@ -207,3 +207,5 @@ De eerste tabelrij heet ALL en toont de gemiddelde Evaluated- en Vitals-percenta
 Garmin C toont bij bruikbare activiteiten een Combine-vinkje en compacte WU/Main/CD-keuze. De bovenste Combine-knop werkt bij twee of drie selecties en toont rolproblemen bij de knop. De gecombineerde preview staat bovenaan; wijzigen van een selectie/rol verwijdert de oude preview. Bediening en beschrijvingsknoppen lopen op smalle schermen door naar de volgende regel; laptabellen blijven horizontaal scrollbaar.
 
 Garmin Combine blijft zichtbaar bij bruikbare lapdata zonder herkende trainingsstructuur. Zo’n activiteit biedt WU en CD, met Main uitgeschakeld; standaard wordt WU gekozen.
+
+Garmin D staat naast Garmin C in de evaluatiepopup en gebruikt dezelfde compacte/mobile bediening. De D-tabel toont Pace Zx naast de effectieve Zx en Last 15s HR. Een korte toelichting benoemt de grens 400m of 50s en fallback bij ontbrekende HR/limieten. Opgeslagen D-resultaten tonen Garmin D bij het klokje en ondersteunen dezelfde p/w-wissel en combineren.

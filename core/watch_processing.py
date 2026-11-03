@@ -3,7 +3,7 @@
 import re
 
 
-WATCH_SOURCES = {"watch_a", "watch_b", "watch_c"}
+WATCH_SOURCES = {"watch_a", "watch_b", "watch_c", "watch_d"}
 
 
 def is_walking_load(meters, seconds):
@@ -99,7 +99,7 @@ def structured_segment_loads(segment, raw_loads):
     try:
         laps = [{"distanceMeters": float(load.get("meters") or 0),
                  "durationMillis": float(load.get("seconds") or 0) * 1000,
-                 "zone": str(load.get("zone") or "")} for load in loads]
+                 "zone": str(load.get("pace_zone", load.get("zone")) or "")} for load in loads]
     except (TypeError, ValueError):
         return None
     # A nominal rep may consist of two uninterrupted auto-laps. Reuse the

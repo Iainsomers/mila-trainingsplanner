@@ -20,9 +20,22 @@ class WatchOriginalPlanTests(TestCase):
     def url(self, index=2):
         return f"/slot-modal/2026/10/30/{index}/?plan={self.plan.pk}&athlete={self.athlete.pk}&source=athlete_year"
 
-    def import_watch(self, index=2, main="10*100m z4 p45"):
-        return self.client.post(self.url(index), {"core_text": main, "watch_origin": "watch_c",
+    def import_watch(self, index=2, main="10*100m z4 p45", origin="watch_c"):
+        return self.client.post(self.url(index), {"core_text": main, "watch_origin": origin,
             "watch_loads": json.dumps([{"segment": "CORE", "meters": 100, "seconds": 20, "zone": "4", "average_hr_last_15": 148}])})
+
+    def test_garmin_d_preserves_plan_and_watch_roundtrip(self):
+        slot = self.original()
+        self.assertEqual(self.import_watch(origin="watch_d").status_code, 200)
+        slot.refresh_from_db()
+        self.assertEqual(slot.source, "watch_d")
+        self.assertIsNotNone(slot.watch_plan_snapshot)
+        loads = slot.watch_loads
+        self.assertEqual(self.client.post(self.url(), {"action":"select_watch_version", "version":"plan"}).status_code,204)
+        self.assertEqual(self.client.post(self.url(), {"action":"select_watch_version", "version":"watch"}).status_code,204)
+        slot.refresh_from_db()
+        self.assertEqual(slot.source,"watch_d")
+        self.assertEqual(slot.watch_loads,loads)
 
     def original(self, index=2):
         slot = TrainingSlot.objects.create(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=index)

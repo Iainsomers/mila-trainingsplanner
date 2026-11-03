@@ -2163,7 +2163,7 @@ def _format_min_km_range(seconds_per_km_values):
 
 def _watch_segment_loads(seg):
     slot = getattr(seg, "slot", None)
-    if not slot or str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c"}:
+    if not slot or str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         return []
     watch_loads = getattr(slot, "watch_loads", None)
     if not isinstance(watch_loads, list):
@@ -2469,7 +2469,7 @@ def _annotate_slot_segment_display_times(slot, athlete):
     except Exception:
         return slot
 
-    if str(getattr(slot, "source", "")) in {"watch_a", "watch_b", "watch_c"}:
+    if str(getattr(slot, "source", "")) in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         from core.watch_processing import processed_main_reps
         slot.watch_main_reps = processed_main_reps(slot)
 
@@ -2696,7 +2696,7 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
     if not slot:
         return []
 
-    watch_source = str(getattr(slot, "source", "") or "") in {"watch_a", "watch_b", "watch_c"}
+    watch_source = str(getattr(slot, "source", "") or "") in {"watch_a", "watch_b", "watch_c", "watch_d"}
     actual_segment_types = set()
     if watch_source:
         watch_loads = getattr(slot, "watch_loads", None)
@@ -2932,7 +2932,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             athlete=athlete,
             date=d,
             slot_index=slot_index,
-            source__in={"watch_a", "watch_b", "watch_c"},
+            source__in={"watch_a", "watch_b", "watch_c", "watch_d"},
         )
         .select_related("plan")
         .order_by("-updated_at", "-id")
@@ -2953,7 +2953,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
                 athlete__isnull=True,
                 date=d,
                 slot_index=slot_index,
-                source__in={"watch_a", "watch_b", "watch_c"},
+                source__in={"watch_a", "watch_b", "watch_c", "watch_d"},
             )
             .select_related("plan")
             .order_by("-updated_at", "-id")
@@ -3014,7 +3014,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if not source_slot and not selected_plan:
         return
 
-    watch_sources = {"watch_a", "watch_b", "watch_c"}
+    watch_sources = {"watch_a", "watch_b", "watch_c", "watch_d"}
     original_source = str(getattr(source_slot, "source", "") or "")
     original_watch_loads = list(getattr(source_slot, "watch_loads", []) or [])
     original_core_text = " // ".join(

@@ -386,3 +386,7 @@ Garmin C/Watch B herkennen gelijke tijdsherhalingen die door kilometer-autolaps 
 Ook twee volledige kilometer-autolaps met een kort reststuk vormen zonder herstelbewijs één doorlopend blok (bijvoorbeeld 2162.83m → 2150m Z1). Het klokje bewaart beide kilometers en het reststuk; sessiekilometers blijven gemeten.
 
 Garmin Combine: een activiteit met bruikbare gemeten laps maar zonder herkende Main-beschrijving kan als WU of CD worden geselecteerd. Alleen de activiteit in de Main-rol vereist een gegenereerde training; de Main-optie is uitgeschakeld bij niet-herkende activiteiten. Summary-only activiteiten blijven uitgesloten.
+
+## Garmin D — zonecontrole met hartslag
+
+Naast Garmin C staat Garmin D. D gebruikt dezelfde activiteitselectie, trainingsstructuur, combinatiebediening en gemeten afstanden/tijden. Voor een rep van minstens 400 gemeten meter óf 50 gemeten seconden gaat de zone uit Last 15s HR vóór de tempozone Z1–Z5. De ingestelde HR-grenzen van de atleet zijn leidend; ontbrekende/ongeldige HR of grenzen behouden de tempozone. Korte reps blijven op tempo. Bij samengestelde reps, zoals 5×8′ met kilometer-autolaps, gebruikt het volledige blok de eind-HR van zijn laatste lap. D krijgt een eigen opgeslagen bron, kloklabel en Watch/Plan-momentopname; C en de brondata worden niet gewijzigd.
