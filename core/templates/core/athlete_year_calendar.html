@@ -2466,7 +2466,7 @@
       body.textContent = ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
     });
   }
-  function renderTypeALaps(parent, title, rows, showLast15Hr, showPaceZone) {
+  function renderTypeALaps(parent, title, rows, showLast15Hr, showPaceZone, useEndHr) {
     if (!rows || !rows.length) return;
     var heading = document.createElement("div");
     heading.className = "fw-semibold mt-2";
@@ -2478,7 +2478,7 @@
     var headers = ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km"];
     if (showPaceZone) headers.push("Pace Zx");
     headers.push("Zx", "Tx", "Avg HR");
-    if (showLast15Hr) headers.push("Last 15s HR");
+    if (showLast15Hr) headers.push(useEndHr ? "End HR" : "Last 15s HR");
     headers.forEach(function(label) {
       var cell = document.createElement("th"); cell.textContent = label; head.appendChild(cell);
     });
@@ -2489,7 +2489,7 @@
       var values = [row.index, row.distance, row.distance_rounded_50, row.duration, row.pace];
       if (showPaceZone) values.push(row.pace_z_pace || row.z_pace);
       values.push(row.z_pace, row.t_pace, row.average_hr);
-      if (showLast15Hr) values.push(row.average_hr_last_15);
+      if (showLast15Hr) values.push(useEndHr ? row.hr_tail : row.average_hr_last_15);
       values.forEach(function(value) {
         var cell = document.createElement("td"); cell.textContent = value == null ? "NA" : value; tr.appendChild(cell);
       });
@@ -2625,8 +2625,8 @@
           var note = document.createElement("div"); note.className = "small text-muted mb-2";
           note.textContent = part.analysis_note; box.appendChild(note);
         }
-        renderTypeALaps(box, (model === "C" || model === "D") ? "Recorded laps" : "Manual laps", part.manual, model === "B" || model === "C" || model === "D", model === "D");
-        renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C" || model === "D", model === "D");
+        renderTypeALaps(box, (model === "C" || model === "D") ? "Recorded laps" : "Manual laps", part.manual, model === "B" || model === "C" || model === "D", model === "D", model === "C" || model === "D");
+        renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C" || model === "D", model === "D", model === "C" || model === "D");
       });
       parent.appendChild(box);
     });
@@ -3291,6 +3291,7 @@
     body.replaceChildren();
     var reps = [];
     try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
+    var useEndHr = /Garmin [CD]/.test(button.getAttribute("data-watch-model") || "");
     var hasSplits = Array.isArray(reps) && reps.some(function(rep) { return Array.isArray(rep.splits) && rep.splits.length; });
     if (hasSplits) {
       title.textContent = "Recorded splits — " + (button.getAttribute("data-watch-model") || "Watch");
@@ -3310,12 +3311,13 @@
       var explanation = document.createElement("div");
       explanation.className = "small text-muted mb-2";
       explanation.textContent = hasSplits ? "Split times are adjusted to the shown distance. The final short lap keeps its measured time. Stops remain included." : "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
+      if (useEndHr) explanation.textContent += " End HR: last 10% of measured rep time, minimum 15s; Avg HR for reps under 15s.";
       body.appendChild(explanation);
       var table = document.createElement("table");
       table.className = "table table-sm table-striped mb-0";
       var thead = document.createElement("thead");
       var header = document.createElement("tr");
-      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Avg HR", "Last 15s HR"].forEach(function(label) {
+      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Avg HR", useEndHr ? "End HR" : "Last 15s HR"].forEach(function(label) {
         var th = document.createElement("th"); th.scope = "col"; th.textContent = label; header.appendChild(th);
       });
       thead.appendChild(header); table.appendChild(thead);
@@ -3331,7 +3333,7 @@
           formatWatchDuration(seconds),
           formatWatchPace(pace),
           Number(rep.average_hr) > 0 ? String(Math.round(Number(rep.average_hr))) : "NA",
-          Number(rep.average_hr_last_15) > 0 ? String(Math.round(Number(rep.average_hr_last_15))) : "NA"
+          Number(useEndHr ? rep.hr_tail : rep.average_hr_last_15) > 0 ? String(Math.round(Number(useEndHr ? rep.hr_tail : rep.average_hr_last_15))) : "NA"
         ];
         values.forEach(function(value) { var td = document.createElement("td"); td.textContent = value; tr.appendChild(td); });
         tbody.appendChild(tr);

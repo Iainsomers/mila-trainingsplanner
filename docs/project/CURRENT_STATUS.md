@@ -252,3 +252,6 @@ Camp details heeft Comments na Accommodation, met automatische opslag en bestaan
 Kane-regressie: lange herstelpauze liet de oorspronkelijke herkenning na twee werkblokken stoppen en verborg een derde circa 3000m-lap en twee 1000m-laps. Prefixafkapping is geblokkeerd. Voor deze complete herhaalde werk/herstelreeks verschijnen nu Distance (3×3000m + 2×1000m) en Time (3×10′ + 2×3′), beide met alle meetgegevens en C/D-zoneverwerking. Tests bewaken beide previews, vijf klokreps en identieke meetkilometers.
 
 Camp details heeft een doorlopende rijtelling voor alle deelnemers, inclusief coaches. De nummers worden na iedere sortering opnieuw vanaf 1 bepaald; geen model- of identiteitswijziging.
+
+
+Garmin C/D End HR is aangepast naar laatste 10% van de gemeten repduur (minimaal 15s, onder 15s Avg HR). Volledige samengestelde reps tellen als één tijdvenster. Gerichte regressies dekken venstergrenzen, meerdere laps, korte reps, ontbrekende oudere samples en D-zonecontrole; Polar-weergave blijft ongewijzigd.

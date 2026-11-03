@@ -1,6 +1,7 @@
 """Persisted, display-ready output derived from a slot's raw Watch laps."""
 
 import re
+from core.watch_hr import tail_hr
 
 
 WATCH_SOURCES = {"watch_a", "watch_b", "watch_c", "watch_d"}
@@ -118,6 +119,7 @@ def structured_segment_loads(segment, raw_loads):
                          "meters": sum(float(item["meters"]) for item in work[i:i+2]),
                          "seconds": sum(float(item["seconds"]) for item in work[i:i+2]),
                          "average_hr": _block_average_hr(work[i:i+2]),
+                         "hr_tail": tail_hr(work[i:i+2]),
                          "average_hr_last_15": work[i+1].get("average_hr_last_15")}
                         for i in range(0, len(work), 2)]
     from core.watch_alternatives import long_interval_options
@@ -137,7 +139,7 @@ def structured_segment_loads(segment, raw_loads):
             block = [loads[i] for i in indices]
             output.append({"matched_rep": True, "meters": sum(float(load["meters"]) for load in block),
                 "seconds": sum(float(load["seconds"]) for load in block),
-                "average_hr": _block_average_hr(block),
+                "average_hr": _block_average_hr(block), "hr_tail": tail_hr(block),
                 "average_hr_last_15": block[-1].get("average_hr_last_15")})
         return output
     structure = short_sets_and_continuous(laps, lambda lap: "Z" + lap["zone"])
@@ -149,7 +151,7 @@ def structured_segment_loads(segment, raw_loads):
             if re.fullmatch(rf"\s*{total}\s*m(?:\s+Z[1-5])?\s*", text, re.IGNORECASE):
                 return [{"matched_rep": True, "meters": sum(lap["distanceMeters"] for lap in laps),
                          "seconds": sum(lap["durationMillis"] for lap in laps) / 1000,
-                         "average_hr": _block_average_hr(loads),
+                         "average_hr": _block_average_hr(loads), "hr_tail": tail_hr(loads),
                          "split_loads": loads}]
         return None
     text = str(getattr(segment, "text", "") or "")
@@ -163,7 +165,7 @@ def structured_segment_loads(segment, raw_loads):
         block = loads[start:structure["cooldown_start"]]
         return [{"matched_rep": True, "meters": sum(float(load["meters"]) for load in block),
                  "seconds": sum(float(load["seconds"]) for load in block),
-                 "average_hr": _block_average_hr(block),
+                 "average_hr": _block_average_hr(block), "hr_tail": tail_hr(block),
                  "average_hr_last_15": block[-1].get("average_hr_last_15")
                     if float(block[-1]["seconds"]) >= 15 else None}]
     return None
@@ -221,6 +223,7 @@ def processed_main_reps(slot):
                     "pace_seconds_per_km": round(seconds * 1000 / meters, 2),
                     "average_hr_last_15": load.get("average_hr_last_15")})
                 output[-1]["average_hr"] = load.get("average_hr")
+                output[-1]["hr_tail"] = load.get("hr_tail") if "hr_tail" in load else tail_hr([load])
                 if load.get("split_loads"):
                     splits = []
                     for index, split in enumerate(load["split_loads"], 1):
@@ -233,6 +236,7 @@ def processed_main_reps(slot):
                             "pace_seconds_per_km": round(split_s * 1000 / split_m, 2),
                             "average_hr_last_15": split.get("average_hr_last_15")})
                         splits[-1]["average_hr"] = split.get("average_hr")
+                        splits[-1]["hr_tail"] = tail_hr([split])
                     output[-1]["splits"] = splits
             continue
         try:
@@ -278,6 +282,7 @@ def processed_main_reps(slot):
                 "pace_seconds_per_km": round(seconds * 1000.0 / meters, 2),
                 "average_hr_last_15": raw_loads[raw_index].get("average_hr_last_15"),
                 "average_hr": raw_loads[raw_index].get("average_hr"),
+                "hr_tail": tail_hr([raw_loads[raw_index]]),
             })
     if any("work_rep" in load for load in raw_loads if isinstance(load, dict)):
         output.sort(key=lambda row: row.get("_lap_order", -1))

@@ -3,6 +3,7 @@ from copy import deepcopy
 import math
 import re
 from types import SimpleNamespace
+from core.watch_hr import tail_hr
 
 
 def hr_zone(athlete, value):
@@ -71,7 +72,7 @@ def apply_garmin_d(results, athlete):
                 consumed = set()
                 for rep in reps:
                     m, s = rep['measured_distance_m'], rep['measured_seconds']
-                    zone = rep_hr_zone(athlete, m, s, rep.get('average_hr_last_15'))
+                    zone = rep_hr_zone(athlete, m, s, rep.get('hr_tail'))
                     if not zone:
                         zones.extend(re.findall(r'\bz([1-5])\b', text, re.I))
                         continue
@@ -104,7 +105,7 @@ def apply_garmin_d(results, athlete):
                 block = [load for load in original if load.get('segment') == kind]
                 if fields.get(key) and block:
                     zone = rep_hr_zone(athlete, sum(float(l['meters']) for l in block),
-                                       sum(float(l['seconds']) for l in block), block[-1].get('average_hr_last_15'))
+                                       sum(float(l['seconds']) for l in block), tail_hr(block))
                     if zone:
                         fields[key] = _replace_zone(fields[key], [zone])
                         for index, load in enumerate(original):
@@ -123,5 +124,5 @@ def apply_garmin_d(results, athlete):
                     candidate = {**alternative, 'watch_loads': deepcopy(original)}
                     converted.append({**apply_garmin_d([{'parts':[candidate]}], athlete)[0]['parts'][0], 'label': alternative['label']})
                 part['training_alternatives'] = converted
-            part['analysis_note'] = 'D: Last 15s HR takes precedence at 400 m or 50 s; otherwise pace zones apply. Reconstructed reps use their final lap HR. Missing HR or configured limits keeps the pace zone.'
+            part['analysis_note'] = 'D: End HR (last 10%, minimum 15s; Avg HR for reps under 15s) takes precedence at 400 m or 50 s; otherwise pace zones apply. Reconstructed reps use the end window of the complete rep. Missing HR or configured limits keeps the pace zone.'
     return results

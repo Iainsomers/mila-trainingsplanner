@@ -221,3 +221,6 @@ Camp details: Comments staat direct na Accommodation, als compact tekstvak van Ã
 Bij dubbelzinnige lange Garmin-intervalgroepen staan twee compacte knoppen Distance en Time boven de gegenereerde beschrijving, met de actieve keuze gevuld. Wisselen past de preview en de Use AM/PM-inhoud aan en verwijdert een eerder gecombineerde preview, zodat geen verouderde keuze wordt opgeslagen. De knoppen lopen op mobiel naar een volgende regel door.
 
 Details Camps heeft vooraan een smalle #-telkolom. De telling volgt uitsluitend de zichtbare rijvolgorde, begint bij 1 en loopt door over atleten en coaches. Na sorteren wordt opnieuw genummerd; dit zijn geen opgeslagen persoonsnummers.
+
+
+Garmin C/D tonen End HR in de rondetabel en klokpopup; de klok legt uit: laatste 10% van de gemeten repduur, minimaal 15s, Avg HR onder 15s. Avg HR blijft een aparte kolom. Polar behoudt Last 15s HR. De bestaande compacte, scrollbare tabellen blijven behouden.

@@ -146,7 +146,10 @@ def lap_rows(laps, athlete=None, samples=None):
         z_pace, t_pace = lap_zone_paces(
             lap.get("distanceMeters"), lap.get("durationMillis"), athlete
         )
+        from core.watch_hr import lap_hr_load
+        end_hr = lap_hr_load(lap, start_ms, end_ms, samples, lap_average_hr(lap, start_ms, end_ms, samples))
         rows.append({
+            "hr_tail": end_hr["hr_tail"],
             "index": index,
             "distance": display(lap.get("distanceMeters")),
             "distance_rounded_50": distance_rounded_to_50(lap.get("distanceMeters")),
@@ -443,7 +446,10 @@ def type_a_watch_loads(exercise, athlete=None):
             continue
         z_pace, t_pace = lap_zone_paces(distance_m, duration_ms, athlete)
         zone = z_pace[1:] if z_pace.startswith("Z") and z_pace[1:].isdigit() else "1"
+        from core.watch_hr import lap_hr_load
+        end_hr = lap_hr_load(lap, start_ms, elapsed_ms, exercise.get("samples"), lap_average_hr(lap, start_ms, elapsed_ms, exercise.get("samples")))
         rows.append({
+            "hr_tail": end_hr["hr_tail"], "hr_samples": end_hr["hr_samples"],
             "index": index,
             "distance_m": distance_m,
             "seconds": duration_ms / 1000.0,
@@ -488,6 +494,7 @@ def type_a_watch_loads(exercise, athlete=None):
         elif cooldown_start is not None and index >= cooldown_start:
             segment = "CD"
         loads.append({
+            "hr_tail": row["hr_tail"], "hr_samples": row["hr_samples"],
             "segment": segment,
             "zone": row["zone"],
             "meters": row["distance_m"],

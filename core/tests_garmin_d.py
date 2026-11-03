@@ -30,7 +30,8 @@ class GarminDTests(SimpleTestCase):
         for block in range(5):
             for meters, seconds, pace_zone, hr in [(1000,200,'2',167),(1000,200,'3',172),(400,80,'3',168)]:
                 loads.append({'segment':'CORE','zone':pace_zone,'meters':meters,'seconds':seconds,
-                              'average_hr':160,'average_hr_last_15':hr})
+                              'average_hr':160,'average_hr_last_15':hr,
+                              'hr_samples':[[t, (160 if t < 65 else 180) if seconds == 80 else hr] for t in range(seconds)]})
             if block < 4:
                 loads.append({'segment':'CORE','zone':'1','meters':300,'seconds':90,
                               'average_hr':140,'average_hr_last_15':175})
@@ -52,6 +53,7 @@ class GarminDTests(SimpleTestCase):
         slot = SimpleNamespace(source='watch_d', watch_loads=part['watch_loads'], segments=SimpleNamespace(all=lambda:[segment]))
         reps = processed_main_reps(slot)
         self.assertEqual([rep['seconds'] for rep in reps], [480] * 5)
+        self.assertEqual([rep['hr_tail'] for rep in reps], [166] * 5)
         self.assertEqual(sum(load['meters'] for load in _ayc_slot_loads_for_totals(slot)), sum(load['meters'] for load in loads))
 
     def test_short_reps_and_missing_tail_hr_keep_pace_zone(self):
