@@ -26,6 +26,33 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_two_kilometres_and_short_remainder_are_one_continuous_run(self):
+        from types import SimpleNamespace
+        from core.watch_structure import continuous_kilometre_run
+        from core.watch_processing import processed_main_reps
+        laps = [{"distanceMeters": m, "durationMillis": seconds * 1000, "zone": zone}
+                for m, seconds, zone in [(1006.26,250,"Z1"),(1001.12,282,"Z1"),(155.45,30,"Z2")]]
+        description = continuous_kilometre_run(laps, lambda lap: lap["zone"])
+        self.assertEqual(description, "WU: none · Main: 2150 m Z1 · CD: none")
+        segment = SimpleNamespace(type="CORE", text="2150 m Z1", distance_m=2150, reps=1, order=1)
+        loads = [{"segment": "CORE", "meters": lap["distanceMeters"], "seconds": lap["durationMillis"] / 1000,
+                  "zone": lap["zone"][1:]} for lap in laps]
+        slot = SimpleNamespace(source="watch_c", watch_loads=loads, segments=SimpleNamespace(all=lambda: [segment]))
+        result = processed_main_reps(slot)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["seconds"], 562)
+        self.assertEqual(len(result[0]["splits"]), 3)
+        self.assertEqual(result[0]["splits"][-1]["seconds"], 30)
+        self.assertAlmostEqual(result[0]["measured_distance_m"], 2162.83)
+        # Explicit recovery information still prevents continuous recognition.
+        broken = deepcopy(laps)
+        for lap in broken[:2]:
+            lap["pausedDurationMillis"] = 20000
+        self.assertIsNone(continuous_kilometre_run(broken, lambda lap: lap["zone"]))
+        broken = deepcopy(laps)
+        broken[0]["lapIntensity"] = 4
+        self.assertIsNone(continuous_kilometre_run(broken, lambda lap: lap["zone"]))
+
     def test_eight_minute_reps_with_kilometre_autolaps_keep_time_structure(self):
         from types import SimpleNamespace
         from core.watch_structure import kilometre_split_timed_intervals

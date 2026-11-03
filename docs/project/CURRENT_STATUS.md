@@ -234,3 +234,5 @@ Watch-terugwandelen telt niet langer als Z1/hardloopafstand: gemeten laptempo st
 Wojtek-regressie: losse opname met twaalf werk/herstelparen wordt 5×200m + 7×150m, inclusief 174.91m als 150m. De uitbreiding is beperkt tot complete afwisselende Main-opnames zonder aanloop; Josefine- en Djamell-regressies blijven slagen.
 
 Nathan-regressie: vijf ongeveer acht minuten durende werkblokken, ieder opgesplitst in 1000+1000+rest met circa 90s herstel, worden als 5×8′ beschreven. Klokreps voegen de drie werklaps samen. Regressies bewaken 480/483/477/482/483s, exacte gemeten sessiemeters onafhankelijk van gewijzigde zonesnelheden en afwijzen van ongelijke tijdsblokken of ontbrekend herstel. Eerdere korte-repherkenning blijft getest.
+
+Nathan-uitloop met twee kilometerlaps en een restlap van 155m viel onder de oude minimumgrens van drie volledige autolaps. Herkenning accepteert nu twee volledige autolaps plus restant; nominale beschrijving 2150m Z1, drie splits en 2162.83m gemeten blijven behouden. Expliciete herstel-/pauzefeiten worden nog steeds gecontroleerd.
