@@ -246,3 +246,5 @@ WU/CD-weergave in Garmin C én D vereenvoudigd tot één afstandgewogen gemiddel
 Garmin C/D-weergave afgestemd op trainingsbasis: tijdsblokken tonen alleen tempo, afstandsblokken reptijd plus tempo. Dit werkt bij bestaande opgeslagen Watch-trainingen door de pagina opnieuw te laden. Regressies testen minuten, seconden en afstandsreps in beide modellen.
 
 Staff Team Overview bundelt Sleep length, Sleep quality, Morning HR en HRV in één Daily vitals-tab met gemiddelde en low–high-range per cel. HR zones, veertiendaags venster, drie-metingenvoorwaarde en privacyfilters blijven behouden. Tests dekken alle vier kolommen, ranges, oude links, Show NA, nulwaarden en uitsluiting van een oude uitschieter.
+
+Camp details heeft Comments na Accommodation, met automatische opslag en bestaande deelnemerrechten en Copy/Paste. Migratie 0139 voegt camp_comments toe aan de whereabout. Gerichte coach-/atleetopslagtests en toegangsregressie slagen.

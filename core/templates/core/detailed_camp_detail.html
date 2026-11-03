@@ -10,6 +10,8 @@
   [data-camp-participants] th:nth-child(8), [data-camp-participants] td:nth-child(8) { min-width: 82px; width: 82px; }
   [data-camp-participants] th:nth-child(9), [data-camp-participants] td:nth-child(9),
   [data-camp-participants] th:nth-child(10), [data-camp-participants] td:nth-child(10) { min-width: 180px; }
+  [data-camp-participants] th:nth-child(11), [data-camp-participants] td:nth-child(11) { min-width: 220px; }
+  [data-camp-participants] textarea { resize: vertical; }
   [data-camp-participants] th:last-child, [data-camp-participants] td:last-child { white-space: nowrap; width: 1%; }
   .camp-actions { display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; }
   .camp-actions form { display: inline-flex; margin: 0; }
@@ -56,6 +58,7 @@
           <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="time">Flight time out &#8597;</button></th>
           <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Rental Car Info &#8597;</button></th>
           <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Accommodation &#8597;</button></th>
+          <th><button class="btn btn-sm btn-link p-0 text-decoration-none text-dark" type="button" data-camp-sort="text">Comments &#8597;</button></th>
           <th></th>
         </tr>
       </thead>
@@ -79,6 +82,7 @@
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="time" name="departure_flight_time" value="{{ participant.departure_flight_time|time:'H:i' }}"></td>
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="rental_car_info" value="{{ participant.rental_car_info }}" maxlength="160"></td>
               <td><input form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" type="text" name="accommodation" value="{{ participant.accommodation }}" maxlength="160"></td>
+              <td><textarea form="camp-participant-{{ forloop.counter }}" class="form-control form-control-sm" name="camp_comments" rows="1" maxlength="2000" aria-label="Comments">{{ participant.camp_comments }}</textarea></td>
               <td>
                 <span class="camp-actions">
                   <form id="camp-participant-{{ forloop.counter }}" method="post" data-camp-edit-form>
@@ -105,6 +109,7 @@
               <td>{{ participant.departure_flight_time|time:"H:i" }}</td>
               <td>{{ participant.rental_car_info }}</td>
               <td>{{ participant.accommodation }}</td>
+              <td>{{ participant.camp_comments|linebreaksbr }}</td>
               <td></td>
             {% endif %}
           </tr>
@@ -165,7 +170,7 @@
         rows.sort((left, right) => {
           const cellValue = (row) => {
             const cell = row.cells[column];
-            const input = cell.querySelector("input");
+            const input = cell.querySelector("input, textarea");
             return (input ? input.value : cell.textContent).trim();
           };
           let leftValue = cellValue(left);

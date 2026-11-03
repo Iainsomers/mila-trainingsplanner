@@ -159,3 +159,5 @@ Bij de WSGI-start met automatische Oura-controle wordt de URL/view-importgraaf e
 De kleine Garmin-combinatiehelper staat als JavaScript-templatepartial naast de kalender en wordt direct in het AYC-script opgenomen. `node core/tests_garmin_combine.js` test dezelfde bron; de AYC-paginatest controleert bovendien dat de gerenderde functie uitvoerbaar is.
 
 Garmin D vereist migratie 0138 (TrainingSlot.source-keuze). Gerichte controles: core.tests_garmin_d, core.tests_garmin_c_push, core.tests_watch_structure en core.tests_watch_plan. HR-controle draait lokaal op bestaande lapfeiten; er is geen extra Garmin-scope, HR-schatting of AI-aanroep voor deze controle.
+
+Migratie 0139 voegt camp_comments toe voor de Comments-kolom in Details Camps. Neem deze mee in de bestaande Render-migratiestap.
