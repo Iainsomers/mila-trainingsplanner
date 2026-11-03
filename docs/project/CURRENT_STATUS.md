@@ -258,3 +258,6 @@ Garmin C/D End HR is aangepast naar laatste 10% van de gemeten repduur (minimaal
 
 
 Stats-atleetgrafiek toont nu gestapelde weekafstanden per zone met Z1 onderaan, zonekleuren, legenda en tooltips. Regressie bewaakt gemeten Watch-kilometers, uitgesloten wandelen, zonevolgorde en gelijke som van stapelhoogtes en totaal.
+
+
+Year Planner: groeps-Basis-periodisering kan weer worden uitgerekt/ingekort en in batches opgeslagen. De lockqueries sorteren expliciet op datum, zodat de nullable atleetnaam uit de standaardmodelsortering geen outer join veroorzaakt die PostgreSQL bij SELECT FOR UPDATE weigert. Regressie controleert Basis-opslag, verlengen, inkorten, gescheiden atleetdata en SQL zonder nullable atleetjoin.

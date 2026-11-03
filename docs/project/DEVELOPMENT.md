@@ -161,3 +161,6 @@ De kleine Garmin-combinatiehelper staat als JavaScript-templatepartial naast de 
 Garmin D vereist migratie 0138 (TrainingSlot.source-keuze). Gerichte controles: core.tests_garmin_d, core.tests_garmin_c_push, core.tests_watch_structure en core.tests_watch_plan. HR-controle draait lokaal op bestaande lapfeiten; er is geen extra Garmin-scope, HR-schatting of AI-aanroep voor deze controle.
 
 Migratie 0139 voegt camp_comments toe voor de Comments-kolom in Details Camps. Neem deze mee in de bestaande Render-migratiestap.
+
+
+YearPlannerEntry heeft standaard ordering via athlete__name. Gebruik bij select_for_update voor Basis-rijen expliciet order_by("date"): een Basis-rij heeft geen atleet en PostgreSQL weigert FOR UPDATE op de nullable zijde van een outer join. De YearPlannerTests bewaken de SQL-vorm ook onder SQLite.

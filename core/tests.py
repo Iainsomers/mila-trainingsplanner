@@ -4054,6 +4054,36 @@ class TrainerPlanningListTests(TestCase):
 
 
 class YearPlannerTests(TestCase):
+    def test_basis_periodisation_resize_has_no_nullable_athlete_lock_join(self):
+        import json
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        coach, athlete = self._coach_and_athlete()
+        plan = TrainingPlan.objects.create(owner=coach, name="Basis resize", plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
+        scope = f"basis-plan-{plan.id}"
+        cell = {"scope":scope, "date":"2026-10-01", "training":"aerobe"}
+        self.assertEqual(self.client.post("/planning/year/entry/", json.dumps(cell), content_type="application/json").status_code, 200)
+        payload = {"scope":scope, "training":"aerobe", "source_start":"2026-10-01", "source_end":"2026-10-01", "start":"2026-10-01", "end":"2026-10-08"}
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.post("/planning/year/training/resize/", json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        reads = [q["sql"] for q in queries if q["sql"].lstrip().upper().startswith("SELECT") and '"core_yearplannerentry"' in q["sql"]]
+        self.assertTrue(reads)
+        self.assertTrue(all('JOIN "core_athlete"' not in sql for sql in reads))
+        entries = YearPlannerEntry.objects.filter(basis_plan=plan)
+        self.assertEqual(entries.count(), 8)
+        self.assertFalse(entries.exclude(athlete=None, training_type="aerobe").exists())
+        self.assertFalse(YearPlannerEntry.objects.filter(athlete=athlete).exists())
+        payload.update(source_end="2026-10-08", end="2026-10-03")
+        self.assertEqual(self.client.post("/planning/year/training/resize/", json.dumps(payload), content_type="application/json").status_code, 200)
+        self.assertEqual(entries.count(), 3)
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.post("/planning/year/training/batch/", json.dumps({"cells":[dict(cell, date="2026-10-02", training="specific")]}), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        reads = [q["sql"] for q in queries if q["sql"].lstrip().upper().startswith("SELECT") and '"core_yearplannerentry"' in q["sql"]]
+        self.assertTrue(reads)
+        self.assertTrue(all('JOIN "core_athlete"' not in sql for sql in reads))
+
     def test_racing_periodisation_saves_copies_and_resizes(self):
         import json
         coach, athlete = self._coach_and_athlete()

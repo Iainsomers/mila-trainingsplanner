@@ -7294,7 +7294,7 @@ def year_planner_training_batch_view(request):
             if not days:
                 continue
             entries = YearPlannerEntry.objects.filter(owner=owner, athlete=athlete_obj, basis_plan=basis_plan, date__in=days)
-            existing = {entry.date: entry for entry in entries.select_for_update()}
+            existing = {entry.date: entry for entry in entries.order_by("date").select_for_update()}
             entries.filter(date__in=[day for day, value in days.items() if not value]).delete()
             updates, creates = [], []
             for day, value in days.items():
@@ -7346,7 +7346,9 @@ def year_planner_training_resize_view(request):
     if athlete_obj and (_year_planner_selected_races([athlete_obj.id], owner, min(start, source_start), max(end, source_end)).exists() or _year_planner_attendances([athlete_obj.id], owner, min(start, source_start), max(end, source_end)).exists()):
         return JsonResponse({"ok": False, "error": "Race days cannot be resized"}, status=409)
     with transaction.atomic():
-        entries = YearPlannerEntry.objects.select_for_update().filter(owner=owner, athlete=athlete_obj, basis_plan=basis_plan)
+        # Default ordering joins the nullable athlete for its name. PostgreSQL
+        # cannot lock that outer join for a Basis row, which has no athlete.
+        entries = YearPlannerEntry.objects.order_by("date").select_for_update().filter(owner=owner, athlete=athlete_obj, basis_plan=basis_plan)
         source = list(entries.filter(date__range=(source_start, source_end)))
         if len(source) != (source_end - source_start).days + 1 or any(entry.training_type != training for entry in source):
             return JsonResponse({"ok": False, "error": "Periodisation changed; refresh the page"}, status=409)
