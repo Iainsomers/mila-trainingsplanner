@@ -405,3 +405,6 @@ Stats: de wekelijkse afstandsgrafiek is gestapeld per Z1–Z6, met de bestaande 
 
 
 Mob/Tech in de trainingspopup ondersteunt maximaal vijf foto’s naast vrije tekst of Standard Strength. Add photos opent de camera/bibliotheekkeuze van de browser; geselecteerde foto’s krijgen direct een preview. Save bewaart ze, Remove verwijdert de koppeling bij Save. Een thumbnail opent de volledige JPEG in een nieuw tabblad voor zoomen. Beschikbaar in Trainer/Flex en AYC, volgens bestaande bewerkrechten; ook een foto zonder tekst is een geldige Mob/Tech-training. Dag-/weekkopieën en Watch/Plan-snapshots nemen fotoreferenties mee. Saved Trainings blijven tekstsjablonen.
+
+
+Garmin C/D herkennen een volledige afwisseling van twee middelgrote repafstanden met trager herstel als beide afstandsgroepen, bijvoorbeeld 6×400m + 6×300m. Beide groepen behouden hun eigen zones/pauzes en alle gemeten reps blijven zichtbaar in de klokpopup.

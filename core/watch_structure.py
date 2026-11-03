@@ -48,6 +48,48 @@ def kilometre_split_timed_intervals(laps, zone_for_lap):
             'blocks': blocks, 'minutes': minutes, 'cooldown_start': len(rows)}
 
 
+def alternating_medium_repetitions(laps, zone_for_lap):
+    """Complete alternating distance reps with a measured slower recovery each.
+
+    Keep this separate from short sprint clustering and long/time intervals.
+    """
+    if not isinstance(laps, list) or len(laps) < 8 or len(laps) % 2:
+        return None
+    rows = []
+    for lap in laps:
+        try:
+            m, s = float(lap['distanceMeters']), float(lap['durationMillis']) / 1000
+        except (KeyError, ValueError, TypeError):
+            return None
+        if not math.isfinite(m + s) or m < 0 or s <= 0:
+            return None
+        rows.append((m, s))
+    work = list(range(0, len(rows), 2))
+    nominal = {}
+    for i in work:
+        m, s = rows[i]
+        rm, rs = rows[i + 1]
+        if not (275 <= m <= 650 and 50 <= s <= 240 and m / s >= 2.5
+                and rm <= 500 and 30 <= rs <= 600 and m / s >= 1.5 * rm / rs):
+            return None
+        nominal[i] = int(math.floor(m / 50 + .5) * 50)
+    pattern = [nominal[i] for i in work]
+    if (len(set(pattern)) != 2 or pattern[0] == pattern[1]
+            or any(value != pattern[index % 2] for index, value in enumerate(pattern))):
+        return None
+    main = []
+    for distance in pattern[:2]:
+        indices = [i for i in work if nominal[i] == distance]
+        zones = sorted({zone_for_lap(laps[i]) for i in indices} & {'Z1','Z2','Z3','Z4','Z5'})
+        zone = (' ' + (zones[0] if len(zones) == 1 else zones[0] + '>' + zones[-1])) if zones else ''
+        recoveries = [rows[i+1][1] for i in indices if rows[i+1][1] < 180]
+        pause = f' p{int(math.floor(median(recoveries) + .5))}' if recoveries else ''
+        main.append(f'{len(indices)}×{distance} m{zone}{pause}')
+    text = ' + '.join(main)
+    return {'description': f'WU: none · Main: {text} · CD: none', 'main': text,
+            'wu_end': 0, 'cooldown_start': len(rows), 'work_indices': work, 'work_distances': nominal}
+
+
 def mixed_short_repetitions(laps, zone_for_lap):
     """Keep short work/recovery laps visible after an easy lead-in.
 

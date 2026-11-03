@@ -662,9 +662,9 @@ def _short_sets_structure(laps, athlete=None):
 
 
 def _mixed_short_structure(laps, athlete=None):
-    from core.watch_structure import mixed_short_repetitions
-    return mixed_short_repetitions(laps, lambda lap: lap_zone_paces(
-        lap["distanceMeters"], lap["durationMillis"], athlete)[0])
+    from core.watch_structure import mixed_short_repetitions, alternating_medium_repetitions
+    zone_for_lap = lambda lap: lap_zone_paces(lap["distanceMeters"], lap["durationMillis"], athlete)[0]
+    return mixed_short_repetitions(laps, zone_for_lap) or alternating_medium_repetitions(laps, zone_for_lap)
 
 
 def _km_timed_structure(laps, athlete=None):

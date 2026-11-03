@@ -541,3 +541,55 @@ class ShortSetsStructureTests(SimpleTestCase):
             self.assertEqual(fixed, proposed)
             self.assertIn("Main: 2*(5*100m z2) p45//3750m z2", fixed)
         request.assert_not_called()
+
+
+class AlternatingMediumRepsTests(SimpleTestCase):
+    def laps(self):
+        result = []
+        for i in range(6):
+            for m, seconds, zone in [(402+i, 104, 'Z3'), (100, 43, 'Z1'),
+                                      (300+i, 73, 'Z4'), (25, 63, 'Z1')]:
+                result.append({'distanceMeters':m, 'durationMillis':seconds*1000, 'zone':zone})
+        return result
+
+    def test_both_distances_are_recognized_before_dominant_distance_fallback(self):
+        from core.watch_structure import alternating_medium_repetitions
+        from core.views.polar_raw import _mixed_short_structure
+        laps = self.laps()
+        result = alternating_medium_repetitions(laps, lambda lap:lap['zone'])
+        self.assertEqual(result['main'], '6×400 m Z3 p43 + 6×300 m Z4 p63')
+        self.assertEqual(len(result['work_indices']), 12)
+        with patch('core.views.polar_raw.lap_zone_paces', side_effect=lambda m, s, athlete: (
+                next(lap['zone'] for lap in laps if lap['distanceMeters']==m and lap['durationMillis']==s), 'NA')):
+            self.assertEqual(_mixed_short_structure(laps)['main'], result['main'])
+
+    def test_all_twelve_clock_reps_survive_in_c_and_d(self):
+        from types import SimpleNamespace
+        from core.watch_structure import alternating_medium_repetitions
+        from core.watch_processing import processed_main_reps
+        from core.views.calendar import _virtual_segment_from_text
+        from core.garmin_d import apply_garmin_d
+        laps = self.laps()
+        result = alternating_medium_repetitions(laps, lambda lap:lap['zone'])
+        loads = [{'segment':'CORE', 'zone':lap['zone'][1:], 'meters':lap['distanceMeters'],
+                  'seconds':lap['durationMillis']/1000, 'work_rep':i in result['work_indices'],
+                  'nominal_rep_m':result['work_distances'].get(i), 'average_hr_last_15':160}
+                 for i,lap in enumerate(laps)]
+        fields = {'wu':'', 'main':result['main'], 'cd':''}
+        converted = apply_garmin_d([{'parts':[{'training_fields':fields, 'watch_loads':loads}]}],
+                                  SimpleNamespace(zone_hr_bpm={'1':'max 140','2':'141-170','3':'171-180','4':'181-190','5':'max 205'}))[0]['parts'][0]
+        for source, main, measured in [('watch_c',fields['main'],loads),
+                                       ('watch_d',converted['training_fields']['main'],converted['watch_loads'])]:
+            segments = [_virtual_segment_from_text('CORE', text.strip()) for text in main.split(' + ')]
+            slot = SimpleNamespace(source=source, watch_loads=measured, segments=SimpleNamespace(all=lambda:segments))
+            reps = processed_main_reps(slot)
+            self.assertEqual([rep['distance_m'] for rep in reps], [400,300]*6)
+            self.assertEqual([rep['measured_distance_m'] for rep in reps], [laps[i]['distanceMeters'] for i in result['work_indices']])
+        self.assertEqual([load['meters'] for load in converted['watch_loads']], [load['meters'] for load in loads])
+
+    def test_incomplete_pattern_or_equally_fast_following_lap_is_not_guessed(self):
+        from core.watch_structure import alternating_medium_repetitions
+        laps = self.laps()
+        self.assertIsNone(alternating_medium_repetitions(laps[:-1], lambda lap:lap['zone']))
+        laps[1]['durationMillis'] = 20000
+        self.assertIsNone(alternating_medium_repetitions(laps, lambda lap:lap['zone']))

@@ -270,3 +270,6 @@ Mob/Tech-foto’s toegevoegd in de trainingspopup, met uploadpreview, verwijdere
 
 
 Mob/Tech-fotolinks zijn nu gekoppeld aan de stabiele TrainingSlot-id. AYC maakt segmenten bij opslaan opnieuw aan; oude segmentlinks konden daardoor 404 geven. Persoonlijke foto’s volgen coachtoegang tot de atleet, ook bij een persoonlijk plan met een andere eigenaar. Tests dekken herhaald opslaan met dezelfde foto-URL, thumbnails en deze toegangsgrens.
+
+
+Garmin C/D missen geen 300m-reps meer bij volledige afwisselende 400/300m-opnames met herstel. Een aparte middelgrote-repregel houdt beide afstandsgroepen en hun nominale lapkoppeling vast; de bestaande korte-rep- en lange-intervalregels blijven behouden. 55 gerichte structuur-, D- en pushtests slagen, inclusief twaalf klokreps in bronvolgorde en negatieve patrooncontroles.
