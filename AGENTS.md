@@ -20,6 +20,7 @@ Lees vóór een wijziging de relevante documenten in `docs/project/`:
 - Trainers moeten in de AYC tussen toegankelijke atleten kunnen schakelen.
 - Gebruik in de gebruikersinterface `Main` en `Main 2`; `CORE` en `CORE2` blijven interne datatypen.
 - Behoud de compacte MiLa-stijl en test wijzigingen ook voor mobiel.
+- Algemene Garmin-wijzigingen gelden standaard voor zowel model C als D; behandel ze alleen apart wanneer de wijziging specifiek hun onderlinge verschil betreft.
 - Voer bij codewijzigingen minstens gerichte tests en `manage.py check` uit.
 - Commit geen lokale database, tijdelijke Office-bestanden of geheime gegevens.
 - Voltooide wijzigingen worden standaard met de relevante bestanden gecommit en naar `main` gepusht, zodat Render ze kan uitrollen. Niet pushen wanneer de gebruiker expliciet zegt dat iets lokaal moet blijven.

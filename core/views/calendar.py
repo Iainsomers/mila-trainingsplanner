@@ -2403,6 +2403,18 @@ def _watch_actual_time_label(actual_loads, seg=None):
     """Return the measured min/km range for a Watch segment."""
     if not actual_loads:
         return ""
+    if (str(getattr(seg, "type", "")).upper() in {"WU", "CD"}
+            and str(getattr(getattr(seg, "slot", None), "source", "")) in {"watch_c", "watch_d"}):
+        meters = seconds = 0.0
+        for load in actual_loads:
+            try:
+                m, s = float(load.get("meters") or 0), float(load.get("seconds") or 0)
+            except (TypeError, ValueError):
+                continue
+            if m > 0 and s > 0:
+                meters += m
+                seconds += s
+        return _format_min_km_range([seconds * 1000 / meters]) if meters > 0 else ""
     measured = actual_loads
     # Type A/B can store short recovery laps in the same CORE bucket as the
     # work laps. For a repeated single-distance Main, exclude those from the

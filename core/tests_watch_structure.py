@@ -26,6 +26,20 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_garmin_warmup_and_cooldown_show_only_weighted_average_pace(self):
+        from types import SimpleNamespace
+        from core.views.calendar import _watch_actual_time_label, _annotate_slot_segment_display_times
+        loads = [{"meters": 1000, "seconds": 270}, {"meters": 500, "seconds": 120}]
+        for source in ("watch_c", "watch_d"):
+            for kind in ("WU", "CD"):
+                slot = SimpleNamespace(source=source)
+                segment = SimpleNamespace(type=kind, slot=slot, text="1500m z1")
+                self.assertEqual(_watch_actual_time_label(loads, segment), "4:20 min/km")
+                self.assertEqual(_watch_actual_time_label([], segment), "")
+        # Main still shows its measured rep-time and pace ranges.
+        segment = SimpleNamespace(type="CORE", slot=SimpleNamespace(source="watch_c"))
+        self.assertIn("-->", _watch_actual_time_label(loads, segment))
+
     def test_two_kilometres_and_short_remainder_are_one_continuous_run(self):
         from types import SimpleNamespace
         from core.watch_structure import continuous_kilometre_run
