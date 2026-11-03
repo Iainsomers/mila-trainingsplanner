@@ -53,7 +53,7 @@ def alternating_medium_repetitions(laps, zone_for_lap):
 
     Keep this separate from short sprint clustering and long/time intervals.
     """
-    if not isinstance(laps, list) or len(laps) < 8 or len(laps) % 2:
+    if not isinstance(laps, list) or len(laps) < 7:
         return None
     rows = []
     for lap in laps:
@@ -64,25 +64,44 @@ def alternating_medium_repetitions(laps, zone_for_lap):
         if not math.isfinite(m + s) or m < 0 or s <= 0:
             return None
         rows.append((m, s))
-    work = list(range(0, len(rows), 2))
-    nominal = {}
-    for i in work:
-        m, s = rows[i]
-        rm, rs = rows[i + 1]
-        if not (275 <= m <= 650 and 50 <= s <= 240 and m / s >= 2.5
-                and rm <= 500 and 30 <= rs <= 600 and m / s >= 1.5 * rm / rs):
-            return None
+    def is_work(row):
+        m, seconds = row
+        return 275 <= m <= 650 and 50 <= seconds <= 240 and m / seconds >= 2.5
+    work = [i for i, row in enumerate(rows) if is_work(row)]
+    if len(work) < 4 or work[0] != 0:
+        return None
+    nominal, recovery_seconds = {}, {}
+    for position, i in enumerate(work):
+        m, seconds = rows[i]
+        end = work[position + 1] if position + 1 < len(work) else len(rows)
+        recovery = rows[i + 1:end]
+        # The recording can stop on its final work rep. A split recovery
+        # remains one recovery block, not a missing or invented work lap.
+        if not recovery:
+            if position != len(work) - 1:
+                return None
+        else:
+            rm = sum(row[0] for row in recovery)
+            rs = sum(row[1] for row in recovery)
+            if not (rm <= 500 and 30 <= rs <= 600
+                    and all(row[0] <= 500 for row in recovery)
+                    and m / seconds >= 1.4 * rm / rs):
+                return None
+            recovery_seconds[i] = rs
         nominal[i] = int(math.floor(m / 50 + .5) * 50)
     pattern = [nominal[i] for i in work]
-    if (len(set(pattern)) != 2 or pattern[0] == pattern[1]
-            or any(value != pattern[index % 2] for index, value in enumerate(pattern))):
+    # Allow one additional measured rep of the last distance after the
+    # alternating sets; never infer a missing rep of the other distance.
+    alternating = pattern[:-1] if pattern[-1] == pattern[-2] else pattern
+    if (len(set(pattern)) != 2 or len(alternating) < 4 or alternating[0] == alternating[1]
+            or any(value != alternating[index % 2] for index, value in enumerate(alternating))):
         return None
     main = []
     for distance in pattern[:2]:
         indices = [i for i in work if nominal[i] == distance]
         zones = sorted({zone_for_lap(laps[i]) for i in indices} & {'Z1','Z2','Z3','Z4','Z5'})
         zone = (' ' + (zones[0] if len(zones) == 1 else zones[0] + '>' + zones[-1])) if zones else ''
-        recoveries = [rows[i+1][1] for i in indices if rows[i+1][1] < 180]
+        recoveries = [recovery_seconds[i] for i in indices if i in recovery_seconds and recovery_seconds[i] < 180]
         pause = f' p{int(math.floor(median(recoveries) + .5))}' if recoveries else ''
         main.append(f'{len(indices)}×{distance} m{zone}{pause}')
     text = ' + '.join(main)

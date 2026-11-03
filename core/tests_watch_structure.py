@@ -590,6 +590,39 @@ class AlternatingMediumRepsTests(SimpleTestCase):
     def test_incomplete_pattern_or_equally_fast_following_lap_is_not_guessed(self):
         from core.watch_structure import alternating_medium_repetitions
         laps = self.laps()
-        self.assertIsNone(alternating_medium_repetitions(laps[:-1], lambda lap:lap['zone']))
+        self.assertIsNotNone(alternating_medium_repetitions(laps[:-1], lambda lap:lap['zone']))
+        self.assertIsNone(alternating_medium_repetitions(laps[1:], lambda lap:lap['zone']))
         laps[1]['durationMillis'] = 20000
         self.assertIsNone(alternating_medium_repetitions(laps, lambda lap:lap['zone']))
+
+    def test_exact_mixed_recording_includes_split_recovery_and_extra_final_300(self):
+        from core.watch_structure import alternating_medium_repetitions
+        pairs = [(402.76,110,98.99,82),(309.93,68,18.32,74),
+                 (402.92,103,101.17,42),(307.05,74,30.27,60),
+                 (412.28,104,109.46,45),(300.36,71,37.21,62),
+                 (411.37,105,100.35,43),(301.49,75,27.97,69),
+                 (412.04,102,108.94,40),(301.91,73,15.21,63),
+                 (414.02,104,108.86,40),(309.28,74,49.1396,163)]
+        laps = []
+        for m,s,rm,rs in pairs:
+            laps.extend([{'distanceMeters':m,'durationMillis':s*1000},
+                         {'distanceMeters':rm,'durationMillis':rs*1000}])
+        laps.extend([{'distanceMeters':91.1704,'durationMillis':34000},
+                     {'distanceMeters':297.53,'durationMillis':72000}])
+        result = alternating_medium_repetitions(laps, lambda lap:'Z3' if lap['distanceMeters'] >= 275 else 'Z1')
+        self.assertEqual(result['main'], '6×400 m Z3 p43 + 7×300 m Z3 p63')
+        self.assertEqual(result['work_indices'], list(range(0,24,2)) + [25])
+        self.assertEqual(result['work_distances'][25],300)
+        self.assertAlmostEqual(sum(lap['distanceMeters'] for lap in laps),5480)
+        self.assertEqual(sum(lap['durationMillis'] for lap in laps),1952000)
+        from types import SimpleNamespace
+        from core.views.calendar import _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+        loads = [{'segment':'CORE','zone':'3','meters':lap['distanceMeters'], 'seconds':lap['durationMillis']/1000,
+                  'work_rep':i in result['work_indices'], 'nominal_rep_m':result['work_distances'].get(i)} for i,lap in enumerate(laps)]
+        segments = [_virtual_segment_from_text('CORE', text) for text in result['main'].split(' + ')]
+        for source in ['watch_c','watch_d']:
+            slot = SimpleNamespace(source=source, watch_loads=loads, segments=SimpleNamespace(all=lambda:segments))
+            reps = processed_main_reps(slot)
+            self.assertEqual([rep['distance_m'] for rep in reps], [400,300]*6 + [300])
+            self.assertEqual(reps[-1]['measured_distance_m'],297.53)
