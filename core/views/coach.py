@@ -5893,6 +5893,8 @@ def garmin_type_c_ayc_view(request):
                                        "CD" if index >= structured["cooldown_start"] else "CORE")
                     if "work_indices" in structured and load["segment"] == "CORE":
                         load["work_rep"] = index in structured["work_indices"] or float(load.get("meters") or 0) >= 800
+                        if index in structured.get("work_distances", {}):
+                            load["nominal_rep_m"] = structured["work_distances"][index]
                 continue
             main_before = fields.get("main", "")
             source_candidate = _watch_c_merge_half_laps_from_raw(main_before, raw_laps)

@@ -2179,6 +2179,9 @@ def _watch_segment_loads(seg):
             continue
         if segment_type == "CORE" and load.get("work_rep") is False:
             continue
+        if load.get("nominal_rep_m") and getattr(seg, "distance_m", None):
+            if float(load["nominal_rep_m"]) != float(seg.distance_m):
+                continue
         try:
             meters = float(load.get("meters") or 0)
             seconds = float(load.get("seconds") or 0)
@@ -2415,7 +2418,7 @@ def _watch_actual_time_label(actual_loads, seg=None):
         # followed by 4x150 m) in the same CORE bucket. Keep each pill's
         # timing tied to laps near that segment's own rep distance; a broad
         # half-distance cutoff mixed the short sets and recovery laps together.
-        tolerance = max(20.0, target_distance * 0.25)
+        tolerance = max(25.0 if target_distance <= 50 else 20.0, target_distance * 0.25)
         expected_zones = {str(zone) for zone in _segment_zone_labels(seg)}
         work_loads = []
         for load in actual_loads:

@@ -26,6 +26,44 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_compact_short_groups_keep_final_rep_and_cooldown(self):
+        from core.watch_structure import mixed_short_repetitions
+        values = [(5521,1785),(44,680),(2420,1083),(180,1156)]
+        values += [(m, seconds) for m, seconds in [(49,9),(86,98),(47,8),(97,86),(47,8),(87,113),(46,8),(90,396)]]
+        values += [(m, seconds) for m, seconds in [(182,35),(202,137),(147,28),(165,121),(175.32,34),(198,124),
+                  (135,25),(187,300),(175.94,35),(193,132),(138,26),(168,135),
+                  (167,32),(202,158),(143,25),(175,304),(169,33),(202,141),
+                  (139.49,26),(176,134),(171.58,33),(199,166),(139.09,25),(1842,925)]]
+        laps = [{"distanceMeters": m, "durationMillis": seconds * 1000,
+                 "zone": "Z5" if seconds < 60 else "Z1"} for m, seconds in values]
+        result = mixed_short_repetitions(laps, lambda lap: lap["zone"])
+        self.assertIn("2400 m Z1", result["main"])
+        self.assertIn("4×50 m", result["main"])
+        self.assertIn("6×200 m", result["main"])
+        self.assertIn("6×150 m", result["main"])
+        self.assertEqual(len(result["main"].split(" + ")), 4)
+        self.assertEqual(len(result["work_indices"]), 16)
+        self.assertIn("CD: 1850 m Z1", result["description"])
+
+    def test_grouped_reps_keep_the_recorded_clock_order(self):
+        from types import SimpleNamespace
+        from core.watch_processing import processed_main_reps
+        values = [(182,35,200),(147,28,150),(175,34,200),(135,25,150)]
+        loads = [{"segment": "CORE", "zone": "5", "meters": m, "seconds": seconds,
+                  "nominal_rep_m": nominal, "work_rep": True} for m, seconds, nominal in values]
+        segments = [SimpleNamespace(type="CORE", text=f"2×{m} m Z5", reps=2, distance_m=m, order=i)
+                    for i, m in enumerate((200,150))]
+        slot = SimpleNamespace(source="watch_c", watch_loads=loads, segments=SimpleNamespace(all=lambda: segments))
+        result = processed_main_reps(slot)
+        self.assertEqual([row["distance_m"] for row in result], [200,150,200,150])
+        self.assertEqual([row["measured_seconds"] for row in result], [35,28,34,25])
+        self.assertEqual([row["rep"] for row in result], [1,2,3,4])
+        from core.views.calendar import _watch_segment_loads
+        for segment in segments:
+            segment.slot = slot
+        self.assertEqual([load["seconds"] for load in _watch_segment_loads(segments[0])], [35,34])
+        self.assertEqual([load["seconds"] for load in _watch_segment_loads(segments[1])], [28,25])
+
     def test_known_short_recoveries_are_not_selected_as_work_at_same_distance(self):
         from types import SimpleNamespace
         from core.watch_processing import processed_main_reps
@@ -51,8 +89,8 @@ class ShortSetsStructureTests(SimpleTestCase):
         self.assertEqual(result["cooldown_start"], 27)
         self.assertIn("WU: 4950 m Z1", result["description"])
         self.assertIn("2×50 m", result["main"])
-        self.assertEqual(result["main"].count("200 m"), 5)
-        self.assertEqual(result["main"].count("150 m"), 4)
+        self.assertIn("5×200 m", result["main"])
+        self.assertIn("4×150 m", result["main"])
         self.assertIn("CD: 1000 m Z1", result["description"])
         self.assertNotIn("1000 m", result["main"])
         # Strong measured short work must win before an AI call or km grouping.

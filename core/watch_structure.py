@@ -24,7 +24,7 @@ def mixed_short_repetitions(laps, zone_for_lap):
     for i, (m, s) in enumerate(rows[:-1]):
         rm, rs = rows[i + 1]
         if (25 <= m <= 250 and 3 <= s <= 60 and rs >= 30
-                and rm <= 300 and m / s >= 2.5 and m / s >= 1.5 * rm / rs):
+                and (rm <= 300 or (i == len(rows) - 2 and rm >= 500)) and m / s >= 2.5 and m / s >= 1.5 * rm / rs):
             work.append(i)
     if len(work) < 4:
         return None
@@ -49,15 +49,26 @@ def mixed_short_repetitions(laps, zone_for_lap):
         return (' ' + (zones[0] if len(zones) == 1 else zones[0] + '>' + zones[-1])) if zones else ''
     main = [f'{distance_label(rows[i][0])} m{zone_label([i])}'
             for i in range(wu_end, work[0]) if rows[i][0] >= 800]
-    groups = []
+    nominal_by_index = {i: distance_label(rows[i][0]) for i in work}
+    # GPS can put alternating 200m reps just below the 175m rounding boundary.
+    # Only two clearly separated repeated distance clusters justify correcting
+    # nominal labels; isolated outliers do not establish a new rep distance.
+    longer = sorted((rows[i][0], i) for i in work if rows[i][0] >= 100)
+    gaps = [(longer[j + 1][0] - longer[j][0], j + 1) for j in range(1, len(longer) - 2)]
+    gap, split = max(gaps, default=(0, 0))
+    if gap >= 15:
+        clusters = [longer[:split], longer[split:]]
+        targets = [distance_label(cluster[min(len(cluster) - 1, int(len(cluster) * .75))][0]) for cluster in clusters]
+        if targets[1] - targets[0] >= 50:
+            for cluster, target in zip(clusters, targets):
+                for _, i in cluster:
+                    nominal_by_index[i] = target
+    grouped = {}
     for i in work:
-        nominal = distance_label(rows[i][0])
-        gap = sum(s for _, s in rows[groups[-1][-1] + 1:i]) if groups else 0
-        if not groups or nominal != distance_label(rows[groups[-1][0]][0]) or gap >= 180:
-            groups.append([])
-        groups[-1].append(i)
+        grouped.setdefault(nominal_by_index[i], []).append(i)
+    groups = list(grouped.values())
     for group in groups:
-        nominal = distance_label(rows[group[0]][0])
+        nominal = nominal_by_index[group[0]]
         label = (f'{len(group)}×' if len(group) > 1 else '') + f'{nominal} m' + zone_label(group)
         # Use the recovery immediately following each work lap; a separate
         # near-stationary lap must not inflate its typical rep recovery.
@@ -75,7 +86,7 @@ def mixed_short_repetitions(laps, zone_for_lap):
     cd = f'{distance_label(cd_m)} m' + zone_label(list(range(cooldown_start, len(rows)))) if has_cd else ''
     main_text = ' + '.join(main)
     return {'description': f'WU: {wu} · Main: {main_text} · CD: {cd or "none"}',
-            'main': main_text, 'wu_end': wu_end, 'work_indices': work,
+            'main': main_text, 'wu_end': wu_end, 'work_indices': work, 'work_distances': nominal_by_index,
             'cooldown_start': cooldown_start if has_cd else len(rows)}
 
 

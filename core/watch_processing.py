@@ -229,7 +229,8 @@ def processed_main_reps(slot):
                     (index, meters, seconds)
                     for index, meters, seconds, zone in candidates
                     if index not in used_indices
-                    and abs(meters - distance) <= tolerance
+                    and (float(raw_loads[index]["nominal_rep_m"]) == distance
+                         if raw_loads[index].get("nominal_rep_m") else abs(meters - distance) <= tolerance)
                     and (not expected_zones or not zone or zone in expected_zones)
                 ),
                 None,
@@ -240,6 +241,7 @@ def processed_main_reps(slot):
             used_indices.add(raw_index)
             output.append({
                 "rep": len(output) + 1,
+                "_lap_order": raw_index,
                 # Show the clean planned rep distance (e.g. 200 m), not GPS
                 # drift such as 190 or 250 m. Pace remains based on measured
                 # meters, which are retained separately for transparency.
@@ -251,6 +253,11 @@ def processed_main_reps(slot):
                 "average_hr_last_15": raw_loads[raw_index].get("average_hr_last_15"),
                 "average_hr": raw_loads[raw_index].get("average_hr"),
             })
+    if any("work_rep" in load for load in raw_loads if isinstance(load, dict)):
+        output.sort(key=lambda row: row.get("_lap_order", -1))
+    for index, row in enumerate(output, 1):
+        row.pop("_lap_order", None)
+        row["rep"] = index
     return output
 
 
