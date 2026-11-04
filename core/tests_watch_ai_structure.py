@@ -140,11 +140,30 @@ class WatchAIStructureTests(SimpleTestCase):
         response = MagicMock()
         response.__enter__.return_value.read.return_value = json.dumps({'choices':[{'message':{'content':json.dumps(self.proposal)}}]}).encode()
         with patch.dict('os.environ',{'OPENAI_API_KEY':'test'}), patch('core.views.polar_raw.urlopen',return_value=response) as call, patch('core.views.polar_raw.lap_zone_paces',return_value=('Z2','NA')):
-            description = _model_b_ai_description(laps)
+            description = _model_b_ai_description(laps,strict_lap_structure=True)
         self.assertIsNotNone(description.structure)
         request = call.call_args.args[0]
         self.assertIn('lap_structure',request.data.decode())
         self.assertNotIn('heart_rate',request.data.decode())
+        prompt = json.loads(json.loads(request.data)['messages'][1]['content'])
+        self.assertEqual(set(prompt['output_schema']), {'lap_structure','confidence'})
+
+    def test_ai_failures_are_distinguishable_without_exposing_service_response(self):
+        from core.views.polar_raw import _model_b_ai_description
+        laps = [{'distanceMeters':f['distance_m'],'durationMillis':f['duration_s']*1000} for f in self.facts]
+        cases = [('unavailable', '', None), ('service_error','test', OSError('private service detail')),
+                 ('invalid_response','test', {}), ('rejected_structure','test', {'confidence':.1,'lap_structure':{}})]
+        for expected,key,payload in cases:
+            with self.subTest(status=expected):
+                response = MagicMock()
+                response.__enter__.return_value.read.return_value = json.dumps(
+                    {'choices':[{'message':{'content':json.dumps({} if isinstance(payload,Exception) else payload)}}]}).encode()
+                diagnostics = {}
+                with patch.dict('os.environ',{'OPENAI_API_KEY':key}), patch('core.views.polar_raw.urlopen',
+                        side_effect=payload if isinstance(payload,Exception) else None,return_value=response), patch(
+                        'core.views.polar_raw.lap_zone_paces',return_value=('Z2','NA')):
+                    self.assertEqual(_model_b_ai_description(laps,diagnostics=diagnostics,strict_lap_structure=True),'')
+                self.assertEqual(diagnostics,{'status':expected})
 
     def test_translation_keeps_validated_metadata_and_consent_skips_ai(self):
         from core.views.polar_raw import translate_model_b
@@ -160,5 +179,6 @@ class WatchAIStructureTests(SimpleTestCase):
             self.assertEqual(ai.call_count,1)
         with patch('core.views.polar_raw.translate',return_value=deepcopy(baseline)), patch(
                 'core.views.polar_raw._model_b_ai_description',side_effect=AssertionError('AI consent disabled')):
-            result = translate_model_b([session],5,allow_ai=False)
+            result = translate_model_b([session],5,allow_ai=False,allow_lap_structure=True)
             self.assertNotIn('validated_lap_structure',result[0]['parts'][0])
+            self.assertEqual(result[0]['parts'][0]['ai_structure_status'],'consent_required')

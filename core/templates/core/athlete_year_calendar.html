@@ -2573,6 +2573,22 @@
       var meta = document.createElement("div"); meta.className = "text-muted mb-2";
       meta.textContent = "Distance: " + session.distance + " m · Duration: " + session.duration; box.appendChild(meta);
       (session.parts || []).forEach(function(part) {
+        var aiMessages = {
+          applied: "AI structure applied.",
+          consent_required: "AI not used: Garmin AI permission is not enabled for this athlete.",
+          unavailable: "AI not available: the server AI key is not configured.",
+          service_error: "AI service could not be reached. Showing measured fallback; try again later.",
+          invalid_response: "AI returned no usable lap structure. Showing measured fallback.",
+          rejected_structure: "AI lap structure failed measurement checks. Showing measured fallback.",
+          insufficient_laps: "Too few usable laps for AI structure recognition.",
+          measured_structure: "Using measured structure recognition; AI was not called."
+        };
+        if (aiMessages[part.ai_structure_status]) {
+          var aiStatus = document.createElement("div");
+          aiStatus.className = "small text-muted mb-2";
+          aiStatus.textContent = aiMessages[part.ai_structure_status];
+          box.appendChild(aiStatus);
+        }
         if (part.description) {
           var description = document.createElement("div");
           description.className = "alert alert-light border py-2 mb-2 d-flex flex-wrap align-items-start justify-content-between gap-2";

@@ -679,13 +679,15 @@ def _continuous_km_description(laps, athlete=None):
         lap["distanceMeters"], lap["durationMillis"], athlete)[0])
 
 
-def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
+def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, diagnostics=None, strict_lap_structure=False):
     """Ask the language model to identify nested interval structure for Watch B.
 
     The model only proposes structure from compact numeric lap facts.  The
     server validates the numeric ranges and builds the displayed description,
     so a model response cannot alter measured distance or time calculations.
     """
+    diagnostics = diagnostics if diagnostics is not None else {}
+    diagnostics['status'] = 'measured_structure'
     # Strong measured structure wins over an AI proposal which can omit short
     # reps or repeat the following continuous block inside every set.
     structured = _short_sets_structure(laps, athlete) if isinstance(laps, list) else None
@@ -702,6 +704,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
         return continuous
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key or not isinstance(laps, list):
+        diagnostics["status"] = "unavailable"
         return ""
     facts = []
     elapsed_s = 0.0
@@ -729,6 +732,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
         })
         elapsed_s += duration_ms / 1000
     if len(facts) < 6:
+        diagnostics["status"] = "insufficient_laps"
         return ""
 
     prompt = {
@@ -775,6 +779,9 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
             "confidence": "number from 0 to 1",
         },
     }
+    if strict_lap_structure:
+        prompt['output_schema'] = {key:prompt['output_schema'][key] for key in ('lap_structure','confidence')}
+        prompt['task'] += ' Return the complete lap_structure schema only. If uncertain return confidence below 0.75. Do not use legacy sets/segments.'
     if not allow_lap_structure:
         prompt["output_schema"].pop("lap_structure", None)
         task = prompt["task"]
@@ -786,7 +793,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
         "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": (
-                ("Use the legacy segments/sets schema only. " if not allow_lap_structure else "") +
+                ("Use the legacy segments/sets schema only. " if not allow_lap_structure else ("Use only lap_structure and confidence; never legacy sets/segments. " if strict_lap_structure else "")) +
                 "You are a conservative running-workout structure recognizer. "
                 "Return only valid JSON matching the requested schema. Use measured "
                 "lap facts, never invent distances, counts or a cooldown. Prefer lap_structure "
@@ -805,11 +812,15 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         method="POST",
     )
+    diagnostics["status"] = "invalid_response"
     try:
         with urlopen(request, timeout=25) as response:
             payload = json.loads(response.read().decode("utf-8"))
         data = json.loads(payload["choices"][0]["message"]["content"])
-    except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError, IndexError, TypeError):
+    except (HTTPError, URLError, TimeoutError, OSError):
+        diagnostics["status"] = "service_error"
+        return ""
+    except (ValueError, KeyError, IndexError, TypeError):
         return ""
 
     if not isinstance(data, dict):
@@ -819,7 +830,10 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
             return ""
         from core.watch_ai_structure import validate_lap_structure, ValidatedDescription
         structure = validate_lap_structure(data, facts)
+        diagnostics["status"] = "applied" if structure else "rejected_structure"
         return ValidatedDescription(structure) if structure else ""
+    if strict_lap_structure:
+        return ""
     try:
         sets = int(data.get("sets") or 1)
         warmup_m = int(data["warmup_m"]) if data.get("warmup_m") is not None else 0
@@ -980,6 +994,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
     parts = [f"WU: {int(math.floor(warmup_m / 50 + 0.5) * 50)} m Z1" if warmup_m >= 500 else "WU: none"]
     parts.append("Main: " + main_text)
     parts.append(f"CD: {int(math.floor(cooldown_m / 50 + 0.5) * 50)} m Z1" if cooldown_m >= 500 else "CD: none")
+    diagnostics["status"] = "applied"
     return " · ".join(parts)
 
 
@@ -1120,7 +1135,10 @@ def translate_model_b(payload, interval, athlete=None, *, allow_ai=True, allow_l
             laps_container = laps_container if isinstance(laps_container, dict) else {}
             manual_laps = laps_container.get("laps") or laps_container.get("manualLaps") or laps_container.get("manual-laps") or []
             if manual_laps:
-                description = (_model_b_ai_description(manual_laps, athlete, allow_lap_structure=allow_lap_structure) if allow_ai else "") or type_b_description(manual_laps, athlete)
+                diagnostics = {'status':'consent_required'}
+                description = (_model_b_ai_description(manual_laps, athlete, allow_lap_structure=allow_lap_structure, diagnostics=diagnostics, strict_lap_structure=allow_lap_structure) if allow_ai else "") or type_b_description(manual_laps, athlete)
+                if allow_lap_structure:
+                    result_parts[result_index]['ai_structure_status'] = diagnostics['status']
                 if description:
                     if getattr(description, "structure", None):
                         result_parts[result_index]["validated_lap_structure"] = description.structure
