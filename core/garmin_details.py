@@ -28,7 +28,31 @@ def lap_data(item):
     if distance is None:
         # Garmin can omit distance on stationary/short activities. This is not
         # a malformed batch: preserve the receipt without inventing lap metres.
-        return {"laps": [], "heart_rate_samples": [], "total_distance_m": None,
+        heart_samples = []
+        for sample in samples:
+            if not isinstance(sample,dict):
+                continue
+            timestamp, hr = number(sample.get('startTimeInSeconds')), number(sample.get('heartRate'))
+            if timestamp is not None and start <= timestamp <= start+duration and hr is not None and 0 < hr < 300:
+                heart_samples.append({'timestamp':datetime.fromtimestamp(timestamp,timezone.utc).isoformat(),'heart_rate':hr})
+        metrics = {'heart_rate_sample_count':len(heart_samples)}
+        sport = summary.get('activityType')
+        if isinstance(sport,str) and sport.strip():
+            metrics['sport'] = sport.strip()[:100]
+        for source,key,upper in (('averageHeartRateInBeatsPerMinute','average_hr',300),
+                                 ('maxHeartRateInBeatsPerMinute','max_hr',300),
+                                 ('activeKilocalories','active_kcal',100000)):
+            value = number(summary.get(source))
+            if value is not None and 0 < value < upper:
+                metrics[key] = round(value,1)
+        if heart_samples:
+            hrs = [point['heart_rate'] for point in heart_samples]
+            if 'average_hr' not in metrics:
+                metrics['sample_average_hr'] = round(sum(hrs)/len(hrs),1)
+            if 'max_hr' not in metrics:
+                metrics['sample_max_hr'] = max(hrs)
+        return {"laps": [], "heart_rate_samples": heart_samples, "total_distance_m": None,
+                "activity_metrics":metrics,
                 "total_elapsed_s": duration, "lap_data_status": "missing_distance",
                 "received_lap_count": len(laps), "received_sample_count": len(samples)}
     points = sorted((number(sample.get("startTimeInSeconds")), number(sample.get("totalDistanceInMeters")))

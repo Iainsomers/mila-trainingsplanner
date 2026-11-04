@@ -202,6 +202,34 @@ class GarminCPushTests(TestCase):
                 self.assertEqual(part['training_fields'],options[0]['training_fields'])
                 self.assertNotIn('review_lap_structure',part)
 
+    def test_distance_free_activity_preserves_sport_and_heart_rate_in_c_and_d(self):
+        details=self.details()
+        details['summary']=dict(self.summary,activityType='ELLIPTICAL_FITNESS',
+            averageHeartRateInBeatsPerMinute=142,maxHeartRateInBeatsPerMinute=170,activeKilocalories=450)
+        details['summary'].pop('distanceInMeters')
+        self.send({'activityDetails':[details]})
+        saved=GarminActivitySummary.objects.get().analysis_data
+        self.assertTrue(saved['heart_rate_samples'])
+        self.assertEqual(saved['laps'],[])
+        self.assertNotIn('latitudeInDegree',json.dumps(saved))
+        for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+            self.client.force_login(self.coach)
+            item=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'}).json()['results'][0]
+            self.assertEqual(item['distance'],'NA')
+            self.assertEqual(item['activity_metrics']['sport'],'ELLIPTICAL_FITNESS')
+            self.assertEqual(item['activity_metrics']['average_hr'],142)
+            self.assertEqual(item['activity_metrics']['max_hr'],170)
+            self.assertEqual(item['activity_metrics']['active_kcal'],450)
+            self.assertEqual(item['activity_metrics']['heart_rate_sample_count'],6)
+            self.assertNotIn('watch_loads',item['parts'][0])
+        from core.garmin_details import lap_data
+        details['summary'].pop('averageHeartRateInBeatsPerMinute')
+        details['summary'].pop('maxHeartRateInBeatsPerMinute')
+        metrics=lap_data(details)['activity_metrics']
+        self.assertIn('sample_average_hr',metrics)
+        self.assertNotIn('average_hr',metrics)
+        self.assertEqual(metrics['sample_max_hr'],170)
+
     def test_timer_duration_matches_garmin_for_new_and_existing_single_lap(self):
         details = self.details()
         details['summary'] = dict(self.summary,distanceInMeters=17336,durationInSeconds=4503)

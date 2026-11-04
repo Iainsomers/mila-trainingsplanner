@@ -5782,7 +5782,9 @@ def garmin_type_c_ayc_view(request, model="C"):
                 if parsed.get("lap_data_status") == "no_lap_markers":
                     detail_message = "Activity Details have been received. Garmin supplied no recorded lap boundaries for this activity."
                 elif parsed.get("lap_data_status") == "missing_distance":
-                    detail_message = "Activity Details have been received, but Garmin supplied no total distance. No lap distances are estimated."
+                    detail_message = "Garmin supplied no total distance. For an indoor or non-running activity this can be normal. Available activity and heart-rate measurements are shown above; no running distance is estimated."
+                    if not parsed.get('activity_metrics'):
+                        detail_message += " No sport/heart-rate measurements are stored for this delivery. Resend Activity Details or upload the original FIT file to inspect those measurements."
                 elif parsed.get("lap_data_status") == "incomplete_lap_coverage":
                     detail_message = "Activity Details have been received, but the measured samples do not cover all lap boundaries. No incomplete workout analysis is offered."
                 if parsed.get("details_received_at"):
@@ -5793,6 +5795,7 @@ def garmin_type_c_ayc_view(request, model="C"):
                 detail_status = "summary_only"
             summary_results.append({"name": f"Garmin activity {received.activity_id}",
                 "detail_status": detail_status,
+                "activity_metrics": parsed.get("activity_metrics",{}),
                 "start": timezone.localtime(received.activity_start).isoformat(),
                 "distance": f"{received.distance_m:g}" if received.distance_m is not None else "NA",
                 "duration": watch_duration(received.duration_s * 1000) if received.duration_s is not None else "NA",

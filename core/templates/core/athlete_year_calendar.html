@@ -2572,6 +2572,20 @@
       title.textContent = (session.name || "Training session") + (session.start ? " — " + session.start : ""); box.appendChild(title);
       var meta = document.createElement("div"); meta.className = "text-muted mb-2";
       meta.textContent = "Distance: " + session.distance + " m · Duration: " + session.duration; box.appendChild(meta);
+      if (session.activity_metrics && Object.keys(session.activity_metrics).length) {
+        var metrics = session.activity_metrics;
+        var metricLabels = {sport:"Activity",average_hr:"Average HR (Garmin)",max_hr:"Max HR (Garmin)",
+          sample_average_hr:"Average HR (received samples)",sample_max_hr:"Max HR (received samples)",
+          active_kcal:"Active kcal",heart_rate_sample_count:"Received HR samples"};
+        var details = document.createElement("div"); details.className = "small mb-2 d-flex flex-wrap gap-3";
+        Object.keys(metricLabels).forEach(function(key) {
+          if (metrics[key] === undefined || metrics[key] === null) return;
+          var item = document.createElement("span");
+          item.textContent = metricLabels[key] + ": " + String(metrics[key]);
+          details.appendChild(item);
+        });
+        box.appendChild(details);
+      }
       (session.parts || []).forEach(function(part) {
         var aiMessages = {
           applied: "AI structure applied.",
