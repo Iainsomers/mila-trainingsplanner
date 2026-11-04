@@ -12,6 +12,45 @@ from core.views.calendar import _virtual_segment_from_text, _ayc_slot_loads_for_
 
 
 class WatchAIStructureTests(SimpleTestCase):
+    def test_ai_distance_group_keeps_seventeen_measured_reps_and_outlier(self):
+        from core.views.polar_raw import _model_b_ai_description
+        values = [(1000,324.87),(1000,311.95),(244.87,994.38)]
+        work = [(499.74,105.84),(498.86,100.68),(496.63,98.54),(496.73,98.89),
+                (531.92,108.72),(497.7,97.42),(499.16,98.29),(495.84,97.71),
+                (498.08,98.11),(492.68,97.13),(498.71,97.9),(495.12,97.65),
+                (497.26,96.96),(495.6,97.09),(497.05,98.18),(504.67,100.75),(502.39,100.64)]
+        for index, rep in enumerate(work):
+            values.extend([rep, (80,45) if index < 16 else (9.53,3.27)])
+        facts = [dict(lap=i,distance_m=m,duration_s=t,zone='Z2' if i in range(4,37,2) else 'Z1')
+                 for i,(m,t) in enumerate(values,1)]
+        proposal = {'confidence':.96, 'lap_structure':dict(warmup_laps=[1,2],stop_laps=[3],
+            cooldown_laps=[], recovery_laps=list(range(5,38,2)),
+            groups=[dict(target_meters=500,target_seconds=None,reps=[[i] for i in range(4,37,2)])])}
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(
+            {'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode()
+        laps = [dict(distanceMeters=m,durationMillis=t*1000) for m,t in values]
+        with patch.dict('os.environ',{'OPENAI_API_KEY':'test'}), patch('core.views.polar_raw.lap_zone_paces', side_effect=lambda m,t,a: ('Z2' if m > 400 and t < 150000 else 'Z1', None)), patch('core.views.polar_raw.urlopen',return_value=response) as call:
+            result = _model_b_ai_description(laps)
+        self.assertEqual(call.call_count,1)
+        structure = result.structure
+        self.assertEqual(structure['training_fields']['main'],'17×500 m Z2 p45')
+        self.assertEqual(structure['training_fields']['wu'],'2000 m Z1')
+        self.assertIsNone(structure['time_fields'])
+        loads = [dict(segment='CORE',meters=m,seconds=t,zone='2' if i in range(4,37,2) else '1')
+                 for i,(m,t) in enumerate(values,1)]
+        part = {}
+        self.assertTrue(apply_lap_structure(part,loads,structure))
+        self.assertEqual([a['label'] for a in part['training_alternatives']],['Distance'])
+        segment = _virtual_segment_from_text('CORE',structure['training_fields']['main'])
+        slot = SimpleNamespace(source='watch_c',watch_loads=loads,segments=SimpleNamespace(all=lambda:[segment]))
+        reps = processed_main_reps(slot)
+        self.assertEqual([r['measured_seconds'] for r in reps],[t for m,t in work])
+        self.assertEqual([(l['meters'],l['seconds']) for l in loads],values)
+        bad = deepcopy(proposal)
+        bad['lap_structure']['groups'][0]['target_meters']=400
+        self.assertIsNone(validate_lap_structure(bad,facts))
+
     def test_minute_block_separator_preserves_nested_sets_zones_and_paces(self):
         from core.training_text import split_main_segments
         self.assertEqual(split_main_segments("2×8′ Z2 p91 - 4×4′ Z2 p61"),

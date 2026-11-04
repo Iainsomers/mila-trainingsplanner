@@ -749,13 +749,13 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
             " Equal 500 m or kilometre laps alone are not interval evidence. Require repeated "
             "work/recovery transitions, repeated timer pauses or workout-step markers. "
             "One or two isolated stops during a long easy run do not establish intervals. "
-            "Prefer lap_structure whenever reps span multiple automatic laps or multiple time groups exist. "
+            "Prefer lap_structure for repeated distance intervals as well as reps spanning automatic laps or multiple time groups. Group distance repetitions by their intended nominal distance even with modest GPS variation, a slower opening rep or a low final heart rate. An isolated rounded distance outlier does not by itself split a consistent repeated group. "
             "Assign every lap exactly once to warmup_laps, cooldown_laps, recovery_laps, stop_laps or a rep. "
             "Each rep is a consecutive list of original one-based lap numbers. Do not sum over a recovery. "
             "A long nearly stationary lap is a stop, not an interval or work distance. "
             "For example 215s + 211s + 56s without recovery can form one 8-minute rep; "
             "another 481s lap can be its second rep. A later 253s rep can belong to a group near 4 minutes. "
-            "Propose whole-minute target_seconds; counts, distances, zones and pauses will be derived in code. "
+            "For each group propose either target_meters (nominal distance, multiple of 50) or whole-minute target_seconds, never both. Choose distance targets for consistent distances with alternating recovery, even when durations vary. Counts, zones, pauses and actual measurements are derived in code. "
             "Low zones support an easy run but never prove it. Timer duration excludes "
             "pauses; missing timer data is unknown, not zero pause."
         ),
@@ -764,7 +764,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
             "lap_structure": {
                 "warmup_laps": ["lap number"], "cooldown_laps": ["lap number"],
                 "recovery_laps": ["lap number"], "stop_laps": ["lap number"],
-                "groups": [{"target_seconds":"whole-minute duration in seconds", "reps":[["consecutive lap numbers"]]}],
+                "groups": [{"target_meters":"nominal distance or null", "target_seconds":"whole-minute duration in seconds or null", "reps":[["consecutive lap numbers"]]}],
             },
             "warmup_m": "integer or null",
             "cooldown_m": "integer or null",
@@ -790,9 +790,9 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True):
                 "You are a conservative running-workout structure recognizer. "
                 "Return only valid JSON matching the requested schema. Use measured "
                 "lap facts, never invent distances, counts or a cooldown. Prefer lap_structure "
-                "for long time intervals: every source lap must appear exactly once, reps "
+                "for distance and time intervals: every source lap must appear exactly once, reps "
                 "contain consecutive original lap numbers and groups are chronological. "
-                "Use the legacy segments/sets schema only when a lap-based time-group "
+                "Use the legacy segments/sets schema only when a lap-based group "
                 "proposal is unsuitable; those segments describe one repeated set. "
                 "Use null for unknown recovery. If uncertain, lower confidence rather than "
                 "discarding inconvenient laps or inventing a workout."

@@ -100,8 +100,12 @@ def validate_lap_structure(data, facts):
         blocks, last = [], 0
         for group_index, group in enumerate(groups):
             reps = group['reps']
-            target = group['target_seconds']
-            if type(target) is not int or target % 60 or not 120 <= target <= 1800:
+            distance_target = group.get('target_meters')
+            target = group.get('target_seconds')
+            distance_based = distance_target is not None
+            if distance_based and (type(distance_target) is not int or distance_target % 50 or not 100 <= distance_target <= 10000 or target is not None):
+                raise ValueError
+            if not distance_based and (type(target) is not int or target % 60 or not 120 <= target <= 1800):
                 raise ValueError
             if not isinstance(reps, list) or not 2 <= len(reps) <= 30:
                 raise ValueError
@@ -113,10 +117,11 @@ def validate_lap_structure(data, facts):
                 meters = sum(row['distance_m'] for row in rows)
                 seconds = sum(row['duration_s'] for row in rows)
                 if (not math.isfinite(meters+seconds) or meters <= 0 or seconds <= 0
-                        or abs(seconds-target) > max(15, target*.06)
+                        or (abs(meters-distance_target) > distance_target*.08 if distance_based
+                            else abs(seconds-target) > max(15, target*.06))
                         or any(row['distance_m']/row['duration_s'] < 2 for row in rows)):
                     raise ValueError
-                blocks.append({'ids':ids, 'group':group_index, 'target':target, 'meters':meters, 'seconds':seconds})
+                blocks.append({'ids':ids, 'group':group_index, 'target':target or max(1, round(seconds)), 'distance_target':distance_target, 'meters':meters, 'seconds':seconds})
                 last = ids[-1]
         if used != set(by_id) or len(blocks) < 3:
             return None
@@ -144,7 +149,7 @@ def validate_lap_structure(data, facts):
         distance_keys, time_keys = set(), set()
         for group_index in range(len(groups)):
             group_blocks = [block for block in blocks if block['group']==group_index]
-            nominal = int(math.floor(median(b['meters'] for b in group_blocks)/100+.5)*100)
+            nominal = group_blocks[0]['distance_target'] or int(math.floor(median(b['meters'] for b in group_blocks)/100+.5)*100)
             if any(abs(b['meters']-nominal) > nominal*.08 for b in group_blocks):
                 return None
             zones = sorted({by_id[i]['zone'] for b in group_blocks for i in b['ids']} & {'Z1','Z2','Z3','Z4','Z5'})
@@ -172,7 +177,7 @@ def validate_lap_structure(data, facts):
             zone = (' '+(zones[0] if len(zones)==1 else zones[0]+'>'+zones[-1])) if zones else ''
             return f'{math.floor(meters/50+.5)*50} m{zone}'
         fields = {'wu':boundary(warmup), 'main':' + '.join(distance_parts), 'cd':boundary(cooldown)}
-        time_fields = dict(fields, main=' + '.join(time_parts))
+        time_fields = None if any(g.get('target_meters') is not None for g in groups) else dict(fields, main=' + '.join(time_parts))
         return {'training_fields':fields, 'time_fields':time_fields, 'assignments':assignments,
                 'description':description(fields)}
     except (KeyError, TypeError, ValueError, ZeroDivisionError, OverflowError):
@@ -190,6 +195,8 @@ def apply_lap_structure(part, loads, structure):
         load.update(assignment)
     options = []
     for label, fields in [('Distance',structure['training_fields']), ('Time',structure['time_fields'])]:
+        if fields is None:
+            continue
         options.append({'label':label, 'training_fields':dict(fields), 'description':description(fields), 'watch_loads':loads})
     part.update(training_fields=dict(structure['training_fields']), description=structure['description'],
                 watch_loads=loads, training_alternatives=options)
