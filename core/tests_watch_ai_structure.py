@@ -84,6 +84,18 @@ class WatchAIStructureTests(SimpleTestCase):
         self.assertEqual(corrected['training_fields']['main'],'2×(10×400 m Z2 p60) sp318')
         self.assertEqual(corrected['assignments'][42],{'segment':'CORE','work_rep':False})
         self.assertEqual(corrected['assignments'][43]['segment'],'CD')
+        omitted_walking=deepcopy(proposal)
+        omitted_walking['lap_structure']['stop_laps']=[]
+        omitted_walking['lap_structure']['recovery_laps']=[i for i in boundary['recovery_laps'] if i != 23]
+        recovered=validate_lap_structure(omitted_walking,facts)
+        self.assertIsNotNone(recovered)
+        self.assertEqual(recovered['training_fields'],result.structure['training_fields'])
+        self.assertFalse(recovered['assignments'][22]['work_rep'])
+        omitted_running=deepcopy(proposal)
+        omitted_running['lap_structure']['warmup_laps']=[]
+        issues=[]
+        self.assertIsNone(validate_lap_structure(omitted_running,facts,issues=issues))
+        self.assertIn('Missing source lap IDs [1]',issues[0])
         loads=[dict(meters=m,seconds=t,zone='2',hr_samples=[[t-1,160]],average_hr=150) for m,t in values]
         part={}
         self.assertTrue(apply_lap_structure(part,loads,result.structure))
@@ -163,7 +175,7 @@ class WatchAIStructureTests(SimpleTestCase):
         self.assertIsNone(infer_lap_structure(no_zones))
 
     def test_rejects_missing_duplicate_invented_and_noncontiguous_laps(self):
-        mutations = [lambda p:p['lap_structure']['stop_laps'].clear(),
+        mutations = [lambda p:p['lap_structure']['warmup_laps'].clear(),
                      lambda p:p['lap_structure']['groups'][0]['reps'][0].append(5),
                      lambda p:p['lap_structure']['groups'][0]['reps'][0].append(99),
                      lambda p:p['lap_structure']['groups'][0]['reps'].__setitem__(0,[4,6]),

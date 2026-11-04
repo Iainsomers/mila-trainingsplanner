@@ -159,8 +159,19 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
                     raise ValueError
                 blocks.append({'ids':ids, 'group':group_index, 'target':target or max(1, round(seconds)), 'distance_target':distance_target, 'meters':meters, 'seconds':seconds})
                 last = ids[-1]
-        reason = "Some source laps are missing or fewer than three work reps are assigned."
-        if used != set(by_id) or len(blocks) < 3:
+        missing = sorted(set(by_id) - used)
+        # Preserve unassigned measured walking as recovery, never invent a
+        # work repetition or infer the role of an omitted running lap.
+        missing_walking = [i for i in missing
+                           if is_walking_load(by_id[i]['distance_m'],by_id[i]['duration_s'])]
+        recovery = sorted(recovery + missing_walking)
+        used.update(missing_walking)
+        missing = sorted(set(by_id) - used)
+        if missing:
+            reason = f"Missing source lap IDs {missing[:50]}. Assign each to a work rep, running warmup or cooldown; do not discard running laps."
+            return reject()
+        if len(blocks) < 3:
+            reason = f"Only {len(blocks)} work reps assigned; at least three measured work reps are required. Each reps entry is one repetition, not one set."
             return reject()
         reason = 'Warmup must precede work, cooldown must follow work; leading recovery must be slow and trailing recovery immediately follow work.'
         first, last = blocks[0]['ids'][0], blocks[-1]['ids'][-1]
