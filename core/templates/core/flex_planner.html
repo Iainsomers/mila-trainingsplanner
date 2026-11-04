@@ -565,6 +565,8 @@
       return (u === "km" || u === "k") ? n * 1000 : n;
     }
 
+    {% include "core/partials/alternative_loads.js.html" %}
+
     function flexDurationSeconds(text) {
       const s = text || "";
       let setMatch = s.match(/\b(\d+)\s*(?:x|\*|×)\s*\(([^)]+)\)/i);
@@ -757,20 +759,7 @@
       }
 
       if (segType === "ALT") {
-        const altParts = text.split("//").map((part) => part.trim()).filter(Boolean);
-        if (altParts.length > 1) {
-          return altParts.flatMap((part) => {
-            const zoneMatch = part.match(/\bz\s*([1-3])\b/i);
-            const seconds = flexDurationSeconds(part);
-            return zoneMatch && seconds > 0
-              ? [{kind: "alt", zone: zoneMatch[1], seconds: seconds}]
-              : [];
-          });
-        }
-        const altSeconds = flexNumberAttr(el, "data-flex-duration") || flexDurationSeconds(text);
-        return altSeconds > 0 && ["1", "2", "3"].includes(fallbackZone)
-          ? [{kind: "alt", zone: fallbackZone, seconds: altSeconds}]
-          : [];
+        return flexAlternativeLoads(text, fallbackZone, flexNumberAttr(el, "data-flex-duration"), flexDurationSeconds);
       }
 
       const compound = flexCompoundLoads(text, fallbackZone);
@@ -893,7 +882,7 @@
         line = "";
         ["1", "2", "3"].forEach((z) => {
           if (altSeconds[z] > 0) {
-            line += flexPill("pill-z" + z, "ALT Z" + z, Math.round(altSeconds[z] / 60) + "'");
+            line += flexPill("pill-z" + z, "ALT Z" + z, Number((altSeconds[z] / 60).toFixed(1)) + "'");
           }
         });
         if (line) lines.push(`<div class="flex-total-line">${line}</div>`);

@@ -233,3 +233,6 @@ DCO Training gebruikt dezelfde gedeelde pillenkleuring als Flex Planner. Progres
 
 
 Mob/Tech-foto’s: compacte Add photos-knop, maximaal vijf, thumbnails van 64px onder het tekstveld. De browser biedt foto maken/kiezen waar ondersteund. Iedere bestaande thumbnail heeft bij bewerken een Remove-vinkje; wijzigingen worden met Save opgeslagen. Klikken opent de grote foto met browserzoom. Dezelfde thumbnails staan bij Mob/Tech in de trainingsweergaven en DCO; ze stoppen doorklikken op de achterliggende trainingscel. Bestandsfouten verschijnen bij het veld.
+
+
+Alternative-weektotalen in AYC en de live Flex-telling behouden halve minuten bij progressieve zones, met maximaal één decimaal en zonder overbodige .0. De bestaande meerzonekleuren blijven van toepassing.

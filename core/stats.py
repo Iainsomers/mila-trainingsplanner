@@ -505,20 +505,9 @@ def _text_duration_s(text: str) -> int:
 
 
 def _alt_zone_durations(seg):
-    text = getattr(seg, "text", "") or ""
-    parts = [part.strip() for part in text.split("//") if part.strip()]
-    if len(parts) > 1:
-        loads = []
-        for part in parts:
-            zone_match = re.search(r"\bz\s*([1-3])\b", part, re.I)
-            duration_s = _text_duration_s(part)
-            if zone_match and duration_s > 0:
-                loads.append((zone_match.group(1), duration_s))
-        return loads
-
-    zone = str(getattr(seg, "zone", "") or "").strip()
-    duration_s = int(getattr(seg, "duration_s", None) or 0) or _text_duration_s(text)
-    return [(zone, duration_s)] if zone in {"1", "2", "3"} and duration_s > 0 else []
+    from core.alternative import zone_durations
+    return zone_durations(getattr(seg, "text", ""), getattr(seg, "zone", ""),
+                          float(getattr(seg, "duration_s", None) or 0), _text_duration_s)
 
 
 def _text_fallback_loads(seg, default_zone: str, speeds: dict, t_speed_func=None):

@@ -1,0 +1,17 @@
+function flexAlternativeLoads(text, fallbackZone, storedSeconds, durationForText) {
+  const parts = (text || '').split('//').map(p => p.trim()).filter(Boolean);
+  return (parts.length ? parts : ['']).flatMap(part => {
+    const range = part.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
+    let zones = [];
+    if (range) {
+      const start = Number(range[1]), end = Number(range[2]), step = end >= start ? 1 : -1;
+      for (let z = start; z !== end + step; z += step) zones.push(String(z));
+    } else {
+      const match = part.match(/\bz\s*([1-6])\b/i);
+      zones = [match ? match[1] : fallbackZone];
+    }
+    const seconds = durationForText(part) || (parts.length <= 1 ? storedSeconds : 0);
+    return seconds > 0 && zones.every(z => ['1','2','3'].includes(z))
+      ? zones.map(zone => ({kind:'alt', zone:zone, seconds:seconds/zones.length})) : [];
+  });
+}

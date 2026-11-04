@@ -571,9 +571,9 @@ def calendar_view(request):
             t_totals = st.get("t_totals") or {}
 
             alt = st.get("alt_zones") or {}
-            alt_z1_min = int(round(float(alt.get("1", {}).get("duration_s", 0) or 0) / 60.0))
-            alt_z2_min = int(round(float(alt.get("2", {}).get("duration_s", 0) or 0) / 60.0))
-            alt_z3_min = int(round(float(alt.get("3", {}).get("duration_s", 0) or 0) / 60.0))
+            alt_z1_min = float(alt.get("1", {}).get("duration_s", 0) or 0) / 60.0
+            alt_z2_min = float(alt.get("2", {}).get("duration_s", 0) or 0) / 60.0
+            alt_z3_min = float(alt.get("3", {}).get("duration_s", 0) or 0) / 60.0
 
             for z in ("1", "2", "3", "4", "5", "6"):
                 vals = zones.get(z) or {"distance_m": 0, "duration_s": 0}
@@ -2782,19 +2782,10 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
         fallback_zone = (str(getattr(seg, "zone", "") or "").strip() or ("4" if is_race else "1"))
 
         if seg_type == "ALT":
-            alt_parts = [part.strip() for part in text.split("//") if part.strip()]
-            if len(alt_parts) > 1:
-                for alt_part in alt_parts:
-                    zone_match = re.search(r"\bz\s*([1-3])\b", alt_part, re.I)
-                    duration_s = _ayc_text_duration_s(alt_part)
-                    if zone_match and duration_s > 0:
-                        loads.append({"kind": "alt", "zone": zone_match.group(1), "seconds": duration_s})
-            else:
-                duration_s = float(getattr(seg, "duration_s", None) or 0)
-                if duration_s <= 0:
-                    duration_s = _ayc_text_duration_s(text)
-                if duration_s > 0 and fallback_zone in {"1", "2", "3"}:
-                    loads.append({"kind": "alt", "zone": fallback_zone, "seconds": duration_s})
+            from core.alternative import zone_durations
+            for zone, seconds in zone_durations(text, fallback_zone,
+                    float(getattr(seg, "duration_s", None) or 0), _ayc_text_duration_s):
+                loads.append({"kind":"alt", "zone":zone, "seconds":seconds})
             continue
 
         pause_m = _ayc_pause_distance_m(
@@ -4168,7 +4159,7 @@ def athlete_year_calendar_view(request):
                 for load in _ayc_slot_loads_for_totals(slot, selected_athlete, athlete_pause_mode):
                     if load.get("kind") == "alt":
                         zone = str(load.get("zone") or "")
-                        minutes = int(round(float(load.get("seconds") or 0) / 60.0))
+                        minutes = float(load.get("seconds") or 0) / 60.0
                         if zone == "1":
                             alt_z1_min += minutes
                         elif zone == "2":

@@ -282,3 +282,6 @@ Klokfix voor gemengde Garmin-reps: de twee Z4-laps binnen 7×300m Z3>Z5 werden t
 
 
 AI-herkenning uitgebreid met gevalideerde bronlapgroepen voor Garmin C/D. De 18-lap-regressie ondersteunt 2×8′ + 4×4′ ondanks een eerste rep over drie laps, een 4:13-rep en een lange voorafgaande stop. Distance/Time, samengestelde End HR en gemeten totalen zijn getest met gemockte AI-output; de echte modelrespons is niet op productie aangeroepen. Gerichte regressies: 72 tests, manage.py check en migratiecontrole slagen; geen migratie nodig.
+
+
+Alternative Z2>Z3 telde volledig als de eerste zone. De actieve tijd wordt nu gelijk verdeeld over alle bereikzones in serverstats/AYC én Flex-browserberekening. Tests dekken het 20′ Z1 // 15×3′ Z2>Z3 // 10′ Z1-voorbeeld, losse segmenten, drie zones, dalende ranges en uitsluiting van loopkilometers.

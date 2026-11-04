@@ -1548,9 +1548,9 @@
               {% if w.has_thm %}<span class="total-pill total-race">THM {{ w.sum_thm_km }}</span>{% endif %}
               {% if w.has_t4 %}<span class="total-pill total-race">T4 {{ w.sum_t4_km }}</span>{% endif %}
 
-              {% if w.alt_z1_min %}<span class="total-pill total-z1">ALT Z1 {{ w.alt_z1_min }}m</span>{% endif %}
-              {% if w.alt_z2_min %}<span class="total-pill total-z2">ALT Z2 {{ w.alt_z2_min }}m</span>{% endif %}
-              {% if w.alt_z3_min %}<span class="total-pill total-z3">ALT Z3 {{ w.alt_z3_min }}m</span>{% endif %}
+              {% if w.alt_z1_min %}<span class="total-pill total-z1">ALT Z1 {{ w.alt_z1_min|floatformat:"-1" }}m</span>{% endif %}
+              {% if w.alt_z2_min %}<span class="total-pill total-z2">ALT Z2 {{ w.alt_z2_min|floatformat:"-1" }}m</span>{% endif %}
+              {% if w.alt_z3_min %}<span class="total-pill total-z3">ALT Z3 {{ w.alt_z3_min|floatformat:"-1" }}m</span>{% endif %}
             </div>
           </td>
 

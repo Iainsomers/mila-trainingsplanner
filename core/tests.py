@@ -10441,11 +10441,10 @@ class FlexPlannerAltTotalsTests(TestCase):
         source = get_template("core/flex_planner.html").template.source
 
         self.assertIn('if (segType === "ALT")', source)
-        self.assertIn('["1", "2", "3"].includes(fallbackZone)', source)
-        self.assertIn('? [{kind: "alt", zone: fallbackZone, seconds: altSeconds}]', source)
+        self.assertIn('flexAlternativeLoads(text, fallbackZone', source)
         self.assertIn('if (load.kind === "alt")', source)
         self.assertIn('"ALT Z" + z', source)
-        self.assertIn('const altParts = text.split("//")', source)
+        self.assertIn('partials/alternative_loads.js.html', source)
 
     def test_flex_slot_modal_uses_capture_click_opener(self):
         source = get_template("core/flex_planner.html").template.source
