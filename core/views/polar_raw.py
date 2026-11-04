@@ -786,7 +786,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         prompt['task'] = (
             'Identify the performed running workout using only these recorded laps. Return lap_structure and numeric confidence from 0 to 1. '
             'Every original one-based lap number must appear exactly once in warmup_laps, cooldown_laps, recovery_laps, stop_laps or a work rep. '
-            'A work rep is a consecutive list of lap numbers, never crossing recovery. Groups and reps must be chronological. '
+            'A reps entry is ONE work repetition: [[7],[9]] means two single-lap repetitions; [[7,8],[10]] means two repetitions, the first spanning adjacent laps 7 and 8. Never put a whole set or recovery in one rep entry. Groups and reps must be chronological. '
             'For each group choose exactly one target: nominal target_meters (multiple of 50), or whole-minute target_seconds; omit or null the other. '
             'Distance targets allow up to 8 percent GPS variation. Different pace zones and progressive speeds do not require separate groups. '
             'Repeated work with slower recoveries is interval evidence. Automatic equal-distance splits without recovery are not. '
@@ -865,7 +865,19 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         # facts go back to the same service; do not forward raw error bodies.
         if not structure and strict_lap_structure and data.get('confidence', 0) != 0:
             repair_body = json.loads(body)
-            repair_body['messages'].append({'role':'user','content':
+            # Retain only the numeric structure fields, never arbitrary model text.
+            def numeric_tree(value):
+                if value is None or type(value) in (int,float):
+                    return value
+                if isinstance(value,list):
+                    return [numeric_tree(v) for v in value[:100]]
+                if isinstance(value,dict):
+                    keys = {'lap_structure','confidence','warmup_laps','cooldown_laps','recovery_laps',
+                            'stop_laps','groups','target_meters','target_seconds','set_start_laps','reps'}
+                    return {k:numeric_tree(v) for k,v in value.items() if k in keys}
+                return None
+            repair_body['messages'].append({'role':'assistant','content':json.dumps(numeric_tree(data))})
+            repair_body['messages'].append({'role':'user' ,'content':
                 'Your lap proposal failed validation: ' + '; '.join(issues) +
                 ' Reconsider the original lap facts and return one corrected complete lap_structure. '
                 'Assign every lap once, including slow transitions. Do not change measurements. '

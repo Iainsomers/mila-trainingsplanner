@@ -224,6 +224,8 @@ class WatchAIStructureTests(SimpleTestCase):
             self.assertEqual(call.call_count,2)
             feedback=json.loads(call.call_args.args[0].data)['messages'][-1]['content']
             self.assertIn('slower than 2 m/s',feedback)
+            sent=json.loads(call.call_args.args[0].data)['messages']
+            self.assertEqual(json.loads(sent[-2]['content'])['lap_structure'],invalid['lap_structure'])
             if repair_succeeds:
                 self.assertTrue(result.structure)
                 self.assertEqual(diagnostics['status'],'applied')
@@ -257,6 +259,17 @@ class WatchAIStructureTests(SimpleTestCase):
             if corrupt:
                 self.assertIn('Reps must be chronological',diagnostics['reason'])
             self.assertIsNone(validate_lap_structure(proposal,self.facts))
+
+    def test_rep_failure_identifies_distance_time_and_nonconsecutive_set(self):
+        cases=[([4,6],480,None,'not consecutive/chronological'),
+               ([4,5,6],600,None,'482.00s'),([4,5,6],None,2000,'2278.2m')]
+        for ids,seconds,meters,expected in cases:
+            proposal=deepcopy(self.proposal)
+            group=proposal['lap_structure']['groups'][0]
+            group.update(reps=[ids,[8]],target_seconds=seconds,target_meters=meters)
+            issues=[]
+            self.assertIsNone(validate_lap_structure(proposal,self.facts,issues=issues))
+            self.assertIn(expected,issues[0])
 
     def test_translation_keeps_validated_metadata_and_consent_skips_ai(self):
         from core.views.polar_raw import translate_model_b

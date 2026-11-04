@@ -362,3 +362,6 @@ AI-voorstel ter beoordeling (4 november 2026): automatische acceptatie blijft co
 
 
 AI-reviewdiagnose: lage confidence maskeerde de eerste inhoudelijke meetfout omdat confidence eerder wordt gecontroleerd. Ook bij onvoldoende automatische confidence wordt nu de review-meetcontrole uitgevoerd; unieke afwijsredenen gaan samen naar de ene AI-herstelpoging en browsermelding. Ongeldige repindeling wordt nooit toegestaan door lagere reviewgrens. 13 gerichte AI-tests en manage.py check slagen.
+
+
+Gerichte AI-repcorrectie (4 november 2026): de ene herstelpoging krijgt nu het oorspronkelijke numerieke AI-voorstel als assistant-context plus validatiefout. Alleen bekende structuurvelden/numerieke waarden worden teruggestuurd, geen willekeurige modeltekst. Repfouten zijn opgesplitst naar concrete lap-ID-volgorde, gemeten meters versus doelmeters, seconden versus tijdtarget, en langzame herstel-lap in werkrep. Lap-only opdracht verduidelijkt dat elke reps-entry precies een herhaling is en geen volledige set. 46 gerichte tests slagen; daarna 14 AI-tests met nieuwe herstelcontext-/foutdetailregressies en manage.py check slagen. Productievoorstel nog niet beschikbaar; geen bevestiging van de specifieke lapfout op productie.

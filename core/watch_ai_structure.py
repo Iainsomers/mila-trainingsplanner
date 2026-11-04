@@ -131,14 +131,22 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
                 reason = "Reps must be chronological consecutive source laps and agree with target distance within 8% or target time within tolerance."
                 ids = indices(rep)
                 if not ids or ids != list(range(ids[0], ids[-1]+1)) or ids[0] <= last:
+                    reason = f"Group {group_index+1}: rep lap IDs {ids[:20]} are not consecutive/chronological. Each reps entry is ONE work repetition, not a whole set."
                     raise ValueError
                 rows = [by_id[i] for i in ids]
                 meters = sum(row['distance_m'] for row in rows)
                 seconds = sum(row['duration_s'] for row in rows)
-                if (not math.isfinite(meters+seconds) or meters <= 0 or seconds <= 0
-                        or (abs(meters-distance_target) > distance_target*.08 if distance_based
-                            else abs(seconds-target) > max(15, target*.06))
-                        or any(row['distance_m']/row['duration_s'] < 2 for row in rows)):
+                if not math.isfinite(meters+seconds) or meters <= 0 or seconds <= 0:
+                    reason = f"Group {group_index+1}, laps {ids[:20]}: missing positive measured distance/time."
+                    raise ValueError
+                if distance_based and abs(meters-distance_target) > distance_target*.08:
+                    reason = f"Group {group_index+1}, laps {ids[:20]}: measured {meters:.1f}m differs from target {distance_target}m by more than 8%. A rep must not include recovery laps."
+                    raise ValueError
+                if not distance_based and abs(seconds-target) > max(15, target*.06):
+                    reason = f"Group {group_index+1}, laps {ids[:20]}: measured {seconds:.2f}s does not match time target {target}s. Use target_meters for fixed-distance reps with variable duration."
+                    raise ValueError
+                if any(row['distance_m']/row['duration_s'] < 2 for row in rows):
+                    reason = f"Group {group_index+1}, laps {ids[:20]}: work rep contains a slow recovery/stop lap. Assign recovery separately."
                     raise ValueError
                 blocks.append({'ids':ids, 'group':group_index, 'target':target or max(1, round(seconds)), 'distance_target':distance_target, 'meters':meters, 'seconds':seconds})
                 last = ids[-1]
