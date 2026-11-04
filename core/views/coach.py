@@ -5868,6 +5868,9 @@ def garmin_type_c_ayc_view(request, model="C"):
             structure = part.pop("validated_lap_structure", None) or infer_lap_structure(facts)
             if structure and apply_lap_structure(part, watch_loads, structure):
                 continue
+            from core.watch_hr_structure import apply_hr_distance_structure
+            if apply_hr_distance_structure(part, watch_loads, athlete):
+                continue
             fields = part.get("training_fields") if isinstance(part.get("training_fields"), dict) else {}
             # Watch B's text recognizer and Type A's load classifier use
             # different WU heuristics. For Watch C, the recognized training

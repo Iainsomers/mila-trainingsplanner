@@ -346,3 +346,31 @@ class GarminCPushTests(TestCase):
         self.assertNotIn("runner-id", output)
         self.assertNotIn("private-token", output)
         self.assertNotIn(receiver_key(), output)
+
+    def test_all_z1_pace_recording_uses_hr_structure_in_complete_c_and_d_preview(self):
+        from datetime import timedelta
+        from core.tests_watch_hr_structure import HRDistanceStructureTests
+        fixture=HRDistanceStructureTests();fixture.setUp()
+        self.athlete.zone_hr_bpm=fixture.athlete.zone_hr_bpm
+        self.athlete.save(update_fields=['zone_hr_bpm'])
+        start=datetime.fromtimestamp(self.start,dt_timezone.utc)
+        elapsed=0
+        samples=[]
+        laps=[]
+        for load in fixture.loads:
+            laps.append({'distance':load['meters'],'elapsed_time':load['seconds'],'avg_heart_rate':load['average_hr']})
+            samples.append({'timestamp':(start+timedelta(seconds=elapsed+load['seconds']-1)).isoformat(),'heart_rate':load['average_hr']})
+            elapsed+=load['seconds']
+        GarminActivitySummary.objects.create(athlete=self.athlete,activity_id='hr-distance-recording',activity_start=start,
+             activity_date='2026-10-31',distance_m=sum(l['meters'] for l in fixture.loads),
+             analysis_data={'laps':laps,'heart_rate_samples':samples})
+        self.client.force_login(self.coach)
+        with patch('core.views.polar_raw.lap_zone_paces',return_value=('Z1','NA')), patch('core.views.polar_raw.urlopen',side_effect=AssertionError('No external AI')):
+            for route,zone in [('garmin_type_c_ayc','Z1'),('garmin_type_d_ayc','Z3')]:
+                response=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'})
+                self.assertEqual(response.status_code,200)
+                part=response.json()['results'][0]['parts'][0]
+                self.assertEqual(part['training_fields']['main'],f'6×1000 m {zone} p356')
+                self.assertEqual(part['training_fields']['cd'],'1400 m Z1')
+                self.assertEqual([i+1 for i,l in enumerate(part['watch_loads']) if l['work_rep']],[1,4,6,8,10,12])
+                self.assertAlmostEqual(sum(l['meters'] for l in part['watch_loads']),sum(l['meters'] for l in fixture.loads))
