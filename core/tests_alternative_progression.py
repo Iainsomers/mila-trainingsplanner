@@ -5,6 +5,23 @@ from core.stats import _alt_zone_durations
 
 
 class AlternativeProgressionTests(SimpleTestCase):
+    def test_plus_and_double_slash_give_same_totals_in_existing_and_base_slots(self):
+        from core.views.calendar import _virtual_slot_from_base_training
+        expected = [('1',1500),('2',1800),('1',1500)]
+        for separator in [' + ', '//', ' + // ']:
+            text = separator.join(["25'z1", "3*10' z2", "25'z1 elliptical"])
+            seg = SimpleNamespace(type='ALT',text=text,zone='1',duration_s=1500)
+            self.assertEqual(_alt_zone_durations(seg),expected)
+            for slot in [_VirtualSlot([seg]),_virtual_slot_from_base_training('ALT='+text)]:
+                loads = _ayc_slot_loads_for_totals(slot)
+                self.assertEqual([(l['zone'],l['seconds']) for l in loads],expected)
+                self.assertTrue(all(l['kind']=='alt' and not l.get('meters') for l in loads))
+
+    def test_plus_does_not_split_nested_sets_or_zone_ranges(self):
+        from core.alternative import split_alternative_segments
+        self.assertEqual(split_alternative_segments("2*(5' z1 + 3' z2) + 10' z2-z3 // 5' z1"),
+                         ["2*(5' z1 + 3' z2)","10' z2-z3","5' z1"])
+
     def test_combined_and_split_segments_agree_on_repeated_progression(self):
         text = "20'z1 // 15*3' z2>z3 // 10'z1 p1"
         combined = SimpleNamespace(type='ALT', text=text, zone='1', duration_s=1200)

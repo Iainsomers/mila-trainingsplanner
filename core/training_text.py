@@ -19,7 +19,7 @@ def normalize_watch_main_text(text):
     return value
 
 
-def split_main_segments(text):
+def split_main_segments(text, *, split_hyphens=True):
     """Split Main text on top-level ``//``, ``+`` or block ``-`` separators.
 
     A plus, double slash or hyphen inside parentheses belongs to the
@@ -59,7 +59,7 @@ def split_main_segments(text):
             index += 1
             start = index
             continue
-        if depth == 0 and char == "-":
+        if split_hyphens and depth == 0 and char == "-":
             left = value[start:index].strip()
             right = value[index + 1:].lstrip()
             right_starts_distance = re.match(

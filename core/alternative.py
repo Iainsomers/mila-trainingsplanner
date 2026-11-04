@@ -1,9 +1,15 @@
 """Alternative duration belongs equally to all zones in a progression."""
 import re
+from core.training_text import split_main_segments
+
+
+def split_alternative_segments(text):
+    """Accept Main's top-level plus notation alongside existing double slashes."""
+    return split_main_segments(text, split_hyphens=False)
 
 
 def zone_durations(text, fallback_zone, stored_seconds, duration_for_text):
-    parts = [part.strip() for part in (text or '').split('//') if part.strip()]
+    parts = split_alternative_segments(text)
     output = []
     for part in parts or ['']:
         match = re.search(r'\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b', part, re.I)

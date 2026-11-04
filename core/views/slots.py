@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.db.models import Q
 from django.db import transaction
 
+from core.alternative import split_alternative_segments
 from core.models import (
     TrainingSlot,
     SavedTrainingTemplate,
@@ -1965,7 +1966,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     else:
         core_parse = None
     core2_parse = _parse_core_segment_text(core2_text) if core2_text else None
-    alt_parts = [part.strip() for part in alt_text.split("//") if part.strip()]
+    alt_parts = split_alternative_segments(alt_text)
     alt_parses = [parse_segment_text(part, zone_required=False) for part in alt_parts]
     alt_parse = next((parsed for parsed in alt_parses if not parsed.ok), alt_parses[-1] if alt_parses else None)
     cd_parse = parse_segment_text(cd_text, zone_required=False) if cd_text else None

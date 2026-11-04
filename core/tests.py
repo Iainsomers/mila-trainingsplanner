@@ -10493,6 +10493,29 @@ class FlexPlannerAltTotalsTests(TestCase):
         self.assertEqual(stats["alt_zones"]["3"]["duration_s"], 600)
         self.assertTrue(all(zone["distance_m"] == 0 for zone in stats["zones"].values()))
 
+    def test_plus_alternative_saves_separate_blocks_for_am_and_pm(self):
+        from core.stats import athlete_week_stats
+        trainer = get_user_model().objects.create_user(username="altpluscoach", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Alt Plus Athlete", birth_year=2000, gender="X")
+        day = date.today()
+        week_start = day - timedelta(days=day.weekday())
+        plan = TrainingPlan.objects.create(owner=trainer, name="Flex Planner Alt plus",
+                                          start_date=week_start, end_date=week_start+timedelta(days=6))
+        self.client.force_login(trainer)
+        for index in (1, 2):
+            response = self.client.post(f"/slot-modal/{day.year}/{day.month}/{day.day}/{index}/", {
+                "plan": str(plan.id), "athlete": str(athlete.id), "source": "flex",
+                "alt_text": "25'z1 + 3*10' z2 + 25'z1 elliptical",
+            })
+            self.assertEqual(response.status_code, 200)
+            slot = TrainingSlot.objects.get(plan=plan, athlete=athlete, date=day, slot_index=index)
+            self.assertEqual(list(slot.segments.filter(type="ALT").order_by("order").values_list("text", flat=True)),
+                             ["25'z1", "3*10' z2", "25'z1 elliptical"])
+        stats = athlete_week_stats(plan, athlete, week_start)
+        self.assertEqual(stats["alt_zones"]["1"]["duration_s"], 6000)
+        self.assertEqual(stats["alt_zones"]["2"]["duration_s"], 3600)
+        self.assertTrue(all(zone["distance_m"] == 0 for zone in stats["zones"].values()))
+
     def test_base_planning_alt_blocks_are_split_too(self):
         slot = _virtual_slot_from_base_training("ALT=20' z1//10'z2//10'z3")
 

@@ -12,6 +12,7 @@ from django.db.models import Q, Prefetch
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 
+from core.alternative import split_alternative_segments
 from core.access import evaluation_visibility_for_request
 
 from core.models import (
@@ -969,7 +970,7 @@ def _virtual_slot_from_base_training(text):
         if not value:
             continue
         if seg_type == "ALT":
-            parts = [part.strip() for part in value.split("//") if part.strip()]
+            parts = split_alternative_segments(value)
         elif seg_type == "CORE":
             parts = split_main_segments(value)
         else:
@@ -3188,7 +3189,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             continue
 
         if segment_type == "ALT":
-            for alt_part in [part.strip() for part in raw_text.split("//") if part.strip()]:
+            for alt_part in split_alternative_segments(raw_text):
                 parsed = parse_segment_text(alt_part, zone_required=False)
                 seg = TrainingSegment.objects.create(
                     slot=override_slot,
