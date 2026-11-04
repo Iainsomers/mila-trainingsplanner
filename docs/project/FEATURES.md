@@ -414,3 +414,5 @@ Garmin C/D kunnen een door AI voorgestelde lapindeling gebruiken voor lange tijd
 
 
 Duidelijke gemengde lange tijdsblokken worden ook lokaal voorgesteld: aaneengesloten snellere laps vormen één werkblok, langzame onderbrekingen herstel. Minstens twee verschillende tijdsgroepen zijn vereist. Dezelfde lapvalidator maakt Distance/Time-opties, onafhankelijk van AI-toestemming of beschikbaarheid. AI blijft beschikbaar voor interpretaties die deze vaste controle niet kan afleiden.
+
+Garmin C/D bieden ook Time bij één complete reeks van N gelijkdurende werkblokken (minstens drie), afgewisseld met duidelijk trager herstel. Dit geldt algemeen voor hele minuten van 2–30 minuten, met maximaal 15s of 6% afwijking. Werkafstand mag variëren; de bestaande Distance-beschrijving en gemeten meters/seconden blijven behouden. De tijdsvariant bewaart expliciete repkoppelingen, ook na de D-hartslagcontrole.

@@ -295,3 +295,5 @@ Alternative Z2>Z3 telde volledig als de eerste zone. De actieve tijd wordt nu ge
 
 
 De 18-laptraining kreeg nog geen minutenkeuze omdat de eerdere uitbreiding van een geldig AI-antwoord afhing. Nu leidt lokale herkenning dezelfde gevalideerde lapgroepen af, waarna de volledige Garmin C- én D-endpointtest zonder AI-toestemming aantoonbaar Distance/Time teruggeeft met 2×8′ Z2 + 4×4′ Z2, WU 2000m en CD 1100m. De eerste rep blijft uit drie laps bestaan; alle bronmeters en seconden blijven identiek.
+
+Garmin C/D: één reeks N×T minuten krijgt nu ook een Time-optie, onafhankelijk van wisselende werkafstanden. Screenshotregressie bewaakt zeven gemeten reps (242, 241, 243, 242, 242, 245, 243s), WU/CD en behoud van alle bronmetingen in C en D. D bewaart de repmetadata per alternatief. Algemene voorbeelden 3×2, 5×6 en 9×10 minuten en negatieve patrooncontroles zijn gedekt. 36 gerichte tests en manage.py check slagen. Geen layoutwijziging; visuele desktop-/mobielcontrole en Render-deploy nog niet geverifieerd.

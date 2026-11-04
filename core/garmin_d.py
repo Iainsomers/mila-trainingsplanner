@@ -121,7 +121,7 @@ def apply_garmin_d(results, athlete):
             if part.get('training_alternatives'):
                 converted = []
                 for alternative in part['training_alternatives']:
-                    candidate = {**alternative, 'watch_loads': deepcopy(original)}
+                    candidate = {**alternative, 'watch_loads': deepcopy(alternative.get('watch_loads') or original)}
                     converted.append({**apply_garmin_d([{'parts':[candidate]}], athlete)[0]['parts'][0], 'label': alternative['label']})
                 part['training_alternatives'] = converted
             part['analysis_note'] = 'D: End HR (last 10%, minimum 15s; Avg HR for reps under 15s) takes precedence at 400 m or 50 s; otherwise pace zones apply. Reconstructed reps use the end window of the complete rep. Missing HR or configured limits keeps the pace zone.'

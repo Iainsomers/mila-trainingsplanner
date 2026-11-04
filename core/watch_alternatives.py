@@ -1,7 +1,38 @@
 """Alternative descriptions for genuinely ambiguous measured interval groups."""
 import math
 import re
+from copy import deepcopy
 from statistics import median
+
+
+def single_time_option(core):
+    """Recognize repeated whole-minute work bouts, independent of distance."""
+    if len(core) < 5:
+        return None
+    work = core[::2]
+    recovery = core[1::2]
+    try:
+        seconds = [float(l['seconds']) for l in work]
+        target = int(math.floor(median(seconds) / 60 + .5)) * 60
+        if not 120 <= target <= 1800 or any(
+                not math.isfinite(s) or abs(s-target) > max(15, target*.06) for s in seconds):
+            return None
+        if any(not math.isfinite(float(l['meters'])) or float(l['meters']) / s < 2.5 for l, s in zip(work, seconds)):
+            return None
+        for i, lap in enumerate(recovery):
+            m, s = float(lap['meters']), float(lap['seconds'])
+            neighbors = work[i:i+2]
+            if (not math.isfinite(m+s) or not 30 <= s <= 600 or not 0 <= m <= 600
+                    or str(lap.get('zone')) not in {'1', '', 'None'}
+                    or any(float(w['meters'])/float(w['seconds']) < 1.4*m/s for w in neighbors)):
+                return None
+        zones = sorted({'Z'+str(l.get('zone')) for l in work} & {'Z1','Z2','Z3','Z4','Z5'})
+        zone = (' ' + (zones[0] if len(zones)==1 else zones[0]+'>'+zones[-1])) if zones else ''
+        rests = [float(l['seconds']) for l in recovery[:len(work)-1]]
+        pause = f' p{int(math.floor(median(rests)+.5))}'
+        return f"{len(work)}×{target//60}'{zone}{pause}"
+    except (KeyError, TypeError, ValueError, ZeroDivisionError, OverflowError):
+        return None
 
 
 def long_interval_options(laps, zone_for_lap):
@@ -50,13 +81,27 @@ def add_training_alternatives(results):
             laps = [{'distanceMeters':l['meters'], 'durationMillis':l['seconds']*1000,
                      'zone':'Z'+str(l.get('zone') or '')} for l in core]
             options = long_interval_options(laps, lambda lap: lap['zone'])
+            timed_loads = loads
+            if not options:
+                timed = single_time_option(core)
+                main = (part.get('training_fields') or {}).get('main')
+                if timed and main:
+                    options = {'distance':main, 'time':timed}
+                    timed_loads = deepcopy(loads)
+                    main_loads = [l for l in timed_loads if l.get('segment') == 'CORE']
+                    target = int(re.search(r"×(\d+)'", timed)[1]) * 60
+                    nominal = max(50, int(math.floor(median(float(l['meters']) for l in core[::2])/50+.5))*50)
+                    for index, load in enumerate(main_loads):
+                        load.update(work_rep=index % 2 == 0)
+                        if index % 2 == 0:
+                            load.update(ai_rep=index+1, ai_group=0, ai_target_seconds=target, ai_nominal_m=nominal)
             if not options:
                 continue
             alternatives = []
             for key, label in (('distance','Distance'), ('time','Time')):
                 fields = dict(part.get('training_fields') or {})
                 fields['main'] = options[key]
-                alternatives.append({'label':label, 'training_fields':fields, 'watch_loads':loads,
+                alternatives.append({'label':label, 'training_fields':fields, 'watch_loads':timed_loads if key == 'time' else loads,
                     'description':f"WU: {fields.get('wu') or 'none'} · Main: {fields['main']} · CD: {fields.get('cd') or 'none'}"})
             part['training_alternatives'] = alternatives
             part.update({key: alternatives[0][key] for key in ('training_fields','description')})
