@@ -62,6 +62,14 @@
   .hr-zone-table th, .hr-zone-table td { vertical-align: middle; text-align: center; }
   .hr-zone-table th:first-child, .hr-zone-table td:first-child { text-align: left; }
   .hr-zone-table td.hr-zone-misaligned { color: #c00000 !important; font-weight: 700; }
+  .issue-dots { display: flex; gap: .65rem; align-items: center; }
+  .issue-dot { display: inline-block; width: .9rem; height: .9rem; border-radius: 50%; flex: 0 0 auto; border: 1px solid rgba(0,0,0,.18); }
+  .issue-green { background: #198754; }
+  .issue-yellow { background: #ffc107; }
+  .issue-red { background: #dc3545; }
+  .issue-unknown { background: #e9ecef; }
+  .issue-table { width: 100%; }
+  .issue-table th, .issue-table td { vertical-align: middle; }
 </style>
 {% endblock %}
 
@@ -70,7 +78,7 @@
   <div class="d-flex justify-content-between align-items-center gap-3">
     <div>
       <h1 class="h3 mb-1">Staff Team Overview</h1>
-      <p class="text-muted mb-0">Team vitals and information quality.</p>
+      <p class="text-muted mb-0">Team vitals, information quality and injury/issue overview.</p>
     </div>
     <div class="d-flex gap-2">
       {% if overview_mode %}<a href="{% url 'daily_overview_other' %}" class="btn btn-outline-secondary">All athletes</a>{% endif %}
@@ -81,6 +89,7 @@
   <nav class="d-flex flex-wrap gap-2 mt-3" aria-label="Staff overview sections">
     <a class="btn {% if overview_mode == 'vitals' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=vitals">Vitals</a>
     <a class="btn {% if overview_mode == 'information_quality' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=information_quality">Information Quality</a>
+    <a class="btn {% if overview_mode == 'injury_issues' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=injury_issues">Injury/Issue Overview</a>
   </nav>
 
   {% if not overview_mode %}
@@ -91,6 +100,29 @@
         {% for athlete in athletes %}<li>{{ athlete.name }}</li>
         {% empty %}<li class="text-muted">No athletes found.</li>{% endfor %}
       </ul>
+    </div>
+  </section>
+  {% elif overview_mode == 'injury_issues' %}
+  <section class="overview-block" aria-label="Injury/Issue Overview">
+    <div class="overview-content">
+      <p class="text-muted small">Last five evaluations · oldest to newest (right).</p>
+      <div class="d-flex flex-wrap gap-3 small mb-3">
+        <span><span class="issue-dot issue-green" aria-hidden="true"></span> Fit</span>
+        <span><span class="issue-dot issue-yellow" aria-hidden="true"></span> Some issue</span>
+        <span><span class="issue-dot issue-red" aria-hidden="true"></span> Serious issue</span>
+        <span><span class="issue-dot issue-unknown" aria-hidden="true"></span> No data</span>
+      </div>
+      <table class="table table-sm issue-table mb-0">
+        <thead><tr><th scope="col">Athlete</th><th scope="col">Last 5 evaluations</th></tr></thead>
+        <tbody>
+          {% for row in injury_rows %}
+          <tr><td>{{ row.athlete.name }}</td><td>
+            {% if row.visible %}<div class="issue-dots">{% for dot in row.dots %}<span class="issue-dot issue-{{ dot.color }}" role="img" aria-label="{{ dot.label }}" title="{{ dot.label }}"></span>{% endfor %}</div>
+            {% else %}<span class="text-muted" title="Training evaluations unavailable">—</span>{% endif %}
+          </td></tr>
+          {% empty %}<tr><td colspan="2" class="text-muted">No athletes found.</td></tr>{% endfor %}
+        </tbody>
+      </table>
     </div>
   </section>
   {% elif overview_mode == 'information_quality' %}

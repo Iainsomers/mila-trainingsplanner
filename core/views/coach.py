@@ -12646,7 +12646,7 @@ def daily_overview_other_view(request):
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     requested_view = request.GET.get("view", "").strip().lower()
     # Keep links/bookmarks using the old ?vital=... URL working.
-    if requested_view not in {"vitals", "information_quality"}:
+    if requested_view not in {"vitals", "information_quality", "injury_issues"}:
         requested_view = "vitals" if request.GET.get("vital") else ""
     if not requested_view:
         return render(request, "core/daily_overview_other.html", {
@@ -12665,6 +12665,36 @@ def daily_overview_other_view(request):
         for athlete in athletes
         if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
     }
+    if requested_view == "injury_issues":
+        from django.db.models import F, Window
+        from django.db.models.functions import RowNumber
+        visible_ids = {a.id for a in athletes if a.id in training_visible_athlete_ids
+                       and a.training_reports_enabled}
+        latest = AthleteDayCheck.objects.filter(athlete_id__in=visible_ids, date__lte=today).annotate(
+            clean_comment=Trim("comment"),
+        ).filter(Q(checked=True) | ~Q(status="") | Q(rpe__isnull=False)
+                 | ~Q(pain="") | ~Q(clean_comment="")).annotate(
+            recent_number=Window(expression=RowNumber(), partition_by=[F("athlete_id")],
+                                 order_by=[F("date").desc(), F("slot_index").desc(), F("id").desc()]),
+        ).filter(recent_number__lte=5).order_by("athlete_id", "date", "slot_index", "id")
+        indicators = {}
+        states = {AthleteDayCheck.PAIN_NONE: ("green", "Fit"),
+                  AthleteDayCheck.PAIN_SOME: ("yellow", "Some issue"),
+                  AthleteDayCheck.PAIN_SERIOUS: ("red", "Serious issue")}
+        for check in latest:
+            color, label = states.get(check.pain, ("unknown", "Not provided"))
+            slot_label = "AM" if check.slot_index == 1 else "PM"
+            indicators.setdefault(check.athlete_id, []).append({
+                "color": color, "label": f"{check.date:%d-%m-%Y} {slot_label}: {label}",
+            })
+        rows = []
+        for athlete in athletes:
+            dots = indicators.get(athlete.id, [])
+            rows.append({"athlete": athlete, "visible": athlete.id in visible_ids,
+                         "dots": [{"color": "unknown", "label": "No evaluation"}]*(5-len(dots)) + dots})
+        return render(request, "core/daily_overview_other.html", {
+            "overview_mode": requested_view, "injury_rows": rows,
+        })
     # Last filled calendar date, including entries older than the ten-day score window.
     last_vital_dates = dict(
         AthleteDailyVital.objects.filter(

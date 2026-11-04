@@ -120,3 +120,5 @@ Mob/Tech-foto’s volgen dezelfde trainingsbewerkrechten, inclusief bestaande AY
 
 
 Foto’s in een persoonlijk trainingsslot volgen coachtoegang tot de betreffende atleet, ook als de eigenaar van het opslagplan verschilt. Alleen eigenaar zijn van zo’n opslagplan geeft geen toegang tot foto’s van een ontoegankelijke atleet. Gedeelde trainingsfoto’s blijven de plantoegang volgen.
+
+Injury/Issue Overview volgt dezelfde atleetselectie en trainingsevaluatie-zichtbaarheid als Staff Team Overview. Gedeelde coaches zonder toegang tot trainingsevaluaties ontvangen geen individuele indicaties; bij uitgeschakelde training reports worden eveneens geen statussen getoond.
