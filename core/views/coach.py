@@ -674,6 +674,32 @@ def garmin_uploads_view(request):
     })
 
 
+@login_required
+@require_GET
+def garmin_upload_download_view(request, activity_id):
+    """Return the original upload, with the same athlete access as uploads."""
+    from django.http import Http404
+    from django.utils.http import content_disposition_header
+    athlete_user = _athlete_for_user(request.user)
+    if is_coach_tools_only_user(request.user):
+        raise Http404
+    if athlete_user and not request.user.is_staff and not request.user.is_superuser:
+        athletes = Athlete.objects.filter(pk=athlete_user.pk,garmin_fit_upload_enabled=True)
+    elif _is_coach_user(request.user):
+        athletes = _filter_owned(Athlete.objects.filter(garmin_fit_upload_enabled=True),request)
+    else:
+        raise Http404
+    activity = get_object_or_404(GarminActivity.objects.filter(athlete__in=athletes),pk=activity_id)
+    if not activity.raw_file:
+        raise Http404
+    filename = str(activity.original_filename or 'activity.fit').replace('\\','/').rsplit('/',1)[-1]
+    response = HttpResponse(bytes(activity.raw_file),content_type='application/octet-stream')
+    response['Content-Disposition'] = content_disposition_header(True,filename)
+    response['Cache-Control'] = 'private, no-store'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 def _is_product_admin(user):
     return bool(user.is_authenticated and user.username.casefold() == "admin")
 

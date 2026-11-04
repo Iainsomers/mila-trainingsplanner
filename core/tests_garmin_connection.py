@@ -82,6 +82,29 @@ class GarminConnectionTests(TestCase):
         self.assertEqual(self.client.post(url,{'action':'fit_ai_consent','consent_fit_ai':'on'}).status_code,302)
         self.assertFalse(fit_ai_allowed(self.athlete))
 
+    def test_original_fit_download_obeys_athlete_and_coach_access(self):
+        from core.models import GarminActivity
+        self.athlete.garmin_fit_upload_enabled=True
+        self.athlete.save()
+        activity=GarminActivity.objects.create(athlete=self.athlete,original_filename='coros.fit',
+            file_hash='download',raw_file=b'original-fit-bytes',parsed_data={})
+        url=reverse('garmin_upload_download',args=[activity.pk])
+        response=self.client.get(url)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.content,b'original-fit-bytes')
+        self.assertIn('attachment',response['Content-Disposition'])
+        self.assertEqual(response['Cache-Control'],'private, no-store')
+        self.assertContains(self.client.get(reverse('garmin_uploads')),'Download original')
+        self.client.force_login(self.coach)
+        self.assertEqual(self.client.get(url).status_code,200)
+        other=get_user_model().objects.create_user(username='foreign-coach',is_staff=True)
+        self.client.force_login(other)
+        self.assertEqual(self.client.get(url).status_code,404)
+        self.client.force_login(self.user)
+        self.athlete.garmin_fit_upload_enabled=False
+        self.athlete.save()
+        self.assertEqual(self.client.get(url).status_code,404)
+
     def test_missing_data_consent_or_configuration_does_not_start_oauth(self):
         self.enable()
         response = self.client.post(reverse("garmin_connect"), {"consent_garmin_ai": "on"})

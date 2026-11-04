@@ -64,7 +64,7 @@
         <h2 class="h6">Saved Garmin activities for {{ selected_athlete.name }}</h2>
         <div class="table-responsive">
           <table class="table table-sm mb-0">
-            <thead><tr><th>Activity date</th><th>File</th><th>Distance</th><th>Uploaded</th></tr></thead>
+            <thead><tr><th>Activity date</th><th>File</th><th>Distance</th><th>Uploaded</th><th></th></tr></thead>
             <tbody>
               {% for activity in saved_activities %}
                 <tr>
@@ -72,6 +72,7 @@
                   <td>{{ activity.original_filename }}</td>
                   <td>{{ activity.parsed_data.human.distance|default:"—" }}</td>
                   <td>{{ activity.uploaded_at|date:"M j, Y H:i" }}</td>
+                  <td><a class="btn btn-sm btn-outline-primary" href="{% url 'garmin_upload_download' activity.id %}">Download original</a></td>
                 </tr>
               {% endfor %}
             </tbody>
