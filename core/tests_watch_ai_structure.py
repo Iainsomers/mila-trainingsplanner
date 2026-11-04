@@ -294,6 +294,28 @@ class WatchAIStructureTests(SimpleTestCase):
             self.assertIsNone(validate_lap_structure(proposal,self.facts,issues=issues))
             self.assertIn(expected,issues[0])
 
+    def test_stronger_structure_model_uses_compatible_parameters_on_both_attempts(self):
+        from core.views.polar_raw import _model_b_ai_description
+        laps=[dict(distanceMeters=f['distance_m'],durationMillis=f['duration_s']*1000) for f in self.facts]
+        invalid=deepcopy(self.proposal);invalid['confidence']=.7
+        def response(data):
+            result=MagicMock()
+            result.__enter__.return_value.read.return_value=json.dumps({'choices':[{'message':{'content':json.dumps(data)}}]}).encode()
+            return result
+        for override,expected in (('', 'gpt-5.4-mini'),('gpt-6.1-sol','gpt-6.1-sol')):
+            diagnostics={}
+            with patch.dict('os.environ',{'OPENAI_API_KEY':'test','OPENAI_MODEL':'gpt-4o-mini','WATCH_STRUCTURE_MODEL':override}), patch(
+                    'core.views.polar_raw.urlopen',side_effect=[response(invalid),response(self.proposal)]) as call, patch(
+                    'core.views.polar_raw.lap_zone_paces',return_value=('Z2','NA')):
+                self.assertTrue(_model_b_ai_description(laps,strict_lap_structure=True,diagnostics=diagnostics).structure)
+            self.assertEqual(diagnostics['model'],expected)
+            self.assertEqual(call.call_count,2)
+            for attempt in call.call_args_list:
+                payload=json.loads(attempt.args[0].data)
+                self.assertEqual(payload['model'],expected)
+                self.assertEqual(payload['reasoning_effort'],'low')
+                self.assertNotIn('temperature',payload)
+
     def test_translation_keeps_validated_metadata_and_consent_skips_ai(self):
         from core.views.polar_raw import translate_model_b
         from core.watch_ai_structure import ValidatedDescription

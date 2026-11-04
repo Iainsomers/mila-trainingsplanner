@@ -825,6 +825,12 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
     }).encode("utf-8")
     if strict_lap_structure:
         strict_body = json.loads(body)
+        # A dedicated setting prevents an old global OPENAI_MODEL value from
+        # silently keeping Garmin/FIT structure analysis on the mini model.
+        strict_body['model'] = (os.environ.get('WATCH_STRUCTURE_MODEL') or 'gpt-5.4-mini').strip()
+        strict_body.pop('temperature',None)
+        strict_body['reasoning_effort'] = 'low'
+        diagnostics['model'] = strict_body['model']
         strict_body['messages'][0]['content'] = (
             'You interpret recorded running workouts. Return valid JSON with only lap_structure and confidence, '
             'using the provided schema. Use original source lap IDs and measured evidence. '
@@ -1214,6 +1220,7 @@ def translate_model_b(payload, interval, athlete=None, *, allow_ai=True, allow_l
                 if allow_lap_structure:
                     result_parts[result_index]['ai_structure_status'] = diagnostics['status']
                     result_parts[result_index]['ai_structure_reason'] = diagnostics.get('reason','')
+                    result_parts[result_index]['ai_structure_model'] = diagnostics.get('model','')
                     if diagnostics.get('review_structure'):
                         result_parts[result_index]['review_lap_structure'] = diagnostics['review_structure']
                 if description:
