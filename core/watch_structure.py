@@ -134,6 +134,15 @@ def mixed_short_repetitions(laps, zone_for_lap):
             work.append(i)
     if len(work) < 4:
         return None
+    # The final stride can have only a short transition before longer work.
+    last = work[-1] + 2
+    if last + 2 < len(rows):
+        m, s = rows[last]
+        rm, rs = rows[last+1]
+        if (25 <= m <= 250 and 3 <= s <= 60 and 10 <= rs < 30
+                and rm <= 300 and rows[last+2][0] >= 500
+                and m/s >= max(2.5, 1.5*rm/rs)):
+            work.append(last)
     # Every intervening lap must be recovery: no hidden unanalysed work block.
     if any(m > 300 or (m / s >= 2.5 and s < 60)
            for i, (m, s) in enumerate(rows[work[0]:work[-1] + 1], work[0]) if i not in work):
@@ -187,11 +196,58 @@ def mixed_short_repetitions(laps, zone_for_lap):
             label += f' p{int(math.floor(median(recovery) + .5))}'
         main.append(label)
     cooldown_start = work[-1] + 1
+    # Preserve later repeated distance blocks instead of ending recognition
+    # at the strides. Every remaining lap must be explained.
+    position = cooldown_start + 1
+    later, transitions = [], []
+    while position < len(rows):
+        m, s = rows[position]
+        if zone_for_lap(laps[position]) in {'Z1', '', 'NA'} and m >= 500:
+            break
+        if position+1 < len(rows):
+            rm, rs = rows[position+1]
+            if (400 <= m <= 6000 and s >= 60 and m/s >= 2.5
+                    and rm <= 600 and 30 <= rs <= 600 and m/s >= 1.4*rm/rs):
+                later.append(position)
+                position += 2
+                continue
+        # A final work lap can lead directly into cooling-down.
+        if (400 <= m <= 6000 and s >= 60 and m/s >= 2.5
+                and position+1 < len(rows) and rows[position+1][0] >= 500
+                and zone_for_lap(laps[position+1]) in {'Z1', '', 'NA'}):
+            later.append(position)
+            position += 1
+            break
+        if not later and m >= 500 and zone_for_lap(laps[position]) == 'Z2':
+            transitions.append(position)
+            position += 1
+            continue
+        break
+    if later:
+        grouped_later = []
+        for i in later:
+            nominal = int(math.floor(rows[i][0]/100+.5)*100)
+            if not grouped_later or grouped_later[-1][0] != nominal:
+                grouped_later.append((nominal, []))
+            grouped_later[-1][1].append(i)
+        if any(len(indices) < 2 for _, indices in grouped_later):
+            return None
+        for i in transitions:
+            main.append(f'{distance_label(rows[i][0])} m{zone_label([i])}')
+        for nominal, indices in grouped_later:
+            rests = [rows[i+1][1] for i in indices[:-1]]
+            main.append(f'{len(indices)}×{nominal} m{zone_label(indices)} p{int(math.floor(median(rests)+.5))}')
+            nominal_by_index.update({i:nominal for i in indices})
+        work.extend(transitions + later)
+        cooldown_start = position
     tail = rows[cooldown_start:]
     cd_m = sum(m for m, _ in tail)
     # Keep one clear trailing run as CD; short final recoveries alone are not CD.
     has_cd = any(m >= 500 for m, _ in tail) and all(zone_for_lap(laps[i]) in {'Z1', '', 'NA'}
                   for i in range(cooldown_start, len(rows)))
+    if any(m >= 400 and zone_for_lap(laps[i]) in {'Z2','Z3','Z4','Z5'}
+           for i, (m, _) in enumerate(tail, cooldown_start)):
+        return None
     wu = (f'{distance_label(sum(m for m, _ in rows[:wu_end]))} m' + zone_label(list(range(wu_end)))) if wu_end else 'none'
     cd = f'{distance_label(cd_m)} m' + zone_label(list(range(cooldown_start, len(rows)))) if has_cd else ''
     main_text = ' + '.join(main)

@@ -26,6 +26,50 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_strides_followed_by_two_distance_series_are_complete(self):
+        from types import SimpleNamespace
+        from core.watch_structure import mixed_short_repetitions
+        from core.views.calendar import _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+        from core.garmin_d import apply_garmin_d
+        values = [(1004.65,307),(999.488,310),(14.222,26),(44.84,10),
+                  (44.9399,64),(60.04,11),(120.1,87),(58.5999,11),
+                  (126.72,63),(66.3699,12),(114.27,77),(66.95,12),
+                  (108.41,76),(61.1399,11),(32.77,16),(888.76,253),
+                  (804.08,187),(91.9697,60),(795.61,186),(91.46,61),
+                  (801.18,189),(352.71,182),(497.07,111),(82.8799,47),
+                  (501.15,116),(77.4302,46),(497.41,116),(89.6104,45),
+                  (504.67,117),(79.79,45),(502.37,117),(1000.95,311),(17.7996,7)]
+        work = [3,5,7,9,11,13,15,16,18,20,22,24,26,28,30]
+        laps = [dict(distanceMeters=m,durationMillis=s*1000,
+                     zone='Z4' if i==3 else 'Z5' if i in work[:6] else 'Z2' if i==15 else 'Z3' if i in work else 'Z1')
+                for i,(m,s) in enumerate(values)]
+        structure = mixed_short_repetitions(laps,lambda l:l['zone'])
+        self.assertIsNotNone(structure)
+        zones = {(l['distanceMeters'],l['durationMillis']):l['zone'] for l in laps}
+        with patch('core.views.polar_raw.lap_zone_paces',side_effect=lambda m, ms, athlete=None:(zones[(m,ms)],'NA')), patch(
+                'core.views.polar_raw.urlopen',side_effect=AssertionError('No external AI needed')):
+            self.assertEqual(_model_b_ai_description(laps),structure['description'])
+        self.assertIn('6×50 m',structure['main'])
+        self.assertIn('3×800 m',structure['main'])
+        self.assertIn('5×500 m',structure['main'])
+        self.assertIn('CD: 1000 m Z1',structure['description'])
+        self.assertEqual(structure['work_indices'],work)
+        loads = [dict(segment='WU' if i<structure['wu_end'] else 'CD' if i>=structure['cooldown_start'] else 'CORE',
+                      meters=m,seconds=s,zone=laps[i]['zone'][1:],work_rep=i in work,
+                      **({'nominal_rep_m':structure['work_distances'][i]} if i in structure['work_distances'] else {}))
+                 for i,(m,s) in enumerate(values)]
+        part = dict(training_fields={'wu':'2000 m Z1','main':structure['main'],'cd':'1000 m Z1'},watch_loads=loads)
+        d = apply_garmin_d([{'parts':[deepcopy(part)]}],SimpleNamespace(zone_hr_bpm={}))[0]['parts'][0]
+        for source, candidate in [('watch_c',part),('watch_d',d)]:
+            segments = [_virtual_segment_from_text('CORE',t) for t in candidate['training_fields']['main'].split(' + ')]
+            slot = SimpleNamespace(source=source,watch_loads=candidate['watch_loads'],segments=SimpleNamespace(all=lambda:segments))
+            self.assertEqual([r['measured_seconds'] for r in processed_main_reps(slot)], [values[i][1] for i in work])
+            self.assertEqual(sum(l['meters'] for l in candidate['watch_loads']),sum(m for m,s in values))
+        broken = deepcopy(laps)
+        broken[24]['distanceMeters'] = 700
+        self.assertIsNone(mixed_short_repetitions(broken,lambda l:l['zone']))
+
     def test_long_recovery_cannot_truncate_later_work(self):
         from core.views.polar_raw import type_a_description
         values = [(2970.31,611),(203.83,106),(3001.14,598),(105.59,283),
