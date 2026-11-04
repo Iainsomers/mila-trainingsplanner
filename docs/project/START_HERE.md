@@ -1,6 +1,6 @@
 # Start Here
 
-Bijgewerkt: 29 oktober 2026.
+Bijgewerkt: 4 november 2026.
 
 ## Project in één minuut
 
@@ -12,14 +12,16 @@ MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers m
 - Interface en communicatie: Engels in de app, Nederlands met de projecteigenaar.
 - Voltooide wijzigingen worden normaal direct gecommit en naar `main` gepusht, tenzij de gebruiker expliciet lokaal werk vraagt.
 
-## Handoff voor een nieuwe chat — 29 oktober 2026
+## Handoff voor een nieuwe chat — 4 november 2026
 
-- De laatste afgeronde wijziging is commit `fcb0b49` (`Add Flex Planner week copy and paste`).
-- Flex Planner heeft per geselecteerde atleet en week een compacte `c`- en `p`-actie. `c` kopieert de zichtbare week; `p` plakt die week naar een andere week van dezelfde atleet. Racecellen worden niet overschreven. Rijen groeien mee zodat langere trainingen volledig zichtbaar blijven.
-- Lokaal gevalideerd: `manage.py check`, template-compilatie en 12 gerichte `FlexPlannerAltTotalsTests` slagen.
-- De eigenaar meldde na een latere Render-deploy een HTTP 500 en wil die deploy mogelijk terugdraaien. Controleer in Render eerst welke deploy live staat voordat je verder pusht. Een dashboard-rollback kan autodeploy tijdelijk uitschakelen; ga dus niet alleen op de Git-status af.
-- De oorzaak is inmiddels lokaal gereproduceerd: het nieuwe Flex-weekclipboard riep `order_by()` aan op virtuele weergavesegmenten. Dit gebruikt nu `all()`; een echte paginatest met AM en PM bewaakt deze fout. De Render-status blijft afzonderlijk te bevestigen.
-- Ongecommitteerde lokale handleidingen, render-uitvoer en tijdelijke Office-bestanden zijn bewust buiten de wijziging gehouden en mogen niet worden meegestaged.
+- Laatste codefix: `e81f743` (`Keep all timed Main blocks in Watch clock results`), gepusht naar `main`. Render-deploy en visuele productiecontrole zijn nog niet bevestigd; de eigenaar controleert visueel.
+- Actuele casus: atleet 29, Garmin-activiteit `24955086351`, 3 november 2026. Main is `2×8′ Z2 p91 + 4×4′ Z2 p61`, WU 2000m en CD 1100m. De beschrijving was correct, maar het klokje toonde alleen de twee 8-minutenreps.
+- Oorzaak: `normalize_watch_main_text` zet `+` om naar ` - `; `split_main_segments` splitste dat alleen voor afstandsblokken. Minutenblokken worden nu ook gesplitst. `processed_main_reps` verwerkt bovendien bestaande gecombineerde CORE-records, zodat opnieuw Use AM/PM voor deze fix niet nodig is; na deploy de pagina verversen.
+- Regressie na echte Use AM/PM-opslag voor C én D: alle zes gemeten reptijden blijven `[482, 481, 253, 240, 241, 242]` seconden. Ook oudere gecombineerde records zijn gedekt. Geneste sets, zonebereiken en temporanges blijven intact. 75 gerichte tests slaagden; daarna slaagden 7 tests met de extra parserregressie en `manage.py check`. Volledige core-suite en visuele mobiele controle zijn niet uitgevoerd.
+- Voorgaande herkenningsfix `d30d058`: lokale, gevalideerde herkenning geeft Distance/Time voor deze gemengde training zonder afhankelijk te zijn van een AI-respons. De eerste 8-minutenrep bestaat uit bronlaps 4–6; de tweede uit lap 8; vier korte reps uit laps 10, 12, 14 en 16. De lange stop in lap 3 mag geen werkrep worden.
+- Kernbestanden: `core/training_text.py`, `core/watch_processing.py`, `core/watch_ai_structure.py`, `core/garmin_d.py`, `core/views/coach.py`. Tests: `core/tests_watch_plan.py`, `core/tests_watch_ai_structure.py`, `core/tests_watch_structure.py`, `core/tests_garmin_d.py`, `core/tests_garmin_c_push.py`, `core/tests_watch_alternatives.py`.
+- Algemene Garmin-wijzigingen standaard in C én D. D gebruikt End HR (laatste 10% van de volledige gemeten repduur, minimaal 15s; onder 15s Avg HR) om vanaf 400m óf 50s tempozones te corrigeren. Gemeten meters/seconden blijven leidend voor totalen; wandelen trager dan 10:00/km telt niet mee als loopafstand.
+- Ongevolgde Word-handleidingen, Office-lockbestanden, `_manual_v2_render/` en `output/` zijn ongerelateerd en bewust niet gecommit. Geen databases of privé-Garmin-payloads meestagen.
 
 ## Leesvolgorde voor nieuw werk
 

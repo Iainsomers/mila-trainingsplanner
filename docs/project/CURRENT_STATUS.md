@@ -1,5 +1,12 @@
 # Actuele status
 
+## Laatste overdracht — 4 november 2026
+
+- `e81f743` staat op main: het C/D-klokoverzicht verwerkt alle minutenblokken na Use AM/PM, ook als oudere opslag meerdere blokken met ` - ` in één CORE-record bevat. Casus atleet 29, 3 november: 2×8′ + 4×4′ moet zes klokregels tonen met 482, 481, 253, 240, 241 en 242 gemeten seconden.
+- Getest via echte import/opslag en bestaande gecombineerde records voor C/D; 75 gerichte tests slagen, daarna ook de extra parserregressie (7 tests) en manage.py check. Geen migratie nodig. De volledige suite is niet uitgevoerd.
+- Open: eigenaar ververst na Render-deploy en controleert de zes klokregels visueel. Deployvoltooiing is niet geverifieerd. Opnieuw importeren is voor deze fix niet nodig.
+- Zie START_HERE.md voor de compacte overdracht en relevante bestanden; DATA_RULES.md beschrijft de parserregel.
+
 ## Privacyverklaring
 
 - Een openbare Engelstalige privacyverklaring staat op `/privacy/` en is bereikbaar vanaf de loginpagina. De tekst omvat MiLa-verwerking, Oura en Garmin, de afzonderlijke optionele Garmin-AI-toestemming, OpenAI als verwerker en intrekking via dashboard of Athlete settings. Bijgewerkt op 31 oktober 2026; automatische Garmin-import wordt niet als bestaande functie voorgesteld. Controleer de verklaring opnieuw wanneer dataverwerking, providers of bewaartermijnen veranderen.
@@ -7,7 +14,7 @@
 - Op het atleten-dashboard staat een `Hardware settings`-blok voor de optionele Oura OAuth-verbinding, alleen zichtbaar als de coach per atleet `Allow Oura connection` inschakelt. De Oura-testpagina is een tijdelijke preview; coaches kunnen die openen voor eigen aangesloten atleten. In de AYC kan de atleet met `Use Oura data` maximaal veertien dagen bekijken, individuele dagen verwijderen en de overige waarden met `Use all` opslaan. Alleen lege velden voor slaapuren, slaapkwaliteit (Oura-score / 10), Morning HR (laagste slaap-HR, afgerond op bpm) en HRV worden gevuld. Readiness is een verborgen voorwaarde. Uitschakelen verwijdert de opgeslagen Oura-koppeling. De productieconfiguratie gebruikt `OURA_CLIENT_ID` en `OURA_CLIENT_SECRET`; callback: `https://mila-trainingsplanner.onrender.com/integrations/oura/callback/`.
 - Polar-toegang is per atleet standaard uit. De coachschakelaar `Allow Polar access` bepaalt of de atleet Polar-functies ziet en Polar-data-endpoints kan gebruiken; coachtoegang blijft werken.
 
-Bijgewerkt: 30 oktober 2026.
+Bijgewerkt: 4 november 2026.
 
 ## Productiestatus
 
