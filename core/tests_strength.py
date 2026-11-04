@@ -67,13 +67,13 @@ class StrengthTrainingTests(TestCase):
         # Legacy Strength was stored after CD; display must move it after all Main parts.
         for order,kind,text in [(1,'WU','WU text'),(2,'CORE','Main one'),(3,'CORE','Main two'),(4,'CD','CD text'),(9,'CORE2','Gym text')]:
             slot.segments.create(order=order,type=kind,text=text)
-        self.assertEqual([s.type for s in slot.display_segments],['WU','CORE','CORE','CORE2','CD'])
+        self.assertEqual([s.type for s in slot.display_segments],['WU','CORE2','CORE','CORE','CD'])
         for template,context in [
                 ('core/partials/trainer_planning_cell.html',{'slot':slot,'day':self.day,'slot_index':1,'selected_plan':self.plan}),
                 ('core/partials/calendar_cell.html',{'slot':slot,'day':self.day,'slot_index':1,'selected_plan':self.plan}),
                 ('core/partials/ayc_slot_segments.html',{'cell':{'slot':slot,'day':self.day,'slot_index':1}})]:
             html=render_to_string(template,context)
-            self.assertLess(html.index('Main two'),html.index('Gym text'))
+            self.assertLess(html.index('Gym text'),html.index('Main one'))
             self.assertLess(html.index('Gym text'),html.index('CD text'))
             self.assertNotIn('Main 2',html)
 
@@ -97,7 +97,7 @@ class StrengthTrainingTests(TestCase):
             html=response.content.decode()
             self.assertIn('<b>Strength</b>',html)
             self.assertNotIn('Main 2',html)
-            self.assertLess(html.index('name="core_text"'),html.index('name="core2_text"'))
+            self.assertLess(html.index('name="core2_text"'),html.index('name="core_text"'))
 
     def test_saved_standard_preserves_multiline_strength(self):
         from core.views.slots import _serialize_slot_template_text, _deserialize_slot_template_text
@@ -108,7 +108,7 @@ class StrengthTrainingTests(TestCase):
     def test_modal_prefill_virtual_training_keeps_strength_visible_after_main(self):
         from core.views.slots import _virtual_slot_from_base_training_for_slot_reset
         slot=_virtual_slot_from_base_training_for_slot_reset('CORE=1000m z2\nCORE2=Gym free text\nCD=500m z1')
-        self.assertEqual([s.type for s in slot.display_segments],['CORE','CORE2','CD'])
+        self.assertEqual([s.type for s in slot.display_segments],['CORE2','CORE','CD'])
         html=render_to_string('core/partials/trainer_planning_cell.html',{'slot':slot,'day':self.day,'slot_index':1,'selected_plan':self.plan})
         self.assertIn('Strength: Gym free text',html)
 

@@ -1025,6 +1025,7 @@ class TrainingSlot(models.Model):
     watch_main_reps = models.JSONField(default=list, blank=True)
     watch_plan_snapshot = models.JSONField(null=True, blank=True, default=None)
     watch_training_snapshot = models.JSONField(null=True, blank=True, default=None)
+    segment_order = models.JSONField(default=list, blank=True)
 
     athletes = models.ManyToManyField(Athlete, blank=True, related_name="training_slots")
     groups = models.ManyToManyField(Group, blank=True, related_name="training_slots")
@@ -1054,8 +1055,8 @@ class TrainingSlot(models.Model):
 
     @property
     def display_segments(self):
-        from core.strength import ordered_training_segments
-        return ordered_training_segments(self.segments.all())
+        from core.segment_order import ordered_training_segments
+        return ordered_training_segments(self.segments.all(), self.segment_order)
 
     def core_text(self) -> str:
         cores = self.segments.filter(type="CORE").order_by("order", "id")

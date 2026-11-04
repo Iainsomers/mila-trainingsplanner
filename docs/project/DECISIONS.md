@@ -124,3 +124,5 @@ Planning blijft de hoofdactie. Admin, Stats, Polar en een niet-functionele Setti
 - Doelwedstrijden worden als `Race!` duidelijker gemarkeerd dan gewone wedstrijden.
 
 4 november 2026: het tweede hoofdonderdeel Main 2 wordt Strength: vrij krachttrainingsveld zonder zoneplicht, zichtbaar na Main. CORE2 blijft de interne sleutel voor compatibiliteit; Strength levert geen hardloopkilometers of zonetotalen.
+
+4 november 2026: segmentvolgorde wordt per training instelbaar. Nieuwe standaard is WU, Mob/Tech, Strength, Sprint, Main, Alternative, CD; dit vervangt de eerdere vaste plaats van Strength na Main. Verplaatsen verandert de inhoud en loopberekeningen niet.

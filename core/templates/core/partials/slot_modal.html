@@ -9,7 +9,7 @@
         #slotModal .slot-modal-dialog { max-width: 890px; }
         #slotModal textarea.form-control { min-height: 58px; padding: .3rem .45rem; font-size: .88rem; line-height: 1.25; }
         #slotModal textarea.compact-tall { min-height: 78px; }
-        #slotModal .compact-main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem .75rem; }
+        #slotModal .compact-main-grid { display: grid; grid-template-columns: 1fr; gap: .55rem .75rem; }
         #slotModal .compact-field { margin-bottom: 0 !important; }
         #slotModal .compact-field-wide { grid-column: 1 / -1; }
         #slotModal .compact-feedback { font-size: .75rem; line-height: 1.15; margin-top: .15rem; }
@@ -55,6 +55,14 @@
           }
           #slotModal .compact-actions .btn { min-height: 40px; }
         }
+        #slotModal .compact-field { position: relative; }
+        #slotModal .compact-field > .form-label { display: block; min-height: 26px; padding-right: 100px; }
+        #slotModal .segment-order-tools { position: absolute; top: 0; right: 0; display: inline-flex; gap: .2rem; }
+        #slotModal .segment-order-tools button { font-size: .8rem; padding: .05rem .35rem; min-height: 26px; }
+        #slotModal .segment-drag-handle { cursor: grab; touch-action: none; }
+        #slotModal .segment-dragging { opacity: .45; }
+        #slotModal .modal-content { max-height: 95dvh; }
+        #slotModal .modal-body { overflow-y: auto; }
       </style>
 
       <div class="modal-header py-2">
@@ -84,6 +92,7 @@
               data-watch-slot="{{ is_watch_slot|yesno:'1,0' }}"
             >
               {% csrf_token %}
+              <input type="hidden" name="segment_order" value="{% firstof segment_order_value request.POST.segment_order "WU,MOB,CORE2,SPR,CORE,ALT,CD" %}">
 
               {% if selected_plan %}
                 <input type="hidden" name="plan" value="{{ selected_plan.id }}">
@@ -143,6 +152,25 @@
               </div>
               {% endif %}
 
+              <!-- STRENGTH (free text) -->
+              {% if tb_show_core2 %}
+                {% if core2_error %}
+                  <div class="alert alert-danger compact-field-wide">{{ core2_error }}</div>
+                {% endif %}
+
+                <div class="mb-2 compact-field compact-field-wide">
+                  <label class="form-label"><b>Strength</b></label>
+                  <textarea name="core2_text" class="form-control" rows="2"
+                    placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ core2_text }}</textarea>
+
+                  {% if core2_feedback %}
+                    <div class="small compact-feedback {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
+                      {{ core2_feedback }}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endif %}
+
               <!-- SPRINT -->
               {% if tb_show_sprint %}
               <div class="mb-2 compact-field">
@@ -182,25 +210,6 @@
                   </div>
                 {% endif %}
               </div>
-
-              <!-- STRENGTH (free text) -->
-              {% if tb_show_core2 %}
-                {% if core2_error %}
-                  <div class="alert alert-danger compact-field-wide">{{ core2_error }}</div>
-                {% endif %}
-
-                <div class="mb-2 compact-field compact-field-wide">
-                  <label class="form-label"><b>Strength</b></label>
-                  <textarea name="core2_text" class="form-control" rows="2"
-                    placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ core2_text }}</textarea>
-
-                  {% if core2_feedback %}
-                    <div class="small compact-feedback {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
-                      {{ core2_feedback }}
-                    </div>
-                  {% endif %}
-                </div>
-              {% endif %}
 
               <!-- ALTERNATIVE -->
               <div class="mb-2 compact-field">
@@ -328,3 +337,72 @@
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  const modal = document.getElementById('slotModal');
+  const form = modal.querySelector('form');
+  const grid = form.querySelector('.compact-main-grid');
+  const input = form.elements.segment_order;
+  const fields = {WU:'wu_text', MOB:'mob_text', CORE2:'core2_text', SPR:'sprint_text', CORE:'core_text', ALT:'alt_text', CD:'cd_text'};
+  const order = input.value.split(',');
+  const cards = new Map();
+  Array.from(grid.children).forEach(card => {
+    const kind = Object.keys(fields).find(key => card.querySelector('[name="' + fields[key] + '"]'));
+    if (kind) { card.dataset.segmentType = kind; cards.set(kind, card); }
+  });
+  order.forEach(kind => { if (cards.has(kind)) grid.appendChild(cards.get(kind)); });
+  function sync() {
+    const visible = Array.from(grid.children).filter(card => card.dataset.segmentType);
+    const types = visible.map(card => card.dataset.segmentType);
+    let index = 0;
+    input.value = order.map(kind => cards.has(kind) ? types[index++] : kind).join(',');
+    visible.forEach((card, index) => {
+      const up = card.querySelector('[data-order-move="up"]');
+      const down = card.querySelector('[data-order-move="down"]');
+      if (up) up.disabled = index === 0;
+      if (down) down.disabled = index === visible.length - 1;
+    });
+  }
+  let dragged = null;
+  cards.forEach((card, kind) => {
+    const field = card.querySelector('[name="' + fields[kind] + '"]');
+    if (field.readOnly) return;
+    const label = card.querySelector('label');
+    const title = label.textContent.trim();
+    const tools = document.createElement('span');
+    tools.className = 'segment-order-tools';
+    for (const [direction, symbol] of [['up','↑'], ['down','↓'], ['drag','↕']]) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'btn btn-sm btn-outline-secondary';
+      button.textContent = symbol;
+      button.title = direction === 'drag' ? 'Drag to reorder ' + title : 'Move ' + title + ' ' + direction;
+      button.setAttribute('aria-label', button.title);
+      if (direction === 'drag') {
+        button.draggable = true; button.classList.add('segment-drag-handle');
+        button.addEventListener('dragstart', event => { dragged = card; card.classList.add('segment-dragging'); event.dataTransfer.setData('text/plain', kind); event.dataTransfer.effectAllowed = 'move'; });
+        button.addEventListener('dragend', () => { card.classList.remove('segment-dragging'); dragged = null; sync(); });
+      } else {
+        button.dataset.orderMove = direction;
+        button.addEventListener('click', () => {
+          const visible = Array.from(grid.children).filter(item => item.dataset.segmentType);
+          const other = visible[visible.indexOf(card) + (direction === 'up' ? -1 : 1)];
+          if (other) { if (direction === 'up') grid.insertBefore(card, other); else grid.insertBefore(other, card); }
+          sync(); button.focus();
+        });
+      }
+      tools.appendChild(button);
+    }
+    label.before(tools);
+    card.addEventListener('dragover', event => { if (dragged) event.preventDefault(); });
+    card.addEventListener('drop', event => {
+      if (!dragged || dragged === card) return;
+      event.preventDefault();
+      const after = event.clientY > card.getBoundingClientRect().top + card.offsetHeight / 2;
+      grid.insertBefore(dragged, after ? card.nextSibling : card);
+      sync();
+    });
+  });
+  sync();
+})();
+</script>

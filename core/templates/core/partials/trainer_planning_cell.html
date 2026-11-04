@@ -47,7 +47,7 @@
       <div class="trainer-celltext">
         {% for seg in slot.display_segments %}
           {% if seg.text or seg.standard_strength_program or seg.photo_ids %}
-            {% include "core/partials/segment_display.html" with seg=seg %}
+            <div class="training-segment-line">{% include "core/partials/segment_display.html" with seg=seg %}</div>
           {% endif %}
         {% endfor %}
       </div>

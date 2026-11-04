@@ -847,7 +847,8 @@ class _VirtualSegment:
 
 
 class _VirtualSlot:
-    def __init__(self, segments, plan_id=None, source="planned", watch_loads=None, watch_main_reps=None, slot_id=None):
+    def __init__(self, segments, plan_id=None, source="planned", watch_loads=None, watch_main_reps=None, slot_id=None, segment_order=None):
+        self.segment_order = segment_order or []
         self.segments = _VirtualSegmentList(segments)
         self.plan_id = plan_id
         self.id = slot_id
@@ -857,8 +858,8 @@ class _VirtualSlot:
 
     @property
     def display_segments(self):
-        from core.strength import ordered_training_segments
-        return ordered_training_segments(self.segments.all())
+        from core.segment_order import ordered_training_segments
+        return ordered_training_segments(self.segments.all(), self.segment_order)
 
     def core_text(self):
         return " // ".join(seg.text for seg in self.segments.all() if seg.type == "CORE" and seg.text)
@@ -909,6 +910,7 @@ def _clone_slot_for_display(slot):
         watch_loads=getattr(slot, "watch_loads", []),
         watch_main_reps=getattr(slot, "watch_main_reps", []),
         slot_id=getattr(slot, "id", None),
+        segment_order=getattr(slot, "segment_order", []),
     )
     clone.watch_plan_snapshot = getattr(slot, "watch_plan_snapshot", None)
     clone.watch_training_snapshot = getattr(slot, "watch_training_snapshot", None)
@@ -1589,6 +1591,7 @@ def flex_planner_view(request):
                     day_payload[str(slot_index)] = {
                         "skip": bool(source_cell.get("has_race")),
                         "segments": segments,
+                        "segment_order": getattr(source_slot, "segment_order", []),
                     }
                 flex_week_days.append(day_payload)
 
@@ -3053,7 +3056,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     original_watch_loads = list(getattr(source_slot, "watch_loads", []) or [])
     original_core_text = " // ".join(
         str(getattr(segment, "text", "") or "").strip()
-        for segment in source_slot.segments.filter(type__in=("CORE", "CORE2")).order_by("id")
+        for segment in source_slot.segments.filter(type="CORE").order_by("order", "id")
     ) if source_slot else ""
 
     def _normalise_main_text(value):
@@ -3070,7 +3073,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     preserved_watch_loads = [
         load for load in original_watch_loads
         if isinstance(load, dict)
-        and str(load.get("segment") or "CORE").upper() in {"CORE", "CORE2"}
+        and str(load.get("segment") or "CORE").upper() == "CORE"
     ]
     override_source = original_source if keep_watch_main else "planned"
     override_watch_loads = preserved_watch_loads if keep_watch_main else []
@@ -3089,6 +3092,9 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         override_slot.source = override_source
         override_slot.watch_loads = override_watch_loads
         override_slot.save(update_fields=["source", "watch_loads", "updated_at"])
+
+    from core.segment_order import normalize_segment_order, apply_segment_order
+    segment_order = normalize_segment_order(request.POST.get("segment_order") or getattr(source_slot, "segment_order", None))
 
     override_slot.segments.all().delete()
     for prepared in prepared_photos:
@@ -3261,6 +3267,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
         order += 1
 
+    apply_segment_order(override_slot, segment_order)
     save_processed_main_reps(override_slot)
 
 

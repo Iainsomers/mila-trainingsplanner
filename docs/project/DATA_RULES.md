@@ -37,7 +37,7 @@ Bijgewerkt: 22 oktober 2026.
 
 ## Trainingsonderdelen
 
-Volgorde: WU, MOB, SPR, CORE, CORE2, ALT, CD. Meerdere segmenten van hetzelfde type behouden hun onderlinge volgorde. `Main` en `Strength` zijn alleen de zichtbare namen voor CORE en CORE2.
+Standaardvolgorde: WU, MOB, CORE2, SPR, CORE, ALT, CD. Een opgeslagen TrainingSlot.segment_order kan deze volgorde per training aanpassen. Meerdere segmenten van hetzelfde type behouden hun onderlinge volgorde. `Main` en `Strength` zijn alleen de zichtbare namen voor CORE en CORE2.
 
 ## Parsernotatie
 
@@ -248,4 +248,6 @@ De Injury/Issue-schuif toont de laatste N van deze 25 evaluaties (5–25, standa
 
 InjuryIssueComment bewaart een unieke opmerking per (athlete, coach), los van de evaluatie van de atleet en Desired Improvements. Dezelfde coach-identiteitshulp genereert in beide overzichten initialen en deterministische kleur. Opslaan accepteert alleen de ingelogde auteur, maximaal 5000 tekens; leeg verwijdert uitsluitend diens eigen opmerking. See training is alleen lezen en schrijft geen planning/Flex-records; het leest de actuele opgeslagen sessie met persoonlijke override, baseplanning en racevoorrang, niet een historische snapshot.
 
-Strength gebruikt het bestaande type CORE2 uitsluitend als vrije tekst. Nieuwe/gewijzigde invoer bewaart geen zone, T-type, afstand, genormaliseerde afstand of duur. Ook bestaande CORE2-records worden uitgesloten van AYC-/Flex-/DCO-/statistiek-looploads; Stats-schema v21 vernieuwt de cache. De weergave verplaatst Strength naar direct na de laatste Main zonder de opgeslagen tekst of onderlinge volgorde van Main-reps te wijzigen. Meerdere regels en + of // binnen Strength blijven vrije tekst; opgeslagen standaarden bewaren vervolgregels.
+Strength gebruikt het bestaande type CORE2 uitsluitend als vrije tekst. Nieuwe/gewijzigde invoer bewaart geen zone, T-type, afstand, genormaliseerde afstand of duur. Ook bestaande CORE2-records worden uitgesloten van AYC-/Flex-/DCO-/statistiek-looploads; Stats-schema v21 vernieuwt de cache. De weergave gebruikt de standaard- of aangepaste segmentvolgorde zonder de opgeslagen tekst of onderlinge volgorde van Main-reps te wijzigen. Meerdere regels en + of // binnen Strength blijven vrije tekst; opgeslagen standaarden bewaren vervolgregels.
+
+TrainingSlot.segment_order bewaart een volledige, unieke permutatie van WU/MOB/CORE2/SPR/CORE/ALT/CD. Leeg betekent de standaard WU-MOB-CORE2-SPR-CORE-ALT-CD. De server weigert onbekende, dubbele of ontbrekende typen. Binnen hetzelfde type blijft de bronvolgorde behouden (bijvoorbeeld meerdere Main-blokken). Opslaan schrijft tevens de numerieke segment.order; display-klonen nemen de slotmetadata over. Zonder meegestuurde volgorde blijft de zichtbare bronvolgorde behouden. Standaarden gebruiken de compatibele ORDER=-regel; oude standaarden zonder die regel krijgen de standaard. Dag/weekkopieën en Watch/Plan-snapshots bewaren hun eigen volgorde. Louter verplaatsen wist geen gemeten Watch-Main-data.

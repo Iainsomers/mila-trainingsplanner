@@ -3431,7 +3431,7 @@
     formData.append("source", "athlete_year");
     formData.append("slot_text", collectSlotText(form));
 
-    ["wu_text", "mob_text", "sprint_text", "core_text", "core2_text", "alt_text", "cd_text"].forEach(function(name) {
+    ["wu_text", "mob_text", "sprint_text", "core_text", "core2_text", "alt_text", "cd_text", "segment_order"].forEach(function(name) {
       var field = form.querySelector('[name="' + name + '"]');
       if (field) {
         formData.append(name, field.value || "");

@@ -184,3 +184,21 @@ class WatchOriginalPlanTests(TestCase):
             "cell": {"slot": clone, "day": self.day, "slot_index": 2, "plan_id": self.plan.pk},
             "selected_athlete_id": self.athlete.pk})
         self.assertIn('data-version-url="/slot-modal/2026/10/30/2/', html)
+
+    def test_segment_order_is_separate_for_saved_plan_and_watch_versions(self):
+        slot=self.original()
+        plan_order=['CORE2','WU','MOB','SPR','CORE','ALT','CD']
+        watch_order=['CORE','WU','MOB','CORE2','SPR','CD','ALT']
+        slot.segment_order=plan_order
+        slot.save()
+        response=self.client.post(self.url(),{'core_text':'10*100m z4 p45','watch_origin':'watch_c','segment_order':','.join(watch_order),
+            'watch_loads':json.dumps([{'segment':'CORE','meters':100,'seconds':20,'zone':'4'}])})
+        self.assertEqual(response.status_code,200)
+        slot.refresh_from_db()
+        self.assertEqual(slot.segment_order,watch_order)
+        self.assertEqual(self.client.post(self.url(),{'action':'select_watch_version','version':'plan'}).status_code,204)
+        slot.refresh_from_db()
+        self.assertEqual(slot.segment_order,plan_order)
+        self.assertEqual(self.client.post(self.url(),{'action':'select_watch_version','version':'watch'}).status_code,204)
+        slot.refresh_from_db()
+        self.assertEqual(slot.segment_order,watch_order)

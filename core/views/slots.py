@@ -243,13 +243,14 @@ class _VirtualSegment:
 
 
 class _VirtualSlot:
-    def __init__(self, segments):
+    def __init__(self, segments, segment_order=None):
+        self.segment_order = segment_order or []
         self.segments = _VirtualSegmentList(segments)
 
     @property
     def display_segments(self):
-        from core.strength import ordered_training_segments
-        return ordered_training_segments(self.segments.all())
+        from core.segment_order import ordered_training_segments
+        return ordered_training_segments(self.segments.all(), self.segment_order)
 
     @property
     def core_text(self):
@@ -716,7 +717,7 @@ def _tb_flag(request, key: str, default: bool = True) -> bool:
 
 
 def _deserialize_slot_template_text(text: str) -> dict:
-    out = {"WU":"","MOB":"","SPR":"","CORE":"","CORE2":"","ALT":"","CD":""}
+    out = {"WU":"","MOB":"","SPR":"","CORE":"","CORE2":"","ALT":"","CD":"","ORDER":""}
     current_key = None
     for line in (text or "").splitlines():
         key, separator, value = line.partition("=")
@@ -779,8 +780,10 @@ def _standard_strength_for_user(user_or_request, program_id):
     )
 
 
-def _serialize_slot_template_text(wu_text, mob_text, sprint_text, core_text, core2_text, alt_text, cd_text) -> str:
+def _serialize_slot_template_text(wu_text, mob_text, sprint_text, core_text, core2_text, alt_text, cd_text, segment_order=None) -> str:
+    from core.segment_order import normalize_segment_order
     parts = [
+        "ORDER=" + ",".join(normalize_segment_order(segment_order)),
         f"WU={wu_text or ''}",
         f"MOB={mob_text or ''}",
         f"SPR={sprint_text or ''}",
@@ -809,6 +812,7 @@ def week_copy(request, yyyy, mm, dd):
     payload = {
         "source_plan_id": selected_plan.id,
         "source_week_start": week_start.isoformat(),
+        "orders": {},
         "days": {},
     }
 
@@ -851,6 +855,7 @@ def week_copy(request, yyyy, mm, dd):
                 })
 
             payload["days"][offset_key][str(slot_index)] = segs
+            payload["orders"][offset_key + ":" + str(slot_index)] = base_slot.segment_order
 
     request.session["week_clipboard"] = payload
     request.session.modified = True
@@ -921,6 +926,9 @@ def week_paste(request, yyyy, mm, dd):
                     seg.t_type = item.get("t_type") or ""
                 seg.parsed_at = now
                 seg.save()
+
+            from core.segment_order import apply_segment_order
+            apply_segment_order(base_slot, clipboard.get("orders", {}).get(str(offset) + ":" + str(slot_index)))
 
     _bump_stats_version()
 
@@ -1050,6 +1058,7 @@ def slot_copy(request, yyyy, mm, dd, slot_index):
         "athlete_id": athlete.id if athlete else None,
         "copied_from_has_fix": bool(has_fix),
         "segments": segments_payload,
+        "segment_order": getattr(visible_slot, "segment_order", []),
     }
     request.session.modified = True
 
@@ -1139,6 +1148,8 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
         seg.parsed_at = now
         seg.save()
 
+    from core.segment_order import apply_segment_order
+    apply_segment_order(slot, clipboard.get("segment_order"))
     save_processed_main_reps(slot)
 
     _bump_stats_version()
@@ -1175,7 +1186,7 @@ def _week_segment_payload(slot):
 
 
 def _watch_version_payload(slot):
-    return {"segments": _week_segment_payload(slot), "source": slot.source,
+    return {"segments": _week_segment_payload(slot), "segment_order": slot.segment_order, "source": slot.source,
             "watch_loads": slot.watch_loads, "watch_main_reps": slot.watch_main_reps}
 
 
@@ -1192,6 +1203,15 @@ def flex_week_copy(request):
         return HttpResponse("Invalid week clipboard", status=400)
     if not isinstance(payload, dict) or not isinstance(payload.get("days"), list):
         return HttpResponse("Invalid week clipboard", status=400)
+    from core.segment_order import normalize_segment_order
+    try:
+        for day in payload["days"]:
+            if isinstance(day, dict):
+                for item in day.values():
+                    if isinstance(item, dict):
+                        normalize_segment_order(item.get("segment_order"))
+    except ValueError:
+        return HttpResponse("Invalid training segment order", status=400)
     request.session["flex_week_clipboard"] = {
         "athlete_id": athlete.id,
         "source_week_start": request.POST.get("source_week_start") or "",
@@ -1259,6 +1279,8 @@ def flex_week_paste(request):
                     seg.standard_strength_program = _standard_strength_for_user(request, strength_id)
                 seg.parsed_at = now
                 seg.save()
+            from core.segment_order import apply_segment_order
+            apply_segment_order(slot, item.get("segment_order"))
             save_processed_main_reps(slot)
     _bump_stats_version()
     request.session.pop("flex_week_clipboard", None)
@@ -1485,6 +1507,13 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     ):
         return HttpResponse("Only existing training can be edited.", status=403)
 
+    from core.segment_order import normalize_segment_order, apply_segment_order
+    try:
+        form_segment_order = normalize_segment_order(request.POST.get("segment_order") or getattr(visible_slot, "segment_order", None))
+    except ValueError as error:
+        return HttpResponse(str(error), status=400)
+    segment_order_value = ','.join(form_segment_order)
+
     visible_mob = visible_slot.segments.filter(type="MOB").first() if visible_slot else None
     mob_photos = getattr(visible_mob, "photo_items", [])
     if request.method == "GET":
@@ -1501,6 +1530,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             "core/partials/slot_modal.html",
             {
                 "day": d,
+                "segment_order_value": segment_order_value,
                 "slot_index": slot_index,
 
                 "tb_show_wu": tb_show_wu,
@@ -1572,14 +1602,15 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             snapshot = restore_slot.watch_training_snapshot
             if not isinstance(snapshot, dict):
                 return HttpResponse("No saved Watch training", status=409)
-            restore_slot.watch_plan_snapshot = {"segments": _week_segment_payload(restore_slot)}
+            restore_slot.watch_plan_snapshot = {"segments": _week_segment_payload(restore_slot), "segment_order":restore_slot.segment_order}
         restore_slot.segments.all().delete()
         for item in snapshot.get("segments", []):
             restore_slot.segments.create(**item)
+        restore_slot.segment_order = snapshot.get("segment_order", [])
         restore_slot.source = snapshot.get("source", "planned")
         restore_slot.watch_loads = snapshot.get("watch_loads", [])
         restore_slot.watch_main_reps = snapshot.get("watch_main_reps", [])
-        restore_slot.save(update_fields=["source", "watch_loads", "watch_main_reps", "watch_plan_snapshot", "watch_training_snapshot", "updated_at"])
+        restore_slot.save(update_fields=["segment_order", "source", "watch_loads", "watch_main_reps", "watch_plan_snapshot", "watch_training_snapshot", "updated_at"])
         _bump_stats_version()
         return HttpResponse(status=204)
 
@@ -1648,7 +1679,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
         cell_html = render_to_string(
             "core/partials/calendar_cell.html",
-            {"day": d, "slot": None, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan, "selected_athlete": athlete, "is_override": True},
+            {"day": d,
+                "segment_order_value": segment_order_value, "slot": None, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan, "selected_athlete": athlete, "is_override": True},
             request=request,
         )
         resp = HttpResponse(cell_html)
@@ -1660,7 +1692,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             visible_slot.delete()
         _bump_stats_version()
         cell_template = "core/partials/trainer_planning_cell.html" if _is_trainer_planning_plan(selected_plan) else "core/partials/calendar_cell.html"
-        cell_context = {"day": d, "slot": None, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan}
+        cell_context = {"day": d,
+                "segment_order_value": segment_order_value, "slot": None, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan}
         if not _is_trainer_planning_plan(selected_plan):
             cell_context.update({"selected_athlete": None, "is_override": False})
         cell_html = render_to_string(cell_template, cell_context, request=request)
@@ -1692,7 +1725,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             elif not original_slot:
                 original_slot = _get_effective_slot(display_plan, athlete, d, slot_index, prefetch_segments=True)["visible_slot"] if display_plan else None
         if str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
-            original_watch_plan = {"segments": _week_segment_payload(original_slot)}
+            original_watch_plan = {"segments": _week_segment_payload(original_slot), "segment_order":getattr(original_slot, "segment_order", [])}
     if athlete:
         slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=athlete)
         is_override = True
@@ -1735,6 +1768,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "core/partials/slot_modal.html",
                 {
                     "day": d,
+                "segment_order_value": segment_order_value,
                     "slot_index": slot_index,
 
                     "tb_show_wu": tb_show_wu,
@@ -1782,6 +1816,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 core2_text=core2_text,
                 alt_text=alt_text,
                 cd_text=cd_text,
+                segment_order=form_segment_order,
             ),
         )
 
@@ -1790,6 +1825,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             "core/partials/slot_modal.html",
             {
                 "day": d,
+                "segment_order_value": segment_order_value,
                 "slot_index": slot_index,
 
                 "tb_show_wu": tb_show_wu,
@@ -1843,12 +1879,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             return HttpResponse("Not allowed", status=403)
 
         data = _deserialize_slot_template_text(tpl.text)
+        segment_order_value = ",".join(normalize_segment_order(data.get("ORDER")))
 
         return render(
             request,
             "core/partials/slot_modal.html",
             {
                 "day": d,
+                "segment_order_value": segment_order_value,
                 "slot_index": slot_index,
 
                 "tb_show_wu": tb_show_wu,
@@ -1882,6 +1920,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             "core/partials/slot_modal.html",
             {
                 "day": d,
+                "segment_order_value": segment_order_value,
                 "slot_index": slot_index,
 
                 "tb_show_wu": tb_show_wu,
@@ -1959,6 +1998,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             "core/partials/slot_modal.html",
             {
                 "day": d,
+                "segment_order_value": segment_order_value,
                 "slot_index": slot_index,
 
                 "tb_show_wu": tb_show_wu,
@@ -2179,6 +2219,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if cd_seg:
             cd_seg.delete()
 
+    apply_segment_order(slot, form_segment_order)
     save_processed_main_reps(slot)
     sync_athlete_auto_wucd_overrides(slot, selected_plan, core_text)
     if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
@@ -2193,7 +2234,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         return resp
 
     cell_template = "core/partials/trainer_planning_cell.html" if _is_trainer_planning_plan(selected_plan) else "core/partials/calendar_cell.html"
-    cell_context = {"day": d, "slot": slot, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan}
+    cell_context = {"day": d,
+                "segment_order_value": segment_order_value, "slot": slot, "slot_index": slot_index, "oob": True, "selected_plan": selected_plan}
     if not _is_trainer_planning_plan(selected_plan):
         cell_context.update({"selected_athlete": athlete, "is_override": is_override})
     cell_html = render_to_string(cell_template, cell_context, request=request)

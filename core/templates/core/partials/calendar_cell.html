@@ -83,23 +83,17 @@
         >
           <span class="celltext">
             {% if display_mode == "core_only" %}
-              {% if slot.core_text %}
-                <div><strong>{{ slot.core_text }}</strong></div>
-              {% endif %}
               {% for seg in slot.display_segments %}
-                {% if seg.type == "CORE2" and seg.text %}
+                {% if seg.type == "CORE" and seg.text %}
+                  <div><strong>{{ seg.text }}</strong></div>
+                {% elif seg.type == "CORE2" and seg.text %}
                   <div>{% include "core/partials/segment_display.html" with seg=seg %}</div>
                 {% elif seg.type == "ALT" and seg.text %}
                   <div>{{ seg.text }}</div>
+                {% elif seg.type == "MOB" and not slot.core_text %}
+                  <div>{% include "core/partials/segment_display.html" with seg=seg %}</div>
                 {% endif %}
               {% endfor %}
-              {% if not slot.core_text %}
-                {% for seg in slot.display_segments %}
-                  {% if seg.type == "MOB" and seg.text or seg.type == "MOB" and seg.standard_strength_program or seg.type == "MOB" and seg.photo_ids %}
-                    <div>{% include "core/partials/segment_display.html" with seg=seg %}</div>
-                  {% endif %}
-                {% endfor %}
-              {% endif %}
             {% else %}
               {% for seg in slot.display_segments %}
                 {% if seg.text or seg.standard_strength_program or seg.photo_ids %}

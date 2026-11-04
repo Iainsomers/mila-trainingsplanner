@@ -307,7 +307,7 @@
                         {% else %}
                           {% for seg in r.slot1.display_segments %}
                             {% if seg.text or seg.photo_ids %}
-                              {% include "core/partials/segment_display.html" with seg=seg %}
+                              <div class="training-segment-line">{% include "core/partials/segment_display.html" with seg=seg %}</div>
                             {% endif %}
                           {% endfor %}
                         {% endif %}
@@ -344,7 +344,7 @@
                         {% else %}
                           {% for seg in r.slot2.display_segments %}
                             {% if seg.text or seg.photo_ids %}
-                              {% include "core/partials/segment_display.html" with seg=seg %}
+                              <div class="training-segment-line">{% include "core/partials/segment_display.html" with seg=seg %}</div>
                             {% endif %}
                           {% endfor %}
                         {% endif %}

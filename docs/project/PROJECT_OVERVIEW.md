@@ -71,3 +71,5 @@ PAC (Pro Athletic Coach) is een zelfstandig Django-project voor coachhulpmiddele
 Mob/Tech-foto’s staan als verkleinde privé-JPEG plus thumbnail in TrainingPhoto (database). TrainingSegment bewaart UUID-referenties; kopieën en snapshots delen de onveranderlijke foto. Een geauthenticeerde downloadroute controleert toegang via het verwijzende trainingssegment; er is geen openbare media-opslag nodig.
 
 - InjuryIssueComment: unieke coachopmerking per atleet en auteur in Injury/Issue Overview (migratie 0141). core/coach_identity.py deelt initialen en auteurkleur met Desired Improvements; core/injury_overview.py leest het trainingdagdeel voor de evaluatiepopup zonder planningrecords te schrijven.
+
+- TrainingSlot.segment_order (migratie 0143) bewaart de per-training volgorde. core/segment_order.py valideert en ordent de bestaande interne segmenttypen voor formulier, opslag en alle plannerweergaven.
