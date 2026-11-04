@@ -237,4 +237,7 @@ Mob/Tech-foto’s: compacte Add photos-knop, maximaal vijf, thumbnails van 64px 
 
 Alternative-weektotalen in AYC en de live Flex-telling behouden halve minuten bij progressieve zones, met maximaal één decimaal en zonder overbodige .0. De bestaande meerzonekleuren blijven van toepassing.
 
-Injury/Issue Overview gebruikt een compacte tabel met naam en vijf vaste ronde groen/geel/rood-indicatoren, oudste links en nieuwste rechts. Grijs betekent ontbrekende data. De legenda en navigatie mogen op mobiel ombreken; de tabel heeft geen desktop-minimumbreedte. Elke indicator heeft een datum-/AM-PM-/statuslabel voor toegankelijkheid en hover.
+Injury/Issue Overview gebruikt een compacte tabel met naam en 5–25 ronde groen/geel/rood-indicatoren (schuifje, standaard 5), oudste links en nieuwste rechts. Grijs betekent ontbrekende data. De legenda en navigatie mogen op mobiel ombreken; de tabel heeft geen desktop-minimumbreedte. Elke indicator heeft een datum-/AM-PM-/statuslabel voor toegankelijkheid en hover.
+
+
+Injury/Issue-indicatoren zijn toetsenbordbedienbare knoppen wanneer een evaluatie bestaat. Ze openen een alleen-lezen popup met statuskleur/-teken, evaluatietekst en RPE. Meer indicatoren lopen op mobiel naar een volgende regel door; de modal staat buiten de pagina-container en kan verticaal scrollen. De schuif toont het actuele aantal naast het label en in de tabelkop.

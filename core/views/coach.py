@@ -12676,7 +12676,7 @@ def daily_overview_other_view(request):
                  | ~Q(pain="") | ~Q(clean_comment="")).annotate(
             recent_number=Window(expression=RowNumber(), partition_by=[F("athlete_id")],
                                  order_by=[F("date").desc(), F("slot_index").desc(), F("id").desc()]),
-        ).filter(recent_number__lte=5).order_by("athlete_id", "date", "slot_index", "id")
+        ).filter(recent_number__lte=25).order_by("athlete_id", "date", "slot_index", "id")
         indicators = {}
         states = {AthleteDayCheck.PAIN_NONE: ("green", "Fit"),
                   AthleteDayCheck.PAIN_SOME: ("yellow", "Some issue"),
@@ -12686,12 +12686,16 @@ def daily_overview_other_view(request):
             slot_label = "AM" if check.slot_index == 1 else "PM"
             indicators.setdefault(check.athlete_id, []).append({
                 "color": color, "label": f"{check.date:%d-%m-%Y} {slot_label}: {label}",
+                "evaluation": True, "comment": check.comment, "status": check.effective_status,
+                "status_label": dict(AthleteDayCheck.STATUS_CHOICES).get(check.effective_status, "—"),
+                "rpe": check.rpe,
             })
         rows = []
         for athlete in athletes:
             dots = indicators.get(athlete.id, [])
+            history = [{"color": "unknown", "label": "No evaluation"}]*(25-len(dots)) + dots
             rows.append({"athlete": athlete, "visible": athlete.id in visible_ids,
-                         "dots": [{"color": "unknown", "label": "No evaluation"}]*(5-len(dots)) + dots})
+                         "dots": history[-5:], "history_dots": history})
         return render(request, "core/daily_overview_other.html", {
             "overview_mode": requested_view, "injury_rows": rows,
         })

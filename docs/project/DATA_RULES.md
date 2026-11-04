@@ -241,4 +241,7 @@ Gemengde korte/lange Watch-series: na de korte versnellingen worden volgende lan
 
 Alternative-blokken splitsen op top-level `+` en `//`; beide mogen door elkaar worden gebruikt. Scheidingstekens binnen haakjes en zonebereiken blijven intact. Opslag, virtuele base-slots, bestaande teksten en de Flex-browserberekening gebruiken dezelfde scheidingsregels. De actieve tijd per los blok telt mee in de eigen zone(s), met behoud van de bestaande gelijke verdeling bij zonebereiken; Alternative blijft uitgesloten van loopkilometers.
 
-Injury/Issue Overview selecteert maximaal vijf werkelijk ingevulde AthleteDayCheck-records per atleet met trainingsdatum <= vandaag. Checked/status/RPE/pain of niet-lege commentaartekst telt als ingevuld. Volgorde is datum, slot_index (AM voor PM), id; updated_at verandert deze volgorde niet. Lege pain is onbekend, geen Fit; toekomstige of lege evaluaties worden niet meegerekend. Er geldt geen vaste terugkijkperiode.
+Injury/Issue Overview selecteert maximaal 25 werkelijk ingevulde AthleteDayCheck-records per atleet met trainingsdatum <= vandaag. Checked/status/RPE/pain of niet-lege commentaartekst telt als ingevuld. Volgorde is datum, slot_index (AM voor PM), id; updated_at verandert deze volgorde niet. Lege pain is onbekend, geen Fit; toekomstige of lege evaluaties worden niet meegerekend. Er geldt geen vaste terugkijkperiode.
+
+
+De Injury/Issue-schuif toont de laatste N van deze 25 evaluaties (5–25, standaard 5) zonder nieuwe opslag of requests. Alleen zichtbare trainingsevaluaties leveren commentaar, RPE en effective_status voor de popup. Lege status met checked=True krijgt de bestaande Done-status; de tekst wordt veilig als tekst weergegeven. Ontbrekende evaluaties hebben geen popup.

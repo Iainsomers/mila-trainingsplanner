@@ -62,7 +62,7 @@
   .hr-zone-table th, .hr-zone-table td { vertical-align: middle; text-align: center; }
   .hr-zone-table th:first-child, .hr-zone-table td:first-child { text-align: left; }
   .hr-zone-table td.hr-zone-misaligned { color: #c00000 !important; font-weight: 700; }
-  .issue-dots { display: flex; gap: .65rem; align-items: center; }
+  .issue-dots { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
   .issue-dot { display: inline-block; width: .9rem; height: .9rem; border-radius: 50%; flex: 0 0 auto; border: 1px solid rgba(0,0,0,.18); }
   .issue-green { background: #198754; }
   .issue-yellow { background: #ffc107; }
@@ -70,6 +70,15 @@
   .issue-unknown { background: #e9ecef; }
   .issue-table { width: 100%; }
   .issue-table th, .issue-table td { vertical-align: middle; }
+  button.issue-dot { padding: 0; cursor: pointer; }
+  .issue-dot[hidden] { display: none !important; }
+  button.issue-dot:focus-visible { outline: 2px solid #17324d; outline-offset: 3px; }
+  .issue-comment { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .issue-status { display: inline-block; border-radius: 4px; padding: .25rem .5rem; background: #e9ecef; }
+  .issue-status[data-status="done_as_planned"] { background: #00cc00; }
+  .issue-status[data-status="adjusted_ok"], .issue-status[data-status="lighter_slower"] { background: #ffc107; }
+  .issue-status[data-status="too_hard_fast"] { background: #fd7e14; }
+  .issue-status[data-status="not_done"] { background: #dc3545; color: white; }
 </style>
 {% endblock %}
 
@@ -105,7 +114,11 @@
   {% elif overview_mode == 'injury_issues' %}
   <section class="overview-block" aria-label="Injury/Issue Overview">
     <div class="overview-content">
-      <p class="text-muted small">Last five evaluations · oldest to newest (right).</p>
+      <div class="mb-3">
+        <label for="issue-history-count" class="form-label small">Last <output id="issue-history-value" for="issue-history-count">5</output> evaluations</label>
+        <input id="issue-history-count" class="form-range" type="range" min="5" max="25" step="1" value="5" style="display:block;max-width:20rem;" aria-describedby="issue-history-help">
+        <p id="issue-history-help" class="text-muted small mb-0">Oldest to newest (right). Click a dot to view the evaluation.</p>
+      </div>
       <div class="d-flex flex-wrap gap-3 small mb-3">
         <span><span class="issue-dot issue-green" aria-hidden="true"></span> Fit</span>
         <span><span class="issue-dot issue-yellow" aria-hidden="true"></span> Some issue</span>
@@ -113,11 +126,11 @@
         <span><span class="issue-dot issue-unknown" aria-hidden="true"></span> No data</span>
       </div>
       <table class="table table-sm issue-table mb-0">
-        <thead><tr><th scope="col">Athlete</th><th scope="col">Last 5 evaluations</th></tr></thead>
+        <thead><tr><th scope="col">Athlete</th><th scope="col">Last <span id="issue-history-heading">5</span> evaluations</th></tr></thead>
         <tbody>
           {% for row in injury_rows %}
           <tr><td>{{ row.athlete.name }}</td><td>
-            {% if row.visible %}<div class="issue-dots">{% for dot in row.dots %}<span class="issue-dot issue-{{ dot.color }}" role="img" aria-label="{{ dot.label }}" title="{{ dot.label }}"></span>{% endfor %}</div>
+            {% if row.visible %}<div class="issue-dots">{% for dot in row.history_dots %}{% if dot.evaluation %}<button type="button" class="issue-dot issue-{{ dot.color }}" data-history-index="{{ forloop.counter0 }}" {% if forloop.counter0 < 20 %}hidden{% endif %} aria-label="{{ dot.label }}" title="{{ dot.label }}" data-athlete="{{ row.athlete.name }}" data-label="{{ dot.label }}" data-comment="{{ dot.comment }}" data-status="{{ dot.status }}" data-status-label="{{ dot.status_label }}" data-rpe="{{ dot.rpe|default_if_none:'' }}" data-bs-toggle="modal" data-bs-target="#issueEvaluationModal"></button>{% else %}<span class="issue-dot issue-unknown" data-history-index="{{ forloop.counter0 }}" {% if forloop.counter0 < 20 %}hidden{% endif %} role="img" aria-label="{{ dot.label }}" title="{{ dot.label }}"></span>{% endif %}{% endfor %}</div>
             {% else %}<span class="text-muted" title="Training evaluations unavailable">—</span>{% endif %}
           </td></tr>
           {% empty %}<tr><td colspan="2" class="text-muted">No athletes found.</td></tr>{% endfor %}
@@ -125,6 +138,39 @@
       </table>
     </div>
   </section>
+  <div class="modal fade" id="issueEvaluationModal" tabindex="-1" aria-labelledby="issueEvaluationTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+      <div class="modal-header"><h2 class="modal-title h5" id="issueEvaluationTitle">Evaluation</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <p id="issueEvaluationSession" class="text-muted small"></p>
+        <p><span id="issueEvaluationStatus" class="issue-status"></span></p>
+        <p id="issueEvaluationRpe" class="small"></p>
+        <div id="issueEvaluationComment" class="issue-comment"></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+    </div></div>
+  </div>
+  <script>
+    document.getElementById('issue-history-count').addEventListener('input', function() {
+      const count = Math.min(25, Math.max(5, Number(this.value) || 5));
+      document.getElementById('issue-history-value').textContent = count;
+      document.getElementById('issue-history-heading').textContent = count;
+      document.querySelectorAll('[data-history-index]').forEach(dot => { dot.hidden = Number(dot.dataset.historyIndex) < 25 - count; });
+    });
+    const issueModal = document.getElementById('issueEvaluationModal');
+    document.body.appendChild(issueModal);
+    issueModal.addEventListener('show.bs.modal', function(event) {
+      const dot = event.relatedTarget;
+      if (!dot) return;
+      document.getElementById('issueEvaluationTitle').textContent = dot.dataset.athlete + ' · Evaluation';
+      document.getElementById('issueEvaluationSession').textContent = dot.dataset.label;
+      const status = document.getElementById('issueEvaluationStatus');
+      status.textContent = dot.dataset.statusLabel || '—';
+      status.dataset.status = dot.dataset.status;
+      document.getElementById('issueEvaluationRpe').textContent = dot.dataset.rpe ? 'RPE: ' + dot.dataset.rpe : '';
+      document.getElementById('issueEvaluationComment').textContent = dot.dataset.comment.trim() || 'No evaluation comment.';
+    });
+  </script>
   {% elif overview_mode == 'information_quality' %}
   <section class="overview-block">
     <div class="overview-content">

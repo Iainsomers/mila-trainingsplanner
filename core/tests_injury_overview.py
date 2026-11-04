@@ -70,3 +70,34 @@ class InjuryIssueOverviewTests(TestCase):
         self.athlete.training_reports_enabled=False
         self.athlete.save()
         self.assertFalse(self.page().context['injury_rows'][0]['visible'])
+
+    def test_history_is_limited_to_25_and_defaults_to_latest_five(self):
+        for days in range(30):
+            self.check(days,pain='no_pain',comment=f'Day {days}')
+        response=self.page()
+        row=response.context['injury_rows'][0]
+        self.assertEqual(len(row['history_dots']),25)
+        self.assertEqual([d['comment'] for d in row['dots']], [f'Day {i}' for i in range(4,-1,-1)])
+        self.assertEqual(row['history_dots'][0]['comment'],'Day 24')
+        self.assertNotContains(response,'data-comment="Day 25"')
+        self.assertContains(response,'min="5" max="25" step="1" value="5"')
+
+    def test_popup_has_comment_and_effective_status_with_safe_text(self):
+        self.check(0,checked=True,comment='<script>alert("test")</script>\nSecond line',rpe=4)
+        self.check(1,status='adjusted_ok',pain='some_pain',comment='Adjusted comment')
+        self.check(2,status='not_done',pain='serious_pain',comment='Not done comment')
+        response=self.page()
+        dots=response.context['injury_rows'][0]['dots'][-3:]
+        self.assertEqual([d['status'] for d in dots],['not_done','adjusted_ok','done_as_planned'])
+        self.assertEqual(dots[-1]['rpe'],4)
+        self.assertContains(response,'data-bs-target="#issueEvaluationModal"',count=3)
+        self.assertContains(response,'&lt;script&gt;')
+        self.assertNotContains(response,'<script>alert(')
+
+    def test_hidden_reports_do_not_expose_popup_comments_or_status(self):
+        self.check(0,status='not_done',pain='serious_pain',comment='Private issue detail')
+        self.athlete.training_reports_enabled=False
+        self.athlete.save()
+        response=self.page()
+        self.assertNotContains(response,'Private issue detail')
+        self.assertNotContains(response,'data-bs-target="#issueEvaluationModal"')
