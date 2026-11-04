@@ -111,7 +111,17 @@ def lap_data(item):
         normalized_laps = []  # Do not offer an incomplete activity as a complete workout.
     else:
         lap_status = "available"
-    return {"laps": normalized_laps, "heart_rate_samples": heart_samples,
+    # Garmin summary duration is the recorded activity time; timestamps can
+    # span additional stopped time. Never distribute that difference over laps.
+    timer_total = number(summary.get('timerDurationInSeconds'))
+    if timer_total is None:
+        timer_total = duration
+    if not 0 < timer_total <= end - start + 1:
+        timer_total = None
+    if len(normalized_laps) == 1 and timer_total is not None and 'timer_time' not in normalized_laps[0]:
+        normalized_laps[0]['timer_time'] = timer_total
+        normalized_laps[0]['paused_time'] = max(0, normalized_laps[0]['elapsed_time'] - timer_total)
+    return {"total_timer_s": timer_total, "laps": normalized_laps, "heart_rate_samples": heart_samples,
             "total_distance_m": distance, "total_elapsed_s": end - start,
             "lap_data_status": lap_status, "received_lap_count": len(laps),
             "received_sample_count": len(samples)}

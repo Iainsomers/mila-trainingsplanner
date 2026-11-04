@@ -453,6 +453,7 @@ def type_a_watch_loads(exercise, athlete=None):
             "index": index,
             "distance_m": distance_m,
             "seconds": duration_ms / 1000.0,
+            "elapsed_seconds": (elapsed_ms-start_ms) / 1000.0,
             "zone": zone,
             "t_key": _watch_t_key(t_pace),
             "average_hr_last_15": number(lap_average_hr_last_15(lap, start_ms, elapsed_ms, exercise.get("samples"))),
@@ -499,6 +500,7 @@ def type_a_watch_loads(exercise, athlete=None):
             "zone": row["zone"],
             "meters": row["distance_m"],
             "seconds": row["seconds"],
+            "elapsed_seconds": row["elapsed_seconds"],
             "t_key": row["t_key"],
             "race": False,
         })

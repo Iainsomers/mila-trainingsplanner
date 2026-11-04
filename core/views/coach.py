@@ -5722,6 +5722,16 @@ def garmin_type_c_ayc_view(request, model="C"):
             continue
         parsed = received.analysis_data or {}
         if parsed.get("laps"):
+            # Older stored details lack total_timer_s; retain the received
+            # Garmin summary duration without modifying the stored payload.
+            if parsed.get('total_timer_s') is None and received.duration_s is not None:
+                parsed = dict(parsed, total_timer_s=received.duration_s)
+                if len(parsed['laps']) == 1 and parsed['laps'][0].get('timer_time') is None:
+                    original = parsed['laps'][0]
+                    wall = original.get('elapsed_time')
+                    if isinstance(wall,(int,float)) and 0 < received.duration_s <= wall:
+                        parsed['laps'] = [dict(original,timer_time=received.duration_s,
+                            paused_time=wall-received.duration_s)]
             saved_activities.append(SimpleNamespace(activity_start=received.activity_start,
                 original_filename=f"Garmin activity {received.activity_id}", parsed_data=parsed, raw_file=b""))
         else:
@@ -5778,12 +5788,19 @@ def garmin_type_c_ayc_view(request, model="C"):
                 continue
             if distance_m < 0 or duration_s <= 0:
                 continue
-            duration_ms = round(duration_s * 1000)
-            elapsed_ms += duration_ms
+            wall_duration_ms = round(duration_s * 1000)
+            timer_s = lap.get('timer_time')
+            if isinstance(timer_s, (int,float)) and not isinstance(timer_s,bool) and math.isfinite(timer_s) and 0 < timer_s <= duration_s:
+                active_s = timer_s
+            else:
+                active_s = duration_s
+            duration_ms = round(active_s * 1000)
+            elapsed_ms += wall_duration_ms
             normalized_lap = {
                 "distanceMeters": distance_m,
                 "durationMillis": duration_ms,
                 "splitTimeMillis": elapsed_ms,
+                "elapsedDurationMillis": wall_duration_ms,
             }
             for source_key, target_key in (("timer_time", "timerDurationMillis"),
                                            ("moving_time", "movingDurationMillis"),
@@ -5792,7 +5809,7 @@ def garmin_type_c_ayc_view(request, model="C"):
                 if isinstance(value, (int, float)) and math.isfinite(value) and 0 <= value <= duration_s:
                     normalized_lap[target_key] = round(value * 1000)
             if "timerDurationMillis" in normalized_lap:
-                normalized_lap["pausedDurationMillis"] = max(0, duration_ms - normalized_lap["timerDurationMillis"])
+                normalized_lap["pausedDurationMillis"] = max(0, wall_duration_ms - normalized_lap["timerDurationMillis"])
             if lap.get("lap_trigger") is not None:
                 normalized_lap["lapTrigger"] = lap["lap_trigger"]
             if lap.get("intensity") is not None:
@@ -5808,7 +5825,7 @@ def garmin_type_c_ayc_view(request, model="C"):
                         # Some FIT files omit lap.start_time. Anchor the lap to
                         # the saved activity start plus preceding lap durations
                         # so its record-level HR samples still map to this lap.
-                        lap_start = saved.activity_start + timedelta(milliseconds=elapsed_ms - duration_ms)
+                        lap_start = saved.activity_start + timedelta(milliseconds=elapsed_ms - wall_duration_ms)
                     else:
                         lap_start = None
                     lap_samples = []
@@ -5818,9 +5835,9 @@ def garmin_type_c_ayc_view(request, model="C"):
                         try:
                             sample_time = datetime.fromisoformat(str(sample["timestamp"]).replace("Z", "+00:00"))
                             offset_ms = round((sample_time - lap_start).total_seconds() * 1000)
-                            if 0 <= offset_ms < duration_ms and sample.get("heart_rate") is not None:
+                            if 0 <= offset_ms < wall_duration_ms and sample.get("heart_rate") is not None:
                                 lap_samples.append({
-                                    "timeMillis": elapsed_ms - duration_ms + offset_ms,
+                                    "timeMillis": elapsed_ms - wall_duration_ms + offset_ms,
                                     "heartRate": sample["heart_rate"],
                                 })
                         except (TypeError, ValueError):
@@ -5837,6 +5854,11 @@ def garmin_type_c_ayc_view(request, model="C"):
             distance_m = sum(lap["distanceMeters"] for lap in polar_laps)
         if elapsed_s is None:
             elapsed_s = sum(lap["durationMillis"] for lap in polar_laps) / 1000
+        timer_s = session_data.get('total_timer_time') or parsed.get('total_timer_s')
+        if isinstance(timer_s,(int,float)) and not isinstance(timer_s,bool) and math.isfinite(timer_s) and 0 < timer_s <= float(elapsed_s):
+            active_s = timer_s
+        else:
+            active_s = sum(lap['durationMillis'] for lap in polar_laps) / 1000
         activity_start = saved.activity_start
         if activity_start:
             activity_start = timezone.localtime(activity_start).isoformat()
@@ -5844,7 +5866,8 @@ def garmin_type_c_ayc_view(request, model="C"):
             "name": saved.original_filename or "Garmin activity",
             "startTime": activity_start or human.get("activity_start", ""),
             "distanceMeters": distance_m,
-            "durationMillis": float(elapsed_s) * 1000,
+            "durationMillis": active_s * 1000,
+            "elapsedDurationMillis": float(elapsed_s) * 1000,
             "laps": {"laps": polar_laps},
         }
         sessions.append(session)

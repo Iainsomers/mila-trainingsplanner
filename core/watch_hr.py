@@ -11,7 +11,7 @@ def _positive(value):
 
 
 def tail_hr(loads):
-    durations = [_positive(load.get('seconds')) for load in loads]
+    durations = [_positive(load.get('elapsed_seconds', load.get('seconds'))) for load in loads]
     if not durations or any(s is None for s in durations):
         return None
     total = sum(durations)

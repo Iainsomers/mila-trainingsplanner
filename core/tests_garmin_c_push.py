@@ -153,6 +153,38 @@ class GarminCPushTests(TestCase):
         self.assertEqual(laps[0]["pausedDurationMillis"], 30000)
         self.assertEqual(laps[0]["timerDurationMillis"], 120000)
 
+    def test_timer_duration_matches_garmin_for_new_and_existing_single_lap(self):
+        details = self.details()
+        details['summary'] = dict(self.summary,distanceInMeters=17336,durationInSeconds=4503)
+        details['laps'] = [{'startTimeInSeconds':self.start}]
+        details['samples'] = [dict(startTimeInSeconds=self.start+t,totalDistanceInMeters=m,heartRate=hr)
+                              for t,m,hr in [(0,0,100),(4500,17320,150),(4670,17334,155),(4676,17336,155)]]
+        self.send({'activityDetails':[details]})
+        stored = GarminActivitySummary.objects.get()
+        self.assertEqual(stored.analysis_data['total_elapsed_s'],4676)
+        self.assertEqual(stored.analysis_data['total_timer_s'],4503)
+        for old in (False,True):
+            if old:
+                parsed = stored.analysis_data
+                parsed.pop('total_timer_s')
+                parsed['laps'][0].pop('timer_time')
+                stored.analysis_data = parsed
+                stored.save(update_fields=['analysis_data'])
+            for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+                self.client.force_login(self.coach)
+                response = self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'})
+                result = response.json()['results'][0]
+                self.assertEqual(result['duration'],'01:15:03.000')
+                row = result['parts'][0]['manual'][0]
+                self.assertEqual(row['duration'],'01:15:03.000')
+                self.assertEqual(row['pace'],'4:20')
+                load = result['parts'][0]['watch_loads'][0]
+                self.assertEqual(load['seconds'],4503)
+                self.assertEqual(load['elapsed_seconds'],4676)
+                self.assertGreater(load['hr_samples'][-1][0],4503)
+        stored.refresh_from_db()
+        self.assertEqual(stored.analysis_data['laps'][0]['elapsed_time'],4676)
+
     def test_unknown_or_reset_timer_is_not_reported_as_zero_pause(self):
         for reset in (False, True):
             details = self.details()
