@@ -23,15 +23,18 @@ def hr_zone(athlete, value):
         ceiling = re.fullmatch(r'(?:max\s*|<=\s*|≤\s*)?(\d+)', text)
         if interval:
             low, high = map(int, interval.groups())
-        elif ceiling:
+        elif ceiling and previous is not None:
             low, high = previous + 1, int(ceiling.group(1))
         else:
-            return None  # No estimated limits or guessed missing zones.
-        if low <= previous or high < low:
-            return None
+            previous = None  # A missing limit must not supply a later ceiling lower bound.
+            continue
+        if low <= 0 or high < low:
+            previous = None
+            continue
         ranges.append((low, high, str(zone)))
         previous = high
-    return next((zone for low, high, zone in ranges if low <= hr <= high), None)
+    matches = [zone for low, high, zone in ranges if low <= hr <= high]
+    return matches[0] if len(matches) == 1 else None
 
 
 def rep_hr_zone(athlete, meters, seconds, hr):

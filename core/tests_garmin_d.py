@@ -25,6 +25,22 @@ class GarminDTests(SimpleTestCase):
         invalid.zone_hr_bpm['3'] = '160-188'
         self.assertIsNone(hr_zone(invalid, 168))
 
+    def test_shared_boundary_does_not_disable_unambiguous_hr_zones(self):
+        athlete=SimpleNamespace(zone_hr_bpm={'1':'151','2':'152-168','3':'169-178','4':'178-184','5':'188'})
+        values=[139,92,100,155,160,166,164,169,177,178,179,184,185,188,189]
+        expected=['1','1','1','2','2','2','2','3','3',None,'4','4','5','5',None]
+        self.assertEqual([hr_zone(athlete,hr) for hr in values],expected)
+        part=apply_garmin_d([{'parts':[{'manual':[{'hr_tail':hr} for hr in values]}]}],athlete)[0]['parts'][0]
+        self.assertEqual([r['hr_zone'] for r in part['manual']],['Z'+z if z else None for z in expected])
+        athlete.zone_hr_bpm['5']=''
+        self.assertEqual(hr_zone(athlete,155),'2')
+        self.assertIsNone(hr_zone(athlete,186))
+        athlete.zone_hr_bpm['3']='invalid'
+        self.assertEqual(hr_zone(athlete,155),'2')
+        self.assertEqual(hr_zone(athlete,180),'4')
+        athlete.zone_hr_bpm['4']='184'
+        self.assertIsNone(hr_zone(athlete,180))  # Unknown preceding limit is never guessed.
+
     def test_complete_timed_reps_use_final_hr_and_keep_measured_distance(self):
         loads = []
         for block in range(5):

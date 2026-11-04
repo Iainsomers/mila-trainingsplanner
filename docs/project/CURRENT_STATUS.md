@@ -344,3 +344,6 @@ Download originele FIT-upload (4 november 2026): Saved Garmin activities op het 
 
 
 FIT-uploadscherm: atleetkeuze navigeert direct naar ?athlete=id zodat opgeslagen activiteiten en Download original zichtbaar worden zonder verplicht nieuw bestand. Gerichte download-/paginatest en manage.py check slagen.
+
+
+HR-zonecontrole bij gedeeltelijke/overlappende instellingen (4 november 2026): hr_zone beoordeelt elke meting tegen alle bruikbare expliciete bereiken. Precies een match geeft een zone; overlappende waarde (bijvoorbeeld 178 bij 169-178 en 178-184) blijft NA, zonder alle andere waarden uit te schakelen. Ontbrekende/ongeldige zone blokkeert geen eenduidige match elders. Een bovengrens zonder ondergrens na een ontbrekende zone blijft onbekend; er worden geen grenzen geschat. Ongewijzigde drempels voor D-trainingscorrectie en bronmeters/tijden. Regressie met opgegeven grenzen 151 / 152-168 / 169-178 / 178-184 / 188 dekt losse lapkolom en grenswaarden. 54 gerichte tests en manage.py check slagen; productie-/mobiele visuele controle nog niet uitgevoerd.
