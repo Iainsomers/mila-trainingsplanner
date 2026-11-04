@@ -1,5 +1,5 @@
 {% if seg.type == "CORE2" %}
-  <span class="strength-text" data-flex-segment data-flex-type="CORE2">Strength: {{ seg.text|linebreaksbr }}</span>
+  <span class="strength-text" data-flex-segment data-flex-type="CORE2">{{ seg.text|linebreaksbr }}</span>
 {% elif seg.standard_strength_program %}
   <span
     class="pill pill-strength"

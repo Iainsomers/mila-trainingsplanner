@@ -58,7 +58,7 @@ class StrengthTrainingTests(TestCase):
         segment=TrainingSegment.objects.get(slot__athlete=self.athlete,type='CORE2')
         self.assert_free_text(segment,text)
         html=render_to_string('core/partials/segment_display.html',{'seg':segment})
-        self.assertIn('Strength:',html)
+        self.assertNotIn('Strength:',html)
         self.assertIn('&lt;bands&gt;',html)
         self.assertNotIn('pill-z',html)
 
@@ -110,10 +110,12 @@ class StrengthTrainingTests(TestCase):
         slot=_virtual_slot_from_base_training_for_slot_reset('CORE=1000m z2\nCORE2=Gym free text\nCD=500m z1')
         self.assertEqual([s.type for s in slot.display_segments],['CORE2','CORE','CD'])
         html=render_to_string('core/partials/trainer_planning_cell.html',{'slot':slot,'day':self.day,'slot_index':1,'selected_plan':self.plan})
-        self.assertIn('Strength: Gym free text',html)
+        self.assertIn('Gym free text',html)
+        self.assertNotIn('Strength:',html)
 
     def test_strength_only_is_visible_in_core_only_display_mode(self):
         slot=TrainingSlot.objects.create(plan=self.plan,date=self.day,slot_index=1)
         slot.segments.create(type='CORE2',text='Gym only')
         html=render_to_string('core/partials/calendar_cell.html',{'slot':slot,'day':self.day,'slot_index':1,'selected_plan':self.plan,'display_mode':'core_only'})
-        self.assertIn('Strength: Gym only',html)
+        self.assertIn('Gym only',html)
+        self.assertNotIn('Strength:',html)
