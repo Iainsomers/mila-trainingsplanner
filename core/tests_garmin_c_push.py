@@ -172,6 +172,36 @@ class GarminCPushTests(TestCase):
                 self.assertEqual(self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'}).status_code,200)
             self.assertEqual(ai.call_count,2 if enabled else 0)
 
+    def test_low_confidence_ai_is_optional_in_c_and_d_preview(self):
+        from core.models import GarminActivity
+        from core.views.garmin import CONSENT_VERSION
+        from core.watch_ai_structure import validate_lap_structure
+        values=[(1000,300),(400,80),(100,60),(400,80),(100,60),(400,80),(100,60),(400,80),(1000,300)]
+        facts=[dict(lap=i,distance_m=m,duration_s=t,zone='Z2' if i in (2,4,6,8) else 'Z1') for i,(m,t) in enumerate(values,1)]
+        structure=validate_lap_structure({'confidence':.7,'lap_structure':dict(warmup_laps=[1],cooldown_laps=[9],
+            recovery_laps=[3,5,7],stop_laps=[],groups=[dict(target_meters=400,reps=[[2],[4],[6],[8]])])},facts,minimum_confidence=.5)
+        self.assertIsNotNone(structure)
+        self.athlete.garmin_fit_upload_enabled=True
+        self.athlete.fit_ai_consent_at=timezone.now()
+        self.athlete.fit_ai_consent_version=CONSENT_VERSION
+        self.athlete.save()
+        GarminActivity.objects.create(athlete=self.athlete,original_filename='review.fit',file_hash='review',
+            activity_start=datetime.fromtimestamp(self.start,dt_timezone.utc),parsed_data={'laps':[
+                dict(distance=m,elapsed_time=t) for m,t in values]})
+        def ai(*args,diagnostics,**kwargs):
+            diagnostics.update(status='review_available',review_structure=structure)
+            return ''
+        with patch('core.views.polar_raw._model_b_ai_description',side_effect=ai):
+            for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+                self.client.force_login(self.coach)
+                part=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'}).json()['results'][0]['parts'][0]
+                options=part['training_alternatives']
+                self.assertFalse(options[0].get('requires_review',False))
+                self.assertTrue(options[-1]['requires_review'])
+                self.assertEqual(options[-1]['training_fields']['main'],'4×400 m Z2 p60')
+                self.assertEqual(part['training_fields'],options[0]['training_fields'])
+                self.assertNotIn('review_lap_structure',part)
+
     def test_timer_duration_matches_garmin_for_new_and_existing_single_lap(self):
         details = self.details()
         details['summary'] = dict(self.summary,distanceInMeters=17336,durationInSeconds=4503)

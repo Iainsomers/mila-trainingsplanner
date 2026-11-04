@@ -62,7 +62,7 @@ def infer_lap_structure(facts):
         return None
 
 
-def validate_lap_structure(data, facts, *, issues=None):
+def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
     """No omitted/duplicate laps, invented reps, or running discarded as stops."""
     reason = 'Invalid lap structure or confidence.'
     def reject():
@@ -76,8 +76,8 @@ def validate_lap_structure(data, facts, *, issues=None):
         if isinstance(score,bool) or not isinstance(score,(int,float)) or not math.isfinite(score):
             reason = 'AI confidence is missing or is not a finite number from 0 to 1.'
             return reject()
-        if not .75 <= score <= 1:
-            reason = f'AI confidence {score:.2f}; required range is 0.75 to 1.00.'
+        if not minimum_confidence <= score <= 1:
+            reason = f'AI confidence {score:.2f}; required range is {minimum_confidence:.2f} to 1.00.'
             return reject()
         reason = 'AI lap_structure is missing or has an invalid format.'
         proposal = data['lap_structure']

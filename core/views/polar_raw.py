@@ -853,6 +853,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         if not allow_lap_structure:
             return ""
         from core.watch_ai_structure import validate_lap_structure, ValidatedDescription
+        candidate_data = data
         issues = []
         structure = validate_lap_structure(data, facts, issues=issues)
         # A bounded repair is still an AI proposal, never a local pattern fix.
@@ -870,6 +871,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             try:
                 with urlopen(repair_request, timeout=15) as response:
                     repaired = json.loads(json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content'])
+                candidate_data = repaired
                 issues = []
                 structure = validate_lap_structure(repaired, facts, issues=issues)
             except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError, IndexError, TypeError):
@@ -877,6 +879,13 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         diagnostics["status"] = "applied" if structure else "rejected_structure"
         if not structure and issues:
             diagnostics['reason'] = issues[0]
+            # Automatic use retains the 0.75 threshold. A lower score may only
+            # be offered for explicit review after identical measurement checks.
+            review = validate_lap_structure(candidate_data, facts, minimum_confidence=.5)
+            if review:
+                diagnostics['review_structure'] = review
+                diagnostics['status'] = 'review_available'
+                diagnostics['reason'] = f"AI confidence {candidate_data['confidence']:.2f}. Check the proposal before selecting it."
         return ValidatedDescription(structure) if structure else ""
     if strict_lap_structure:
         return ""
@@ -1186,6 +1195,8 @@ def translate_model_b(payload, interval, athlete=None, *, allow_ai=True, allow_l
                 if allow_lap_structure:
                     result_parts[result_index]['ai_structure_status'] = diagnostics['status']
                     result_parts[result_index]['ai_structure_reason'] = diagnostics.get('reason','')
+                    if diagnostics.get('review_structure'):
+                        result_parts[result_index]['review_lap_structure'] = diagnostics['review_structure']
                 if description:
                     if getattr(description, "structure", None):
                         result_parts[result_index]["validated_lap_structure"] = description.structure

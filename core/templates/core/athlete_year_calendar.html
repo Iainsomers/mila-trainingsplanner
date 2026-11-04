@@ -2575,6 +2575,7 @@
       (session.parts || []).forEach(function(part) {
         var aiMessages = {
           applied: "AI structure applied.",
+          review_available: "An AI proposal passed measurement checks and is available for your review.",
           consent_required: "AI not used: AI permission is not enabled for this athlete.",
           unavailable: "AI not available: the server AI key is not configured.",
           service_error: "AI service could not be reached. Showing measured fallback; try again later.",
@@ -2600,7 +2601,7 @@
             var alternatives = document.createElement("div");
             alternatives.className = "d-flex flex-wrap gap-1 mb-2";
             var hint = document.createElement("span"); hint.className = "small text-muted me-2";
-            hint.textContent = "Both distance and time fit these laps. Choose:";
+            hint.textContent = part.training_alternatives.some(function(option) { return option.requires_review; }) ? "Choose a result. Check the AI proposal before using AM/PM:" : "Both distance and time fit these laps. Choose:";
             alternatives.appendChild(hint);
             part.training_alternatives.forEach(function(option, index) {
               var choice = document.createElement("button"); choice.type = "button";

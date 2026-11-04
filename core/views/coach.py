@@ -6019,6 +6019,20 @@ def garmin_type_c_ayc_view(request, model="C"):
                 }
     from core.watch_alternatives import add_training_alternatives
     add_training_alternatives(results)
+    for result in results:
+        for part in result.get('parts') or []:
+            review = part.pop('review_lap_structure',None)
+            if review:
+                from copy import deepcopy
+                candidate = {}
+                from core.watch_ai_structure import apply_lap_structure
+                if apply_lap_structure(candidate,deepcopy(part.get('watch_loads') or []),review):
+                    options = part.get('training_alternatives') or [dict(
+                        label='Current result', training_fields=part.get('training_fields'),
+                        description=part.get('description'),watch_loads=part.get('watch_loads'))]
+                    options.append(dict(label='AI proposal — review',requires_review=True,
+                        **{key:candidate[key] for key in ('training_fields','description','watch_loads')}))
+                    part['training_alternatives'] = options
     if model == "D":
         from core.garmin_d import apply_garmin_d
         results = apply_garmin_d(results, athlete)

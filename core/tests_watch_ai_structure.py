@@ -239,6 +239,23 @@ class WatchAIStructureTests(SimpleTestCase):
             self.assertIsNone(validate_lap_structure(proposal,self.facts,issues=issues))
             self.assertIn(expected,issues[0])
 
+    def test_low_confidence_is_review_only_after_all_measurement_checks(self):
+        from core.views.polar_raw import _model_b_ai_description
+        laps=[dict(distanceMeters=f['distance_m'],durationMillis=f['duration_s']*1000) for f in self.facts]
+        for corrupt in (False,True):
+            proposal=deepcopy(self.proposal);proposal['confidence']=.7
+            if corrupt:
+                proposal['lap_structure']['groups'][0]['reps'][0].append(99)
+            response=MagicMock()
+            response.__enter__.return_value.read.return_value=json.dumps({'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode()
+            diagnostics={}
+            with patch.dict('os.environ',{'OPENAI_API_KEY':'test'}), patch('core.views.polar_raw.urlopen',return_value=response), patch(
+                    'core.views.polar_raw.lap_zone_paces',return_value=('Z2','NA')):
+                self.assertEqual(_model_b_ai_description(laps,strict_lap_structure=True,diagnostics=diagnostics),'')
+            self.assertEqual(diagnostics['status'],'rejected_structure' if corrupt else 'review_available')
+            self.assertEqual('review_structure' in diagnostics,not corrupt)
+            self.assertIsNone(validate_lap_structure(proposal,self.facts))
+
     def test_translation_keeps_validated_metadata_and_consent_skips_ai(self):
         from core.views.polar_raw import translate_model_b
         from core.watch_ai_structure import ValidatedDescription
