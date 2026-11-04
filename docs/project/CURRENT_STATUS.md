@@ -341,3 +341,6 @@ FIT AI-toestemming (4 november 2026): uploadscherm bevat voor atleten een option
 
 
 Download originele FIT-upload (4 november 2026): Saved Garmin activities op het uploadscherm heeft Download original. GET-route garmin_upload_download retourneert ongewijzigde raw_file met veilige attachment-bestandsnaam, private/no-store en nosniff; oorspronkelijke ZIP blijft ZIP. Zelfde uploadrecht/toegankelijke atleet vereist; eigen atleet of bevoegde coach, geen Coach Tools-only of vreemde atleet, 404 zonder bronbestand. 21 gerichte tests en manage.py check slagen. Geen migratie. Kilometerafwijking Daan blijft open en vereist brononderzoek; deze wijziging maakt het bronbestand downloadbaar. Visuele desktop-/mobiele controle nog niet uitgevoerd.
+
+
+FIT-uploadscherm: atleetkeuze navigeert direct naar ?athlete=id zodat opgeslagen activiteiten en Download original zichtbaar worden zonder verplicht nieuw bestand. Gerichte download-/paginatest en manage.py check slagen.

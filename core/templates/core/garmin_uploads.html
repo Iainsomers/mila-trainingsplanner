@@ -37,7 +37,7 @@
           {% csrf_token %}
           <div class="col-md-5">
             <label class="form-label" for="garmin-athlete">Athlete</label>
-            <select class="form-select" id="garmin-athlete" name="athlete_id" required>
+            <select class="form-select" id="garmin-athlete" name="athlete_id" required onchange="if (this.value) window.location.assign('?athlete=' + encodeURIComponent(this.value));">
               <option value="">Choose an athlete</option>
               {% for athlete in athletes %}
                 <option value="{{ athlete.id }}" {% if selected_athlete and selected_athlete.id == athlete.id %}selected{% endif %}>{{ athlete.name }}</option>
