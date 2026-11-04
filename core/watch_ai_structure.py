@@ -99,6 +99,15 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
         cooldown = indices(proposal.get('cooldown_laps', []))
         recovery = indices(proposal.get('recovery_laps', []))
         stops = indices(proposal.get('stop_laps', []))
+        # A boundary may include a recorded walking transition. Preserve that
+        # source lap as non-work recovery instead of adding walking to WU/CD
+        # or rejecting an otherwise valid AI-selected interval structure.
+        from core.watch_processing import is_walking_load
+        walking = [i for i in warmup + cooldown
+                   if is_walking_load(by_id[i]['distance_m'],by_id[i]['duration_s'])]
+        warmup = [i for i in warmup if i not in walking]
+        cooldown = [i for i in cooldown if i not in walking]
+        recovery = sorted(recovery + walking)
         reason = "Stop laps must last at least 600 seconds and average less than 1 m/s; classify other slow transitions as recovery_laps."
         for i in stops:
             row = by_id[i]

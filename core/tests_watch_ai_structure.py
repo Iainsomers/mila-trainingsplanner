@@ -73,6 +73,17 @@ class WatchAIStructureTests(SimpleTestCase):
                 'core.views.polar_raw.lap_zone_paces',side_effect=lambda m,t,a:('Z2' if 390<m<430 else 'Z1',None)):
             result=_model_b_ai_description(laps,strict_lap_structure=True)
         self.assertEqual(result.structure['training_fields']['main'],'2×(10×400 m Z2 p60) sp318')
+        walking_boundaries=deepcopy(proposal)
+        boundary=walking_boundaries['lap_structure']
+        boundary.update(warmup_laps=[1,2,3],stop_laps=[],cooldown_laps=[43,44],
+                        recovery_laps=list(range(5,43,2)))
+        corrected=validate_lap_structure(walking_boundaries,facts)
+        self.assertIsNotNone(corrected)
+        self.assertEqual(corrected['training_fields']['wu'],'3800 m Z1')
+        self.assertEqual(corrected['training_fields']['cd'],'1450 m Z1')
+        self.assertEqual(corrected['training_fields']['main'],'2×(10×400 m Z2 p60) sp318')
+        self.assertEqual(corrected['assignments'][42],{'segment':'CORE','work_rep':False})
+        self.assertEqual(corrected['assignments'][43]['segment'],'CD')
         loads=[dict(meters=m,seconds=t,zone='2',hr_samples=[[t-1,160]],average_hr=150) for m,t in values]
         part={}
         self.assertTrue(apply_lap_structure(part,loads,result.structure))
@@ -209,8 +220,8 @@ class WatchAIStructureTests(SimpleTestCase):
         from core.views.polar_raw import _model_b_ai_description
         laps=[dict(distanceMeters=f['distance_m'],durationMillis=f['duration_s']*1000) for f in self.facts]
         invalid=deepcopy(self.proposal)
-        invalid['lap_structure']['warmup_laps']=[1,2,3]
-        invalid['lap_structure']['stop_laps']=[]
+        invalid['lap_structure']['warmup_laps']=[1,2]
+        invalid['lap_structure']['groups'][0]['target_seconds']=600
         def response(data):
             result=MagicMock()
             result.__enter__.return_value.read.return_value=json.dumps({'choices':[{'message':{'content':json.dumps(data)}}]}).encode()
@@ -223,7 +234,7 @@ class WatchAIStructureTests(SimpleTestCase):
                 result=_model_b_ai_description(laps,strict_lap_structure=True,diagnostics=diagnostics)
             self.assertEqual(call.call_count,2)
             feedback=json.loads(call.call_args.args[0].data)['messages'][-1]['content']
-            self.assertIn('slower than 2 m/s',feedback)
+            self.assertIn('does not match time target',feedback)
             sent=json.loads(call.call_args.args[0].data)['messages']
             self.assertEqual(json.loads(sent[-2]['content'])['lap_structure'],invalid['lap_structure'])
             if repair_succeeds:
@@ -232,7 +243,7 @@ class WatchAIStructureTests(SimpleTestCase):
             else:
                 self.assertEqual(result,'')
                 self.assertEqual(diagnostics['status'],'rejected_structure')
-                self.assertIn('slower than 2 m/s',diagnostics['reason'])
+                self.assertIn('does not match time target',diagnostics['reason'])
 
     def test_confidence_rejection_distinguishes_score_from_invalid_format(self):
         for value, expected in ((.6,'0.60'),(1.5,'1.50'),('high','not a finite number'),(True,'not a finite number')):
