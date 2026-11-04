@@ -53,6 +53,13 @@ def apply_garmin_d(results, athlete):
     results = deepcopy(results)
     for session in results:
         for part in session.get('parts') or []:
+            # HR Zx describes each displayed lap's measured HR, regardless of
+            # whether the training matcher recognized it as a work repetition.
+            for rows_key in ('manual', 'auto'):
+                for row in part.get(rows_key) or []:
+                    row.setdefault('pace_z_pace', row.get('z_pace'))
+                    zone = hr_zone(athlete, row.get('hr_tail'))
+                    row['hr_zone'] = 'Z' + zone if zone else None
             original = deepcopy(part.get('watch_loads') or [])
             if not original:
                 continue
@@ -115,7 +122,6 @@ def apply_garmin_d(results, athlete):
             if fields.get('main'):
                 part['description'] = f"WU: {fields.get('wu') or 'none'} · Main: {main} · CD: {fields.get('cd') or 'none'}"
             for row, load in zip(part.get('manual') or [], loads):
-                row['pace_z_pace'] = row.get('z_pace')
                 if str(load.get('zone')) in {'1','2','3','4','5'}:
                     row['z_pace'] = 'Z' + str(load['zone'])
             if part.get('training_alternatives'):

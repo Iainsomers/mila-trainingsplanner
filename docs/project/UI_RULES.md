@@ -252,3 +252,5 @@ Trainingbuilder: één kolom op desktop en mobiel. Naast elke segmentkop staan �
 De hoofdknoppen Save/Cancel (en Delete/Reset waar beschikbaar) staan in een vaste footer buiten het scrollbare veldgedeelte, op desktop én mobiel. Save/Load standard staat daaronder helemaal onderaan de modal. Alle knoppen blijven deel van hetzelfde formulier, zodat HTMX en AYC dezelfde opgeslagen velden blijven gebruiken.
 
 Trainer Planner gebruikt voor meerzonekleuren dezelfde gedeelde routine als Flex Planner en DCO. Een bereik toont alle tussenliggende zones met gelijke kleurstroken: Z2>Z4 geeft Z2, Z3 en Z4; een dalend bereik houdt de omgekeerde volgorde. Dit geldt ook na HTMX-verversingen en bij afdrukken. Eén zone houdt zijn gewone kleur.
+
+Garmin D: HR Zx toont de HR-zone van de End HR van de betreffende tabelregel. Geen getoonde HR-zone mag uit Pace Zx of alleen uit een geslaagde trainingsherkenning worden afgeleid; ontbrekende HR/grenzen tonen NA. Dit geldt voor handmatige en automatische laps.

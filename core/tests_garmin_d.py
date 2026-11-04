@@ -67,3 +67,48 @@ class GarminDTests(SimpleTestCase):
         results[0]['parts'][0]['watch_loads']=[{'segment':'CORE','zone':'3','meters':800,'seconds':160,'average_hr':168}]
         part = apply_garmin_d(results,self.athlete)[0]['parts'][0]
         self.assertEqual(part['training_fields']['main'],'1×800 m Z3')
+
+    def test_hr_column_uses_each_displayed_lap_end_hr_even_without_matching_reps(self):
+        # Screenshot laps 10 and 12 had End HR 178 but retained pace Z1.
+        rows=[{'index':i,'z_pace':'Z1','hr_tail':hr} for i,hr in [(1,171),(4,173),(6,174),(8,175),(10,178),(12,178)]]
+        source=[{'parts':[{'training_fields':{'wu':'','main':'unrecognized recording','cd':''},
+                          'manual':rows,'auto':[dict(index=1,z_pace='Z1',hr_tail=178)],
+                          'watch_loads':[dict(segment='CORE',zone='1',meters=1000,seconds=265,average_hr=166) for _ in rows]}]}]
+        before=deepcopy(source)
+        part=apply_garmin_d(source,self.athlete)[0]['parts'][0]
+        self.assertEqual([r['hr_zone'] for r in part['manual']],['Z3']*6)
+        self.assertEqual([r['pace_z_pace'] for r in part['manual']],['Z1']*6)
+        self.assertEqual(part['auto'][0]['hr_zone'],'Z3')
+        self.assertEqual(source,before)
+        self.assertEqual([l['zone'] for l in part['watch_loads']],['1']*6)
+
+    def test_hr_column_has_no_pace_fallback_or_minimum_rep_length(self):
+        source=[{'parts':[{'manual':[dict(z_pace='Z4',hr_tail=178),dict(z_pace='Z2',hr_tail=None),
+                                     dict(z_pace='Z2',hr_tail='NA'),dict(z_pace='Z2',hr_tail=0)]}]}]
+        part=apply_garmin_d(source,self.athlete)[0]['parts'][0]
+        self.assertEqual([r['hr_zone'] for r in part['manual']],['Z3',None,None,None])
+        missing=apply_garmin_d(source,SimpleNamespace(zone_hr_bpm={}))[0]['parts'][0]
+        self.assertTrue(all(r['hr_zone'] is None for r in missing['manual']))
+
+    def test_hr_table_renders_hr_zone_instead_of_corrected_pace_zone(self):
+        import shutil
+        import subprocess
+        from django.template.loader import get_template
+        node=shutil.which('node')
+        if not node:self.skipTest('Node is required to execute the table renderer')
+        source=get_template('core/athlete_year_calendar.html').template.source
+        start=source.index('  function renderTypeALaps(')
+        end=source.index('  {% include "core/partials/garmin_combine.js" %}',start)
+        script='''const assert=require('assert');
+function element(){return {children:[],appendChild(child){this.children.push(child);}};}
+const document={createElement:()=>element()};
+'''+source[start:end]+'''
+const parent=element();
+renderTypeALaps(parent,'Recorded laps',[{z_pace:'Z1',pace_z_pace:'Z1',hr_zone:'Z3',hr_tail:178},{z_pace:'Z1',hr_zone:null}],true,true,true);
+const rows=parent.children[1].children[0].children[1].children;
+assert.equal(rows[0].children[5].textContent,'Z1');
+assert.equal(rows[0].children[6].textContent,'Z3');
+assert.equal(rows[1].children[6].textContent,'NA');
+'''
+        result=subprocess.run([node,'-'],input=script,text=True,capture_output=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)

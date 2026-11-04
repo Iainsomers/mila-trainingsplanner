@@ -254,3 +254,5 @@ TrainingSlot.segment_order bewaart een volledige, unieke permutatie van WU/MOB/C
 
 
 Nieuwe foto’s gebruiken Strength (CORE2) via strength_photos/remove_strength_photo. Bestaande Mob/Tech-referenties blijven behouden en de oudere mob_photos-invoer blijft compatibel. Beide segmenttypen hebben dezelfde privéfoto-downloadcontrole; kopieën blijven referenties delen. Strength met alleen foto’s is geldige inhoud zonder zone of loopload.
+
+Garmin D-tabelkolom HR Zx gebruikt per weergegeven lap/rep uitsluitend de eigen hr_tail (dezelfde End HR die rechts wordt getoond) met de ingestelde Athlete.zone_hr_bpm-grenzen. Ook niet-herkende reps en herstelrondes worden afzonderlijk geclassificeerd; er geldt geen minimumafstand/duur voor deze informatieve kolom. Ontbrekende gegevens leveren NA. De regel voor End HR zelf blijft laatste 10% met minimaal 15s, of Avg HR bij reps korter dan 15s. De D-trainingszonecorrectie vanaf 400m of 50s blijft hiervan gescheiden.
