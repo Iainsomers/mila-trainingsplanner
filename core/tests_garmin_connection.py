@@ -122,6 +122,32 @@ class GarminConnectionTests(TestCase):
         self.assertIsNotNone(self.athlete.garmin_ai_withdrawn_at)
         self.assertTrue(self.athlete.garmin_connection_enabled)  # Trainer permission survives.
 
+    @patch("core.views.garmin.requests.delete")
+    def test_withdraw_keeps_reconnect_tile_and_requires_fresh_consent(self, delete):
+        self.enable()
+        GarminConnection.objects.create(athlete=self.athlete,access_token="test",data_consent_at=timezone.now())
+        delete.return_value.status_code = 204
+        self.client.post(reverse("garmin_withdraw"))
+        page = self.client.get(reverse("dashboard"))
+        self.assertContains(page,'id="garmin-heading"')
+        self.assertContains(page,'id="garmin-ai-consent"')
+        self.assertContains(page,'Connect Garmin')
+        self.assertNotContains(page,'Your Garmin account is connected.')
+        self.assertFalse(ai_allowed(self.athlete))
+        self.athlete.refresh_from_db()
+        self.athlete.garmin_connection_enabled = False
+        self.athlete.save()
+        self.assertContains(self.client.get(reverse("dashboard")),'Ask your coach to enable')
+        self.assertEqual(self.begin().status_code,403)
+
+    def test_connected_without_ai_can_authorise_again(self):
+        self.enable()
+        GarminConnection.objects.create(athlete=self.athlete,access_token="test",data_consent_at=timezone.now())
+        page = self.client.get(reverse("dashboard"))
+        self.assertContains(page,'AI permission is not enabled.')
+        self.assertContains(page,'id="garmin-ai-consent"')
+        self.assertFalse(ai_allowed(self.athlete))
+
     def test_withdraw_invalidates_pending_oauth_and_is_post_only(self):
         self.enable()
         self.begin()

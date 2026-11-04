@@ -545,7 +545,7 @@ def dashboard_view(request):
             Athlete.objects.filter(oura_connection_enabled=True, oura_connection__isnull=False), request
         ).exists()
 
-    from core.views.garmin import configured as garmin_configured
+    from core.views.garmin import configured as garmin_configured, ai_allowed as garmin_ai_allowed
     from core.models import GarminConnection
     garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
 
@@ -562,6 +562,8 @@ def dashboard_view(request):
         "is_llg_team": is_llg_team,
         "garmin_upload_athlete_count": garmin_upload_athlete_count,
         "garmin_connection_enabled": bool(is_athlete_user and athlete.garmin_connection_enabled),
+        "garmin_tile_visible": bool(is_athlete_user and (athlete.garmin_connection_enabled or athlete.garmin_ai_withdrawn_at)),
+        "garmin_ai_allowed": garmin_ai_allowed(athlete) if is_athlete_user else False,
         "garmin_connection": garmin_connection,
         "garmin_configured": garmin_configured(),
         "garmin_status": request.GET.get("garmin", ""),
