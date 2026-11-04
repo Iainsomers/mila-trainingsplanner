@@ -359,3 +359,6 @@ AI-opdracht en confidence verduidelijkt (4 november 2026): strict Garmin C/D geb
 
 
 AI-voorstel ter beoordeling (4 november 2026): automatische acceptatie blijft confidence >=0.75 vereisen. Een AI-voorstel met geldige score 0.50-0.75 kan na volledige identieke lap-/meetvalidatie als aparte keuze AI proposal — review worden aangeboden. Fallback blijft standaard geselecteerd; alleen expliciet kiezen vervangt fields/loads voor Use AM/PM. Ongeldige/ontbrekende laps blijven afgewezen. Zelfgerapporteerde modelscore is geen gemeten juistheidspercentage. Toestemming en maximaal een AI-herstelpoging ongewijzigd; C/D behandelen voorstel dezelfde wijze inclusief HR-correctie en klokmetadata. Regressies bewaken .70 zonder automatische acceptatie, afwijzing van verzonnen laps, optionele C/D-preview en ongewijzigde standaardvelden. 97 gerichte tests en manage.py check slagen. Echte productie-indeling en visuele controle nog niet bevestigd.
+
+
+AI-reviewdiagnose: lage confidence maskeerde de eerste inhoudelijke meetfout omdat confidence eerder wordt gecontroleerd. Ook bij onvoldoende automatische confidence wordt nu de review-meetcontrole uitgevoerd; unieke afwijsredenen gaan samen naar de ene AI-herstelpoging en browsermelding. Ongeldige repindeling wordt nooit toegestaan door lagere reviewgrens. 13 gerichte AI-tests en manage.py check slagen.

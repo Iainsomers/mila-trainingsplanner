@@ -254,6 +254,8 @@ class WatchAIStructureTests(SimpleTestCase):
                 self.assertEqual(_model_b_ai_description(laps,strict_lap_structure=True,diagnostics=diagnostics),'')
             self.assertEqual(diagnostics['status'],'rejected_structure' if corrupt else 'review_available')
             self.assertEqual('review_structure' in diagnostics,not corrupt)
+            if corrupt:
+                self.assertIn('Reps must be chronological',diagnostics['reason'])
             self.assertIsNone(validate_lap_structure(proposal,self.facts))
 
     def test_translation_keeps_validated_metadata_and_consent_skips_ai(self):

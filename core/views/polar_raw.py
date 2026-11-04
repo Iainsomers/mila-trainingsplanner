@@ -856,6 +856,10 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         candidate_data = data
         issues = []
         structure = validate_lap_structure(data, facts, issues=issues)
+        if not structure:
+            measurement_issues = []
+            validate_lap_structure(data, facts, issues=measurement_issues, minimum_confidence=.5)
+            issues += [issue for issue in measurement_issues if issue not in issues]
         # A bounded repair is still an AI proposal, never a local pattern fix.
         # Only server-owned validation feedback and the existing anonymous lap
         # facts go back to the same service; do not forward raw error bodies.
@@ -881,7 +885,10 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             diagnostics['reason'] = issues[0]
             # Automatic use retains the 0.75 threshold. A lower score may only
             # be offered for explicit review after identical measurement checks.
-            review = validate_lap_structure(candidate_data, facts, minimum_confidence=.5)
+            measurement_issues = []
+            review = validate_lap_structure(candidate_data, facts, minimum_confidence=.5, issues=measurement_issues)
+            if not review:
+                diagnostics['reason'] = ' '.join(dict.fromkeys(issues + measurement_issues))
             if review:
                 diagnostics['review_structure'] = review
                 diagnostics['status'] = 'review_available'
