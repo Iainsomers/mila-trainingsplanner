@@ -128,7 +128,9 @@ def validate_lap_structure(data, facts):
         first, last = blocks[0]['ids'][0], blocks[-1]['ids'][-1]
         if any(i >= first for i in warmup) or any(i <= last for i in cooldown):
             return None
-        if any(not first < i or i > last+1 for i in recovery):
+        if any(i < first and by_id[i]["distance_m"]/by_id[i]["duration_s"] >= 2 for i in recovery):
+            return None
+        if any(i > last+1 for i in recovery):
             return None
         # Every rep boundary needs real, slower recovery; stop markers alone
         # cannot turn a continuous easy run into a series of intervals.
@@ -154,7 +156,23 @@ def validate_lap_structure(data, facts):
                 return None
             zones = sorted({by_id[i]['zone'] for b in group_blocks for i in b['ids']} & {'Z1','Z2','Z3','Z4','Z5'})
             zone = (' '+(zones[0] if len(zones)==1 else zones[0]+'>'+zones[-1])) if zones else ''
-            rests = [pauses[b['ids'][0]] for b in group_blocks[:-1] if b['ids'][0] in pauses and pauses[b['ids'][0]]<180]
+            starts = groups[group_index].get('set_start_laps', [])
+            set_sizes, set_pauses = [], []
+            if starts:
+                rep_starts = [b['ids'][0] for b in group_blocks]
+                if (not isinstance(starts,list) or any(type(i) is not int for i in starts)
+                        or starts != sorted(set(starts)) or starts[0] != rep_starts[0]
+                        or any(i not in rep_starts for i in starts) or len(starts) < 2):
+                    return None
+                positions = [rep_starts.index(i) for i in starts] + [len(group_blocks)]
+                set_sizes = [right-left for left,right in zip(positions,positions[1:])]
+                if len(set(set_sizes)) != 1 or min(set_sizes) < 2:
+                    return None
+                set_pauses = [pauses[group_blocks[pos-1]['ids'][0]] for pos in positions[1:-1]]
+            rests = [pauses[b['ids'][0]] for b,next_b in zip(group_blocks,group_blocks[1:])
+                     if next_b['ids'][0] not in starts]
+            if set_pauses and (not rests or min(set_pauses) < 1.5*median(rests)):
+                return None
             pause = f' p{math.floor(median(rests)+.5)}' if rests else ''
             count = len(group_blocks)
             # Both displayed alternatives must identify one unique stored
@@ -163,8 +181,14 @@ def validate_lap_structure(data, facts):
                 return None
             distance_keys.add((count, nominal))
             time_keys.add((count, group_blocks[0]['target']))
-            distance_parts.append(f'{count}×{nominal} m{zone}{pause}')
-            time_parts.append(f"{count}×{group_blocks[0]['target']//60}'{zone}{pause}")
+            distance_text = f'{count}×{nominal} m{zone}{pause}'
+            time_text = f"{count}×{group_blocks[0]['target']//60}'{zone}{pause}"
+            if set_sizes:
+                set_pause = f" sp{math.floor(median(set_pauses)+.5)}"
+                distance_text = f'{len(set_sizes)}×({set_sizes[0]}×{nominal} m{zone}{pause}){set_pause}'
+                time_text = f"{len(set_sizes)}×({set_sizes[0]}×{group_blocks[0]['target']//60}'{zone}{pause}){set_pause}"
+            distance_parts.append(distance_text)
+            time_parts.append(time_text)
             for block in group_blocks:
                 for i in block['ids']:
                     assignments[i-1].update(work_rep=True, ai_rep=block['ids'][0],

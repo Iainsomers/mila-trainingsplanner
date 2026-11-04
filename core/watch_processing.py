@@ -106,6 +106,9 @@ def structured_segment_loads(segment, raw_loads):
     for reps in ai_groups.values():
         first = next(iter(reps.values()))[0]
         text = str(getattr(segment, "text", "") or "")
+        nested = re.match(r"^\s*(\d+)\s*[x×*]\s*\(\s*(\d+)\s*[x×*]", text)
+        if nested:
+            text = str(int(nested[1])*int(nested[2])) + '×' + text[nested.end():]
         distance = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*m\b", text, re.I)
         timed = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*['′]", text)
         matches = (distance and int(distance[1]) == len(reps) and int(distance[2]) == first["ai_nominal_m"]

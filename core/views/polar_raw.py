@@ -761,7 +761,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             "A long nearly stationary lap is a stop, not an interval or work distance. "
             "For example 215s + 211s + 56s without recovery can form one 8-minute rep; "
             "another 481s lap can be its second rep. A later 253s rep can belong to a group near 4 minutes. "
-            "For each group propose either target_meters (nominal distance, multiple of 50) or whole-minute target_seconds, never both. Choose distance targets for consistent distances with alternating recovery, even when durations vary. Counts, zones, pauses and actual measurements are derived in code. "
+            "For each group propose either target_meters (nominal distance, multiple of 50) or whole-minute target_seconds, never both. Choose distance targets for consistent distances with alternating recovery, even when durations vary. Identify repeated sets with set_start_laps (first work lap of each set). Keep every work rep in chronological reps; do not split identical sets into duplicate groups. Longer recovery may separate sets. Mark slow transition laps before the first rep as recovery_laps, not running warmup. Counts, zones, pauses and actual measurements are derived in code. "
             "Low zones support an easy run but never prove it. Timer duration excludes "
             "pauses; missing timer data is unknown, not zero pause."
         ),
@@ -770,7 +770,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             "lap_structure": {
                 "warmup_laps": ["lap number"], "cooldown_laps": ["lap number"],
                 "recovery_laps": ["lap number"], "stop_laps": ["lap number"],
-                "groups": [{"target_meters":"nominal distance or null", "target_seconds":"whole-minute duration in seconds or null", "reps":[["consecutive lap numbers"]]}],
+                "groups": [{"target_meters":"nominal distance or null", "target_seconds":"whole-minute duration in seconds or null", "set_start_laps":["first work lap of each set, or empty when no sets"], "reps":[["consecutive lap numbers"]]}],
             },
             "warmup_m": "integer or null",
             "cooldown_m": "integer or null",
