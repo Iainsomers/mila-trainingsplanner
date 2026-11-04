@@ -158,25 +158,6 @@
               </div>
               {% endif %}
 
-              <!-- 2ND CORE -->
-              {% if tb_show_core2 %}
-                {% if core2_error %}
-                  <div class="alert alert-danger compact-field-wide">{{ core2_error }}</div>
-                {% endif %}
-
-                <div class="mb-2 compact-field">
-                  <label class="form-label"><b>Main 2</b></label>
-                  <textarea name="core2_text" class="form-control" rows="2"
-                    placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ core2_text }}</textarea>
-
-                  {% if core2_feedback %}
-                    <div class="small compact-feedback {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
-                      {{ core2_feedback }}
-                    </div>
-                  {% endif %}
-                </div>
-              {% endif %}
-
               {% if core_error %}
                 <div class="alert alert-danger compact-field-wide">{{ core_error }}</div>
               {% endif %}
@@ -201,6 +182,25 @@
                   </div>
                 {% endif %}
               </div>
+
+              <!-- STRENGTH (free text) -->
+              {% if tb_show_core2 %}
+                {% if core2_error %}
+                  <div class="alert alert-danger compact-field-wide">{{ core2_error }}</div>
+                {% endif %}
+
+                <div class="mb-2 compact-field compact-field-wide">
+                  <label class="form-label"><b>Strength</b></label>
+                  <textarea name="core2_text" class="form-control" rows="2"
+                    placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ core2_text }}</textarea>
+
+                  {% if core2_feedback %}
+                    <div class="small compact-feedback {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
+                      {{ core2_feedback }}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endif %}
 
               <!-- ALTERNATIVE -->
               <div class="mb-2 compact-field">

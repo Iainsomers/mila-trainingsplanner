@@ -116,7 +116,7 @@ class InjuryIssueOverviewTests(TestCase):
         a=self.check(0,slot=1,pain='no_pain')
         b=self.check(0,slot=2,pain='no_pain')
         self.assertEqual(self.training(a).json()['segments'],[{'label':'Main','text':'3*1000m z2'}])
-        self.assertEqual(self.training(b).json()['segments'],[{'label':'Main 2','text':'5*200m z4'}])
+        self.assertEqual(self.training(b).json()['segments'],[{'label':'Strength','text':'5*200m z4'}])
         flex=TrainingPlan.objects.create(owner=self.coach,name='Flex Planner')
         override=TrainingSlot.objects.create(plan=flex,athlete=self.athlete,date=self.today,slot_index=1,source='watch_d')
         override.segments.create(type='CORE',text='4*800m z2')

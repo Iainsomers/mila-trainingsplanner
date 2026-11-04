@@ -49,7 +49,7 @@ PAC (Pro Athletic Coach) is een zelfstandig Django-project voor coachhulpmiddele
 - DCO: Daily Coach Overview.
 - WU/CD: warming-up en cooling-down.
 - Mob/Tech: mobiliteit, techniek of standaard krachtprogramma.
-- Main/Main 2: belangrijkste trainingsonderdelen; intern opgeslagen als `CORE`/`CORE2`.
+- Main: belangrijkste looponderdeel (intern `CORE`). Strength: vrije krachttrainingstekst (intern `CORE2`), zonder zone- of afstandsberekening.
 - FIX: een training die specifiek voor een atleet is aangepast.
 
 ## Bronnen van waarheid

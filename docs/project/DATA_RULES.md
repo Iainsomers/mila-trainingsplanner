@@ -37,7 +37,7 @@ Bijgewerkt: 22 oktober 2026.
 
 ## Trainingsonderdelen
 
-Volgorde: WU, MOB, SPR, CORE, CORE2, ALT, CD. Meerdere segmenten van hetzelfde type behouden hun onderlinge volgorde. `Main` en `Main 2` zijn alleen de zichtbare namen voor CORE en CORE2.
+Volgorde: WU, MOB, SPR, CORE, CORE2, ALT, CD. Meerdere segmenten van hetzelfde type behouden hun onderlinge volgorde. `Main` en `Strength` zijn alleen de zichtbare namen voor CORE en CORE2.
 
 ## Parsernotatie
 
@@ -247,3 +247,5 @@ Injury/Issue Overview selecteert maximaal 25 werkelijk ingevulde AthleteDayCheck
 De Injury/Issue-schuif toont de laatste N van deze 25 evaluaties (5–25, standaard 5) zonder nieuwe opslag of requests. Alleen zichtbare trainingsevaluaties leveren commentaar, RPE en effective_status voor de popup. Lege status met checked=True krijgt de bestaande Done-status; de tekst wordt veilig als tekst weergegeven. Ontbrekende evaluaties hebben geen popup.
 
 InjuryIssueComment bewaart een unieke opmerking per (athlete, coach), los van de evaluatie van de atleet en Desired Improvements. Dezelfde coach-identiteitshulp genereert in beide overzichten initialen en deterministische kleur. Opslaan accepteert alleen de ingelogde auteur, maximaal 5000 tekens; leeg verwijdert uitsluitend diens eigen opmerking. See training is alleen lezen en schrijft geen planning/Flex-records; het leest de actuele opgeslagen sessie met persoonlijke override, baseplanning en racevoorrang, niet een historische snapshot.
+
+Strength gebruikt het bestaande type CORE2 uitsluitend als vrije tekst. Nieuwe/gewijzigde invoer bewaart geen zone, T-type, afstand, genormaliseerde afstand of duur. Ook bestaande CORE2-records worden uitgesloten van AYC-/Flex-/DCO-/statistiek-looploads; Stats-schema v21 vernieuwt de cache. De weergave verplaatst Strength naar direct na de laatste Main zonder de opgeslagen tekst of onderlinge volgorde van Main-reps te wijzigen. Meerdere regels en + of // binnen Strength blijven vrije tekst; opgeslagen standaarden bewaren vervolgregels.

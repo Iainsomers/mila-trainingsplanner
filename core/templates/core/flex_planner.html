@@ -699,7 +699,7 @@
     function flexLoadsForSegment(el, zoneSpeeds) {
       const speeds = zoneSpeeds || FLEX_ZONE_SPEEDS_MPS;
       const segType = (el.getAttribute("data-flex-type") || "").toUpperCase();
-      if (["MOB", "TECH"].includes(segType)) {
+      if (["MOB", "TECH", "CORE2"].includes(segType)) {
         return [];
       }
 
@@ -1430,7 +1430,7 @@
                         {% if cell.slot %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}"><span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
-                            {% for seg in cell.slot.segments.all %}
+                            {% for seg in cell.slot.display_segments %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
                           </div>
@@ -1451,7 +1451,7 @@
                         {% if cell.slot %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}"><span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
-                            {% for seg in cell.slot.segments.all %}
+                            {% for seg in cell.slot.display_segments %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
                           </div>
@@ -1517,7 +1517,7 @@
                         {% if cell.slot %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}"><span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
-                            {% for seg in cell.slot.segments.all %}
+                            {% for seg in cell.slot.display_segments %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
                           </div>
@@ -1538,7 +1538,7 @@
                         {% if cell.slot %}
                           <div class="flex-celltext">
                             {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}"><span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
-                            {% for seg in cell.slot.segments.all %}
+                            {% for seg in cell.slot.display_segments %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endfor %}
                           </div>

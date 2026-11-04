@@ -46,10 +46,10 @@ def training_for_evaluation(check):
         race = _calendar_race_slots([athlete.id], day, day+timedelta(days=1)).get((athlete.id, day))
         if race and not _slot_has_race(slot):
             slot = race
-    labels = {'WU':'WU', 'MOB':'Mob / Tech', 'SPR':'Sprint Z6', 'CORE':'Main', 'CORE2':'Main 2', 'ALT':'Alternative', 'CD':'CD'}
+    labels = {'WU':'WU', 'MOB':'Mob / Tech', 'SPR':'Sprint Z6', 'CORE':'Main', 'CORE2':'Strength', 'ALT':'Alternative', 'CD':'CD'}
     output = []
     if slot:
-        for segment in slot.segments.all():
+        for segment in slot.display_segments:
             text = segment.text or ''
             program = getattr(segment, 'standard_strength_program', None)
             if program:

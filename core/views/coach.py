@@ -8005,7 +8005,7 @@ def _base_training_display_parts(text: str):
         "MOB": "Mob",
         "SPR": "Sprint",
         "CORE": "Main",
-        "CORE2": "Main 2",
+        "CORE2": "Strength",
         "ALT": "Alt",
         "CD": "CD",
     }

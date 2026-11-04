@@ -122,3 +122,5 @@ Planning blijft de hoofdactie. Admin, Stats, Polar en een niet-functionele Setti
 - Zones worden ingevoerd als min/km.
 - Standard Strength wordt als herbruikbaar blok via Mob/Tech gekozen en vanuit planning geopend.
 - Doelwedstrijden worden als `Race!` duidelijker gemarkeerd dan gewone wedstrijden.
+
+4 november 2026: het tweede hoofdonderdeel Main 2 wordt Strength: vrij krachttrainingsveld zonder zoneplicht, zichtbaar na Main. CORE2 blijft de interne sleutel voor compatibiliteit; Strength levert geen hardloopkilometers of zonetotalen.

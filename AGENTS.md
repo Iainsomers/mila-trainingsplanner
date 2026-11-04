@@ -18,7 +18,7 @@ Lees vóór een wijziging de relevante documenten in `docs/project/`:
 - Controleer de actuele code; documentatie beschrijft de bedoeling maar kan achterlopen.
 - Atleten mogen alleen hun eigen instellingen, wedstrijden en AYC zien.
 - Trainers moeten in de AYC tussen toegankelijke atleten kunnen schakelen.
-- Gebruik in de gebruikersinterface `Main` en `Main 2`; `CORE` en `CORE2` blijven interne datatypen.
+- Gebruik in de gebruikersinterface `Main` en `Strength`; `CORE` en `CORE2` blijven interne datatypen.
 - Behoud de compacte MiLa-stijl en test wijzigingen ook voor mobiel.
 - Algemene Garmin-wijzigingen gelden standaard voor zowel model C als D; behandel ze alleen apart wanneer de wijziging specifiek hun onderlinge verschil betreft.
 - Voer bij codewijzigingen minstens gerichte tests en `manage.py check` uit.

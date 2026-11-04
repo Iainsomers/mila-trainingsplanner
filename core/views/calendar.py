@@ -855,6 +855,11 @@ class _VirtualSlot:
         self.watch_loads = watch_loads if isinstance(watch_loads, list) else []
         self.watch_main_reps = watch_main_reps if isinstance(watch_main_reps, list) else []
 
+    @property
+    def display_segments(self):
+        from core.strength import ordered_training_segments
+        return ordered_training_segments(self.segments.all())
+
     def core_text(self):
         return " // ".join(seg.text for seg in self.segments.all() if seg.type == "CORE" and seg.text)
 
@@ -945,6 +950,8 @@ def _parse_base_training_text(text):
 
 
 def _virtual_segment_from_text(seg_type, text):
+    if seg_type == "CORE2":
+        return _VirtualSegment(text=text, type=seg_type)
     parsed = _parse_core_segment_text(text) if seg_type in {"CORE", "CORE2"} else parse_segment_text(text, zone_required=False)
     if parsed and getattr(parsed, "ok", False):
         return _VirtualSegment(
@@ -2279,7 +2286,7 @@ def _segment_rep_time_label(athlete, seg):
         return ""
 
     seg_type = (getattr(seg, "type", "") or "").upper()
-    if seg_type not in {"CORE", "CORE2"}:
+    if seg_type != "CORE":
         return ""
 
     special = (getattr(seg, "special", "") or "").upper()
@@ -2727,7 +2734,7 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
             watch_loads = align_watch_loads(watch_loads, boundary_text.get("WU", ""), boundary_text.get("CD", ""))
             actual = []
             for load in watch_loads:
-                if not isinstance(load, dict):
+                if not isinstance(load, dict) or str(load.get("segment", "")).upper() == "CORE2":
                     continue
                 try:
                     meters = float(load.get("meters") or 0)
@@ -2763,7 +2770,7 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
 
     for seg in segments:
         seg_type = (getattr(seg, "type", "") or "").upper()
-        if seg_type in ("MOB", "TECH"):
+        if seg_type in ("MOB", "TECH", "CORE2"):
             continue
         # Actual Watch laps take precedence for the segment they belong to;
         # edited/non-measured segments are calculated from their current text.
@@ -3133,6 +3140,11 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     for segment_type, value, default_zone in fields:
         raw_text = (value or "").strip()
         if not raw_text and not (segment_type == "MOB" and (selected_standard_strength or photo_ids)):
+            continue
+
+        if segment_type == "CORE2":
+            TrainingSegment.objects.create(slot=override_slot, order=order, type="CORE2", text=raw_text, zone="")
+            order += 1
             continue
 
         if segment_type == "CORE":

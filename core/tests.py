@@ -5432,7 +5432,7 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(result, "DCO Print Athlete")
         self.assertContains(result, "daily-print-grid")
 
-    def test_ayc_session_km_includes_running_segments_but_excludes_alternative(self):
+    def test_ayc_session_km_includes_running_segments_but_excludes_alternative_and_strength(self):
         _, plan, athlete = self._user_plan_and_athlete()
         day = date.today()
         slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=day, slot_index=1)
@@ -5464,8 +5464,8 @@ class SlotModalSaveTests(TestCase):
             for cell in week["cells1"]
             if cell["day"] == day
         )
-        self.assertEqual(current_cell["session_km"], "6.9")
-        self.assertContains(response, 'class="session-km-label">T 6.9</div>')
+        self.assertEqual(current_cell["session_km"], "4.9")
+        self.assertContains(response, 'class="session-km-label">T 4.9</div>')
 
         athlete.see_session_km = False
         athlete.save(update_fields=["see_session_km"])
@@ -5569,14 +5569,14 @@ class SlotModalSaveTests(TestCase):
             for cell in flex.context["week_rows"][0]["athlete_rows"][0]["am_cells"]
             if cell["day"] == day
         )
-        self.assertEqual(flex_cell["session_km"], "4.6")
+        self.assertEqual(flex_cell["session_km"], "4.0")
         self.assertContains(flex, "flex-session-km-label")
         self.assertContains(flex, 'data-flex-pause-mode="active_unless_pp"')
 
         dco = self.client.get(
             f"/coach/daily-overview/?date={day.isoformat()}&selection=all&slots=am&ok=1"
         )
-        self.assertEqual(dco.context["rows"][0]["session_km1"], "4.6")
+        self.assertEqual(dco.context["rows"][0]["session_km1"], "4.0")
         self.assertContains(dco, "daily-session-km-label")
 
         settings.see_session_km = False
@@ -10077,7 +10077,7 @@ class AthleteTimeInputFormatTests(TestCase):
 class TrainingSegmentLabelTests(TestCase):
     def test_main_labels_replace_core_labels(self):
         self.assertEqual(TrainingSegment(type="CORE").get_type_display(), "Main")
-        self.assertEqual(TrainingSegment(type="CORE2").get_type_display(), "Main 2")
+        self.assertEqual(TrainingSegment(type="CORE2").get_type_display(), "Strength")
 
     def test_watch_slot_uses_actual_zone_time_for_segment_label_and_totals(self):
         from core.stats import athlete_week_stats

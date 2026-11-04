@@ -1052,6 +1052,11 @@ class TrainingSlot(models.Model):
             return f"{self.plan} · {self.athlete} · {self.date} – slot {self.slot_index}"
         return f"{self.plan} · {self.date} – slot {self.slot_index}"
 
+    @property
+    def display_segments(self):
+        from core.strength import ordered_training_segments
+        return ordered_training_segments(self.segments.all())
+
     def core_text(self) -> str:
         cores = self.segments.filter(type="CORE").order_by("order", "id")
         parts = [seg.text.strip() for seg in cores if seg.text and seg.text.strip()]
@@ -1067,7 +1072,7 @@ class TrainingSegment(models.Model):
     TYPE_CHOICES = [
         ("WU", "WU"),
         ("CORE", "Main"),
-        ("CORE2", "Main 2"),
+        ("CORE2", "Strength"),
         ("ALT", "Alternative"),
         ("MOB", "Mob/Tech"),
         ("SPR", "Sprint"),

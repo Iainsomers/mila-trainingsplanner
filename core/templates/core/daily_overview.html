@@ -305,7 +305,7 @@
                         {% if r.slot1.text %}
                           <span>{{ r.slot1.text|linebreaksbr }}</span>
                         {% else %}
-                          {% for seg in r.slot1.segments.all %}
+                          {% for seg in r.slot1.display_segments %}
                             {% if seg.text or seg.photo_ids %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endif %}
@@ -342,7 +342,7 @@
                         {% if r.slot2.text %}
                           <span>{{ r.slot2.text|linebreaksbr }}</span>
                         {% else %}
-                          {% for seg in r.slot2.segments.all %}
+                          {% for seg in r.slot2.display_segments %}
                             {% if seg.text or seg.photo_ids %}
                               {% include "core/partials/segment_display.html" with seg=seg %}
                             {% endif %}

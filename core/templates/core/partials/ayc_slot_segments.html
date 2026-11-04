@@ -19,7 +19,7 @@
 {% if cell.slot.text %}
   <span data-flex-segment data-flex-zone="" data-flex-t="" data-flex-special="" data-flex-type="" data-flex-reps="" data-flex-distance="" data-flex-duration="" data-flex-norm="">{{ cell.slot.text|linebreaksbr }}</span>
 {% else %}
-  {% for seg in cell.slot.segments.all %}
+  {% for seg in cell.slot.display_segments %}
     {% if seg.text or seg.standard_strength_program or seg.photo_ids %}
       {% include "core/partials/segment_display.html" with seg=seg %}
     {% endif %}

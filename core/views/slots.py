@@ -247,6 +247,11 @@ class _VirtualSlot:
         self.segments = _VirtualSegmentList(segments)
 
     @property
+    def display_segments(self):
+        from core.strength import ordered_training_segments
+        return ordered_training_segments(self.segments.all())
+
+    @property
     def core_text(self):
         return " // ".join(seg.text for seg in self.segments.all() if seg.type == "CORE" and seg.text)
 
@@ -294,6 +299,8 @@ def _base_planning_slot_for_slot_reset(athlete, day, slot_index):
 
 
 def _virtual_segment_from_base_text(seg_type, text):
+    if seg_type == "CORE2":
+        return _VirtualSegment(text=text, type=seg_type)
     parsed = _parse_core_segment_text(text) if seg_type in {"CORE", "CORE2"} else parse_segment_text(text, zone_required=False)
     if parsed and getattr(parsed, "ok", False):
         return _VirtualSegment(
@@ -710,10 +717,15 @@ def _tb_flag(request, key: str, default: bool = True) -> bool:
 
 def _deserialize_slot_template_text(text: str) -> dict:
     out = {"WU":"","MOB":"","SPR":"","CORE":"","CORE2":"","ALT":"","CD":""}
+    current_key = None
     for line in (text or "").splitlines():
-        if "=" in line:
-            k,v = line.split("=",1)
-            out[k.strip().upper()] = v.strip()
+        key, separator, value = line.partition("=")
+        key = key.strip().upper()
+        if separator and key in out:
+            current_key = key
+            out[key] = value.strip()
+        elif current_key:
+            out[current_key] += "\n" + line
     return out
 
 
@@ -931,7 +943,7 @@ def week_clipboard_clear(request):
 # -----------------------------
 def slot_detail(request, slot_id):
     slot = get_object_or_404(TrainingSlot, id=slot_id)
-    segments = slot.segments.order_by("order", "id")
+    segments = slot.display_segments
 
     return HttpResponse(
         "<h3>Training detail</h3>"
@@ -1864,7 +1876,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # validatie: Core, Mob/Tech of Alt moet gevuld zijn
     has_mob_content = bool(mob_text or selected_standard_strength or kept_photo_ids or prepared_photos)
 
-    if not core_text and not has_mob_content and not alt_text:
+    if not core_text and not core2_text and not has_mob_content and not alt_text:
         return render(
             request,
             "core/partials/slot_modal.html",
@@ -1888,7 +1900,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "alt_text": alt_text,
                 "cd_text": cd_text,
 
-                "core_error": "Fill in Main, Mob/Tech, or Alternative.",
+                "core_error": "Fill in Main, Strength, Mob/Tech, or Alternative.",
                 "saved_templates": _saved_templates_for_user(request),
                 "selected_template_id": (request.POST.get("template_id") or "").strip(),
                 "template_name": (request.POST.get("template_name") or "").strip(),
@@ -1906,52 +1918,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             },
         )
 
-    # CORE2 mag niet als enige segment
-    if core2_text and not any([wu_text, mob_text, sprint_text, core_text, alt_text, cd_text]):
-        return render(
-            request,
-            "core/partials/slot_modal.html",
-            {
-                "day": d,
-                "slot_index": slot_index,
-
-                "tb_show_wu": tb_show_wu,
-                "tb_show_mob": tb_show_mob,
-                "tb_show_sprint": tb_show_sprint,
-                "tb_show_core2": tb_show_core2,
-                "tb_show_cd": tb_show_cd,
-
-                "wu_text": wu_text,
-                "mob_text": mob_text, "mob_photos": mob_photos,
-                "standard_strength_programs": _standard_strength_programs_for_user(request),
-                "selected_standard_strength_id": selected_standard_strength_id,
-                "sprint_text": sprint_text,
-                "core_text": core_text,
-                "core2_text": core2_text,
-                "alt_text": alt_text,
-                "cd_text": cd_text,
-
-                "core2_error": "Main 2 cannot be the only segment in the slot.",
-                "saved_templates": _saved_templates_for_user(request),
-                "selected_template_id": (request.POST.get("template_id") or "").strip(),
-                "template_name": (request.POST.get("template_name") or "").strip(),
-
-                "wu_feedback": "", "wu_ok": None,
-                "sprint_feedback": "", "sprint_ok": None,
-                "core_feedback": "", "core_ok": None,
-                "core2_feedback": "", "core2_ok": None,
-                "alt_feedback": "", "alt_ok": None,
-                "cd_feedback": "", "cd_ok": None,
-
-                "selected_plan": selected_plan,
-                "selected_athlete": athlete,
-                "is_override": is_override,
-            },
-        )
-
-    # parsing
+    # Parse running fields only; Strength remains unrestricted text.
     sprint_text_for_parse = _ensure_zone_in_text(sprint_text, "6")
-
     wu_parse = parse_segment_text(wu_text, zone_required=False) if wu_text else None
     sprint_parse = parse_segment_text(sprint_text_for_parse) if sprint_text else None
     if core_text:
@@ -1965,7 +1933,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 break
     else:
         core_parse = None
-    core2_parse = _parse_core_segment_text(core2_text) if core2_text else None
+    core2_parse = None  # Strength is free text; no zone or running parser.
     alt_parts = split_alternative_segments(alt_text)
     alt_parses = [parse_segment_text(part, zone_required=False) for part in alt_parts]
     alt_parse = next((parsed for parsed in alt_parses if not parsed.ok), alt_parses[-1] if alt_parses else None)
@@ -2187,8 +2155,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             core2_seg.order = next_followup_order
         else:
             core2_seg = slot.segments.create(type="CORE2", text=core2_text, order=next_followup_order)
-        _apply_parse_to_segment(core2_seg, core2_parse)
-        core2_seg.norm_distance_m = _compute_norm_distance_m(core2_seg)
+        from core.strength import clear_strength_metrics
+        clear_strength_metrics(core2_seg)
         core2_seg.parsed_at = now
         core2_seg.save()
     else:

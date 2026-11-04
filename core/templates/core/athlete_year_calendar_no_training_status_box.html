@@ -482,20 +482,15 @@
                           <strong>{{ cell.slot.text|linebreaksbr }}</strong>
                         </div>
                       {% else %}
-                        {% for seg in cell.slot.segments.all %}
-                          {% if seg.text and seg.type != "CORE2" %}
+                        {% for seg in cell.slot.display_segments %}
+                          {% if seg.text %}
                             {% if seg.type == "CORE" %}
                               <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
                                 <strong>{{ seg.text }}</strong>
                               </div>
                             {% else %}
-                              <div>{{ seg.text }}</div>
+                              <div>{% if seg.type == "CORE2" %}Strength: {% endif %}{{ seg.text }}</div>
                             {% endif %}
-                          {% endif %}
-                        {% endfor %}
-                        {% for seg in cell.slot.segments.all %}
-                          {% if seg.text and seg.type == "CORE2" %}
-                            <div>2nd: {{ seg.text }}</div>
                           {% endif %}
                         {% endfor %}
                       {% endif %}
@@ -520,20 +515,15 @@
                           <strong>{{ cell.slot.text|linebreaksbr }}</strong>
                         </div>
                       {% else %}
-                        {% for seg in cell.slot.segments.all %}
-                          {% if seg.text and seg.type != "CORE2" %}
+                        {% for seg in cell.slot.display_segments %}
+                          {% if seg.text %}
                             {% if seg.type == "CORE" %}
                               <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
                                 <strong>{{ seg.text }}</strong>
                               </div>
                             {% else %}
-                              <div>{{ seg.text }}</div>
+                              <div>{% if seg.type == "CORE2" %}Strength: {% endif %}{{ seg.text }}</div>
                             {% endif %}
-                          {% endif %}
-                        {% endfor %}
-                        {% for seg in cell.slot.segments.all %}
-                          {% if seg.text and seg.type == "CORE2" %}
-                            <div>2nd: {{ seg.text }}</div>
                           {% endif %}
                         {% endfor %}
                       {% endif %}
@@ -628,20 +618,15 @@
                         <strong>{{ cell.slot.text|linebreaksbr }}</strong>
                       </div>
                     {% else %}
-                      {% for seg in cell.slot.segments.all %}
-                        {% if seg.text and seg.type != "CORE2" %}
+                      {% for seg in cell.slot.display_segments %}
+                        {% if seg.text %}
                           {% if seg.type == "CORE" %}
                             <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
                               <strong>{{ seg.text }}</strong>
                             </div>
                           {% else %}
-                            <div>{{ seg.text }}</div>
+                            <div>{% if seg.type == "CORE2" %}Strength: {% endif %}{{ seg.text }}</div>
                           {% endif %}
-                        {% endif %}
-                      {% endfor %}
-                      {% for seg in cell.slot.segments.all %}
-                        {% if seg.text and seg.type == "CORE2" %}
-                          <div>2nd: {{ seg.text }}</div>
                         {% endif %}
                       {% endfor %}
                     {% endif %}
@@ -663,20 +648,15 @@
                         <strong>{{ cell.slot.text|linebreaksbr }}</strong>
                       </div>
                     {% else %}
-                      {% for seg in cell.slot.segments.all %}
-                        {% if seg.text and seg.type != "CORE2" %}
+                      {% for seg in cell.slot.display_segments %}
+                        {% if seg.text %}
                           {% if seg.type == "CORE" %}
                             <div class="core-line" data-zone="{{ seg.zone|default:'' }}">
                               <strong>{{ seg.text }}</strong>
                             </div>
                           {% else %}
-                            <div>{{ seg.text }}</div>
+                            <div>{% if seg.type == "CORE2" %}Strength: {% endif %}{{ seg.text }}</div>
                           {% endif %}
-                        {% endif %}
-                      {% endfor %}
-                      {% for seg in cell.slot.segments.all %}
-                        {% if seg.text and seg.type == "CORE2" %}
-                          <div>2nd: {{ seg.text }}</div>
                         {% endif %}
                       {% endfor %}
                     {% endif %}

@@ -53,7 +53,7 @@
       {% with ctl=ct|lower %}
         <a class="celllink"
            href="#"
-           title="{% for seg in slot.segments.all %}{% if seg.text or seg.standard_strength_program %}{{ seg.type }}: {% if seg.standard_strength_program %}{{ seg.standard_strength_program.name|escape }}{% if seg.text and seg.text != seg.standard_strength_program.name %} {{ seg.display_text|default:seg.text|escape }}{% endif %}{% else %}{{ seg.display_text|default:seg.text|escape }}{% endif %}&#10;{% endif %}{% endfor %}"
+           title="{% for seg in slot.display_segments %}{% if seg.text or seg.standard_strength_program %}{{ seg.type }}: {% if seg.standard_strength_program %}{{ seg.standard_strength_program.name|escape }}{% if seg.text and seg.text != seg.standard_strength_program.name %} {{ seg.display_text|default:seg.text|escape }}{% endif %}{% else %}{{ seg.display_text|default:seg.text|escape }}{% endif %}&#10;{% endif %}{% endfor %}"
            hx-get="/slot-modal/{{ day|date:'Y' }}/{{ day|date:'m' }}/{{ day|date:'d' }}/{{ slot_index }}/{% if selected_plan or selected_athlete or cell_source %}?{% endif %}{% if selected_plan %}plan={{ selected_plan.id }}{% endif %}{% if selected_athlete %}{% if selected_plan %}&{% endif %}athlete={{ selected_athlete.id }}{% endif %}{% if cell_source %}{% if selected_plan or selected_athlete %}&{% endif %}source={{ cell_source }}{% endif %}"
            hx-target="#modal-container"
            hx-swap="innerHTML"
@@ -86,31 +86,28 @@
               {% if slot.core_text %}
                 <div><strong>{{ slot.core_text }}</strong></div>
               {% endif %}
-              {% for seg in slot.segments.all %}
-                {% if seg.type == "ALT" and seg.text %}
+              {% for seg in slot.display_segments %}
+                {% if seg.type == "CORE2" and seg.text %}
+                  <div>{% include "core/partials/segment_display.html" with seg=seg %}</div>
+                {% elif seg.type == "ALT" and seg.text %}
                   <div>{{ seg.text }}</div>
                 {% endif %}
               {% endfor %}
               {% if not slot.core_text %}
-                {% for seg in slot.segments.all %}
+                {% for seg in slot.display_segments %}
                   {% if seg.type == "MOB" and seg.text or seg.type == "MOB" and seg.standard_strength_program or seg.type == "MOB" and seg.photo_ids %}
                     <div>{% include "core/partials/segment_display.html" with seg=seg %}</div>
                   {% endif %}
                 {% endfor %}
               {% endif %}
             {% else %}
-              {% for seg in slot.segments.all %}
-                {% if seg.type != "CORE2" and seg.text or seg.type != "CORE2" and seg.standard_strength_program or seg.type != "CORE2" and seg.photo_ids %}
+              {% for seg in slot.display_segments %}
+                {% if seg.text or seg.standard_strength_program or seg.photo_ids %}
                   {% if seg.type == "CORE" %}
                     <div class="core-line" data-zone="{{ seg.zone|default:'' }}" data-t-type="{{ seg.t_type|default:'' }}"><strong style="color: inherit;">{{ seg.text }}</strong></div>
                   {% else %}
                     <div>{% include "core/partials/segment_display.html" with seg=seg %}</div>
                   {% endif %}
-                {% endif %}
-              {% endfor %}
-              {% for seg in slot.segments.all %}
-                {% if seg.type == "CORE2" and seg.text or seg.type == "CORE2" and seg.standard_strength_program %}
-                  <div>Main 2: {% include "core/partials/segment_display.html" with seg=seg %}</div>
                 {% endif %}
               {% endfor %}
             {% endif %}
