@@ -275,6 +275,17 @@ class FocusPointComment(models.Model):
         return f"{self.athlete} - {self.point_key} - {self.coach}"
 
 
+class InjuryIssueComment(models.Model):
+    athlete = models.ForeignKey("Athlete", on_delete=models.CASCADE, related_name="injury_issue_comments")
+    coach = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="injury_issue_comments")
+    comment = models.TextField(blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["coach__id"]
+        constraints = [models.UniqueConstraint(fields=["athlete", "coach"], name="unique_injury_issue_comment_per_coach")]
+
+
 class AthleteFocusPoint(models.Model):
     athlete = models.ForeignKey(
         "Athlete",

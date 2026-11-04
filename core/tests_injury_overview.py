@@ -90,7 +90,7 @@ class InjuryIssueOverviewTests(TestCase):
         dots=response.context['injury_rows'][0]['dots'][-3:]
         self.assertEqual([d['status'] for d in dots],['not_done','adjusted_ok','done_as_planned'])
         self.assertEqual(dots[-1]['rpe'],4)
-        self.assertContains(response,'data-bs-target="#issueEvaluationModal"',count=3)
+        self.assertContains(response,'data-training-url="',count=3)
         self.assertContains(response,'&lt;script&gt;')
         self.assertNotContains(response,'<script>alert(')
 
@@ -100,4 +100,104 @@ class InjuryIssueOverviewTests(TestCase):
         self.athlete.save()
         response=self.page()
         self.assertNotContains(response,'Private issue detail')
-        self.assertNotContains(response,'data-bs-target="#issueEvaluationModal"')
+        self.assertNotContains(response,'data-training-url="')
+
+    def training(self, check):
+        return self.client.get('/coach/daily-overview-other/', {'view':'injury_issues','training_evaluation':check.id})
+
+    def test_see_training_uses_correct_daypart_and_flex_override_without_writes(self):
+        from core.models import TrainingPlan, TrainingSlot, PlanMembership
+        plan=TrainingPlan.objects.create(owner=self.coach,name='Source')
+        PlanMembership.objects.create(plan=plan,athlete=self.athlete)
+        am=TrainingSlot.objects.create(plan=plan,date=self.today,slot_index=1)
+        am.segments.create(type='CORE',text='3*1000m z2')
+        pm=TrainingSlot.objects.create(plan=plan,date=self.today,slot_index=2)
+        pm.segments.create(type='CORE2',text='5*200m z4')
+        a=self.check(0,slot=1,pain='no_pain')
+        b=self.check(0,slot=2,pain='no_pain')
+        self.assertEqual(self.training(a).json()['segments'],[{'label':'Main','text':'3*1000m z2'}])
+        self.assertEqual(self.training(b).json()['segments'],[{'label':'Main 2','text':'5*200m z4'}])
+        flex=TrainingPlan.objects.create(owner=self.coach,name='Flex Planner')
+        override=TrainingSlot.objects.create(plan=flex,athlete=self.athlete,date=self.today,slot_index=1,source='watch_d')
+        override.segments.create(type='CORE',text='4*800m z2')
+        counts=(TrainingSlot.objects.count(),TrainingPlan.objects.count())
+        self.assertEqual(self.training(a).json()['segments'][0]['text'],'4*800m z2')
+        self.assertEqual(counts,(TrainingSlot.objects.count(),TrainingPlan.objects.count()))
+        override.segments.all().delete()
+        self.assertEqual(self.training(a).json()['segments'],[])
+
+    def test_training_private_and_invalid_ids_do_not_expose_data(self):
+        c=self.check(0,pain='no_pain')
+        self.athlete.training_reports_enabled=False
+        self.athlete.save()
+        self.assertEqual(self.training(c).status_code,404)
+        self.assertEqual(self.client.get('/coach/daily-overview-other/',{'view':'injury_issues','training_evaluation':'abc'}).status_code,400)
+
+    def test_comments_match_desired_improvements_identity_and_keep_other_authors(self):
+        from core.models import InjuryIssueComment
+        from core.coach_identity import decorate_coach_comment
+        self.coach.first_name='Piet'
+        self.coach.last_name='van Driel'
+        self.coach.save()
+        other=get_user_model().objects.create_user(username='Jan_Jansen',is_staff=True)
+        InjuryIssueComment.objects.create(athlete=self.athlete,coach=other,comment='Other author')
+        url='/coach/daily-overview-other/?view=injury_issues'
+        for text in ['First note','Updated note']:
+            result=self.client.post(url,{'athlete_id':self.athlete.id,'comment':text,'coach_id':other.id})
+            self.assertEqual(result.status_code,302)
+            self.assertEqual(InjuryIssueComment.objects.get(athlete=self.athlete,coach=self.coach).comment,text)
+        self.assertEqual(InjuryIssueComment.objects.get(coach=other).comment,'Other author')
+        comments=self.page().context['injury_rows'][0]['comments']
+        own=next(c for c in comments if c.coach_id==self.coach.id)
+        self.assertEqual(own.initials,'PD')
+        self.assertEqual(own.coach_color,decorate_coach_comment(own).coach_color)
+        self.assertNotEqual(comments[0].coach_color,comments[1].coach_color)
+        self.client.post(url,{'athlete_id':self.athlete.id,'comment':''})
+        self.assertFalse(InjuryIssueComment.objects.filter(coach=self.coach).exists())
+        self.assertTrue(InjuryIssueComment.objects.filter(coach=other).exists())
+
+    def test_view_only_coach_can_read_but_cannot_write_comments(self):
+        from core.models import InjuryIssueComment
+        viewer=get_user_model().objects.create_user(username='readonly-issues',is_staff=True)
+        CoachAccess.objects.create(owner=self.coach,grantee=viewer,can_edit=False)
+        InjuryIssueComment.objects.create(athlete=self.athlete,coach=self.coach,comment='Visible note')
+        self.client.force_login(viewer)
+        session=self.client.session
+        session['active_coach_owner_id']=self.coach.id
+        session.save()
+        response=self.page()
+        self.assertContains(response,'Visible note')
+        self.assertFalse(response.context['injury_rows'][0]['can_comment'])
+        result=self.client.post('/coach/daily-overview-other/?view=injury_issues',{'athlete_id':self.athlete.id,'comment':'Not permitted'})
+        self.assertEqual(result.status_code,403)
+        self.assertEqual(InjuryIssueComment.objects.count(),1)
+
+    def test_comment_write_is_scoped_and_hidden_comments_are_not_rendered(self):
+        from core.models import InjuryIssueComment
+        self.athlete.training_reports_enabled=False
+        self.athlete.save()
+        InjuryIssueComment.objects.create(athlete=self.athlete,coach=self.coach,comment='Secret coach note')
+        self.assertNotContains(self.page(),'Secret coach note')
+        result=self.client.post('/coach/daily-overview-other/?view=injury_issues',{'athlete_id':self.athlete.id,'comment':'Denied'})
+        self.assertEqual(result.status_code,404)
+
+    def test_training_follows_base_text_and_explicit_rest(self):
+        from core.models import AthleteBasePlanningBlock, AthleteBasePlanningSlot
+        block=AthleteBasePlanningBlock.objects.create(athlete=self.athlete,start_month=1,start_day=1,end_month=12,end_day=31)
+        base=AthleteBasePlanningSlot.objects.create(block=block,weekday=self.today.weekday(),slot_index=1,
+              mode=AthleteBasePlanningSlot.MODE_TRAINING,training_text='WU=1000m z1\nCORE=4*800m z2\nCD=1000m z1')
+        check=self.check(0,pain='no_pain')
+        self.assertEqual([s['label'] for s in self.training(check).json()['segments']],['WU','Main','CD'])
+        base.mode=AthleteBasePlanningSlot.MODE_REST
+        base.save()
+        self.assertEqual(self.training(check).json()['segments'],[])
+
+    def test_other_athlete_training_and_comments_are_inaccessible(self):
+        from core.models import InjuryIssueComment
+        owner=get_user_model().objects.create_user(username='private-issue-owner',is_staff=True)
+        other=Athlete.objects.create(owner=owner,name='Private other',birth_year=2000,gender='X')
+        check=AthleteDayCheck.objects.create(athlete=other,date=self.today,updated_by=owner,pain='serious_pain')
+        self.assertEqual(self.training(check).status_code,404)
+        response=self.client.post('/coach/daily-overview-other/?view=injury_issues',{'athlete_id':other.id,'comment':'No access'})
+        self.assertEqual(response.status_code,404)
+        self.assertFalse(InjuryIssueComment.objects.filter(athlete=other).exists())

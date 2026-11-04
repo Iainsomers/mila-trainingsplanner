@@ -122,3 +122,5 @@ Mob/Tech-foto’s volgen dezelfde trainingsbewerkrechten, inclusief bestaande AY
 Foto’s in een persoonlijk trainingsslot volgen coachtoegang tot de betreffende atleet, ook als de eigenaar van het opslagplan verschilt. Alleen eigenaar zijn van zo’n opslagplan geeft geen toegang tot foto’s van een ontoegankelijke atleet. Gedeelde trainingsfoto’s blijven de plantoegang volgen.
 
 Injury/Issue Overview volgt dezelfde atleetselectie en trainingsevaluatie-zichtbaarheid als Staff Team Overview. Gedeelde coaches zonder toegang tot trainingsevaluaties ontvangen geen individuele indicaties; bij uitgeschakelde training reports worden eveneens geen statussen getoond.
+
+Injury/Issue-coachcommentaar: eigenaar en bevoegde edit-coaches mogen alleen hun eigen commentaar per atleet opslaan/verwijderen. De auteur is altijd de werkelijk ingelogde trainer, ook in view-as-modus. View-only en atleetlogins mogen geen coachcommentaar schrijven. Zowel coachcommentaar als See training volgen de atleetselectie en trainingsevaluatie-zichtbaarheid; verborgen rapporten leveren geen opmerkingen of trainingdetails via dit overzicht.

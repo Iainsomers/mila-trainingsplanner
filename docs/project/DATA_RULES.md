@@ -245,3 +245,5 @@ Injury/Issue Overview selecteert maximaal 25 werkelijk ingevulde AthleteDayCheck
 
 
 De Injury/Issue-schuif toont de laatste N van deze 25 evaluaties (5–25, standaard 5) zonder nieuwe opslag of requests. Alleen zichtbare trainingsevaluaties leveren commentaar, RPE en effective_status voor de popup. Lege status met checked=True krijgt de bestaande Done-status; de tekst wordt veilig als tekst weergegeven. Ontbrekende evaluaties hebben geen popup.
+
+InjuryIssueComment bewaart een unieke opmerking per (athlete, coach), los van de evaluatie van de atleet en Desired Improvements. Dezelfde coach-identiteitshulp genereert in beide overzichten initialen en deterministische kleur. Opslaan accepteert alleen de ingelogde auteur, maximaal 5000 tekens; leeg verwijdert uitsluitend diens eigen opmerking. See training is alleen lezen en schrijft geen planning/Flex-records; het leest de actuele opgeslagen sessie met persoonlijke override, baseplanning en racevoorrang, niet een historische snapshot.

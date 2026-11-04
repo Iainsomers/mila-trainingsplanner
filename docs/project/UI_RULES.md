@@ -241,3 +241,5 @@ Injury/Issue Overview gebruikt een compacte tabel met naam en 5–25 ronde groen
 
 
 Injury/Issue-indicatoren zijn toetsenbordbedienbare knoppen wanneer een evaluatie bestaat. Ze openen een alleen-lezen popup met statuskleur/-teken, evaluatietekst en RPE. Meer indicatoren lopen op mobiel naar een volgende regel door; de modal staat buiten de pagina-container en kan verticaal scrollen. De schuif toont het actuele aantal naast het label en in de tabelkop.
+
+Injury/Issue Overview heeft naast de statusreeks een Comments coaches-cel met de auteursteksten in hun vaste trainerkleur en een + rechts. De + opent de eigen commentaartekst; er is geen overschrijven van andere auteurs. Op smalle schermen staan naam, bolletjes en commentaar onder elkaar. See training wisselt van evaluatiepopup naar een afzonderlijke scrollbare trainingspopup met terugknop; beide popups staan buiten de pagina-container.

@@ -1,7 +1,6 @@
 from datetime import date, datetime, time, timedelta
 import calendar as py_calendar
 import base64
-import colorsys
 import hashlib
 import json
 import math
@@ -6657,18 +6656,8 @@ def focus_points_view(request):
             athlete=selected_athlete,
         ).select_related("coach").order_by("coach__id")
         for item in comments:
-            username_parts = [part for part in item.coach.get_username().split("_") if part]
-            coach_name_parts = (item.coach.get_full_name() or "").split()
-            name_parts = username_parts if len(username_parts) > 1 else coach_name_parts
-            initials = (
-                name_parts[0][:1] + name_parts[-1][:1]
-                if len(name_parts) > 1
-                else (name_parts[0][:2] if name_parts else item.coach.get_username()[:2])
-            ).upper()
-            hue = ((item.coach_id * 137.508) % 360) / 360
-            red, green, blue = colorsys.hls_to_rgb(hue, 0.32, 0.62)
-            item.initials = initials
-            item.coach_color = "#%02x%02x%02x" % (round(red * 255), round(green * 255), round(blue * 255))
+            from core.coach_identity import decorate_coach_comment
+            decorate_coach_comment(item)
             comments_by_point.setdefault(item.point_key, []).append(item)
             if item.coach_id == request.user.id:
                 own_comments[item.point_key] = item.comment
@@ -12666,10 +12655,41 @@ def daily_overview_other_view(request):
         if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
     }
     if requested_view == "injury_issues":
+        from core.models import InjuryIssueComment
+        from core.coach_identity import decorate_coach_comment
         from django.db.models import F, Window
         from django.db.models.functions import RowNumber
         visible_ids = {a.id for a in athletes if a.id in training_visible_athlete_ids
                        and a.training_reports_enabled}
+        can_comment = _is_coach_user(request.user) and _active_coach_access_label(request) != "view"
+        if request.method == "POST":
+            if not (request.POST.get("athlete_id") or "").isdigit():
+                return HttpResponse("Invalid athlete.", status=400)
+            athlete = get_object_or_404(Athlete, id=_parse_int(request.POST.get("athlete_id")), id__in=visible_ids)
+            if not can_comment:
+                return HttpResponseForbidden("You cannot edit these coach comments.")
+            text = (request.POST.get("comment") or "").strip()
+            if len(text) > 5000:
+                return HttpResponse("Comment is too long.", status=400)
+            if text:
+                InjuryIssueComment.objects.update_or_create(athlete=athlete, coach=request.user, defaults={"comment":text})
+            else:
+                InjuryIssueComment.objects.filter(athlete=athlete, coach=request.user).delete()
+            return redirect(f"{reverse('daily_overview_other')}?view=injury_issues")
+        if request.GET.get("training_evaluation"):
+            if not request.GET["training_evaluation"].isdigit():
+                return HttpResponse("Invalid evaluation.", status=400)
+            check = get_object_or_404(AthleteDayCheck.objects.select_related("athlete__owner"),
+                                      pk=_parse_int(request.GET.get("training_evaluation")),
+                                      athlete_id__in=visible_ids, date__lte=today)
+            from core.injury_overview import training_for_evaluation
+            return JsonResponse({"segments":training_for_evaluation(check)})
+        comments_by_athlete, own_comments = {}, {}
+        for item in InjuryIssueComment.objects.filter(athlete_id__in=visible_ids).select_related("coach"):
+            decorate_coach_comment(item)
+            comments_by_athlete.setdefault(item.athlete_id, []).append(item)
+            if item.coach_id == request.user.id:
+                own_comments[item.athlete_id] = item.comment
         latest = AthleteDayCheck.objects.filter(athlete_id__in=visible_ids, date__lte=today).annotate(
             clean_comment=Trim("comment"),
         ).filter(Q(checked=True) | ~Q(status="") | Q(rpe__isnull=False)
@@ -12689,12 +12709,15 @@ def daily_overview_other_view(request):
                 "evaluation": True, "comment": check.comment, "status": check.effective_status,
                 "status_label": dict(AthleteDayCheck.STATUS_CHOICES).get(check.effective_status, "—"),
                 "rpe": check.rpe,
+                "training_url": f"{reverse('daily_overview_other')}?view=injury_issues&training_evaluation={check.id}",
             })
         rows = []
         for athlete in athletes:
             dots = indicators.get(athlete.id, [])
             history = [{"color": "unknown", "label": "No evaluation"}]*(25-len(dots)) + dots
             rows.append({"athlete": athlete, "visible": athlete.id in visible_ids,
+                         "comments":comments_by_athlete.get(athlete.id, []),
+                         "own_comment":own_comments.get(athlete.id, ""), "can_comment":can_comment and athlete.id in visible_ids,
                          "dots": history[-5:], "history_dots": history})
         return render(request, "core/daily_overview_other.html", {
             "overview_mode": requested_view, "injury_rows": rows,

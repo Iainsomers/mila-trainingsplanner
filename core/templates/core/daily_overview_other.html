@@ -79,6 +79,20 @@
   .issue-status[data-status="adjusted_ok"], .issue-status[data-status="lighter_slower"] { background: #ffc107; }
   .issue-status[data-status="too_hard_fast"] { background: #fd7e14; }
   .issue-status[data-status="not_done"] { background: #dc3545; color: white; }
+  .issue-table { table-layout: fixed; }
+  .issue-table th:first-child { width: 23%; }
+  .issue-table th:nth-child(2) { width: 37%; }
+  .issue-table td { overflow-wrap: anywhere; }
+  .issue-coach-cell { position: relative; padding-right: 2.4rem !important; }
+  .issue-coach-comment { display: block; white-space: pre-wrap; }
+  .issue-comment-add { position: absolute; right: .25rem; top: .25rem; }
+  @media(max-width:575.98px) {
+    .issue-table, .issue-table tbody, .issue-table tr, .issue-table td { display:block; width:100%; }
+    .issue-table thead { display:none; }
+    .issue-table td { border:0; }
+    .issue-table tr { border-bottom:1px solid #d9e0e7; padding:.4rem 0; }
+    .issue-coach-cell { min-height:2.3rem; }
+  }
 </style>
 {% endblock %}
 
@@ -126,14 +140,19 @@
         <span><span class="issue-dot issue-unknown" aria-hidden="true"></span> No data</span>
       </div>
       <table class="table table-sm issue-table mb-0">
-        <thead><tr><th scope="col">Athlete</th><th scope="col">Last <span id="issue-history-heading">5</span> evaluations</th></tr></thead>
+        <thead><tr><th scope="col">Athlete</th><th scope="col">Last <span id="issue-history-heading">5</span> evaluations</th><th scope="col">Comments coaches</th></tr></thead>
         <tbody>
           {% for row in injury_rows %}
           <tr><td>{{ row.athlete.name }}</td><td>
-            {% if row.visible %}<div class="issue-dots">{% for dot in row.history_dots %}{% if dot.evaluation %}<button type="button" class="issue-dot issue-{{ dot.color }}" data-history-index="{{ forloop.counter0 }}" {% if forloop.counter0 < 20 %}hidden{% endif %} aria-label="{{ dot.label }}" title="{{ dot.label }}" data-athlete="{{ row.athlete.name }}" data-label="{{ dot.label }}" data-comment="{{ dot.comment }}" data-status="{{ dot.status }}" data-status-label="{{ dot.status_label }}" data-rpe="{{ dot.rpe|default_if_none:'' }}" data-bs-toggle="modal" data-bs-target="#issueEvaluationModal"></button>{% else %}<span class="issue-dot issue-unknown" data-history-index="{{ forloop.counter0 }}" {% if forloop.counter0 < 20 %}hidden{% endif %} role="img" aria-label="{{ dot.label }}" title="{{ dot.label }}"></span>{% endif %}{% endfor %}</div>
+            {% if row.visible %}<div class="issue-dots">{% for dot in row.history_dots %}{% if dot.evaluation %}<button type="button" class="issue-dot issue-{{ dot.color }}" data-history-index="{{ forloop.counter0 }}" {% if forloop.counter0 < 20 %}hidden{% endif %} aria-label="{{ dot.label }}" title="{{ dot.label }}" data-athlete="{{ row.athlete.name }}" data-label="{{ dot.label }}" data-comment="{{ dot.comment }}" data-status="{{ dot.status }}" data-status-label="{{ dot.status_label }}" data-rpe="{{ dot.rpe|default_if_none:'' }}" data-training-url="{{ dot.training_url }}" data-bs-toggle="modal" data-bs-target="#issueEvaluationModal"></button>{% else %}<span class="issue-dot issue-unknown" data-history-index="{{ forloop.counter0 }}" {% if forloop.counter0 < 20 %}hidden{% endif %} role="img" aria-label="{{ dot.label }}" title="{{ dot.label }}"></span>{% endif %}{% endfor %}</div>
             {% else %}<span class="text-muted" title="Training evaluations unavailable">—</span>{% endif %}
+          </td><td class="issue-coach-cell">
+            <div class="issue-coach-comments">
+              {% for comment in row.comments %}<span class="issue-coach-comment" style="color:{{ comment.coach_color }}"><strong>{{ comment.initials }}:</strong> {{ comment.comment }}</span>{% endfor %}
+            </div>
+            {% if row.can_comment %}<button type="button" class="btn btn-sm btn-outline-primary issue-comment-add" data-bs-toggle="modal" data-bs-target="#issueCoachCommentModal" data-athlete-id="{{ row.athlete.id }}" data-athlete-name="{{ row.athlete.name }}" data-own-comment="{{ row.own_comment }}" aria-label="Add or edit your comment for {{ row.athlete.name }}">+</button>{% endif %}
           </td></tr>
-          {% empty %}<tr><td colspan="2" class="text-muted">No athletes found.</td></tr>{% endfor %}
+          {% empty %}<tr><td colspan="3" class="text-muted">No athletes found.</td></tr>{% endfor %}
         </tbody>
       </table>
     </div>
@@ -147,8 +166,23 @@
         <p id="issueEvaluationRpe" class="small"></p>
         <div id="issueEvaluationComment" class="issue-comment"></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+      <div class="modal-footer"><button type="button" id="issueSeeTraining" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#issueTrainingModal">See training</button><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
     </div></div>
+  </div>
+  <div class="modal fade" id="issueTrainingModal" tabindex="-1" aria-labelledby="issueTrainingTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+      <div class="modal-header"><h2 id="issueTrainingTitle" class="modal-title h5">Training</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body"><p id="issueTrainingSession" class="text-muted small"></p><div id="issueTrainingContent" aria-live="polite"></div></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#issueEvaluationModal">Back to evaluation</button><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+    </div></div>
+  </div>
+  <div class="modal fade" id="issueCoachCommentModal" tabindex="-1" aria-labelledby="issueCoachCommentTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><form class="modal-content" method="post" action="?view=injury_issues">
+      {% csrf_token %}<input type="hidden" name="athlete_id" id="issueCoachCommentAthlete">
+      <div class="modal-header"><h2 id="issueCoachCommentTitle" class="modal-title h5">Comment coaches</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body"><label for="issueCoachCommentText" class="form-label">Your comment</label><textarea class="form-control" id="issueCoachCommentText" name="comment" rows="4" maxlength="5000"></textarea></div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
+    </form></div>
   </div>
   <script>
     document.getElementById('issue-history-count').addEventListener('input', function() {
@@ -161,7 +195,8 @@
     document.body.appendChild(issueModal);
     issueModal.addEventListener('show.bs.modal', function(event) {
       const dot = event.relatedTarget;
-      if (!dot) return;
+      if (!dot || !dot.dataset.label) return;
+      document.getElementById('issueSeeTraining').dataset.trainingUrl = dot.dataset.trainingUrl;
       document.getElementById('issueEvaluationTitle').textContent = dot.dataset.athlete + ' · Evaluation';
       document.getElementById('issueEvaluationSession').textContent = dot.dataset.label;
       const status = document.getElementById('issueEvaluationStatus');
@@ -169,6 +204,48 @@
       status.dataset.status = dot.dataset.status;
       document.getElementById('issueEvaluationRpe').textContent = dot.dataset.rpe ? 'RPE: ' + dot.dataset.rpe : '';
       document.getElementById('issueEvaluationComment').textContent = dot.dataset.comment.trim() || 'No evaluation comment.';
+    });
+    const trainingModal = document.getElementById('issueTrainingModal');
+    const coachCommentModal = document.getElementById('issueCoachCommentModal');
+    document.body.appendChild(trainingModal);
+    document.body.appendChild(coachCommentModal);
+    let trainingRequest;
+    trainingModal.addEventListener('show.bs.modal', async function() {
+      if (trainingRequest) trainingRequest.abort();
+      const controller = new AbortController();
+      trainingRequest = controller;
+      const content = document.getElementById('issueTrainingContent');
+      document.getElementById('issueTrainingTitle').textContent = document.getElementById('issueEvaluationTitle').textContent.replace(' · Evaluation', ' · Training');
+      document.getElementById('issueTrainingSession').textContent = document.getElementById('issueEvaluationSession').textContent;
+      content.textContent = 'Loading training…';
+      try {
+        const response = await fetch(document.getElementById('issueSeeTraining').dataset.trainingUrl, {signal:controller.signal, headers:{'Accept':'application/json'}});
+        if (!response.ok) throw new Error('Training unavailable');
+        const data = await response.json();
+        if (controller.signal.aborted) return;
+        content.replaceChildren();
+        if (!data.segments.length) content.textContent = 'No training found for this session.';
+        data.segments.forEach(segment => {
+          const block = document.createElement('div');
+          block.className = 'mb-3';
+          const label = document.createElement('strong');
+          label.textContent = segment.label;
+          const text = document.createElement('div');
+          text.className = 'issue-comment';
+          text.textContent = segment.text;
+          block.append(label, text);
+          content.appendChild(block);
+        });
+      } catch (error) {
+        if (error.name !== 'AbortError') content.textContent = 'Could not load training. Please try again.';
+      }
+    });
+    trainingModal.addEventListener('hide.bs.modal', () => { if (trainingRequest) trainingRequest.abort(); });
+    coachCommentModal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      document.getElementById('issueCoachCommentTitle').textContent = button.dataset.athleteName + ' · Comment coaches';
+      document.getElementById('issueCoachCommentAthlete').value = button.dataset.athleteId;
+      document.getElementById('issueCoachCommentText').value = button.dataset.ownComment || '';
     });
   </script>
   {% elif overview_mode == 'information_quality' %}
