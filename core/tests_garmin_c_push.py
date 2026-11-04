@@ -23,6 +23,30 @@ class GarminCPushTests(TestCase):
             "startTimeInSeconds": self.start, "distanceInMeters": 1000, "durationInSeconds": 300}
         self.push_url = reverse("garmin_activity_push", args=[receiver_key()])
 
+    def test_mixed_timed_recording_exposes_time_option_without_ai_in_c_and_d(self):
+        self.athlete.zone_speed_mps = {'1':4,'2':4.9,'3':5.5,'4':6,'5':6.5,'6':7}
+        self.athlete.save(update_fields=['zone_speed_mps'])
+        values = [(1005.4,301),(1001.21,286),(946.95,13681),(1008.92,215),
+                  (996.954,211),(272.28,56),(126.39,91),(2347.52,481),
+                  (152.97,93),(1192.51,253),(236.771,222),(1175.82,240),
+                  (162.26,61),(1167.32,241),(46.8906,61),(1172.89,242),
+                  (432.01,301),(1106.27,437)]
+        GarminActivitySummary.objects.create(athlete=self.athlete, activity_id='mixed-timed',
+            activity_start=datetime.fromtimestamp(self.start, dt_timezone.utc), activity_date='2026-10-31',
+            distance_m=14550.3, analysis_data={'laps':[{'distance':m,'elapsed_time':s} for m,s in values]})
+        self.client.force_login(self.coach)
+        with patch('core.views.polar_raw.urlopen',side_effect=AssertionError('No AI consent')):
+            for route in ['garmin_type_c_ayc','garmin_type_d_ayc']:
+                response = self.client.get(reverse(route), {'athlete':self.athlete.pk,'date':'2026-10-31'})
+                self.assertEqual(response.status_code,200)
+                part = response.json()['results'][0]['parts'][0]
+                self.assertEqual([a['label'] for a in part['training_alternatives']],['Distance','Time'])
+                time_fields = part['training_alternatives'][1]['training_fields']
+                self.assertEqual(time_fields['main'],"2×8' Z2 p91 + 4×4' Z2 p61")
+                self.assertEqual(time_fields['wu'],'2000 m Z1')
+                self.assertEqual(time_fields['cd'],'1100 m Z1')
+                self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],values)
+
     def test_calendar_loads_combiner_without_oura_import(self):
         self.client.force_login(self.coach)
         response = self.client.get(reverse("athlete_year_calendar"), {"athlete": self.athlete.pk, "year": 2026})

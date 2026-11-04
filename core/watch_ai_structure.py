@@ -10,6 +10,58 @@ class ValidatedDescription(str):
         return value
 
 
+def infer_lap_structure(facts):
+    """Propose clear mixed time groups locally, then use the same validator.
+
+    Does not depend on AI consent, service availability or a model's answer.
+    Missing pace zones or ambiguous boundaries deliberately yield no proposal.
+    """
+    try:
+        if not facts or any(row['duration_s'] <= 0 for row in facts):
+            return None
+        def work(row):
+            return row['zone'] in {'Z2','Z3','Z4','Z5'} and row['distance_m']/row['duration_s'] >= 2.5
+        blocks, index = [], 0
+        while index < len(facts):
+            if not work(facts[index]):
+                index += 1
+                continue
+            block = []
+            while index < len(facts) and work(facts[index]):
+                block.append(facts[index]['lap'])
+                index += 1
+            blocks.append(block)
+        if len(blocks) < 4:
+            return None
+        by_id = {row['lap']:row for row in facts}
+        first, last = blocks[0][0], blocks[-1][-1]
+        groups = []
+        for block in blocks:
+            seconds = sum(by_id[i]['duration_s'] for i in block)
+            target = int(math.floor(seconds/60+.5)*60)
+            if not groups or groups[-1]['target_seconds'] != target:
+                groups.append({'target_seconds':target, 'reps':[]})
+            groups[-1]['reps'].append(block)
+        if len(groups) < 2:
+            return None
+        proposal = {'warmup_laps':[], 'stop_laps':[], 'recovery_laps':[], 'cooldown_laps':[], 'groups':groups}
+        assigned = {i for block in blocks for i in block}
+        for row in facts:
+            i, meters, seconds = row['lap'], row['distance_m'], row['duration_s']
+            if i in assigned:
+                continue
+            if i < first:
+                key = 'stop_laps' if seconds >= 600 and meters/seconds < 1 else 'warmup_laps'
+            elif i > last and meters >= 800 and meters/seconds >= 2:
+                key = 'cooldown_laps'
+            else:
+                key = 'recovery_laps'
+            proposal[key].append(i)
+        return validate_lap_structure({'confidence':1, 'lap_structure':proposal}, facts)
+    except (KeyError, ValueError, TypeError, ZeroDivisionError, OverflowError):
+        return None
+
+
 def validate_lap_structure(data, facts):
     """No omitted/duplicate laps, invented reps, or running discarded as stops."""
     try:

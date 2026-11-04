@@ -411,3 +411,6 @@ Garmin C/D herkennen een volledige afwisseling van twee middelgrote repafstanden
 
 
 Garmin C/D kunnen een door AI voorgestelde lapindeling gebruiken voor lange tijdsintervallen met automatische splits en verschillende repduren. De AI verwijst naar originele lapnummers; de server controleert volledige dekking, unieke/toenemende reps, werk/herstelcontrast en nabijheid van hele minuten. Een geldig voorstel levert Distance en Time met dezelfde meetloads. Voorbeeld: drie doorlopende laps samen 8:02, gevolgd door 8:01 en vier circa 4-minutenreps. De bestaande AI-toestemming en vaste fallback blijven gelden.
+
+
+Duidelijke gemengde lange tijdsblokken worden ook lokaal voorgesteld: aaneengesloten snellere laps vormen één werkblok, langzame onderbrekingen herstel. Minstens twee verschillende tijdsgroepen zijn vereist. Dezelfde lapvalidator maakt Distance/Time-opties, onafhankelijk van AI-toestemming of beschikbaarheid. AI blijft beschikbaar voor interpretaties die deze vaste controle niet kan afleiden.

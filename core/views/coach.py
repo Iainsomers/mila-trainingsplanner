@@ -5863,8 +5863,10 @@ def garmin_type_c_ayc_view(request, model="C"):
     for session, result in zip(session_exercises, results):
         for part in result.get("parts") or []:
             watch_loads = type_a_watch_loads(session, athlete)
-            from core.watch_ai_structure import apply_lap_structure
-            structure = part.pop("validated_lap_structure", None)
+            from core.watch_ai_structure import apply_lap_structure, infer_lap_structure
+            facts = [{'lap':index, 'distance_m':load['meters'], 'duration_s':load['seconds'],
+                      'zone':'Z'+str(load.get('zone') or '')} for index, load in enumerate(watch_loads, 1)]
+            structure = part.pop("validated_lap_structure", None) or infer_lap_structure(facts)
             if structure and apply_lap_structure(part, watch_loads, structure):
                 continue
             fields = part.get("training_fields") if isinstance(part.get("training_fields"), dict) else {}

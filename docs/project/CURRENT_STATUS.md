@@ -285,3 +285,6 @@ AI-herkenning uitgebreid met gevalideerde bronlapgroepen voor Garmin C/D. De 18-
 
 
 Alternative Z2>Z3 telde volledig als de eerste zone. De actieve tijd wordt nu gelijk verdeeld over alle bereikzones in serverstats/AYC én Flex-browserberekening. Tests dekken het 20′ Z1 // 15×3′ Z2>Z3 // 10′ Z1-voorbeeld, losse segmenten, drie zones, dalende ranges en uitsluiting van loopkilometers.
+
+
+De 18-laptraining kreeg nog geen minutenkeuze omdat de eerdere uitbreiding van een geldig AI-antwoord afhing. Nu leidt lokale herkenning dezelfde gevalideerde lapgroepen af, waarna de volledige Garmin C- én D-endpointtest zonder AI-toestemming aantoonbaar Distance/Time teruggeeft met 2×8′ Z2 + 4×4′ Z2, WU 2000m en CD 1100m. De eerste rep blijft uit drie laps bestaan; alle bronmeters en seconden blijven identiek.

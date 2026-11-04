@@ -58,6 +58,16 @@ class WatchAIStructureTests(SimpleTestCase):
                     sum(l['meters'] for l in before if l['seconds'] <= l['meters']*.6))
         self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],[(l['meters'],l['seconds']) for l in before])
 
+    def test_local_inference_recognizes_actual_mixed_recording_without_ai(self):
+        from core.watch_ai_structure import infer_lap_structure
+        with patch('core.views.polar_raw.urlopen',side_effect=AssertionError('No AI request')):
+            result = infer_lap_structure(self.facts)
+        expected = validate_lap_structure(self.proposal,self.facts)
+        self.assertEqual(result,expected)
+        self.assertEqual(result['time_fields']['main'],"2×8' Z2 p91 + 4×4' Z2 p61")
+        no_zones = [dict(row, zone='Z1') for row in self.facts]
+        self.assertIsNone(infer_lap_structure(no_zones))
+
     def test_rejects_missing_duplicate_invented_and_noncontiguous_laps(self):
         mutations = [lambda p:p['lap_structure']['stop_laps'].clear(),
                      lambda p:p['lap_structure']['groups'][0]['reps'][0].append(5),
