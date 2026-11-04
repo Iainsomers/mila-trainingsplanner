@@ -153,6 +153,25 @@ class GarminCPushTests(TestCase):
         self.assertEqual(laps[0]["pausedDurationMillis"], 30000)
         self.assertEqual(laps[0]["timerDurationMillis"], 120000)
 
+    @patch('core.views.polar_raw._model_b_ai_description',return_value='')
+    def test_uploaded_fit_uses_fit_consent_in_both_previews(self, ai):
+        from core.models import GarminActivity
+        from core.views.garmin import CONSENT_VERSION
+        GarminActivity.objects.create(athlete=self.athlete,original_filename='coros.fit',
+            file_hash='coros-ai',activity_start=datetime.fromtimestamp(self.start,dt_timezone.utc),
+            parsed_data={'total_distance_m':1000,'total_elapsed_s':300,
+                'laps':[{'distance':1000,'elapsed_time':300}]})
+        for enabled in (False,True):
+            self.athlete.garmin_fit_upload_enabled = True
+            self.athlete.fit_ai_consent_at = timezone.now() if enabled else None
+            self.athlete.fit_ai_consent_version = CONSENT_VERSION
+            self.athlete.save()
+            ai.reset_mock()
+            for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+                self.client.force_login(self.coach)
+                self.assertEqual(self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'}).status_code,200)
+            self.assertEqual(ai.call_count,2 if enabled else 0)
+
     def test_timer_duration_matches_garmin_for_new_and_existing_single_lap(self):
         details = self.details()
         details['summary'] = dict(self.summary,distanceInMeters=17336,durationInSeconds=4503)

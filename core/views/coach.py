@@ -610,6 +610,19 @@ def garmin_uploads_view(request):
     if request.method == "POST":
         if not is_athlete_user and _active_coach_access_label(request) == "view":
             return HttpResponseForbidden("View-only coach access cannot upload files.")
+        if request.POST.get('action') == 'fit_ai_consent':
+            if not is_athlete_user or selected_athlete != athlete_user:
+                return HttpResponseForbidden("Only the athlete can change AI permission.")
+            from core.views.garmin import CONSENT_VERSION
+            now = timezone.now()
+            if request.POST.get('consent_fit_ai') == 'on':
+                selected_athlete.fit_ai_consent_at = now
+                selected_athlete.fit_ai_consent_version = CONSENT_VERSION
+                selected_athlete.fit_ai_withdrawn_at = None
+            else:
+                selected_athlete.fit_ai_withdrawn_at = now
+            selected_athlete.save(update_fields=['fit_ai_consent_at','fit_ai_consent_version','fit_ai_withdrawn_at'])
+            return redirect(reverse('garmin_uploads') + '?athlete=' + str(selected_athlete.pk))
         uploaded = request.FILES.get("fit_file")
         if selected_athlete is None:
             error = "Choose an athlete first."
@@ -648,7 +661,10 @@ def garmin_uploads_view(request):
             "id", "activity_start", "original_filename", "parsed_data", "uploaded_at"
         )[:100]
     ) if selected_athlete else []
+    from core.views.garmin import fit_ai_allowed
     return render(request, "core/garmin_uploads.html", {
+        "can_change_fit_ai": is_athlete_user,
+        "fit_ai_allowed": fit_ai_allowed(selected_athlete),
         "athletes": athletes,
         "selected_athlete": selected_athlete,
         "preview": preview,
@@ -5863,6 +5879,7 @@ def garmin_type_c_ayc_view(request, model="C"):
         if activity_start:
             activity_start = timezone.localtime(activity_start).isoformat()
         session = {
+            "is_fit_upload": isinstance(saved, GarminActivity),
             "name": saved.original_filename or "Garmin activity",
             "startTime": activity_start or human.get("activity_start", ""),
             "distanceMeters": distance_m,
@@ -5882,8 +5899,11 @@ def garmin_type_c_ayc_view(request, model="C"):
         })
 
     from .polar_raw import translate_model_b, type_a_watch_loads
-    from core.views.garmin import ai_allowed
-    results = translate_model_b(sessions, 5, athlete, allow_ai=ai_allowed(athlete), allow_lap_structure=True)
+    from core.views.garmin import ai_allowed, fit_ai_allowed
+    results = []
+    for session in sessions:
+        allowed = fit_ai_allowed(athlete) if session.get('is_fit_upload') else ai_allowed(athlete)
+        results.extend(translate_model_b([session], 5, athlete, allow_ai=allowed, allow_lap_structure=True))
     for session, result in zip(session_exercises, results):
         for part in result.get("parts") or []:
             watch_loads = type_a_watch_loads(session, athlete)

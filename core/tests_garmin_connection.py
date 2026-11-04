@@ -54,6 +54,34 @@ class GarminConnectionTests(TestCase):
         self.assertNotContains(self.client.get(reverse("dashboard")), 'id="garmin-heading"')
         self.assertEqual(self.begin().status_code, 403)
 
+    def test_fit_upload_consent_is_self_service_and_independent_of_garmin(self):
+        from core.views.garmin import fit_ai_allowed
+        self.athlete.garmin_fit_upload_enabled = True
+        self.athlete.save()
+        url = reverse('garmin_uploads')
+        page = self.client.get(url)
+        self.assertContains(page,'id="fit-ai-consent"')
+        self.assertNotContains(page,'id="fit-ai-consent" checked')
+        self.assertFalse(fit_ai_allowed(self.athlete))
+        self.client.post(url,{'action':'fit_ai_consent','athlete_id':self.athlete.pk,'consent_fit_ai':'on'})
+        self.assertTrue(fit_ai_allowed(self.athlete))
+        self.assertFalse(ai_allowed(self.athlete))
+        self.assertFalse(GarminConnection.objects.exists())
+        self.assertContains(self.client.get(url),'id="fit-ai-consent" checked')
+        self.client.force_login(self.coach)
+        self.assertNotContains(self.client.get(url),'id="fit-ai-consent"')
+        self.assertEqual(self.client.post(url,{'action':'fit_ai_consent','athlete_id':self.athlete.pk}).status_code,403)
+        self.assertTrue(fit_ai_allowed(self.athlete))
+        self.client.force_login(self.user)
+        self.client.post(url,{'action':'fit_ai_consent','athlete_id':self.athlete.pk})
+        self.assertFalse(fit_ai_allowed(self.athlete))
+        self.athlete.refresh_from_db()
+        self.assertIsNotNone(self.athlete.fit_ai_withdrawn_at)
+        self.athlete.garmin_fit_upload_enabled = False
+        self.athlete.save()
+        self.assertEqual(self.client.post(url,{'action':'fit_ai_consent','consent_fit_ai':'on'}).status_code,302)
+        self.assertFalse(fit_ai_allowed(self.athlete))
+
     def test_missing_data_consent_or_configuration_does_not_start_oauth(self):
         self.enable()
         response = self.client.post(reverse("garmin_connect"), {"consent_garmin_ai": "on"})

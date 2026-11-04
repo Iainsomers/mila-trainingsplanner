@@ -236,6 +236,13 @@ def ai_allowed(athlete):
     ).exists())
 
 
+def fit_ai_allowed(athlete):
+    """FIT consent is independent of Garmin OAuth and its withdrawal."""
+    return bool(athlete and Athlete.objects.filter(pk=athlete.pk,
+        garmin_fit_upload_enabled=True, fit_ai_consent_at__isnull=False,
+        fit_ai_withdrawn_at__isnull=True, fit_ai_consent_version=CONSENT_VERSION).exists())
+
+
 def revoke_connection(athlete):
     """Block locally first, then best-effort unregister with Garmin."""
     with transaction.atomic():
