@@ -783,7 +783,21 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
     }
     if strict_lap_structure:
         prompt['output_schema'] = {key:prompt['output_schema'][key] for key in ('lap_structure','confidence')}
-        prompt['task'] += ' Return the complete lap_structure schema only. If uncertain return confidence below 0.75. Do not use legacy sets/segments.'
+        prompt['task'] = (
+            'Identify the performed running workout using only these recorded laps. Return lap_structure and numeric confidence from 0 to 1. '
+            'Every original one-based lap number must appear exactly once in warmup_laps, cooldown_laps, recovery_laps, stop_laps or a work rep. '
+            'A work rep is a consecutive list of lap numbers, never crossing recovery. Groups and reps must be chronological. '
+            'For each group choose exactly one target: nominal target_meters (multiple of 50), or whole-minute target_seconds; omit or null the other. '
+            'Distance targets allow up to 8 percent GPS variation. Different pace zones and progressive speeds do not require separate groups. '
+            'Repeated work with slower recoveries is interval evidence. Automatic equal-distance splits without recovery are not. '
+            'If a longer recovery divides equal-size sets, use one group and set_start_laps containing the first work lap of every set, including the first rep. '
+            'Otherwise use an empty set_start_laps. Do not invent a set or discard a rep to make equal sets. '
+            'Running warmup/cooldown must average at least 2 m/s; classify slow transitions before/after work as recovery_laps. '
+            'Stop laps must be at least 600 seconds and slower than 1 m/s. Long incidental stops do not erase the surrounding workout structure. '
+            'Code derives counts and ordinary/set pause durations from source laps. No need to predict pause numbers. '
+            'Each group has 2-30 reps. Recovery between work reps must last 30-600 seconds, cover at most 600m and be slower than both neighbors. '
+            'Assess confidence in the observed structure, not why the athlete stopped. Do not invent missing laps or upgrade confidence to pass validation.'
+        )
     if not allow_lap_structure:
         prompt["output_schema"].pop("lap_structure", None)
         task = prompt["task"]
@@ -809,6 +823,14 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
         ],
     }).encode("utf-8")
+    if strict_lap_structure:
+        strict_body = json.loads(body)
+        strict_body['messages'][0]['content'] = (
+            'You interpret recorded running workouts. Return valid JSON with only lap_structure and confidence, '
+            'using the provided schema. Use original source lap IDs and measured evidence. '
+            'Do not use legacy sets/segments or discard inconvenient laps. Confidence must be a finite number from 0 to 1.'
+        )
+        body = json.dumps(strict_body).encode('utf-8')
     request = Request(
         "https://api.openai.com/v1/chat/completions", data=body,
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},

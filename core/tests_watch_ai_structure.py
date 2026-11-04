@@ -184,6 +184,8 @@ class WatchAIStructureTests(SimpleTestCase):
         self.assertNotIn('heart_rate',request.data.decode())
         prompt = json.loads(json.loads(request.data)['messages'][1]['content'])
         self.assertEqual(set(prompt['output_schema']), {'lap_structure','confidence'})
+        self.assertNotIn('legacy',prompt['task'])
+        self.assertNotIn('Use the legacy segments/sets schema',json.loads(request.data)['messages'][0]['content'])
 
     def test_ai_failures_are_distinguishable_without_exposing_service_response(self):
         from core.views.polar_raw import _model_b_ai_description
@@ -229,6 +231,13 @@ class WatchAIStructureTests(SimpleTestCase):
                 self.assertEqual(result,'')
                 self.assertEqual(diagnostics['status'],'rejected_structure')
                 self.assertIn('slower than 2 m/s',diagnostics['reason'])
+
+    def test_confidence_rejection_distinguishes_score_from_invalid_format(self):
+        for value, expected in ((.6,'0.60'),(1.5,'1.50'),('high','not a finite number'),(True,'not a finite number')):
+            proposal=deepcopy(self.proposal);proposal['confidence']=value
+            issues=[]
+            self.assertIsNone(validate_lap_structure(proposal,self.facts,issues=issues))
+            self.assertIn(expected,issues[0])
 
     def test_translation_keeps_validated_metadata_and_consent_skips_ai(self):
         from core.views.polar_raw import translate_model_b
