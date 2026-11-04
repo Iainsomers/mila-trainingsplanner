@@ -3050,6 +3050,14 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if len(photo_ids) + len(uploads) > 5:
         raise ValueError("You can attach up to 5 photos per training.")
     prepared_photos = [prepare_photo(upload) for upload in uploads]
+    source_strength = source_slot.segments.filter(type="CORE2").first() if source_slot else None
+    strength_photo_ids = [key for key in getattr(source_strength, "photo_ids", []) or []
+                          if key not in request.POST.getlist("remove_strength_photo")]
+    strength_uploads = request.FILES.getlist("strength_photos")
+    if len(photo_ids) + len(uploads) + len(strength_photo_ids) + len(strength_uploads) > 5:
+        raise ValueError("You can attach up to 5 photos per training.")
+    prepared_strength_photos = [prepare_photo(upload) for upload in strength_uploads]
+
 
     watch_sources = {"watch_a", "watch_b", "watch_c", "watch_d"}
     original_source = str(getattr(source_slot, "source", "") or "")
@@ -3101,6 +3109,10 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         photo = TrainingPhoto.objects.create(owner=override_slot.plan.owner, **prepared)
         photo_ids.append(str(photo.pk))
 
+    for prepared in prepared_strength_photos:
+        photo = TrainingPhoto.objects.create(owner=override_slot.plan.owner, **prepared)
+        strength_photo_ids.append(str(photo.pk))
+
     fields = [
         ("WU", request.POST.get("wu_text", ""), "1"),
         ("MOB", request.POST.get("mob_text", ""), "1"),
@@ -3120,7 +3132,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             .first()
         )
 
-    has_field_text = any((value or "").strip() for _, value, _ in fields) or bool(selected_standard_strength or photo_ids)
+    has_field_text = any((value or "").strip() for _, value, _ in fields) or bool(selected_standard_strength or photo_ids or strength_photo_ids)
 
     if not has_field_text and (slot_text or "").strip():
         fields = [("CORE", slot_text, "1")]
@@ -3145,11 +3157,11 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
     for segment_type, value, default_zone in fields:
         raw_text = (value or "").strip()
-        if not raw_text and not (segment_type == "MOB" and (selected_standard_strength or photo_ids)):
+        if not raw_text and not (segment_type == "MOB" and (selected_standard_strength or photo_ids)) and not (segment_type == "CORE2" and strength_photo_ids):
             continue
 
         if segment_type == "CORE2":
-            TrainingSegment.objects.create(slot=override_slot, order=order, type="CORE2", text=raw_text, zone="")
+            TrainingSegment.objects.create(slot=override_slot, order=order, type="CORE2", text=raw_text, zone="", photo_ids=strength_photo_ids)
             order += 1
             continue
 

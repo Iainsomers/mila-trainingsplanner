@@ -3442,9 +3442,11 @@
       formData.append("standard_strength_id", strengthField.value || "");
     }
 
-    var photoField = form.querySelector('[name="mob_photos"]');
-    Array.from(photoField ? photoField.files : []).forEach(function(file) { formData.append("mob_photos", file); });
-    form.querySelectorAll('[name="remove_mob_photo"]:checked').forEach(function(field) { formData.append(field.name, field.value); });
+    ["mob_photos", "strength_photos"].forEach(function(name) {
+      var photoField = form.querySelector('[name="' + name + '"]');
+      Array.from(photoField ? photoField.files : []).forEach(function(file) { formData.append(name, file); });
+    });
+    form.querySelectorAll('[name="remove_mob_photo"]:checked, [name="remove_strength_photo"]:checked').forEach(function(field) { formData.append(field.name, field.value); });
 
     fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
       method: "POST",

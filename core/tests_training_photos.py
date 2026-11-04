@@ -153,3 +153,78 @@ class TrainingPhotoTests(TestCase):
         self.assertEqual(self.client.get(copied.photo_items[0]['url']).status_code, 200)
         self.client.post(self.url(), {'mob_text':'Strength', 'remove_mob_photo':seg.photo_ids})
         self.assertEqual(self.client.get(copied.photo_items[0]['url']).status_code, 200)
+
+    def test_strength_upload_is_default_and_primary_buttons_precede_standards(self):
+        response=self.client.post(self.url(),{'core2_text':'Squats','strength_photos':self.photo()})
+        self.assertEqual(response.status_code,200)
+        strength=self.slot.segments.get(type='CORE2')
+        self.assertEqual(len(strength.photo_ids),1)
+        self.assertFalse(self.slot.segments.filter(type='MOB').exists())
+        self.assertEqual(strength.zone,'')
+        page=self.client.get(self.url())
+        html=page.content.decode()
+        self.assertContains(page,'name="strength_photos"')
+        self.assertNotContains(page,'name="mob_photos"')
+        self.assertLess(html.index('class="modal-footer slot-main-actions"'),html.index('<b>Save standard</b>'))
+        self.assertContains(page,strength.photo_items[0]['url'])
+        self.assertEqual(self.client.get(strength.photo_items[0]['url']).status_code,200)
+        self.client.post(self.url(),{'core2_text':'Updated squats'})
+        self.assertEqual(self.slot.segments.get(type='CORE2').photo_ids,strength.photo_ids)
+        self.client.post(self.url(),{'core2_text':'Updated squats','remove_strength_photo':strength.photo_ids})
+        self.assertEqual(self.slot.segments.get(type='CORE2').photo_ids,[])
+
+    def test_strength_photo_only_session_renders_and_keeps_private_access(self):
+        self.client.post(self.url(),{'strength_photos':self.photo()})
+        segment=self.slot.segments.get(type='CORE2')
+        self.assertEqual(segment.text,'')
+        self.assertEqual(len(segment.photo_ids),1)
+        from django.template.loader import render_to_string
+        html=render_to_string('core/partials/segment_display.html',{'seg':segment})
+        self.assertIn(segment.photo_items[0]['url'],html)
+        self.client.force_login(self.login)
+        self.assertEqual(self.client.get(segment.photo_items[0]['url']).status_code,200)
+        stranger=get_user_model().objects.create_user(username='strength-photo-outsider')
+        self.client.force_login(stranger)
+        self.assertEqual(self.client.get(segment.photo_items[0]['url']).status_code,404)
+
+    def test_direct_ayc_strength_photo_does_not_move_or_drop_legacy_mob_photos(self):
+        original=self.upload()
+        response=self.client.post('/athlete/year/',{'athlete':self.athlete.id,'plan':self.plan.id,'date':self.day.isoformat(),
+               'slot_index':1,'slot_text':'','mob_text':'Existing drills','core2_text':'Gym notes','strength_photos':self.photo()})
+        self.assertIn(response.status_code,[200,204])
+        own=TrainingSlot.objects.get(athlete=self.athlete,date=self.day,slot_index=1)
+        self.assertEqual(own.segments.get(type='MOB').photo_ids,original.photo_ids)
+        strength=own.segments.get(type='CORE2')
+        self.assertEqual(len(strength.photo_ids),1)
+        self.assertNotEqual(strength.photo_ids,original.photo_ids)
+        url=strength.photo_items[0]['url']
+        self.client.post('/athlete/year/',{'athlete':self.athlete.id,'plan':self.plan.id,'date':self.day.isoformat(),
+               'slot_index':1,'slot_text':'','mob_text':'Existing drills','core2_text':'Gym notes'})
+        self.assertEqual(self.client.get(url).status_code,200)
+        self.assertEqual(self.slot.segments.get(type='MOB').photo_ids,original.photo_ids)
+
+    def test_strength_photo_limit_counts_legacy_mob_and_rejects_bad_uploads(self):
+        original=self.upload()
+        count=TrainingPhoto.objects.count()
+        response=self.client.post(self.url(),{'core2_text':'Should not save','strength_photos':[self.photo() for _ in range(5)]})
+        self.assertEqual(response['HX-Retarget'],'#strengthPhotoError')
+        self.assertEqual(TrainingPhoto.objects.count(),count)
+        self.assertEqual(self.slot.segments.get(type='MOB').photo_ids,original.photo_ids)
+        bad=SimpleUploadedFile('bad.png',b'not an image','image/png')
+        response=self.client.post(self.url(),{'core2_text':'Should not save','strength_photos':bad})
+        self.assertEqual(response['HX-Retarget'],'#strengthPhotoError')
+        self.assertFalse(self.slot.segments.filter(type='CORE2').exists())
+
+    def test_flex_strength_upload_and_copy_keep_photo_in_strength(self):
+        response=self.client.post(self.url()+f'&athlete={self.athlete.id}&source=flex',{'core2_text':'Gym','strength_photos':self.photo()})
+        self.assertEqual(response.status_code,200)
+        own=TrainingSlot.objects.get(athlete=self.athlete,date=self.day,slot_index=1)
+        segment=own.segments.get(type='CORE2')
+        copy=f'/slot-copy/{self.day.year}/{self.day.month}/{self.day.day}/1/?plan={own.plan_id}&athlete={self.athlete.id}&source=flex'
+        self.assertEqual(self.client.post(copy).status_code,200)
+        target=self.day+timedelta(days=1)
+        paste=f'/slot-paste/{target.year}/{target.month}/{target.day}/1/?plan={own.plan_id}&athlete={self.athlete.id}&source=flex'
+        self.assertEqual(self.client.post(paste).status_code,200)
+        copied=TrainingSlot.objects.get(plan=own.plan,athlete=self.athlete,date=target,slot_index=1).segments.get(type='CORE2')
+        self.assertEqual(copied.photo_ids,segment.photo_ids)
+        self.assertEqual(self.client.get(copied.photo_items[0]['url']).status_code,200)

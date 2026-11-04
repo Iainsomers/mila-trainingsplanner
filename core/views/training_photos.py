@@ -47,7 +47,7 @@ def training_photo(request, segment_id, photo_id):
 @require_GET
 def training_slot_photo(request, slot_id, photo_id):
     slot = get_object_or_404(TrainingSlot.objects.select_related("plan"), pk=slot_id)
-    if not any(str(photo_id) in segment.photo_ids for segment in slot.segments.filter(type="MOB")):
+    if not any(str(photo_id) in segment.photo_ids for segment in slot.segments.filter(type__in=("MOB", "CORE2"))):
         raise Http404
     return _serve_photo(request, slot, photo_id)
 

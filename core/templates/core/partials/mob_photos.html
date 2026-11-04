@@ -2,9 +2,9 @@
   {% for photo in mob_photos %}
     <div class="d-flex flex-column align-items-start">
       <a href="{{ photo.url }}" target="_blank" rel="noopener" title="Open training photo" onclick="event.stopPropagation();">
-        <img src="{{ photo.url }}?thumb=1" alt="Mob/Tech training photo" loading="lazy" style="width:64px;height:64px;object-fit:contain;border:1px solid #dee2e6;border-radius:4px;background:white;">
+        <img src="{{ photo.url }}?thumb=1" alt="Training photo" loading="lazy" style="width:64px;height:64px;object-fit:contain;border:1px solid #dee2e6;border-radius:4px;background:white;">
       </a>
-      {% if editable %}<label class="small"><input type="checkbox" name="remove_mob_photo" value="{{ photo.id }}"> Remove</label>{% endif %}
+      {% if editable %}<label class="small"><input type="checkbox" name="{{ remove_name|default:'remove_mob_photo' }}" value="{{ photo.id }}"> Remove</label>{% endif %}
     </div>
   {% endfor %}
 </div>

@@ -1516,6 +1516,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     visible_mob = visible_slot.segments.filter(type="MOB").first() if visible_slot else None
     mob_photos = getattr(visible_mob, "photo_items", [])
+    visible_strength = visible_slot.segments.filter(type="CORE2").first() if visible_slot else None
+    strength_photos = getattr(visible_strength, "photo_items", [])
     if request.method == "GET":
         wu_seg = visible_slot.segments.filter(type="WU").order_by("order", "id").first() if visible_slot else None
         mob_seg = visible_slot.segments.filter(type="MOB").order_by("order", "id").first() if visible_slot else None
@@ -1541,7 +1543,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
                 "wu_text": (wu_seg.text if (wu_seg and tb_show_wu) else ""),
                 "mob_text": (mob_seg.text if (mob_seg and tb_show_mob) else ""),
-                "mob_photos": mob_photos,
+                "mob_photos": mob_photos, "strength_photos": strength_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": str(getattr(mob_seg, "standard_strength_program_id", "") or ""),
                 "sprint_text": (sprint_seg.text if (sprint_seg and tb_show_sprint) else ""),
@@ -1704,15 +1706,20 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     kept_photo_ids = list(getattr(visible_mob, "photo_ids", []) or [])
     removed = set(request.POST.getlist("remove_mob_photo"))
     kept_photo_ids = [key for key in kept_photo_ids if key not in removed]
-    prepared_photos = []
-    if tb_show_mob and action not in {"save_template", "load_template"}:
-        uploads = request.FILES.getlist("mob_photos")
+    strength_photo_ids = [key for key in getattr(visible_strength, "photo_ids", []) or []
+                          if key not in request.POST.getlist("remove_strength_photo")]
+    prepared_photos, prepared_strength_photos = [], []
+    if action not in {"save_template", "load_template"}:
+        uploads = request.FILES.getlist("mob_photos") if tb_show_mob else []
+        strength_uploads = request.FILES.getlist("strength_photos") if tb_show_core2 else []
         try:
-            if len(kept_photo_ids) + len(uploads) > 5:
+            if len(kept_photo_ids) + len(strength_photo_ids) + len(uploads) + len(strength_uploads) > 5:
                 raise ValueError("You can attach up to 5 photos per training.")
             prepared_photos = [prepare_photo(upload) for upload in uploads]
+            prepared_strength_photos = [prepare_photo(upload) for upload in strength_uploads]
         except ValueError as error:
-            return HttpResponse(escape(str(error)), headers={"HX-Retarget":"#mobPhotoError", "HX-Reswap":"innerHTML"})
+            target = "#strengthPhotoError" if strength_uploads else "#mobPhotoError"
+            return HttpResponse(escape(str(error)), headers={"HX-Retarget":target, "HX-Reswap":"innerHTML"})
 
     # POST: maak slot (base/override)
     original_watch_plan = None
@@ -1778,7 +1785,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                     "tb_show_cd": tb_show_cd,
 
                     "wu_text": wu_text,
-                    "mob_text": mob_text, "mob_photos": mob_photos,
+                    "mob_text": mob_text, "mob_photos": mob_photos, "strength_photos": strength_photos,
                     "standard_strength_programs": _standard_strength_programs_for_user(request),
                     "selected_standard_strength_id": selected_standard_strength_id,
                     "sprint_text": sprint_text,
@@ -1835,7 +1842,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "tb_show_cd": tb_show_cd,
 
                 "wu_text": wu_text,
-                "mob_text": mob_text, "mob_photos": mob_photos,
+                "mob_text": mob_text, "mob_photos": mob_photos, "strength_photos": strength_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
@@ -1914,7 +1921,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # validatie: Core, Mob/Tech of Alt moet gevuld zijn
     has_mob_content = bool(mob_text or selected_standard_strength or kept_photo_ids or prepared_photos)
 
-    if not core_text and not core2_text and not has_mob_content and not alt_text:
+    has_strength_content = bool(core2_text or strength_photo_ids or prepared_strength_photos)
+    if not core_text and not has_strength_content and not has_mob_content and not alt_text:
         return render(
             request,
             "core/partials/slot_modal.html",
@@ -1930,7 +1938,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "tb_show_cd": tb_show_cd,
 
                 "wu_text": wu_text,
-                "mob_text": mob_text, "mob_photos": mob_photos,
+                "mob_text": mob_text, "mob_photos": mob_photos, "strength_photos": strength_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
@@ -2008,7 +2016,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "tb_show_cd": tb_show_cd,
 
                 "wu_text": wu_text,
-                "mob_text": mob_text, "mob_photos": mob_photos,
+                "mob_text": mob_text, "mob_photos": mob_photos, "strength_photos": strength_photos,
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": selected_standard_strength_id,
                 "sprint_text": sprint_text,
@@ -2188,8 +2196,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
 
 
-    # Save CORE2
-    if core2_text:
+    # Save Strength, including photo-only sessions.
+    if has_strength_content:
         if core2_seg:
             core2_seg.text = core2_text
             core2_seg.order = next_followup_order
@@ -2197,6 +2205,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             core2_seg = slot.segments.create(type="CORE2", text=core2_text, order=next_followup_order)
         from core.strength import clear_strength_metrics
         clear_strength_metrics(core2_seg)
+        for prepared in prepared_strength_photos:
+            photo = TrainingPhoto.objects.create(owner=selected_plan.owner, **prepared)
+            strength_photo_ids.append(str(photo.pk))
+        core2_seg.photo_ids = strength_photo_ids
         core2_seg.parsed_at = now
         core2_seg.save()
     else:

@@ -1175,7 +1175,7 @@ class TrainingSegment(models.Model):
 
     def clean(self):
         super().clean()
-        if self.type in ("CORE", "CORE2", "ALT") and not (self.text or "").strip():
+        if self.type in ("CORE", "CORE2", "ALT") and not (self.text or "").strip() and not (self.type == "CORE2" and self.photo_ids):
             raise ValidationError("This segment must have text, for example '6×1000m' or an alternative.")
 
 

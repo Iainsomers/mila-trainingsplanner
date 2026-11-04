@@ -232,7 +232,7 @@ Stats-weekbalken tonen Z1 onderaan gevolgd door Z2–Z6 in de AYC-zonekleuren. E
 DCO Training gebruikt dezelfde gedeelde pillenkleuring als Flex Planner. Progressieve zones (zoals z2>z3), meerdere zones binnen samengestelde reps en T-bereiken krijgen dezelfde diagonale, gelijk verdeelde kleurvlakken. Gewone éénzonepillen behouden hun bestaande achtergrond. Dit geldt voor AM/PM, mobiel en de printweergave.
 
 
-Mob/Tech-foto’s: compacte Add photos-knop, maximaal vijf, thumbnails van 64px onder het tekstveld. De browser biedt foto maken/kiezen waar ondersteund. Iedere bestaande thumbnail heeft bij bewerken een Remove-vinkje; wijzigingen worden met Save opgeslagen. Klikken opent de grote foto met browserzoom. Dezelfde thumbnails staan bij Mob/Tech in de trainingsweergaven en DCO; ze stoppen doorklikken op de achterliggende trainingscel. Bestandsfouten verschijnen bij het veld.
+Trainingsfoto’s: compacte Add photos-knop naast de Strength-kop, maximaal vijf in totaal, thumbnails van 64px onder het Strength-tekstveld. De browser biedt foto maken/kiezen waar ondersteund. Iedere bestaande thumbnail heeft bij bewerken een Remove-vinkje; wijzigingen worden met Save opgeslagen. Klikken opent de grote foto met browserzoom. Dezelfde thumbnails staan bij Strength (of bij het oorspronkelijke Mob/Tech-segment voor bestaande foto’s) in de trainingsweergaven en DCO; ze stoppen doorklikken op de achterliggende trainingscel. Bestandsfouten verschijnen bij het veld.
 
 
 Alternative-weektotalen in AYC en de live Flex-telling behouden halve minuten bij progressieve zones, met maximaal één decimaal en zonder overbodige .0. De bestaande meerzonekleuren blijven van toepassing.
@@ -247,3 +247,6 @@ Injury/Issue Overview heeft naast de statusreeks een Comments coaches-cel met de
 Strength (CORE2) is een vrij tekstveld zonder zoneplicht en zonder parse-feedback. Het gedeelde formulier toont alle segmenten onder elkaar; de volgorde is per training instelbaar, ook mobiel. De trainingsweergave volgt de opgeslagen segmentvolgorde; zonder aangepaste volgorde geldt WU, Mob/Tech, Strength, Sprint, Main, Alternative, CD. Strength-tekst heeft geen hardloopzonekleur, richttempo of automatisch voorvoegsel in de trainingsweergave. Het formulierveld blijft Strength heten.
 
 Trainingbuilder: één kolom op desktop en mobiel. Naast elke segmentkop staan ↑/↓ en een sleepgreep; de pijltjes aan de boven-/ondergrens zijn uitgeschakeld. Read-only-velden hebben geen verplaatsknoppen. De modal kan verticaal scrollen en de Save-bediening blijft mobiel onderaan beschikbaar. Ook de trainingscellen tonen elk segment op een eigen compacte regel in de gekozen volgorde.
+
+
+De hoofdknoppen Save/Cancel (en Delete/Reset waar beschikbaar) staan in een vaste footer buiten het scrollbare veldgedeelte, op desktop én mobiel. Save/Load standard staat daaronder helemaal onderaan de modal. Alle knoppen blijven deel van hetzelfde formulier, zodat HTMX en AYC dezelfde opgeslagen velden blijven gebruiken.

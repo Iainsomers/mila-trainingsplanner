@@ -63,6 +63,13 @@
         #slotModal .segment-dragging { opacity: .45; }
         #slotModal .modal-content { max-height: 95dvh; }
         #slotModal .modal-body { overflow-y: auto; }
+        #slotModal .slot-training-form { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden; }
+        #slotModal .slot-main-actions { flex:0 0 auto; padding:.45rem .75rem; }
+        #slotModal .slot-main-actions .compact-actions { position:static; margin:0; padding:0; border:0; width:100%; }
+        #slotModal .slot-training-form > .compact-template-box { flex:0 0 auto; margin:.2rem .75rem .55rem; }
+        #slotModal .strength-field-heading { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; padding-right:100px; min-height:30px; margin-bottom:.2rem; }
+        #slotModal .strength-photo-upload { font-size:.75rem; padding:.1rem .4rem; }
+        @media(max-width:575.98px) { #slotModal .strength-field-heading .text-muted { display:none; } }
       </style>
 
       <div class="modal-header py-2">
@@ -81,8 +88,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
-      <div class="modal-body py-2">
-            <form
+            <form class="slot-training-form"
               method="post"
               enctype="multipart/form-data"
               hx-encoding="multipart/form-data"
@@ -91,6 +97,7 @@
               hx-swap="innerHTML"
               data-watch-slot="{{ is_watch_slot|yesno:'1,0' }}"
             >
+      <div class="modal-body py-2">
               {% csrf_token %}
               <input type="hidden" name="segment_order" value="{% firstof segment_order_value request.POST.segment_order "WU,MOB,CORE2,SPR,CORE,ALT,CD" %}">
 
@@ -137,16 +144,10 @@
                 <textarea name="mob_text" class="form-control" rows="2"
                   placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ mob_text }}</textarea>
                 {% if not is_athlete_year_calendar or athlete_year_can_edit_training %}
-                  <label class="btn btn-sm btn-outline-secondary mt-1 mb-0">
-                    📷 Add photos
-                    <input type="file" name="mob_photos" accept="image/jpeg,image/png,image/webp" multiple class="visually-hidden" onchange="window.milaPhotoPreview(this)">
-                  </label>
-                  <span class="small text-muted">Up to 5 photos · camera or library</span>
                   {% include "core/partials/mob_photos.html" with editable=True %}
                 {% else %}
                   {% include "core/partials/mob_photos.html" with editable=False %}
                 {% endif %}
-                <div data-photo-preview class="d-flex flex-wrap gap-2 mt-1"></div>
                 <div id="mobPhotoError" class="small text-danger" role="status" aria-live="polite"></div>
 
               </div>
@@ -159,9 +160,24 @@
                 {% endif %}
 
                 <div class="mb-2 compact-field compact-field-wide">
-                  <label class="form-label"><b>Strength</b></label>
+                  <div class="strength-field-heading">
+                    <label class="form-label mb-0"><b>Strength</b></label>
+                    {% if not is_athlete_year_calendar or athlete_year_can_edit_training %}
+                    <label class="btn btn-sm btn-outline-secondary mb-0 strength-photo-upload">
+                      📷 Add photos
+                      <input type="file" name="strength_photos" accept="image/jpeg,image/png,image/webp" multiple class="visually-hidden" onchange="window.milaPhotoPreview(this)">
+                    </label><span class="small text-muted">Up to 5 photos · camera or library</span>
+                    {% endif %}
+                  </div>
                   <textarea name="core2_text" class="form-control" rows="2"
                     placeholder=""{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} readonly{% endif %}>{{ core2_text }}</textarea>
+                  {% if not is_athlete_year_calendar or athlete_year_can_edit_training %}
+                    {% include "core/partials/mob_photos.html" with mob_photos=strength_photos remove_name="remove_strength_photo" editable=True %}
+                  {% else %}
+                    {% include "core/partials/mob_photos.html" with mob_photos=strength_photos editable=False %}
+                  {% endif %}
+                  <div data-photo-preview class="d-flex flex-wrap gap-2 mt-1"></div>
+                  <div id="strengthPhotoError" class="small text-danger" role="status" aria-live="polite"></div>
 
                   {% if core2_feedback %}
                     <div class="small compact-feedback {% if core2_ok %}text-success{% else %}text-danger{% endif %}">
@@ -241,6 +257,51 @@
 
               </div>
 
+
+      </div>
+      <div class="modal-footer slot-main-actions">
+              <div class="d-flex justify-content-end gap-2 compact-actions">
+                {% if is_athlete_year_calendar and not athlete_year_can_edit_training %}
+                  <span class="small text-secondary me-auto align-self-center">Future training can only be edited by your coach.</span>
+                {% endif %}
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
+                  Cancel
+                </button>
+
+                {% if selected_athlete and selected_plan and is_flex_source %}
+                  <button
+                    type="submit"
+                    class="btn btn-sm btn-outline-dark"
+                    name="action"
+                    value="reset_to_plan"
+                  >
+                    Reset to plan
+                  </button>
+                {% endif %}
+
+                {% if not is_athlete_year_calendar %}
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-outline-danger"
+                  name="action"
+                  value="delete"
+                >
+                  {% if selected_athlete %}
+                    Clear
+                  {% else %}
+                    Delete
+                  {% endif %}
+                </button>
+                {% endif %}
+
+                {% if not is_athlete_year_calendar or athlete_year_can_edit_training %}
+                  <button type="submit" class="btn btn-sm btn-primary">
+                    Save
+                  </button>
+                {% endif %}
+              </div>
+
+      </div>
               {% if not is_athlete_year_calendar %}
               <div class="border rounded compact-template-box">
                 <div class="compact-template-grid">
@@ -291,48 +352,7 @@
 
               {% endif %}
 
-              <div class="d-flex justify-content-end gap-2 compact-actions">
-                {% if is_athlete_year_calendar and not athlete_year_can_edit_training %}
-                  <span class="small text-secondary me-auto align-self-center">Future training can only be edited by your coach.</span>
-                {% endif %}
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
-                  Cancel
-                </button>
-
-                {% if selected_athlete and selected_plan and is_flex_source %}
-                  <button
-                    type="submit"
-                    class="btn btn-sm btn-outline-dark"
-                    name="action"
-                    value="reset_to_plan"
-                  >
-                    Reset to plan
-                  </button>
-                {% endif %}
-
-                {% if not is_athlete_year_calendar %}
-                <button
-                  type="submit"
-                  class="btn btn-sm btn-outline-danger"
-                  name="action"
-                  value="delete"
-                >
-                  {% if selected_athlete %}
-                    Clear
-                  {% else %}
-                    Delete
-                  {% endif %}
-                </button>
-                {% endif %}
-
-                {% if not is_athlete_year_calendar or athlete_year_can_edit_training %}
-                  <button type="submit" class="btn btn-sm btn-primary">
-                    Save
-                  </button>
-                {% endif %}
-              </div>
             </form>
-      </div>
 
     </div>
   </div>
@@ -393,7 +413,8 @@
       }
       tools.appendChild(button);
     }
-    label.before(tools);
+    const heading = card.querySelector('.strength-field-heading');
+    if (heading) heading.before(tools); else label.before(tools);
     card.addEventListener('dragover', event => { if (dragged) event.preventDefault(); });
     card.addEventListener('drop', event => {
       if (!dragged || dragged === card) return;
