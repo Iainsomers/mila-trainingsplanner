@@ -2586,7 +2586,7 @@
         if (aiMessages[part.ai_structure_status]) {
           var aiStatus = document.createElement("div");
           aiStatus.className = "small text-muted mb-2";
-          aiStatus.textContent = aiMessages[part.ai_structure_status];
+          aiStatus.textContent = aiMessages[part.ai_structure_status] + (part.ai_structure_reason ? " " + part.ai_structure_reason : "");
           box.appendChild(aiStatus);
         }
         if (part.description) {

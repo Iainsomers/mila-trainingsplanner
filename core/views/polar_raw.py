@@ -831,8 +831,30 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         if not allow_lap_structure:
             return ""
         from core.watch_ai_structure import validate_lap_structure, ValidatedDescription
-        structure = validate_lap_structure(data, facts)
+        issues = []
+        structure = validate_lap_structure(data, facts, issues=issues)
+        # A bounded repair is still an AI proposal, never a local pattern fix.
+        # Only server-owned validation feedback and the existing anonymous lap
+        # facts go back to the same service; do not forward raw error bodies.
+        if not structure and strict_lap_structure and data.get('confidence', 0) != 0:
+            repair_body = json.loads(body)
+            repair_body['messages'].append({'role':'user','content':
+                'Your lap proposal failed validation: ' + '; '.join(issues) +
+                ' Reconsider the original lap facts and return one corrected complete lap_structure. '
+                'Assign every lap once, including slow transitions. Do not change measurements. '
+                'Return confidence below 0.75 if the evidence is insufficient.'})
+            repair_request = Request(request.full_url, data=json.dumps(repair_body).encode('utf-8'),
+                headers={'Authorization':f'Bearer {api_key}','Content-Type':'application/json'}, method='POST')
+            try:
+                with urlopen(repair_request, timeout=15) as response:
+                    repaired = json.loads(json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content'])
+                issues = []
+                structure = validate_lap_structure(repaired, facts, issues=issues)
+            except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError, IndexError, TypeError):
+                pass
         diagnostics["status"] = "applied" if structure else "rejected_structure"
+        if not structure and issues:
+            diagnostics['reason'] = issues[0]
         return ValidatedDescription(structure) if structure else ""
     if strict_lap_structure:
         return ""
@@ -1141,6 +1163,7 @@ def translate_model_b(payload, interval, athlete=None, *, allow_ai=True, allow_l
                 description = (_model_b_ai_description(manual_laps, athlete, allow_lap_structure=allow_lap_structure, diagnostics=diagnostics, strict_lap_structure=allow_lap_structure) if allow_ai else "") or type_b_description(manual_laps, athlete)
                 if allow_lap_structure:
                     result_parts[result_index]['ai_structure_status'] = diagnostics['status']
+                    result_parts[result_index]['ai_structure_reason'] = diagnostics.get('reason','')
                 if description:
                     if getattr(description, "structure", None):
                         result_parts[result_index]["validated_lap_structure"] = description.structure
