@@ -37,6 +37,35 @@ class WatchOriginalPlanTests(TestCase):
         self.assertEqual(slot.source,"watch_d")
         self.assertEqual(slot.watch_loads,loads)
 
+    def test_mixed_minutes_keep_all_six_clock_reps_after_import(self):
+        from core.tests_watch_ai_structure import WatchAIStructureTests
+        from core.watch_ai_structure import validate_lap_structure, apply_lap_structure
+        from core.watch_processing import processed_main_reps
+
+        fixture = WatchAIStructureTests()
+        fixture.setUp()
+        part = {}
+        apply_lap_structure(part, fixture.loads,
+                            validate_lap_structure(fixture.proposal, fixture.facts))
+        alternative = part['training_alternatives'][1]
+        for index, source in ((1, 'watch_c'), (2, 'watch_d')):
+            response = self.client.post(self.url(index), {
+                'core_text': alternative['training_fields']['main'],
+                'watch_origin': source,
+                'watch_loads': json.dumps(alternative['watch_loads']),
+            })
+            self.assertEqual(response.status_code, 200)
+            slot = TrainingSlot.objects.get(plan=self.plan, athlete=self.athlete,
+                                            date=self.day, slot_index=index)
+            for candidate in (slot, _clone_slot_for_display(slot)):
+                self.assertEqual([r['measured_seconds'] for r in processed_main_reps(candidate)],
+                                 [482, 481, 253, 240, 241, 242])
+            # Existing imports may have retained both blocks in one record.
+            slot.segments.all().delete()
+            slot.segments.create(type='CORE', text="2×8' Z2 p91 - 4×4' Z2 p61", order=3)
+            self.assertEqual([r['measured_seconds'] for r in processed_main_reps(slot)],
+                             [482, 481, 253, 240, 241, 242])
+
     def original(self, index=2):
         slot = TrainingSlot.objects.create(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=index)
         slot.segments.create(type="WU", text="1500m z1", order=0, distance_m=1500)

@@ -225,7 +225,20 @@ def processed_main_reps(slot):
         segments = [seg for seg in slot.segments.all() if str(getattr(seg, "type", "")).upper() == "CORE"]
         segments.sort(key=lambda seg: (getattr(seg, "order", 0), getattr(seg, "id", 0) or 0))
 
+    # Older imports can retain multiple blocks in one CORE record. Interpret
+    # those with the same grammar as newly saved and displayed Main blocks.
+    from core.training_text import split_main_segments
+    from core.views.calendar import _virtual_segment_from_text
+
+    expanded_segments = []
     for segment in segments:
+        parts = split_main_segments(segment.text)
+        expanded_segments.extend(
+            [_virtual_segment_from_text("CORE", part) for part in parts]
+            if len(parts) > 1 else [segment]
+        )
+
+    for segment in expanded_segments:
         structured = structured_segment_loads(segment, raw_loads)
         if structured is not None:
             for load in structured:

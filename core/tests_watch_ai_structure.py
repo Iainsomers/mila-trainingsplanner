@@ -12,6 +12,13 @@ from core.views.calendar import _virtual_segment_from_text, _ayc_slot_loads_for_
 
 
 class WatchAIStructureTests(SimpleTestCase):
+    def test_minute_block_separator_preserves_nested_sets_zones_and_paces(self):
+        from core.training_text import split_main_segments
+        self.assertEqual(split_main_segments("2×8′ Z2 p91 - 4×4′ Z2 p61"),
+                         ["2×8′ Z2 p91", "4×4′ Z2 p61"])
+        for text in ("2*(8′-4′) Z2-Z3", "2×8′ Z2-Z3 (3:32-->3:25 min/km)"):
+            self.assertEqual(split_main_segments(text), [text])
+
     def setUp(self):
         values = [(1005.4,301),(1001.21,286),(946.95,13681),(1008.92,215),
                   (996.954,211),(272.28,56),(126.39,91),(2347.52,481),

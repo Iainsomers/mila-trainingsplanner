@@ -25,7 +25,7 @@ def split_main_segments(text):
     A plus, double slash or hyphen inside parentheses belongs to the
     repeated-set expression and is therefore preserved as part of that
     expression.  At the top level a hyphen is a separator only when its right
-    side starts a new distance/repetition expression; this keeps text such as
+    side starts a new distance or minutes/repetition expression; this keeps text such as
     ``Z1-Z2`` and time ranges intact.
     """
     value = str(text or "")
@@ -63,12 +63,12 @@ def split_main_segments(text):
             left = value[start:index].strip()
             right = value[index + 1:].lstrip()
             right_starts_distance = re.match(
-                r"(?:\d+\s*(?:x|\*|×)\s*)?\d+(?:[.,]\d+)?\s*(?:km|k|m)\b",
+                r"(?:\d+\s*(?:x|\*|×)\s*)?\d+(?:[.,]\d+)?\s*(?:(?:km|k|m)\b|['′])",
                 right,
                 re.IGNORECASE,
             )
             left_has_distance = re.search(
-                r"\d+(?:[.,]\d+)?\s*(?:km|k|m)\b",
+                r"\d+(?:[.,]\d+)?\s*(?:(?:km|k|m)\b|['′])",
                 left,
                 re.IGNORECASE,
             )

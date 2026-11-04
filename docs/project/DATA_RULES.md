@@ -232,3 +232,5 @@ Alternative-progressies verdelen uitsluitend de actieve duur gelijk over alle zo
 
 
 Lokale kandidaat voor gemengde tijdsblokken: werk is een aaneengesloten reeks Z2–Z5-laps vanaf 2.5m/s, onderbroken door trager herstel. Repduur wordt op hele minuten gegroepeerd; minimaal vier reps en twee opeenvolgende verschillende tijdsgroepen. Prefix wordt alleen als stop behandeld bij minstens 600s onder 1m/s; overige prefix is WU. Een rustige eindlap vanaf 800m en 2m/s kan CD zijn. Daarna gelden onverkort alle controles van validate_lap_structure, inclusief volledige dekking, repduur/distance-consistentie en herstelcontrast. Geen AI-verzoek nodig voor deze lokale kandidaat.
+
+Klokoverzicht C/D splitst ook opgeslagen Main-blokken met minuten en een streepje (2×8′ - 4×4′). Bestaande gecombineerde CORE-records worden bij lezen op dezelfde manier opgesplitst; alle gemeten reps blijven zichtbaar zonder opnieuw importeren. Geneste sets, zonebereiken en temporanges blijven intact.
