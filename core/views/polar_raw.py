@@ -795,6 +795,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             'Repeated work with slower recoveries is interval evidence. Automatic equal-distance splits without recovery are not. '
             'If a longer recovery divides equal-size sets, use one group and set_start_laps containing the first work lap of every set, including the first rep. '
             'Otherwise use an empty set_start_laps. Do not invent a set or discard a rep to make equal sets. '
+            'Warmup, cooldown and recovery allow only Z1/Z2 or unknown pace zones; never assign Z3-Z5 work laps to these roles. '
             'Running warmup/cooldown must average at least 2 m/s; classify slow transitions before/after work as recovery_laps. '
             'Stop laps must be at least 600 seconds and slower than 1 m/s. Long incidental stops do not erase the surrounding workout structure. '
             'Code derives counts and ordinary/set pause durations from source laps. No need to predict pause numbers. '

@@ -2457,7 +2457,9 @@
     });
     validate();
   }
+  var watchPreviewSequence = 0;
   function showWatchModel(model) {
+    var sequence = ++watchPreviewSequence;
     var popup = document.getElementById("suggestInputPlaceholder");
     var body = document.getElementById("suggestInputPlaceholderBody");
     popup.style.display = "flex";
@@ -2468,15 +2470,53 @@
     var endpoint = (model === "C" || model === "D") ? "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/" : "/integrations/polar/type-a-ayc/";
     var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate);
     if (model !== "C" && model !== "D") query += "&model=" + encodeURIComponent(model);
-    fetch(endpoint + query, {
+    var isGarmin = model === "C" || model === "D";
+    fetch(endpoint + query + (isGarmin ? "&preview=measured" : ""), {
       headers: {"Accept": "application/json"}
     }).then(function(response) { return response.json(); }).then(function(data) {
+      if (sequence !== watchPreviewSequence) return;
       if (!data.ok) {
         body.textContent = data.message || ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
         return;
       }
       renderTypeAResults(body, data.results || [], data.message || "", model);
+      if (isGarmin && (data.results || []).some(function(session) {
+        return (session.parts || []).some(function(part) { return part.ai_structure_status === "pending"; });
+      })) {
+        var touched = false;
+        function markTouched() { touched = true; }
+        body.addEventListener("pointerdown", markTouched, {once: true});
+        body.addEventListener("keydown", markTouched, {once: true});
+        var notice = document.createElement("div");
+        notice.className = "small text-muted mb-2";
+        notice.textContent = "Analyzing workout structure with AI. Measured results are available below.";
+        body.prepend(notice);
+        fetch(endpoint + query, {headers: {"Accept": "application/json"}})
+          .then(function(response) { return response.json(); }).then(function(analyzed) {
+            if (sequence !== watchPreviewSequence || !notice.isConnected) return;
+            if (!analyzed.ok) throw new Error("analysis unavailable");
+            function showAnalysis() {
+              renderTypeAResults(body, analyzed.results || [], analyzed.message || "", model);
+            }
+            if (!touched) showAnalysis();
+            else {
+              notice.textContent = "Workout analysis ready. ";
+              var button = document.createElement("button");
+              button.type = "button"; button.className = "btn btn-sm btn-outline-primary";
+              button.textContent = "Show analysis";
+              button.addEventListener("click", showAnalysis);
+              notice.appendChild(button);
+            }
+          }).catch(function() {
+            if (sequence === watchPreviewSequence && notice.isConnected)
+              notice.textContent = "AI analysis could not be loaded. Measured results remain available.";
+          }).finally(function() {
+            body.removeEventListener("pointerdown", markTouched);
+            body.removeEventListener("keydown", markTouched);
+          });
+      }
     }).catch(function() {
+      if (sequence !== watchPreviewSequence) return;
       body.textContent = ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
     });
   }
@@ -2604,6 +2644,7 @@
       }
       (session.parts || []).forEach(function(part) {
         var aiMessages = {
+          pending: "Measured preview; AI analysis is pending.",
           applied: "AI structure applied.",
           review_available: "An AI proposal passed measurement checks and is available for your review.",
           consent_required: "AI not used: AI permission is not enabled for this athlete.",

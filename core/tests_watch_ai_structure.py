@@ -274,6 +274,16 @@ class WatchAIStructureTests(SimpleTestCase):
         self.assertNotIn('legacy',prompt['task'])
         self.assertNotIn('Use the legacy segments/sets schema',json.loads(request.data)['messages'][0]['content'])
 
+    def test_work_lap_boundary_error_names_lap_zone_and_role(self):
+        facts, proposal = split_distance_example()
+        proposal['lap_structure']['groups'][0]['reps'][0] = [2,3]
+        proposal['lap_structure']['warmup_laps'] = [1]
+        facts[0]['zone'] = 'Z3'
+        issues = []
+        self.assertIsNone(validate_lap_structure(proposal, facts, issues=issues))
+        self.assertIn('Lap 1 is Z3 but assigned to warmup_laps', issues[0])
+        self.assertIn('same rep', issues[0])
+
     def test_valid_ai_proposal_is_reused_for_same_athlete_and_facts(self):
         from django.core.cache import cache
         from core.views.polar_raw import _model_b_ai_description

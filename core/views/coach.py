@@ -5944,7 +5944,13 @@ def garmin_type_c_ayc_view(request, model="C"):
     results = []
     for session in sessions:
         allowed = fit_ai_allowed(athlete) if session.get('is_fit_upload') else ai_allowed(athlete)
-        results.extend(translate_model_b([session], 5, athlete, allow_ai=allowed, allow_lap_structure=True))
+        quick_preview = request.GET.get('preview') == 'measured'
+        translated = translate_model_b([session], 5, athlete, allow_ai=allowed and not quick_preview, allow_lap_structure=True)
+        if allowed and quick_preview:
+            for item in translated:
+                for part in item.get('parts') or []:
+                    part['ai_structure_status'] = 'pending'
+        results.extend(translated)
     for session, result in zip(session_exercises, results):
         for part in result.get("parts") or []:
             watch_loads = type_a_watch_loads(session, athlete)

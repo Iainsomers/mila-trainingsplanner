@@ -232,6 +232,12 @@ class GarminCPushTests(TestCase):
                     'core.views.polar_raw.lap_zone_paces',side_effect=lambda m,t,a: ('Z1' if m<500 else 'Z2','NA')):
                 for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
                     ai.reset_mock()
+                    quick=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31','preview':'measured'})
+                    self.assertEqual(quick.status_code,200)
+                    self.assertEqual(ai.call_count,0)
+                    quick_part=quick.json()['results'][0]['parts'][0]
+                    self.assertEqual(len(quick_part['manual']),16)
+                    self.assertEqual(quick_part['ai_structure_status'],'pending' if consent else 'consent_required')
                     result=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'})
                     self.assertEqual(result.status_code,200)
                     part=result.json()['results'][0]['parts'][0]

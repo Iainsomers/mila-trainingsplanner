@@ -116,6 +116,10 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
         reason = "Warmup, cooldown and recovery must have easy pace zones; do not discard work laps."
         for i in warmup + cooldown + recovery:
             if by_id[i]['zone'] not in {'Z1', 'Z2', '', 'NA'}:
+                role = 'warmup_laps' if i in warmup else 'cooldown_laps' if i in cooldown else 'recovery_laps'
+                reason = (f"Lap {i} is {by_id[i]['zone']} but assigned to {role}. "
+                          "Warmup, cooldown and recovery allow only Z1/Z2 or unknown zones. "
+                          "Keep this work lap in a rep; adjacent autolaps without recovery may belong to the same rep.")
                 raise ValueError
         reason = "Warmup/cooldown contain a lap slower than 2 m/s; classify slow transition laps as recovery_laps or valid stop_laps."
         if any(by_id[i]['distance_m']/by_id[i]['duration_s'] < 2 for i in warmup + cooldown):
