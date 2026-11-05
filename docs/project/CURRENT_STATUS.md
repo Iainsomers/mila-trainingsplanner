@@ -409,3 +409,6 @@ Garmin C/D AI-latentie (5 november 2026): automatisch goedgekeurde AI-indelingen
 
 
 Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel, niet aantoonbaar de snelheidsgrens. Validator geeft nu exact lapnummer, zone en rol terug voor de ene AI-herstelpoging; de opdracht benoemt toegestane grenszones expliciet. Geen lokale repgroepering, versoepelde zonecontrole of confidenceverhoging. C/D laadt gemeten resultaten eerst en AI daarna; eerdere 12+6s-aanpassing alleen was onvoldoende voor de ervaren wachttijd. 109 gerichte Django-tests, manage.py check en JavaScript-tests voor preview, Garmin-combinatie en Alternative slagen. Previewtest controleert tonen vóór AI klaar is en behoud van gebruikersinteractie. Live modelkwaliteit en visuele mobiele controle nog niet bevestigd.
+
+
+5 november — samengestelde repzones gecorrigeerd: AI-groepering 4×3000 m werkt volgens screenshot, maar C nam onterecht alle autolapzones samen. Zoneclassificatie gebruikt nu volledige repmeters en -seconden; regressies met echte tempoclassificatie controleren Z3-autolap/Z2-rep, geldig Z2>Z3 bij verschillende volledige reps, AI-review en D met/zonder HR-grenzen. 111 gerichte tests en manage.py check geslaagd. Productie-uitrol nog niet onafhankelijk bevestigd.

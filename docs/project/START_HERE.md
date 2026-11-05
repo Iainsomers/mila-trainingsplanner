@@ -83,3 +83,6 @@ Garmin C/D AI-latentie (5 november 2026): automatisch goedgekeurde AI-indelingen
 
 
 Actueel vervolg 5 november: C/D-browser vraagt eerst preview=measured (zonder AI) en daarna de volledige analyse. Gebruiker kan de meetgegevens al gebruiken; na interactie wordt een nieuw resultaat alleen via Show analysis geladen. Exacte zone-/lap-/rolfeedback vervangt de algemene grenszonefout en staat ook in de AI-opdracht. De live 4×3000-indeling blijft onbevestigd; controleer nieuwe concrete afwijsreden indien nodig. Validatie: 109 gerichte Django-tests, check en drie JS-tests slagen; zie CURRENT_STATUS.
+
+
+Actuele 4×3000-status: screenshot bevestigt toegepaste AI-groepering. Aanvullende correctie bepaalt C-zones uit volledige gemeten reps in plaats van de afzonderlijke autolaps. D behoudt End HR-correctie; zonder bruikbare HR blijft de volledige-reptempozone staan. 111 gerichte tests en check geslaagd.

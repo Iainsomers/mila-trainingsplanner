@@ -481,3 +481,6 @@ Garmin C/D AI-latentie (5 november 2026): automatisch goedgekeurde AI-indelingen
 
 
 Garmin C/D opent de gemeten preview zonder AI-verzoek (preview=measured) en vraagt daarna automatisch de AI-analyse in een afzonderlijk browserverzoek op. Resultaten blijven bruikbaar bij een AI-fout. Zonder gebruikersinteractie verschijnt de analyse automatisch; na interactie biedt Show analysis deze expliciet aan, zodat combinatiekeuzes niet worden overschreven. Toestemming en atleetrechten worden voor beide verzoeken opnieuw gecontroleerd.
+
+
+Garmin C toont voor 4×3000 m met alle volledige reps in Z2 uitsluitend Z2, ook als enkele kilometer-autolaps Z3 zijn. Verschillende volledige repzones kunnen wel Z2>Z3 opleveren. D behoudt de hartslagcorrectie na deze tempobepaling.

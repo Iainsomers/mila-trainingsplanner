@@ -61,6 +61,47 @@ class WatchAIStructureTests(SimpleTestCase):
             self.assertEqual(sum(l['meters'] for l in item['watch_loads']),sum(f['distance_m'] for f in facts))
             self.assertFalse(item['watch_loads'][-1]['work_rep'])
 
+    def test_complete_rep_pace_overrides_fast_autolap_zone_for_c_and_d_fallback(self):
+        from core.views.polar_raw import _model_b_ai_description, lap_zone_paces
+        athlete = SimpleNamespace(zone_speed_mps={'1':4, '2':5.05, '3':5.3},
+                                  zone_hr_bpm={})
+        facts, proposal = split_distance_example()
+        laps = [dict(distanceMeters=f['distance_m'], durationMillis=f['duration_s']*1000) for f in facts]
+        self.assertEqual(lap_zone_paces(laps[2]['distanceMeters'], laps[2]['durationMillis'], athlete)[0], 'Z3')
+        for confidence in (.96, .68):
+            proposal['confidence'] = confidence
+            response = MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps(
+                {'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode()
+            diagnostics = {}
+            with patch.dict('os.environ', {'OPENAI_API_KEY':'test'}), patch(
+                    'core.views.polar_raw.urlopen', return_value=response):
+                result = _model_b_ai_description(laps, athlete, strict_lap_structure=True, diagnostics=diagnostics)
+            structure = result.structure if result else diagnostics['review_structure']
+            self.assertEqual(structure['training_fields']['main'], '4×3000 m Z2 p119')
+            loads = [dict(segment='CORE', meters=f['distance_m'], seconds=f['duration_s'],
+                          zone=lap_zone_paces(f['distance_m'],f['duration_s']*1000,athlete)[0][1:],
+                          hr_samples=[[t,175] for t in range(int(f['duration_s']))]) for f in facts]
+            part = {}
+            apply_lap_structure(part, loads, structure)
+            self.assertEqual(part['watch_loads'][2]['zone'], '3')  # Source split stays measured.
+            fallback = apply_garmin_d([{'parts':[part]}], athlete)[0]['parts'][0]
+            self.assertEqual(fallback['training_fields']['main'], '4×3000 m Z2 p119')
+            athlete.zone_hr_bpm = {'1':'max 150','2':'151-170','3':'171-188'}
+            corrected = apply_garmin_d([{'parts':[part]}], athlete)[0]['parts'][0]
+            self.assertEqual(corrected['training_fields']['main'], '4×3000 m Z3 p119')
+            athlete.zone_hr_bpm = {}
+
+    def test_group_zone_range_uses_complete_rep_zones(self):
+        from core.views.polar_raw import lap_zone_paces
+        facts, proposal = split_distance_example()
+        athlete = SimpleNamespace(zone_speed_mps={'1':4,'2':5.05,'3':5.3})
+        for index in (8,9,10):
+            facts[index]['duration_s'] = 189
+        result = validate_lap_structure(proposal, facts,
+            rep_zone=lambda m,s: lap_zone_paces(m,s*1000,athlete)[0])
+        self.assertEqual(result['training_fields']['main'], '4×3000 m Z2>Z3 p119')
+
     def test_ai_jogging_recovery_is_still_required_to_be_slower_than_both_efforts(self):
         facts,proposal=split_distance_example()
         self.assertIsNotNone(validate_lap_structure(proposal,facts))

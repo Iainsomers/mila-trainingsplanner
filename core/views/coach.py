@@ -5939,7 +5939,7 @@ def garmin_type_c_ayc_view(request, model="C"):
             "model": model,
         })
 
-    from .polar_raw import translate_model_b, type_a_watch_loads
+    from .polar_raw import translate_model_b, type_a_watch_loads, lap_zone_paces
     from core.views.garmin import ai_allowed, fit_ai_allowed
     results = []
     for session in sessions:
@@ -5957,7 +5957,7 @@ def garmin_type_c_ayc_view(request, model="C"):
             from core.watch_ai_structure import apply_lap_structure, infer_lap_structure
             facts = [{'lap':index, 'distance_m':load['meters'], 'duration_s':load['seconds'],
                       'zone':'Z'+str(load.get('zone') or '')} for index, load in enumerate(watch_loads, 1)]
-            structure = part.pop("validated_lap_structure", None) or infer_lap_structure(facts)
+            structure = part.pop("validated_lap_structure", None) or infer_lap_structure(facts, rep_zone=lambda m, s: lap_zone_paces(m, s * 1000, athlete)[0])
             if structure and apply_lap_structure(part, watch_loads, structure):
                 continue
             from core.watch_hr_structure import apply_hr_distance_structure

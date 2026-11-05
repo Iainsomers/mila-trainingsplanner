@@ -891,12 +891,13 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         if not allow_lap_structure:
             return ""
         from core.watch_ai_structure import validate_lap_structure, ValidatedDescription
+        rep_zone = lambda meters, seconds: lap_zone_paces(meters, seconds * 1000, athlete)[0]
         candidate_data = data
         issues = []
-        structure = validate_lap_structure(data, facts, issues=issues)
+        structure = validate_lap_structure(data, facts, issues=issues, rep_zone=rep_zone)
         if not structure:
             measurement_issues = []
-            validate_lap_structure(data, facts, issues=measurement_issues, minimum_confidence=.5)
+            validate_lap_structure(data, facts, issues=measurement_issues, minimum_confidence=.5, rep_zone=rep_zone)
             issues += [issue for issue in measurement_issues if issue not in issues]
         # A bounded repair is still an AI proposal, never a local pattern fix.
         # Only server-owned validation feedback and the existing anonymous lap
@@ -927,7 +928,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
                     repaired = json.loads(json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content'])
                 candidate_data = repaired
                 issues = []
-                structure = validate_lap_structure(repaired, facts, issues=issues)
+                structure = validate_lap_structure(repaired, facts, issues=issues, rep_zone=rep_zone)
             except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError, IndexError, TypeError):
                 pass
         if structure and cache_key:
@@ -938,7 +939,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             # Automatic use retains the 0.75 threshold. A lower score may only
             # be offered for explicit review after identical measurement checks.
             measurement_issues = []
-            review = validate_lap_structure(candidate_data, facts, minimum_confidence=.5, issues=measurement_issues)
+            review = validate_lap_structure(candidate_data, facts, minimum_confidence=.5, issues=measurement_issues, rep_zone=rep_zone)
             if not review:
                 diagnostics['reason'] = ' '.join(dict.fromkeys(measurement_issues or issues))
             if review:

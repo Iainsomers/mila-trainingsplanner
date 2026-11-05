@@ -10,7 +10,7 @@ class ValidatedDescription(str):
         return value
 
 
-def infer_lap_structure(facts):
+def infer_lap_structure(facts, *, rep_zone=None):
     """Propose clear mixed time groups locally, then use the same validator.
 
     Does not depend on AI consent, service availability or a model's answer.
@@ -57,12 +57,12 @@ def infer_lap_structure(facts):
             else:
                 key = 'recovery_laps'
             proposal[key].append(i)
-        return validate_lap_structure({'confidence':1, 'lap_structure':proposal}, facts)
+        return validate_lap_structure({'confidence':1, 'lap_structure':proposal}, facts, rep_zone=rep_zone)
     except (KeyError, ValueError, TypeError, ZeroDivisionError, OverflowError):
         return None
 
 
-def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
+def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, rep_zone=None):
     """No omitted/duplicate laps, invented reps, or running discarded as stops."""
     reason = 'Invalid lap structure or confidence.'
     def reject():
@@ -211,7 +211,13 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
             nominal = group_blocks[0]['distance_target'] or int(math.floor(median(b['meters'] for b in group_blocks)/100+.5)*100)
             if any(abs(b['meters']-nominal) > nominal*.08 for b in group_blocks):
                 return reject()
-            zones = sorted({by_id[i]['zone'] for b in group_blocks for i in b['ids']} & {'Z1','Z2','Z3','Z4','Z5'})
+            # Autolaps describe recording boundaries, not separate efforts.
+            # Classify each complete measured rep before forming the group range.
+            if rep_zone is not None:
+                labels = {rep_zone(b['meters'], b['seconds']) for b in group_blocks}
+            else:
+                labels = {by_id[i]['zone'] for b in group_blocks for i in b['ids']}
+            zones = sorted(labels & {'Z1','Z2','Z3','Z4','Z5'})
             zone = (' '+(zones[0] if len(zones)==1 else zones[0]+'>'+zones[-1])) if zones else ''
             reason = 'set_start_laps must list the first work lap of each equal-sized set, including the first rep; each set needs at least two reps and a longer measured set pause.'
             starts = groups[group_index].get('set_start_laps', [])
