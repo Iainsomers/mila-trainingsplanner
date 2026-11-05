@@ -256,8 +256,34 @@ def mixed_short_repetitions(laps, zone_for_lap):
             'cooldown_start': cooldown_start if has_cd else len(rows)}
 
 
+def continuous_easy_run(laps, zone_for_lap):
+    """Z1 splits describe one easy run unless measured recovery contradicts it."""
+    if not isinstance(laps,list) or len(laps) < 2:
+        return None
+    rows = []
+    try:
+        for lap in laps:
+            meters, seconds = float(lap['distanceMeters']), float(lap['durationMillis'])/1000
+            if (not math.isfinite(meters+seconds) or meters <= 0 or seconds <= 0
+                    or zone_for_lap(lap) != 'Z1'
+                    or lap.get('lapIntensity') in {1,4,5}
+                    or seconds > meters*.6):
+                return None
+            rows.append((meters,seconds))
+    except (KeyError,TypeError,ValueError,OverflowError):
+        return None
+    speeds = [m/s for m,s in rows]
+    if max(speeds)/min(speeds) >= 1.6:
+        return None  # Clear relative work/recovery, even with low pace zones.
+    meters = math.floor(sum(m for m,s in rows)/50+.5)*50
+    return f'WU: none · Main: {meters} m Z1 · CD: none'
+
+
 def continuous_kilometre_run(laps, zone_for_lap):
     """Regular 500 m / kilometre splits alone do not establish repetitions."""
+    easy = continuous_easy_run(laps,zone_for_lap)
+    if easy:
+        return easy
     if not isinstance(laps, list) or len(laps) < 3:
         return None
     rows = []

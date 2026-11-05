@@ -425,14 +425,16 @@ class ShortSetsStructureTests(SimpleTestCase):
         updated = processed_main_reps(slot)[0]["splits"][0]
         self.assertEqual(updated["seconds"], round(260 * 1000 / 1007.71, 2))
 
-    def test_repeated_pauses_recovery_laps_or_explicit_intervals_block_continuous_rule(self):
+    def test_z1_timer_pauses_allow_continuous_run_but_recovery_or_interval_markers_do_not(self):
         from core.watch_structure import continuous_kilometre_run
         paused = [{"distanceMeters": 1000, "durationMillis": 300000, "pausedDurationMillis": 60000}] * 6
         alternating = [{"distanceMeters": 1000, "durationMillis": seconds * 1000} for seconds in (240, 480) * 4]
         short_recovery = [{"distanceMeters": meters, "durationMillis": seconds * 1000}
                           for meters, seconds in ((1000, 240), (100, 60)) * 5]
         explicit = [{"distanceMeters": 1000, "durationMillis": 300000, "lapIntensity": 5}] * 6
-        for laps in (paused, alternating, short_recovery, explicit):
+        # Timer pauses alone do not turn an otherwise steady Z1 run into reps.
+        self.assertIsNotNone(continuous_kilometre_run(paused, lambda lap: "Z1"))
+        for laps in (alternating, short_recovery, explicit):
             self.assertIsNone(continuous_kilometre_run(laps, lambda lap: "Z1"))
 
     @patch("core.views.polar_raw.urlopen")

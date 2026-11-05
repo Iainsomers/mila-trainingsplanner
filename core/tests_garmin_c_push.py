@@ -230,6 +230,28 @@ class GarminCPushTests(TestCase):
         self.assertNotIn('average_hr',metrics)
         self.assertEqual(metrics['sample_max_hr'],170)
 
+    def test_z1_run_includes_partial_lap_as_one_block_with_or_without_ai(self):
+        from core.views.garmin import CONSENT_VERSION
+        self.athlete.zone_speed_mps={'1':4,'2':4.8,'3':5.3,'4':5.6,'5':6,'6':7}
+        values=[(1005.56,312),(1000.39,285),(234.197,65)]
+        GarminActivitySummary.objects.create(athlete=self.athlete,activity_id='easy-splits',
+            activity_start=datetime.fromtimestamp(self.start,dt_timezone.utc),activity_date='2026-10-31',
+            distance_m=sum(m for m,t in values),duration_s=662,
+            analysis_data={'total_distance_m':sum(m for m,t in values),'total_elapsed_s':702,
+                'total_timer_s':662,'laps':[dict(distance=m,elapsed_time=t+(20 if i<2 else 0),timer_time=t)
+                    for i,(m,t) in enumerate(values)]})
+        for consent in (False,True):
+            self.athlete.garmin_ai_consent_at=timezone.now() if consent else None
+            self.athlete.garmin_ai_consent_version=CONSENT_VERSION
+            self.athlete.save()
+            for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+                self.client.force_login(self.coach)
+                with patch('core.views.polar_raw.urlopen',side_effect=AssertionError('No AI needed for clear Z1 splits')):
+                    part=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'}).json()['results'][0]['parts'][0]
+                self.assertEqual(part['training_fields']['main'],'2250 m Z1')
+                self.assertAlmostEqual(sum(l['meters'] for l in part['watch_loads']),2240.147)
+                self.assertEqual([l['seconds'] for l in part['watch_loads']],[312,285,65])
+
     def test_timer_duration_matches_garmin_for_new_and_existing_single_lap(self):
         details = self.details()
         details['summary'] = dict(self.summary,distanceInMeters=17336,durationInSeconds=4503)

@@ -739,7 +739,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
 
     prompt = {
         "task": (
-            "Recognize the performed running workout from recorded laps. Find nested "
+            "Consecutive Z1 laps normally form one continuous easy run, including the final partial lap; do not call autolaps repetitions without explicit interval evidence or clear work/recovery. Recognize the performed running workout from recorded laps. Find nested "
             "repeated structures such as 2 sets of (3x500m + 5x400m + 6x200m). "
             "Short slow laps are recoveries, not work. Include only clearly observed "
             "warmup, main work and cooldown. Do not force every lap into a block."
@@ -789,6 +789,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             'A reps entry is ONE work repetition: [[7],[9]] means two single-lap repetitions; [[7,8],[10]] means two repetitions, the first spanning adjacent laps 7 and 8. Never put a whole set or recovery in one rep entry. Groups and reps must be chronological. '
             'For each group choose exactly one target: nominal target_meters (multiple of 50), or whole-minute target_seconds; omit or null the other. '
             'Distance targets allow up to 8 percent GPS variation. Different pace zones and progressive speeds do not require separate groups. '
+            'Consecutive Z1 laps default to one continuous easy run, including the final partial lap. Autolaps and timer pauses alone are not Z1 repetitions. Only explicit interval markers or clear relative work/recovery override this. '
             'Repeated work with slower recoveries is interval evidence. Automatic equal-distance splits without recovery are not. '
             'If a longer recovery divides equal-size sets, use one group and set_start_laps containing the first work lap of every set, including the first rep. '
             'Otherwise use an empty set_start_laps. Do not invent a set or discard a rep to make equal sets. '
