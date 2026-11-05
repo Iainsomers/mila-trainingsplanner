@@ -226,6 +226,14 @@ def _visible_year_slot(slot_map, has_fix_keys, key):
     return slot
 
 
+def _slot_evaluation_training_text(slot):
+    if not slot:
+        return ''
+    return '\n'.join(str(getattr(segment,'display_text',None) or segment.text or '').strip()
+                     for segment in slot.segments.all()
+                     if getattr(segment,'display_text',None) or segment.text)
+
+
 def _slot_watch_plan_text(slot) -> str:
     if not slot:
         return ""
@@ -4137,6 +4145,8 @@ def athlete_year_calendar_view(request):
                     and (not slot1 or (check1 and check1.effective_status))
                     and (not slot2 or (check2 and check2.effective_status))
                 ),
+                "training_text1": _slot_evaluation_training_text(slot1),
+                "training_text2": _slot_evaluation_training_text(slot2),
                 "plan_text1": _slot_watch_plan_text(slot1),
                 "plan_text2": _slot_watch_plan_text(slot2),
             })

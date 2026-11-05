@@ -557,6 +557,11 @@
     word-break: break-word;
   }
 
+  .evaluation-dialog { background:#fff; width:540px; max-width:95vw; max-height:92vh; max-height:92dvh; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.2); display:flex; flex-direction:column; }
+  .evaluation-body { overflow-y:auto; min-height:0; }
+  .evaluation-training { white-space:pre-wrap; overflow-wrap:anywhere; padding:10px; background:#f8f8f0; border:1px solid #ddd; border-radius:6px; }
+  .evaluation-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; margin-top:10px; flex-shrink:0; }
+  @media(max-width:575px) { .evaluation-actions button { min-height:40px; } .evaluation-dialog input, .evaluation-dialog select, .evaluation-dialog textarea { font-size:16px; } .evaluation-dialog { padding:12px; } }
   .report-form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1068,6 +1073,8 @@
                data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
                data-t1-watch-id="{% if d.check1.watch_activity_id %}{{ d.check1.watch_activity_id|escape }}{% endif %}"
                data-t1-watch-summary="{% if d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary|escape }}{% endif %}"
+               data-t1-training="{{ d.training_text1|default:''|escape }}"
+               data-t2-training="{{ d.training_text2|default:''|escape }}"
                data-t1-plan-text="{{ d.plan_text1|default:''|escape }}"
                data-t2-enabled="{% if d.has_slot2 %}1{% else %}0{% endif %}"
                data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
@@ -1084,7 +1091,8 @@
             <div class="d-flex align-items-center gap-2">
               {% if d.evaluation_done %}<span class="ayc-mobile-evaluation-done" title="Evaluation completed" aria-label="Evaluation completed">&#10003;</span>{% endif %}
               {% if d.check1.pain or d.check2.pain %}<span class="ayc-mobile-evaluation-pain" title="Pain: {% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}Serious issue, talk to staff!{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Fit{% endif %}" aria-label="Pain: {% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}Serious issue, talk to staff!{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Fit{% endif %}">{% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}🔴{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}🟠{% else %}🟢{% endif %}</span>{% endif %}
-              <button type="button" class="btn btn-sm btn-outline-secondary" {% if mobile_day.day > today and not athlete_extended_edit_rights %}disabled{% endif %}>Open</button>
+              {% if d.has_slot1 %}<button type="button" class="btn btn-sm btn-outline-secondary" data-evaluation-slot="1" {% if mobile_day.day > today and not athlete_extended_edit_rights %}disabled{% endif %}>AM</button>{% endif %}
+              {% if d.has_slot2 %}<button type="button" class="btn btn-sm btn-outline-secondary" data-evaluation-slot="2" {% if mobile_day.day > today and not athlete_extended_edit_rights %}disabled{% endif %}>PM</button>{% endif %}
             </div>
           </div>
           {% endwith %}
@@ -1641,7 +1649,9 @@
                    data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
                    data-t1-watch-id="{% if d.check1.watch_activity_id %}{{ d.check1.watch_activity_id|escape }}{% endif %}"
                    data-t1-watch-summary="{% if d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary|escape }}{% endif %}"
-                   data-t1-plan-text="{{ d.plan_text1|default:''|escape }}"
+                   data-t1-training="{{ d.training_text1|default:''|escape }}"
+               data-t2-training="{{ d.training_text2|default:''|escape }}"
+               data-t1-plan-text="{{ d.plan_text1|default:''|escape }}"
                    data-t2-enabled="{% if d.has_slot2 %}1{% else %}0{% endif %}"
                    data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
                    data-t2-rpe="{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% endif %}"
@@ -1654,7 +1664,7 @@
                 {% if d.has_slot1 or d.has_slot2 %}
                   <div class="report-preview-grid{% if d.has_slot1 and not d.has_slot2 or d.has_slot2 and not d.has_slot1 %} single{% endif %}">
                     {% if d.has_slot1 %}
-                      <div class="report-preview-half">
+                      <div class="report-preview-half" data-evaluation-slot="1" role="button" tabindex="0" aria-label="Evaluate AM">
                         <div class="report-preview-top">
                           {% with status=d.check1.effective_status|default:"" %}
                             <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
@@ -1668,7 +1678,7 @@
                       </div>
                     {% endif %}
                     {% if d.has_slot2 %}
-                      <div class="report-preview-half">
+                      <div class="report-preview-half" data-evaluation-slot="2" role="button" tabindex="0" aria-label="Evaluate PM">
                         <div class="report-preview-top">
                           {% with status=d.check2.effective_status|default:"" %}
                             <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
@@ -2102,6 +2112,7 @@
             type="button"
             class="btn btn-sm btn-primary pending-evaluation-open"
             data-evaluation-date="{{ reminder.date|date:'Y-m-d' }}"
+            data-evaluation-slot="{{ reminder.slot_index }}"
           >Evaluate</button>
         </div>
       {% endfor %}
@@ -2110,9 +2121,11 @@
 </div>
 {% endif %}
 
-<div id="commentModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:#ffffff; width:720px; max-width:95vw; max-height:92vh; overflow:auto; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-    <h5>Evaluation</h5>
+<div id="commentModal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
+  <div class="evaluation-dialog">
+    <h5 id="reportModalTitle">Evaluation</h5>
+    <div class="evaluation-body">
+    <div id="reportTraining" class="evaluation-training mb-3"></div>
     <div id="reportFormGrid" class="report-form-grid">
       <div id="reportT1Section" class="report-form-section" data-report-slot="1">
         <div class="report-form-title">Training AM</div>
@@ -2194,7 +2207,8 @@
       <input type="hidden" id="aypWatchActivitySummary">
       <input type="hidden" id="aypWatchActivityPayload">
     </div>
-    <div style="text-align:right; margin-top:10px;">
+    </div>
+    <div class="evaluation-actions">
       <button type="button" id="commentCancelBtn" class="btn btn-sm btn-light">Cancel</button>
       {% if show_polar_tools %}
       <button type="button" id="suggestInputBtn" class="btn btn-sm btn-outline-primary">Polar A</button>
@@ -2736,16 +2750,26 @@
     fd.append("watch_activity_payload", watchVal("aypWatchActivityPayload"));
     return fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {method:"POST", body:fd, headers:{"X-CSRFToken":getCookie("csrftoken")}, credentials:"same-origin"});
   }
+  document.querySelectorAll(".report-preview-half[data-evaluation-slot]").forEach(function(el) {
+    el.addEventListener("keydown", function(event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); el.click(); } });
+  });
   document.querySelectorAll(".comment-display").forEach(function(el){
     el.addEventListener("click", function(event){
       event.preventDefault(); event.stopImmediatePropagation();
       activeDate = el.getAttribute("data-date") || "";
-      var t1Enabled = (el.getAttribute("data-t1-enabled") === "1");
-      var t2Enabled = (el.getAttribute("data-t2-enabled") === "1");
+      var clicked = event.target.closest("[data-evaluation-slot]");
+      var requestedSlot = clicked ? clicked.getAttribute("data-evaluation-slot") : "";
+      var t1Available = el.getAttribute("data-t1-enabled") === "1";
+      var t2Available = el.getAttribute("data-t2-enabled") === "1";
+      var selectedSlot = requestedSlot || (t1Available ? "1" : "2");
+      var t1Enabled = selectedSlot === "1" && t1Available;
+      var t2Enabled = selectedSlot === "2" && t2Available;
       if (!t1Enabled && !t2Enabled) return;
       setSectionVisible("reportT1", t1Enabled);
       setSectionVisible("reportT2", t2Enabled);
       updateReportGrid();
+      document.getElementById("reportModalTitle").textContent = "Evaluation · " + (t1Enabled ? "AM" : "PM") + " · " + activeDate;
+      document.getElementById("reportTraining").textContent = el.getAttribute("data-t" + selectedSlot + "-training") || "No training text available for this session.";
       setVal("reportT1Status", el.getAttribute("data-t1-status"));
       setVal("reportT1Rpe", el.getAttribute("data-t1-rpe"));
       setVal("reportT1Pain", el.getAttribute("data-t1-pain") || (evaluationPainEnabled ? "no_pain" : ""));
@@ -2756,8 +2780,8 @@
       setVal("reportT2Comment", el.getAttribute("data-t2-comment"));
       setNotDoneRpe("reportT1Status", "reportT1Rpe");
       setNotDoneRpe("reportT2Status", "reportT2Rpe");
-      var savedWatchId = el.getAttribute("data-t1-watch-id") || el.getAttribute("data-t2-watch-id") || "";
-      var savedWatchSummary = el.getAttribute("data-t1-watch-summary") || el.getAttribute("data-t2-watch-summary") || "";
+      var savedWatchId = el.getAttribute("data-t" + selectedSlot + "-watch-id") || "";
+      var savedWatchSummary = el.getAttribute("data-t" + selectedSlot + "-watch-summary") || "";
       setSavedWatchResult(savedWatchId, savedWatchSummary);
       document.getElementById("commentModal").style.display = "flex";
       validate();
@@ -2781,7 +2805,8 @@
         });
         pendingEvaluationModal.classList.remove("is-visible");
         if (target) {
-          target.click();
+          var slotButton = target.querySelector('[data-evaluation-slot="' + button.getAttribute("data-evaluation-slot") + '"]');
+          (slotButton || target).click();
         }
       });
     });
