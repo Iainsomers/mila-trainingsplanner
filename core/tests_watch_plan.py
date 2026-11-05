@@ -105,6 +105,25 @@ class WatchOriginalPlanTests(TestCase):
         self.assertFalse(slot.segments.filter(type__in=['WU','CD','ALT']).exists())
         self.assertEqual(set(slot.segments.values_list('type',flat=True)),{'MOB','SPR','CORE2','CORE'})
 
+    def test_alternative_use_replaces_running_fields_but_preserves_other_blocks(self):
+        for index in (1,2):
+            slot=self.original(index)
+            self.add_protected_fields(slot)
+            self.import_watch(index=index)
+            slot.refresh_from_db()
+            protected=list(slot.segments.filter(type__in=['MOB','SPR','CORE2']).values('type','text','photo_ids'))
+            response=self.client.post(self.url(index),{'watch_fields':'alternative_replace',
+                'alt_text':"Strength training 46' Z1",'watch_origin':'watch_d',
+                'wu_text':'1000m Z1','core_text':'4x400m Z3','cd_text':'1000m Z1','watch_loads':'[]'})
+            self.assertEqual(response.status_code,200)
+            slot.refresh_from_db()
+            self.assertFalse(slot.segments.filter(type__in=['WU','CORE','CD']).exists())
+            self.assertEqual(list(slot.segments.filter(type__in=['MOB','SPR','CORE2']).values('type','text','photo_ids')),protected)
+            alt=slot.segments.get(type='ALT')
+            self.assertEqual(alt.text,"Strength training 46' Z1")
+            self.assertEqual(alt.duration_s,2760)
+            self.assertEqual(slot.watch_loads,[])
+
     def test_alternative_only_import_preserves_running_and_all_other_fields(self):
         for index in (1,2):
             slot=self.original(index)

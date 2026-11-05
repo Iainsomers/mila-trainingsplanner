@@ -294,3 +294,6 @@ Aanvulling korte AI-afstandsreps (5 november): afstandstolerantie max(30m, 8% va
 
 
 Zonebereik van repgroepen (5 november): voor de AI-/samengestelde C-repgroep tellen zones met minder dan 10% van alle volledige reps niet mee in het samenvattende label. Tel aantallen reps, geen autolaps, meters of seconden; tel gelijke sets gezamenlijk. Exact 10% blijft staan. D past dezelfde samenvatting toe na HR-classificatie per volledige rep, met berekende reptempozone als fallback bij ontbrekende HR. Onbekende zones blijven in de noemer; als geen bekende zone de grens haalt, behoud het waargenomen bekende bereik. Bronlapzones, individuele repzones, HR, gemeten afstand/tijd en loads blijven behouden.
+
+
+6 november — alternatief horlogegebruik: watch_fields=alternative_replace (Use) wist server-side WU/CORE/CD en vervangt ALT, ook wanneer toch looptekst wordt meegestuurd. watch_fields=alternative (Add) behoudt de bestaande ALT-only importsemantiek inclusief loopmetingen/bron/snapshots; alleen ALT wordt vervangen. Beide vereisen niet-lege ALT en een geldige watch_origin. Sportnamen zoals Strength training worden voor beide modi als alternatieve minuten geparsed. Dit vervangt de eerdere afspraak dat Use bij alternatieven uitsluitend ALT schrijft.

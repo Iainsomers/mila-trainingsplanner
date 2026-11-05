@@ -490,3 +490,6 @@ AI-structuur C/D ondersteunt korte afstandssets met herstel onder 30s: bijvoorbe
 
 
 C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde groep. Bijvoorbeeld één Z5-rep van 24 vergroot Z3>Z4 niet naar Z3>Z5. Exact 10% telt mee; één van vier blijft dus zichtbaar. Alle afzonderlijke bronlaps en metingen blijven behouden.
+
+
+6 november — alternatieve horlogetrainingen: Use AM/PM vult Alternative en wist WU/Main/CD. Alleen bij ALT-resultaten verschijnen daarnaast Add AM/Add PM; deze vervangen uitsluitend Alternative en behouden de rest van de training. Mob/Tech, Sprint en Strength blijven bij beide acties behouden. Add voegt geen tekst achter een bestaand ALT-segment toe, maar schrijft het ontvangen resultaat naar ALT.

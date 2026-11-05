@@ -1448,7 +1448,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     preserve_watch_fields = (request.POST.get('watch_origin') or '').strip().lower() in {'watch_a','watch_b','watch_c','watch_d'}
     alternative_only = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative'
-    if alternative_only and not (request.POST.get('alt_text') or '').strip():
+    alternative_replace = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative_replace'
+    if (alternative_only or alternative_replace) and not (request.POST.get('alt_text') or '').strip():
         return HttpResponse('Alternative training required.', status=400)
     # Trainingsbuilder toggles (uit session)
     tb_show_wu = _tb_flag(request, "tb_show_wu", True)
@@ -1795,7 +1796,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         mob_text = sprint_text = core2_text = ''
         selected_standard_strength = None
         core_text = normalize_watch_main_text(core_text)
-    if alternative_only:
+    if alternative_only or alternative_replace:
         wu_text = core_text = cd_text = ''
     if core_text and not preserve_watch_fields:
         wu_text, cd_text = apply_auto_wucd_texts(athlete, selected_plan, core_text, wu_text, cd_text)
@@ -2019,7 +2020,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # Activity names such as "Strength training" must not invoke the running
     # parser's special Strength shortcut and discard Alternative minutes/zone.
     alt_parses = [parse_segment_text(
-        re.sub(r"^.*?(?=\d+' Z[1-5]$)", '', part) if alternative_only else part,
+        re.sub(r"^.*?(?=\d+' Z[1-5]$)", '', part) if alternative_only or alternative_replace else part,
         zone_required=False) for part in alt_parts]
     alt_parse = next((parsed for parsed in alt_parses if not parsed.ok), alt_parses[-1] if alt_parses else None)
     cd_parse = parse_segment_text(cd_text, zone_required=False) if cd_text else None

@@ -418,3 +418,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 5 november — screenshot bevestigt toegepaste 3×(8×300m)-AI-indeling. Op verzoek wordt een zone onder 10% van de reps uit het samenvattende bereik gehouden: hier Z3>Z4 in plaats van Z3>Z5. Gedeelde telhelper voor C-repzones en D-HR-repzones; tests dekken 1/24, 1/10, 1/11, 1/4, behoud van bronzones/meters/tijden en D-HR-uitbijter. 114 gerichte tests en manage.py check geslaagd; Render-uitrol nog niet onafhankelijk bevestigd.
+
+
+6 november — Alternative Use/Add aangepast op verzoek eigenaar. Use AM/PM vervangt ALT en wist WU/Main/CD; extra Add AM/PM schrijft alleen ALT. Beschermde trainingsblokken blijven behouden. 50 gerichte Watch/Plan- en Garmin C-tests, JavaScript-test voor echte renderer/knoppen en opslag en manage.py check geslaagd. Actieregel gebruikt flex-wrap voor mobiel; geen aparte visuele browsercontrole uitgevoerd. Vooraf analyseren/blijvende AI-opslag blijft uitgesteld.

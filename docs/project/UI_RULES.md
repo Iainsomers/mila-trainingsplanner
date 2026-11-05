@@ -263,3 +263,6 @@ Evaluatie per dagdeel (5 november 2026): desktop AM-/PM-previewhelften en mobiel
 
 
 Garmin C/D toont direct na het gemeten verzoek de laps en bestaande trainingskeuzes. Een compacte regel meldt de lopende AI-analyse. Bij reeds begonnen interactie vervangt AI de resultaten pas na Show analysis. Een oudere reactie mag een later geopende C/D-popup niet overschrijven. De melding/knop gebruikt bestaande compacte Bootstrap-stijl, zonder vaste breedte.
+
+
+6 november — ALT-resultaten hebben Use AM, Use PM, Add AM en Add PM in dezelfde compacte, ombrekende actieregel. Gewone hardloopresultaten behouden uitsluitend Use AM/PM.

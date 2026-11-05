@@ -92,3 +92,6 @@ Nieuwste casus: 3×8 circa300m met p28-30s en setpauzes175/180s. Correct AI-voor
 
 
 Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de volledige reps. Eén Z5 van 24 valt buiten het label, individuele zones en meetloads blijven intact. D telt na eigen HR-correctie, met volledige-reptempo als fallback. Screenshot bevestigt live 3×8×300-herkenning; deze nieuwe samenvattingsregel is lokaal getest (114 tests + check).
+
+
+6 november: vooraf analyseren en blijvend opslaan van AI-resultaten is uitgesteld. Nieuwe Alternative-acties: Use AM/PM wist WU/Main/CD en vult ALT; alleen ALT-resultaten krijgen Add AM/PM voor uitsluitend ALT vervangen. Mob/Tech/Sprint/Strength blijven behouden. 50 gerichte tests, JS-renderer-/opslagtest en check geslaagd; zie DATA_RULES.
