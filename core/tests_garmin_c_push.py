@@ -230,6 +230,54 @@ class GarminCPushTests(TestCase):
         self.assertNotIn('average_hr',metrics)
         self.assertEqual(metrics['sample_max_hr'],170)
 
+    def test_non_running_previews_use_average_hr_plus_ten_in_both_models(self):
+        self.athlete.zone_hr_bpm = {'1':'151','2':'152-168','3':'169-178','4':'179-184','5':'185-200'}
+        self.athlete.save(update_fields=['zone_hr_bpm'])
+        examples = [('PILATES', 2771, 80, "Pilates 46' Z1"),
+                    ('ELLIPTICAL', 5408, 143, "Elliptical 90' Z2"),
+                    ('ELLIPTICAL', 5945, 134, "Elliptical 99' Z1"),
+                    ('CYCLING', 300, 160, "Cycling 5' Z3")]
+        for index,(sport,seconds,hr,expected) in enumerate(examples):
+            details = self.details()
+            details['activityId'] = index + 100
+            details['summary'] = dict(self.summary, activityId=index+100, activityType=sport,
+                durationInSeconds=seconds, averageHeartRateInBeatsPerMinute=hr)
+            if sport != 'CYCLING':
+                details['summary'].pop('distanceInMeters')
+            self.assertEqual(self.send({'activityDetails':[details]}).status_code,200)
+        self.client.force_login(self.coach)
+        with patch('core.views.polar_raw.translate_model_b', side_effect=AssertionError('Non-running needs no running AI')):
+            for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+                results=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'}).json()['results']
+                self.assertEqual(len(results),len(examples))
+                for result,(_,_,hr,expected) in zip(results,examples):
+                    part=result['parts'][0]
+                    self.assertEqual(part['description'],expected)
+                    self.assertEqual(part['training_fields'],{'alt':expected})
+                    self.assertIn(f'+ 10 = {hr+10} bpm',part['analysis_note'])
+                    self.assertNotIn('watch_loads',part)
+                    self.assertEqual(part['manual'],[])
+        cycling=GarminActivitySummary.objects.get(activity_id='103')
+        self.assertEqual(cycling.analysis_data['activity_metrics']['sport'],'CYCLING')
+        self.assertTrue(cycling.analysis_data['laps'])
+
+    def test_non_running_missing_hr_or_limits_never_invents_a_zone(self):
+        from core.watch_alternative import alternative_part
+        self.athlete.zone_hr_bpm={'1':'151','2':'152-168'}
+        missing=alternative_part(self.athlete,{'sport':'PILATES'},2771)
+        self.assertEqual(missing['description'],"Pilates 46'")
+        self.assertNotIn('training_fields',missing)
+        for value in (None, 0, float('nan'), True, 999):
+            metrics={'sport':'ELLIPTICAL','average_hr':value}
+            self.assertNotIn('training_fields',alternative_part(self.athlete,metrics,5408))
+        self.athlete.zone_hr_bpm={}
+        self.assertNotIn('training_fields',alternative_part(self.athlete,{'sport':'ELLIPTICAL','average_hr':143},5408))
+        self.athlete.zone_hr_bpm={'1':'151','2':'152-168'}
+        sampled=alternative_part(self.athlete,{'sport':'ELLIPTICAL','sample_average_hr':143},5408)
+        self.assertEqual(sampled['training_fields'],{'alt':"Elliptical 90' Z2"})
+        for sport in ('RUNNING','TRAIL_RUNNING','TREADMILL_RUNNING','VIRTUAL_RUN','UNKNOWN','MULTISPORT',None):
+            self.assertIsNone(alternative_part(self.athlete,{'sport':sport,'average_hr':143},5408))
+
     def test_z1_run_includes_partial_lap_as_one_block_with_or_without_ai(self):
         from core.views.garmin import CONSENT_VERSION
         self.athlete.zone_speed_mps={'1':4,'2':4.8,'3':5.3,'4':5.6,'5':6,'6':7}

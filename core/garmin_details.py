@@ -14,6 +14,26 @@ def number(value):
     return result if math.isfinite(result) else None
 
 
+def activity_metrics(summary, heart_samples):
+    metrics = {'heart_rate_sample_count':len(heart_samples)}
+    sport = summary.get('activityType')
+    if isinstance(sport,str) and sport.strip():
+        metrics['sport'] = sport.strip()[:100]
+    for source,key,upper in (('averageHeartRateInBeatsPerMinute','average_hr',300),
+                             ('maxHeartRateInBeatsPerMinute','max_hr',300),
+                             ('activeKilocalories','active_kcal',100000)):
+        value = number(summary.get(source))
+        if value is not None and 0 < value < upper:
+            metrics[key] = round(value,1)
+    if heart_samples:
+        hrs = [point['heart_rate'] for point in heart_samples]
+        if 'average_hr' not in metrics:
+            metrics['sample_average_hr'] = round(sum(hrs)/len(hrs),1)
+        if 'max_hr' not in metrics:
+            metrics['sample_max_hr'] = max(hrs)
+    return metrics
+
+
 def lap_data(item):
     summary = item.get("summary") or {}
     start = number(summary.get("startTimeInSeconds"))
@@ -35,22 +55,7 @@ def lap_data(item):
             timestamp, hr = number(sample.get('startTimeInSeconds')), number(sample.get('heartRate'))
             if timestamp is not None and start <= timestamp <= start+duration and hr is not None and 0 < hr < 300:
                 heart_samples.append({'timestamp':datetime.fromtimestamp(timestamp,timezone.utc).isoformat(),'heart_rate':hr})
-        metrics = {'heart_rate_sample_count':len(heart_samples)}
-        sport = summary.get('activityType')
-        if isinstance(sport,str) and sport.strip():
-            metrics['sport'] = sport.strip()[:100]
-        for source,key,upper in (('averageHeartRateInBeatsPerMinute','average_hr',300),
-                                 ('maxHeartRateInBeatsPerMinute','max_hr',300),
-                                 ('activeKilocalories','active_kcal',100000)):
-            value = number(summary.get(source))
-            if value is not None and 0 < value < upper:
-                metrics[key] = round(value,1)
-        if heart_samples:
-            hrs = [point['heart_rate'] for point in heart_samples]
-            if 'average_hr' not in metrics:
-                metrics['sample_average_hr'] = round(sum(hrs)/len(hrs),1)
-            if 'max_hr' not in metrics:
-                metrics['sample_max_hr'] = max(hrs)
+        metrics = activity_metrics(summary, heart_samples)
         return {"laps": [], "heart_rate_samples": heart_samples, "total_distance_m": None,
                 "activity_metrics":metrics,
                 "total_elapsed_s": duration, "lap_data_status": "missing_distance",
@@ -147,5 +152,6 @@ def lap_data(item):
         normalized_laps[0]['paused_time'] = max(0, normalized_laps[0]['elapsed_time'] - timer_total)
     return {"total_timer_s": timer_total, "laps": normalized_laps, "heart_rate_samples": heart_samples,
             "total_distance_m": distance, "total_elapsed_s": end - start,
+            "activity_metrics": activity_metrics(summary, heart_samples),
             "lap_data_status": lap_status, "received_lap_count": len(laps),
             "received_sample_count": len(samples)}

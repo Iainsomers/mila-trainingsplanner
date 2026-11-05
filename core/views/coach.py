@@ -5752,6 +5752,7 @@ def garmin_type_c_ayc_view(request, model="C"):
     from core.models import GarminActivitySummary
     from types import SimpleNamespace
     from .polar_raw import duration as watch_duration
+    from core.watch_alternative import alternative_part
     summary_results = []
     uploaded_activities = tuple(saved_activities)
     for received in GarminActivitySummary.objects.filter(athlete=athlete, activity_date=target_date).order_by("activity_start", "id"):
@@ -5763,6 +5764,17 @@ def garmin_type_c_ayc_view(request, model="C"):
                for saved in uploaded_activities):
             continue
         parsed = received.analysis_data or {}
+        alt_part = alternative_part(athlete, parsed.get('activity_metrics') or {}, received.duration_s)
+        if alt_part is not None:
+            summary_results.append({
+                'name': f'Garmin activity {received.activity_id}',
+                'activity_metrics': parsed.get('activity_metrics', {}),
+                'start': timezone.localtime(received.activity_start).isoformat(),
+                'distance': f'{received.distance_m:g}' if received.distance_m is not None else 'NA',
+                'duration': watch_duration(received.duration_s * 1000) if received.duration_s is not None else 'NA',
+                'parts': [alt_part],
+            })
+            continue  # Non-running distance must never enter running recognition/loads.
         if parsed.get("laps"):
             # Older stored details lack total_timer_s; retain the received
             # Garmin summary duration without modifying the stored payload.

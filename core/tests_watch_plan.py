@@ -105,6 +105,78 @@ class WatchOriginalPlanTests(TestCase):
         self.assertFalse(slot.segments.filter(type__in=['WU','CD','ALT']).exists())
         self.assertEqual(set(slot.segments.values_list('type',flat=True)),{'MOB','SPR','CORE2','CORE'})
 
+    def test_alternative_only_import_preserves_running_and_all_other_fields(self):
+        for index in (1,2):
+            slot=self.original(index)
+            self.add_protected_fields(slot)
+            self.import_watch(index=index,origin='watch_d')
+            slot.refresh_from_db()
+            before=list(slot.segments.exclude(type='ALT').values())
+            metadata=(slot.source,slot.watch_loads,slot.watch_main_reps,slot.watch_plan_snapshot,slot.segment_order)
+            for origin,text in [('watch_c',"Elliptical 90' Z2"),('watch_d',"Strength training 46' Z1")]:
+                response=self.client.post(self.url(index),{'watch_fields':'alternative','alt_text':text,
+                    'watch_origin':origin,'core_text':'invalid ignored running value','wu_text':'invalid',
+                    'cd_text':'invalid','watch_loads':'[]','core2_text':'malicious replacement'})
+                self.assertEqual(response.status_code,200)
+                slot.refresh_from_db()
+                after=list(slot.segments.exclude(type='ALT').values())
+                for rows in (before,after):
+                    for row in rows: row.pop('order',None)
+                self.assertEqual(after,before)
+                self.assertEqual((slot.source,slot.watch_loads,slot.watch_main_reps,slot.watch_plan_snapshot,slot.segment_order),metadata)
+                alt=slot.segments.get(type='ALT')
+                self.assertEqual(alt.text,text)
+                self.assertEqual(alt.duration_s,5400 if origin=='watch_c' else 2760)
+                self.assertEqual(alt.zone,'2' if origin=='watch_c' else '1')
+                self.assertIsNone(alt.distance_m)
+                self.assertIsNone(alt.norm_distance_m)
+                self.assertIn(text,[item['text'] for item in slot.watch_training_snapshot['segments']])
+
+    def test_alternative_minutes_are_added_without_changing_measured_running_totals(self):
+        from core.stats import athlete_week_stats
+        from core.views.calendar import _ayc_slot_loads_for_totals
+        from django.core.cache import cache
+        self.original()
+        self.import_watch(origin='watch_d')
+        week=self.day.fromordinal(self.day.toordinal()-self.day.weekday())
+        cache.clear()
+        before=athlete_week_stats(self.plan,self.athlete,week)
+        self.client.post(self.url(),{'watch_fields':'alternative','alt_text':"Elliptical 90' Z2",'watch_origin':'watch_c'})
+        cache.clear()
+        after=athlete_week_stats(self.plan,self.athlete,week)
+        self.assertEqual(after['zones'],before['zones'])
+        self.assertEqual(after['alt_zones']['2']['duration_s'],5400)
+        own=TrainingSlot.objects.get(plan=self.plan,date=self.day,slot_index=2,athlete=self.athlete)
+        loads=_ayc_slot_loads_for_totals(own,self.athlete)
+        self.assertEqual([load for load in loads if load.get('kind')=='alt'],
+                         [{'kind':'alt','zone':'2','seconds':5400}])
+
+    def test_alternative_only_inherits_entire_shared_training_and_keeps_planned_source(self):
+        shared=TrainingSlot.objects.create(plan=self.plan,date=self.day,slot_index=2)
+        shared.segments.create(type='WU',text='1500m z1',order=0)
+        shared.segments.create(type='CORE',text='4*400m z3',order=3)
+        shared.segments.create(type='CD',text='800m z1',order=6)
+        self.add_protected_fields(shared)
+        before=list(shared.segments.values())
+        response=self.client.post(self.url(),{'watch_fields':'alternative','alt_text':"Pilates 46' Z1",'watch_origin':'watch_d'})
+        self.assertEqual(response.status_code,200)
+        own=TrainingSlot.objects.get(plan=self.plan,date=self.day,slot_index=2,athlete=self.athlete)
+        self.assertEqual(own.source,'planned')
+        self.assertIsNone(own.watch_plan_snapshot)
+        self.assertEqual(own.segment_order,shared.segment_order)
+        self.assertEqual(list(own.segments.exclude(type='ALT').order_by('type').values_list('type','text','photo_ids')),
+                         list(shared.segments.exclude(type='ALT').order_by('type').values_list('type','text','photo_ids')))
+        self.assertEqual(list(shared.segments.values()),before)
+        self.assertEqual(own.segments.get(type='ALT').text,"Pilates 46' Z1")
+
+    def test_alternative_only_import_into_empty_daypart(self):
+        response=self.client.post(self.url(),{'watch_fields':'alternative','alt_text':"Elliptical 99' Z1",'watch_origin':'watch_c'})
+        self.assertEqual(response.status_code,200)
+        own=TrainingSlot.objects.get(plan=self.plan,date=self.day,slot_index=2,athlete=self.athlete)
+        self.assertEqual(list(own.segments.values_list('type',flat=True)),['ALT'])
+        self.assertEqual(own.segments.get().duration_s,5940)
+        self.assertEqual(self.client.post(self.url(),{'watch_fields':'alternative','watch_origin':'watch_c'}).status_code,400)
+
     def test_garmin_d_preserves_plan_and_watch_roundtrip(self):
         slot = self.original()
         self.assertEqual(self.import_watch(origin="watch_d").status_code, 200)

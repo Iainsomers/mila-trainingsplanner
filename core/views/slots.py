@@ -1447,6 +1447,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         return HttpResponse("Future training can only be edited by a coach.", status=403)
 
     preserve_watch_fields = (request.POST.get('watch_origin') or '').strip().lower() in {'watch_a','watch_b','watch_c','watch_d'}
+    alternative_only = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative'
+    if alternative_only and not (request.POST.get('alt_text') or '').strip():
+        return HttpResponse('Alternative training required.', status=400)
     # Trainingsbuilder toggles (uit session)
     tb_show_wu = _tb_flag(request, "tb_show_wu", True)
     tb_show_mob = _tb_flag(request, "tb_show_mob", True)
@@ -1742,9 +1745,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 {field.attname:getattr(segment,field.attname) for field in TrainingSegment._meta.concrete_fields
                  if field.attname not in {'id','slot_id'} and hasattr(segment,field.attname)}
                 for segment in original_slot.segments.all()
-                if segment.type not in {'WU','CORE','ALT','CD'}
+                if segment.type not in ({'ALT'} if alternative_only else {'WU','CORE','ALT','CD'})
             ]
-        if str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+        if not alternative_only and str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
             original_watch_plan = {"segments": _week_segment_payload(original_slot), "segment_order":getattr(original_slot, "segment_order", [])}
     if athlete:
         slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=athlete)
@@ -1756,9 +1759,16 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if preserve_watch_fields and watch_preserve_source and getattr(watch_preserve_source,'pk',None) != slot.pk:
         # The visible training can be inherited from a shared/base plan. Copy
         # its non-watch fields into the personal override without reparsing.
-        slot.segments.exclude(type__in=['WU','CORE','ALT','CD']).delete()
+        slot.segments.exclude(type__in=['ALT'] if alternative_only else ['WU','CORE','ALT','CD']).delete()
         for payload in protected_watch_segments:
             slot.segments.create(**payload)
+        if alternative_only:
+            # Preserve measured running data and version history when inheriting
+            # a complete workout into a personal Alternative-only override.
+            for field in ('source', 'watch_loads', 'watch_main_reps', 'watch_plan_snapshot', 'watch_training_snapshot'):
+                if hasattr(watch_preserve_source, field):
+                    setattr(slot, field, getattr(watch_preserve_source, field))
+            slot.save()
 
     # existing segments
     wu_seg = slot.segments.filter(type="WU").order_by("order", "id").first()
@@ -1785,6 +1795,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         mob_text = sprint_text = core2_text = ''
         selected_standard_strength = None
         core_text = normalize_watch_main_text(core_text)
+    if alternative_only:
+        wu_text = core_text = cd_text = ''
     if core_text and not preserve_watch_fields:
         wu_text, cd_text = apply_auto_wucd_texts(athlete, selected_plan, core_text, wu_text, cd_text)
 
@@ -2004,7 +2016,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         core_parse = None
     core2_parse = None  # Strength is free text; no zone or running parser.
     alt_parts = split_alternative_segments(alt_text)
-    alt_parses = [parse_segment_text(part, zone_required=False) for part in alt_parts]
+    # Activity names such as "Strength training" must not invoke the running
+    # parser's special Strength shortcut and discard Alternative minutes/zone.
+    alt_parses = [parse_segment_text(
+        re.sub(r"^.*?(?=\d+' Z[1-5]$)", '', part) if alternative_only else part,
+        zone_required=False) for part in alt_parts]
     alt_parse = next((parsed for parsed in alt_parses if not parsed.ok), alt_parses[-1] if alt_parses else None)
     cd_parse = parse_segment_text(cd_text, zone_required=False) if cd_text else None
 
@@ -2080,12 +2096,13 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 watch_loads = [item for item in decoded_loads if isinstance(item, dict)]
         except (TypeError, ValueError):
             watch_loads = []
-    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"} else "planned"
-    slot.watch_loads = watch_loads
-    slot.save(update_fields=["source", "watch_loads", "updated_at"])
+    if not alternative_only:
+        slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"} else "planned"
+        slot.watch_loads = watch_loads
+        slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
     # Save WU
-    if wu_text:
+    if not alternative_only and wu_text:
         if wu_seg:
             wu_seg.text = wu_text
             wu_seg.order = 0
@@ -2097,7 +2114,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         wu_seg.parsed_at = now
         wu_seg.save()
     else:
-        if wu_seg:
+        if wu_seg and not alternative_only:
             wu_seg.delete()
 
     if not preserve_watch_fields:
@@ -2142,7 +2159,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     # Save CORE
     next_followup_order = 3
-    if core_text:
+    if not alternative_only and core_text:
         parts = []
         for core_part in split_main_segments(core_text):
             parts.extend(_expand_repeated_core_set_parts(core_part))
@@ -2195,7 +2212,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             seg.save()
             order += 1
         next_followup_order = order
-    else:
+    elif not alternative_only:
         slot.segments.filter(type="CORE").delete()
 
     # Save ALT as separate blocks so // keeps Z1-Z3 minutes independent.
@@ -2240,7 +2257,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 core2_seg.delete()
 
     # Save CD
-    if cd_text:
+    if not alternative_only and cd_text:
         if cd_seg:
             cd_seg.text = cd_text
             cd_seg.order = next_followup_order + 1
@@ -2252,13 +2269,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         cd_seg.parsed_at = now
         cd_seg.save()
     else:
-        if cd_seg:
+        if cd_seg and not alternative_only:
             cd_seg.delete()
 
     apply_segment_order(slot, form_segment_order)
-    save_processed_main_reps(slot)
-    sync_athlete_auto_wucd_overrides(slot, selected_plan, core_text)
-    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    if not alternative_only:
+        save_processed_main_reps(slot)
+        sync_athlete_auto_wucd_overrides(slot, selected_plan, core_text)
+    if slot.source in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         slot.watch_training_snapshot = _watch_version_payload(slot)
         slot.save(update_fields=["watch_training_snapshot"])
     _bump_stats_version()

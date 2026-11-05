@@ -856,6 +856,11 @@ def athlete_week_stats(plan, athlete, week_start: date_cls, pause_mode=None):
                 continue
 
             if add_actual_watch_loads(slot):
+                # Alternative minutes are independent of measured running laps.
+                for seg in slot.segments.all():
+                    if seg.type == 'ALT':
+                        for alt_zone, alt_duration_s in _alt_zone_durations(seg):
+                            alt_zones[alt_zone]['duration_s'] += alt_duration_s
                 continue
 
             for seg in slot.segments.all():

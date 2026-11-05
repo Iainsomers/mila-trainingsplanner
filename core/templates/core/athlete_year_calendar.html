@@ -2522,7 +2522,9 @@
     var selections = [];
     var combinedHost = document.createElement("div");
     var combineButton;
-    if ((model === "C" || model === "D") && !combinedPreview && results.length > 1) {
+    if ((model === "C" || model === "D") && !combinedPreview && results.filter(function(session) {
+      return (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length;
+    }).length > 1) {
       var toolbar = document.createElement("div");
       toolbar.className = "d-flex flex-wrap align-items-center gap-2 mb-2";
       var hint = document.createElement("span");
@@ -2648,7 +2650,7 @@
             });
             box.appendChild(alternatives);
           }
-          if (fields.main) {
+          if (fields.main || fields.alt || fields.alternative) {
             var actions = document.createElement("div");
             actions.className = "d-flex flex-wrap gap-1 flex-shrink-0";
             [1, 2].forEach(function(slotIndex) {
@@ -2677,7 +2679,7 @@
     });
   }
   function useWatchTraining(fields, watchLoads, slotIndex, button, model) {
-    if (!activeDate || !activeAthlete || !fields || !fields.main) return;
+    if (!activeDate || !activeAthlete || !fields || !(fields.main || fields.alt || fields.alternative)) return;
     var originalLabel = button.textContent;
     button.disabled = true;
     button.textContent = "Saving...";
@@ -2688,6 +2690,7 @@
     formData.append("wu_text", fields.wu || "");
     formData.append("core_text", fields.main || "");
     formData.append("alt_text", fields.alt || fields.alternative || "");
+    if (!fields.main && (fields.alt || fields.alternative)) formData.append("watch_fields", "alternative");
     formData.append("cd_text", fields.cd || "");
     formData.append("watch_origin", "watch_" + String(model || "A").toLowerCase());
     formData.append("watch_loads", JSON.stringify(watchLoads || []));
