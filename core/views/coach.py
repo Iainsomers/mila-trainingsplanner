@@ -7863,6 +7863,19 @@ def trainer_planning_detail_view(request, plan_id: int):
             stops.append(f"{color} {start_pct:.2f}%, {color} {cursor:.2f}%")
         return f"background: linear-gradient(135deg, {', '.join(stops)});"
 
+    championships_by_day = {}
+    championships = RaceEvent.objects.filter(
+        owner=plan.owner, race_type="championship", date__lte=week_end,
+    ).filter(
+        Q(end_date__gte=week_start) | Q(end_date__isnull=True, date__gte=week_start)
+    ).only("id", "name", "date", "end_date").order_by("date", "name", "id")
+    for championship in championships:
+        day = max(championship.date, week_start)
+        last_day = min(championship.last_date, week_end)
+        while day <= last_day:
+            championships_by_day.setdefault(day, []).append(championship)
+            day += timedelta(days=1)
+
     week_rows = []
     for visible_week_start in week_starts:
         week_days = [visible_week_start + timedelta(days=i) for i in range(7)]
@@ -7880,6 +7893,8 @@ def trainer_planning_detail_view(request, plan_id: int):
             "week_start": visible_week_start,
             "week_end": visible_week_start + timedelta(days=6),
             "days": week_days,
+            "day_headers": [{"day": day, "championships": championships_by_day.get(day, [])}
+                            for day in week_days],
             "rows": rows,
             "week_phase_style": trainer_week_training_style(week_days),
             "is_current_week": visible_week_start == today_week_start,

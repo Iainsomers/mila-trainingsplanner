@@ -164,6 +164,19 @@
     .pill-z6 { background-color: #f2c200; }
     .pill-race { background-color: #ff7a00; }
     .pill-important-race { background-color: #cc0000; color: #ffffff; }
+    .trainer-championship-pill {
+      display: inline-block;
+      max-width: 100%;
+      background: #d32f2f;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 400;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .trainer-championships { margin-top: 2px; line-height: 1.3; }
     .pill-strength { background-color: #d9d9d9 !important; color: #111111; text-decoration: underline; cursor: pointer; }
 
     .trainer-title-input {
@@ -600,8 +613,17 @@
                   >c</button>
                 {% endif %}
               </th>
-              {% for day in week.days %}
-                <th>{{ day|date:"D d-m" }}</th>
+              {% for header in week.day_headers %}
+                <th>
+                  {{ header.day|date:"D d-m" }}
+                  {% if header.championships %}
+                    <div class="trainer-championships">
+                      {% for championship in header.championships %}
+                        <span class="pill trainer-championship-pill" data-championship-id="{{ championship.id }}">{{ championship.name }}</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </th>
               {% endfor %}
             </tr>
           </thead>
