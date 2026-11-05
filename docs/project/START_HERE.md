@@ -89,3 +89,6 @@ Actuele 4×3000-status: screenshot bevestigt toegepaste AI-groepering. Aanvullen
 
 
 Nieuwste casus: 3×8 circa300m met p28-30s en setpauzes175/180s. Correct AI-voorstel wordt nu toegelaten met korte-afstandsherstelminimum15s en afstandsmarge max(30m,8%); bestaande 20%-snelheidscontrole blijft. Zie DATA_RULES/CURRENT_STATUS voor voorwaarden. Prompt verduidelijkt afstandtarget bij ~55s-reps en één groep voor gelijke sets. 112 gerichte tests/check slagen; live herkenning nog te controleren.
+
+
+Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de volledige reps. Eén Z5 van 24 valt buiten het label, individuele zones en meetloads blijven intact. D telt na eigen HR-correctie, met volledige-reptempo als fallback. Screenshot bevestigt live 3×8×300-herkenning; deze nieuwe samenvattingsregel is lokaal getest (114 tests + check).

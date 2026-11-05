@@ -291,3 +291,6 @@ Bij samengestelde AI-reps in Garmin C wordt de tempozone opnieuw bepaald met de 
 
 
 Aanvulling korte AI-afstandsreps (5 november): afstandstolerantie max(30m, 8% van target), zowel per rep als voor groepscontrole. Herstel minimaal 15s uitsluitend wanneer beide aangrenzende reps afstandtargets <=600m en gemeten duur <=90s hebben; anders blijft minimum 30s. Maximum 600s/600m, beide snelheidsratios >=1.2 en volledige brondekking blijven gelijk. Nominale afstand wordt uitsluitend door AI voorgesteld; gemeten meters/tijden worden niet afgerond of overschreven.
+
+
+Zonebereik van repgroepen (5 november): voor de AI-/samengestelde C-repgroep tellen zones met minder dan 10% van alle volledige reps niet mee in het samenvattende label. Tel aantallen reps, geen autolaps, meters of seconden; tel gelijke sets gezamenlijk. Exact 10% blijft staan. D past dezelfde samenvatting toe na HR-classificatie per volledige rep, met berekende reptempozone als fallback bij ontbrekende HR. Onbekende zones blijven in de noemer; als geen bekende zone de grens haalt, behoud het waargenomen bekende bereik. Bronlapzones, individuele repzones, HR, gemeten afstand/tijd en loads blijven behouden.

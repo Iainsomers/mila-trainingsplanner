@@ -12,6 +12,27 @@ class GarminDTests(SimpleTestCase):
         self.athlete = SimpleNamespace(zone_hr_bpm={
             '1': 'max 150', '2': '151-170', '3': '171-188', '4': '189-194', '5': 'max 205'})
 
+    def test_hr_summary_ignores_rare_zone_without_changing_rep_measurements(self):
+        from core.watch_ai_structure import validate_lap_structure, apply_lap_structure
+        facts = []
+        loads = []
+        for index in range(24):
+            hr = 200 if index == 0 else 180 if index < 15 else 190
+            for meters, seconds, zone in ((300,55,'3'), (100,29,'1')):
+                facts.append(dict(lap=len(facts)+1,distance_m=meters,duration_s=seconds,zone='Z'+zone))
+                loads.append(dict(segment='CORE',meters=meters,seconds=seconds,zone=zone,
+                                  hr_samples=[[t,hr] for t in range(seconds)]))
+        proposal = dict(confidence=.95,lap_structure=dict(warmup_laps=[],cooldown_laps=[],stop_laps=[],
+            recovery_laps=list(range(2,49,2)),groups=[dict(target_meters=300,reps=[[i] for i in range(1,48,2)])]))
+        structure = validate_lap_structure(proposal,facts,rep_zone=lambda m,s:'Z3')
+        part = {}
+        apply_lap_structure(part,loads,structure)
+        converted = apply_garmin_d([{'parts':[part]}],self.athlete)[0]['parts'][0]
+        self.assertEqual(converted['training_fields']['main'],'24×300 m Z3>Z4 p29')
+        self.assertEqual(converted['watch_loads'][0]['zone'],'5')
+        self.assertEqual([(l['meters'],l['seconds']) for l in loads],
+                         [(l['meters'],l['seconds']) for l in converted['watch_loads']])
+
     def test_configured_hr_limits_and_exact_rep_thresholds(self):
         for hr, zone in [(150,'1'),(151,'2'),(170,'2'),(171,'3'),(194,'4'),(195,'5'),(205,'5'),(206,None)]:
             self.assertEqual(hr_zone(self.athlete, hr), zone)

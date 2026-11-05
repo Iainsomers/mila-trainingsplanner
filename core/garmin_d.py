@@ -42,7 +42,8 @@ def rep_hr_zone(athlete, meters, seconds, hr):
 
 
 def _replace_zone(text, zones):
-    zones = sorted(set(zones))
+    from core.watch_ai_structure import representative_zones
+    zones = [label[1:] for label in representative_zones('Z'+str(zone) for zone in zones)]
     if not zones:
         return text
     label = 'Z' + zones[0] + ('>Z' + zones[-1] if len(zones) > 1 else '')
@@ -84,7 +85,9 @@ def apply_garmin_d(results, athlete):
                     m, s = rep['measured_distance_m'], rep['measured_seconds']
                     zone = rep_hr_zone(athlete, m, s, rep.get('hr_tail'))
                     if not zone:
-                        zones.extend(re.findall(r'\bz([1-5])\b', text, re.I))
+                        from core.views.polar_raw import lap_zone_paces
+                        pace_zone = lap_zone_paces(m, s * 1000, athlete)[0]
+                        zones.append(pace_zone[1:] if pace_zone in {'Z1','Z2','Z3','Z4','Z5'} else None)
                         continue
                     zones.append(zone)
                     # Assign the full reconstructed rep (e.g. 1000+1000+rest)

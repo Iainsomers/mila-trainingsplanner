@@ -415,3 +415,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 5 november — screenshot nieuwe activiteit: 24 circa 300m-reps in drie sets; fallback 2×500m Z1 is onjuist. De screenshot toont een algemene target-/repaantalfout; het werkelijke AI-voorstel is niet beschikbaar. Daarnaast zou ook een correct 3×8×300-voorstel stranden op 28-29s herstel en eerste rep 326,34m (>8% van 300). Deze vaste blokkades zijn aangepast volgens DATA_RULES; prompt en targetdiagnostiek verduidelijkt. Synthetische 48-lapregressie bewaart 24 klokreps, p29, sp178 en bronmetingen; negatieve tests voor te kort/te snel herstel en te grote afstandsafwijking. 112 gerichte tests en manage.py check geslaagd. Geen nieuwe lokale patroonherkenning; live AI-indeling nog niet bevestigd.
+
+
+5 november — screenshot bevestigt toegepaste 3×(8×300m)-AI-indeling. Op verzoek wordt een zone onder 10% van de reps uit het samenvattende bereik gehouden: hier Z3>Z4 in plaats van Z3>Z5. Gedeelde telhelper voor C-repzones en D-HR-repzones; tests dekken 1/24, 1/10, 1/11, 1/4, behoud van bronzones/meters/tijden en D-HR-uitbijter. 114 gerichte tests en manage.py check geslaagd; Render-uitrol nog niet onafhankelijk bevestigd.

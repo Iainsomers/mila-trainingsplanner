@@ -487,3 +487,6 @@ Garmin C toont voor 4×3000 m met alle volledige reps in Z2 uitsluitend Z2, ook 
 
 
 AI-structuur C/D ondersteunt korte afstandssets met herstel onder 30s: bijvoorbeeld drie sets van acht 300m met 28-30s pauze en langere setpauzes. Modelopdracht benoemt target_meters voor korte reps, alle reps in één groep en set_start_laps voor gelijke sets. Validator geeft afzonderlijke feedback voor ongeldige afstandtarget, tijdtarget of repaantal.
+
+
+C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde groep. Bijvoorbeeld één Z5-rep van 24 vergroot Z3>Z4 niet naar Z3>Z5. Exact 10% telt mee; één van vier blijft dus zichtbaar. Alle afzonderlijke bronlaps en metingen blijven behouden.

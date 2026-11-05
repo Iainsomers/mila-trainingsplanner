@@ -1,6 +1,19 @@
 """Validate AI lap assignments; derive all displayed numbers from measurements."""
 import math
 from statistics import median
+from collections import Counter
+
+
+def representative_zones(labels):
+    """Summary only: keep zones represented by at least 10% of the reps.
+
+    Unknown reps remain in the denominator; if none meets the threshold,
+    retain the observed zones rather than inventing or removing a label.
+    """
+    labels = list(labels)
+    counts = Counter(label for label in labels if label in {'Z1','Z2','Z3','Z4','Z5'})
+    retained = [label for label,count in counts.items() if count * 10 >= len(labels)]
+    return sorted(retained or counts)
 
 
 class ValidatedDescription(str):
@@ -220,10 +233,11 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             # Autolaps describe recording boundaries, not separate efforts.
             # Classify each complete measured rep before forming the group range.
             if rep_zone is not None:
-                labels = {rep_zone(b['meters'], b['seconds']) for b in group_blocks}
+                labels = [rep_zone(b['meters'], b['seconds']) for b in group_blocks]
             else:
                 labels = {by_id[i]['zone'] for b in group_blocks for i in b['ids']}
-            zones = sorted(labels & {'Z1','Z2','Z3','Z4','Z5'})
+            zones = (representative_zones(labels) if rep_zone is not None else
+                     sorted(labels & {'Z1','Z2','Z3','Z4','Z5'}))
             zone = (' '+(zones[0] if len(zones)==1 else zones[0]+'>'+zones[-1])) if zones else ''
             reason = 'set_start_laps must list the first work lap of each equal-sized set, including the first rep; each set needs at least two reps and a longer measured set pause.'
             starts = groups[group_index].get('set_start_laps', [])

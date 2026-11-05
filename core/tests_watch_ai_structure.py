@@ -232,6 +232,10 @@ class WatchAIStructureTests(SimpleTestCase):
             recovery_laps=recovery_ids,groups=[dict(target_meters=300,reps=[[i] for i in work_ids],set_start_laps=[1,17,33])]))
         result = validate_lap_structure(proposal,facts)
         self.assertEqual(result['training_fields']['main'],'3×(8×300 m Z3 p29) sp178')
+        labels = iter(['Z5'] + ['Z3']*14 + ['Z4']*9)
+        summary = validate_lap_structure(proposal,facts,rep_zone=lambda m,s:next(labels))
+        self.assertEqual(summary['training_fields']['main'],'3×(8×300 m Z3>Z4 p29) sp178')
+
         loads = [dict(segment='CORE',meters=m,seconds=t,zone='3' if i in work_ids else '1')
                  for i,(m,t) in enumerate(values,1)]
         part = {}
@@ -254,6 +258,14 @@ class WatchAIStructureTests(SimpleTestCase):
             description = _model_b_ai_description([dict(distanceMeters=m,durationMillis=t*1000) for m,t in values],
                 strict_lap_structure=True)
         self.assertEqual(description.structure['training_fields']['main'],'3×(8×300 m Z3 p29) sp178')
+
+    def test_summary_ignores_zone_below_ten_percent_but_keeps_exact_threshold(self):
+        from core.watch_ai_structure import representative_zones
+        self.assertEqual(representative_zones(['Z3']*14 + ['Z4']*9 + ['Z5']), ['Z3','Z4'])
+        self.assertEqual(representative_zones(['Z3']*9 + ['Z5']), ['Z3','Z5'])
+        self.assertEqual(representative_zones(['Z3']*10 + ['Z5']), ['Z3'])
+        self.assertEqual(representative_zones(['Z3']*3 + ['Z5']), ['Z3','Z5'])
+        self.assertEqual(representative_zones([None]*24), [])
 
     def test_minute_block_separator_preserves_nested_sets_zones_and_paces(self):
         from core.training_text import split_main_segments
