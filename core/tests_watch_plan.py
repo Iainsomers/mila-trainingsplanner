@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.template.loader import render_to_string
 
-from core.models import Athlete, TrainingPlan, TrainingSlot, CoachAccess
+from core.models import Athlete, TrainingPlan, TrainingSlot, CoachAccess, TrainingPhoto, StandardStrengthProgram, AthleteBasePlanningBlock, AthleteBasePlanningSlot
 from core.views.calendar import _clone_slot_for_display
 
 
@@ -23,6 +23,87 @@ class WatchOriginalPlanTests(TestCase):
     def import_watch(self, index=2, main="10*100m z4 p45", origin="watch_c"):
         return self.client.post(self.url(index), {"core_text": main, "watch_origin": origin,
             "watch_loads": json.dumps([{"segment": "CORE", "meters": 100, "seconds": 20, "zone": "4", "average_hr_last_15": 148}])})
+
+    def add_protected_fields(self,slot):
+        program=StandardStrengthProgram.objects.create(owner=self.coach,name=f'Gym {slot.pk}')
+        photo=TrainingPhoto.objects.create(owner=self.coach,image=b'private-image',thumbnail=b'thumb')
+        slot.segments.create(type='MOB',text='Drills and hurdles',order=1,standard_strength_program=program,photo_ids=[str(photo.pk)])
+        slot.segments.create(type='SPR',text='5x60m strides',order=2,zone='6',reps=5,distance_m=60,parse_ok=True)
+        slot.segments.create(type='CORE2',text='Three sets of squats',order=4,photo_ids=[str(photo.pk)])
+        slot.segments.create(type='ALT',text="30' z1 cross trainer",order=5,zone='1',duration_s=1800)
+        slot.segment_order=['CORE2','MOB','WU','CORE','SPR','ALT','CD']
+        slot.save(update_fields=['segment_order'])
+        return photo
+
+    def test_all_watch_models_change_only_running_and_alternative_fields_in_both_dayparts(self):
+        for index in (1,2):
+            slot=self.original(index)
+            photo=self.add_protected_fields(slot)
+            protected=list(slot.segments.exclude(type__in=['WU','CORE','ALT','CD']).values())
+            for origin in ('watch_a','watch_b','watch_c','watch_d'):
+                response=self.client.post(self.url(index),dict(wu_text='900m z1',core_text='4*400m z3',
+                    alt_text="20' z2 cycling",cd_text='600m z1',watch_origin=origin,
+                    mob_text='discarded browser value',sprint_text='invalid running syntax',core2_text='',
+                    remove_mob_photo=[str(photo.pk)],remove_strength_photo=[str(photo.pk)],
+                    watch_loads=json.dumps([dict(segment='CORE',meters=400,seconds=80,zone='3')])) )
+                self.assertEqual(response.status_code,200)
+                slot.refresh_from_db()
+                current=list(slot.segments.exclude(type__in=['WU','CORE','ALT','CD']).values())
+                for rows in (protected,current):
+                    for row in rows:row.pop('order',None)
+                self.assertEqual(sorted(current,key=lambda row:row["id"]),sorted(protected,key=lambda row:row["id"]))
+                self.assertEqual(slot.segment_order,['CORE2','MOB','WU','CORE','SPR','ALT','CD'])
+                self.assertEqual(slot.segments.get(type='WU').text,'900m z1')
+                self.assertEqual(slot.segments.get(type='CD').text,'600m z1')
+                self.assertEqual(slot.segments.get(type='ALT').duration_s,1200)
+                self.assertIn('4',slot.segments.get(type='CORE').text)
+                for snapshot in (slot.watch_plan_snapshot,slot.watch_training_snapshot):
+                    self.assertEqual({s['type'] for s in snapshot['segments']} & {'MOB','SPR','CORE2'},{'MOB','SPR','CORE2'})
+            self.assertEqual(self.client.post(self.url(index),{'action':'select_watch_version','version':'plan'}).status_code,204)
+            self.assertEqual(self.client.post(self.url(index),{'action':'select_watch_version','version':'watch'}).status_code,204)
+            slot.refresh_from_db()
+            self.assertEqual(slot.segments.get(type='CORE2').photo_ids,[str(photo.pk)])
+
+    def test_watch_import_inherits_protected_fields_without_modifying_shared_plan(self):
+        shared=TrainingSlot.objects.create(plan=self.plan,date=self.day,slot_index=2)
+        shared.segments.create(type='CORE',text='6*200m z4',order=3)
+        self.add_protected_fields(shared)
+        before=list(shared.segments.values())
+        response=self.import_watch(origin='watch_d')
+        self.assertEqual(response.status_code,200)
+        own=TrainingSlot.objects.get(plan=self.plan,date=self.day,slot_index=2,athlete=self.athlete)
+        self.assertEqual(own.segments.get(type='MOB').text,'Drills and hurdles')
+        self.assertEqual(own.segments.get(type='MOB').photo_ids,shared.segments.get(type='MOB').photo_ids)
+        self.assertEqual(own.segments.get(type='SPR').reps,5)
+        self.assertEqual(own.segments.get(type='CORE2').text,'Three sets of squats')
+        self.assertEqual(own.segment_order,shared.segment_order)
+        self.assertEqual(list(shared.segments.values()),before)
+
+    def test_watch_import_keeps_protected_base_planning_trainer_fields(self):
+        trainer=TrainingPlan.objects.create(owner=self.coach,name='Base trainer',plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
+        shared=TrainingSlot.objects.create(plan=trainer,date=self.day,slot_index=2)
+        shared.segments.create(type='CORE',text='6*200m z4',order=3)
+        self.add_protected_fields(shared)
+        block=AthleteBasePlanningBlock.objects.create(athlete=self.athlete,start_month=1,start_day=1,end_month=12,end_day=31)
+        AthleteBasePlanningSlot.objects.create(block=block,weekday=self.day.weekday(),slot_index=2,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,trainer_plan=trainer)
+        self.assertEqual(self.import_watch(origin='watch_c').status_code,200)
+        own=TrainingSlot.objects.get(plan=self.plan,date=self.day,slot_index=2,athlete=self.athlete)
+        self.assertEqual(own.segments.get(type='MOB').text,'Drills and hurdles')
+        self.assertEqual(own.segments.get(type='CORE2').photo_ids,shared.segments.get(type='CORE2').photo_ids)
+        self.assertEqual(own.segment_order,shared.segment_order)
+
+    def test_empty_watch_boundaries_and_alternative_clear_only_the_allowed_fields(self):
+        slot=self.original()
+        self.add_protected_fields(slot)
+        self.athlete.auto_wucd_enabled=True
+        self.athlete.auto_wu_m=1500
+        self.athlete.auto_cd_m=1000
+        self.athlete.save()
+        self.assertEqual(self.import_watch(origin='watch_d').status_code,200)
+        slot.refresh_from_db()
+        self.assertFalse(slot.segments.filter(type__in=['WU','CD','ALT']).exists())
+        self.assertEqual(set(slot.segments.values_list('type',flat=True)),{'MOB','SPR','CORE2','CORE'})
 
     def test_garmin_d_preserves_plan_and_watch_roundtrip(self):
         slot = self.original()
@@ -185,7 +266,7 @@ class WatchOriginalPlanTests(TestCase):
             "selected_athlete_id": self.athlete.pk})
         self.assertIn('data-version-url="/slot-modal/2026/10/30/2/', html)
 
-    def test_segment_order_is_separate_for_saved_plan_and_watch_versions(self):
+    def test_watch_import_keeps_existing_segment_order_in_both_versions(self):
         slot=self.original()
         plan_order=['CORE2','WU','MOB','SPR','CORE','ALT','CD']
         watch_order=['CORE','WU','MOB','CORE2','SPR','CD','ALT']
@@ -195,10 +276,10 @@ class WatchOriginalPlanTests(TestCase):
             'watch_loads':json.dumps([{'segment':'CORE','meters':100,'seconds':20,'zone':'4'}])})
         self.assertEqual(response.status_code,200)
         slot.refresh_from_db()
-        self.assertEqual(slot.segment_order,watch_order)
+        self.assertEqual(slot.segment_order,plan_order)
         self.assertEqual(self.client.post(self.url(),{'action':'select_watch_version','version':'plan'}).status_code,204)
         slot.refresh_from_db()
         self.assertEqual(slot.segment_order,plan_order)
         self.assertEqual(self.client.post(self.url(),{'action':'select_watch_version','version':'watch'}).status_code,204)
         slot.refresh_from_db()
-        self.assertEqual(slot.segment_order,watch_order)
+        self.assertEqual(slot.segment_order,plan_order)

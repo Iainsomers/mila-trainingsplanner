@@ -15,6 +15,7 @@ from django.db import transaction
 from core.alternative import split_alternative_segments
 from core.models import (
     TrainingSlot,
+    TrainingSegment,
     SavedTrainingTemplate,
     StandardStrengthProgram,
     TrainingPlan,
@@ -1445,6 +1446,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if is_athlete_year_calendar and not athlete_year_can_edit_training and request.method == "POST":
         return HttpResponse("Future training can only be edited by a coach.", status=403)
 
+    preserve_watch_fields = (request.POST.get('watch_origin') or '').strip().lower() in {'watch_a','watch_b','watch_c','watch_d'}
     # Trainingsbuilder toggles (uit session)
     tb_show_wu = _tb_flag(request, "tb_show_wu", True)
     tb_show_mob = _tb_flag(request, "tb_show_mob", True)
@@ -1509,7 +1511,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     from core.segment_order import normalize_segment_order, apply_segment_order
     try:
-        form_segment_order = normalize_segment_order(request.POST.get("segment_order") or getattr(visible_slot, "segment_order", None))
+        form_segment_order = normalize_segment_order(getattr(visible_slot,"segment_order",None) if preserve_watch_fields else (request.POST.get("segment_order") or getattr(visible_slot, "segment_order", None)))
     except ValueError as error:
         return HttpResponse(str(error), status=400)
     segment_order_value = ','.join(form_segment_order)
@@ -1709,7 +1711,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     strength_photo_ids = [key for key in getattr(visible_strength, "photo_ids", []) or []
                           if key not in request.POST.getlist("remove_strength_photo")]
     prepared_photos, prepared_strength_photos = [], []
-    if action not in {"save_template", "load_template"}:
+    if action not in {"save_template", "load_template"} and not preserve_watch_fields:
         uploads = request.FILES.getlist("mob_photos") if tb_show_mob else []
         strength_uploads = request.FILES.getlist("strength_photos") if tb_show_core2 else []
         try:
@@ -1723,6 +1725,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
     # POST: maak slot (base/override)
     original_watch_plan = None
+    protected_watch_segments = []
+    watch_preserve_source = visible_slot
     if (request.POST.get("watch_origin") or "").strip().lower() in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         original_slot = visible_slot
         if not has_athlete_override and athlete and _is_flex_planner_plan(selected_plan):
@@ -1731,6 +1735,15 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 original_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
             elif not original_slot:
                 original_slot = _get_effective_slot(display_plan, athlete, d, slot_index, prefetch_segments=True)["visible_slot"] if display_plan else None
+        watch_preserve_source = original_slot
+        form_segment_order = normalize_segment_order(getattr(original_slot,'segment_order',None))
+        if original_slot:
+            protected_watch_segments = [
+                {field.attname:getattr(segment,field.attname) for field in TrainingSegment._meta.concrete_fields
+                 if field.attname not in {'id','slot_id'} and hasattr(segment,field.attname)}
+                for segment in original_slot.segments.all()
+                if segment.type not in {'WU','CORE','ALT','CD'}
+            ]
         if str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
             original_watch_plan = {"segments": _week_segment_payload(original_slot), "segment_order":getattr(original_slot, "segment_order", [])}
     if athlete:
@@ -1739,6 +1752,13 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     else:
         slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=None)
         is_override = False
+
+    if preserve_watch_fields and watch_preserve_source and getattr(watch_preserve_source,'pk',None) != slot.pk:
+        # The visible training can be inherited from a shared/base plan. Copy
+        # its non-watch fields into the personal override without reparsing.
+        slot.segments.exclude(type__in=['WU','CORE','ALT','CD']).delete()
+        for payload in protected_watch_segments:
+            slot.segments.create(**payload)
 
     # existing segments
     wu_seg = slot.segments.filter(type="WU").order_by("order", "id").first()
@@ -1761,9 +1781,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     core2_text = (request.POST.get("core2_text") or "").strip() if tb_show_core2 else ""
     alt_text = (request.POST.get("alt_text") or "").strip()
     cd_text = (request.POST.get("cd_text") or "").strip() if tb_show_cd else ""
-    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    if preserve_watch_fields:
+        mob_text = sprint_text = core2_text = ''
+        selected_standard_strength = None
         core_text = normalize_watch_main_text(core_text)
-    if core_text:
+    if core_text and not preserve_watch_fields:
         wu_text, cd_text = apply_auto_wucd_texts(athlete, selected_plan, core_text, wu_text, cd_text)
 
     if action == "save_template":
@@ -2078,44 +2100,45 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if wu_seg:
             wu_seg.delete()
 
-    # Save MOB; binaries are stored once, copies keep private references.
-    if has_mob_content:
-        if mob_seg:
-            mob_seg.order = 1
-            _apply_mob_only(mob_seg, mob_text)
-            mob_seg.standard_strength_program = selected_standard_strength
-            mob_seg.save()
+    if not preserve_watch_fields:
+        # Save MOB; binaries are stored once, copies keep private references.
+        if has_mob_content:
+            if mob_seg:
+                mob_seg.order = 1
+                _apply_mob_only(mob_seg, mob_text)
+                mob_seg.standard_strength_program = selected_standard_strength
+                mob_seg.save()
+            else:
+                mob_seg = slot.segments.create(type="MOB", text=mob_text, order=1)
+                _apply_mob_only(mob_seg, mob_text)
+                mob_seg.standard_strength_program = selected_standard_strength
+                mob_seg.save()
         else:
-            mob_seg = slot.segments.create(type="MOB", text=mob_text, order=1)
-            _apply_mob_only(mob_seg, mob_text)
-            mob_seg.standard_strength_program = selected_standard_strength
-            mob_seg.save()
-    else:
-        if mob_seg:
-            mob_seg.delete()
+            if mob_seg:
+                mob_seg.delete()
 
-    if mob_seg and has_mob_content:
-        for prepared in prepared_photos:
-            photo = TrainingPhoto.objects.create(owner=selected_plan.owner, **prepared)
-            kept_photo_ids.append(str(photo.pk))
-        mob_seg.photo_ids = kept_photo_ids
-        mob_seg.save(update_fields=["photo_ids"])
+        if mob_seg and has_mob_content:
+            for prepared in prepared_photos:
+                photo = TrainingPhoto.objects.create(owner=selected_plan.owner, **prepared)
+                kept_photo_ids.append(str(photo.pk))
+            mob_seg.photo_ids = kept_photo_ids
+            mob_seg.save(update_fields=["photo_ids"])
 
-    # Save SPRINT
-    if sprint_text:
-        if sprint_seg:
-            sprint_seg.text = sprint_text
-            sprint_seg.order = 2
+        # Save SPRINT
+        if sprint_text:
+            if sprint_seg:
+                sprint_seg.text = sprint_text
+                sprint_seg.order = 2
+            else:
+                sprint_seg = slot.segments.create(type="SPR", text=sprint_text, order=2)
+            _apply_parse_to_segment(sprint_seg, sprint_parse)
+            sprint_seg.zone = "6"
+            sprint_seg.norm_distance_m = None if sprint_seg.duration_s is not None else _compute_norm_distance_m(sprint_seg)
+            sprint_seg.parsed_at = now
+            sprint_seg.save()
         else:
-            sprint_seg = slot.segments.create(type="SPR", text=sprint_text, order=2)
-        _apply_parse_to_segment(sprint_seg, sprint_parse)
-        sprint_seg.zone = "6"
-        sprint_seg.norm_distance_m = None if sprint_seg.duration_s is not None else _compute_norm_distance_m(sprint_seg)
-        sprint_seg.parsed_at = now
-        sprint_seg.save()
-    else:
-        if sprint_seg:
-            sprint_seg.delete()
+            if sprint_seg:
+                sprint_seg.delete()
 
     # Save CORE
     next_followup_order = 3
@@ -2196,24 +2219,25 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
 
 
 
-    # Save Strength, including photo-only sessions.
-    if has_strength_content:
-        if core2_seg:
-            core2_seg.text = core2_text
-            core2_seg.order = next_followup_order
+    if not preserve_watch_fields:
+        # Save Strength, including photo-only sessions.
+        if has_strength_content:
+            if core2_seg:
+                core2_seg.text = core2_text
+                core2_seg.order = next_followup_order
+            else:
+                core2_seg = slot.segments.create(type="CORE2", text=core2_text, order=next_followup_order)
+            from core.strength import clear_strength_metrics
+            clear_strength_metrics(core2_seg)
+            for prepared in prepared_strength_photos:
+                photo = TrainingPhoto.objects.create(owner=selected_plan.owner, **prepared)
+                strength_photo_ids.append(str(photo.pk))
+            core2_seg.photo_ids = strength_photo_ids
+            core2_seg.parsed_at = now
+            core2_seg.save()
         else:
-            core2_seg = slot.segments.create(type="CORE2", text=core2_text, order=next_followup_order)
-        from core.strength import clear_strength_metrics
-        clear_strength_metrics(core2_seg)
-        for prepared in prepared_strength_photos:
-            photo = TrainingPhoto.objects.create(owner=selected_plan.owner, **prepared)
-            strength_photo_ids.append(str(photo.pk))
-        core2_seg.photo_ids = strength_photo_ids
-        core2_seg.parsed_at = now
-        core2_seg.save()
-    else:
-        if core2_seg:
-            core2_seg.delete()
+            if core2_seg:
+                core2_seg.delete()
 
     # Save CD
     if cd_text:

@@ -2686,11 +2686,8 @@
     formData.append("slot_index", String(slotIndex));
     formData.append("slot_text", [fields.wu, fields.main, fields.cd].filter(Boolean).join("\n"));
     formData.append("wu_text", fields.wu || "");
-    formData.append("mob_text", "");
-    formData.append("sprint_text", "");
     formData.append("core_text", fields.main || "");
-    formData.append("core2_text", "");
-    formData.append("alt_text", "");
+    formData.append("alt_text", fields.alt || fields.alternative || "");
     formData.append("cd_text", fields.cd || "");
     formData.append("watch_origin", "watch_" + String(model || "A").toLowerCase());
     formData.append("watch_loads", JSON.stringify(watchLoads || []));
