@@ -13049,7 +13049,7 @@ def daily_overview_other_view(request):
             "evaluation_tooltip": evaluation_tooltip,
             "vitals_filled": vitals_filled,
             "vitals_total": 40 if can_view_vitals else None,
-            "vitals_percentage": round(vitals_filled * 100 / 40) if can_view_vitals else None,
+            "vitals_percentage": round(vitals_filled * 100 / 40) if can_view_vitals and evaluation_percentage is not None else None,
             "vitals_tooltip": f"Filled: {vitals_filled} / 40 · Last: {last_date_label(last_vital_dates, athlete.id)}" if can_view_vitals else "",
         })
 
@@ -13057,6 +13057,9 @@ def daily_overview_other_view(request):
     for key in ("evaluation_percentage", "vitals_percentage"):
         values = [row[key] for row in counts if row[key] is not None]
         information_quality_all[key] = round(sum(values) / len(values)) if values else None
+
+    if requested_view == "information_quality" and request.GET.get("show_na") != "1":
+        counts = [row for row in counts if row['evaluation_percentage'] is not None]
 
     vital_columns = [
         {"key": "sleep_hours", "label": "Sleep length", "suffix": " h"},

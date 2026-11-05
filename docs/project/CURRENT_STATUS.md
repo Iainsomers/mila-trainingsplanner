@@ -421,3 +421,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Alternative Use/Add aangepast op verzoek eigenaar. Use AM/PM vervangt ALT en wist WU/Main/CD; extra Add AM/PM schrijft alleen ALT. Beschermde trainingsblokken blijven behouden. 50 gerichte Watch/Plan- en Garmin C-tests, JavaScript-test voor echte renderer/knoppen en opslag en manage.py check geslaagd. Actieregel gebruikt flex-wrap voor mobiel; geen aparte visuele browsercontrole uitgevoerd. Vooraf analyseren/blijvende AI-opslag blijft uitgesteld.
+
+
+6 november — Information Quality koppelt Vitals-NA aan Evaluated-NA en verbergt deze rijen standaard via Show NA. Getest: gevulde vitals zonder trainingen zijn NA, schakelaar herstelt rij, 0%-evaluatie blijft zichtbaar met normaal vitalspercentage, NA uitgesloten uit gemiddelde. 40 overige PlanningOverview/LastActive-tests geslaagd; de aangepaste vitalsregressie na toevoegen schakelaar afzonderlijk geslaagd; manage.py check geslaagd.

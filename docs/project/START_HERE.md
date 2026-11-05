@@ -95,3 +95,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november: vooraf analyseren en blijvend opslaan van AI-resultaten is uitgesteld. Nieuwe Alternative-acties: Use AM/PM wist WU/Main/CD en vult ALT; alleen ALT-resultaten krijgen Add AM/PM voor uitsluitend ALT vervangen. Mob/Tech/Sprint/Strength blijven behouden. 50 gerichte tests, JS-renderer-/opslagtest en check geslaagd; zie DATA_RULES.
+
+
+6 november — Information Quality: Evaluated NA betekent Vitals NA. Nieuwe Show NA-schuif staat standaard uit en verbergt Evaluated-NA-atleten; 0% blijft zichtbaar. ALL sluit NA uit. Zie FEATURES/UI_RULES.

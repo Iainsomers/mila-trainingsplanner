@@ -493,3 +493,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — alternatieve horlogetrainingen: Use AM/PM vult Alternative en wist WU/Main/CD. Alleen bij ALT-resultaten verschijnen daarnaast Add AM/Add PM; deze vervangen uitsluitend Alternative en behouden de rest van de training. Mob/Tech, Sprint en Strength blijven bij beide acties behouden. Add voegt geen tekst achter een bestaand ALT-segment toe, maar schrijft het ontvangen resultaat naar ALT.
+
+
+6 november — Information Quality: Vitals toont NA wanneer Evaluated NA is. Show NA is een schakelaar, standaard uit; rijen met Evaluated NA blijven verborgen tot inschakelen. 0% blijft zichtbaar. NA telt niet mee in ALL-gemiddelden. Toegangsbeperkingen blijven gelden; zonder vitalsrechten blijft de afgeschermde weergave behouden.

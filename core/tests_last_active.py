@@ -70,7 +70,7 @@ class AthleteLastActiveTests(TestCase):
         foreign_coach = get_user_model().objects.create_user(username="foreign-active-coach", is_staff=True)
         Athlete.objects.create(owner=foreign_coach, name="Private Foreign Activity", birth_year=2000, gender="X", last_active_at=now.return_value)
         self.client.force_login(self.coach)
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
         self.assertEqual(response.status_code, 200)
         rows = {row["athlete"].name: row for row in response.context["athlete_rows"]}
         for name, last, color in entries:

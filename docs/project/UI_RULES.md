@@ -266,3 +266,6 @@ Garmin C/D toont direct na het gemeten verzoek de laps en bestaande trainingskeu
 
 
 6 november — ALT-resultaten hebben Use AM, Use PM, Add AM en Add PM in dezelfde compacte, ombrekende actieregel. Gewone hardloopresultaten behouden uitsluitend Use AM/PM.
+
+
+Information Quality heeft een compacte Show NA-schuifschakelaar boven de tabel, standaard uit, met GET-parameter show_na=1 voor ingeschakelde weergave. Geen vaste breedte; bestaande tabel blijft op mobiel horizontaal schuifbaar.

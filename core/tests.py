@@ -1555,7 +1555,7 @@ class PlanningOverviewTests(TestCase):
         )
 
         self.client.force_login(coach)
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
@@ -1572,7 +1572,7 @@ class PlanningOverviewTests(TestCase):
         Athlete.objects.create(owner=coach, name="Quality without sessions", birth_year=2000, gender="X")
         zero = Athlete.objects.create(owner=coach, name="Quality zero evaluations", birth_year=2000, gender="X")
         PlanMembership.objects.create(plan=plan, athlete=zero)
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
         percentages = [item["evaluation_percentage"] for item in response.context["athlete_rows"]]
         self.assertIn(None, percentages)
         self.assertIn(0, percentages)
@@ -1591,13 +1591,13 @@ class PlanningOverviewTests(TestCase):
         AthleteDayCheck.objects.create(athlete=athlete, date=today, comment="   ", updated_by=coach)
         AthleteDayCheck.objects.create(athlete=athlete, date=today + timedelta(days=1), checked=True, updated_by=coach)
         self.client.force_login(coach)
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
         row = response.context["athlete_rows"][0]
         self.assertEqual(row["vitals_tooltip"], f"Filled: 0 / 40 · Last: {last:%d-%m-%Y}")
         self.assertEqual(row["evaluation_tooltip"], f"Open: 0 · Evaluated: 0 · Last: {last:%d-%m-%Y}")
         AthleteDailyVital.objects.filter(athlete=athlete).delete()
         AthleteDayCheck.objects.filter(athlete=athlete).delete()
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
         row = response.context["athlete_rows"][0]
         self.assertTrue(row["vitals_tooltip"].endswith("Last: —"))
         self.assertTrue(row["evaluation_tooltip"].endswith("Last: —"))
@@ -1627,10 +1627,24 @@ class PlanningOverviewTests(TestCase):
         )
 
         self.client.force_login(coach)
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
+        self.assertIsNone(row["evaluation_percentage"])
+        self.assertIsNone(row["vitals_percentage"])
+        self.assertIsNone(response.context["information_quality_all"]["vitals_percentage"])
+        hidden = self.client.get("/coach/daily-overview-other/", {"view":"information_quality"})
+        self.assertEqual(hidden.context["athlete_rows"], [])
+        self.assertContains(hidden, 'role="switch"')
+        plan = TrainingPlan.objects.create(owner=coach,name="Quality test")
+        PlanMembership.objects.create(plan=plan,athlete=athlete)
+        slot = TrainingSlot.objects.create(plan=plan,date=today-timedelta(days=1),slot_index=1)
+        slot.segments.create(type="CORE",text="Easy run",order=0)
+        response = self.client.get("/coach/daily-overview-other/", {"view":"information_quality"})
+        self.assertEqual(len(response.context["athlete_rows"]),1)
+        row = response.context["athlete_rows"][0]
+        self.assertEqual(row["evaluation_percentage"],0)  # Zero is visible, not NA.
         self.assertEqual(row["vitals_filled"], 4)
         self.assertEqual(row["vitals_total"], 40)
         self.assertEqual(row["vitals_percentage"], 10)
@@ -1640,9 +1654,9 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "10%")
 
         Athlete.objects.create(owner=coach, name="Quality zero vitals", birth_year=2000, gender="X")
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
-        self.assertEqual(response.context["information_quality_all"]["vitals_percentage"], 5)
-        self.assertIsNone(response.context["information_quality_all"]["evaluation_percentage"])
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
+        self.assertEqual(response.context["information_quality_all"]["vitals_percentage"], 10)
+        self.assertEqual(response.context["information_quality_all"]["evaluation_percentage"], 0)
 
     def test_daily_overview_other_counts_ten_days_and_unlocks_today_sessions_at_noon_and_21(self):
         coach = get_user_model().objects.create_user(
@@ -1693,7 +1707,7 @@ class PlanningOverviewTests(TestCase):
                 return_value=timezone.make_aware(local_now),
             ):
                 response = self.client.get(
-                    "/coach/daily-overview-other/", {"view": "information_quality"}
+                    "/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"}
                 )
                 row = response.context["athlete_rows"][0]
                 self.assertEqual(response.context["window_start"], today - timedelta(days=9))
@@ -1717,7 +1731,7 @@ class PlanningOverviewTests(TestCase):
         )
         self.client.force_login(coach)
         response = self.client.get(
-            "/coach/daily-overview-other/", {"view": "information_quality"}
+            "/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"}
         )
 
         row = response.context["athlete_rows"][0]
@@ -1765,7 +1779,7 @@ class PlanningOverviewTests(TestCase):
         session = self.client.session
         session["active_coach_owner_id"] = owner.id
         session.save()
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
@@ -1809,7 +1823,7 @@ class PlanningOverviewTests(TestCase):
         session = self.client.session
         session["active_coach_owner_id"] = owner.id
         session.save()
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
@@ -1852,7 +1866,7 @@ class PlanningOverviewTests(TestCase):
         )
 
         self.client.force_login(coach)
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
 
         self.assertEqual(response.status_code, 200)
         row = response.context["athlete_rows"][0]
@@ -2679,7 +2693,7 @@ class PlanningOverviewTests(TestCase):
 
         dco = self.client.get(f"/coach/daily-overview/?date={today.isoformat()}&ok=1")
         self.assertIsNotNone(dco.context["rows"][0]["check1"])
-        dco_other = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        dco_other = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
         self.assertEqual(dco_other.context["athlete_rows"][0]["pending_count"], 0)
 
         flex = self.client.get(
@@ -11227,7 +11241,7 @@ class MeetingRequestTests(TestCase):
         self.athlete.save(update_fields=["meeting_requested_at"])
         self.client.force_login(self.coach)
 
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Meeting Athlete requested a meeting.")
         self.assertContains(response, "Meeting requested · 3d")
@@ -11235,7 +11249,7 @@ class MeetingRequestTests(TestCase):
 
         response = self.client.post("/coach/meeting-requests/dismiss/")
         self.assertEqual(response.status_code, 302)
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
         self.assertNotContains(response, "Meeting Athlete requested a meeting.")
         self.assertContains(response, "Meeting requested · 3d")
 
@@ -11251,7 +11265,7 @@ class MeetingRequestTests(TestCase):
             athlete.save(update_fields=["meeting_requested_at"])
 
         self.client.force_login(self.coach)
-        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality"})
+        response = self.client.get("/coach/daily-overview-other/", {"view": "information_quality", "show_na": "1"})
         self.assertContains(response, "Meeting requested · 0d")
         self.assertContains(response, "Meeting requested · 2d")
         self.assertContains(response, "Meeting requested · 3d")
