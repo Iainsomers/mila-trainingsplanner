@@ -77,3 +77,6 @@ MiLa Training Planner is een Django 5.2-app voor trainers en atleten. Trainers m
 ```
 
 Bij modelwijzigingen: maak migraties, voer ze lokaal uit en laat Render daarna migreren via de bestaande deploystap. Zie `DEVELOPMENT.md` voor de volledige werkwijze.
+
+
+Garmin C/D AI-latentie (5 november 2026): automatisch goedgekeurde AI-indelingen worden 24 uur gecachet per atleet en exacte opdracht (inclusief meetwaarden, zones en model). C en D delen dit voorstel; actuele toestemming blijft voor ieder gebruik vereist. De standaard Django-cache is proceslokaal: andere workers/herstarts kunnen opnieuw AI vragen. Afwijzingen, reviews en servicefouten worden niet gecachet. Strict AI-verzoeken wachten maximaal 12s per eerste netwerkpoging en 6s voor één herstelpoging (voorheen 25+15); meerdere activiteiten kunnen nog steeds optellen. De popup onderscheidt confidence- of meetafwijzing, zonder twee confidencegrenzen achter elkaar. Screenshotcasus confidence 0,42 bewijst geen meetfout; stabiele live 4×3000-herkenning blijft onbevestigd. Geen lokale patroonherkenning of confidenceverhoging toegevoegd.

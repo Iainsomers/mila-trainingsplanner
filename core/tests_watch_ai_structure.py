@@ -274,6 +274,27 @@ class WatchAIStructureTests(SimpleTestCase):
         self.assertNotIn('legacy',prompt['task'])
         self.assertNotIn('Use the legacy segments/sets schema',json.loads(request.data)['messages'][0]['content'])
 
+    def test_valid_ai_proposal_is_reused_for_same_athlete_and_facts(self):
+        from django.core.cache import cache
+        from core.views.polar_raw import _model_b_ai_description
+        cache.clear()
+        self.addCleanup(cache.clear)
+        laps = [dict(distanceMeters=f['distance_m'], durationMillis=f['duration_s']*1000) for f in self.facts]
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(
+            {'choices':[{'message':{'content':json.dumps(self.proposal)}}]}).encode()
+        with patch.dict('os.environ', {'OPENAI_API_KEY':'test'}), patch(
+                'core.views.polar_raw.urlopen', return_value=response) as call, patch(
+                'core.views.polar_raw.lap_zone_paces', return_value=('Z2','NA')):
+            for athlete_id in (71,71,72):
+                result = _model_b_ai_description(laps, SimpleNamespace(pk=athlete_id), strict_lap_structure=True)
+                self.assertTrue(result.structure)
+            self.assertEqual(call.call_count, 2)
+            self.assertEqual(call.call_args.kwargs['timeout'], 12)
+            laps[0]['durationMillis'] += 1000
+            _model_b_ai_description(laps, SimpleNamespace(pk=71), strict_lap_structure=True)
+            self.assertEqual(call.call_count, 3)
+
     def test_ai_failures_are_distinguishable_without_exposing_service_response(self):
         from core.views.polar_raw import _model_b_ai_description
         laps = [{'distanceMeters':f['distance_m'],'durationMillis':f['duration_s']*1000} for f in self.facts]

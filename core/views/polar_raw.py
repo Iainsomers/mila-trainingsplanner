@@ -1,5 +1,6 @@
 """Read-only Polar v4 inspection; never imports or modifies workouts."""
 import json
+import hashlib
 import math
 import os
 import re
@@ -8,6 +9,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.utils import timezone
@@ -860,11 +862,22 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         method="POST",
     )
+    # Cache only validated automatic proposals, scoped to athlete and exact
+    # prompt (measurements, zones, model and instructions). Consent is checked
+    # by the caller before this function is entered. Never cache failures.
+    cache_key = None
+    if strict_lap_structure and getattr(athlete, 'pk', None) is not None:
+        digest = hashlib.sha256(body).hexdigest()
+        cache_key = f'watch-structure-v1:{athlete.pk}:{digest}'
+    cached = cache.get(cache_key) if cache_key else None
     diagnostics["status"] = "invalid_response"
     try:
-        with urlopen(request, timeout=25) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-        data = json.loads(payload["choices"][0]["message"]["content"])
+        if cached is not None:
+            data = cached
+        else:
+            with urlopen(request, timeout=12 if strict_lap_structure else 25) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            data = json.loads(payload["choices"][0]["message"]["content"])
     except (HTTPError, URLError, TimeoutError, OSError):
         diagnostics["status"] = "service_error"
         return ""
@@ -909,13 +922,15 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             repair_request = Request(request.full_url, data=json.dumps(repair_body).encode('utf-8'),
                 headers={'Authorization':f'Bearer {api_key}','Content-Type':'application/json'}, method='POST')
             try:
-                with urlopen(repair_request, timeout=15) as response:
+                with urlopen(repair_request, timeout=6) as response:
                     repaired = json.loads(json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content'])
                 candidate_data = repaired
                 issues = []
                 structure = validate_lap_structure(repaired, facts, issues=issues)
             except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError, IndexError, TypeError):
                 pass
+        if structure and cache_key:
+            cache.set(cache_key, candidate_data, timeout=86400)
         diagnostics["status"] = "applied" if structure else "rejected_structure"
         if not structure and issues:
             diagnostics['reason'] = issues[0]
@@ -924,7 +939,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             measurement_issues = []
             review = validate_lap_structure(candidate_data, facts, minimum_confidence=.5, issues=measurement_issues)
             if not review:
-                diagnostics['reason'] = ' '.join(dict.fromkeys(issues + measurement_issues))
+                diagnostics['reason'] = ' '.join(dict.fromkeys(measurement_issues or issues))
             if review:
                 diagnostics['review_structure'] = review
                 diagnostics['status'] = 'review_available'

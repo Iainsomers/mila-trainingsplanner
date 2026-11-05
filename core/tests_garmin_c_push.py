@@ -216,7 +216,11 @@ class GarminCPushTests(TestCase):
             distance_m=sum(f['distance_m'] for f in facts),duration_s=sum(f['duration_s'] for f in facts),
             analysis_data={'laps':[dict(distance=f['distance_m'],elapsed_time=f['duration_s']) for f in facts]})
         self.client.force_login(self.coach)
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
         for consent,confidence in ((True,.96),(True,.68),(False,.96)):
+            cache.clear()
             self.athlete.garmin_ai_consent_at=timezone.now() if consent else None
             self.athlete.garmin_ai_consent_version=CONSENT_VERSION
             self.athlete.save()
@@ -236,7 +240,7 @@ class GarminCPushTests(TestCase):
                         self.assertEqual(ai.call_count,0)
                         self.assertNotIn('4×3000',part['training_fields']['main'])
                         continue
-                    self.assertEqual(ai.call_count,1 if confidence>=.75 else 2)
+                    self.assertEqual(ai.call_count, (1 if route == 'garmin_type_c_ayc' else 0) if confidence>=.75 else 2)
                     if confidence>=.75:
                         self.assertEqual(part['ai_structure_status'],'applied')
                         selected=part
