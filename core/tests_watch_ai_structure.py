@@ -11,7 +11,71 @@ from core.garmin_d import apply_garmin_d
 from core.views.calendar import _virtual_segment_from_text, _ayc_slot_loads_for_totals
 
 
+def split_distance_example():
+    """Four uninterrupted efforts, recorded as kilometre autolaps and jogs."""
+    values=[(1007.92,200),(1000.6,205),(1002.27,188),(448.88,119),
+            (1005.18,191),(998.16,198),(1001.04,197),(438.58,119),
+            (1001.94,195),(1001.58,202),(999.490,195),(448.931,121),
+            (1004.74,203),(998.869,191),(1000.13,195),(24.1795,7)]
+    recovery={4,8,12,16}
+    facts=[dict(lap=i,distance_m=m,duration_s=t,zone='Z1' if i in recovery else 'Z2')
+           for i,(m,t) in enumerate(values,1)]
+    proposal={'confidence':.96,'lap_structure':dict(warmup_laps=[],cooldown_laps=[],stop_laps=[],
+        recovery_laps=sorted(recovery),groups=[dict(target_meters=3000,
+            reps=[[1,2,3],[5,6,7],[9,10,11],[13,14,15]])])}
+    return facts,proposal
+
+
 class WatchAIStructureTests(SimpleTestCase):
+    def test_ai_groups_kilometre_autolaps_into_distance_reps_with_jogging_recovery(self):
+        from core.views.polar_raw import _model_b_ai_description
+        facts,proposal=split_distance_example()
+        laps=[dict(distanceMeters=f['distance_m'],durationMillis=f['duration_s']*1000) for f in facts]
+        response=MagicMock()
+        response.__enter__.return_value.read.return_value=json.dumps(
+            {'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode()
+        diagnostics={}
+        with patch.dict('os.environ',{'OPENAI_API_KEY':'test'}), patch(
+                'core.views.polar_raw.urlopen',return_value=response) as call, patch(
+                'core.views.polar_raw.lap_zone_paces',side_effect=lambda m,t,a: ('Z1' if m<500 else 'Z2','NA')):
+            result=_model_b_ai_description(laps,strict_lap_structure=True,diagnostics=diagnostics)
+        self.assertEqual(call.call_count,1)  # AI, not a new local recognizer.
+        self.assertEqual(diagnostics['status'],'applied')
+        self.assertEqual(result.structure['training_fields'],{'wu':'','main':'4×3000 m Z2 p119','cd':''})
+        sent=json.loads(json.loads(call.call_args.args[0].data)['messages'][1]['content'])
+        self.assertIn('source lap boundary',sent['recording_boundaries'])
+        self.assertIn('target_meters=3000',sent['recording_boundaries'])
+        self.assertIn('continuous run',sent['recording_boundaries'])
+        self.assertEqual(len(sent['laps']),len(facts))
+        loads=[dict(segment='CORE',meters=f['distance_m'],seconds=f['duration_s'],zone=f['zone'][1:]) for f in facts]
+        part={}
+        self.assertTrue(apply_lap_structure(part,loads,result.structure))
+        for model in ('C','D'):
+            item=deepcopy(part) if model=='C' else apply_garmin_d([{'parts':[deepcopy(part)]}],SimpleNamespace(zone_hr_bpm={}))[0]['parts'][0]
+            slot=SimpleNamespace(source='watch_'+model.lower(),watch_loads=item['watch_loads'],
+                segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',item['training_fields']['main'])]))
+            reps=processed_main_reps(slot)
+            self.assertEqual([r['distance_m'] for r in reps],[3000]*4)
+            self.assertEqual([r['measured_seconds'] for r in reps],[593,586,592,589])
+            self.assertEqual(len(item['watch_loads']),16)
+            self.assertEqual(sum(l['meters'] for l in item['watch_loads']),sum(f['distance_m'] for f in facts))
+            self.assertFalse(item['watch_loads'][-1]['work_rep'])
+
+    def test_ai_jogging_recovery_is_still_required_to_be_slower_than_both_efforts(self):
+        facts,proposal=split_distance_example()
+        self.assertIsNotNone(validate_lap_structure(proposal,facts))
+        accepted=deepcopy(facts);accepted[3].update(distance_m=500,duration_s=119)
+        self.assertIsNotNone(validate_lap_structure(proposal,accepted))  # ratio just above 1.2
+        for meters,seconds in ((700,120),(450,20),(450,650),(650,120),(600,119),(510,119)):
+            invalid=deepcopy(facts);invalid[3].update(distance_m=meters,duration_s=seconds)
+            self.assertIsNone(validate_lap_structure(proposal,invalid))
+        missing=deepcopy(proposal);missing['lap_structure']['recovery_laps'].remove(4)
+        self.assertIsNone(validate_lap_structure(missing,facts))
+        without_recovery=deepcopy(proposal)
+        without_recovery['lap_structure'].update(recovery_laps=[16],groups=[dict(target_meters=1000,
+            reps=[[i] for i in range(1,16)])])
+        self.assertIsNone(validate_lap_structure(without_recovery,facts))
+
     def test_ai_distance_group_keeps_seventeen_measured_reps_and_outlier(self):
         from core.views.polar_raw import _model_b_ai_description
         values = [(1000,324.87),(1000,311.95),(244.87,994.38)]

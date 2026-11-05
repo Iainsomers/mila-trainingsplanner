@@ -183,7 +183,7 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
             return reject()
         # Every rep boundary needs real, slower recovery; stop markers alone
         # cannot turn a continuous easy run into a series of intervals.
-        reason = "Each rep boundary needs assigned recovery of 30-600 seconds, at most 600m, and slower than both neighboring reps."
+        reason = "Each rep boundary needs assigned recovery of 30-600 seconds, at most 600m; both neighboring work reps must be at least 20% faster than recovery."
         pauses = {}
         for left, right in zip(blocks, blocks[1:]):
             gap = list(range(left['ids'][-1]+1, right['ids'][0]))
@@ -192,7 +192,9 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75):
             meters = sum(by_id[i]['distance_m'] for i in gap)
             seconds = sum(by_id[i]['duration_s'] for i in gap)
             speed = min(left['meters']/left['seconds'], right['meters']/right['seconds'])
-            if not 30 <= seconds <= 600 or meters > 600 or speed < 1.4*meters/seconds:
+            # AI chooses the structure. Retain a measurable speed contrast,
+            # allowing jogging recovery without accepting nearly equal pace.
+            if not 30 <= seconds <= 600 or meters > 600 or speed < 1.2*meters/seconds:
                 return reject()
             pauses[left['ids'][0]] = seconds
         assignments = [{'segment':'WU' if i in warmup else 'CD' if i in cooldown else 'CORE',

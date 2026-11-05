@@ -796,7 +796,8 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             'Running warmup/cooldown must average at least 2 m/s; classify slow transitions before/after work as recovery_laps. '
             'Stop laps must be at least 600 seconds and slower than 1 m/s. Long incidental stops do not erase the surrounding workout structure. '
             'Code derives counts and ordinary/set pause durations from source laps. No need to predict pause numbers. '
-            'Each group has 2-30 reps. Recovery between work reps must last 30-600 seconds, cover at most 600m and be slower than both neighbors. '
+            'Each group has 2-30 reps. Recovery between work reps must last 30-600 seconds and cover at most 600m; '
+            'both neighboring complete work reps must be at least 20 percent faster than recovery (work speed / recovery speed >= 1.2). '
             'Assess confidence in the observed structure, not why the athlete stopped. Do not invent missing laps or upgrade confidence to pass validation.'
         )
     if not allow_lap_structure:
@@ -804,6 +805,22 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         task = prompt["task"]
         first, last = task.index("Prefer lap_structure"), task.index("Low zones support")
         prompt["task"] = task[:first] + task[last:]
+    else:
+        prompt['recording_boundaries'] = (
+            'A source lap boundary is not necessarily a repetition boundary. First identify actual work/recovery transitions '
+            'across the whole recording, then group the uninterrupted source laps inside each work effort into ONE rep. '
+            'Repeated longer efforts separated by slower jogging can be distance intervals even when every effort is '
+            'recorded as several automatic kilometre splits. Jogging recovery need not be walking; '
+            'both adjacent complete efforts must be at least 20 percent faster than recovery (speed ratio >= 1.2). Consider its repeated placement, distance and duration '
+            'together; do not treat each kilometre split as a separate rep or split one group solely because pace zones change. '
+            'For example, three adjacent ~1000m laps, then ~450m in ~120s slower jogging, repeated four times, can be '
+            'one target_meters=3000 group with reps [[1,2,3],[5,6,7],[9,10,11],[13,14,15]], recovery_laps [4,8,12]. '
+            'A tiny final recording remainder may be trailing recovery, not another full repetition or invented cooldown. '
+            'This is an illustrative example, not a template to force: infer the number of splits, repetitions and target '
+            'from the actual source laps. Two adjacent ~1000m splits per effort can instead form 2000m reps. '
+            'A continuous run of equal kilometre laps without repeated work/recovery transitions stays continuous. '
+            'Missing, flat or ambiguous evidence must lower confidence; never invent recovery or increase confidence to pass validation.'
+        )
     body = json.dumps({
         "model": (os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip(),
         "temperature": 0.1,

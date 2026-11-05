@@ -202,6 +202,56 @@ class GarminCPushTests(TestCase):
                 self.assertEqual(part['training_fields'],options[0]['training_fields'])
                 self.assertNotIn('review_lap_structure',part)
 
+    def test_ai_split_kilometre_distance_group_survives_c_and_d_preview(self):
+        from copy import deepcopy
+        from unittest.mock import MagicMock
+        from core.tests_watch_ai_structure import split_distance_example
+        from core.views.garmin import CONSENT_VERSION
+        from core.watch_processing import processed_main_reps
+        from core.views.calendar import _virtual_segment_from_text
+        from types import SimpleNamespace
+        facts,proposal=split_distance_example()
+        GarminActivitySummary.objects.create(athlete=self.athlete,activity_id='split-distance',
+            activity_start=datetime.fromtimestamp(self.start,dt_timezone.utc),activity_date='2026-10-31',
+            distance_m=sum(f['distance_m'] for f in facts),duration_s=sum(f['duration_s'] for f in facts),
+            analysis_data={'laps':[dict(distance=f['distance_m'],elapsed_time=f['duration_s']) for f in facts]})
+        self.client.force_login(self.coach)
+        for consent,confidence in ((True,.96),(True,.68),(False,.96)):
+            self.athlete.garmin_ai_consent_at=timezone.now() if consent else None
+            self.athlete.garmin_ai_consent_version=CONSENT_VERSION
+            self.athlete.save()
+            answer=deepcopy(proposal);answer['confidence']=confidence
+            response=MagicMock()
+            response.__enter__.return_value.read.return_value=json.dumps(
+                {'choices':[{'message':{'content':json.dumps(answer)}}]}).encode()
+            with patch.dict('os.environ',{'OPENAI_API_KEY':'test'}), patch('core.views.polar_raw.urlopen',return_value=response) as ai, patch(
+                    'core.views.polar_raw.lap_zone_paces',side_effect=lambda m,t,a: ('Z1' if m<500 else 'Z2','NA')):
+                for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+                    ai.reset_mock()
+                    result=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'})
+                    self.assertEqual(result.status_code,200)
+                    part=result.json()['results'][0]['parts'][0]
+                    self.assertEqual(len(part['manual']),16)
+                    if not consent:
+                        self.assertEqual(ai.call_count,0)
+                        self.assertNotIn('4×3000',part['training_fields']['main'])
+                        continue
+                    self.assertEqual(ai.call_count,1 if confidence>=.75 else 2)
+                    if confidence>=.75:
+                        self.assertEqual(part['ai_structure_status'],'applied')
+                        selected=part
+                    else:
+                        self.assertEqual(part['ai_structure_status'],'review_available')
+                        self.assertNotIn('4×3000',part['training_fields']['main'])
+                        selected=part['training_alternatives'][-1]
+                        self.assertTrue(selected['requires_review'])
+                    self.assertEqual(selected['training_fields']['main'],'4×3000 m Z2 p119')
+                    slot=SimpleNamespace(source='watch_c',watch_loads=selected['watch_loads'],segments=SimpleNamespace(
+                        all=lambda:[_virtual_segment_from_text('CORE',selected['training_fields']['main'])]))
+                    reps=processed_main_reps(slot)
+                    self.assertEqual([r['measured_seconds'] for r in reps],[593,586,592,589])
+                    self.assertEqual(sum(l['meters'] for l in selected['watch_loads']),sum(f['distance_m'] for f in facts))
+
     def test_distance_free_activity_preserves_sport_and_heart_rate_in_c_and_d(self):
         details=self.details()
         details['summary']=dict(self.summary,activityType='ELLIPTICAL_FITNESS',
