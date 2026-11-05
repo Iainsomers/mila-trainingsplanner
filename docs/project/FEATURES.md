@@ -484,3 +484,6 @@ Garmin C/D opent de gemeten preview zonder AI-verzoek (preview=measured) en vraa
 
 
 Garmin C toont voor 4×3000 m met alle volledige reps in Z2 uitsluitend Z2, ook als enkele kilometer-autolaps Z3 zijn. Verschillende volledige repzones kunnen wel Z2>Z3 opleveren. D behoudt de hartslagcorrectie na deze tempobepaling.
+
+
+AI-structuur C/D ondersteunt korte afstandssets met herstel onder 30s: bijvoorbeeld drie sets van acht 300m met 28-30s pauze en langere setpauzes. Modelopdracht benoemt target_meters voor korte reps, alle reps in één groep en set_start_laps voor gelijke sets. Validator geeft afzonderlijke feedback voor ongeldige afstandtarget, tijdtarget of repaantal.

@@ -135,13 +135,16 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             target = group.get('target_seconds')
             distance_based = distance_target is not None
             if distance_based and (type(distance_target) is not int or distance_target % 50 or not 100 <= distance_target <= 10000 or target is not None):
+                reason = f"Group {group_index+1}: target_meters must be an integer multiple of 50 from 100 to 10000; target_seconds must be omitted or null when using distance."
                 raise ValueError
             if not distance_based and (type(target) is not int or target % 60 or not 120 <= target <= 1800):
+                reason = f"Group {group_index+1}: target_seconds must be whole minutes from 120 to 1800. For short fixed-distance reps (e.g. 300m in 55s), use target_meters, not measured seconds."
                 raise ValueError
             if not isinstance(reps, list) or not 2 <= len(reps) <= 30:
+                reason = f"Group {group_index+1}: provide 2-30 observed reps. Combine equal sets in one group with set_start_laps; each reps entry is one effort."
                 raise ValueError
             for rep in reps:
-                reason = "Reps must be chronological consecutive source laps and agree with target distance within 8% or target time within tolerance."
+                reason = "Reps must be chronological consecutive source laps and agree with target distance within max(30m, 8%) or target time within tolerance."
                 ids = indices(rep)
                 if not ids or ids != list(range(ids[0], ids[-1]+1)) or ids[0] <= last:
                     reason = f"Group {group_index+1}: rep lap IDs {ids[:20]} are not consecutive/chronological. Each reps entry is ONE work repetition, not a whole set."
@@ -152,8 +155,8 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
                 if not math.isfinite(meters+seconds) or meters <= 0 or seconds <= 0:
                     reason = f"Group {group_index+1}, laps {ids[:20]}: missing positive measured distance/time."
                     raise ValueError
-                if distance_based and abs(meters-distance_target) > distance_target*.08:
-                    reason = f"Group {group_index+1}, laps {ids[:20]}: measured {meters:.1f}m differs from target {distance_target}m by more than 8%. A rep must not include recovery laps."
+                if distance_based and abs(meters-distance_target) > max(30, distance_target*.08):
+                    reason = f"Group {group_index+1}, laps {ids[:20]}: measured {meters:.1f}m differs from target {distance_target}m by more than max(30m, 8%). A rep must not include recovery laps."
                     raise ValueError
                 if not distance_based and abs(seconds-target) > max(15, target*.06):
                     reason = f"Group {group_index+1}, laps {ids[:20]}: measured {seconds:.2f}s does not match time target {target}s. Use target_meters for fixed-distance reps with variable duration."
@@ -187,7 +190,7 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             return reject()
         # Every rep boundary needs real, slower recovery; stop markers alone
         # cannot turn a continuous easy run into a series of intervals.
-        reason = "Each rep boundary needs assigned recovery of 30-600 seconds, at most 600m; both neighboring work reps must be at least 20% faster than recovery."
+        reason = "Each rep boundary needs assigned recovery of 30-600 seconds (15s minimum between distance reps up to 600m and 90s), at most 600m; both neighboring work reps must be at least 20% faster than recovery."
         pauses = {}
         for left, right in zip(blocks, blocks[1:]):
             gap = list(range(left['ids'][-1]+1, right['ids'][0]))
@@ -198,7 +201,10 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             speed = min(left['meters']/left['seconds'], right['meters']/right['seconds'])
             # AI chooses the structure. Retain a measurable speed contrast,
             # allowing jogging recovery without accepting nearly equal pace.
-            if not 30 <= seconds <= 600 or meters > 600 or speed < 1.2*meters/seconds:
+            short_distance_reps = all(b['distance_target'] is not None and b['distance_target'] <= 600
+                                      and b['seconds'] <= 90 for b in (left, right))
+            minimum_rest = 15 if short_distance_reps else 30
+            if not minimum_rest <= seconds <= 600 or meters > 600 or speed < 1.2*meters/seconds:
                 return reject()
             pauses[left['ids'][0]] = seconds
         assignments = [{'segment':'WU' if i in warmup else 'CD' if i in cooldown else 'CORE',
@@ -207,9 +213,9 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
         distance_keys, time_keys = set(), set()
         for group_index in range(len(groups)):
             group_blocks = [block for block in blocks if block['group']==group_index]
-            reason = "Group repetitions must agree with the nominal distance within 8%."
+            reason = "Group repetitions must agree with the nominal distance within max(30m, 8%)."
             nominal = group_blocks[0]['distance_target'] or int(math.floor(median(b['meters'] for b in group_blocks)/100+.5)*100)
-            if any(abs(b['meters']-nominal) > nominal*.08 for b in group_blocks):
+            if any(abs(b['meters']-nominal) > max(30, nominal*.08) for b in group_blocks):
                 return reject()
             # Autolaps describe recording boundaries, not separate efforts.
             # Classify each complete measured rep before forming the group range.

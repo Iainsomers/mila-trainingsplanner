@@ -86,3 +86,6 @@ Actueel vervolg 5 november: C/D-browser vraagt eerst preview=measured (zonder AI
 
 
 Actuele 4×3000-status: screenshot bevestigt toegepaste AI-groepering. Aanvullende correctie bepaalt C-zones uit volledige gemeten reps in plaats van de afzonderlijke autolaps. D behoudt End HR-correctie; zonder bruikbare HR blijft de volledige-reptempozone staan. 111 gerichte tests en check geslaagd.
+
+
+Nieuwste casus: 3×8 circa300m met p28-30s en setpauzes175/180s. Correct AI-voorstel wordt nu toegelaten met korte-afstandsherstelminimum15s en afstandsmarge max(30m,8%); bestaande 20%-snelheidscontrole blijft. Zie DATA_RULES/CURRENT_STATUS voor voorwaarden. Prompt verduidelijkt afstandtarget bij ~55s-reps en één groep voor gelijke sets. 112 gerichte tests/check slagen; live herkenning nog te controleren.

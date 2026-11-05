@@ -412,3 +412,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 5 november — samengestelde repzones gecorrigeerd: AI-groepering 4×3000 m werkt volgens screenshot, maar C nam onterecht alle autolapzones samen. Zoneclassificatie gebruikt nu volledige repmeters en -seconden; regressies met echte tempoclassificatie controleren Z3-autolap/Z2-rep, geldig Z2>Z3 bij verschillende volledige reps, AI-review en D met/zonder HR-grenzen. 111 gerichte tests en manage.py check geslaagd. Productie-uitrol nog niet onafhankelijk bevestigd.
+
+
+5 november — screenshot nieuwe activiteit: 24 circa 300m-reps in drie sets; fallback 2×500m Z1 is onjuist. De screenshot toont een algemene target-/repaantalfout; het werkelijke AI-voorstel is niet beschikbaar. Daarnaast zou ook een correct 3×8×300-voorstel stranden op 28-29s herstel en eerste rep 326,34m (>8% van 300). Deze vaste blokkades zijn aangepast volgens DATA_RULES; prompt en targetdiagnostiek verduidelijkt. Synthetische 48-lapregressie bewaart 24 klokreps, p29, sp178 en bronmetingen; negatieve tests voor te kort/te snel herstel en te grote afstandsafwijking. 112 gerichte tests en manage.py check geslaagd. Geen nieuwe lokale patroonherkenning; live AI-indeling nog niet bevestigd.

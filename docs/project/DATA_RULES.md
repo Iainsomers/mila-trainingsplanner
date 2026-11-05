@@ -288,3 +288,6 @@ AI-jogherstel tussen samengestelde reps (5 november 2026): uitsluitend de valida
 
 
 Bij samengestelde AI-reps in Garmin C wordt de tempozone opnieuw bepaald met de bestaande atleetreferenties uit som(gemeten meters)/som(gemeten seconden) per volledige rep. De groepszone is het bereik van deze repzones, niet van de bronautolaps. Ook AI-review, herstelvoorstellen en lokale gemengde tijdrepindeling gebruiken deze berekening. Bronlapzones en meetwaarden blijven intact. D gebruikt deze tempozone als fallback en behoudt de bestaande End HR-correctie per volledige rep.
+
+
+Aanvulling korte AI-afstandsreps (5 november): afstandstolerantie max(30m, 8% van target), zowel per rep als voor groepscontrole. Herstel minimaal 15s uitsluitend wanneer beide aangrenzende reps afstandtargets <=600m en gemeten duur <=90s hebben; anders blijft minimum 30s. Maximum 600s/600m, beide snelheidsratios >=1.2 en volledige brondekking blijven gelijk. Nominale afstand wordt uitsluitend door AI voorgesteld; gemeten meters/tijden worden niet afgerond of overschreven.
