@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-11-05 — AI kiest repgroepering; meetcontroles houden een drempel
+
+Bij samengestelde kilometer-autolaps moet de AI de werkreps en herstelgrenzen bepalen; voeg geen lokale herkenningsregel toe voor een afzonderlijke trainingscasus. De generieke validator bewaakt volledige brongegevens en minimaal 20% hogere werksnelheid dan de herstelsnelheid bij beide aangrenzende reps (ratio >=1.2), herstelduur/afstand en bestaande confidencegrenzen. Automatische acceptatie vraagt >=0.75; lagere geldige scores vanaf 0.50 zijn uitsluitend expliciet te beoordelen. Model niet verzwaren of confidence verhogen om een casus te laten slagen. Niet-hardloop-ALT-beschrijvingen gebruiken de afzonderlijke expliciete rekenregel gemiddelde HR +10 en vereisen geen AI.
+
 ## 2026-10-20 — Focus-pointprioriteit en Other-namen zijn gedeeld per atleet
 
 Prio (—/🥇/🥈/🥉) en aangepaste namen van Other 1–3 horen bij de atleet, niet bij een coach. Iedere coach met editrechten op die atleet kan deze waarden aanpassen; een lege Other-naam toont de standaardnaam. Per atleet kan een medaille maar één keer voorkomen; bij toekenning schuiven dezelfde en lagere posities door, en een keuze voor — verwijdert de prioriteit en vult de resterende volgorde op.

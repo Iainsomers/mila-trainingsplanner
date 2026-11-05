@@ -1,11 +1,11 @@
 # Actuele status
 
-## Laatste overdracht — 4 november 2026
+## Laatste overdracht — 5 november 2026
 
-- `e81f743` staat op main: het C/D-klokoverzicht verwerkt alle minutenblokken na Use AM/PM, ook als oudere opslag meerdere blokken met ` - ` in één CORE-record bevat. Casus atleet 29, 3 november: 2×8′ + 4×4′ moet zes klokregels tonen met 482, 481, 253, 240, 241 en 242 gemeten seconden.
-- Getest via echte import/opslag en bestaande gecombineerde records voor C/D; 75 gerichte tests slagen, daarna ook de extra parserregressie (7 tests) en manage.py check. Geen migratie nodig. De volledige suite is niet uitgevoerd.
-- Open: eigenaar ververst na Render-deploy en controleert de zes klokregels visueel. Deployvoltooiing is niet geverifieerd. Opnieuw importeren is voor deze fix niet nodig.
-- Zie START_HERE.md voor de compacte overdracht en relevante bestanden; DATA_RULES.md beschrijft de parserregel.
+- Laatste codecommit `42c8470` staat op main: AI-opdracht voor samengestelde kilometerreps verduidelijkt; generieke validatiedrempel blijft bestaan als minimaal 20% hogere werksnelheid dan herstelsnelheid aan beide kanten. Geen nieuwe lokale 4x3000-patroonregel, geen wijziging van model of confidencegrenzen.
+- Actuele casus: AYC-atleet 70, vier blokken van drie kilometerlaps met jogpauzes. Met een passend gemockt AI-antwoord geeft C/D `4×3000 m Z2 p119`, vier klokreps 593/586/592/589s en behoud van alle bronmeters. Confidence 0.68 blijft review-only. 111 gerichte tests en manage.py check slagen; volledige core-suite niet uitgevoerd.
+- Eerdere commits `bec1d8a`, `a8447c2`, `0a651fc`: niet-hardloopactiviteiten naar alleen Alternative (HR +10); gewone horlogeimport beschermt Mob/Tech, Sprint en Strength; evaluatie opent per dagdeel met training erboven. Zie START_HERE.md voor de overdracht en de secties onderaan dit document voor validatie.
+- Open: Render-rollout van `42c8470` en het echte AI-antwoord voor de casus controleren. Een gemockte AI-response is geen bevestiging van live modelkwaliteit. Bij onvoldoende confidence hoort een volledig gevalideerd voorstel alleen als expliciete reviewkeuze beschikbaar te zijn.
 
 ## Privacyverklaring
 
@@ -14,7 +14,7 @@
 - Op het atleten-dashboard staat een `Hardware settings`-blok voor de optionele Oura OAuth-verbinding, alleen zichtbaar als de coach per atleet `Allow Oura connection` inschakelt. De Oura-testpagina is een tijdelijke preview; coaches kunnen die openen voor eigen aangesloten atleten. In de AYC kan de atleet met `Use Oura data` maximaal veertien dagen bekijken, individuele dagen verwijderen en de overige waarden met `Use all` opslaan. Alleen lege velden voor slaapuren, slaapkwaliteit (Oura-score / 10), Morning HR (laagste slaap-HR, afgerond op bpm) en HRV worden gevuld. Readiness is een verborgen voorwaarde. Uitschakelen verwijdert de opgeslagen Oura-koppeling. De productieconfiguratie gebruikt `OURA_CLIENT_ID` en `OURA_CLIENT_SECRET`; callback: `https://mila-trainingsplanner.onrender.com/integrations/oura/callback/`.
 - Polar-toegang is per atleet standaard uit. De coachschakelaar `Allow Polar access` bepaalt of de atleet Polar-functies ziet en Polar-data-endpoints kan gebruiken; coachtoegang blijft werken.
 
-Bijgewerkt: 4 november 2026.
+Bijgewerkt: 5 november 2026.
 
 ## Productiestatus
 
@@ -398,7 +398,7 @@ Validatie: 98 gerichte tests (Garmin push/C/D, Watch/Plan, Alternative, foto's e
 
 ## AI-groepering van kilometerlaps — 5 november 2026
 
-Casus vier blokken van drie kilometer-autolaps met ~450m/~120s jogherstel: een correct AI-voorstel werd door de generieke 1.4-snelheidsverhouding afgewezen (werk/herstel hier ~1.35). Op verzoek blijft een drempel bestaan: minimaal 1.2 voor beide aangrenzende complete reps. De AI-opdracht legt automatische lapgrenzen versus repgrenzen uit met positieve en negatieve voorbeelden; geen nieuwe rules-based patroonherkenning en geen model-/kostenwijziging. Geen verlaging van de confidencegrens.
+Casus vier blokken van drie kilometer-autolaps met ~450m/~120s jogherstel: de screenshot meldde onvoldoende confidence plus afgewezen herstelgrenzen. Ook het correct gereconstrueerde testvoorstel werd door de generieke 1.4-snelheidsverhouding afgewezen (werk/herstel hier ~1.35); het oorspronkelijke ruwe AI-antwoord uit productie is niet onderzocht. Op verzoek blijft een drempel bestaan: minimaal 1.2 voor beide aangrenzende complete reps. De AI-opdracht legt automatische lapgrenzen versus repgrenzen uit met positieve en negatieve voorbeelden; geen nieuwe rules-based patroonherkenning en geen model-/kostenwijziging. Geen verlaging van de confidencegrens.
 
 Regressie door de werkelijke C- en D-analysestroom met gemockte AI-responses produceert 4×3000 m Z2 p119 en vier klokreps met gemeten tijden 593/586/592/589s, met alle zestien bronlaps en meters behouden. Bij confidence 0.68 komt uitsluitend een AI-voorstel voor handmatige beoordeling beschikbaar; zonder toestemming wordt geen AI aangeroepen en geen nieuwe lokale 4x3000-herkenning toegepast. Grensgevallen boven/onder snelheidsratio 1.2, ontbrekend herstel, te lang/kort herstel en ongeldige bronindeling blijven getest. Echte AI-service-uitkomst voor de productieactiviteit en Render-rollout nog niet geverifieerd.
 
