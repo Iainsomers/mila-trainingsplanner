@@ -149,3 +149,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — hoofdpagina: ondertitels van alle tegels verwijderd voor coach/atleet; alleen titels en bestaande iconen blijven. Desktoptegels verhoogd80→96px, More64→76px; compacte laptopvariant64→76px en More56→64px. Indeling, volgorde, rechten en bestemmingen behouden. Tien gerichte navigatie-/volgordetests en manage.py check geslaagd; geen visuele browsercontrole.
+
+
+6 november — More is standaard ingeklapt en opent via de categorietitel. Rood bolletje toont aantal New-items afgelopen14 dagen, gelijk aan New/Plans/Wishes. Elf gerichte tests/check geslaagd.

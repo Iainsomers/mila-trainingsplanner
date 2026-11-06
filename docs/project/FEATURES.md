@@ -538,3 +538,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 Atleethoofdpagina: nieuwe Views-volgorde met Evaluations achteraan; losse racekalendertegel verwijderd, bestaande racefunctie en Year Planner-ingang blijven behouden. Rechten voor Year Planner, Camps en Improvements blijven ongewijzigd.
+
+
+6 november — More is in-/uitklapbaar voor coaches en atleten, standaard ingeklapt. Klein rood telbolletje naast More toont hetzelfde aantal New-items als New/Plans/Wishes: publicaties uit afgelopen14 dagen, ook0. Telling verandert niet door open-/dichtklappen; alle bestaande tegels/rechten behouden.

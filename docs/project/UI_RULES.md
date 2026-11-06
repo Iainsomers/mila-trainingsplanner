@@ -320,3 +320,6 @@ Mila Planner gebruikt uniforme col-md-6 col-lg-4 tegels: drie naast elkaar op de
 
 
 6 november — hoofdpagina: ondertitels van alle tegels verwijderd voor coach/atleet; alleen titels en bestaande iconen blijven. Desktoptegels verhoogd80→96px, More64→76px; compacte laptopvariant64→76px en More56→64px. Indeling, volgorde, rechten en bestemmingen behouden. Tien gerichte navigatie-/volgordetests en manage.py check geslaagd; geen visuele browsercontrole.
+
+
+More gebruikt native details/summary (muis, touch en toetsenbord), met pijltje en klein rood telbolletje rechtsboven naast de titel. Standaard ingeklapt. Uitgeklapt blijft laptop/desktop één automatische tegelrij; mobiel bestaande stapeling. Badge met toegankelijk numeriek label en ruimte voor meer cijfers.

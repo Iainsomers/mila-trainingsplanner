@@ -1,6 +1,10 @@
 <section class="planning-section planning-more">
-  <div class="planning-section-head"><h2 class="planning-section-title">More</h2></div>
-  <div class="row g-3">
+  <details id="planningMore">
+    <summary class="planning-section-head">
+      <h2 class="planning-section-title">More</h2>
+      <span class="more-new-count" aria-label="{{ recent_feature_count }} new items">{{ recent_feature_count }}</span>
+    </summary>
+  <div class="row g-3 more-tiles">
   {% if is_athlete_user %}
     <div class="col-md-6 col-lg-3">
       <a href="{% url 'planning_overview' %}?section=hardware" class="card h-100 planning-card text-decoration-none text-reset">
@@ -42,4 +46,5 @@
     </div>
   {% endif %}
   </div>
+  </details>
 </section>

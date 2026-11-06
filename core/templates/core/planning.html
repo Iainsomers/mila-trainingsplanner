@@ -117,14 +117,14 @@
     .planning-card .card-body { padding: 8px; }
     .planning-card-title-row { margin-bottom: 2px; }
     .planning-card .card-text { margin-bottom: 0; }
-    .planning-more > .row {
+    .planning-more .more-tiles {
       display: grid;
       grid-auto-flow: column;
       grid-auto-columns: minmax(0, 1fr);
       gap: 8px;
       margin: 0;
     }
-    .planning-more > .row > div { width: auto; padding: 0; margin: 0; min-width: 0; }
+    .planning-more .more-tiles > div { width: auto; padding: 0; margin: 0; min-width: 0; }
     .planning-more .planning-card { min-height: 76px; height: 76px; }
     .planning-more .planning-card .card-title { font-size: 0.86rem; }
   }
@@ -135,6 +135,18 @@
     .planning-card .card-title { font-size: 0.88rem; }
     .planning-card .card-text { font-size: 0.75rem; }
     .planning-more .planning-card .card-text { font-size: 0.7rem; }
+  }
+  .planning-more summary { display: flex; align-items: center; gap: 5px; cursor: pointer; list-style: none; }
+  .planning-more summary::-webkit-details-marker { display: none; }
+  .planning-more summary::before { content: "▸"; font-size: 0.85rem; }
+  .planning-more details[open] > summary::before { content: "▾"; }
+  .planning-more details:not([open]) > summary { margin-bottom: 0; }
+  .more-new-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 4px;
+    border-radius: 999px; background: #dc3545; color: #fff;
+    font-size: 0.66rem; font-weight: 700; line-height: 1;
+    align-self: flex-start; margin-top: -4px;
   }
 </style>
 {% endblock %}

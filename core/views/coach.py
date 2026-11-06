@@ -6551,6 +6551,7 @@ def planning_overview_view(request):
         "garmin_connection": garmin_connection,
         "garmin_configured": garmin_configured(),
         "garmin_status": request.GET.get('garmin', ''),
+        "recent_feature_count": NewFeature.objects.filter(created_at__gte=timezone.now() - timedelta(days=14)).count(),
         "groups": groups,
         "today": date.today(),
         "is_athlete_user": is_athlete_user,

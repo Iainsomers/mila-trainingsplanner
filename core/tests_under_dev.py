@@ -169,3 +169,23 @@ class UnderDevTests(TestCase):
         section=re.search(r'<section.*?</section>',html,re.S)[0]
         self.assertEqual(re.findall(r'<h5 class="card-title[^"]*">(.*?)</h5>',section),
                          ['Athlete Diary','Athlete Info','Evaluations'])
+
+    def test_more_collapses_and_badge_matches_new_items_for_both_roles(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.urls import reverse
+        from core.models import Athlete, NewFeature
+        coach=get_user_model().objects.create_user(username='more-coach',is_staff=True)
+        runner=get_user_model().objects.create_user(username='more-runner')
+        Athlete.objects.create(owner=coach,name='more-runner',birth_year=2000,gender='X')
+        NewFeature.objects.create(title='Recent')
+        old=NewFeature.objects.create(title='Old')
+        NewFeature.objects.filter(pk=old.pk).update(created_at=timezone.now()-timedelta(days=15))
+        for user in (coach,runner):
+            self.client.force_login(user)
+            response=self.client.get('/planning/')
+            self.assertContains(response,'<details id="planningMore">')
+            self.assertNotContains(response,'<details id="planningMore" open')
+            self.assertContains(response,'aria-label="1 new items">1</span>')
+            self.assertEqual(response.context['recent_feature_count'],
+                self.client.get(reverse('new_plans_wishes')).context['recent_feature_count'])
