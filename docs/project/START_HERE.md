@@ -101,3 +101,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — coachdashboard: Polar/Garmin uploads/Garmin onder Hardware acces, bestaande links en zichtbaarheid behouden. Hardwareoverzicht via dashboard?section=hardware alleen voor coaches. 22 gerichte tests/check geslaagd.
+
+
+6 november — Trainer Planning opent standaard met 12 zichtbare weken (voorheen 4). De bestaande weekkeuze en navigatie blijven behouden; ongeldige weekinvoer valt terug op 12. Gerichte standaard-/expliciete-/ongeldige-weektest en manage.py check geslaagd.

@@ -499,3 +499,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — coachdashboard bundelt Polar en beide Garmin-tegels onder Hardware acces. De tegel opent een apart overzicht met de bestaande namen en bestemmingen; Garmin uploads behoudt de bestaande voorwaarde dat toegankelijke uploadatleten aanwezig zijn. Stats en eventueel Oura blijven op het dashboard.
+
+
+6 november — Trainer Planning opent standaard met 12 zichtbare weken (voorheen 4). De bestaande weekkeuze en navigatie blijven behouden; ongeldige weekinvoer valt terug op 12. Gerichte standaard-/expliciete-/ongeldige-weektest en manage.py check geslaagd.

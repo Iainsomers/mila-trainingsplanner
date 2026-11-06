@@ -427,3 +427,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Hardware acces groepeert drie coachhardwaretegels op dashboard?section=hardware. 22 GarminConnection-tests en manage.py check slagen, inclusief coach-/nietcoachweergave, oude links en uploadzichtbaarheid. Responsieve Bootstrap-grid behouden; geen visuele browsercontrole uitgevoerd.
+
+
+6 november — Trainer Planning opent standaard met 12 zichtbare weken (voorheen 4). De bestaande weekkeuze en navigatie blijven behouden; ongeldige weekinvoer valt terug op 12. Gerichte standaard-/expliciete-/ongeldige-weektest en manage.py check geslaagd.

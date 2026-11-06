@@ -7794,9 +7794,9 @@ def trainer_planning_detail_view(request, plan_id: int):
     prev_week = week_start - timedelta(days=7)
     next_week = week_start + timedelta(days=7)
     try:
-        visible_weeks = int((request.GET.get("weeks") or "4").strip())
+        visible_weeks = int((request.GET.get("weeks") or "12").strip())
     except ValueError:
-        visible_weeks = 4
+        visible_weeks = 12
     visible_weeks = max(1, min(12, visible_weeks))
     week_end = week_start + timedelta(days=(visible_weeks * 7) - 1)
     days = [week_start + timedelta(days=i) for i in range(visible_weeks * 7)]

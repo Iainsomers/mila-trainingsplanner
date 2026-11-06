@@ -5424,6 +5424,11 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, "Print weeks")
         self.assertContains(response, "@page { size: A4 landscape")
         self.assertEqual(response.context["visible_weeks"], 3)
+        default = self.client.get(f"/planning/trainer/{plan.id}/")
+        self.assertEqual(default.context["visible_weeks"], 12)
+        invalid = self.client.get(f"/planning/trainer/{plan.id}/?weeks=invalid")
+        self.assertEqual(invalid.context["visible_weeks"], 12)
+
 
     def test_dco_print_is_available_after_athlete_selection(self):
         user = get_user_model().objects.create_user(
