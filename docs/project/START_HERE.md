@@ -119,3 +119,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Garmin connection en Garmin uploads voor atleten verhuisd van Dashboard naar Planning. Dezelfde toestemmingen en acties; Garmin-statusredirects wijzen nu naar Planning. Coachhardwaregroep ongewijzigd.
+
+
+6 november — hoofdpagina /planning/ heet nu Mila Planner (paginakop en browsertitel). Evaluations heeft een Back-knop naar deze hoofdpagina. Bestaande terugknoppen naar planning_overview met label Planner/Planning/Back to Planning heten consequent Back; links naar specifieke planners en annuleerknoppen blijven ongewijzigd. Gerichte titel-/evaluatienavigatie-/module-/coachselectietests en manage.py check geslaagd.

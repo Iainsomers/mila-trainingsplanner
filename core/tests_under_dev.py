@@ -82,3 +82,11 @@ class UnderDevTests(TestCase):
                 continue
             source=path.read_text(encoding='utf-8')
             self.assertIsNone(re.search(r'<a[^>]+href="(?:/|\{% url [\'\"]dashboard[\'\"] %\})"',source),str(path))
+
+    def test_main_page_title_and_evaluations_back(self):
+        coach=get_user_model().objects.create_user(username='back-coach',is_staff=True)
+        self.client.force_login(coach)
+        response=self.client.get('/planning/')
+        self.assertContains(response,'<title>Mila Planner</title>',html=True)
+        self.assertContains(response,'<h1 class="mb-1">Mila Planner</h1>',html=True)
+        self.assertContains(self.client.get('/evaluations/'),'<a href="/planning/" class="btn btn-outline-secondary">Back</a>',html=True)

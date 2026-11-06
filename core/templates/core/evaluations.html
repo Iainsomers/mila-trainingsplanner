@@ -26,7 +26,7 @@
         {% if is_athlete_user %}Beschikbare vragenlijsten en jouw eerdere antwoorden.{% else %}Maak vragenlijsten en bekijk ingevulde evaluaties.{% endif %}
       </p>
     </div>
-
+    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
   </div>
 
   {% if is_athlete_user %}

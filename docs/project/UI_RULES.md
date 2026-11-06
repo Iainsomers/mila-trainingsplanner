@@ -287,3 +287,6 @@ Planning bevat View as coach boven de tegelsecties, met bestaande view-only-waar
 
 
 Atleten: Garmin connection behoudt alle bestaande toestemmingsvelden/acties maar staat onder Planning; Garmin uploads staat ernaast/eronder in responsieve kaartgrid. De coachhardwaregroep blijft ongewijzigd.
+
+
+6 november — hoofdpagina /planning/ heet nu Mila Planner (paginakop en browsertitel). Evaluations heeft een Back-knop naar deze hoofdpagina. Bestaande terugknoppen naar planning_overview met label Planner/Planning/Back to Planning heten consequent Back; links naar specifieke planners en annuleerknoppen blijven ongewijzigd. Gerichte titel-/evaluatienavigatie-/module-/coachselectietests en manage.py check geslaagd.

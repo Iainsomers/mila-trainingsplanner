@@ -445,3 +445,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — twee Garmin-atleettegels verplaatst naar Planning, inclusief context en statusredirects na koppelen/intrekken. 27 gerichte GarminConnection/UnderDev-tests en manage.py check geslaagd; aanvullende uploadtegelregressie apart gecontroleerd. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — hoofdpagina /planning/ heet nu Mila Planner (paginakop en browsertitel). Evaluations heeft een Back-knop naar deze hoofdpagina. Bestaande terugknoppen naar planning_overview met label Planner/Planning/Back to Planning heten consequent Back; links naar specifieke planners en annuleerknoppen blijven ongewijzigd. Gerichte titel-/evaluatienavigatie-/module-/coachselectietests en manage.py check geslaagd.
