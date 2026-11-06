@@ -490,3 +490,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Django Admin-tegel verplaatst van oud dashboard naar More op Mila Planner. Alleen zichtbaar voor het ingelogde coach-adminaccount (bestaande productbeheerdercontrole), onafhankelijk van actieve coachselectie. Bestaande Django-adminrechten behouden. Twaalf gerichte tests en manage.py check geslaagd.
+
+
+6 november — ontbrekende mobiele ALT-weekpillen toegevoegd (geen berekeningswijziging). Gerichte weektotalenregressie controleert ALT Z2 10 min zichtbaar en niet-uitgevoerde ALT Z1 30 min afwezig. manage.py check geslaagd. Geen visuele browsercontrole uitgevoerd.

@@ -5768,6 +5768,8 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(week["sum_tot_km"], "2.0")
         self.assertEqual(week["alt_z1_min"], 0)
         self.assertEqual(week["alt_z2_min"], 10)
+        self.assertContains(response,'ALT Z2 10 min')
+        self.assertNotContains(response,'ALT Z1 30 min')
 
     def test_base_planning_autosave_allows_intermediate_overlapping_blocks(self):
         user, _, athlete = self._user_plan_and_athlete()

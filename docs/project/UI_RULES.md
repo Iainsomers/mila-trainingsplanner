@@ -335,3 +335,6 @@ More gebruikt native details/summary (muis, touch en toetsenbord), met pijltje e
 
 
 6 november — Django Admin-tegel verplaatst van oud dashboard naar More op Mila Planner. Alleen zichtbaar voor het ingelogde coach-adminaccount (bestaande productbeheerdercontrole), onafhankelijk van actieve coachselectie. Bestaande Django-adminrechten behouden. Twaalf gerichte tests en manage.py check geslaagd.
+
+
+Mobiele Diary-weekkaart heeft ALT-zonepillen naast de hardloopzones, met expliciete eenheid min en bestaande zonekleuren. Alleen niet-nul totalen worden getoond; de regel kan omlopen.

@@ -544,3 +544,6 @@ Atleethoofdpagina: nieuwe Views-volgorde met Evaluations achteraan; losse raceka
 
 
 6 november — Django Admin-tegel verplaatst van oud dashboard naar More op Mila Planner. Alleen zichtbaar voor het ingelogde coach-adminaccount (bestaande productbeheerdercontrole), onafhankelijk van actieve coachselectie. Bestaande Django-adminrechten behouden. Twaalf gerichte tests en manage.py check geslaagd.
+
+
+6 november — Athlete Diary toont nu ook op mobiel de Alternative-weekminuten per zone (ALT Z1/Z2/Z3) bij de hardloopkilometers. Gebruikt dezelfde bestaande weektotalen als desktop, inclusief uitsluiting van niet-uitgevoerde dagdelen.

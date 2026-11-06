@@ -155,3 +155,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — tegelnamen hoofdpagina vergroot naar uniforme1.6rem (ook More en compacte laptopvariant). Alle tegels centreren inhoud verticaal; lange titels mogen omlopen. More/compacte tegels minimaal80px om twee tekstregels te passen. Bestaande iconen/volgorde behouden. Elf gerichte tests en manage.py check geslaagd; geen visuele browsercontrole.
+
+
+6 november — Athlete Diary mobiel toont ALT-weekminuten per Z1/Z2/Z3 bij de loopzones, met min-eenheid. Bestaande berekening/uitsluiting niet-uitgevoerd blijft intact; gerichte test/check geslaagd.
