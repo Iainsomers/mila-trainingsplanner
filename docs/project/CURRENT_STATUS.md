@@ -442,3 +442,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — coachkeuze naar Planning en Dashboard-terugknoppen verwijderd uit34 templates. 27 gerichte UnderDev/Garmin-tests, waaronder wisselen van actieve coach, weigering ontoegankelijke coach en controle op resterende dashboardanchors; manage.py check geslaagd. Bestaande dashboard-POST blijft achterwaarts compatibel. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — twee Garmin-atleettegels verplaatst naar Planning, inclusief context en statusredirects na koppelen/intrekken. 27 gerichte GarminConnection/UnderDev-tests en manage.py check geslaagd; aanvullende uploadtegelregressie apart gecontroleerd. Geen visuele browsercontrole uitgevoerd.

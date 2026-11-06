@@ -284,3 +284,6 @@ Planning > More groepeert Coach tools, Under Dev, Settings en New, Plans, Wishes
 
 
 Planning bevat View as coach boven de tegelsecties, met bestaande view-only-waarschuwing. De kiezer blijft maximaal360px breed en past op mobiel. Onderliggende templates hebben geen directe Dashboard-/root-terugknoppen meer.
+
+
+Atleten: Garmin connection behoudt alle bestaande toestemmingsvelden/acties maar staat onder Planning; Garmin uploads staat ernaast/eronder in responsieve kaartgrid. De coachhardwaregroep blijft ongewijzigd.

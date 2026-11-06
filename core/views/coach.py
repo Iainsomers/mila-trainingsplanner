@@ -6529,11 +6529,22 @@ def planning_overview_view(request):
     evaluation_settings = CoachSettings.objects.filter(user=evaluation_owner).first()
     evaluations_enabled = (not is_coach_tools_only_user(request.user)
                            and getattr(evaluation_settings, 'evaluations_enabled', True))
+    from core.views.garmin import configured as garmin_configured, ai_allowed as garmin_ai_allowed
+    from core.models import GarminConnection
+    garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
     return render(request, "core/planning.html", {
         "coach_tools_only": coach_tools_only,
         "coach_view_options": _coach_view_options(request.user) if is_trainer_user else [],
         "active_coach": active_coach,
         "active_coach_access_label": _active_coach_access_label(request) if is_trainer_user else 'own',
+        "current_athlete": athlete,
+        "garmin_upload_athlete_count": int(bool(is_athlete_user and athlete.garmin_fit_upload_enabled)),
+        "garmin_connection_enabled": bool(is_athlete_user and athlete.garmin_connection_enabled),
+        "garmin_tile_visible": bool(is_athlete_user and (athlete.garmin_connection_enabled or athlete.garmin_ai_withdrawn_at)),
+        "garmin_ai_allowed": garmin_ai_allowed(athlete) if is_athlete_user else False,
+        "garmin_connection": garmin_connection,
+        "garmin_configured": garmin_configured(),
+        "garmin_status": request.GET.get('garmin', ''),
         "groups": groups,
         "today": date.today(),
         "is_athlete_user": is_athlete_user,

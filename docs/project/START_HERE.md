@@ -116,3 +116,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — actieve coach wordt nu gekozen bovenaan Planning. Dashboardkeuze is weg; Dashboard-terugknoppen op onderliggende pagina’s verwijderd. Planning-POST behoudt bestaande selectie-/toegangsregels. 27 gerichte tests en check geslaagd.
+
+
+6 november — Garmin connection en Garmin uploads voor atleten verhuisd van Dashboard naar Planning. Dezelfde toestemmingen en acties; Garmin-statusredirects wijzen nu naar Planning. Coachhardwaregroep ongewijzigd.

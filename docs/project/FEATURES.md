@@ -514,3 +514,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — View as coach verplaatst van Dashboard naar bovenaan Planning. Selectie via POST op Planning gebruikt dezelfde toegestane coachkeuzes en actieve sessie als voorheen. Directe Dashboard-terugknoppen verwijderd uit onderliggende pagina’s; submenuverwijzingen naar Under Dev/Hardware blijven behouden.
+
+
+6 november — atleten vinden Garmin connection en Garmin uploads nu in Planning in plaats van Dashboard. Bestaande eigen-atleetrechten, coachtoestemming, AI-toestemming en uploadvoorwaarden blijven behouden. Garmin OAuth-/intrekkingsstatus keert terug naar Planning.
