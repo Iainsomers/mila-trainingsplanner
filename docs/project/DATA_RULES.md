@@ -300,3 +300,8 @@ Zonebereik van repgroepen (5 november): voor de AI-/samengestelde C-repgroep tel
 
 
 Alternative-sessiesamenvatting groepeert bestaande kind=alt-loads per zone1–3 en deelt seconden door60. Toon maximaal één decimaal zonder onnodige nul. Niet optellen bij T-kilometers; dezelfde effectieve bron als bestaande totals.
+
+
+## Openingsrep bij AI-intervalstructuur (6 november 2026)
+
+C/D bepaalt in de AI-opdracht eerst werk/herstel en daarna intensiteitszones. Een Z1/Z2-openingslap kan bij dezelfde afstandsreeks horen. De validator vraagt via de bestaande ene AI-herstelpoging herbeoordeling wanneer de laatste WU-lap direct voor een herstellap en de eerste rep ligt: afstand binnen max(30m,8%) van het groepstarget, snelheid binnen 15% van de mediane groepssnelheid, herstel 30-600s en maximaal 600m, beide aangrenzende inspanningen minimaal 20% sneller. Geen lokale herindeling of confidenceverhoging. Promptvoorbeeld: 2x8x500m met p60/sp208, alle zestien reps behouden. D behoudt eigen HR-zonecorrectie.

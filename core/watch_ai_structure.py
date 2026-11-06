@@ -220,6 +220,27 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             if not minimum_rest <= seconds <= 600 or meters > 600 or speed < 1.2*meters/seconds:
                 return reject()
             pauses[left['ids'][0]] = seconds
+        # Challenge an omitted opening effort; only AI may change the grouping.
+        opening = blocks[0]
+        if opening['distance_target'] is not None and len(blocks) >= 3:
+            candidate_id = first - 2
+            gap_id = first - 1
+            if candidate_id in warmup and gap_id in recovery:
+                candidate, gap = by_id[candidate_id], by_id[gap_id]
+                target = opening['distance_target']
+                reference_speed = median(b['meters']/b['seconds'] for b in blocks
+                                         if b['group'] == opening['group'])
+                candidate_speed = candidate['distance_m']/candidate['duration_s']
+                if (abs(candidate['distance_m']-target) <= max(30, target*.08)
+                        and .85 <= candidate_speed/reference_speed <= 1.15
+                        and 30 <= gap['duration_s'] <= 600 and gap['distance_m'] <= 600
+                        and min(candidate_speed, opening['meters']/opening['seconds'])
+                            >= 1.2*gap['distance_m']/gap['duration_s']):
+                    reason = (f"Lap {candidate_id} assigned to warmup matches the opening distance "
+                              "group in distance and speed and has slower recovery before the next rep. "
+                              "Reassess it as a possible first work rep regardless of Z1/Z2; "
+                              "check longer pauses for equal sets without discarding a rep.")
+                    return reject()
         assignments = [{'segment':'WU' if i in warmup else 'CD' if i in cooldown else 'CORE',
                         'work_rep':False} for i in range(1,len(facts)+1)]
         distance_parts, time_parts = [], []

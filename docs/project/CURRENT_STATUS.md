@@ -499,3 +499,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — ALT-minuten toegevoegd aan Diary-sessieheaders met A en zonekleurpillen, inclusief AM/PM en mobiel. Twintig gerichte WatchPlan-/week-/sessietotaaltests en manage.py check slagen. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november - C/D openingsrep: AI-opdracht benadrukt structuur voor zones en 2x8x500m met langere setpauze. Meetcontrole weigert een passende openingsrep in WU en gebruikt bestaande AI-herstelpoging; geen lokale repgroepering. 97 gerichte tests en manage.py check geslaagd; daarna alle 24 AI-structuurtests opnieuw geslaagd inclusief gemockte tweestapsherbeoordeling naar 2x8x500m p60 sp208 en echte langere/langzamere WU als tegenvoorbeelden. Live AI-uitkomst en Render-deploy nog niet bevestigd.

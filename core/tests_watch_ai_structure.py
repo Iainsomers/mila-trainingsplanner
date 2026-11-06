@@ -27,6 +27,48 @@ def split_distance_example():
 
 
 class WatchAIStructureTests(SimpleTestCase):
+    def test_opening_low_zone_rep_requires_ai_reassessment_and_preserves_sets(self):
+        facts = []
+        for n in range(16):
+            facts.extend([dict(lap=2*n+1, distance_m=497, duration_s=101 if n == 0 else 98,
+                               zone='Z1' if n == 0 else 'Z2'),
+                          dict(lap=2*n+2, distance_m=70, duration_s=208 if n == 7 else 60,
+                               zone='Z1')])
+        proposal = dict(confidence=.96, lap_structure=dict(warmup_laps=[], cooldown_laps=[],
+            stop_laps=[], recovery_laps=list(range(2,33,2)), groups=[dict(target_meters=500,
+                reps=[[i] for i in range(1,32,2)], set_start_laps=[1,17])]))
+        result = validate_lap_structure(proposal, facts)
+        self.assertIsNotNone(result)
+        self.assertIn('500', result['training_fields']['main'])
+        bad = deepcopy(proposal)
+        bad['lap_structure']['warmup_laps'] = [1]
+        bad['lap_structure']['groups'][0]['reps'].pop(0)
+        bad['lap_structure']['groups'][0]['set_start_laps'] = []
+        issues = []
+        self.assertIsNone(validate_lap_structure(bad, facts, issues=issues))
+        self.assertIn('possible first work rep', issues[0])
+        from core.views.polar_raw import _model_b_ai_description
+        responses = []
+        for value in (bad, proposal):
+            response = MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps(
+                {'choices':[{'message':{'content':json.dumps(value)}}]}).encode()
+            responses.append(response)
+        laps = [dict(distanceMeters=f['distance_m'], durationMillis=f['duration_s']*1000)
+                for f in facts]
+        with patch.dict('os.environ', {'OPENAI_API_KEY':'test'}), patch(
+                'core.views.polar_raw.urlopen', side_effect=responses) as call, patch(
+                'core.views.polar_raw.lap_zone_paces', return_value=('Z2','NA')):
+            repaired = _model_b_ai_description(laps, strict_lap_structure=True)
+        self.assertEqual(call.call_count, 2)
+        self.assertEqual(repaired.structure['training_fields']['wu'], '')
+        self.assertIn('2\u00d7(8\u00d7500 m', repaired.structure['training_fields']['main'])
+        self.assertIn('sp208', repaired.structure['training_fields']['main'])
+        for meters, seconds in ((1000,300), (497,180)):
+            genuine = deepcopy(facts)
+            genuine[0].update(distance_m=meters, duration_s=seconds)
+            self.assertIsNotNone(validate_lap_structure(bad, genuine))
+
     def test_ai_groups_kilometre_autolaps_into_distance_reps_with_jogging_recovery(self):
         from core.views.polar_raw import _model_b_ai_description
         facts,proposal=split_distance_example()

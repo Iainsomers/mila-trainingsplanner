@@ -793,6 +793,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             'Distance targets allow GPS variation of max(30 meters, 8 percent of target). Different pace zones and progressive speeds do not require separate groups. '
             'Consecutive Z1 laps default to one continuous easy run, including the final partial lap. Autolaps and timer pauses alone are not Z1 repetitions. Only explicit interval markers or clear relative work/recovery override this. '
             'Repeated work with slower recoveries is interval evidence. Automatic equal-distance splits without recovery are not. '
+            'Determine work/recovery structure before intensity zones. Check every proposed warmup boundary: an opening lap matching later reps in distance and speed, followed by comparable slower recovery, belongs to the interval sequence even in Z1/Z2. Example: eight 500m efforts around 100s with 60s recoveries, then 208s recovery and eight more 500m efforts form 2x8x500m; keep all sixteen reps in one group with set_start_laps. A genuinely longer or clearly slower warmup remains warmup. '
             'If a longer recovery divides equal-size sets, use one group and set_start_laps containing the first work lap of every set, including the first rep. '
             'Otherwise use an empty set_start_laps. Do not invent a set or discard a rep to make equal sets. '
             'Warmup, cooldown and recovery allow only Z1/Z2 or unknown pace zones; never assign Z3-Z5 work laps to these roles. '
