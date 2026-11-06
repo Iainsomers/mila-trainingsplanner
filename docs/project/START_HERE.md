@@ -125,3 +125,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — atleten hebben Hardware onder More naast New/Plans/Wishes; Garmin-tiles en statusmeldingen staan in /planning/?section=hardware. Coach/atleettegels heten Athlete info. Coachtools/NewPlansWishes/Settings hebben Back. 30 gerichte tests + check geslaagd.
+
+
+6 november — nieuwe UI-namen Athlete Diary / General Plans / Individual planner. Default na login en rootlaunch is Mila Planner. Start on Diary (bestaande boolean start_on_ayc) behoudt uitzondering voor atleet. Under Dev/Hardware-rootsecties blijven werken; interne Flex Planner-plannamen en routes zijn bewust niet hernoemd.

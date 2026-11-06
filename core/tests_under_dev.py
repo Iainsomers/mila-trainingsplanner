@@ -7,7 +7,7 @@ class UnderDevTests(TestCase):
     def test_default_off_toggle_and_submenus(self):
         coach=get_user_model().objects.create_user(username='dev-coach',is_staff=True)
         self.client.force_login(coach)
-        for section in ('','under_dev','hardware'):
+        for section in ('under_dev','hardware'):
             response=self.client.get('/',{'section':section})
             self.assertTemplateUsed(response,'core/dashboard.html')
             self.assertNotContains(response,'?section=under_dev')
@@ -18,14 +18,14 @@ class UnderDevTests(TestCase):
         self.assertTrue(CoachSettings.objects.get(user=coach).under_dev_enabled)
         response=self.client.get('/planning/')
         self.assertContains(response,'?section=under_dev')
-        self.assertNotContains(self.client.get('/'),'?section=under_dev')
+        self.assertRedirects(self.client.get('/'),'/planning/')
         self.assertNotContains(response,'?section=hardware')
         response=self.client.get('/',{'section':'under_dev'})
         self.assertContains(response,'?section=hardware')
         self.assertContains(response,'Stats (under development)')
         self.assertTemplateUsed(self.client.get('/',{'section':'hardware'}),'core/hardware_access.html')
         self.client.post('/settings/',{})
-        self.assertNotContains(self.client.get('/'),'?section=under_dev')
+        self.assertRedirects(self.client.get('/'),'/planning/')
 
     def test_view_only_coach_cannot_enable_module(self):
         owner=get_user_model().objects.create_user(username='dev-owner',is_staff=True)
@@ -50,12 +50,12 @@ class UnderDevTests(TestCase):
             dashboard=self.client.get('/')
             planning=self.client.get('/planning/')
             for url in ('/coach-tools/','/settings/','/?section=under_dev'):
-                self.assertNotContains(dashboard,'href="'+url+'"')
+                self.assertEqual(dashboard.status_code,302)
                 if user==coach:
                     self.assertContains(planning,'href="'+url+'"' if not url.startswith('?') else '?section=under_dev')
                 else:
                     self.assertNotContains(planning,'href="'+url+'"')
-            self.assertNotContains(dashboard,'>New, Plans, Wishes<')
+            self.assertRedirects(dashboard,'/planning/')
             self.assertContains(planning,'>New, Plans, Wishes<')
 
     def test_coach_selection_on_planning_keeps_access_boundaries(self):
@@ -64,7 +64,7 @@ class UnderDevTests(TestCase):
         stranger=get_user_model().objects.create_user(username='select-stranger',is_staff=True)
         CoachAccess.objects.create(owner=owner,grantee=coach,can_edit=False)
         self.client.force_login(coach)
-        self.assertNotContains(self.client.get('/'),'View as coach')
+        self.assertRedirects(self.client.get('/'),'/planning/')
         self.assertContains(self.client.get('/planning/'),'View as coach')
         response=self.client.post('/planning/',{'coach_view_owner':owner.pk})
         self.assertRedirects(response,'/planning/')

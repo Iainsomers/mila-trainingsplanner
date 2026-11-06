@@ -451,3 +451,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — vier navigatiecorrecties uitgevoerd: drie ontbrekende Back-knoppen, Garmin-atleetgroep Hardware onder More, tegellabel Athlete info voor coach/atleet. 29 gerichte GarminConnection/UnderDev-tests en één aanvullende navigatie-/rol-/labeltest geslaagd, plus manage.py check. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — drie UI-namen en Start on Diary aangepast. LOGIN_REDIRECT_URL=/planning/; oude rootdashboardlink stuurt regulier door naar Mila Planner. Opt-in Diary-start en expliciete next-links behouden. Gerichte login-, navigatie-, Garmin- en startinstellingtests gecontroleerd; geen schemawijziging. Geen visuele browsercontrole uitgevoerd.

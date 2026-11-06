@@ -511,6 +511,9 @@ def dashboard_view(request):
         _set_active_coach_user(request, request.POST.get("coach_view_owner"))
         return redirect("dashboard")
 
+    if request.method == 'GET' and not coach_tools_only and request.GET.get('section') not in {'under_dev','hardware'} and not request.GET.get('oura'):
+        return redirect('planning_overview')
+
     active_coach = _active_coach_user(request) if is_trainer_user else request.user
     evaluation_owner = athlete.owner if is_athlete_user else active_coach
     evaluation_settings = CoachSettings.objects.filter(user=evaluation_owner).first()

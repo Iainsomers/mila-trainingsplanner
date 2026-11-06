@@ -48,7 +48,7 @@ class GarminConnectionTests(TestCase):
         self.enable()
         page = self.client.get(reverse("planning_overview"), {"section":"hardware"})
         self.assertContains(page, 'id="garmin-heading"')
-        self.assertNotContains(self.client.get(reverse('dashboard')), 'id="garmin-heading"')
+        self.assertRedirects(self.client.get(reverse('dashboard')),reverse('planning_overview'))
         self.assertContains(page, "Withdraw AI permission")
         self.assertNotContains(page, 'id="garmin-ai-consent" checked')
         self.client.force_login(self.coach)
@@ -59,7 +59,7 @@ class GarminConnectionTests(TestCase):
         self.assertNotContains(self.client.get(reverse('planning_overview'), {'section':'hardware'}), 'Upload and inspect your Garmin FIT file.')
         self.athlete.garmin_fit_upload_enabled = True
         self.athlete.save()
-        self.assertNotContains(self.client.get(reverse('dashboard')), 'Upload and inspect your Garmin FIT file.')
+        self.assertRedirects(self.client.get(reverse('dashboard')),reverse('planning_overview'))
         page = self.client.get(reverse('planning_overview'), {'section':'hardware'})
         self.assertContains(page, 'Upload and inspect your Garmin FIT file.')
         self.assertContains(page, reverse('garmin_uploads'))
@@ -254,7 +254,7 @@ class GarminConnectionTests(TestCase):
         GarminConnection.objects.create(athlete=other, access_token="other-token", data_consent_at=timezone.now())
         self.client.force_login(self.coach)
         page = self.client.get(reverse("dashboard"))
-        self.assertNotContains(page, "Under Dev")
+        self.assertRedirects(page, reverse("planning_overview"))
         page = self.client.get("/planning/")
         self.assertContains(page, "Under Dev")
         self.assertNotContains(page, "Hardware acces")
@@ -281,13 +281,13 @@ class GarminConnectionTests(TestCase):
 
     def test_coach_garmin_tile_empty_and_hidden_from_athlete(self):
         self.client.force_login(self.coach)
-        page = self.client.get(reverse("dashboard"))
+        page = self.client.get(reverse("dashboard"), follow=True)
         self.assertNotContains(page, "No athletes connected yet.")
         self.assertContains(self.client.get(reverse("garmin_connections")), "No athletes connected yet.")
         self.enable()  # Permission alone is not a connection.
         self.assertEqual(list(self.client.get(reverse("garmin_connections")).context["connected_athletes"]), [])
         self.client.force_login(self.user)
-        page = self.client.get(reverse("dashboard"))
+        page = self.client.get(reverse("dashboard"), follow=True)
         self.assertNotContains(page, 'id="coach-garmin-heading"')
         self.assertEqual(self.client.get(reverse("garmin_connections")).status_code, 403)
 

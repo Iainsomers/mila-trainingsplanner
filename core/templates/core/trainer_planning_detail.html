@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}Trainer planning - {{ plan.name }}{% endblock %}
+{% block title %}General Plans - {{ plan.name }}{% endblock %}
 
 {% block extra_head %}
   <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
@@ -525,11 +525,11 @@
         required
       >
       <strong class="trainer-print-title">{{ plan.name }}</strong>
-      <p class="text-muted mb-0">Trainer planning · {{ week_start }} t/m {{ week_end }}</p>
+      <p class="text-muted mb-0">General Plans · {{ week_start }} t/m {{ week_end }}</p>
     </div>
     <div class="d-flex gap-2 trainer-print-hide">
       <a id="trainerPlanningBack" href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
-      <a id="trainerPlanningList" href="{% url 'trainer_planning' %}" class="btn btn-outline-secondary">Trainer Planner</a>
+      <a id="trainerPlanningList" href="{% url 'trainer_planning' %}" class="btn btn-outline-secondary">General Plans</a>
 
     </div>
   </div>

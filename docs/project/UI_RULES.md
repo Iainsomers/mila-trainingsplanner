@@ -293,3 +293,6 @@ Atleten: Garmin connection behoudt alle bestaande toestemmingsvelden/acties maar
 
 
 Atleten: More bevat Hardware naast New, Plans, Wishes in responsieve grid. Hardware opent een eigen overzicht met Back en bestaande Garmin-inhoud. Planning-tegellabels voor coach Athletes en atleet Athlete settings zijn beide Athlete info. Ontbrekende Back-knoppen toegevoegd aan coachtools, wishes en settings.
+
+
+Gebruik Athlete Diary, General Plans en Individual planner in tegels/paginakoppen/toelichting. De bestaande start-op-AYC-instelling heet Start on Diary en legt uit dat deze naar het dagboek start in plaats van Mila Planner.

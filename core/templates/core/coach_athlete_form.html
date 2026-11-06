@@ -466,7 +466,7 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label d-block">Athlete Year Calendar reports</label>
+          <label class="form-label d-block">Athlete Diary reports</label>
 
           <div class="form-check">
             <input
@@ -507,7 +507,7 @@
             </label>
           </div>
 
-          <div class="form-text">Training reports controls the existing 3rd row in the Athlete Year Calendar. Existing report data is preserved when hidden.</div>
+          <div class="form-text">Training reports controls the existing 3rd row in the Athlete Diary. Existing report data is preserved when hidden.</div>
         </div>
 
         <div class="mb-3">
@@ -593,7 +593,7 @@
             {% if form.see_session_km %}checked{% endif %}
           >
           <label class="form-check-label" for="see_session_km">See session km</label>
-          <div class="form-text">Show total running distance in each session in the Athlete Year Calendar, excluding Alternative.</div>
+          <div class="form-text">Show total running distance in each session in the Athlete Diary, excluding Alternative.</div>
         </div>
         <div class="mb-3 form-check">
           <input
@@ -614,8 +614,8 @@
             name="start_on_ayc"
             {% if form.start_on_ayc %}checked{% endif %}
           >
-          <label class="form-check-label" for="start_on_ayc">Start op AYC</label>
-          <div class="form-text">Open your Athlete Year Calendar after login instead of the dashboard.</div>
+          <label class="form-check-label" for="start_on_ayc">Start on Diary</label>
+          <div class="form-text">Open your Athlete Diary after login instead of Mila Planner.</div>
         </div>
         <div class="mb-3 form-check">
           <input class="form-check-input" type="checkbox" id="oura_auto_import_enabled" name="oura_auto_import_enabled" {% if form.oura_auto_import_enabled %}checked{% endif %}>

@@ -4788,7 +4788,7 @@ class LoginThrottleTests(TestCase):
             "/login/",
             {"username": "login-user", "password": "correct-password-123"},
         )
-        self.assertRedirects(response, "/", fetch_redirect_response=False)
+        self.assertRedirects(response, "/planning/", fetch_redirect_response=False)
 
     def test_opted_in_athlete_starts_on_ayc(self):
         Athlete.objects.create(
@@ -4858,8 +4858,7 @@ class LoginThrottleTests(TestCase):
 
         response = self.client.get("/", HTTP_REFERER="http://testserver/athlete/year/")
 
-        self.assertEqual(response.status_code, 200, response.get("Location", ""))
-        self.assertContains(response, "Athlete dashboard")
+        self.assertRedirects(response, '/planning/', fetch_redirect_response=False)
 
     def test_authenticated_trainer_opening_login_is_redirected_to_dashboard(self):
         self.user.is_staff = True
@@ -4868,7 +4867,7 @@ class LoginThrottleTests(TestCase):
 
         response = self.client.get("/login/")
 
-        self.assertRedirects(response, "/", fetch_redirect_response=False)
+        self.assertRedirects(response, "/planning/", fetch_redirect_response=False)
 
     def test_explicit_login_destination_takes_precedence_over_ayc_setting(self):
         Athlete.objects.create(
@@ -4908,7 +4907,7 @@ class LoginThrottleTests(TestCase):
             {"username": "login-user", "password": "correct-password-123"},
         )
 
-        self.assertRedirects(response, "/", fetch_redirect_response=False)
+        self.assertRedirects(response, "/planning/", fetch_redirect_response=False)
 
     def test_repeated_failures_are_temporarily_throttled(self):
         request_kwargs = {"HTTP_X_FORWARDED_FOR": "198.51.100.20"}
@@ -10059,7 +10058,7 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertFalse(athlete.start_on_ayc)
         self.client.force_login(athlete_user)
         settings_page = self.client.get("/athlete/settings/")
-        self.assertContains(settings_page, "Start op AYC")
+        self.assertContains(settings_page, "Start on Diary")
         self.assertContains(settings_page, 'name="start_on_ayc"')
 
         response = self.client.post(

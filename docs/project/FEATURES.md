@@ -523,3 +523,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — Coach tools, New/Plans/Wishes en Coach Settings hebben Back naar Mila Planner. Atleten vinden Garmin connection/uploads achter Hardware in More naast New/Plans/Wishes. Eigen rechten/consent behouden; Garmin-statusredirects openen dit Hardware-overzicht. Coachtegel Athletes en atleettegel Athlete settings heten Athlete info.
+
+
+6 november — zichtbare namen: Athlete Year Calendar → Athlete Diary, Trainer Planning → General Plans, Flex Planner → Individual planner. Interne routes, typecodes en plannamen voor herkenning blijven behouden. Inloggen start standaard op Mila Planner (/planning/); expliciete next-bestemming blijft voorrang hebben. Atleetoptie Start on Diary behoudt bestaande start_on_ayc-instelling. Gewoon openen van / leidt ook naar Mila Planner, met bestaande Diary-startuitzondering; Under Dev/Hardware en Oura-statusweergave blijven bereikbaar.
