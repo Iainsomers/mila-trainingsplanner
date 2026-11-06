@@ -4,12 +4,12 @@
 
 {% block content %}
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
     <div>
       <h1 class="mb-1">Garmin uploads</h1>
       <p class="text-muted mb-0">Upload a Garmin FIT file and inspect the available training data.</p>
     </div>
-
+    <a href="{% if can_change_fit_ai %}{% url 'planning_overview' %}?section=hardware{% else %}{% url 'dashboard' %}?section=hardware{% endif %}" class="btn btn-sm btn-outline-secondary">Back</a>
   </div>
 
   {% if not athletes %}

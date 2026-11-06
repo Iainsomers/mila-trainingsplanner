@@ -511,3 +511,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november - Garmin C/D Suggest: compact invoerblok links van Use AM/PM toetst een numerieke structuur aan originele laps van de gekozen activiteit. Alleen gevalideerde matching targets/reps/sets vervangen de preview; afwijzing bewaart huidige training. Atleetrespons verwijdert diagnostische redenen/modelnaam/analysenotities server-side; coach behoudt details. Bestaande AI-toestemming en confidencegrens blijven vereist. 99 gerichte Django-tests, drie JS-controles (preview, Alternative en Suggest), manage.py check en diff-check geslaagd. Geen migratie. Responsive ombrekende actieregel behouden en begrensd tot beschikbare breedte; geen visuele browsertest of live AI-service-uitkomst bevestigd.
+
+
+6 november - Hardware acces: Polar Integration, Garmin uploads en Garmin Connected Athletes hebben bovenaan Back naar het coachhardwareoverzicht. Garmin uploads voor atleten gaat terug naar hun eigen Planning > Hardware. Kopregels kunnen omlopen op mobiel. 23 GarminConnection-tests en manage.py check geslaagd; aanvullende gerichte teruglinkcontrole voor alle drie coachpagina's toegevoegd.

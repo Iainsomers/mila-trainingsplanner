@@ -353,3 +353,6 @@ Bij Group=All staan Basis - All en de beschikbare programmagroepen als aparte se
 
 
 Garmin C/D (6 november 2026): Suggest-invoer en knop staan links van Use AM/PM, binnen dezelfde ombrekende actieregel. Invoer 16px en maximaal160px breed; bediening via klik of Enter. Wacht-/foutmelding bij de activiteit, bestaande preview blijft beschikbaar bij afwijzing. Alleen coaches zien technische AI-status/afwijsredenen; atleten krijgen een korte melding wanneer de suggestie niet bevestigd kan worden.
+
+
+6 november - Hardware acces: Polar Integration, Garmin uploads en Garmin Connected Athletes hebben bovenaan Back naar het coachhardwareoverzicht. Garmin uploads voor atleten gaat terug naar hun eigen Planning > Hardware. Kopregels kunnen omlopen op mobiel. 23 GarminConnection-tests en manage.py check geslaagd; aanvullende gerichte teruglinkcontrole voor alle drie coachpagina's toegevoegd.

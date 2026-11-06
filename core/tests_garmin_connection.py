@@ -238,6 +238,10 @@ class GarminConnectionTests(TestCase):
         self.athlete.save()
         page = self.client.get(reverse('dashboard'), {'section':'hardware'})
         self.assertContains(page, reverse('garmin_uploads'))
+        for route in ('polar_integration', 'garmin_uploads', 'garmin_connections'):
+            detail = self.client.get(reverse(route))
+            self.assertContains(detail, f'href="{reverse("dashboard")}?section=hardware"')
+            self.assertContains(detail, '>Back</a>')
         self.client.force_login(self.user)
         page = self.client.get(reverse('dashboard'), {'section':'hardware'})
         self.assertNotContains(page, 'Hardware Acces')
