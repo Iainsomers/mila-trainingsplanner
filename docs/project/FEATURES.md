@@ -556,3 +556,8 @@ Atleethoofdpagina: nieuwe Views-volgorde met Evaluations achteraan; losse raceka
 
 
 Year Planner Group=All toont nu afzonderlijke Basis-keuzes voor alle toegankelijke General Plans (bijvoorbeeld MID en LONG), naast Basis - All. Meerdere Basis-schema’s kunnen samen worden geselecteerd en getoond zonder losse atleet. Iedere Basis behoudt eigen opgeslagen data.
+
+
+## Garmin C/D - Suggest structure (6 november 2026)
+
+Naast Use AM/PM staat bij loopresultaten een compact invoerveld met Suggest. Voorbeelden: 16x500m, 2x8x500m, 2x(8x500m), 4x3min of groepen met +. Het model toetst de suggestie aan de oorspronkelijke laps van de gekozen activiteit; de server controleert targets, aantallen, sets en bestaande meetvoorwaarden. Bij succes wordt alleen de preview vervangen met gemeten laptijden, herstel en eigen C/D-zones; opslaan blijft expliciet via Use AM/PM. Bij afwijzing blijft het huidige resultaat behouden. Bestaande Garmin-/FIT-AI-toestemming blijft vereist. Atleten zien geen AI-modelnamen, diagnostische statusregels, afwijsdetails of analysenotities; coaches wel.

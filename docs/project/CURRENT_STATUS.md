@@ -508,3 +508,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — MID/LONG-basis zichtbaar via multiselect onder Group=All; niet beperkt tot één huidige groepsfilter. Regressie test drie basisrijen zonder atleten, losse MID-selectie, navigatieparameters en uitsluiting vreemd coachplan. 29 YearPlanner-tests en manage.py check gecontroleerd. Geen migratie nodig.
+
+
+6 november - Garmin C/D Suggest: compact invoerblok links van Use AM/PM toetst een numerieke structuur aan originele laps van de gekozen activiteit. Alleen gevalideerde matching targets/reps/sets vervangen de preview; afwijzing bewaart huidige training. Atleetrespons verwijdert diagnostische redenen/modelnaam/analysenotities server-side; coach behoudt details. Bestaande AI-toestemming en confidencegrens blijven vereist. 99 gerichte Django-tests, drie JS-controles (preview, Alternative en Suggest), manage.py check en diff-check geslaagd. Geen migratie. Responsive ombrekende actieregel behouden en begrensd tot beschikbare breedte; geen visuele browsertest of live AI-service-uitkomst bevestigd.

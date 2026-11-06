@@ -2661,7 +2661,7 @@
           insufficient_laps: "Too few usable laps for AI structure recognition.",
           measured_structure: "Using measured structure recognition; AI was not called."
         };
-        if (aiMessages[part.ai_structure_status]) {
+        if (aycCoachUser && aiMessages[part.ai_structure_status]) {
           var aiStatus = document.createElement("div");
           aiStatus.className = "small text-muted mb-2";
           aiStatus.textContent = (part.ai_structure_model ? "AI model: " + part.ai_structure_model + ". " : "") + aiMessages[part.ai_structure_status] + (part.ai_structure_reason ? " " + part.ai_structure_reason : "");
@@ -2699,7 +2699,44 @@
           }
           if (fields.main || fields.alt || fields.alternative) {
             var actions = document.createElement("div");
-            actions.className = "d-flex flex-wrap gap-1 flex-shrink-0";
+            actions.className = "d-flex flex-wrap gap-1";
+            actions.style.maxWidth = "100%";
+            if ((model === "C" || model === "D") && fields.main) {
+              var suggestion = document.createElement("input");
+              suggestion.type = "text"; suggestion.maxLength = 160;
+              suggestion.className = "form-control form-control-sm";
+              suggestion.style.width = "min(160px, 100%)"; suggestion.style.fontSize = "16px";
+              suggestion.placeholder = "2x(8x500m)";
+              suggestion.setAttribute("aria-label", "Suggested workout structure");
+              var suggest = document.createElement("button"); suggest.type = "button";
+              suggest.className = "btn btn-sm btn-outline-primary"; suggest.textContent = "Suggest";
+              var feedback = document.createElement("div"); feedback.className = "small w-100";
+              feedback.setAttribute("role", "status");
+              function checkSuggestion() {
+                if (!suggestion.value.trim() || suggest.disabled) { suggestion.focus(); return; }
+                suggest.disabled = true; feedback.textContent = "Checking measured laps...";
+                var sequence = watchPreviewSequence;
+                var endpoint = "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/";
+                var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate)
+                  + "&suggestion=" + encodeURIComponent(suggestion.value.trim())
+                  + "&suggestion_session=" + encodeURIComponent(session.start || "");
+                fetch(endpoint + query, {headers: {"Accept":"application/json"}})
+                  .then(function(response) { return response.json(); }).then(function(data) {
+                    if (sequence !== watchPreviewSequence || !suggest.isConnected) return;
+                    if (!data.ok) { feedback.textContent = data.message || "No matching structure could be confirmed."; return; }
+                    var replacement = (data.results || []).find(function(item) { return item.start === session.start; });
+                    if (!replacement) { feedback.textContent = "No matching structure could be confirmed."; return; }
+                    var updated = results.slice(); updated[sessionIndex] = replacement;
+                    renderTypeAResults(parent, updated, "", model);
+                  }).catch(function() { feedback.textContent = "Suggestion could not be checked. Try again."; })
+                  .finally(function() { suggest.disabled = false; });
+              }
+              suggest.addEventListener("click", checkSuggestion);
+              suggestion.addEventListener("keydown", function(event) {
+                if (event.key === "Enter") { event.preventDefault(); checkSuggestion(); }
+              });
+              actions.appendChild(suggestion); actions.appendChild(suggest); box.appendChild(feedback);
+            }
             [1, 2].forEach(function(slotIndex) {
               var button = document.createElement("button");
               button.type = "button";
@@ -2728,7 +2765,7 @@
           }
           box.appendChild(description);
         }
-        if (part.analysis_note) {
+        if (aycCoachUser && part.analysis_note) {
           var note = document.createElement("div"); note.className = "small text-muted mb-2";
           note.textContent = part.analysis_note; box.appendChild(note);
         }

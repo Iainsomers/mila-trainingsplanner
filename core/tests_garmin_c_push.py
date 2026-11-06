@@ -23,6 +23,53 @@ class GarminCPushTests(TestCase):
             "startTimeInSeconds": self.start, "distanceInMeters": 1000, "durationInSeconds": 300}
         self.push_url = reverse("garmin_activity_push", args=[receiver_key()])
 
+    def test_suggestion_targets_one_activity_and_hides_athlete_diagnostics(self):
+        from unittest.mock import MagicMock
+        from core.tests_watch_ai_structure import split_distance_example
+        from core.views.garmin import CONSENT_VERSION
+        from django.core.cache import cache
+        cache.clear()
+        self.addCleanup(cache.clear)
+        facts, proposal = split_distance_example()
+        self.athlete.garmin_ai_consent_at = timezone.now()
+        self.athlete.garmin_ai_consent_version = CONSENT_VERSION
+        self.athlete.save()
+        GarminActivitySummary.objects.create(athlete=self.athlete, activity_id='suggestion',
+            activity_start=datetime.fromtimestamp(self.start, dt_timezone.utc), activity_date='2026-10-31',
+            distance_m=sum(f['distance_m'] for f in facts),
+            analysis_data={'laps':[dict(distance=f['distance_m'], elapsed_time=f['duration_s']) for f in facts]})
+        self.client.force_login(self.coach)
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(
+            {'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode()
+        with patch.dict('os.environ', {'OPENAI_API_KEY':'test'}), patch(
+                'core.views.polar_raw.urlopen', return_value=response) as ai, patch(
+                'core.views.polar_raw.lap_zone_paces', return_value=('Z2','NA')):
+            for route in ('garmin_type_c_ayc', 'garmin_type_d_ayc'):
+                url = reverse(route)
+                query = {'athlete':self.athlete.pk, 'date':'2026-10-31'}
+                current = self.client.get(url, query).json()
+                query.update(suggestion='4x3000m', suggestion_session=current['results'][0]['start'])
+                found = self.client.get(url, query).json()
+                self.assertTrue(found['ok'])
+                self.assertEqual(found['results'][0]['parts'][0]['training_fields']['main'], '4\u00d73000 m Z2 p119')
+                self.assertEqual(len(found['results'][0]['parts'][0]['watch_loads']), 16)
+                query['suggestion'] = '5x3000m'
+                rejected = self.client.get(url, query).json()
+                self.assertFalse(rejected['ok'])
+                self.assertIn('No matching structure', rejected['message'])
+            athlete_user = get_user_model().objects.create_user(username='Garmin_C_runner')
+            self.client.force_login(athlete_user)
+            rejected = self.client.get(url, query).json()
+            self.assertEqual(rejected['message'], 'No matching structure could be confirmed.')
+            query.pop('suggestion')
+            result = self.client.get(url, query).json()['results'][0]['parts'][0]
+            self.assertNotIn('ai_structure_reason', result)
+            self.assertNotIn('ai_structure_model', result)
+            other = Athlete.objects.create(owner=self.coach, name='Other runner', birth_year=2000, gender='X')
+            query['athlete'] = other.pk
+            self.assertEqual(self.client.get(url, query).status_code, 404)
+
     def test_mixed_timed_recording_exposes_time_option_without_ai_in_c_and_d(self):
         self.athlete.zone_speed_mps = {'1':4,'2':4.9,'3':5.5,'4':6,'5':6.5,'6':7}
         self.athlete.save(update_fields=['zone_speed_mps'])

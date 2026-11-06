@@ -75,7 +75,31 @@ def infer_lap_structure(facts, *, rep_zone=None):
         return None
 
 
-def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, rep_zone=None):
+def parse_structure_suggestion(text):
+    """Parse bounded numeric intent, never forward free-form instructions to AI."""
+    import re
+    text = str(text).lower().replace('\u00d7', 'x').replace('*', 'x')
+    if not text.strip() or len(text) > 160:
+        raise ValueError('Use a structure such as 16x500m or 2x(8x500m).')
+    text = re.sub(r'(\d+)\s*x\s*(\d+)\s*x\s*(\d+\s*(?:m|min))(?=\s*(?:\+|$))', r'\1x(\2x\3)', text)
+    groups = []
+    for piece in text.split('+'):
+        match = re.fullmatch(r"\s*(?:(\d+)\s*x\s*\(\s*)?(\d+)\s*x\s*(\d+)\s*(m|min|')\s*(\))?\s*", piece)
+        if not match or bool(match[1]) != bool(match[5]):
+            raise ValueError('Use a structure such as 16x500m or 2x(8x500m).')
+        sets, count, value = int(match[1] or 1), int(match[2]), int(match[3])
+        distance = match[4] == 'm'
+        if not (1 <= sets <= 15 and count >= 2 and 3 <= sets*count <= 30
+                and (100 <= value <= 10000 and value % 50 == 0 if distance else 2 <= value <= 30)):
+            raise ValueError('Structure is outside the supported repetition or target range.')
+        groups.append(dict(sets=sets, count=count, target_meters=value if distance else None,
+                           target_seconds=None if distance else value*60))
+    if len(groups) > 8:
+        raise ValueError('Too many groups.')
+    return groups
+
+
+def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, rep_zone=None, requested_structure=None):
     """No omitted/duplicate laps, invented reps, or running discarded as stops."""
     reason = 'Invalid lap structure or confidence.'
     def reject():
@@ -141,6 +165,17 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
         if not isinstance(groups, list) or not 1 <= len(groups) <= 8:
             return reject()
         reason = "Each group needs 2-30 observed reps and exactly one target: nominal target_meters or whole-minute target_seconds."
+        if requested_structure:
+            reason = 'No matching structure found: proposed targets, repetition counts or sets differ from your suggestion.'
+            if len(groups) != len(requested_structure):
+                return reject()
+            for group, expected in zip(groups, requested_structure):
+                starts = group.get('set_start_laps') or []
+                if (group.get('target_meters') != expected['target_meters']
+                        or group.get('target_seconds') != expected['target_seconds']
+                        or len(group.get('reps') or []) != expected['sets']*expected['count']
+                        or (len(starts) if starts else 1) != expected['sets']):
+                    return reject()
         blocks, last = [], 0
         for group_index, group in enumerate(groups):
             reps = group['reps']

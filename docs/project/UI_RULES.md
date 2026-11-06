@@ -350,3 +350,6 @@ Year Planner: onder All in de atleetselector staat Basis - All wanneer Group=All
 
 
 Bij Group=All staan Basis - All en de beschikbare programmagroepen als aparte selectievakjes in Athletes. Basis-selectie wordt direct verstuurd en behouden bij periode-/jaarnavigatie; checkbox All blijft uitsluitend atleten selecteren.
+
+
+Garmin C/D (6 november 2026): Suggest-invoer en knop staan links van Use AM/PM, binnen dezelfde ombrekende actieregel. Invoer 16px en maximaal160px breed; bediening via klik of Enter. Wacht-/foutmelding bij de activiteit, bestaande preview blijft beschikbaar bij afwijzing. Alleen coaches zien technische AI-status/afwijsredenen; atleten krijgen een korte melding wanneer de suggestie niet bevestigd kan worden.

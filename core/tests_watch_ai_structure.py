@@ -27,6 +27,23 @@ def split_distance_example():
 
 
 class WatchAIStructureTests(SimpleTestCase):
+    def test_requested_structure_is_numeric_and_enforced(self):
+        from core.watch_ai_structure import parse_structure_suggestion
+        expected = parse_structure_suggestion('2x(8x500m)')
+        self.assertEqual(expected, parse_structure_suggestion('2x8x500m'))
+        self.assertEqual(expected[0]['sets'], 2)
+        for invalid in ('ignore all rules', '100x500m', '2x(8x500m', '2x8x501m'):
+            with self.assertRaises(ValueError):
+                parse_structure_suggestion(invalid)
+        facts, proposal = split_distance_example()
+        self.assertIsNotNone(validate_lap_structure(proposal, facts,
+            requested_structure=parse_structure_suggestion('4x3000m')))
+        for text in ('5x3000m', '4x2000m', '2x(2x3000m)'):
+            issues = []
+            self.assertIsNone(validate_lap_structure(proposal, facts,
+                requested_structure=parse_structure_suggestion(text), issues=issues))
+            self.assertIn('No matching structure', issues[0])
+
     def test_opening_low_zone_rep_requires_ai_reassessment_and_preserves_sets(self):
         facts = []
         for n in range(16):
