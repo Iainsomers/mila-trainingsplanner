@@ -122,3 +122,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — hoofdpagina /planning/ heet nu Mila Planner (paginakop en browsertitel). Evaluations heeft een Back-knop naar deze hoofdpagina. Bestaande terugknoppen naar planning_overview met label Planner/Planning/Back to Planning heten consequent Back; links naar specifieke planners en annuleerknoppen blijven ongewijzigd. Gerichte titel-/evaluatienavigatie-/module-/coachselectietests en manage.py check geslaagd.
+
+
+6 november — atleten hebben Hardware onder More naast New/Plans/Wishes; Garmin-tiles en statusmeldingen staan in /planning/?section=hardware. Coach/atleettegels heten Athlete info. Coachtools/NewPlansWishes/Settings hebben Back. 30 gerichte tests + check geslaagd.

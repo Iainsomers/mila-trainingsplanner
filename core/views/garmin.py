@@ -268,7 +268,7 @@ def revoke_connection(athlete):
 
 
 def _dashboard(status):
-    return redirect(f"{reverse('planning_overview')}?garmin={status}")
+    return redirect(f"{reverse('planning_overview')}?section=hardware&garmin={status}")
 
 
 @login_required

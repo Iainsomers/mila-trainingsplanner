@@ -1,0 +1,11 @@
+{% extends "core/base.html" %}
+{% block title %}Hardware{% endblock %}
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Hardware</h1>
+    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+  </div>
+  {% include 'core/partials/planning_athlete_garmin.html' %}
+</div>
+{% endblock %}

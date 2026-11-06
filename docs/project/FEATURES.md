@@ -520,3 +520,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — hoofdpagina /planning/ heet nu Mila Planner (paginakop en browsertitel). Evaluations heeft een Back-knop naar deze hoofdpagina. Bestaande terugknoppen naar planning_overview met label Planner/Planning/Back to Planning heten consequent Back; links naar specifieke planners en annuleerknoppen blijven ongewijzigd. Gerichte titel-/evaluatienavigatie-/module-/coachselectietests en manage.py check geslaagd.
+
+
+6 november — Coach tools, New/Plans/Wishes en Coach Settings hebben Back naar Mila Planner. Atleten vinden Garmin connection/uploads achter Hardware in More naast New/Plans/Wishes. Eigen rechten/consent behouden; Garmin-statusredirects openen dit Hardware-overzicht. Coachtegel Athletes en atleettegel Athlete settings heten Athlete info.

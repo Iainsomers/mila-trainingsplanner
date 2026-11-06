@@ -43,24 +43,24 @@ class GarminConnectionTests(TestCase):
 
     def test_default_off_and_only_enabled_athlete_sees_tile(self):
         self.assertFalse(self.athlete.garmin_connection_enabled)
-        self.assertNotContains(self.client.get(reverse("planning_overview")), 'id="garmin-heading"')
+        self.assertNotContains(self.client.get(reverse("planning_overview"), {"section":"hardware"}), 'id="garmin-heading"')
         self.assertEqual(self.begin().status_code, 403)
         self.enable()
-        page = self.client.get(reverse("planning_overview"))
+        page = self.client.get(reverse("planning_overview"), {"section":"hardware"})
         self.assertContains(page, 'id="garmin-heading"')
         self.assertNotContains(self.client.get(reverse('dashboard')), 'id="garmin-heading"')
         self.assertContains(page, "Withdraw AI permission")
         self.assertNotContains(page, 'id="garmin-ai-consent" checked')
         self.client.force_login(self.coach)
-        self.assertNotContains(self.client.get(reverse("planning_overview")), 'id="garmin-heading"')
+        self.assertNotContains(self.client.get(reverse("planning_overview"), {"section":"hardware"}), 'id="garmin-heading"')
         self.assertEqual(self.begin().status_code, 403)
 
     def test_athlete_upload_tile_moved_to_planning_with_existing_permission(self):
-        self.assertNotContains(self.client.get(reverse('planning_overview')), 'Upload and inspect your Garmin FIT file.')
+        self.assertNotContains(self.client.get(reverse('planning_overview'), {'section':'hardware'}), 'Upload and inspect your Garmin FIT file.')
         self.athlete.garmin_fit_upload_enabled = True
         self.athlete.save()
         self.assertNotContains(self.client.get(reverse('dashboard')), 'Upload and inspect your Garmin FIT file.')
-        page = self.client.get(reverse('planning_overview'))
+        page = self.client.get(reverse('planning_overview'), {'section':'hardware'})
         self.assertContains(page, 'Upload and inspect your Garmin FIT file.')
         self.assertContains(page, reverse('garmin_uploads'))
 
@@ -192,7 +192,7 @@ class GarminConnectionTests(TestCase):
         GarminConnection.objects.create(athlete=self.athlete,access_token="test",data_consent_at=timezone.now())
         delete.return_value.status_code = 204
         self.client.post(reverse("garmin_withdraw"))
-        page = self.client.get(reverse("planning_overview"))
+        page = self.client.get(reverse("planning_overview"), {"section":"hardware"})
         self.assertContains(page,'id="garmin-heading"')
         self.assertContains(page,'id="garmin-ai-consent"')
         self.assertContains(page,'Connect Garmin')
@@ -201,13 +201,13 @@ class GarminConnectionTests(TestCase):
         self.athlete.refresh_from_db()
         self.athlete.garmin_connection_enabled = False
         self.athlete.save()
-        self.assertContains(self.client.get(reverse("planning_overview")),'Ask your coach to enable')
+        self.assertContains(self.client.get(reverse("planning_overview"), {"section":"hardware"}),'Ask your coach to enable')
         self.assertEqual(self.begin().status_code,403)
 
     def test_connected_without_ai_can_authorise_again(self):
         self.enable()
         GarminConnection.objects.create(athlete=self.athlete,access_token="test",data_consent_at=timezone.now())
-        page = self.client.get(reverse("planning_overview"))
+        page = self.client.get(reverse("planning_overview"), {"section":"hardware"})
         self.assertContains(page,'AI permission is not enabled.')
         self.assertContains(page,'id="garmin-ai-consent"')
         self.assertFalse(ai_allowed(self.athlete))

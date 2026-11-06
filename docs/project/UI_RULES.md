@@ -290,3 +290,6 @@ Atleten: Garmin connection behoudt alle bestaande toestemmingsvelden/acties maar
 
 
 6 november — hoofdpagina /planning/ heet nu Mila Planner (paginakop en browsertitel). Evaluations heeft een Back-knop naar deze hoofdpagina. Bestaande terugknoppen naar planning_overview met label Planner/Planning/Back to Planning heten consequent Back; links naar specifieke planners en annuleerknoppen blijven ongewijzigd. Gerichte titel-/evaluatienavigatie-/module-/coachselectietests en manage.py check geslaagd.
+
+
+Atleten: More bevat Hardware naast New, Plans, Wishes in responsieve grid. Hardware opent een eigen overzicht met Back en bestaande Garmin-inhoud. Planning-tegellabels voor coach Athletes en atleet Athlete settings zijn beide Athlete info. Ontbrekende Back-knoppen toegevoegd aan coachtools, wishes en settings.

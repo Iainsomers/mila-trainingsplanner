@@ -90,3 +90,24 @@ class UnderDevTests(TestCase):
         self.assertContains(response,'<title>Mila Planner</title>',html=True)
         self.assertContains(response,'<h1 class="mb-1">Mila Planner</h1>',html=True)
         self.assertContains(self.client.get('/evaluations/'),'<a href="/planning/" class="btn btn-outline-secondary">Back</a>',html=True)
+
+    def test_back_buttons_and_athlete_hardware_group(self):
+        from core.models import Athlete
+        coach=get_user_model().objects.create_user(username='hardware-coach',is_staff=True)
+        runner=get_user_model().objects.create_user(username='hardware-runner')
+        Athlete.objects.create(owner=coach,name='hardware-runner',birth_year=2000,gender='X',garmin_fit_upload_enabled=True)
+        self.client.force_login(coach)
+        for url in ('/coach-tools/','/new-plans-wishes/','/settings/'):
+            from django.urls import reverse
+            target=reverse('new_plans_wishes') if 'wishes' in url else url
+            self.assertContains(self.client.get(target),'<a href="/planning/" class="btn btn-outline-secondary">Back</a>',html=True)
+        self.assertContains(self.client.get('/planning/'),'>Athlete info</h5>')
+        self.client.force_login(runner)
+        main=self.client.get('/planning/')
+        self.assertContains(main,'>Athlete info</h5>')
+        self.assertContains(main,'href="/planning/?section=hardware"')
+        self.assertNotContains(main,'Upload and inspect your Garmin FIT file.')
+        hardware=self.client.get('/planning/',{'section':'hardware'})
+        self.assertTemplateUsed(hardware,'core/athlete_hardware.html')
+        self.assertContains(hardware,'Upload and inspect your Garmin FIT file.')
+        self.assertContains(hardware,'>Back</a>')
