@@ -507,7 +507,8 @@ class TrackTimerTests(TestCase):
         self.client.force_login(coach)
 
         dashboard = self.client.get("/")
-        self.assertContains(dashboard, "Evaluations")
+        self.assertNotContains(dashboard, ">Evaluations<")
+        self.assertContains(self.client.get("/planning/"), ">Evaluations<")
 
         create_response = self.client.post(
             "/evaluations/",
@@ -2503,17 +2504,23 @@ class PlanningOverviewTests(TestCase):
         self.assertRedirects(response, "/settings/")
         self.assertFalse(CoachSettings.objects.get(user=coach).evaluations_enabled)
         self.assertNotContains(self.client.get("/"), "Open evaluations")
+        self.assertNotContains(self.client.get("/planning/"), 'href="/evaluations/"')
         self.assertRedirects(self.client.get("/evaluations/"), "/")
 
         self.client.force_login(athlete_user)
         self.assertNotContains(self.client.get("/"), "Open evaluations")
+        self.assertNotContains(self.client.get("/planning/"), 'href="/evaluations/"')
         self.assertRedirects(self.client.get("/evaluations/"), "/")
 
         self.client.force_login(coach)
         response = self.client.post("/settings/", {"evaluations_enabled": "on"})
         self.assertRedirects(response, "/settings/")
         self.assertTrue(CoachSettings.objects.get(user=coach).evaluations_enabled)
-        self.assertContains(self.client.get("/"), 'href="/evaluations/"')
+        self.assertNotContains(self.client.get("/"), 'href="/evaluations/"')
+        self.assertContains(self.client.get("/planning/"), 'href="/evaluations/"')
+        self.client.force_login(athlete_user)
+        self.assertNotContains(self.client.get("/"), 'href="/evaluations/"')
+        self.assertContains(self.client.get("/planning/"), 'href="/evaluations/"')
 
     def test_coach_can_toggle_session_km_in_settings(self):
         coach = get_user_model().objects.create_user(

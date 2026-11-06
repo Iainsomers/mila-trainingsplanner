@@ -430,3 +430,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Trainer Planning opent standaard met 12 zichtbare weken (voorheen 4). De bestaande weekkeuze en navigatie blijven behouden; ongeldige weekinvoer valt terug op 12. Gerichte standaard-/expliciete-/ongeldige-weektest en manage.py check geslaagd.
+
+
+6 november — Evaluations-tegel verplaatst van Dashboard naar Planning > Views, voor coaches en atleten. De instelling evaluations_enabled van de actieve coach/eigen coach en coach-tools-only-beperking blijven van kracht. Bestaande evaluatiepagina, rechten en inhoud ongewijzigd. Tegel gebruikt responsieve Planning-kolommen. Gerichte evaluatieflow en modulezichtbaarheid voor coach/atleet plus manage.py check gecontroleerd.

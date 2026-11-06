@@ -272,3 +272,6 @@ Information Quality heeft een compacte Show NA-schuifschakelaar boven de tabel, 
 
 
 Hardware acces is de exacte coachtegelnaam. Het hardwareoverzicht gebruikt dezelfde MiLa-kaarten, één kolom op mobiel, twee vanaf md en drie vanaf lg, met Dashboard-terugknop. Atleetdashboard ongewijzigd.
+
+
+6 november — Evaluations-tegel verplaatst van Dashboard naar Planning > Views, voor coaches en atleten. De instelling evaluations_enabled van de actieve coach/eigen coach en coach-tools-only-beperking blijven van kracht. Bestaande evaluatiepagina, rechten en inhoud ongewijzigd. Tegel gebruikt responsieve Planning-kolommen. Gerichte evaluatieflow en modulezichtbaarheid voor coach/atleet plus manage.py check gecontroleerd.

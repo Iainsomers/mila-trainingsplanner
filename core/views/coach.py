@@ -6511,6 +6511,10 @@ def planning_overview_view(request):
         ).first()
         detailed_camps_enabled = bool(coach_settings and coach_settings.detailed_camps_enabled)
         focus_points_enabled = bool(coach_settings and coach_settings.focus_points_enabled)
+    evaluation_owner = athlete.owner if is_athlete_user else active_coach
+    evaluation_settings = CoachSettings.objects.filter(user=evaluation_owner).first()
+    evaluations_enabled = (not is_coach_tools_only_user(request.user)
+                           and getattr(evaluation_settings, 'evaluations_enabled', True))
     return render(request, "core/planning.html", {
         "groups": groups,
         "today": date.today(),
@@ -6519,6 +6523,7 @@ def planning_overview_view(request):
         "athlete_can_view_detailed_camps": athlete_can_view_detailed_camps,
         "detailed_camps_enabled": detailed_camps_enabled,
         "focus_points_enabled": focus_points_enabled,
+        "evaluations_enabled": evaluations_enabled,
     })
 
 
