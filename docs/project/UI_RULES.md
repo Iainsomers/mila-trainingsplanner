@@ -314,3 +314,6 @@ Mila Planner gebruikt uniforme col-md-6 col-lg-4 tegels: drie naast elkaar op de
 
 
 6 november — atleten Views volgt rechts-naar-links per rij de volgorde Athlete Diary, Year Planner, Athlete Info, Camps, Improvements, Evaluations. Mobiel dezelfde volgorde van boven naar beneden. Losse Races-tegel verwijderd; races blijven via Year Planner bereikbaar. Bestaande instellingen bepalen welke tegels zichtbaar zijn.
+
+
+6 november — correctie leesrichting voor BEIDE rollen: alle opgegeven tegelvolgordes gelden van links naar rechts, eerst rij1 dan rij2. Omgekeerde flex-/gridrichting verwijderd; categorieën, lijsten en zichtbaarheid ongewijzigd. More blijft één rij op laptop/desktop. Tien gerichte tests en manage.py check geslaagd.

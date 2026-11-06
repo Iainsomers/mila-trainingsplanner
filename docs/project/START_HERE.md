@@ -143,3 +143,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — atletenvolgorde Views: Athlete Diary/Year Planner/Athlete Info/Camps/Improvements/Evaluations, rechts-naar-links per rij. Races-tegel verwijderd (via Year Planner). Tien gerichte tests/check geslaagd.
+
+
+6 november — correctie leesrichting voor BEIDE rollen: alle opgegeven tegelvolgordes gelden van links naar rechts, eerst rij1 dan rij2. Omgekeerde flex-/gridrichting verwijderd; categorieën, lijsten en zichtbaarheid ongewijzigd. More blijft één rij op laptop/desktop. Tien gerichte tests en manage.py check geslaagd.

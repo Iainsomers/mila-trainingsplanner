@@ -134,7 +134,7 @@ class UnderDevTests(TestCase):
         self.assertNotContains(main,'>Standard Trainings</h5>')
         self.assertTemplateUsed(self.client.get('/planning/',{'section':'standards'}),'core/planning.html')
 
-    def test_coach_tile_groups_follow_requested_right_to_left_order(self):
+    def test_coach_tile_groups_follow_requested_left_to_right_order(self):
         import re
         coach=get_user_model().objects.create_user(username='order-coach',is_staff=True)
         CoachSettings.objects.create(user=coach,under_dev_enabled=True,detailed_camps_enabled=True,focus_points_enabled=True)
@@ -145,7 +145,8 @@ class UnderDevTests(TestCase):
         self.assertEqual(labels(sections[0]),['Athlete Info','General Plans','Individual Plans','Year Planner','Improvements','Camps','Evaluations'])
         self.assertEqual(labels(sections[1]),['Athlete Diary','Staff Team Overview','Daily Coach Overview Training'])
         self.assertEqual(labels(sections[2]),['New, Plans, Wishes','Settings','Coach Tools','Under Dev','Standard Trainings'])
-        self.assertContains(self.client.get('/planning/'),'.coach-tile-order { flex-direction: row-reverse; }')
+        self.assertNotContains(self.client.get('/planning/'),'row-reverse')
+        self.assertNotContains(self.client.get('/planning/'),'direction: rtl')
 
     def test_athlete_tile_order_and_races_removed(self):
         import re

@@ -472,3 +472,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — atleettegels geordend volgens eigenaarslijst; losse Races-tegel weg. Tien gerichte navigatie-/rol-/volgordetests en manage.py check geslaagd, inclusief beperkte atleetrechten. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — correctie leesrichting voor BEIDE rollen: alle opgegeven tegelvolgordes gelden van links naar rechts, eerst rij1 dan rij2. Omgekeerde flex-/gridrichting verwijderd; categorieën, lijsten en zichtbaarheid ongewijzigd. More blijft één rij op laptop/desktop. Tien gerichte tests en manage.py check geslaagd.
