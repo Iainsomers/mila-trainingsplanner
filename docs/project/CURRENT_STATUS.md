@@ -484,3 +484,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — tegelnamen hoofdpagina vergroot naar uniforme1.6rem (ook More en compacte laptopvariant). Alle tegels centreren inhoud verticaal; lange titels mogen omlopen. More/compacte tegels minimaal80px om twee tekstregels te passen. Bestaande iconen/volgorde behouden. Elf gerichte tests en manage.py check geslaagd; geen visuele browsercontrole.
+
+
+6 november — dezelfde rode New-teller staat zowel naast More als rechtsboven op de New, Plans, Wishes-tegel. Bij atleten staat die tegel nu ook als eerste links, vóór Hardware. Teller blijft gebaseerd op New-items afgelopen14 dagen. Elf gerichte tests en manage.py check geslaagd.

@@ -5,6 +5,13 @@
       <span class="more-new-count" aria-label="{{ recent_feature_count }} new items">{{ recent_feature_count }}</span>
     </summary>
   <div class="row g-3 more-tiles">
+
+    <div class="col-md-6 col-lg-3">
+      <a href="{% url 'new_plans_wishes' %}" class="card h-100 planning-card text-decoration-none text-reset">
+        <div class="card-body new-features-tile-body"><h5 class="card-title">New, Plans, Wishes</h5></div>
+        <span class="more-new-count tile-new-count" aria-label="{{ recent_feature_count }} new items">{{ recent_feature_count }}</span>
+      </a>
+    </div>
   {% if is_athlete_user %}
     <div class="col-md-6 col-lg-3">
       <a href="{% url 'planning_overview' %}?section=hardware" class="card h-100 planning-card text-decoration-none text-reset">
@@ -12,11 +19,6 @@
       </a>
     </div>
   {% endif %}
-    <div class="col-md-6 col-lg-3">
-      <a href="{% url 'new_plans_wishes' %}" class="card h-100 planning-card text-decoration-none text-reset">
-        <div class="card-body"><h5 class="card-title">New, Plans, Wishes</h5></div>
-      </a>
-    </div>
   {% if is_trainer_user %}
     <div class="col-md-6 col-lg-3">
       <a href="{% url 'settings' %}" class="card h-100 planning-card text-decoration-none text-reset">

@@ -106,6 +106,7 @@ class UnderDevTests(TestCase):
         main=self.client.get('/planning/')
         self.assertContains(main,'>Athlete Info</h5>')
         self.assertContains(main,'href="/planning/?section=hardware"')
+        self.assertLess(main.content.index(b'>New, Plans, Wishes</h5>'),main.content.index(b'>Hardware</h5>'))
         self.assertNotContains(main,'Upload and inspect your Garmin FIT file.')
         hardware=self.client.get('/planning/',{'section':'hardware'})
         self.assertTemplateUsed(hardware,'core/athlete_hardware.html')
@@ -186,6 +187,6 @@ class UnderDevTests(TestCase):
             response=self.client.get('/planning/')
             self.assertContains(response,'<details id="planningMore">')
             self.assertNotContains(response,'<details id="planningMore" open')
-            self.assertContains(response,'aria-label="1 new items">1</span>')
+            self.assertContains(response,'aria-label="1 new items">1</span>',count=2)
             self.assertEqual(response.context['recent_feature_count'],
                 self.client.get(reverse('new_plans_wishes')).context['recent_feature_count'])

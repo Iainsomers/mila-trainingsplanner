@@ -329,3 +329,6 @@ More gebruikt native details/summary (muis, touch en toetsenbord), met pijltje e
 
 
 6 november — Evaluations-tegel heeft een ☑-icoon in dezelfde planning-card-icon-cirkel als de andere hoofdtegels, voor coach en atleet. Decoratief icoon is aria-hidden.
+
+
+6 november — dezelfde rode New-teller staat zowel naast More als rechtsboven op de New, Plans, Wishes-tegel. Bij atleten staat die tegel nu ook als eerste links, vóór Hardware. Teller blijft gebaseerd op New-items afgelopen14 dagen. Elf gerichte tests en manage.py check geslaagd.
