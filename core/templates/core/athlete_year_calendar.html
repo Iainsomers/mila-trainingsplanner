@@ -2506,6 +2506,15 @@
             }
             if (!touched) showAnalysis();
             else {
+              body.querySelectorAll('[data-watch-ai-pending]').forEach(function(status) {
+                status.textContent = "Workout analysis ready. ";
+                var show = document.createElement("button");
+                show.type = "button"; show.className = "btn btn-sm btn-outline-primary";
+                show.textContent = "Show analysis";
+                show.addEventListener("click", showAnalysis);
+                status.appendChild(show);
+                status.removeAttribute("data-watch-ai-pending");
+              });
               notice.textContent = "Workout analysis ready. ";
               var button = document.createElement("button");
               button.type = "button"; button.className = "btn btn-sm btn-outline-primary";
@@ -2514,8 +2523,13 @@
               notice.appendChild(button);
             }
           }).catch(function() {
-            if (sequence === watchPreviewSequence && notice.isConnected)
+            if (sequence === watchPreviewSequence && notice.isConnected) {
               notice.textContent = "AI analysis could not be loaded. Measured results remain available.";
+              body.querySelectorAll('[data-watch-ai-pending]').forEach(function(status) {
+                status.textContent = "AI analysis could not be loaded. Measured results remain available.";
+                status.removeAttribute("data-watch-ai-pending");
+              });
+            }
           }).finally(function() {
             body.removeEventListener("pointerdown", markTouched);
             body.removeEventListener("keydown", markTouched);
@@ -2665,6 +2679,7 @@
         if (watchCoachUser && aiMessages[part.ai_structure_status]) {
           var aiStatus = document.createElement("div");
           aiStatus.className = "small text-muted mb-2";
+          if (part.ai_structure_status === "pending") aiStatus.setAttribute("data-watch-ai-pending", "true");
           aiStatus.textContent = (part.ai_structure_model ? "AI model: " + part.ai_structure_model + ". " : "") + aiMessages[part.ai_structure_status] + (part.ai_structure_reason ? " " + part.ai_structure_reason : "");
           box.appendChild(aiStatus);
         }

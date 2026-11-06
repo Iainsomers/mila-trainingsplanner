@@ -6,12 +6,12 @@ const start = source.indexOf('  var watchPreviewSequence = 0;');
 const end = source.indexOf('  function renderTypeALaps', start);
 function element() {
   return {style:{}, isConnected:true, listeners:{}, children:[],
-    focus(){}, appendChild(child){this.children.push(child);}, prepend(child){this.notice=child;},
+    removeAttribute(key){delete this[key];}, querySelectorAll(){return this.pendingStatuses || [];}, focus(){}, appendChild(child){this.children.push(child);}, prepend(child){this.notice=child;},
     addEventListener(event, fn){this.listeners[event]=fn;},
     removeEventListener(event, fn){if(this.listeners[event]===fn) delete this.listeners[event];}};
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
-async function scenario(touched) {
+async function scenario(touched, failed=false, model="C") {
   const body=element(), elements={suggestInputPlaceholderBody:body};
   const pending={ok:true,results:[{parts:[{ai_structure_status:'pending'}]}]};
   const analyzed={ok:true,results:[{parts:[{ai_structure_status:'applied'}]}]};
@@ -20,18 +20,25 @@ async function scenario(touched) {
   const context={activeAthlete:70, activeDate:'2026-11-05',
     document:{getElementById(id){return elements[id] ||= element();},createElement:element},
     fetch(url){calls.push(url);return calls.length===1 ? Promise.resolve({json:()=>Promise.resolve(pending)}) :
-      new Promise(resolve=>{finish=()=>resolve({json:()=>Promise.resolve(analyzed)});});},
-    renderTypeAResults(parent, results){renders.push(results);}};
+      new Promise(resolve=>{finish=()=>resolve({json:()=>Promise.resolve(failed ? {ok:false} : analyzed)});});},
+    renderTypeAResults(parent, results){renders.push(results); if(results===pending.results) {parent.pendingStatuses=[element(),element()]; parent.pendingStatuses.forEach(s=>s.textContent='pending');}}};
   vm.createContext(context);
   vm.runInContext(source.slice(start,end),context);
-  context.showWatchModel('C');
+  context.showWatchModel(model);
   await tick();
   assert(calls[0].endsWith('&preview=measured'));
   assert.equal(calls.length,2);
   assert.equal(renders.length,1,'Measured result appears while AI is still pending');
   if(touched) body.listeners.pointerdown();
   finish(); await tick();
+  if(failed) {
+    assert(body.pendingStatuses.every(s=>s.textContent.includes('could not be loaded')));
+    assert.equal(renders.length,1);
+    return;
+  }
   if(touched) {
+    assert(body.pendingStatuses.every(s=>s.textContent.includes('analysis ready')));
+    assert(body.pendingStatuses.every(s=>s.children[0].textContent==='Show analysis'));
     assert.equal(renders.length,1,'AI cannot overwrite an active selection');
     const button=body.notice.children[0];
     assert.equal(button.textContent,'Show analysis');
@@ -40,4 +47,4 @@ async function scenario(touched) {
   assert.equal(renders.length,2);
   assert.equal(renders[1][0].parts[0].ai_structure_status,'applied');
 }
-(async()=>{await scenario(false);await scenario(true);console.log('Garmin measured-first preview checks passed.');})().catch(error=>{console.error(error);process.exitCode=1;});
+(async()=>{for(const model of ['C','D']) {await scenario(false,false,model);await scenario(true,false,model);await scenario(true,true,model);}console.log('Garmin measured-first preview checks passed.');})().catch(error=>{console.error(error);process.exitCode=1;});

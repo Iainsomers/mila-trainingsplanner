@@ -356,3 +356,6 @@ Garmin C/D (6 november 2026): Suggest-invoer en knop staan links van Use AM/PM, 
 
 
 6 november - Hardware acces: Polar Integration, Garmin uploads en Garmin Connected Athletes hebben bovenaan Back naar het coachhardwareoverzicht. Garmin uploads voor atleten gaat terug naar hun eigen Planning > Hardware. Kopregels kunnen omlopen op mobiel. 23 GarminConnection-tests en manage.py check geslaagd; aanvullende gerichte teruglinkcontrole voor alle drie coachpagina's toegevoegd.
+
+
+Garmin-preview: wanneer analyse klaar is maar gebruikersinteractie automatisch vervangen verhindert, tonen ook de afzonderlijke activiteitstatussen Analysis ready met Show analysis. Bij een laadfout blijft geen oude pending-melding staan. Invoer en keuzes blijven behouden tot expliciet Show analysis wordt gekozen.

@@ -517,3 +517,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november - Garmin C/D-popup laadfout na Suggest: renderTypeAResults verwees naar aycCoachUser uit een andere afgesloten scriptfunctie. Coachvlag nu binnen de renderer uit templatecontext gezet. JS-regressies draaien zonder kunstmatige externe coachvariabele, voor coach en atleet, C en D. Geen API-/meet-/rechtenwijziging.
+
+
+6 november - C/D verouderde pending-status: bij interactie blijft de meetpreview bewust behouden, maar voltooide analyse actualiseerde alleen het bovenste bericht. Nu krijgt elke zichtbare pending-status ook Analysis ready met Show analysis; bij laadfout verandert elke status naar niet-beschikbaar. Geen invoer/keuze automatisch vervangen. Uitgebreide JS-previewtest dekt C/D, interactie, succes en fout; alle drie JS-controles en manage.py check slagen. Dit lost misleidende status op, niet bewezen servicelatentie.
