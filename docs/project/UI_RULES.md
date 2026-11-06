@@ -338,3 +338,6 @@ More gebruikt native details/summary (muis, touch en toetsenbord), met pijltje e
 
 
 Mobiele Diary-weekkaart heeft ALT-zonepillen naast de hardloopzones, met expliciete eenheid min en bestaande zonekleuren. Alleen niet-nul totalen worden getoond; de regel kan omlopen.
+
+
+Login: desktop centraal formulier max480px met invoervelden/Login-knop minimaal52px hoog en18px tekst. Mobiel tot768px vrijwel volle breedte,76px hoge velden/knop en24px tekst, ruime labels/tussenruimte. Login heeft viewport=device-width zodat mobiel niet verkleind wordt. Labels gekoppeld aan velden, autocomplete behouden.

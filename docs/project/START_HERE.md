@@ -158,3 +158,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Athlete Diary mobiel toont ALT-weekminuten per Z1/Z2/Z3 bij de loopzones, met min-eenheid. Bestaande berekening/uitsluiting niet-uitgevoerd blijft intact; gerichte test/check geslaagd.
+
+
+6 november — loginformulier nu52px desktop en76px mobiel, mobiele tekst24px en bijna volle breedte. Viewportinstelling voorkomt verkleinde mobiele desktopweergave. Tien gerichte logintests/check geslaagd.
