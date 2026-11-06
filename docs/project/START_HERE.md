@@ -134,3 +134,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Standard Trainings onder More bundelt Saved Trainings/Standard Strength. Mila Planner behoudt categorieën en toont desktop drie even brede tegels; More is lager/compacter. Acht gerichte tests/check geslaagd.
+
+
+6 november — More toont laptop/desktop alle zichtbare tegels in één rij via automatisch grid. Tegelhoogtes en witruimte op laptop verlaagd; extra compacte variant bij viewporthoogte<=760px. Acht gerichte tests/check slagen; browserpreview kon localhost niet bereiken.

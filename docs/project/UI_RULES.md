@@ -305,3 +305,6 @@ Mila Planner gebruikt uniforme col-md-6 col-lg-4 tegels: drie naast elkaar op de
 
 
 6 november — More toont op desktop vier compacte tegels per rij (col-lg-3); overige categorieën behouden drie (col-lg-4). Middelgrote schermen twee en mobiel één. Gerichte grid-/navigatietest en manage.py check geslaagd.
+
+
+6 november — More staat op laptop/desktop in één automatische rasterrij, ongeacht vier/vijf zichtbare tegels. Vanaf992px minder padding/witruimte, hoofdtegels80px en More64px; bij schermhoogte<=760px respectievelijk64/56px. Mobiel behoudt bestaande stapeling en automatische inhoudshoogte. Geen overflow verbergen of pagina-afkapping.

@@ -463,3 +463,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — More toont op desktop vier compacte tegels per rij (col-lg-3); overige categorieën behouden drie (col-lg-4). Middelgrote schermen twee en mobiel één. Gerichte grid-/navigatietest en manage.py check geslaagd.
+
+
+6 november — compactere laptopweergave en More in één rij gerealiseerd. Acht gerichte navigatie/gridtests en manage.py check slagen. Synthetische volledige hoofdpagina gerenderd; visuele controle via in-app browser geblokkeerd door localhost-timeout, dus exacte schermpassing niet visueel bevestigd.
