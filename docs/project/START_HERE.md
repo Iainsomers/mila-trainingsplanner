@@ -107,3 +107,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Evaluations-tegel verplaatst van Dashboard naar Planning > Views, voor coaches en atleten. De instelling evaluations_enabled van de actieve coach/eigen coach en coach-tools-only-beperking blijven van kracht. Bestaande evaluatiepagina, rechten en inhoud ongewijzigd. Tegel gebruikt responsieve Planning-kolommen. Gerichte evaluatieflow en modulezichtbaarheid voor coach/atleet plus manage.py check gecontroleerd.
+
+
+6 november — Stats en Hardware acces staan nu onder optionele Under Dev-coachtegel. Coach Settings > Modules > Under Dev standaard uit, opgeslagen per actieve coach. Migratie 0145 vereist bij deploy. 24 gerichte tests/check/migratiecheck geslaagd.

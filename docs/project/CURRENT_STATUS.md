@@ -433,3 +433,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Evaluations-tegel verplaatst van Dashboard naar Planning > Views, voor coaches en atleten. De instelling evaluations_enabled van de actieve coach/eigen coach en coach-tools-only-beperking blijven van kracht. Bestaande evaluatiepagina, rechten en inhoud ongewijzigd. Tegel gebruikt responsieve Planning-kolommen. Gerichte evaluatieflow en modulezichtbaarheid voor coach/atleet plus manage.py check gecontroleerd.
+
+
+6 november — Under Dev-tegel en Modules-schuif gerealiseerd; Stats/Hardware acces naar submenu. 24 gerichte tests (module standaard uit, opslaan aan/uit, directe submenu-URL, view-only, bestaande Garminrechten), manage.py check en migratiecheck slagen. Migratie 0145 lokaal toegepast. Geen aparte visuele browsercontrole; responsieve kaartgrid behouden.

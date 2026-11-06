@@ -549,8 +549,14 @@ def dashboard_view(request):
     from core.models import GarminConnection
     garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
 
-    template = ("core/hardware_access.html" if request.GET.get("section") == "hardware"
-                and is_trainer_user and not coach_tools_only else "core/dashboard.html")
+    under_dev_enabled = bool(evaluation_settings and evaluation_settings.under_dev_enabled)
+    section = request.GET.get('section')
+    template = "core/dashboard.html"
+    if is_trainer_user and not coach_tools_only and under_dev_enabled:
+        if section == 'hardware':
+            template = "core/hardware_access.html"
+        elif section == 'under_dev':
+            template = "core/under_dev.html"
     return render(request, template, {
         "is_athlete_user": is_athlete_user,
         "is_trainer_user": is_trainer_user,
@@ -560,6 +566,7 @@ def dashboard_view(request):
         "active_coach_access_label": _active_coach_access_label(request) if is_trainer_user else "own",
         "coach_tools_only": coach_tools_only,
         "evaluations_enabled": getattr(evaluation_settings, "evaluations_enabled", True),
+        "under_dev_enabled": under_dev_enabled,
         "is_product_admin": _is_product_admin(request.user),
         "is_llg_team": is_llg_team,
         "garmin_upload_athlete_count": garmin_upload_athlete_count,
@@ -10235,12 +10242,14 @@ def settings_view(request):
         if pause_mode in dict(CoachSettings.PAUSE_MODE_CHOICES):
             coach_settings.pause_mode = pause_mode
         coach_settings.evaluations_enabled = (request.POST.get("evaluations_enabled") == "on")
+        coach_settings.under_dev_enabled = (request.POST.get("under_dev_enabled") == "on")
         coach_settings.training_evaluation_pain_enabled = (
             request.POST.get("training_evaluation_pain_enabled") == "on"
         )
         coach_settings.evaluation_sharing_enabled = (request.POST.get("evaluation_sharing_enabled") == "on")
         coach_settings.save(update_fields=[
             "evaluations_enabled",
+            "under_dev_enabled",
             "training_evaluation_pain_enabled",
             "evaluation_sharing_enabled",
             "detailed_camps_enabled",
@@ -10286,6 +10295,7 @@ def settings_view(request):
 
     return render(request, "core/settings.html", {
         "evaluations_enabled": coach_settings.evaluations_enabled,
+        "under_dev_enabled": coach_settings.under_dev_enabled,
         "training_evaluation_pain_enabled": coach_settings.training_evaluation_pain_enabled,
         "evaluation_sharing_enabled": coach_settings.evaluation_sharing_enabled,
         "evaluation_share_rows": evaluation_share_rows,

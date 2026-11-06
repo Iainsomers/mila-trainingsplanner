@@ -71,6 +71,7 @@ class CoachSettings(models.Model):
 
     # Optional long-term planning modules.
     evaluations_enabled = models.BooleanField(default=True)
+    under_dev_enabled = models.BooleanField(default=False)
     training_evaluation_pain_enabled = models.BooleanField(default=True)
     focus_points_enabled = models.BooleanField(default=False)
     evaluation_sharing_enabled = models.BooleanField(default=False)

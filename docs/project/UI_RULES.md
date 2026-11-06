@@ -275,3 +275,6 @@ Hardware acces is de exacte coachtegelnaam. Het hardwareoverzicht gebruikt dezel
 
 
 6 november — Evaluations-tegel verplaatst van Dashboard naar Planning > Views, voor coaches en atleten. De instelling evaluations_enabled van de actieve coach/eigen coach en coach-tools-only-beperking blijven van kracht. Bestaande evaluatiepagina, rechten en inhoud ongewijzigd. Tegel gebruikt responsieve Planning-kolommen. Gerichte evaluatieflow en modulezichtbaarheid voor coach/atleet plus manage.py check gecontroleerd.
+
+
+Under Dev staat als schuif onder Modules in Coach Settings. Op dashboard vervangt deze optionele tegel Stats en Hardware acces; het submenu gebruikt dezelfde responsieve MiLa-kaarten. Hardware acces verwijst terug naar Under Dev.

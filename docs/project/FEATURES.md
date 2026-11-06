@@ -505,3 +505,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — Evaluations-tegel verplaatst van Dashboard naar Planning > Views, voor coaches en atleten. De instelling evaluations_enabled van de actieve coach/eigen coach en coach-tools-only-beperking blijven van kracht. Bestaande evaluatiepagina, rechten en inhoud ongewijzigd. Tegel gebruikt responsieve Planning-kolommen. Gerichte evaluatieflow en modulezichtbaarheid voor coach/atleet plus manage.py check gecontroleerd.
+
+
+6 november — coachdashboard heeft optionele Under Dev-tegel, waaronder Stats en Hardware acces staan. Coach Settings > Modules > Under Dev staat standaard uit, per actieve coach opgeslagen. Uitgeschakeld toont dashboard ook bij directe section=under_dev/hardware geen submenu. Bestaande individuele functionaliteit/rechten behouden.

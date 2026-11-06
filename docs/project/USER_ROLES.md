@@ -130,3 +130,6 @@ FIT AI-toestemming (4 november 2026): uploadscherm bevat voor atleten een option
 
 
 Hardware acces is uitsluitend beschikbaar voor trainers buiten coach-tools-only. De dashboardsectie wordt server-side alleen voor hen gerenderd. De bestaande toegangscontroles van Polar, Garmin uploads en Garmin-verbindingen blijven van kracht.
+
+
+Under Dev-module volgt actieve coachinstelling; uitsluitend coachdashboard (geen atleten of coach-tools-only). Eigenaar en bevoegde edit-coach kunnen schakelen via bestaande settingsrechten; view-only niet.
