@@ -4401,8 +4401,10 @@ class YearPlannerTests(TestCase):
         self.assertTrue(any(row["scope"] == f"basis-plan-{plan.id}" for row in response.context["rows"]))
         self.assertContains(response, "Basis - Basis group")
         html = response.content.decode()
-        selector = html.split('<div class="year-athlete-list">', 1)[1].split("</div>", 1)[0]
-        self.assertLess(selector.index("All"), selector.index("Basis - Basis group"))
+        basis_selector = html.split('data-year-basis-panel',1)[1].split('data-year-athlete-panel',1)[0]
+        self.assertIn('Basis - Basis group',basis_selector)
+        self.assertNotIn('name="athletes"',basis_selector)
+        self.assertContains(response,'id="yearSelection"')
 
         all_groups = self.client.get("/planning/year/?period=current_next&basis=1")
         self.assertTrue(all_groups.context["show_basis"])
@@ -4460,6 +4462,20 @@ class YearPlannerTests(TestCase):
         response=self.client.get('/planning/year/',{'basis':'1'})
         self.assertContains(response,'Basis - All')
         self.assertFalse(TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).exists())
+
+    def test_year_planner_month_bands_and_compact_selection(self):
+        coach,athlete=self._coach_and_athlete()
+        response=self.client.get('/planning/year/',{'year':'2026','period':'season','zoom':'3','athletes':[athlete.pk]})
+        self.assertContains(response,'year-month-row')
+        self.assertContains(response,'class="year-date-label"')
+        self.assertContains(response,'data-year-basis-panel')
+        self.assertContains(response,'1 Athlete · 0 Basis · 0 Coaches')
+        self.assertContains(response,'<details class="year-legend-disclosure">')
+        for chunk in response.context['chunks']:
+            self.assertEqual(sum(month['count'] for month in chunk['months']),len(chunk['days']))
+            self.assertEqual(chunk['months'][0]['key'],(chunk['days'][0].year,chunk['days'][0].month))
+            self.assertEqual(chunk['months'][-1]['key'],(chunk['days'][-1].year,chunk['days'][-1].month))
+        self.assertContains(response,'--year-day-count: 92')
 
     def test_year_planner_stacked_layout_renders_chunks(self):
         _, athlete = self._coach_and_athlete()

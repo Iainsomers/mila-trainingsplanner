@@ -7447,7 +7447,14 @@ def year_planner_view(request):
 
     chunks = []
     for start_index, end_index, label in chunk_spans():
+        chunk_months = []
+        for day in days[start_index:end_index]:
+            key = (day.year, day.month)
+            if not chunk_months or chunk_months[-1]['key'] != key:
+                chunk_months.append({'key': key, 'label': day.strftime('%B %Y'), 'count': 0})
+            chunk_months[-1]['count'] += 1
         chunks.append({
+            'months': chunk_months,
             "label": label,
             "days": days[start_index:end_index],
             "rows": [
@@ -7492,6 +7499,7 @@ def year_planner_view(request):
         "selected_filter_plan": selected_filter_plan,
         "basis_options": trainer_plans if not is_athlete_user and group_filter == "all" else [],
         "selected_basis_ids": selected_basis_ids,
+        "selected_basis_count": len(basis_rows),
         "selected_ids": selected_ids,
         "all_visible_athletes_selected": all_visible_athletes_selected,
         "coaches": coach_options,

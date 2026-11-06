@@ -365,3 +365,6 @@ Garmin-preview: wanneer analyse klaar is maar gebruikersinteractie automatisch v
 
 
 Garmin C/D: oude Suggest-invoer vervangen door Chat-knop met uitklapbaar gesprek per activiteit. Meerregelige invoer16px, gesprek met begrensde scrollhoogte; tekst wordt veilig als tekst getoond. Coach houdt diagnostische afwijsdetails; atleet krijgt alleen kort resultaat. Gevalideerd voorstel wordt expliciet als zodanig benoemd en blijft een preview tot Use AM/PM.
+
+
+Year Planner: compacte bedieningsbalk en kleinere navigatieknoppen; drie aparte selectiepanelen in native details/summary. Selection standaard dicht bij bestaande selectie, open zonder rijen; toestand per gebruiker in sessionStorage. Legend standaard dicht en toont alleen ingeschakelde/toegestane onderdelen. Kwartalen hebben maandkoppen en wekelijkse labels zoals05 Nov, jaarweergave maandlabels, maandweergave dagnummer+weekdag; geen verticaal afgebroken datums. Daglijnen zacht, weekgrenzen duidelijker, maandgrenzen het sterkst. Vaste linkernaamkolom en tweerijige sticky kop; bij smal scherm horizontaal scrollen. Kalenderhoogte gebruikt resterende viewport; mobiel natuurlijke paginahoogte. Viewportmeta toegevoegd voor echt mobiele layout.

@@ -170,3 +170,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Year Planner Group=All kan meerdere Basis-schema’s tonen, inclusief eigen MID/LONG-General Plans naast Basis - All. Herhaalde basis_plans-parameters behouden selectie bij navigatie. Rechten en scheiding van data intact; geen extra migratie.
+
+
+6 november — Year Planner-layout gebundeld aangepakt: compacte toolbar/navigatie, Basis/Athletes/Coaches apart in inklapbare Selection, maandkoppen/heldere weekgrenzen, vastgezette namen, uitklapbare actieve legenda. Data en endpoints blijven gelijk. Eén geïsoleerde commit voor eenvoudig terugdraaien. Dertig gerichte tests/check plus JS-layoutgedragstest.

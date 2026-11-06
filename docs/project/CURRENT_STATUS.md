@@ -529,3 +529,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november - beperkte C/D-chatcorrectie voor bestaande doelafstanden toegevoegd. Nieuwe helper watch_distance_edit laat AI een numerieke correctie voorstellen en controleert elke bestaande rep, zonder nieuwe lapindeling. Synthetische screenshotmetingen6 langere/6 kortere reps testen behoud150m en alle metingen,185m-correctie, vervolgstap190m, ongeldige afstand/membership/ambigue groep. 77 gerichte Django-tests en check geslaagd; na laatste guards drie helpertests, JS-chatcontrole en check opnieuw geslaagd. Geen migratie/UI-wijziging. Live AI-uitkomst niet bevestigd.
+
+
+6 november — alle zes voorgestelde Year Planner-layoutverbeteringen samen geïmplementeerd, bedoeld als één terugdraaibare commit. Dertig YearPlanner-tests en manage.py check geslaagd; nieuwe regressie controleert maandspannen/aantallen/selektiepanelen en behoudt bestaande bewerk-/rechtenchecks. JavaScript-test controleert Selection-persistentie met/zonder browseropslag en kalenderhoogte bij390/1366px. Geen visuele browsercontrole uitgevoerd; eerdere browserpreview kon localhost niet bereiken.
