@@ -535,3 +535,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — Evaluations voor coaches verplaatst van Views naar Coach Plannings; de atleetingang blijft onder Views. Coachvolgorde aangepast volgens UI_RULES, met bestaande modulezichtbaarheid en rechten behouden.
+
+
+Atleethoofdpagina: nieuwe Views-volgorde met Evaluations achteraan; losse racekalendertegel verwijderd, bestaande racefunctie en Year Planner-ingang blijven behouden. Rechten voor Year Planner, Camps en Improvements blijven ongewijzigd.

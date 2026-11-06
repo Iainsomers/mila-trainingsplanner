@@ -140,3 +140,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — coachtegels bewust rechts-naar-links volgens eigenaarsopdracht. Evaluations staat voor coaches in Coach Plannings; Views bestaat uit Diary/Staff Team Overview/DCO. More heeft nieuwe volgorde; zie UI_RULES. Negen gerichte tests/check geslaagd.
+
+
+6 november — atletenvolgorde Views: Athlete Diary/Year Planner/Athlete Info/Camps/Improvements/Evaluations, rechts-naar-links per rij. Races-tegel verwijderd (via Year Planner). Tien gerichte tests/check geslaagd.

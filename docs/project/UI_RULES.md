@@ -311,3 +311,6 @@ Mila Planner gebruikt uniforme col-md-6 col-lg-4 tegels: drie naast elkaar op de
 
 
 6 november — coachtegels volgen expliciet rechts-naar-links per rij. Coach Plannings: Athlete Info, General Plans, Individual Plans, Year Planner, Improvements, Camps, Evaluations. Views: Athlete Diary, Staff Team Overview, Daily Coach Overview Training. More: New/Plans/Wishes, Settings, Coach Tools, Under Dev, Standard Trainings. Flex row-reverse op meerkolomsrijen; More-grid rechts-naar-links met links-naar-rechts tekst. Mobiel volgt de opgegeven lijst van boven naar beneden. Atleten houden eigen categorie-indeling.
+
+
+6 november — atleten Views volgt rechts-naar-links per rij de volgorde Athlete Diary, Year Planner, Athlete Info, Camps, Improvements, Evaluations. Mobiel dezelfde volgorde van boven naar beneden. Losse Races-tegel verwijderd; races blijven via Year Planner bereikbaar. Bestaande instellingen bepalen welke tegels zichtbaar zijn.

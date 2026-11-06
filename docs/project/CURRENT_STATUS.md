@@ -469,3 +469,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — coachvolgorde rechts-naar-links ingesteld; Improvements voor Camps, Evaluations naar Coach Plannings, Staff Team Overview voor DCO, More opnieuw geordend. Acht bestaande gerichte navigatietests plus één aanvullende categorie-/volgordetest en manage.py check geslaagd. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — atleettegels geordend volgens eigenaarslijst; losse Races-tegel weg. Tien gerichte navigatie-/rol-/volgordetests en manage.py check geslaagd, inclusief beperkte atleetrechten. Geen visuele browsercontrole uitgevoerd.

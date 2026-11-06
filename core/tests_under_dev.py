@@ -146,3 +146,25 @@ class UnderDevTests(TestCase):
         self.assertEqual(labels(sections[1]),['Athlete Diary','Staff Team Overview','Daily Coach Overview Training'])
         self.assertEqual(labels(sections[2]),['New, Plans, Wishes','Settings','Coach Tools','Under Dev','Standard Trainings'])
         self.assertContains(self.client.get('/planning/'),'.coach-tile-order { flex-direction: row-reverse; }')
+
+    def test_athlete_tile_order_and_races_removed(self):
+        import re
+        from core.models import Athlete
+        coach=get_user_model().objects.create_user(username='athlete-order-coach',is_staff=True)
+        runner=get_user_model().objects.create_user(username='athlete-order-runner')
+        athlete=Athlete.objects.create(owner=coach,name='athlete-order-runner',birth_year=2000,gender='X',
+            year_planner_training_enabled=True,year_planner_whereabouts_enabled=True,see_desired_improvement_points=True)
+        self.client.force_login(runner)
+        html=self.client.get('/planning/').content.decode()
+        section=re.search(r'<section.*?</section>',html,re.S)[0]
+        labels=re.findall(r'<h5 class="card-title[^"]*">(.*?)</h5>',section)
+        self.assertEqual(labels,['Athlete Diary','Year Planner','Athlete Info','Camps','Improvements','Evaluations'])
+        self.assertNotIn('race_calendar',section)
+        athlete.year_planner_training_enabled=False
+        athlete.year_planner_whereabouts_enabled=False
+        athlete.see_desired_improvement_points=False
+        athlete.save()
+        html=self.client.get('/planning/').content.decode()
+        section=re.search(r'<section.*?</section>',html,re.S)[0]
+        self.assertEqual(re.findall(r'<h5 class="card-title[^"]*">(.*?)</h5>',section),
+                         ['Athlete Diary','Athlete Info','Evaluations'])
