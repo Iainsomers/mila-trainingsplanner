@@ -176,3 +176,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Group-filter staat boven de drie gelijk uitgelijnde selectiepanelen. Dicht/open-flits na selectie hersteld: selection_open gaat mee met formulier/links en wordt direct server-side gerenderd; geen sessionStorage-herstel van details.open meer. 31 gerichte tests/check plus JS-controle.
+
+
+7 november — Staff Team Overview: slaapduur low/high afzonderlijk gekleurd op basis van extremumdatum (vandaag donker, gisteren/eergisteren licht). Zie DATA_RULES voor gelijke waarden en veertiendaagse periode.

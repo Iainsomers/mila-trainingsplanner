@@ -538,3 +538,7 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Year Planner Race Calendar lichtblauw #EFF6FF met tekst/rand #245A91; Camps lichtgroen #EFF8F1 met tekst/rand #28663D. Donkerdere hover en passende focusrand. Beide knoppen auto-breedte, compact38px hoog met6px afronding, passend bij Back. Tekstkleur blijft leesbaar bij teambranding. Gerichte YearPlanner-tests en manage.py check geslaagd.
+
+
+7 november — Recente slaapduur-extremen krijgen afzonderlijke groene/rode kleurmarkeringen in Staff Team Overview. Geen migratie nodig.
+Validatie: 11 gerichte Staff Team Overview/vitals-tests en manage.py check geslaagd. Brede PlanningOverviewTests bevat daarnaast vijf fouten bij eerder gewijzigde plannerteksten/navigatie; niet onderdeel van deze slaapkleurwijziging. Mobiele tabelstructuur behouden; geen visuele browsercontrole uitgevoerd.

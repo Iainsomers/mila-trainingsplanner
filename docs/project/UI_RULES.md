@@ -374,3 +374,6 @@ Year Planner: compacte bedieningsbalk en kleinere navigatieknoppen; drie aparte 
 
 
 6 november — Year Planner Race Calendar lichtblauw #EFF6FF met tekst/rand #245A91; Camps lichtgroen #EFF8F1 met tekst/rand #28663D. Donkerdere hover en passende focusrand. Beide knoppen auto-breedte, compact38px hoog met6px afronding, passend bij Back. Tekstkleur blijft leesbaar bij teambranding. Gerichte YearPlanner-tests en manage.py check geslaagd.
+
+
+Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met contrasterende tekst en datumtooltip. Dit werkt in dezelfde compacte, horizontaal scrollbare vitalstabel op mobiel.

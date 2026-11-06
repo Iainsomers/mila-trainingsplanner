@@ -570,3 +570,6 @@ Garmin C/D-chat: gerichte afstandscorrectie binnen bestaande expliciet gemarkeer
 
 
 6 november — Year Planner-layout als één samenhangende wijziging: compacte periode-/weergavebalk, Race Calendar/Camps rechtsboven, inklapbare Legend, inklapbare Selection met aantallen en aparte Basis/Athletes/Coaches. Selection onthoudt open/dicht tijdens selecteren. Kalender heeft maandbanden, horizontale datumlabels, lichte daglijnen en sterkere week-/maandgrenzen; namen blijven vast bij horizontaal scrollen. Onderliggende data-/selectie-/opslagregels ongewijzigd.
+
+
+Staff Team Overview kleurt bij Sleep length de laagste en hoogste slaapduur afzonderlijk: kortste vandaag donkerrood, gisteren/eergisteren lichtrood; langste vandaag donkergroen, gisteren/eergisteren lichtgroen. Gemiddelde en andere vitals blijven neutraal.

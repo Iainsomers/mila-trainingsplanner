@@ -317,3 +317,6 @@ Garmin-chat: begrensde gesprekstekst gaat via CSRF-beveiligde POST naar dezelfde
 
 
 Gerichte chatcorrecties gebruiken alleen server-eigen meetpreview of de vorige gecontroleerde correctie (tijdelijke cache900s per gebruiker/atleet/dag/model/activiteit). Alle te wijzigen reps moeten al expliciet work_rep=True en nominal_rep_m=bronafstand hebben; geen zoekactie naar nabije laps. Groepsaantal en tekstmatch moeten uniek overeenkomen. Iedere gemeten rep moet binnen max(30m,8%) van de nieuwe doelafstand vallen. AI-confidence>=0.75. Alleen tekstdoelafstand en nominal_rep_m veranderen; gemeten meters/seconden/HR, lapvolgorde, segmenten, zones en herstel blijven gelijk. Niet-passende gerichte correctie valt niet terug op volledige herindeling. Bij verlopen eerdere preview geen stille terugkeer naar de originele training.
+
+
+Sleep length-extremen vergelijken de bestaande veertien kalenderdagen inclusief vandaag (lokale applicatiedatum), met minimaal drie ingevulde waarden. Bij gelijke extremen telt de meest recente datum. Oudere extremen en volledig gelijke slaapduren blijven neutraal. Geen wijziging van gemiddelden, NA of toegangsrechten.

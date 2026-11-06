@@ -13250,11 +13250,14 @@ def daily_overview_other_view(request):
     selected_vital = next((option for option in vital_options if option["key"] == selected_vital_key), vital_options[0])
     vitals_window_start = today - timedelta(days=13)
     vital_values = {}
+    sleep_dates = {}
     if visible_vital_athlete_ids and selected_vital["key"] != "hr_zones":
         for vital in AthleteDailyVital.objects.filter(
             athlete_id__in=visible_vital_athlete_ids,
             date__range=(vitals_window_start, today),
-        ).only("athlete_id", *(column["key"] for column in vital_columns)):
+        ).only("athlete_id", "date", *(column["key"] for column in vital_columns)):
+            if vital.sleep_hours is not None:
+                sleep_dates.setdefault(vital.athlete_id, []).append((float(vital.sleep_hours), vital.date))
             for column in vital_columns:
                 value = getattr(vital, column["key"], None)
                 if value is not None:
@@ -13332,6 +13335,16 @@ def daily_overview_other_view(request):
                 if len(values) >= 3:
                     cell["value"] = f"{sum(values) / len(values):.1f}{column['suffix']}"
                     cell["range"] = f"{min(values):.1f}–{max(values):.1f}"
+                    if column["key"] == "sleep_hours":
+                        for bound, value, color in (("low", min(values), "red"), ("high", max(values), "green")):
+                            latest = max(day for hours, day in sleep_dates[athlete.id] if hours == value)
+                            age = (today - latest).days
+                            cell[bound] = f"{value:.1f}"
+                            cell[f"{bound}_date"] = latest
+                            cell[f"{bound}_class"] = (
+                                f"sleep-extreme-{color}-{'dark' if age == 0 else 'light'}"
+                                if min(values) != max(values) and 0 <= age <= 2 else ""
+                            )
                 cells.append(cell)
             if show_na or any(cell["sample_count"] >= 3 for cell in cells):
                 vital_rows.append({"athlete": athlete, "values": cells})

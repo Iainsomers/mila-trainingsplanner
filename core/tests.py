@@ -1946,6 +1946,36 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Year Planner")
         self.assertContains(response, "Standard Strength")
 
+    def test_sleep_extremes_use_recent_dates_in_fourteen_day_window(self):
+        coach = get_user_model().objects.create_user(username="sleep-colors", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Sleep Colors", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+        today = timezone.localdate()
+        cases = [
+            ((7, 8, 9, 8), "sleep-extreme-red-dark", "sleep-extreme-green-light"),
+            ((9, 7, 8, 8), "sleep-extreme-red-light", "sleep-extreme-green-dark"),
+            ((8, 9, 7, 8), "sleep-extreme-red-light", "sleep-extreme-green-light"),
+            ((8, 8, 8, 7), "", "sleep-extreme-green-dark"),
+            ((8, 8, 8, 9, 7), "", ""),
+            ((8, 8, 8, 8), "", ""),
+            ((9, 8, 7, 9), "sleep-extreme-red-light", "sleep-extreme-green-dark"),
+        ]
+        for values, low_class, high_class in cases:
+            with self.subTest(values=values):
+                AthleteDailyVital.objects.filter(athlete=athlete).delete()
+                for offset, value in enumerate(values):
+                    AthleteDailyVital.objects.create(athlete=athlete, date=today - timedelta(days=offset), sleep_hours=value)
+                AthleteDailyVital.objects.create(athlete=athlete, date=today - timedelta(days=14), sleep_hours=20)
+                response = self.client.get("/coach/daily-overview-other/?vital=summary")
+                cell = response.context["vital_rows"][0]["values"][0]
+                self.assertEqual(cell["low_class"], low_class)
+                self.assertEqual(cell["high_class"], high_class)
+                self.assertEqual(cell["sample_count"], len(values))
+                if low_class:
+                    self.assertContains(response, f'class="{low_class}" title="Shortest night:')
+                if high_class:
+                    self.assertContains(response, f'class="{high_class}" title="Longest night:')
+
     def test_daily_overview_other_shows_selected_vital_average(self):
         coach = get_user_model().objects.create_user(
             username="vitals-overview-coach",
