@@ -424,3 +424,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Information Quality koppelt Vitals-NA aan Evaluated-NA en verbergt deze rijen standaard via Show NA. Getest: gevulde vitals zonder trainingen zijn NA, schakelaar herstelt rij, 0%-evaluatie blijft zichtbaar met normaal vitalspercentage, NA uitgesloten uit gemiddelde. 40 overige PlanningOverview/LastActive-tests geslaagd; de aangepaste vitalsregressie na toevoegen schakelaar afzonderlijk geslaagd; manage.py check geslaagd.
+
+
+6 november — Hardware acces groepeert drie coachhardwaretegels op dashboard?section=hardware. 22 GarminConnection-tests en manage.py check slagen, inclusief coach-/nietcoachweergave, oude links en uploadzichtbaarheid. Responsieve Bootstrap-grid behouden; geen visuele browsercontrole uitgevoerd.

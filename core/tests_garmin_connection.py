@@ -216,6 +216,21 @@ class GarminConnectionTests(TestCase):
         self.client.force_login(self.coach)
         self.assertContains(self.client.get(reverse("coach_athlete_edit", args=[self.athlete.pk])), "Allow Garmin Connection")
 
+    def test_hardware_access_coach_only_and_upload_visibility(self):
+        self.client.force_login(self.coach)
+        page = self.client.get(reverse('dashboard'), {'section':'hardware'})
+        self.assertTemplateUsed(page, 'core/hardware_access.html')
+        self.assertContains(page, reverse('polar_integration'))
+        self.assertNotContains(page, 'Garmin uploads (under development)')
+        self.athlete.garmin_fit_upload_enabled = True
+        self.athlete.save()
+        page = self.client.get(reverse('dashboard'), {'section':'hardware'})
+        self.assertContains(page, reverse('garmin_uploads'))
+        self.client.force_login(self.user)
+        page = self.client.get(reverse('dashboard'), {'section':'hardware'})
+        self.assertNotContains(page, 'Hardware acces')
+        self.assertTemplateUsed(page, 'core/dashboard.html')
+
     def test_coach_dashboard_lists_only_connected_athletes_of_active_coach(self):
         from core.models import CoachAccess
         self.enable()
@@ -225,6 +240,10 @@ class GarminConnectionTests(TestCase):
         GarminConnection.objects.create(athlete=other, access_token="other-token", data_consent_at=timezone.now())
         self.client.force_login(self.coach)
         page = self.client.get(reverse("dashboard"))
+        self.assertContains(page, "Hardware acces")
+        self.assertNotContains(page, 'id="coach-garmin-heading"')
+        self.assertNotContains(page, f'href="{reverse("polar_integration")}"')
+        page = self.client.get(reverse("dashboard"), {"section":"hardware"})
         self.assertContains(page, 'id="coach-garmin-heading"')
         self.assertContains(page, "under construction")
         self.assertContains(page, f'href="{reverse("garmin_connections")}"')

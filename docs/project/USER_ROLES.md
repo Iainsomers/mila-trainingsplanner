@@ -127,3 +127,6 @@ Injury/Issue-coachcommentaar: eigenaar en bevoegde edit-coaches mogen alleen hun
 
 
 FIT AI-toestemming (4 november 2026): uploadscherm bevat voor atleten een optioneel, standaard uitgeschakeld vakje met Save AI permission, apart van bestand uploaden. Geldt voor bestaande/toekomstige eigen FIT-bestanden inclusief Coros, zonder Garmin OAuth. Coach ziet alleen status/uitleg en kan nooit toestemming namens een atleet opslaan; endpoint controleert eigen atleet en uploadrecht. Migratie 0144 voegt fit_ai_consent_at, fit_ai_withdrawn_at en fit_ai_consent_version toe. Intrekken verwijdert geen bestanden en raakt Garmin-koppeling/toestemming niet. C/D kiest toestemming per activiteitbron: GarminActivity gebruikt FIT-toestemming, ontvangen Garmin-details blijven de bestaande Garmin-toestemming gebruiken. Geen AI zonder geldige toestemming of bij ingetrokken uploadrecht. Privacytekst bijgewerkt. 60 gerichte Garmin-/Watch-tests en manage.py check geslaagd; visuele desktop-/mobiele controle en productie-uitrol nog niet bevestigd.
+
+
+Hardware acces is uitsluitend beschikbaar voor trainers buiten coach-tools-only. De dashboardsectie wordt server-side alleen voor hen gerenderd. De bestaande toegangscontroles van Polar, Garmin uploads en Garmin-verbindingen blijven van kracht.

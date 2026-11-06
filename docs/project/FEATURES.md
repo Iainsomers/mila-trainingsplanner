@@ -496,3 +496,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — Information Quality: Vitals toont NA wanneer Evaluated NA is. Show NA is een schakelaar, standaard uit; rijen met Evaluated NA blijven verborgen tot inschakelen. 0% blijft zichtbaar. NA telt niet mee in ALL-gemiddelden. Toegangsbeperkingen blijven gelden; zonder vitalsrechten blijft de afgeschermde weergave behouden.
+
+
+6 november — coachdashboard bundelt Polar en beide Garmin-tegels onder Hardware acces. De tegel opent een apart overzicht met de bestaande namen en bestemmingen; Garmin uploads behoudt de bestaande voorwaarde dat toegankelijke uploadatleten aanwezig zijn. Stats en eventueel Oura blijven op het dashboard.

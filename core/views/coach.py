@@ -549,7 +549,9 @@ def dashboard_view(request):
     from core.models import GarminConnection
     garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
 
-    return render(request, "core/dashboard.html", {
+    template = ("core/hardware_access.html" if request.GET.get("section") == "hardware"
+                and is_trainer_user and not coach_tools_only else "core/dashboard.html")
+    return render(request, template, {
         "is_athlete_user": is_athlete_user,
         "is_trainer_user": is_trainer_user,
         "current_athlete": athlete,

@@ -269,3 +269,6 @@ Garmin C/D toont direct na het gemeten verzoek de laps en bestaande trainingskeu
 
 
 Information Quality heeft een compacte Show NA-schuifschakelaar boven de tabel, standaard uit, met GET-parameter show_na=1 voor ingeschakelde weergave. Geen vaste breedte; bestaande tabel blijft op mobiel horizontaal schuifbaar.
+
+
+Hardware acces is de exacte coachtegelnaam. Het hardwareoverzicht gebruikt dezelfde MiLa-kaarten, één kolom op mobiel, twee vanaf md en drie vanaf lg, met Dashboard-terugknop. Atleetdashboard ongewijzigd.

@@ -98,3 +98,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Information Quality: Evaluated NA betekent Vitals NA. Nieuwe Show NA-schuif staat standaard uit en verbergt Evaluated-NA-atleten; 0% blijft zichtbaar. ALL sluit NA uit. Zie FEATURES/UI_RULES.
+
+
+6 november — coachdashboard: Polar/Garmin uploads/Garmin onder Hardware acces, bestaande links en zichtbaarheid behouden. Hardwareoverzicht via dashboard?section=hardware alleen voor coaches. 22 gerichte tests/check geslaagd.
