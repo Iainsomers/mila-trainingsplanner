@@ -302,3 +302,6 @@ Tegeltitels gebruiken voortaan een hoofdletter aan het begin van elk woord, incl
 
 
 Mila Planner gebruikt uniforme col-md-6 col-lg-4 tegels: drie naast elkaar op desktop, twee op middelgrote schermen, één op mobiel. Gewone tegels hebben minimumhoogte116px; More-tegels80px met compacte padding/tekst. Mobiel groeit hoogte bij lange inhoud. Standard Trainings is een compacte More-tegel met twee bestaande standaardonderdelen in submenu.
+
+
+6 november — More toont op desktop vier compacte tegels per rij (col-lg-3); overige categorieën behouden drie (col-lg-4). Middelgrote schermen twee en mobiel één. Gerichte grid-/navigatietest en manage.py check geslaagd.

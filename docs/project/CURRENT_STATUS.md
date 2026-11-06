@@ -460,3 +460,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Standard Trainings-submenu en uniforme driekolomsindeling op hoofdpagina, compactere More-tegels. Acht gerichte navigatie-/rol-/standards-/gridtests en manage.py check geslaagd. Geen afzonderlijke visuele browsercontrole uitgevoerd.
+
+
+6 november — More toont op desktop vier compacte tegels per rij (col-lg-3); overige categorieën behouden drie (col-lg-4). Middelgrote schermen twee en mobiel één. Gerichte grid-/navigatietest en manage.py check geslaagd.
