@@ -454,3 +454,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — drie UI-namen en Start on Diary aangepast. LOGIN_REDIRECT_URL=/planning/; oude rootdashboardlink stuurt regulier door naar Mila Planner. Opt-in Diary-start en expliciete next-links behouden. Gerichte login-, navigatie-, Garmin- en startinstellingtests gecontroleerd; geen schemawijziging. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — nieuwe labels Individual Plans/Improvements/Camps en consistente beginhoofdletters op statische tegeltitels ingevoerd. 30 gerichte UnderDev/Garmin-navigatietests en manage.py check geslaagd. Geen visuele browsercontrole uitgevoerd.

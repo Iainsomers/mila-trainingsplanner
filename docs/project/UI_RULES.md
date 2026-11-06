@@ -296,3 +296,6 @@ Atleten: More bevat Hardware naast New, Plans, Wishes in responsieve grid. Hardw
 
 
 Gebruik Athlete Diary, General Plans en Individual planner in tegels/paginakoppen/toelichting. De bestaande start-op-AYC-instelling heet Start on Diary en legt uit dat deze naar het dagboek start in plaats van Mila Planner.
+
+
+Tegeltitels gebruiken voortaan een hoofdletter aan het begin van elk woord, inclusief And/Under/Development. Bijvoorbeeld Athlete Info, Coach Tools, Garmin Uploads (Under Development). Productnamen en acroniemen blijven intact; vrije gebruikersinhoud wordt niet gewijzigd. Officiële labels: Individual Plans, Improvements, Camps.

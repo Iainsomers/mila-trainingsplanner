@@ -128,3 +128,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — nieuwe UI-namen Athlete Diary / General Plans / Individual planner. Default na login en rootlaunch is Mila Planner. Start on Diary (bestaande boolean start_on_ayc) behoudt uitzondering voor atleet. Under Dev/Hardware-rootsecties blijven werken; interne Flex Planner-plannamen en routes zijn bewust niet hernoemd.
+
+
+6 november — gebruik UI-namen Individual Plans, Improvements en Camps. Alle statische tegeltitels hebben elk woord met beginhoofdletter. Bestaande routes/datamodellen blijven intact. 30 gerichte tests/check geslaagd.

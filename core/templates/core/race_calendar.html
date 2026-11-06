@@ -55,7 +55,7 @@
   <div class="race-toolbar{% if is_athlete_user %} race-toolbar-single{% endif %} mb-4">
   <div class="card race-add-card">
     <div class="card-body">
-      <h5 class="card-title">Add race</h5>
+      <h5 class="card-title">Add Race</h5>
 
       {% if errors %}
         <div class="alert alert-danger py-2">
@@ -109,7 +109,7 @@
   {% if not is_athlete_user %}
   <div class="card race-filter-card">
     <div class="card-body">
-      <h5 class="card-title">Race filter</h5>
+      <h5 class="card-title">Race Filter</h5>
       <form method="get" class="row g-2 align-items-end">
         <input type="hidden" name="year" value="{{ year }}">
         <input type="hidden" name="view" value="{{ view_mode }}">

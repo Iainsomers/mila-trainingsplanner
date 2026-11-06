@@ -22,7 +22,7 @@ class UnderDevTests(TestCase):
         self.assertNotContains(response,'?section=hardware')
         response=self.client.get('/',{'section':'under_dev'})
         self.assertContains(response,'?section=hardware')
-        self.assertContains(response,'Stats (under development)')
+        self.assertContains(response,'Stats (Under Development)')
         self.assertTemplateUsed(self.client.get('/',{'section':'hardware'}),'core/hardware_access.html')
         self.client.post('/settings/',{})
         self.assertRedirects(self.client.get('/'),'/planning/')
@@ -101,10 +101,10 @@ class UnderDevTests(TestCase):
             from django.urls import reverse
             target=reverse('new_plans_wishes') if 'wishes' in url else url
             self.assertContains(self.client.get(target),'<a href="/planning/" class="btn btn-outline-secondary">Back</a>',html=True)
-        self.assertContains(self.client.get('/planning/'),'>Athlete info</h5>')
+        self.assertContains(self.client.get('/planning/'),'>Athlete Info</h5>')
         self.client.force_login(runner)
         main=self.client.get('/planning/')
-        self.assertContains(main,'>Athlete info</h5>')
+        self.assertContains(main,'>Athlete Info</h5>')
         self.assertContains(main,'href="/planning/?section=hardware"')
         self.assertNotContains(main,'Upload and inspect your Garmin FIT file.')
         hardware=self.client.get('/planning/',{'section':'hardware'})
