@@ -1,0 +1,24 @@
+{% extends "core/planning.html" %}
+{% block title %}Standard Trainings{% endblock %}
+{% block content %}
+<div class="container py-3 planning-page">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Standard Trainings</h1>
+    <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+  </div>
+  <section class="planning-section">
+    <div class="row g-3">
+      <div class="col-md-6 col-lg-4">
+        <a href="{% url 'coach_saved_trainings' %}" class="card h-100 planning-card text-decoration-none text-reset">
+          <div class="card-body"><h5 class="card-title">Saved Trainings</h5><p class="card-text">Reusable training templates.</p></div>
+        </a>
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <a href="{% url 'standard_strength_list' %}" class="card h-100 planning-card text-decoration-none text-reset">
+          <div class="card-body"><h5 class="card-title">Standard Strength</h5><p class="card-text">Reusable strength programs.</p></div>
+        </a>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

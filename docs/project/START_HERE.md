@@ -131,3 +131,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — gebruik UI-namen Individual Plans, Improvements en Camps. Alle statische tegeltitels hebben elk woord met beginhoofdletter. Bestaande routes/datamodellen blijven intact. 30 gerichte tests/check geslaagd.
+
+
+6 november — Standard Trainings onder More bundelt Saved Trainings/Standard Strength. Mila Planner behoudt categorieën en toont desktop drie even brede tegels; More is lager/compacter. Acht gerichte tests/check geslaagd.

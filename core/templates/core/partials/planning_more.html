@@ -1,35 +1,42 @@
-<section class="planning-section">
+<section class="planning-section planning-more">
   <div class="planning-section-head"><h2 class="planning-section-title">More</h2></div>
   <div class="row g-3">
   {% if is_trainer_user %}
-    <div class="col-md-6 col-lg-3">
+    <div class="col-md-6 col-lg-4">
+      <a href="{% url 'planning_overview' %}?section=standards" class="card h-100 planning-card text-decoration-none text-reset">
+        <div class="card-body"><h5 class="card-title">Standard Trainings</h5><p class="card-text">Saved trainings and strength programs.</p></div>
+      </a>
+    </div>
+  {% endif %}
+  {% if is_trainer_user %}
+    <div class="col-md-6 col-lg-4">
       <a href="{% url 'coach_tools' %}" class="card h-100 planning-card text-decoration-none text-reset">
         <div class="card-body"><h5 class="card-title">Coach Tools</h5><p class="card-text">Track timer and competition overview tools.</p></div>
       </a>
     </div>
   {% endif %}
   {% if is_trainer_user and under_dev_enabled %}
-    <div class="col-md-6 col-lg-3">
+    <div class="col-md-6 col-lg-4">
       <a href="{% url 'dashboard' %}?section=under_dev" class="card h-100 planning-card text-decoration-none text-reset">
         <div class="card-body"><h5 class="card-title">Under Dev</h5><p class="card-text">Stats and hardware integrations under development.</p></div>
       </a>
     </div>
   {% endif %}
   {% if is_trainer_user %}
-    <div class="col-md-6 col-lg-3">
+    <div class="col-md-6 col-lg-4">
       <a href="{% url 'settings' %}" class="card h-100 planning-card text-decoration-none text-reset">
         <div class="card-body"><h5 class="card-title">Settings</h5><p class="card-text">Coach preferences.</p></div>
       </a>
     </div>
   {% endif %}
   {% if is_athlete_user %}
-    <div class="col-md-6 col-lg-3">
+    <div class="col-md-6 col-lg-4">
       <a href="{% url 'planning_overview' %}?section=hardware" class="card h-100 planning-card text-decoration-none text-reset">
         <div class="card-body"><h5 class="card-title">Hardware</h5><p class="card-text">Garmin connection and uploads.</p></div>
       </a>
     </div>
   {% endif %}
-    <div class="col-md-6 col-lg-3">
+    <div class="col-md-6 col-lg-4">
       <a href="{% url 'new_plans_wishes' %}" class="card h-100 planning-card text-decoration-none text-reset">
         <div class="card-body"><h5 class="card-title">New, Plans, Wishes</h5><p class="card-text">See new features, planned changes, and share your wishes.</p></div>
       </a>

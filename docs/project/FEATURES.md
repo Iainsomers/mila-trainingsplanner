@@ -529,3 +529,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — Individual planner heet Individual Plans; Focus Points and Desired Improvements heet Improvements; Details Camps heet Camps. Namen aangepast in tegels, bijbehorende paginatitels en instellingslabels. Routes, modellen en rechten behouden.
+
+
+6 november — Standards-groep op hoofdpagina vervangen door coachtegel Standard Trainings onder More. Submenu /planning/?section=standards bevat Saved Trainings en Standard Strength met bestaande bestemmingen/rechten. Overige categorieën behouden.

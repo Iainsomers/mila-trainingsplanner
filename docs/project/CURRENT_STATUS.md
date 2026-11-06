@@ -457,3 +457,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — nieuwe labels Individual Plans/Improvements/Camps en consistente beginhoofdletters op statische tegeltitels ingevoerd. 30 gerichte UnderDev/Garmin-navigatietests en manage.py check geslaagd. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — Standard Trainings-submenu en uniforme driekolomsindeling op hoofdpagina, compactere More-tegels. Acht gerichte navigatie-/rol-/standards-/gridtests en manage.py check geslaagd. Geen afzonderlijke visuele browsercontrole uitgevoerd.

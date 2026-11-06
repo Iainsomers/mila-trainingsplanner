@@ -6536,6 +6536,8 @@ def planning_overview_view(request):
     from core.models import GarminConnection
     garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
     template = "core/athlete_hardware.html" if is_athlete_user and request.GET.get("section") == "hardware" else "core/planning.html"
+    if is_trainer_user and not coach_tools_only and request.GET.get('section') == 'standards':
+        template = 'core/standard_trainings.html'
     return render(request, template, {
         "coach_tools_only": coach_tools_only,
         "coach_view_options": _coach_view_options(request.user) if is_trainer_user else [],

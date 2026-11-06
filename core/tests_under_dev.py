@@ -111,3 +111,24 @@ class UnderDevTests(TestCase):
         self.assertTemplateUsed(hardware,'core/athlete_hardware.html')
         self.assertContains(hardware,'Upload and inspect your Garmin FIT file.')
         self.assertContains(hardware,'>Back</a>')
+
+    def test_standard_trainings_group_and_three_column_layout(self):
+        from core.models import Athlete
+        from django.urls import reverse
+        coach=get_user_model().objects.create_user(username='standard-coach',is_staff=True)
+        athlete=get_user_model().objects.create_user(username='standard-athlete')
+        Athlete.objects.create(owner=coach,name='standard-athlete',birth_year=2000,gender='X')
+        self.client.force_login(coach)
+        main=self.client.get('/planning/')
+        self.assertContains(main,'>Standard Trainings</h5>')
+        self.assertNotContains(main,'>Saved Trainings</h5>')
+        self.assertNotContains(main,'col-lg-3')
+        self.assertContains(main,'planning-section planning-more')
+        standards=self.client.get('/planning/',{'section':'standards'})
+        self.assertTemplateUsed(standards,'core/standard_trainings.html')
+        self.assertContains(standards,reverse('coach_saved_trainings'))
+        self.assertContains(standards,reverse('standard_strength_list'))
+        self.client.force_login(athlete)
+        main=self.client.get('/planning/')
+        self.assertNotContains(main,'>Standard Trainings</h5>')
+        self.assertTemplateUsed(self.client.get('/planning/',{'section':'standards'}),'core/planning.html')

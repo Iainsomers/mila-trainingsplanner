@@ -299,3 +299,6 @@ Gebruik Athlete Diary, General Plans en Individual planner in tegels/paginakoppe
 
 
 Tegeltitels gebruiken voortaan een hoofdletter aan het begin van elk woord, inclusief And/Under/Development. Bijvoorbeeld Athlete Info, Coach Tools, Garmin Uploads (Under Development). Productnamen en acroniemen blijven intact; vrije gebruikersinhoud wordt niet gewijzigd. Officiële labels: Individual Plans, Improvements, Camps.
+
+
+Mila Planner gebruikt uniforme col-md-6 col-lg-4 tegels: drie naast elkaar op desktop, twee op middelgrote schermen, één op mobiel. Gewone tegels hebben minimumhoogte116px; More-tegels80px met compacte padding/tekst. Mobiel groeit hoogte bij lange inhoud. Standard Trainings is een compacte More-tegel met twee bestaande standaardonderdelen in submenu.
