@@ -58,7 +58,11 @@
 
   .planning-card .card-body {
     padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
+  .planning-card .card-body > .mt-auto { display: none; }
 
   .planning-card-title-row {
     display: flex;
@@ -83,7 +87,9 @@
   }
 
   .planning-card .card-title {
-    font-size: 0.95rem;
+    font-size: 1.6rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
     font-weight: 800;
     margin: 0;
   }
@@ -125,14 +131,12 @@
       margin: 0;
     }
     .planning-more .more-tiles > div { width: auto; padding: 0; margin: 0; min-width: 0; }
-    .planning-more .planning-card { min-height: 76px; height: 76px; }
-    .planning-more .planning-card .card-title { font-size: 0.86rem; }
+    .planning-more .planning-card { min-height: 80px; height: 80px; }
   }
   @media (min-width: 992px) and (max-height: 760px) {
-    .planning-card { min-height: 76px; height: 76px; }
-    .planning-more .planning-card { min-height: 64px; height: 64px; }
+    .planning-card { min-height: 80px; height: 80px; }
+    .planning-more .planning-card { min-height: 80px; height: 80px; }
     .planning-card-icon { width: 23px; height: 23px; font-size: 0.85rem; }
-    .planning-card .card-title { font-size: 0.88rem; }
     .planning-card .card-text { font-size: 0.75rem; }
     .planning-more .planning-card .card-text { font-size: 0.7rem; }
   }

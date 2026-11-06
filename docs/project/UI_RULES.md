@@ -323,3 +323,6 @@ Mila Planner gebruikt uniforme col-md-6 col-lg-4 tegels: drie naast elkaar op de
 
 
 More gebruikt native details/summary (muis, touch en toetsenbord), met pijltje en klein rood telbolletje rechtsboven naast de titel. Standaard ingeklapt. Uitgeklapt blijft laptop/desktop één automatische tegelrij; mobiel bestaande stapeling. Badge met toegankelijk numeriek label en ruimte voor meer cijfers.
+
+
+6 november — tegelnamen hoofdpagina vergroot naar uniforme1.6rem (ook More en compacte laptopvariant). Alle tegels centreren inhoud verticaal; lange titels mogen omlopen. More/compacte tegels minimaal80px om twee tekstregels te passen. Bestaande iconen/volgorde behouden. Elf gerichte tests en manage.py check geslaagd; geen visuele browsercontrole.

@@ -481,3 +481,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — More inklapbaar met live New-telling (afgelopen14 dagen) toegevoegd. Elf gerichte tests en manage.py check slagen, inclusief gelijke telling voor coach/atleet en bestaande New-pagina, uitsluiting oud item en standaard dicht. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — tegelnamen hoofdpagina vergroot naar uniforme1.6rem (ook More en compacte laptopvariant). Alle tegels centreren inhoud verticaal; lange titels mogen omlopen. More/compacte tegels minimaal80px om twee tekstregels te passen. Bestaande iconen/volgorde behouden. Elf gerichte tests en manage.py check geslaagd; geen visuele browsercontrole.

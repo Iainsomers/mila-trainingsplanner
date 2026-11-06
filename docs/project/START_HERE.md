@@ -152,3 +152,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — More is standaard ingeklapt en opent via de categorietitel. Rood bolletje toont aantal New-items afgelopen14 dagen, gelijk aan New/Plans/Wishes. Elf gerichte tests/check geslaagd.
+
+
+6 november — tegelnamen hoofdpagina vergroot naar uniforme1.6rem (ook More en compacte laptopvariant). Alle tegels centreren inhoud verticaal; lange titels mogen omlopen. More/compacte tegels minimaal80px om twee tekstregels te passen. Bestaande iconen/volgorde behouden. Elf gerichte tests en manage.py check geslaagd; geen visuele browsercontrole.
