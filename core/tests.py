@@ -8054,8 +8054,10 @@ class SlotModalSaveTests(TestCase):
         self.client.force_login(shared_coach)
 
         dashboard = self.client.get("/")
-        self.assertContains(dashboard, "View as coach")
-        self.assertContains(dashboard, "athleteowner")
+        self.assertNotContains(dashboard, "View as coach")
+        planning = self.client.get('/planning/')
+        self.assertContains(planning, "View as coach")
+        self.assertContains(planning, "athleteowner")
 
         own_page = self.client.get(
             f"/athlete/year/?year={date.today().year}&athlete={athlete.id}"

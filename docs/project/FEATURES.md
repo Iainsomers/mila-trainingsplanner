@@ -511,3 +511,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — Coach tools, Settings, Under Dev en New, Plans, Wishes verhuisd van regulier Dashboard naar Planning > More. Atleten krijgen New, Plans, Wishes eveneens onder Planning, zonder coachtegels. Under Dev blijft afhankelijk van actieve coachmodule. Bestaande coach-tools-only-accounts houden hun enige directe Coach tools-ingang omdat Planning voor hen niet beschikbaar is.
+
+
+6 november — View as coach verplaatst van Dashboard naar bovenaan Planning. Selectie via POST op Planning gebruikt dezelfde toegestane coachkeuzes en actieve sessie als voorheen. Directe Dashboard-terugknoppen verwijderd uit onderliggende pagina’s; submenuverwijzingen naar Under Dev/Hardware blijven behouden.

@@ -113,3 +113,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — reguliere coachtegels Coach tools/Settings/Under Dev en New, Plans, Wishes staan nu onder Planning > More. Atleten zien hier alleen New, Plans, Wishes; coachmodulezichtbaarheid blijft intact. Speciale coach-tools-only-account behoudt directe tooltoegang.
+
+
+6 november — actieve coach wordt nu gekozen bovenaan Planning. Dashboardkeuze is weg; Dashboard-terugknoppen op onderliggende pagina’s verwijderd. Planning-POST behoudt bestaande selectie-/toegangsregels. 27 gerichte tests en check geslaagd.

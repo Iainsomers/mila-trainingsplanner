@@ -57,3 +57,28 @@ class UnderDevTests(TestCase):
                     self.assertNotContains(planning,'href="'+url+'"')
             self.assertNotContains(dashboard,'>New, Plans, Wishes<')
             self.assertContains(planning,'>New, Plans, Wishes<')
+
+    def test_coach_selection_on_planning_keeps_access_boundaries(self):
+        coach=get_user_model().objects.create_user(username='select-coach',is_staff=True)
+        owner=get_user_model().objects.create_user(username='select-owner',is_staff=True)
+        stranger=get_user_model().objects.create_user(username='select-stranger',is_staff=True)
+        CoachAccess.objects.create(owner=owner,grantee=coach,can_edit=False)
+        self.client.force_login(coach)
+        self.assertNotContains(self.client.get('/'),'View as coach')
+        self.assertContains(self.client.get('/planning/'),'View as coach')
+        response=self.client.post('/planning/',{'coach_view_owner':owner.pk})
+        self.assertRedirects(response,'/planning/')
+        self.assertEqual(self.client.session['active_coach_owner_id'],owner.pk)
+        self.assertContains(self.client.get('/planning/'),'View only: changes are blocked.')
+        self.client.post('/planning/',{'coach_view_owner':stranger.pk})
+        self.assertNotEqual(self.client.session.get('active_coach_owner_id'),stranger.pk)
+
+    def test_dashboard_return_buttons_removed_from_templates(self):
+        import re
+        from pathlib import Path
+        directory=Path(__file__).parent/'templates'/'core'
+        for path in directory.rglob('*.html'):
+            if ' - Copy' in path.name:
+                continue
+            source=path.read_text(encoding='utf-8')
+            self.assertIsNone(re.search(r'<a[^>]+href="(?:/|\{% url [\'\"]dashboard[\'\"] %\})"',source),str(path))

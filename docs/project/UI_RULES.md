@@ -281,3 +281,6 @@ Under Dev staat als schuif onder Modules in Coach Settings. Op dashboard vervang
 
 
 Planning > More groepeert Coach tools, Under Dev, Settings en New, Plans, Wishes als bestaande compacte planningkaarten, één kolom op mobiel/twee vanaf md/vier vanaf lg. Alleen New, Plans, Wishes geldt ook voor atleten. Under Dev verwijst terug naar Planning.
+
+
+Planning bevat View as coach boven de tegelsecties, met bestaande view-only-waarschuwing. De kiezer blijft maximaal360px breed en past op mobiel. Onderliggende templates hebben geen directe Dashboard-/root-terugknoppen meer.

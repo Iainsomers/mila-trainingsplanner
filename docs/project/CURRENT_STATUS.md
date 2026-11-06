@@ -439,3 +439,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — dashboardnavigatie naar Planning > More verplaatst, inclusief New, Plans, Wishes voor atleten. Gerichte tests controleren coach-/atleetlinks, Under Dev-module, Garmin-toegang en TrackTimer/evaluatieflows. Twee oudere timer-dashboardasserties aangepast aan kaartlinks en nieuwe locatie. Coach-tools-only-uitzondering behouden. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — coachkeuze naar Planning en Dashboard-terugknoppen verwijderd uit34 templates. 27 gerichte UnderDev/Garmin-tests, waaronder wisselen van actieve coach, weigering ontoegankelijke coach en controle op resterende dashboardanchors; manage.py check geslaagd. Bestaande dashboard-POST blijft achterwaarts compatibel. Geen visuele browsercontrole uitgevoerd.

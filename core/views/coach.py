@@ -6489,10 +6489,17 @@ def coach_console_view(request):
 
 
 @login_required
-@require_GET
+@require_http_methods(["GET", "POST"])
 def planning_overview_view(request):
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    is_trainer_user = bool(request.user.is_staff or request.user.is_superuser)
+    coach_tools_only = is_coach_tools_only_user(request.user)
+    if request.method == 'POST':
+        if not is_trainer_user or coach_tools_only:
+            return HttpResponseForbidden('Only coaches can change coach view.')
+        _set_active_coach_user(request, request.POST.get('coach_view_owner'))
+        return redirect('planning_overview')
     athlete_can_view_year_planner = bool(
         is_athlete_user
         and athlete
@@ -6523,6 +6530,10 @@ def planning_overview_view(request):
     evaluations_enabled = (not is_coach_tools_only_user(request.user)
                            and getattr(evaluation_settings, 'evaluations_enabled', True))
     return render(request, "core/planning.html", {
+        "coach_tools_only": coach_tools_only,
+        "coach_view_options": _coach_view_options(request.user) if is_trainer_user else [],
+        "active_coach": active_coach,
+        "active_coach_access_label": _active_coach_access_label(request) if is_trainer_user else 'own',
         "groups": groups,
         "today": date.today(),
         "is_athlete_user": is_athlete_user,

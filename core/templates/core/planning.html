@@ -104,9 +104,28 @@
       <h1 class="mb-1">Planning</h1>
     </div>
     <div>
-      <a href="/" class="btn btn-outline-secondary">Back to dashboard</a>
+
     </div>
   </div>
+
+  {% if is_trainer_user and coach_view_options and not coach_tools_only %}
+  <form method="post" class="mb-4" style="max-width: 360px;">
+    {% csrf_token %}
+    <label for="coach-view-owner" class="form-label small text-muted mb-1">View as coach</label>
+    <select id="coach-view-owner" name="coach_view_owner" class="form-select" onchange="this.form.submit()">
+      {% for option in coach_view_options %}
+        {% with coach=option.user %}
+        <option value="{{ coach.id }}" {% if active_coach and coach.id == active_coach.id %}selected{% endif %}>
+          {% if coach.id == request.user.id %}{{ coach.get_full_name|default:coach.username }} (you){% else %}{{ coach.get_full_name|default:coach.username }} — {% if option.access_label == "edit" %}edit{% else %}view only{% endif %}{% endif %}
+        </option>
+        {% endwith %}
+      {% endfor %}
+    </select>
+    {% if active_coach and active_coach.id != request.user.id and active_coach_access_label == "view" %}
+      <div class="form-text">View only: changes are blocked.</div>
+    {% endif %}
+  </form>
+  {% endif %}
 
   {% if is_athlete_user %}
     <section class="planning-section">
