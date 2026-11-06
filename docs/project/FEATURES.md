@@ -564,3 +564,6 @@ Naast Use AM/PM staat bij loopresultaten een compact invoerveld met Suggest. Voo
 
 
 Garmin C/D chat (6 november): het losse Suggest-veld is vervangen door Chat naast Use AM/PM. Opent een ombrekend chatpaneel per activiteit met vrije tekst, gesprekshistorie en Send (Enter verstuurt, Shift+Enter nieuwe regel). Gebruiker kan om uitleg of een wijziging vragen. Een antwoord zonder gevalideerde structuur houdt de huidige preview intact; alleen een volledig gecontroleerde lapindeling levert een nieuw bruikbaar voorstel. Opslaan blijft Use AM/PM. Gesprek blijft alleen tijdens de geopende popup bewaard.
+
+
+Garmin C/D-chat: gerichte afstandscorrectie binnen bestaande expliciet gemarkeerde reps. AI stelt uitsluitend count/from_m/to_m voor; server wijzigt alleen een unieke bestaande groep en bijbehorende nominal_rep_m. Bijvoorbeeld zes200m-reps worden185m, terwijl150m-reps, WU/CD, zones, pauzes en bronmetingen gelijk blijven. Geen hergroepering. Ontbrekende/ambigue repkoppeling of onpassende meting geeft geen bruikbaar correctievoorstel.

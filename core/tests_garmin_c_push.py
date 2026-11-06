@@ -57,8 +57,9 @@ class GarminCPushTests(TestCase):
                 chat_query = dict(query)
                 chat_query.pop('suggestion')
                 chat_url = url + '?' + __import__('urllib.parse',fromlist=['urlencode']).urlencode(chat_query)
-                chatted = self.client.post(chat_url, {'chat':json.dumps([
-                    {'role':'user','content':'Kun je vier herhalingen van 3000 meter herkennen?'}])}).json()
+                with patch('core.watch_distance_edit.propose_distance_edit', return_value=None):
+                    chatted = self.client.post(chat_url, {'chat':json.dumps([
+                        {'role':'user','content':'Kun je vier herhalingen van 3000 meter herkennen?'}])}).json()
                 self.assertTrue(chatted['ok'])
                 self.assertEqual(len(chatted['results'][0]['parts'][0]['watch_loads']),16)
                 query['suggestion'] = '5x3000m'

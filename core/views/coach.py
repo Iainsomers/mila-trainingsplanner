@@ -5978,6 +5978,45 @@ def garmin_type_c_ayc_view(request, model="C"):
             "model": model,
         })
 
+    if chat_messages:
+        selected_session = next((s for s in sessions if s.get('startTime','') == request.GET.get('suggestion_session')),None)
+        if selected_session:
+            from core.views.garmin import ai_allowed, fit_ai_allowed
+            permitted = fit_ai_allowed(athlete) if selected_session.get('is_fit_upload') else ai_allowed(athlete)
+            if permitted:
+                from copy import copy
+                from django.http import QueryDict
+                from django.core.cache import cache
+                import hashlib
+                key = 'watch-edit:' + hashlib.sha256(str((request.user.pk,athlete.pk,day,model,
+                    selected_session['startTime'])).encode()).hexdigest()
+                baseline = cache.get(key) if len(chat_messages) > 1 else None
+                if baseline is None and any(m['role'] == 'assistant' and 'Validated proposal:' in m['content'] for m in chat_messages):
+                    return JsonResponse({'ok':False,'results':[], 'message':
+                        'The previous preview is no longer available for a safe partial edit. Reopen Garmin to start again.'})
+                if baseline is None:
+                    measured_request = copy(request)
+                    measured_request.method = 'GET'
+                    measured_request.GET = request.GET.copy()
+                    measured_request.GET.pop('chat',None)
+                    measured_request.GET.pop('suggestion',None)
+                    measured_request.GET['preview'] = 'measured'
+                    measured_request.POST = QueryDict('')
+                    measured = json.loads(garmin_type_c_ayc_view(measured_request,model=model).content)
+                    baseline = next((r for r in measured.get('results',[]) if r.get('start') == selected_session['startTime']),None)
+                if baseline and len(baseline.get('parts',[])) == 1:
+                    from core.watch_distance_edit import propose_distance_edit
+                    edited = propose_distance_edit(baseline['parts'][0],chat_messages)
+                    if edited and edited.get('distance_edit_rejected'):
+                        return JsonResponse({'ok':False,'results':[],
+                            'message':'The requested distance does not fit the existing repetitions. No laps or other blocks were changed.'})
+                    if edited:
+                        from copy import deepcopy
+                        result = deepcopy(baseline)
+                        result['parts'] = [edited]
+                        cache.set(key,result,timeout=900)
+                        return JsonResponse({'ok':True,'results':[result],'model':model,'message':''})
+
     from .polar_raw import translate_model_b, type_a_watch_loads, lap_zone_paces
     from core.views.garmin import ai_allowed, fit_ai_allowed
     results = []

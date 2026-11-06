@@ -526,3 +526,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november - Garmin C/D Chat vervangt Suggest-invoer: vrije gesprekstekst en tijdelijke historie per activiteit; CSRF-beveiligde POST, bestaande toestemming, originele lapfeiten en harde meting-/confidencecontrole. Unsupported/vraag geeft alleen tekst en behoudt preview. Chat ondersteunt exacte nominale190m zonder gemeten afstand/tijd te wijzigen. 67 gerichte Django-tests en manage.py check geslaagd; drie JS-controles slagen, inclusief C/D-chat-POST/preview/afwijzing/coachdiagnostiek. Geen migratie. Live AI-kwaliteit en visuele browsercontrole nog niet bevestigd.
+
+
+6 november - beperkte C/D-chatcorrectie voor bestaande doelafstanden toegevoegd. Nieuwe helper watch_distance_edit laat AI een numerieke correctie voorstellen en controleert elke bestaande rep, zonder nieuwe lapindeling. Synthetische screenshotmetingen6 langere/6 kortere reps testen behoud150m en alle metingen,185m-correctie, vervolgstap190m, ongeldige afstand/membership/ambigue groep. 77 gerichte Django-tests en check geslaagd; na laatste guards drie helpertests, JS-chatcontrole en check opnieuw geslaagd. Geen migratie/UI-wijziging. Live AI-uitkomst niet bevestigd.
