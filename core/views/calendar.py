@@ -2908,6 +2908,19 @@ def _ayc_slot_session_zones(slot, athlete=None, pause_mode=None):
     ]
 
 
+def _ayc_slot_session_alt_zones(slot, athlete=None, pause_mode=None):
+    """Alternative minutes per zone, separate from measured running km."""
+    totals = {str(zone): 0.0 for zone in range(1, 4)}
+    for load in _ayc_slot_loads_for_totals(slot, athlete, pause_mode):
+        if load.get('kind') != 'alt':
+            continue
+        zone = str(load.get('zone') or '')
+        if zone in totals:
+            totals[zone] += float(load.get('seconds') or 0) / 60
+    return [{'zone': zone, 'minutes': f'{minutes:.1f}'.rstrip('0').rstrip('.')}
+            for zone, minutes in totals.items() if minutes > 0]
+
+
 @transaction.atomic
 def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     def base_trainer_plan_assigned_for_day(plan):
@@ -4110,6 +4123,7 @@ def athlete_year_calendar_view(request):
                 "watch_main_reps_json": json.dumps(getattr(slot1, "watch_main_reps", []) or [], separators=(",", ":")),
                 "session_km": _ayc_slot_session_km(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
                 "session_zones": _ayc_slot_session_zones(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
+                "session_alt_zones": _ayc_slot_session_alt_zones(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
                 "whereabouts": whereabouts_dots.get((selected_athlete.id, day), []) if selected_athlete else [],
             })
             cells2.append({
@@ -4123,6 +4137,7 @@ def athlete_year_calendar_view(request):
                 "watch_main_reps_json": json.dumps(getattr(slot2, "watch_main_reps", []) or [], separators=(",", ":")),
                 "session_km": _ayc_slot_session_km(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
                 "session_zones": _ayc_slot_session_zones(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
+                "session_alt_zones": _ayc_slot_session_alt_zones(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
                 "whereabouts": whereabouts_dots.get((selected_athlete.id, day), []) if selected_athlete else [],
             })
             comment = None

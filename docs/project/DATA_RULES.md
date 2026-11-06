@@ -297,3 +297,6 @@ Zonebereik van repgroepen (5 november): voor de AI-/samengestelde C-repgroep tel
 
 
 6 november — alternatief horlogegebruik: watch_fields=alternative_replace (Use) wist server-side WU/CORE/CD en vervangt ALT, ook wanneer toch looptekst wordt meegestuurd. watch_fields=alternative (Add) behoudt de bestaande ALT-only importsemantiek inclusief loopmetingen/bron/snapshots; alleen ALT wordt vervangen. Beide vereisen niet-lege ALT en een geldige watch_origin. Sportnamen zoals Strength training worden voor beide modi als alternatieve minuten geparsed. Dit vervangt de eerdere afspraak dat Use bij alternatieven uitsluitend ALT schrijft.
+
+
+Alternative-sessiesamenvatting groepeert bestaande kind=alt-loads per zone1–3 en deelt seconden door60. Toon maximaal één decimaal zonder onnodige nul. Niet optellen bij T-kilometers; dezelfde effectieve bron als bestaande totals.

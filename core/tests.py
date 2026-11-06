@@ -5768,6 +5768,11 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(week["sum_tot_km"], "2.0")
         self.assertEqual(week["alt_z1_min"], 0)
         self.assertEqual(week["alt_z2_min"], 10)
+        cell = next(cell for row in response.context['week_rows'] for cell in row['cells2'] if cell['day']==day)
+        self.assertEqual(cell['session_alt_zones'],[{'zone':'2','minutes':'10'}])
+        self.assertContains(response,'class="session-alt-label">A</span>')
+        self.assertContains(response,'class="session-zone-pill session-zone-z2" title="Alternative Z2: 10 min">10</span>')
+
         self.assertContains(response,'ALT Z2 10 min')
         self.assertNotContains(response,'ALT Z1 30 min')
 

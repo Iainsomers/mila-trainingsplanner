@@ -161,3 +161,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — loginformulier nu52px desktop en76px mobiel, mobiele tekst24px en bijna volle breedte. Viewportinstelling voorkomt verkleinde mobiele desktopweergave. Tien gerichte logintests/check geslaagd.
+
+
+6 november — Diary-sessiekoppen tonen nu A + Alternative-minuten per zonekleur, naast loopkm. See session zones bepaalt zichtbaarheid; loop- en weektotalen ongewijzigd. Twintig gerichte tests/check geslaagd.

@@ -341,3 +341,6 @@ Mobiele Diary-weekkaart heeft ALT-zonepillen naast de hardloopzones, met explici
 
 
 Login: desktop centraal formulier max480px met invoervelden/Login-knop minimaal52px hoog en18px tekst. Mobiel tot768px vrijwel volle breedte,76px hoge velden/knop en24px tekst, ruime labels/tussenruimte. Login heeft viewport=device-width zodat mobiel niet verkleind wordt. Labels gekoppeld aan velden, autocomplete behouden.
+
+
+Sessiekop Athlete Diary: zwart A-label met daarachter minuten in bestaande session-zone-z1/z2/z3-kleurpillen, zonder extra zoneletters. Tooltip vermeldt Alternative, zone en min. Sessiekop mag omlopen op smalle cellen; loopkm blijven afzonderlijk.

@@ -496,3 +496,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — loginvelden en knop vergroot, extra groot op mobiel. Responsieve viewport, zichtbare labels, autofill en foutfeedback toegevoegd aan bestaande loginflow. Tien login-/throttle-/startpagetests en manage.py check geslaagd. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — ALT-minuten toegevoegd aan Diary-sessieheaders met A en zonekleurpillen, inclusief AM/PM en mobiel. Twintig gerichte WatchPlan-/week-/sessietotaaltests en manage.py check slagen. Geen visuele browsercontrole uitgevoerd.

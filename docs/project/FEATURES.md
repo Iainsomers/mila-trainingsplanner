@@ -547,3 +547,6 @@ Atleethoofdpagina: nieuwe Views-volgorde met Evaluations achteraan; losse raceka
 
 
 6 november — Athlete Diary toont nu ook op mobiel de Alternative-weekminuten per zone (ALT Z1/Z2/Z3) bij de hardloopkilometers. Gebruikt dezelfde bestaande weektotalen als desktop, inclusief uitsluiting van niet-uitgevoerde dagdelen.
+
+
+6 november — Diary-sessietotalen bevatten naast T/loopzones een A met Alternative-minuten per zone. Zowel AM/PM als mobiele/desktopweergave gebruiken dezelfde bestaande ALT-loads; ook bij gecombineerde loop-/ALT-sessies. Zichtbaarheid volgt See session zones. Geen verandering aan loopafstand of weekberekening.
