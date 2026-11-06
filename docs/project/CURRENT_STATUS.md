@@ -535,3 +535,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Year Planner selectie-uitlijning en open/dicht-flits opgelost. Gemeenschappelijke Group-filter boven Basis/Athletes/Coaches en consistente kop-/lijst-/checkboxmaten. Openstand in eerste HTML-render, met hidden formveld en navigatieparameter plus server-sessie; clientcode wijzigt de openstand niet meer bij laden. 31 YearPlanner-tests, JS-tests voor stabiele initiële weergave/formulier/navigatie en mobiel/laptophoogte en manage.py check gecontroleerd. Geen visuele browsercontrole uitgevoerd.
+
+
+6 november — Year Planner Race Calendar lichtblauw #EFF6FF met tekst/rand #245A91; Camps lichtgroen #EFF8F1 met tekst/rand #28663D. Donkerdere hover en passende focusrand. Beide knoppen auto-breedte, compact38px hoog met6px afronding, passend bij Back. Tekstkleur blijft leesbaar bij teambranding. Gerichte YearPlanner-tests en manage.py check geslaagd.

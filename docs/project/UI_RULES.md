@@ -371,3 +371,6 @@ Year Planner: compacte bedieningsbalk en kleinere navigatieknoppen; drie aparte 
 
 
 6 november — selectie-uitlijning gecorrigeerd: Group boven alle drie kolommen; Basis/Athletes/Coaches hebben gelijke koppen, bovenrand en180px lijsten op desktop. Checkboxen en meerregelige labels gebruiken flex-uitlijning; mobiel natuurlijke hoogte met max180px. Selection-openstand wordt nu server-side gerenderd via selection_open en sessievoorkeur, niet achteraf uit sessionStorage hersteld. Dit voorkomt zichtbaar dicht-/openklappen na een checkboxselectie; formulier en periode-links sturen de actuele stand mee.
+
+
+6 november — Year Planner Race Calendar lichtblauw #EFF6FF met tekst/rand #245A91; Camps lichtgroen #EFF8F1 met tekst/rand #28663D. Donkerdere hover en passende focusrand. Beide knoppen auto-breedte, compact38px hoog met6px afronding, passend bij Back. Tekstkleur blijft leesbaar bij teambranding. Gerichte YearPlanner-tests en manage.py check geslaagd.

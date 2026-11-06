@@ -669,13 +669,17 @@
     justify-content: center;
     gap: .5rem;
     flex: 0 0 auto;
-    width: 196px;
+    width: auto;
     min-height: 42px;
     padding: .55rem .8rem;
-    border: 1px solid #17324d;
-    border-radius: 7px;
-    background: #17324d;
-    color: #f2c200;
+    --year-nav-background: #eff6ff;
+    --year-nav-color: #245a91;
+    --year-nav-hover: #dbeafe;
+    --year-nav-focus: #a8c5dd;
+    border: 1px solid var(--year-nav-color);
+    border-radius: 6px;
+    background: var(--year-nav-background);
+    color: var(--year-nav-color);
     font-size: .85rem;
     font-weight: 600;
     line-height: 1.2;
@@ -683,8 +687,15 @@
   }
   .year-race-toggle::before { content: "→"; font-size: 1.1rem; }
   .year-race-toggle[aria-expanded="true"]::before { content: "←"; }
-  .year-race-toggle:hover, .year-race-toggle:active { background: #244b6f; border-color: #244b6f; color: #f2c200; }
-  .year-race-toggle:focus-visible { outline: 3px solid #a8c5dd; outline-offset: 3px; }
+  .year-camps-link {
+    --year-nav-background: #eff8f1;
+    --year-nav-color: #28663d;
+    --year-nav-hover: #dcefe1;
+    --year-nav-focus: #a9d4b5;
+  }
+  .year-race-toggle:hover, .year-race-toggle:active { background: var(--year-nav-hover); border-color: var(--year-nav-color); }
+  .year-race-toggle:focus-visible { outline: 3px solid var(--year-nav-focus); outline-offset: 3px; }
+  .year-planner-page .year-heading-actions .year-race-toggle { color: var(--year-nav-color) !important; }
   @media (max-width: 575.98px) {
     .year-legend-navigation { align-items: flex-start; }
     .year-race-toggle { min-height: 44px; max-width: 100%; }
@@ -703,8 +714,8 @@
   .year-planner-page { padding-top: 12px !important; }
   .year-heading h1 { font-size: 1.75rem; }
   .year-heading-actions .year-race-toggle {
-    min-height: 32px; min-width: 0; padding: 5px 12px;
-    font-size: 0.8rem; box-shadow: none;
+    min-height: 38px; min-width: 0; padding: 6px 12px;
+    font-size: 0.875rem; line-height: 1.5; box-shadow: none;
   }
   .year-heading-actions .btn { white-space: nowrap; }
   .year-control-bar { padding: 8px; border: 1px solid #d9e2ec; border-radius: 7px; background: #f8fafc; gap: 8px; }
@@ -817,7 +828,7 @@
       <div class="d-flex flex-wrap gap-2">
       <button type="button" class="btn year-race-toggle" id="yearRaceToggle"
               aria-expanded="false" aria-controls="yearRacePanel">Race Calendar</button>
-      {% if show_detailed_camps %}<a href="{% url 'detailed_camps' %}" class="btn year-race-toggle">Camps</a>{% endif %}
+      {% if show_detailed_camps %}<a href="{% url 'detailed_camps' %}" class="btn year-race-toggle year-camps-link">Camps</a>{% endif %}
       </div>
       <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
 
