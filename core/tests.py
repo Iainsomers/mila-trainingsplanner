@@ -4469,6 +4469,10 @@ class YearPlannerTests(TestCase):
         self.assertContains(response,'year-month-row')
         self.assertContains(response,'class="year-date-label"')
         self.assertContains(response,'data-year-basis-panel')
+        html=response.content.decode()
+        self.assertLess(html.index('id="yearAthleteGroup"'),html.index('data-year-basis-panel'))
+        for title in ('Basis','Athletes','Coaches'):
+            self.assertContains(response,'<h2 class="year-selector-title">'+title+'</h2>',html=True)
         self.assertContains(response,'1 Athlete · 0 Basis · 0 Coaches')
         self.assertContains(response,'<details class="year-legend-disclosure">')
         for chunk in response.context['chunks']:
@@ -4476,6 +4480,18 @@ class YearPlannerTests(TestCase):
             self.assertEqual(chunk['months'][0]['key'],(chunk['days'][0].year,chunk['days'][0].month))
             self.assertEqual(chunk['months'][-1]['key'],(chunk['days'][-1].year,chunk['days'][-1].month))
         self.assertContains(response,'--year-day-count: 92')
+
+    def test_year_selection_open_state_rendered_without_client_restore(self):
+        coach,athlete=self._coach_and_athlete()
+        response=self.client.get('/planning/year/',{'athletes':[athlete.pk],'selection_open':'1'})
+        self.assertContains(response,'id="yearSelection" open')
+        self.assertContains(response,'id="yearSelectionOpen" value="1"')
+        self.assertNotContains(response,'selectionDisclosure.open =')
+        remembered=self.client.get('/planning/year/',{'athletes':[athlete.pk]})
+        self.assertContains(remembered,'id="yearSelection" open')
+        closed=self.client.get('/planning/year/',{'athletes':[athlete.pk],'selection_open':'0'})
+        self.assertNotContains(closed,'id="yearSelection" open')
+        self.assertContains(closed,'id="yearSelectionOpen" value="0"')
 
     def test_year_planner_stacked_layout_renders_chunks(self):
         _, athlete = self._coach_and_athlete()

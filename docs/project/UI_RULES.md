@@ -368,3 +368,6 @@ Garmin C/D: oude Suggest-invoer vervangen door Chat-knop met uitklapbaar gesprek
 
 
 Year Planner: compacte bedieningsbalk en kleinere navigatieknoppen; drie aparte selectiepanelen in native details/summary. Selection standaard dicht bij bestaande selectie, open zonder rijen; toestand per gebruiker in sessionStorage. Legend standaard dicht en toont alleen ingeschakelde/toegestane onderdelen. Kwartalen hebben maandkoppen en wekelijkse labels zoals05 Nov, jaarweergave maandlabels, maandweergave dagnummer+weekdag; geen verticaal afgebroken datums. Daglijnen zacht, weekgrenzen duidelijker, maandgrenzen het sterkst. Vaste linkernaamkolom en tweerijige sticky kop; bij smal scherm horizontaal scrollen. Kalenderhoogte gebruikt resterende viewport; mobiel natuurlijke paginahoogte. Viewportmeta toegevoegd voor echt mobiele layout.
+
+
+6 november — selectie-uitlijning gecorrigeerd: Group boven alle drie kolommen; Basis/Athletes/Coaches hebben gelijke koppen, bovenrand en180px lijsten op desktop. Checkboxen en meerregelige labels gebruiken flex-uitlijning; mobiel natuurlijke hoogte met max180px. Selection-openstand wordt nu server-side gerenderd via selection_open en sessievoorkeur, niet achteraf uit sessionStorage hersteld. Dit voorkomt zichtbaar dicht-/openklappen na een checkboxselectie; formulier en periode-links sturen de actuele stand mee.

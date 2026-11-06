@@ -752,6 +752,25 @@
     .year-table-wrap { max-height: none; }
     .year-control-bar .btn-group { width: 100%; }
   }
+  .year-selection-filter { padding: 0 16px 6px; max-width: 380px; }
+  .year-selection-filter .form-label { font-size: 0.78rem; }
+  .year-selector-title { margin: 0 0 8px; font-size: 0.85rem; line-height: 20px; font-weight: 700; }
+  .year-selection-grid .year-selector-panel { display: flex; flex-direction: column; }
+  .year-selection-grid .year-athlete-list {
+    height: 180px; align-content: start; align-items: start;
+    grid-auto-rows: minmax(24px, auto);
+  }
+  .year-selection-grid .year-athlete-list .form-check {
+    display: flex; align-items: flex-start; gap: 7px; padding-left: 0; min-height: 24px;
+  }
+  .year-selection-grid .year-athlete-list .form-check-input {
+    float: none; flex: 0 0 auto; margin: 3px 0 0;
+  }
+  .year-selection-grid .year-athlete-list .form-check-label { min-width: 0; line-height: 1.4; }
+  @media (max-width: 767.98px) {
+    .year-selection-filter { max-width: none; }
+    .year-selection-grid .year-athlete-list { height: auto; max-height: 180px; }
+  }
 </style>
 {% endblock %}
 
@@ -815,7 +834,7 @@
     <div class="d-flex flex-wrap align-items-end year-toolbar year-control-bar">
       <div class="btn-group" role="group" aria-label="Period">
         {% for option in period_options %}
-          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}"
+          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&selection_open={% if selection_open %}1{% else %}0{% endif %}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}"
              class="btn btn-sm {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
             {{ option.label }}
           </a>
@@ -823,8 +842,8 @@
       </div>
 
       {% if period_mode != "current_next" %}
-        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
-        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
+        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&selection_open={% if selection_open %}1{% else %}0{% endif %}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
+        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&selection_open={% if selection_open %}1{% else %}0{% endif %}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
       {% endif %}
 
       <input type="hidden" name="year" value="{{ year }}">
@@ -868,11 +887,23 @@
     </div>
 
     {% if not is_athlete_user %}
-    <details class="year-selection" id="yearSelection" {% if not rows %}open{% endif %}>
+    <input type="hidden" name="selection_open" id="yearSelectionOpen" value="{% if selection_open %}1{% else %}0{% endif %}">
+    <details class="year-selection" id="yearSelection" {% if selection_open %}open{% endif %}>
       <summary>Selection <span>{{ selected_ids|length }} Athlete{{ selected_ids|length|pluralize }} · {{ selected_basis_count }} Basis · {{ selected_coach_ids|length }} Coach{{ selected_coach_ids|length|pluralize:"es" }}</span></summary>
+        <div class="year-selection-filter year-athlete-group">
+          <div class="flex-grow-1">
+            <label for="yearAthleteGroup" class="form-label mb-1">Group</label>
+            <select id="yearAthleteGroup" name="athlete_group" class="form-select form-select-sm">
+              <option value="all" {% if group_filter == "all" %}selected{% endif %}>All</option>
+              {% for plan in trainer_plans %}
+                <option value="{{ plan.year_planner_filter_key }}" {% if group_filter == plan.year_planner_filter_key %}selected{% endif %}>{{ plan.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
     <div class="row g-2 align-items-stretch year-selection-grid">
       <div class="col-md-4 year-selector-panel" data-year-basis-panel>
-        <h2 class="h6 mb-2">Basis</h2>
+        <h2 class="year-selector-title">Basis</h2>
         <div class="year-athlete-list">
           {% if not is_athlete_user %}
             <label class="form-check mb-0">
@@ -895,20 +926,7 @@
         </div>
       </div>
       <div class="col-md-4 year-selector-panel" data-year-athlete-panel>
-        <div class="d-flex align-items-center justify-content-between mb-1">
-          <label class="form-label mb-0">Athletes</label>
-        </div>
-        <div class="d-flex align-items-end gap-2 mb-1 year-athlete-group">
-          <div class="flex-grow-1">
-            <label for="yearAthleteGroup" class="form-label mb-1">Group</label>
-            <select id="yearAthleteGroup" name="athlete_group" class="form-select form-select-sm">
-              <option value="all" {% if group_filter == "all" %}selected{% endif %}>All</option>
-              {% for plan in trainer_plans %}
-                <option value="{{ plan.year_planner_filter_key }}" {% if group_filter == plan.year_planner_filter_key %}selected{% endif %}>{{ plan.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
+        <h2 class="year-selector-title">Athletes</h2>
         <div class="year-athlete-list">
           <label class="form-check mb-0">
             <input
@@ -937,9 +955,7 @@
         </div>
       </div>
       <div class="col-md-4 year-selector-panel" data-year-coach-panel>
-        <div class="d-flex align-items-center justify-content-between mb-1">
-          <label class="form-label mb-0">Coaches</label>
-        </div>
+        <h2 class="year-selector-title">Coaches</h2>
         <div class="year-athlete-list">
           <label class="form-check mb-0">
             <input
@@ -1184,25 +1200,29 @@
     } catch (error) { /* Do not block selection when storage is unavailable. */ }
   }, true);
   const selectionDisclosure = document.getElementById("yearSelection");
-  const selectionStateKey = "mila:year-selection-open:{{ request.user.pk }}";
+  const selectionOpenInput = document.getElementById("yearSelectionOpen");
   function resizeYearCalendar() {
     const wrap = document.querySelector('.year-table-wrap');
     if (!wrap) return;
     wrap.style.maxHeight = window.innerWidth <= 768 ? 'none' :
       Math.max(240, window.innerHeight - wrap.getBoundingClientRect().top - 16) + 'px';
   }
+  function syncSelectionState() {
+    if (!selectionDisclosure || !selectionOpenInput) return;
+    selectionOpenInput.value = selectionDisclosure.open ? '1' : '0';
+    document.querySelectorAll('.year-control-bar a[href]').forEach((link) => {
+      const url = new URL(link.href);
+      url.searchParams.set('selection_open', selectionOpenInput.value);
+      link.href = url.toString();
+    });
+  }
   if (selectionDisclosure) {
-    try {
-      const savedOpen = sessionStorage.getItem(selectionStateKey);
-      if (savedOpen !== null) selectionDisclosure.open = savedOpen === '1';
-    } catch (_) {}
     selectionDisclosure.addEventListener('toggle', () => {
-      try { sessionStorage.setItem(selectionStateKey, selectionDisclosure.open ? '1' : '0'); } catch (_) {}
+      syncSelectionState();
       requestAnimationFrame(resizeYearCalendar);
     });
-    form.addEventListener('change', () => {
-      try { sessionStorage.setItem(selectionStateKey, selectionDisclosure.open ? '1' : '0'); } catch (_) {}
-    }, true);
+    form.addEventListener('change', syncSelectionState, true);
+    syncSelectionState();
   }
   document.querySelector('.year-legend-disclosure')?.addEventListener('toggle', () => requestAnimationFrame(resizeYearCalendar));
   window.addEventListener('resize', resizeYearCalendar);

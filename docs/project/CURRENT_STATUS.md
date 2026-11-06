@@ -532,3 +532,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — alle zes voorgestelde Year Planner-layoutverbeteringen samen geïmplementeerd, bedoeld als één terugdraaibare commit. Dertig YearPlanner-tests en manage.py check geslaagd; nieuwe regressie controleert maandspannen/aantallen/selektiepanelen en behoudt bestaande bewerk-/rechtenchecks. JavaScript-test controleert Selection-persistentie met/zonder browseropslag en kalenderhoogte bij390/1366px. Geen visuele browsercontrole uitgevoerd; eerdere browserpreview kon localhost niet bereiken.
+
+
+6 november — Year Planner selectie-uitlijning en open/dicht-flits opgelost. Gemeenschappelijke Group-filter boven Basis/Athletes/Coaches en consistente kop-/lijst-/checkboxmaten. Openstand in eerste HTML-render, met hidden formveld en navigatieparameter plus server-sessie; clientcode wijzigt de openstand niet meer bij laden. 31 YearPlanner-tests, JS-tests voor stabiele initiële weergave/formulier/navigatie en mobiel/laptophoogte en manage.py check gecontroleerd. Geen visuele browsercontrole uitgevoerd.

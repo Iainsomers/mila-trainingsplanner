@@ -173,3 +173,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Year Planner-layout gebundeld aangepakt: compacte toolbar/navigatie, Basis/Athletes/Coaches apart in inklapbare Selection, maandkoppen/heldere weekgrenzen, vastgezette namen, uitklapbare actieve legenda. Data en endpoints blijven gelijk. Eén geïsoleerde commit voor eenvoudig terugdraaien. Dertig gerichte tests/check plus JS-layoutgedragstest.
+
+
+6 november — Group-filter staat boven de drie gelijk uitgelijnde selectiepanelen. Dicht/open-flits na selectie hersteld: selection_open gaat mee met formulier/links en wordt direct server-side gerenderd; geen sessionStorage-herstel van details.open meer. 31 gerichte tests/check plus JS-controle.
