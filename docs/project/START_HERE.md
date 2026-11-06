@@ -110,3 +110,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Stats en Hardware acces staan nu onder optionele Under Dev-coachtegel. Coach Settings > Modules > Under Dev standaard uit, opgeslagen per actieve coach. Migratie 0145 vereist bij deploy. 24 gerichte tests/check/migratiecheck geslaagd.
+
+
+6 november — reguliere coachtegels Coach tools/Settings/Under Dev en New, Plans, Wishes staan nu onder Planning > More. Atleten zien hier alleen New, Plans, Wishes; coachmodulezichtbaarheid blijft intact. Speciale coach-tools-only-account behoudt directe tooltoegang.

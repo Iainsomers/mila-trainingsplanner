@@ -436,3 +436,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Under Dev-tegel en Modules-schuif gerealiseerd; Stats/Hardware acces naar submenu. 24 gerichte tests (module standaard uit, opslaan aan/uit, directe submenu-URL, view-only, bestaande Garminrechten), manage.py check en migratiecheck slagen. Migratie 0145 lokaal toegepast. Geen aparte visuele browsercontrole; responsieve kaartgrid behouden.
+
+
+6 november — dashboardnavigatie naar Planning > More verplaatst, inclusief New, Plans, Wishes voor atleten. Gerichte tests controleren coach-/atleetlinks, Under Dev-module, Garmin-toegang en TrackTimer/evaluatieflows. Twee oudere timer-dashboardasserties aangepast aan kaartlinks en nieuwe locatie. Coach-tools-only-uitzondering behouden. Geen visuele browsercontrole uitgevoerd.

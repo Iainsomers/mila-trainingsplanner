@@ -278,3 +278,6 @@ Hardware acces is de exacte coachtegelnaam. Het hardwareoverzicht gebruikt dezel
 
 
 Under Dev staat als schuif onder Modules in Coach Settings. Op dashboard vervangt deze optionele tegel Stats en Hardware acces; het submenu gebruikt dezelfde responsieve MiLa-kaarten. Hardware acces verwijst terug naar Under Dev.
+
+
+Planning > More groepeert Coach tools, Under Dev, Settings en New, Plans, Wishes als bestaande compacte planningkaarten, één kolom op mobiel/twee vanaf md/vier vanaf lg. Alleen New, Plans, Wishes geldt ook voor atleten. Under Dev verwijst terug naar Planning.

@@ -244,6 +244,8 @@ class GarminConnectionTests(TestCase):
         GarminConnection.objects.create(athlete=other, access_token="other-token", data_consent_at=timezone.now())
         self.client.force_login(self.coach)
         page = self.client.get(reverse("dashboard"))
+        self.assertNotContains(page, "Under Dev")
+        page = self.client.get("/planning/")
         self.assertContains(page, "Under Dev")
         self.assertNotContains(page, "Hardware acces")
         page = self.client.get(reverse("dashboard"), {"section":"under_dev"})

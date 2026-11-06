@@ -430,14 +430,14 @@ class EvaluationFeedbackTests(TestCase):
 
 
 class TrackTimerTests(TestCase):
-    def test_timer_page_is_available_from_dashboard(self):
-        user = get_user_model().objects.create_user(username="timer-user", password="secret")
+    def test_timer_page_is_available_from_planning(self):
+        user = get_user_model().objects.create_user(username="timer-user", password="secret", is_staff=True)
         self.client.force_login(user)
 
         dashboard = self.client.get("/")
         self.assertEqual(dashboard.status_code, 200)
-        self.assertContains(dashboard, "Coach tools")
-        self.assertContains(dashboard, "Go to Coach tools")
+        self.assertNotContains(dashboard, 'href="/coach-tools/"')
+        self.assertContains(self.client.get('/planning/'), 'href="/coach-tools/"')
 
         tools = self.client.get("/coach-tools/")
         self.assertEqual(tools.status_code, 200)
@@ -464,7 +464,7 @@ class TrackTimerTests(TestCase):
         dashboard = self.client.get("/")
         self.assertEqual(dashboard.status_code, 200)
         self.assertContains(dashboard, "Coach tools dashboard")
-        self.assertContains(dashboard, "Go to Coach tools")
+        self.assertContains(dashboard, 'href="/coach-tools/"')
         self.assertNotContains(dashboard, "Go to planning")
         self.assertNotContains(dashboard, "Open Polar")
         self.assertNotContains(dashboard, "Go to admin")

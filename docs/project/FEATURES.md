@@ -508,3 +508,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — coachdashboard heeft optionele Under Dev-tegel, waaronder Stats en Hardware acces staan. Coach Settings > Modules > Under Dev staat standaard uit, per actieve coach opgeslagen. Uitgeschakeld toont dashboard ook bij directe section=under_dev/hardware geen submenu. Bestaande individuele functionaliteit/rechten behouden.
+
+
+6 november — Coach tools, Settings, Under Dev en New, Plans, Wishes verhuisd van regulier Dashboard naar Planning > More. Atleten krijgen New, Plans, Wishes eveneens onder Planning, zonder coachtegels. Under Dev blijft afhankelijk van actieve coachmodule. Bestaande coach-tools-only-accounts houden hun enige directe Coach tools-ingang omdat Planning voor hen niet beschikbaar is.

@@ -6531,6 +6531,8 @@ def planning_overview_view(request):
         "detailed_camps_enabled": detailed_camps_enabled,
         "focus_points_enabled": focus_points_enabled,
         "evaluations_enabled": evaluations_enabled,
+        "is_trainer_user": bool(request.user.is_staff or request.user.is_superuser),
+        "under_dev_enabled": bool(not is_athlete_user and evaluation_settings and evaluation_settings.under_dev_enabled),
     })
 
 

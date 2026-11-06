@@ -16,8 +16,9 @@ class UnderDevTests(TestCase):
         self.assertFalse(CoachSettings.objects.get(user=coach).under_dev_enabled)
         self.assertEqual(self.client.post('/settings/',{'under_dev_enabled':'on'}).status_code,302)
         self.assertTrue(CoachSettings.objects.get(user=coach).under_dev_enabled)
-        response=self.client.get('/')
+        response=self.client.get('/planning/')
         self.assertContains(response,'?section=under_dev')
+        self.assertNotContains(self.client.get('/'),'?section=under_dev')
         self.assertNotContains(response,'?section=hardware')
         response=self.client.get('/',{'section':'under_dev'})
         self.assertContains(response,'?section=hardware')
@@ -37,3 +38,22 @@ class UnderDevTests(TestCase):
         session.save()
         self.assertEqual(self.client.post('/settings/',{'under_dev_enabled':'on'}).status_code,403)
         self.assertFalse(CoachSettings.objects.get(user=owner).under_dev_enabled)
+
+    def test_planning_navigation_for_coach_and_athlete(self):
+        from core.models import Athlete
+        coach=get_user_model().objects.create_user(username='navcoach',is_staff=True)
+        runner=get_user_model().objects.create_user(username='navrunner')
+        Athlete.objects.create(owner=coach,name='navrunner',birth_year=2000,gender='X')
+        CoachSettings.objects.create(user=coach,under_dev_enabled=True)
+        for user in (coach,runner):
+            self.client.force_login(user)
+            dashboard=self.client.get('/')
+            planning=self.client.get('/planning/')
+            for url in ('/coach-tools/','/settings/','/?section=under_dev'):
+                self.assertNotContains(dashboard,'href="'+url+'"')
+                if user==coach:
+                    self.assertContains(planning,'href="'+url+'"' if not url.startswith('?') else '?section=under_dev')
+                else:
+                    self.assertNotContains(planning,'href="'+url+'"')
+            self.assertNotContains(dashboard,'>New, Plans, Wishes<')
+            self.assertContains(planning,'>New, Plans, Wishes<')
