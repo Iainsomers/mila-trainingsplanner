@@ -505,3 +505,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — Basis-only probleem veroorzaakt door ontbrekende change-submit op Basis-checkbox, hersteld. Basis - All toegevoegd met aparte interne plansoort, behoud van coach-/atleetrechten en view-only zonder GET-write. 28 YearPlanner-tests en twee TrainerPlanningList-tests geslaagd; aanvullende Basis-All-regressie omvat periodisering en whereabouts. Bestaande achterhaalde Season planning-ondertitelassertie naar huidige Year Planner-tegel aangepast. Check/migratiecheck geslaagd. Geen live browsercontrole uitgevoerd.
+
+
+6 november — MID/LONG-basis zichtbaar via multiselect onder Group=All; niet beperkt tot één huidige groepsfilter. Regressie test drie basisrijen zonder atleten, losse MID-selectie, navigatieparameters en uitsluiting vreemd coachplan. 29 YearPlanner-tests en manage.py check gecontroleerd. Geen migratie nodig.

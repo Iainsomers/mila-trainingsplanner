@@ -167,3 +167,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Year Planner Basis - All toegevoegd bij Group=All. Basis-checkbox verstuurt nu direct; geen atleet nodig. Interne plansoort year_basis bewaart All-schema apart van groepen/coaches. Migratie0146 vereist. 28 YearPlanner- en2 TrainerPlanningList-tests/check geslaagd; zie DATA_RULES.
+
+
+6 november — Year Planner Group=All kan meerdere Basis-schema’s tonen, inclusief eigen MID/LONG-General Plans naast Basis - All. Herhaalde basis_plans-parameters behouden selectie bij navigatie. Rechten en scheiding van data intact; geen extra migratie.

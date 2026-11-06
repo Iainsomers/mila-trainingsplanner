@@ -7118,6 +7118,15 @@ def year_planner_view(request):
                 defaults={'week_phases_enabled': False},
             )
 
+    requested_basis_ids = _clean_int_list(request.GET.getlist('basis_plans')) if not is_athlete_user and group_filter == 'all' else []
+    extra_basis_plans = [plan for plan in trainer_plans if plan.id in requested_basis_ids]
+    selected_basis_ids = [plan.id for plan in extra_basis_plans]
+    basis_rows = []
+    if show_basis:
+        basis_rows.append((basis_plan, f"Basis - {selected_filter_plan.name if selected_filter_plan else 'All'}"))
+    basis_rows.extend((plan, f"Basis - {plan.name}") for plan in extra_basis_plans)
+    has_basis_rows = bool(basis_rows)
+
     visible_athletes = [athlete_obj for athlete_obj in athletes if athlete_obj.id in group_filtered_athlete_ids]
     if is_athlete_user:
         selected_ids = [athlete.id]
@@ -7164,8 +7173,8 @@ def year_planner_view(request):
                 race.selected_distances = []
                 day_races[race.id] = race
     entry_scope_filter = Q(athlete_id__in=selected_ids)
-    if show_basis:
-        entry_scope_filter |= Q(athlete__isnull=True, basis_plan=basis_plan)
+    if has_basis_rows:
+        entry_scope_filter |= Q(athlete__isnull=True, basis_plan_id__in=[plan.id for plan, label in basis_rows])
     entries = (
         YearPlannerEntry.objects
         .filter(owner=owner, date__gte=start_date, date__lte=end_date)
@@ -7177,8 +7186,8 @@ def year_planner_view(request):
         for entry in entries
     }
     where_scope_filter = Q(athlete_id__in=selected_ids)
-    if show_basis:
-        where_scope_filter |= Q(athlete__isnull=True, basis_plan=basis_plan)
+    if has_basis_rows:
+        where_scope_filter |= Q(athlete__isnull=True, basis_plan_id__in=[plan.id for plan, label in basis_rows])
     whereabout_ranges = list(
         YearPlannerWhereabout.objects
         .filter(owner=owner, start_date__lte=end_date, end_date__gte=start_date)
@@ -7262,18 +7271,18 @@ def year_planner_view(request):
         return cell_ranges
 
     rows = []
-    if show_basis:
+    for row_basis_plan, basis_label in basis_rows:
         base_cells = []
-        base_range_cells = row_range_cells(None, basis_plan.id)
+        base_range_cells = row_range_cells(None, row_basis_plan.id)
         for day in days:
             base_cells.append({
                 "date": day,
-                "payload": _year_planner_entry_payload(entry_map.get((None, basis_plan.id, day))),
+                "payload": _year_planner_entry_payload(entry_map.get((None, row_basis_plan.id, day))),
                 "where_ranges": base_range_cells.get(day, []),
             })
         rows.append({
-            "label": f"Basis - {selected_filter_plan.name if selected_filter_plan else 'All'}",
-            "scope": _year_planner_scope_key(None, basis_plan.id),
+            "label": basis_label,
+            "scope": _year_planner_scope_key(None, row_basis_plan.id),
             "athlete": None,
             "cells": base_cells,
         })
@@ -7394,6 +7403,8 @@ def year_planner_view(request):
         "trainer_plans": trainer_plans,
         "group_filter": group_filter,
         "selected_filter_plan": selected_filter_plan,
+        "basis_options": trainer_plans if not is_athlete_user and group_filter == "all" else [],
+        "selected_basis_ids": selected_basis_ids,
         "selected_ids": selected_ids,
         "all_visible_athletes_selected": all_visible_athletes_selected,
         "coaches": coach_options,

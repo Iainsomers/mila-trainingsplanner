@@ -347,3 +347,6 @@ Sessiekop Athlete Diary: zwart A-label met daarachter minuten in bestaande sessi
 
 
 Year Planner: onder All in de atleetselector staat Basis - All wanneer Group=All, of Basis - groepsnaam bij een General Plan. Aan-/uitvinken ververst direct zonder aanvullende atleetselectie. Schema blijft zichtbaar met alleen Basis geselecteerd.
+
+
+Bij Group=All staan Basis - All en de beschikbare programmagroepen als aparte selectievakjes in Athletes. Basis-selectie wordt direct verstuurd en behouden bij periode-/jaarnavigatie; checkbox All blijft uitsluitend atleten selecteren.

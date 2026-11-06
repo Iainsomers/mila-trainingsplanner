@@ -4407,7 +4407,7 @@ class YearPlannerTests(TestCase):
         all_groups = self.client.get("/planning/year/?period=current_next&basis=1")
         self.assertTrue(all_groups.context["show_basis"])
         self.assertContains(all_groups,"Basis - All")
-        self.assertNotContains(all_groups, "Basis - Basis group")
+        self.assertNotIn("Basis - Basis group", [row["label"] for row in all_groups.context["rows"]])
 
     def test_year_planner_basis_all_saves_without_selected_athletes(self):
         coach, athlete = self._coach_and_athlete()
@@ -4432,6 +4432,21 @@ class YearPlannerTests(TestCase):
         self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach,basis_plan__plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS,note='All camp').exists())
         self.assertFalse(YearPlannerWhereabout.objects.filter(owner=coach,basis_plan__isnull=True,athlete__isnull=True).exists())
 
+
+    def test_year_planner_all_group_can_select_multiple_program_bases(self):
+        coach, athlete=self._coach_and_athlete()
+        mid=TrainingPlan.objects.create(owner=coach,name='MID',plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
+        long=TrainingPlan.objects.create(owner=coach,name='LONG',plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
+        stranger=get_user_model().objects.create_user(username='foreign-basis-coach',is_staff=True)
+        private=TrainingPlan.objects.create(owner=stranger,name='Private program',plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
+        response=self.client.get('/planning/year/',{'basis':'1','basis_plans':[mid.pk,long.pk,private.pk],'period':'current_next'})
+        self.assertEqual(response.context['selected_ids'],[])
+        self.assertEqual([row['label'] for row in response.context['rows']],['Basis - All','Basis - LONG','Basis - MID'])
+        self.assertNotContains(response,'Private program')
+        self.assertContains(response,'basis_plans=')
+        self.assertTrue(all(len(chunk['rows'])==3 for chunk in response.context['chunks']))
+        only=self.client.get('/planning/year/',{'basis_plans':[mid.pk],'period':'current_next'})
+        self.assertEqual([row['label'] for row in only.context['rows']],['Basis - MID'])
 
     def test_view_only_basis_all_does_not_create_internal_plan(self):
         from core.models import CoachAccess

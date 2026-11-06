@@ -553,3 +553,6 @@ Atleethoofdpagina: nieuwe Views-volgorde met Evaluations achteraan; losse raceka
 
 
 6 november — Year Planner heeft Basis - All wanneer Group=All, naast bestaande Basis per General Plan. Basis selecteren verstuurt direct het formulier, ook zonder geselecteerde atleet. Eigen periodisering en whereabouts per coach; geen automatische toepassing op atleten. Bestaande Use for all selected rows blijft beschikbaar.
+
+
+Year Planner Group=All toont nu afzonderlijke Basis-keuzes voor alle toegankelijke General Plans (bijvoorbeeld MID en LONG), naast Basis - All. Meerdere Basis-schema’s kunnen samen worden geselecteerd en getoond zonder losse atleet. Iedere Basis behoudt eigen opgeslagen data.

@@ -760,7 +760,7 @@
     <div class="d-flex flex-wrap align-items-end year-toolbar">
       <div class="btn-group" role="group" aria-label="Period">
         {% for option in period_options %}
-          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}"
+          <a href="?year={{ option.year }}&period={{ option.key }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}"
              class="btn btn-sm {% if period_mode == option.key %}btn-primary{% else %}btn-outline-primary{% endif %}">
             {{ option.label }}
           </a>
@@ -768,8 +768,8 @@
       </div>
 
       {% if period_mode != "current_next" %}
-        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
-        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
+        <a href="?year={{ previous_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ previous_year }}</a>
+        <a href="?year={{ next_year }}&period={{ period_mode }}&zoom={{ zoom_mode }}&layout={{ layout_mode }}&athlete_group={{ group_filter|urlencode }}&basis={% if show_basis %}1{% else %}0{% endif %}&show_training={% if show_training %}1{% else %}0{% endif %}&show_whereabouts={% if show_whereabouts %}1{% else %}0{% endif %}{% for id in selected_ids %}&athletes={{ id }}{% endfor %}{% for id in selected_coach_ids %}&coaches={{ id }}{% endfor %}{% for id in selected_basis_ids %}&basis_plans={{ id }}{% endfor %}" class="btn btn-sm btn-outline-secondary">{{ next_year }}</a>
       {% endif %}
 
       <input type="hidden" name="year" value="{{ year }}">
@@ -853,6 +853,12 @@
               <span class="form-check-label">Basis - {{ selected_filter_plan.name|default:"All" }}</span>
             </label>
           {% endif %}
+          {% for plan in basis_options %}
+            <label class="form-check mb-0">
+              <input type="checkbox" class="form-check-input" name="basis_plans" value="{{ plan.id }}" {% if plan.id in selected_basis_ids %}checked{% endif %}>
+              <span class="form-check-label">Basis - {{ plan.name }}</span>
+            </label>
+          {% endfor %}
           {% for athlete in athletes %}
             <label class="form-check mb-0 {% if not athlete.year_planner_training_enabled and not athlete.year_planner_whereabouts_enabled %}year-athlete-disabled{% endif %}">
               <input
@@ -1737,7 +1743,7 @@
   document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
   document.getElementById("layoutMode")?.addEventListener("change", () => form.submit());
   document.getElementById("yearAthleteGroup")?.addEventListener("change", () => {
-    document.querySelectorAll("input[type='checkbox'][name='basis']").forEach((input) => {
+    document.querySelectorAll("input[type='checkbox'][name='basis'], input[name='basis_plans']").forEach((input) => {
     input.addEventListener("change", () => form.submit());
   });
   document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
