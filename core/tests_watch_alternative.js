@@ -14,8 +14,8 @@ function checkButtons() {
     appendChild(child) { this.children.push(child); },
     addEventListener(event, callback) { this.listeners[event] = callback; }}; }
   const invoked = [];
-  const render = new Function('document','renderTypeALaps','useWatchTraining','aycCoachUser',
-    renderSource + '\nreturn renderTypeAResults;')({createElement:element},()=>{},(...args)=>invoked.push(args), false);
+  const render = new Function('document','renderTypeALaps','useWatchTraining',
+    renderSource.replace('{{ is_coach_user|yesno:"true,false" }}', 'false') + '\nreturn renderTypeAResults;')({createElement:element},()=>{},(...args)=>invoked.push(args));
   for (const model of ['C','D']) {
     for (const fields of [{alt:"Pilates 46' Z1"},{main:'4x400m Z3'}]) {
       const parent=element('div');

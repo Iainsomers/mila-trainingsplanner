@@ -14,9 +14,9 @@ async function check(model, coach, success) {
   const replacement={...current,parts:[{description:'2x8x500m',training_fields:{main:'2x8x500m'},watch_loads:[{seconds:101}]}]};
   const parent=element('div');
   const context={document:{createElement:element,createTextNode:t=>({...element('text'),textContent:t})},
-    renderTypeALaps(){},aycCoachUser:coach,activeAthlete:89,activeDate:'2026-11-05',watchPreviewSequence:1,
+    renderTypeALaps(){},activeAthlete:89,activeDate:'2026-11-05',watchPreviewSequence:1,
     fetch:async url=>{requested=url; return {json:async()=>success ? {ok:true,results:[replacement]} : {ok:false,message:'No matching structure could be confirmed.'}};}};
-  vm.createContext(context); vm.runInContext(source,context);
+  vm.createContext(context); vm.runInContext(source.replace('{{ is_coach_user|yesno:"true,false" }}',String(coach)),context);
   context.renderTypeAResults(parent,[current],'',model);
   const nodes=flatten(parent), buttons=nodes.filter(n=>n.tag==='button');
   assert.deepEqual(buttons.map(n=>n.textContent),['Suggest','Use AM','Use PM']);

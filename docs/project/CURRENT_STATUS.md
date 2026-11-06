@@ -514,3 +514,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november - Hardware acces: Polar Integration, Garmin uploads en Garmin Connected Athletes hebben bovenaan Back naar het coachhardwareoverzicht. Garmin uploads voor atleten gaat terug naar hun eigen Planning > Hardware. Kopregels kunnen omlopen op mobiel. 23 GarminConnection-tests en manage.py check geslaagd; aanvullende gerichte teruglinkcontrole voor alle drie coachpagina's toegevoegd.
+
+
+6 november - Garmin C/D-popup laadfout na Suggest: renderTypeAResults verwees naar aycCoachUser uit een andere afgesloten scriptfunctie. Coachvlag nu binnen de renderer uit templatecontext gezet. JS-regressies draaien zonder kunstmatige externe coachvariabele, voor coach en atleet, C en D. Geen API-/meet-/rechtenwijziging.

@@ -2563,6 +2563,7 @@
   }
   {% include "core/partials/garmin_combine.js" %}
   function renderTypeAResults(parent, results, message, model, combinedPreview) {
+    var watchCoachUser = {{ is_coach_user|yesno:"true,false" }};
     parent.innerHTML = "";
     if (!results.length) { parent.textContent = message || "No Polar training found for this day."; return; }
     var selections = [];
@@ -2661,7 +2662,7 @@
           insufficient_laps: "Too few usable laps for AI structure recognition.",
           measured_structure: "Using measured structure recognition; AI was not called."
         };
-        if (aycCoachUser && aiMessages[part.ai_structure_status]) {
+        if (watchCoachUser && aiMessages[part.ai_structure_status]) {
           var aiStatus = document.createElement("div");
           aiStatus.className = "small text-muted mb-2";
           aiStatus.textContent = (part.ai_structure_model ? "AI model: " + part.ai_structure_model + ". " : "") + aiMessages[part.ai_structure_status] + (part.ai_structure_reason ? " " + part.ai_structure_reason : "");
@@ -2765,7 +2766,7 @@
           }
           box.appendChild(description);
         }
-        if (aycCoachUser && part.analysis_note) {
+        if (watchCoachUser && part.analysis_note) {
           var note = document.createElement("div"); note.className = "small text-muted mb-2";
           note.textContent = part.analysis_note; box.appendChild(note);
         }
