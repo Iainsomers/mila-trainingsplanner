@@ -523,3 +523,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november - Year Planner basisvinkjes: change-handlers stonden per ongeluk binnen de change-handler van Group. Nu worden Basis-All en afzonderlijke programmagroepen direct bij paginaladen gekoppeld: aan/uit verstuurt meteen de selectie, zonder eerst Group te wijzigen. Atleetselectie blijft intact; groepswissel voegt geen dubbele handlers toe. JS-regressie voert werkelijke handlers uit voor herhaald aan/uit en groepswissel.
+
+
+6 november - Garmin C/D Chat vervangt Suggest-invoer: vrije gesprekstekst en tijdelijke historie per activiteit; CSRF-beveiligde POST, bestaande toestemming, originele lapfeiten en harde meting-/confidencecontrole. Unsupported/vraag geeft alleen tekst en behoudt preview. Chat ondersteunt exacte nominale190m zonder gemeten afstand/tijd te wijzigen. 67 gerichte Django-tests en manage.py check geslaagd; drie JS-controles slagen, inclusief C/D-chat-POST/preview/afwijzing/coachdiagnostiek. Geen migratie. Live AI-kwaliteit en visuele browsercontrole nog niet bevestigd.

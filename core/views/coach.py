@@ -5733,7 +5733,7 @@ def polar_type_a_ayc_view(request):
 
 
 @login_required
-@require_GET
+@require_http_methods(["GET", "POST"])
 def garmin_type_c_ayc_view(request, model="C"):
     """Use this athlete's saved Garmin FIT laps with Watch B's matcher."""
     athlete_id = (request.GET.get("athlete") or "").strip()
@@ -5757,6 +5757,23 @@ def garmin_type_c_ayc_view(request, model="C"):
     from .athlete_identity import _is_ayc_coach_user
     show_diagnostics = _is_ayc_coach_user(request.user)
     suggestion = request.GET.get('suggestion', '').strip()
+    chat_messages = None
+    chat_input = request.POST.get('chat') if request.method == 'POST' else request.GET.get('chat')
+    if chat_input:
+        try:
+            raw = chat_input
+            if len(raw) > 10000:
+                raise ValueError
+            chat_messages = json.loads(raw)
+            if (not isinstance(chat_messages, list) or not 1 <= len(chat_messages) <= 12
+                    or any(not isinstance(m, dict) or m.get('role') not in ('user','assistant')
+                           or not isinstance(m.get('content'), str) or not 1 <= len(m['content']) <= 1500
+                           for m in chat_messages) or chat_messages[-1]['role'] != 'user'):
+                raise ValueError
+            chat_messages = [{k:m[k] for k in ('role','content')} for m in chat_messages]
+        except (ValueError, TypeError, KeyError):
+            return JsonResponse({'ok':False,'message':'Please send a shorter message.','results':[]},status=400)
+    guided = bool(suggestion or chat_messages)
     requested_structure = None
     if suggestion:
         from core.watch_ai_structure import parse_structure_suggestion
@@ -5966,26 +5983,26 @@ def garmin_type_c_ayc_view(request, model="C"):
     results = []
     for session in sessions:
         allowed = fit_ai_allowed(athlete) if session.get('is_fit_upload') else ai_allowed(athlete)
-        if requested_structure and session.get('startTime', '') != request.GET.get('suggestion_session'):
+        if guided and session.get('startTime', '') != request.GET.get('suggestion_session'):
             continue
-        if requested_structure and not allowed:
+        if guided and not allowed:
             return JsonResponse({'ok':False, 'message':'AI permission is required to check a suggestion.', 'results':[]}, status=403)
         quick_preview = request.GET.get('preview') == 'measured'
-        translated = translate_model_b([session], 5, athlete, allow_ai=allowed and not quick_preview, allow_lap_structure=True, requested_structure=requested_structure)
+        translated = translate_model_b([session], 5, athlete, allow_ai=allowed and not quick_preview, allow_lap_structure=True, requested_structure=requested_structure, chat_messages=chat_messages)
         if allowed and quick_preview:
             for item in translated:
                 for part in item.get('parts') or []:
                     part['ai_structure_status'] = 'pending'
-        if requested_structure:
+        if guided:
             parts = [p for item in translated for p in item.get('parts', [])]
             if not parts or any(not p.get('validated_lap_structure') for p in parts):
                 reason = next((p.get('ai_structure_reason') for p in parts if p.get('ai_structure_reason')), '')
                 message = 'No matching structure could be confirmed.'
                 if show_diagnostics and reason:
                     message += ' ' + reason
-                return JsonResponse({'ok':False, 'message':message, 'results':[]})
+                return JsonResponse({'ok':False, 'message':message, 'chat_reply': next((p.get('chat_reply') for p in parts if p.get('chat_reply')), ''), 'results':[]})
         results.extend(translated)
-    matched_sessions = [s for s in session_exercises if not requested_structure or s.get('startTime', '') == request.GET.get('suggestion_session')]
+    matched_sessions = [s for s in session_exercises if not guided or s.get('startTime', '') == request.GET.get('suggestion_session')]
     for session, result in zip(matched_sessions, results):
         for part in result.get("parts") or []:
             watch_loads = type_a_watch_loads(session, athlete)
@@ -6092,7 +6109,7 @@ def garmin_type_c_ayc_view(request, model="C"):
     if model == "D":
         from core.garmin_d import apply_garmin_d
         results = apply_garmin_d(results, athlete)
-    if requested_structure and not results:
+    if guided and not results:
         return JsonResponse({'ok':False, 'message':'Activity not found. Reopen Garmin and try again.', 'results':[]})
     for result in results:
         for part in result.get('parts') or []:

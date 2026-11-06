@@ -561,3 +561,6 @@ Year Planner Group=All toont nu afzonderlijke Basis-keuzes voor alle toegankelij
 ## Garmin C/D - Suggest structure (6 november 2026)
 
 Naast Use AM/PM staat bij loopresultaten een compact invoerveld met Suggest. Voorbeelden: 16x500m, 2x8x500m, 2x(8x500m), 4x3min of groepen met +. Het model toetst de suggestie aan de oorspronkelijke laps van de gekozen activiteit; de server controleert targets, aantallen, sets en bestaande meetvoorwaarden. Bij succes wordt alleen de preview vervangen met gemeten laptijden, herstel en eigen C/D-zones; opslaan blijft expliciet via Use AM/PM. Bij afwijzing blijft het huidige resultaat behouden. Bestaande Garmin-/FIT-AI-toestemming blijft vereist. Atleten zien geen AI-modelnamen, diagnostische statusregels, afwijsdetails of analysenotities; coaches wel.
+
+
+Garmin C/D chat (6 november): het losse Suggest-veld is vervangen door Chat naast Use AM/PM. Opent een ombrekend chatpaneel per activiteit met vrije tekst, gesprekshistorie en Send (Enter verstuurt, Shift+Enter nieuwe regel). Gebruiker kan om uitleg of een wijziging vragen. Een antwoord zonder gevalideerde structuur houdt de huidige preview intact; alleen een volledig gecontroleerde lapindeling levert een nieuw bruikbaar voorstel. Opslaan blijft Use AM/PM. Gesprek blijft alleen tijdens de geopende popup bewaard.

@@ -311,3 +311,6 @@ Basis - All gebruikt een apart intern TrainingPlan met plan_kind=year_basis per 
 
 
 Garmin-structuursuggesties (6 november 2026): invoer wordt lokaal begrensd tot numerieke groepen (maximaal 8), 3-30 totale reps per groep, afstandstarget 100-10000m in stappen van 50m of 2-30 hele minuten. De AI krijgt uitsluitend de geparste getallen en originele compacte lapfeiten. AI bepaalt laptoewijzing; dezelfde meet-/confidencecontrole en maximaal een herstelpoging blijven van kracht. Targets, repaantallen en setaantallen moeten exact overeenkomen met de suggestie. Een niet-bevestigd voorstel wordt niet toegepast; meters, seconden, bronlaps en Garmin D-HR-correctie blijven behouden. Suggesties delen de bestaande cache op exacte opdracht, inclusief numerieke suggestie.
+
+
+Garmin-chat: begrensde gesprekstekst gaat via CSRF-beveiligde POST naar dezelfde AI met oorspronkelijke compacte lapfeiten en bestaande toestemmingscontrole. Confidence >=0.75 en alle meetcontroles blijven nodig voor bruikbare chatvoorstellen; een tekstueel antwoord is nooit een opslagbare training. Chat mag integer doelafstanden vanaf50m gebruiken, inclusief190m; bestaande automatische analyses behouden veelvouden van50m vanaf100m. GPS-marge, gemeten meters/tijden, volledige unieke laptoewijzing, herstelcontrast en D-HR-correctie blijven gelden. Geen geforceerde match of verhoging van confidence.

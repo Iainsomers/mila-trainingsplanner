@@ -99,7 +99,7 @@ def parse_structure_suggestion(text):
     return groups
 
 
-def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, rep_zone=None, requested_structure=None):
+def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, rep_zone=None, requested_structure=None, allow_exact_distance=False):
     """No omitted/duplicate laps, invented reps, or running discarded as stops."""
     reason = 'Invalid lap structure or confidence.'
     def reject():
@@ -182,7 +182,7 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             distance_target = group.get('target_meters')
             target = group.get('target_seconds')
             distance_based = distance_target is not None
-            if distance_based and (type(distance_target) is not int or distance_target % 50 or not 100 <= distance_target <= 10000 or target is not None):
+            if distance_based and (type(distance_target) is not int or (distance_target % 50 and not allow_exact_distance) or not (50 if allow_exact_distance else 100) <= distance_target <= 10000 or target is not None):
                 reason = f"Group {group_index+1}: target_meters must be an integer multiple of 50 from 100 to 10000; target_seconds must be omitted or null when using distance."
                 raise ValueError
             if not distance_based and (type(target) is not int or target % 60 or not 120 <= target <= 1800):

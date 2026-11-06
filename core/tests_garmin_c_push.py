@@ -54,6 +54,13 @@ class GarminCPushTests(TestCase):
                 self.assertTrue(found['ok'])
                 self.assertEqual(found['results'][0]['parts'][0]['training_fields']['main'], '4\u00d73000 m Z2 p119')
                 self.assertEqual(len(found['results'][0]['parts'][0]['watch_loads']), 16)
+                chat_query = dict(query)
+                chat_query.pop('suggestion')
+                chat_url = url + '?' + __import__('urllib.parse',fromlist=['urlencode']).urlencode(chat_query)
+                chatted = self.client.post(chat_url, {'chat':json.dumps([
+                    {'role':'user','content':'Kun je vier herhalingen van 3000 meter herkennen?'}])}).json()
+                self.assertTrue(chatted['ok'])
+                self.assertEqual(len(chatted['results'][0]['parts'][0]['watch_loads']),16)
                 query['suggestion'] = '5x3000m'
                 rejected = self.client.get(url, query).json()
                 self.assertFalse(rejected['ok'])

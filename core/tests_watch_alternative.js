@@ -14,8 +14,8 @@ function checkButtons() {
     appendChild(child) { this.children.push(child); },
     addEventListener(event, callback) { this.listeners[event] = callback; }}; }
   const invoked = [];
-  const render = new Function('document','renderTypeALaps','useWatchTraining',
-    renderSource.replace('{{ is_coach_user|yesno:"true,false" }}', 'false') + '\nreturn renderTypeAResults;')({createElement:element},()=>{},(...args)=>invoked.push(args));
+  const render = new Function('document','renderTypeALaps','useWatchTraining','watchChats',
+    renderSource.replace('{{ is_coach_user|yesno:"true,false" }}', 'false') + '\nreturn renderTypeAResults;')({createElement:element},()=>{},(...args)=>invoked.push(args), {});
   for (const model of ['C','D']) {
     for (const fields of [{alt:"Pilates 46' Z1"},{main:'4x400m Z3'}]) {
       const parent=element('div');
@@ -24,10 +24,10 @@ function checkButtons() {
       const nodes=flatten(parent);
       const buttons=nodes.filter(node=>node.tag==='button');
       assert.deepEqual(buttons.map(button=>button.textContent),fields.alt ?
-        ['Use AM','Use PM','Add AM','Add PM'] : ['Suggest','Use AM','Use PM']);
-      const actionRow=nodes.find(node=>node.children.includes(buttons[0]));
+        ['Use AM','Use PM','Add AM','Add PM'] : ['Send','Chat','Use AM','Use PM']);
+      const actionRow=nodes.find(node=>node.children.includes(buttons.find(b=>b.textContent==='Use AM')));
       assert.ok(actionRow.className.includes('flex-wrap'));
-      for (const button of buttons.filter(b=>b.textContent !== 'Suggest')) button.listeners.click({preventDefault(){}});
+      for (const button of buttons.filter(b=>['Use AM','Use PM','Add AM','Add PM'].includes(b.textContent))) button.listeners.click({preventDefault(){}});
       if(fields.alt) {
         assert.equal(invoked.at(-1)[5],true);
         assert.equal(invoked.at(-2)[5],true);

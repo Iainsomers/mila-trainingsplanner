@@ -27,6 +27,38 @@ def split_distance_example():
 
 
 class WatchAIStructureTests(SimpleTestCase):
+    def test_chat_can_reply_without_a_usable_training(self):
+        from core.views.polar_raw import _model_b_ai_description
+        facts, _ = split_distance_example()
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps({'choices':[{'message':{'content':json.dumps(
+            dict(confidence=0,lap_structure=None,chat_reply='Deze afstand zie ik niet in de laps.'))}}]}).encode()
+        diagnostics = {}
+        with patch.dict('os.environ',{'OPENAI_API_KEY':'test'}), patch(
+                'core.views.polar_raw.urlopen',return_value=response) as call:
+            result = _model_b_ai_description([dict(distanceMeters=f['distance_m'],durationMillis=f['duration_s']*1000)
+                for f in facts],strict_lap_structure=True,diagnostics=diagnostics,
+                chat_messages=[dict(role='user',content='Maak hier 6 keer 190 meter van')])
+        self.assertFalse(result)
+        self.assertEqual(call.call_count,1)
+        self.assertIn('niet',diagnostics['chat_reply'])
+        self.assertNotIn('review_structure',diagnostics)
+
+    def test_chat_exact_distance_still_requires_real_measurements(self):
+        facts = []
+        for n in range(6):
+            facts.extend([dict(lap=2*n+1,distance_m=189,duration_s=40,zone='Z3'),
+                          dict(lap=2*n+2,distance_m=20,duration_s=60,zone='Z1')])
+        proposal = dict(confidence=.96,lap_structure=dict(warmup_laps=[],cooldown_laps=[],
+            stop_laps=[],recovery_laps=list(range(2,13,2)),groups=[dict(target_meters=190,
+            reps=[[i] for i in range(1,12,2)])]))
+        self.assertIsNone(validate_lap_structure(proposal,facts))
+        result = validate_lap_structure(proposal,facts,allow_exact_distance=True)
+        self.assertIsNotNone(result)
+        self.assertIn('190 m',result['training_fields']['main'])
+        facts[0]['distance_m'] = 100
+        self.assertIsNone(validate_lap_structure(proposal,facts,allow_exact_distance=True))
+
     def test_requested_structure_is_numeric_and_enforced(self):
         from core.watch_ai_structure import parse_structure_suggestion
         expected = parse_structure_suggestion('2x(8x500m)')

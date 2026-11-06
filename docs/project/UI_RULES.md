@@ -362,3 +362,6 @@ Garmin-preview: wanneer analyse klaar is maar gebruikersinteractie automatisch v
 
 
 6 november - Year Planner basisvinkjes: change-handlers stonden per ongeluk binnen de change-handler van Group. Nu worden Basis-All en afzonderlijke programmagroepen direct bij paginaladen gekoppeld: aan/uit verstuurt meteen de selectie, zonder eerst Group te wijzigen. Atleetselectie blijft intact; groepswissel voegt geen dubbele handlers toe. JS-regressie voert werkelijke handlers uit voor herhaald aan/uit en groepswissel.
+
+
+Garmin C/D: oude Suggest-invoer vervangen door Chat-knop met uitklapbaar gesprek per activiteit. Meerregelige invoer16px, gesprek met begrensde scrollhoogte; tekst wordt veilig als tekst getoond. Coach houdt diagnostische afwijsdetails; atleet krijgt alleen kort resultaat. Gevalideerd voorstel wordt expliciet als zodanig benoemd en blijft een preview tot Use AM/PM.

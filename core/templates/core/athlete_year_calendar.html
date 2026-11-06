@@ -2464,7 +2464,9 @@
     validate();
   }
   var watchPreviewSequence = 0;
+  var watchChats = {};
   function showWatchModel(model) {
+    watchChats = {};
     var sequence = ++watchPreviewSequence;
     var popup = document.getElementById("suggestInputPlaceholder");
     var body = document.getElementById("suggestInputPlaceholderBody");
@@ -2718,39 +2720,71 @@
             actions.className = "d-flex flex-wrap gap-1";
             actions.style.maxWidth = "100%";
             if ((model === "C" || model === "D") && fields.main) {
-              var suggestion = document.createElement("input");
-              suggestion.type = "text"; suggestion.maxLength = 160;
-              suggestion.className = "form-control form-control-sm";
-              suggestion.style.width = "min(160px, 100%)"; suggestion.style.fontSize = "16px";
-              suggestion.setAttribute("aria-label", "Suggested workout structure");
+              var key = model + ":" + session.start;
+              var chat = watchChats[key] || (watchChats[key] = {messages:[], open:false});
+              var panel = document.createElement("div"); panel.className = "border rounded p-2 mt-2 w-100";
+              panel.style.display = chat.open ? "block" : "none";
+              var log = document.createElement("div"); log.className = "small mb-2";
+              log.setAttribute("role", "log"); log.setAttribute("aria-live", "polite");
+              log.style.maxHeight = "220px"; log.style.overflowY = "auto";
+              function renderChat() {
+                log.textContent = "";
+                chat.messages.forEach(function(message) {
+                  var line = document.createElement("div"); line.className = "mb-2";
+                  line.style.whiteSpace = "pre-wrap";
+                  line.textContent = (message.role === "user" ? "You: " : "MiLa: ") + message.content;
+                  log.appendChild(line);
+                });
+                log.scrollTop = log.scrollHeight;
+              }
+              renderChat();
+              var suggestion = document.createElement("textarea"); suggestion.maxLength = 1000; suggestion.rows = 2;
+              suggestion.className = "form-control form-control-sm mb-2"; suggestion.style.fontSize = "16px";
+              suggestion.setAttribute("aria-label", "Message about this activity");
               var suggest = document.createElement("button"); suggest.type = "button";
-              suggest.className = "btn btn-sm btn-outline-primary"; suggest.textContent = "Suggest";
-              var feedback = document.createElement("div"); feedback.className = "small w-100";
+              suggest.className = "btn btn-sm btn-primary"; suggest.textContent = "Send";
+              var feedback = document.createElement("div"); feedback.className = "small mt-2";
               feedback.setAttribute("role", "status");
+              var openChat = document.createElement("button"); openChat.type = "button";
+              openChat.className = "btn btn-sm btn-outline-primary"; openChat.textContent = "Chat";
+              openChat.addEventListener("click", function() {
+                chat.open = !chat.open; panel.style.display = chat.open ? "block" : "none";
+                if (chat.open) suggestion.focus();
+              });
               function checkSuggestion() {
-                if (!suggestion.value.trim() || suggest.disabled) { suggestion.focus(); return; }
+                if (!suggestion.value.trim() || suggest.disabled) return;
+                chat.messages.push({role:"user", content:suggestion.value.trim()});
+                suggestion.value = ""; renderChat();
                 suggest.disabled = true; feedback.textContent = "Checking measured laps...";
                 var sequence = watchPreviewSequence;
                 var endpoint = "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/";
                 var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate)
-                  + "&suggestion=" + encodeURIComponent(suggestion.value.trim())
                   + "&suggestion_session=" + encodeURIComponent(session.start || "");
-                fetch(endpoint + query, {headers: {"Accept":"application/json"}})
+                fetch(endpoint + query, {method:"POST", headers: {"Accept":"application/json",
+                  "Content-Type":"application/x-www-form-urlencoded", "X-CSRFToken":getCookie("csrftoken")},
+                  body:new URLSearchParams({chat:JSON.stringify(chat.messages.slice(-5))}).toString()})
                   .then(function(response) { return response.json(); }).then(function(data) {
                     if (sequence !== watchPreviewSequence || !suggest.isConnected) return;
-                    if (!data.ok) { feedback.textContent = data.message || "No matching structure could be confirmed."; return; }
                     var replacement = (data.results || []).find(function(item) { return item.start === session.start; });
-                    if (!replacement) { feedback.textContent = "No matching structure could be confirmed."; return; }
+                    var reply = data.chat_reply || (replacement && replacement.parts[0].chat_reply);
+                    if (!data.ok || !replacement) {
+                      chat.messages.push({role:"assistant", content:(reply ? reply + "\n" : "") +
+                        (data.message || "No usable proposal confirmed by the measured laps.")});
+                      renderChat(); feedback.textContent = ""; return;
+                    }
+                    chat.messages.push({role:"assistant", content:(reply || "The measured laps support this proposal.") +
+                      "\nValidated proposal: " + replacement.parts[0].description + "\nReview it before choosing Use AM/PM."});
                     var updated = results.slice(); updated[sessionIndex] = replacement;
                     renderTypeAResults(parent, updated, "", model);
-                  }).catch(function() { feedback.textContent = "Suggestion could not be checked. Try again."; })
+                  }).catch(function() { feedback.textContent = "Message could not be processed. Try again."; })
                   .finally(function() { suggest.disabled = false; });
               }
               suggest.addEventListener("click", checkSuggestion);
               suggestion.addEventListener("keydown", function(event) {
-                if (event.key === "Enter") { event.preventDefault(); checkSuggestion(); }
+                if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); checkSuggestion(); }
               });
-              actions.appendChild(suggestion); actions.appendChild(suggest); box.appendChild(feedback);
+              panel.appendChild(log); panel.appendChild(suggestion); panel.appendChild(suggest); panel.appendChild(feedback);
+              box.appendChild(panel); actions.appendChild(openChat);
             }
             [1, 2].forEach(function(slotIndex) {
               var button = document.createElement("button");
