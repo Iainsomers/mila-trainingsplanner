@@ -359,3 +359,6 @@ Garmin C/D (6 november 2026): Suggest-invoer en knop staan links van Use AM/PM, 
 
 
 Garmin-preview: wanneer analyse klaar is maar gebruikersinteractie automatisch vervangen verhindert, tonen ook de afzonderlijke activiteitstatussen Analysis ready met Show analysis. Bij een laadfout blijft geen oude pending-melding staan. Invoer en keuzes blijven behouden tot expliciet Show analysis wordt gekozen.
+
+
+6 november - Year Planner basisvinkjes: change-handlers stonden per ongeluk binnen de change-handler van Group. Nu worden Basis-All en afzonderlijke programmagroepen direct bij paginaladen gekoppeld: aan/uit verstuurt meteen de selectie, zonder eerst Group te wijzigen. Atleetselectie blijft intact; groepswissel voegt geen dubbele handlers toe. JS-regressie voert werkelijke handlers uit voor herhaald aan/uit en groepswissel.

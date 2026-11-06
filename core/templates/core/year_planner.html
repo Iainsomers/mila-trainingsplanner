@@ -1742,11 +1742,11 @@
   });
   document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
   document.getElementById("layoutMode")?.addEventListener("change", () => form.submit());
-  document.getElementById("yearAthleteGroup")?.addEventListener("change", () => {
-    document.querySelectorAll("input[type='checkbox'][name='basis'], input[name='basis_plans']").forEach((input) => {
+  document.querySelectorAll("input[type='checkbox'][name='basis'], input[name='basis_plans']").forEach((input) => {
     input.addEventListener("change", () => form.submit());
   });
-  document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
+  document.getElementById("yearAthleteGroup")?.addEventListener("change", () => {
+    document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
       input.checked = false;
     });
     form.submit();

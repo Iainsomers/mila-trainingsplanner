@@ -520,3 +520,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november - C/D verouderde pending-status: bij interactie blijft de meetpreview bewust behouden, maar voltooide analyse actualiseerde alleen het bovenste bericht. Nu krijgt elke zichtbare pending-status ook Analysis ready met Show analysis; bij laadfout verandert elke status naar niet-beschikbaar. Geen invoer/keuze automatisch vervangen. Uitgebreide JS-previewtest dekt C/D, interactie, succes en fout; alle drie JS-controles en manage.py check slagen. Dit lost misleidende status op, niet bewezen servicelatentie.
+
+
+6 november - Year Planner basisvinkjes: change-handlers stonden per ongeluk binnen de change-handler van Group. Nu worden Basis-All en afzonderlijke programmagroepen direct bij paginaladen gekoppeld: aan/uit verstuurt meteen de selectie, zonder eerst Group te wijzigen. Atleetselectie blijft intact; groepswissel voegt geen dubbele handlers toe. JS-regressie voert werkelijke handlers uit voor herhaald aan/uit en groepswissel.
