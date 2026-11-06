@@ -164,3 +164,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — Diary-sessiekoppen tonen nu A + Alternative-minuten per zonekleur, naast loopkm. See session zones bepaalt zichtbaarheid; loop- en weektotalen ongewijzigd. Twintig gerichte tests/check geslaagd.
+
+
+6 november — Year Planner Basis - All toegevoegd bij Group=All. Basis-checkbox verstuurt nu direct; geen atleet nodig. Interne plansoort year_basis bewaart All-schema apart van groepen/coaches. Migratie0146 vereist. 28 YearPlanner- en2 TrainerPlanningList-tests/check geslaagd; zie DATA_RULES.

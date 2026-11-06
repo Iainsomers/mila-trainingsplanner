@@ -622,9 +622,11 @@ class Group(models.Model):
 class TrainingPlan(models.Model):
     PLAN_KIND_LEGACY = "legacy"
     PLAN_KIND_TRAINER = "trainer"
+    PLAN_KIND_YEAR_BASIS = "year_basis"
     PLAN_KIND_CHOICES = [
         (PLAN_KIND_LEGACY, "Legacy plan"),
         (PLAN_KIND_TRAINER, "Trainer planning"),
+        (PLAN_KIND_YEAR_BASIS, "Year Planner Basis All"),
     ]
 
     owner = models.ForeignKey(

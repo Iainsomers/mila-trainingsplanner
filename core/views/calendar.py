@@ -437,7 +437,7 @@ def athlete_week_phase_set(request, y: int, m: int, d: int):
 def calendar_view(request):
     coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
     plans = (
-        _filter_accessible(TrainingPlan.objects.order_by("name"), request)
+        _filter_accessible(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request)
         .exclude(name__startswith="Flex Planner")
         .exclude(plan_kind=TrainingPlan.PLAN_KIND_TRAINER)
     )
@@ -1127,7 +1127,7 @@ def flex_planner_view(request):
             request,
         )
     )
-    accessible_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request).exclude(name__startswith="Flex Planner"))
+    accessible_plans = list(_filter_accessible(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request).exclude(name__startswith="Flex Planner"))
 
     today = date.today()
     default_start = today - timedelta(days=today.weekday())
@@ -2945,7 +2945,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
         )
 
     if request.user.is_staff:
-        owned_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request))
+        owned_plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
         # A shared edit grant is tied to the selected athlete's owner, not
         # necessarily to the currently selected dashboard owner.
         requested_plan_id = (request.POST.get("plan") or request.GET.get("plan") or "").strip()
@@ -2958,7 +2958,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             ):
                 owned_plans.append(requested_plan)
     else:
-        owned_plans = list(TrainingPlan.objects.order_by("name"))
+        owned_plans = list(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"))
 
     base_slot = None
     existing_override = None
@@ -3717,9 +3717,9 @@ def athlete_year_calendar_view(request):
 
     if selected_athlete:
         if is_ayc_coach:
-            owned_plans = list(_filter_accessible(TrainingPlan.objects.order_by("name"), request))
+            owned_plans = list(_filter_accessible(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
         else:
-            owned_plans = list(TrainingPlan.objects.order_by("name"))
+            owned_plans = list(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"))
 
         flex_plan = _get_athlete_year_flex_plan(owner, selected_athlete, full_start, end)
         if flex_plan and flex_plan not in owned_plans:

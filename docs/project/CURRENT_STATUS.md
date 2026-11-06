@@ -502,3 +502,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november - C/D openingsrep: AI-opdracht benadrukt structuur voor zones en 2x8x500m met langere setpauze. Meetcontrole weigert een passende openingsrep in WU en gebruikt bestaande AI-herstelpoging; geen lokale repgroepering. 97 gerichte tests en manage.py check geslaagd; daarna alle 24 AI-structuurtests opnieuw geslaagd inclusief gemockte tweestapsherbeoordeling naar 2x8x500m p60 sp208 en echte langere/langzamere WU als tegenvoorbeelden. Live AI-uitkomst en Render-deploy nog niet bevestigd.
+
+
+6 november — Basis-only probleem veroorzaakt door ontbrekende change-submit op Basis-checkbox, hersteld. Basis - All toegevoegd met aparte interne plansoort, behoud van coach-/atleetrechten en view-only zonder GET-write. 28 YearPlanner-tests en twee TrainerPlanningList-tests geslaagd; aanvullende Basis-All-regressie omvat periodisering en whereabouts. Bestaande achterhaalde Season planning-ondertitelassertie naar huidige Year Planner-tegel aangepast. Check/migratiecheck geslaagd. Geen live browsercontrole uitgevoerd.

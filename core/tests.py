@@ -4405,8 +4405,46 @@ class YearPlannerTests(TestCase):
         self.assertLess(selector.index("All"), selector.index("Basis - Basis group"))
 
         all_groups = self.client.get("/planning/year/?period=current_next&basis=1")
-        self.assertFalse(all_groups.context["show_basis"])
+        self.assertTrue(all_groups.context["show_basis"])
+        self.assertContains(all_groups,"Basis - All")
         self.assertNotContains(all_groups, "Basis - Basis group")
+
+    def test_year_planner_basis_all_saves_without_selected_athletes(self):
+        coach, athlete = self._coach_and_athlete()
+        response=self.client.get('/planning/year/',{'basis':'1','period':'current_next'})
+        self.assertEqual(response.context['selected_ids'],[])
+        row=response.context['rows'][0]
+        self.assertEqual(row['label'],'Basis - All')
+        self.assertEqual(len(response.context['rows']),1)
+        self.assertTrue(all(len(chunk['rows'])==1 for chunk in response.context['chunks']))
+        self.assertContains(response,"input[type='checkbox'][name='basis']")
+        day=response.context['days'][0].isoformat()
+        saved=self.client.post('/planning/year/entry/',data=json.dumps(dict(scope=row['scope'],date=day,training='aerobe')),content_type='application/json')
+        self.assertEqual(saved.status_code,200)
+        self.assertTrue(YearPlannerEntry.objects.filter(owner=coach,basis_plan__plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS,training_type='aerobe').exists())
+        self.assertFalse(YearPlannerEntry.objects.filter(athlete=athlete).exists())
+        response=self.client.get('/planning/year/',{'basis':'1','period':'current_next'})
+        self.assertEqual(response.context['rows'][0]['cells'][0]['payload']['training'],'aerobe')
+        self.assertNotContains(self.client.get('/planning/trainer/'),'Year Planner Basis All')
+        where=self.client.post('/planning/year/whereabout/',data=json.dumps(dict(scope=row['scope'],start_date=day,end_date=day,whereabouts='camp',note='All camp')),content_type='application/json')
+        self.assertEqual(where.status_code,200)
+        self.assertEqual(where.json()['range']['scope'],row['scope'])
+        self.assertTrue(YearPlannerWhereabout.objects.filter(owner=coach,basis_plan__plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS,note='All camp').exists())
+        self.assertFalse(YearPlannerWhereabout.objects.filter(owner=coach,basis_plan__isnull=True,athlete__isnull=True).exists())
+
+
+    def test_view_only_basis_all_does_not_create_internal_plan(self):
+        from core.models import CoachAccess
+        coach, athlete = self._coach_and_athlete()
+        viewer=get_user_model().objects.create_user(username='basis-all-viewer',is_staff=True)
+        CoachAccess.objects.create(owner=coach,grantee=viewer,can_edit=False)
+        self.client.force_login(viewer)
+        session=self.client.session
+        session['active_coach_owner_id']=coach.pk
+        session.save()
+        response=self.client.get('/planning/year/',{'basis':'1'})
+        self.assertContains(response,'Basis - All')
+        self.assertFalse(TrainingPlan.objects.filter(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).exists())
 
     def test_year_planner_stacked_layout_renders_chunks(self):
         _, athlete = self._coach_and_athlete()
@@ -4444,7 +4482,7 @@ class YearPlannerTests(TestCase):
         response = self.client.get("/planning/year/?year=2026&period=season&athletes={}".format(other.id))
 
         self.assertEqual(planning.status_code, 200)
-        self.assertContains(planning, "Season planning")
+        self.assertContains(planning, ">Year Planner</h5>")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["selected_ids"], [athlete.id])
         self.assertFalse(response.context["show_basis"])

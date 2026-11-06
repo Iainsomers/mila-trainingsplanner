@@ -550,3 +550,6 @@ Atleethoofdpagina: nieuwe Views-volgorde met Evaluations achteraan; losse raceka
 
 
 6 november — Diary-sessietotalen bevatten naast T/loopzones een A met Alternative-minuten per zone. Zowel AM/PM als mobiele/desktopweergave gebruiken dezelfde bestaande ALT-loads; ook bij gecombineerde loop-/ALT-sessies. Zichtbaarheid volgt See session zones. Geen verandering aan loopafstand of weekberekening.
+
+
+6 november — Year Planner heeft Basis - All wanneer Group=All, naast bestaande Basis per General Plan. Basis selecteren verstuurt direct het formulier, ook zonder geselecteerde atleet. Eigen periodisering en whereabouts per coach; geen automatische toepassing op atleten. Bestaande Use for all selected rows blijft beschikbaar.

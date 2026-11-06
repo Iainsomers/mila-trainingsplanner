@@ -6957,7 +6957,8 @@ def _year_planner_scope_target(request, scope):
         return athlete_obj, None
     match = re.fullmatch(r"basis-plan-(\d+)", scope)
     if match:
-        basis_plan = _trainer_planning_qs(request).filter(id=int(match.group(1))).first()
+        basis_plan = _filter_owned(TrainingPlan.objects.filter(
+            plan_kind__in=[TrainingPlan.PLAN_KIND_TRAINER, TrainingPlan.PLAN_KIND_YEAR_BASIS]), request).filter(id=int(match.group(1))).first()
         if not basis_plan:
             raise LookupError("Trainer planning not found")
         return None, basis_plan
@@ -7100,9 +7101,22 @@ def year_planner_view(request):
 
     show_basis = bool(
         not is_athlete_user
-        and selected_filter_plan
         and request.GET.get("basis", "0") == "1"
     )
+
+    basis_plan = selected_filter_plan
+    if show_basis and basis_plan is None:
+        basis_owner = _active_coach_user(request)
+        basis_name = f"Year Planner Basis All {basis_owner.pk}"
+        if _active_coach_access_label(request) == 'view':
+            basis_plan = TrainingPlan.objects.filter(owner=basis_owner, plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).first()
+            if basis_plan is None:
+                basis_plan = TrainingPlan(pk=-1, owner=basis_owner, name=basis_name, plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS)
+        else:
+            basis_plan, _ = TrainingPlan.objects.get_or_create(
+                name=basis_name, owner=basis_owner, plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS,
+                defaults={'week_phases_enabled': False},
+            )
 
     visible_athletes = [athlete_obj for athlete_obj in athletes if athlete_obj.id in group_filtered_athlete_ids]
     if is_athlete_user:
@@ -7151,7 +7165,7 @@ def year_planner_view(request):
                 day_races[race.id] = race
     entry_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
-        entry_scope_filter |= Q(athlete__isnull=True, basis_plan=selected_filter_plan)
+        entry_scope_filter |= Q(athlete__isnull=True, basis_plan=basis_plan)
     entries = (
         YearPlannerEntry.objects
         .filter(owner=owner, date__gte=start_date, date__lte=end_date)
@@ -7164,7 +7178,7 @@ def year_planner_view(request):
     }
     where_scope_filter = Q(athlete_id__in=selected_ids)
     if show_basis:
-        where_scope_filter |= Q(athlete__isnull=True, basis_plan=selected_filter_plan)
+        where_scope_filter |= Q(athlete__isnull=True, basis_plan=basis_plan)
     whereabout_ranges = list(
         YearPlannerWhereabout.objects
         .filter(owner=owner, start_date__lte=end_date, end_date__gte=start_date)
@@ -7250,16 +7264,16 @@ def year_planner_view(request):
     rows = []
     if show_basis:
         base_cells = []
-        base_range_cells = row_range_cells(None, selected_filter_plan.id)
+        base_range_cells = row_range_cells(None, basis_plan.id)
         for day in days:
             base_cells.append({
                 "date": day,
-                "payload": _year_planner_entry_payload(entry_map.get((None, selected_filter_plan.id, day))),
+                "payload": _year_planner_entry_payload(entry_map.get((None, basis_plan.id, day))),
                 "where_ranges": base_range_cells.get(day, []),
             })
         rows.append({
-            "label": f"Basis - {selected_filter_plan.name}",
-            "scope": _year_planner_scope_key(None, selected_filter_plan.id),
+            "label": f"Basis - {selected_filter_plan.name if selected_filter_plan else 'All'}",
+            "scope": _year_planner_scope_key(None, basis_plan.id),
             "athlete": None,
             "cells": base_cells,
         })
@@ -10727,7 +10741,7 @@ def _detailed_camp_detail_context(camp, request, error="", saved=False, can_rena
 
 
 def _exclude_flex_planner_plans(qs):
-    return qs.exclude(name__startswith="Flex Planner")
+    return qs.exclude(name__startswith="Flex Planner").exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS)
 
 
 def _exclude_non_legacy_plans(qs):
@@ -10767,7 +10781,7 @@ def coach_plan_create_view(request):
     elif source_sort == "end":
         qs = TrainingPlan.objects.order_by("end_date")
     else:
-        qs = TrainingPlan.objects.order_by("name")
+        qs = TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name")
 
     plans = _exclude_non_legacy_plans(_filter_owned(qs, request))
 
@@ -11852,7 +11866,7 @@ def coach_assignments_view(request):
     else:
         qs = TrainingPlan.objects.order_by(Lower("name"))
 
-    plans = _filter_owned(qs.prefetch_related("groups", "athletes"), request)
+    plans = _filter_owned(qs.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).prefetch_related("groups", "athletes"), request)
 
     rows = []
     for p in plans:
@@ -12209,7 +12223,7 @@ def trainer_stats_view(request):
     else:
         selected_athlete_ids = set(all_athlete_ids)
 
-    plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request))
+    plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
     this_week_start = date.today() - timedelta(days=date.today().weekday())
     previous_week_start = this_week_start - timedelta(days=7)
     rows = []
@@ -12295,7 +12309,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         period_index = 0
     period_index = min(max(period_index, 0), 120)
 
-    plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request))
+    plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
     current_week_start = date.today() - timedelta(days=date.today().weekday())
     period_last_week_start = current_week_start - timedelta(weeks=week_count * period_index)
     weeks = _athlete_week_distance_history(
@@ -12590,7 +12604,7 @@ def daily_overview_view(request):
         if comment.athlete_id in training_visible_athlete_ids:
             comment_map[comment.athlete_id] = comment
 
-    accessible_plans = list(_filter_owned(TrainingPlan.objects.order_by("name"), request).exclude(name__startswith="Flex Planner"))
+    accessible_plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request).exclude(name__startswith="Flex Planner"))
     flex_plan = _get_athlete_year_flex_plan(_active_coach_user(request), athletes[0] if athletes else None, d, d + timedelta(days=1))
 
     plan_targets = {}
@@ -12929,7 +12943,7 @@ def daily_overview_other_view(request):
             )
 
     plans = list(
-        _filter_owned(TrainingPlan.objects.order_by("name"), request)
+        _filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request)
         .exclude(name__startswith="Flex Planner")
     )
     flex_plan_by_athlete = {

@@ -190,3 +190,6 @@ AI-autolapopdracht (5 november 2026): voorbeelden en tegenvoorbeelden voor samen
 
 
 Migratie 0145_coachsettings_under_dev_enabled voegt de standaard uitgeschakelde Under Dev-module toe. Lokaal toegepast; Render moet de migratie via de bestaande deploystap uitvoeren.
+
+
+Migratie0146_trainingplan_year_basis_kind voegt de interne jaarbasis-plansoort toe (choices). Lokaal gemigreerd; meegaan met bestaande Render-migratiestap. Interne plannen uitsluiten uit algemene gebruikersplanningslijsten.

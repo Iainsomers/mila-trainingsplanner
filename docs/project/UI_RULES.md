@@ -344,3 +344,6 @@ Login: desktop centraal formulier max480px met invoervelden/Login-knop minimaal5
 
 
 Sessiekop Athlete Diary: zwart A-label met daarachter minuten in bestaande session-zone-z1/z2/z3-kleurpillen, zonder extra zoneletters. Tooltip vermeldt Alternative, zone en min. Sessiekop mag omlopen op smalle cellen; loopkm blijven afzonderlijk.
+
+
+Year Planner: onder All in de atleetselector staat Basis - All wanneer Group=All, of Basis - groepsnaam bij een General Plan. Aan-/uitvinken ververst direct zonder aanvullende atleetselectie. Schema blijft zichtbaar met alleen Basis geselecteerd.

@@ -841,7 +841,7 @@
             >
             <span class="form-check-label">All</span>
           </label>
-          {% if selected_filter_plan %}
+          {% if not is_athlete_user %}
             <label class="form-check mb-0">
               <input
                 type="checkbox"
@@ -850,7 +850,7 @@
                 value="1"
                 {% if show_basis %}checked{% endif %}
               >
-              <span class="form-check-label">Basis - {{ selected_filter_plan.name }}</span>
+              <span class="form-check-label">Basis - {{ selected_filter_plan.name|default:"All" }}</span>
             </label>
           {% endif %}
           {% for athlete in athletes %}
@@ -1737,7 +1737,10 @@
   document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
   document.getElementById("layoutMode")?.addEventListener("change", () => form.submit());
   document.getElementById("yearAthleteGroup")?.addEventListener("change", () => {
-    document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
+    document.querySelectorAll("input[type='checkbox'][name='basis']").forEach((input) => {
+    input.addEventListener("change", () => form.submit());
+  });
+  document.querySelectorAll(".year-athlete-list input[name='athletes']").forEach((input) => {
       input.checked = false;
     });
     form.submit();
