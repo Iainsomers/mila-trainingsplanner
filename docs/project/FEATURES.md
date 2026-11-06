@@ -532,3 +532,6 @@ C/D-repsamenvatting negeert zeldzame zones onder 10% van de reps binnen dezelfde
 
 
 6 november — Standards-groep op hoofdpagina vervangen door coachtegel Standard Trainings onder More. Submenu /planning/?section=standards bevat Saved Trainings en Standard Strength met bestaande bestemmingen/rechten. Overige categorieën behouden.
+
+
+6 november — Evaluations voor coaches verplaatst van Views naar Coach Plannings; de atleetingang blijft onder Views. Coachvolgorde aangepast volgens UI_RULES, met bestaande modulezichtbaarheid en rechten behouden.

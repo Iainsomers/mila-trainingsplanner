@@ -133,3 +133,16 @@ class UnderDevTests(TestCase):
         main=self.client.get('/planning/')
         self.assertNotContains(main,'>Standard Trainings</h5>')
         self.assertTemplateUsed(self.client.get('/planning/',{'section':'standards'}),'core/planning.html')
+
+    def test_coach_tile_groups_follow_requested_right_to_left_order(self):
+        import re
+        coach=get_user_model().objects.create_user(username='order-coach',is_staff=True)
+        CoachSettings.objects.create(user=coach,under_dev_enabled=True,detailed_camps_enabled=True,focus_points_enabled=True)
+        self.client.force_login(coach)
+        html=self.client.get('/planning/').content.decode()
+        sections=re.findall(r'<section.*?</section>',html,re.S)
+        labels=lambda section:re.findall(r'<h5 class="card-title[^"]*">(.*?)</h5>',section)
+        self.assertEqual(labels(sections[0]),['Athlete Info','General Plans','Individual Plans','Year Planner','Improvements','Camps','Evaluations'])
+        self.assertEqual(labels(sections[1]),['Athlete Diary','Staff Team Overview','Daily Coach Overview Training'])
+        self.assertEqual(labels(sections[2]),['New, Plans, Wishes','Settings','Coach Tools','Under Dev','Standard Trainings'])
+        self.assertContains(self.client.get('/planning/'),'.coach-tile-order { flex-direction: row-reverse; }')

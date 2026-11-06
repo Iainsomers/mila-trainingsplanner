@@ -308,3 +308,6 @@ Mila Planner gebruikt uniforme col-md-6 col-lg-4 tegels: drie naast elkaar op de
 
 
 6 november — More staat op laptop/desktop in één automatische rasterrij, ongeacht vier/vijf zichtbare tegels. Vanaf992px minder padding/witruimte, hoofdtegels80px en More64px; bij schermhoogte<=760px respectievelijk64/56px. Mobiel behoudt bestaande stapeling en automatische inhoudshoogte. Geen overflow verbergen of pagina-afkapping.
+
+
+6 november — coachtegels volgen expliciet rechts-naar-links per rij. Coach Plannings: Athlete Info, General Plans, Individual Plans, Year Planner, Improvements, Camps, Evaluations. Views: Athlete Diary, Staff Team Overview, Daily Coach Overview Training. More: New/Plans/Wishes, Settings, Coach Tools, Under Dev, Standard Trainings. Flex row-reverse op meerkolomsrijen; More-grid rechts-naar-links met links-naar-rechts tekst. Mobiel volgt de opgegeven lijst van boven naar beneden. Atleten houden eigen categorie-indeling.

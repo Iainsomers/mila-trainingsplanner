@@ -466,3 +466,6 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 
 6 november — compactere laptopweergave en More in één rij gerealiseerd. Acht gerichte navigatie/gridtests en manage.py check slagen. Synthetische volledige hoofdpagina gerenderd; visuele controle via in-app browser geblokkeerd door localhost-timeout, dus exacte schermpassing niet visueel bevestigd.
+
+
+6 november — coachvolgorde rechts-naar-links ingesteld; Improvements voor Camps, Evaluations naar Coach Plannings, Staff Team Overview voor DCO, More opnieuw geordend. Acht bestaande gerichte navigatietests plus één aanvullende categorie-/volgordetest en manage.py check geslaagd. Geen visuele browsercontrole uitgevoerd.

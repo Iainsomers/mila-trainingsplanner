@@ -137,3 +137,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 6 november — More toont laptop/desktop alle zichtbare tegels in één rij via automatisch grid. Tegelhoogtes en witruimte op laptop verlaagd; extra compacte variant bij viewporthoogte<=760px. Acht gerichte tests/check slagen; browserpreview kon localhost niet bereiken.
+
+
+6 november — coachtegels bewust rechts-naar-links volgens eigenaarsopdracht. Evaluations staat voor coaches in Coach Plannings; Views bestaat uit Diary/Staff Team Overview/DCO. More heeft nieuwe volgorde; zie UI_RULES. Negen gerichte tests/check geslaagd.
