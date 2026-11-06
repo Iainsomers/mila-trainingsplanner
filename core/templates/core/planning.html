@@ -113,7 +113,7 @@
     .planning-section { padding: 8px; margin-bottom: 8px; }
     .planning-section-head { margin-bottom: 6px; }
     .planning-section > .row { --bs-gutter-x: 8px; --bs-gutter-y: 8px; }
-    .planning-card { min-height: 80px; height: 80px; }
+    .planning-card { min-height: 96px; height: 96px; }
     .planning-card .card-body { padding: 8px; }
     .planning-card-title-row { margin-bottom: 2px; }
     .planning-card .card-text { margin-bottom: 0; }
@@ -125,12 +125,12 @@
       margin: 0;
     }
     .planning-more > .row > div { width: auto; padding: 0; margin: 0; min-width: 0; }
-    .planning-more .planning-card { min-height: 64px; height: 64px; }
+    .planning-more .planning-card { min-height: 76px; height: 76px; }
     .planning-more .planning-card .card-title { font-size: 0.86rem; }
   }
   @media (min-width: 992px) and (max-height: 760px) {
-    .planning-card { min-height: 64px; height: 64px; }
-    .planning-more .planning-card { min-height: 56px; height: 56px; }
+    .planning-card { min-height: 76px; height: 76px; }
+    .planning-more .planning-card { min-height: 64px; height: 64px; }
     .planning-card-icon { width: 23px; height: 23px; font-size: 0.85rem; }
     .planning-card .card-title { font-size: 0.88rem; }
     .planning-card .card-text { font-size: 0.75rem; }
@@ -180,7 +180,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">Y</span><h5 class="card-title">Athlete Diary</h5></div>
-              <p class="card-text">Year planning and reports.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'athlete_year_calendar' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -193,7 +193,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">◇</span><h5 class="card-title">Year Planner</h5></div>
-              <p class="card-text">Season planning.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'year_planner' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -206,7 +206,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">⚙</span><h5 class="card-title">Athlete Info</h5></div>
-              <p class="card-text">Athlete profile and settings.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'athlete_settings' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -219,7 +219,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">▤</span><h5 class="card-title">Camps</h5></div>
-              <p class="card-text">Camp travel and participant details.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'detailed_camps' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -233,7 +233,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">✦</span><h5 class="card-title">Improvements</h5></div>
-              <p class="card-text">Your focus points and desired improvements.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'focus_points' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -259,7 +259,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">☻</span><h5 class="card-title">Athlete Info</h5></div>
-              <p class="card-text">Athlete data and settings.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'coach_athletes' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -271,7 +271,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">▦</span><h5 class="card-title">General Plans</h5></div>
-              <p class="card-text">Trainer calendars.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'trainer_planning' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -283,7 +283,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">↔</span><h5 class="card-title">Individual Plans</h5></div>
-              <p class="card-text">Effective athlete planning.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'flex_planner' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -296,7 +296,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">◇</span><h5 class="card-title">Year Planner</h5></div>
-              <p class="card-text">Phases and whereabouts.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'year_planner' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -309,7 +309,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">✦</span><h5 class="card-title">Improvements</h5></div>
-              <p class="card-text">Athlete focus points and desired improvements.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'focus_points' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -323,7 +323,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">▤</span><h5 class="card-title">Camps</h5></div>
-              <p class="card-text">Detailed camp planning.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'detailed_camps' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -346,7 +346,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">Y</span><h5 class="card-title">Athlete Diary</h5></div>
-              <p class="card-text">Planning and reports.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'athlete_year_calendar' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -358,7 +358,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">O</span><h5 class="card-title">Staff Team Overview</h5></div>
-              <p class="card-text">Team vitals and information quality.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'daily_overview_other' %}" class="btn btn-primary w-100">Open</a>
               </div>
@@ -370,7 +370,7 @@
           <div class="card h-100 planning-card">
             <div class="card-body d-flex flex-column">
               <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">D</span><h5 class="card-title">Daily Coach Overview Training</h5></div>
-              <p class="card-text">Daily training overview.</p>
+
               <div class="mt-auto">
                 <a href="{% url 'daily_overview' %}" class="btn btn-primary w-100">Open</a>
               </div>
