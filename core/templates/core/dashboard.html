@@ -116,18 +116,7 @@
 
   {% if not is_athlete_user and not coach_tools_only %}
   <div class="row g-4 mt-auto pt-5">
-    {% if is_product_admin %}
-    <div class="col-md-6 col-xl-3">
-      <a href="/admin/" class="card h-100 dashboard-tile">
-        <div class="card-body d-flex flex-column">
-          <h5 class="card-title">Admin</h5>
-          <p class="card-text">
-            Authentication &amp; authorization (users, groups, permissions).
-          </p>
-        </div>
-      </a>
-    </div>
-    {% endif %}
+
 
 
     {% if is_trainer_user and not coach_tools_only and oura_preview_available %}

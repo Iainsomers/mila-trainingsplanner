@@ -190,3 +190,18 @@ class UnderDevTests(TestCase):
             self.assertContains(response,'aria-label="1 new items">1</span>',count=2)
             self.assertEqual(response.context['recent_feature_count'],
                 self.client.get(reverse('new_plans_wishes')).context['recent_feature_count'])
+
+    def test_django_admin_tile_only_for_admin_account(self):
+        from django.urls import reverse
+        admin=get_user_model().objects.create_superuser(username='admin',password='test')
+        coach=get_user_model().objects.create_user(username='ordinary-coach',is_staff=True)
+        other_superuser=get_user_model().objects.create_superuser(username='other-superuser',password='test')
+        for user in (admin,coach,other_superuser):
+            self.client.force_login(user)
+            response=self.client.get('/planning/')
+            if user==admin:
+                self.assertContains(response,'>Django Admin</h5>')
+                self.assertContains(response,'href="'+reverse('admin:index')+'"')
+                self.assertEqual(self.client.get(reverse('admin:index')).status_code,200)
+            else:
+                self.assertNotContains(response,'>Django Admin</h5>')

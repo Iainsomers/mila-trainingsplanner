@@ -332,3 +332,6 @@ More gebruikt native details/summary (muis, touch en toetsenbord), met pijltje e
 
 
 6 november — dezelfde rode New-teller staat zowel naast More als rechtsboven op de New, Plans, Wishes-tegel. Bij atleten staat die tegel nu ook als eerste links, vóór Hardware. Teller blijft gebaseerd op New-items afgelopen14 dagen. Elf gerichte tests en manage.py check geslaagd.
+
+
+6 november — Django Admin-tegel verplaatst van oud dashboard naar More op Mila Planner. Alleen zichtbaar voor het ingelogde coach-adminaccount (bestaande productbeheerdercontrole), onafhankelijk van actieve coachselectie. Bestaande Django-adminrechten behouden. Twaalf gerichte tests en manage.py check geslaagd.

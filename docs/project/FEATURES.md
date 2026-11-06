@@ -541,3 +541,6 @@ Atleethoofdpagina: nieuwe Views-volgorde met Evaluations achteraan; losse raceka
 
 
 6 november — More is in-/uitklapbaar voor coaches en atleten, standaard ingeklapt. Klein rood telbolletje naast More toont hetzelfde aantal New-items als New/Plans/Wishes: publicaties uit afgelopen14 dagen, ook0. Telling verandert niet door open-/dichtklappen; alle bestaande tegels/rechten behouden.
+
+
+6 november — Django Admin-tegel verplaatst van oud dashboard naar More op Mila Planner. Alleen zichtbaar voor het ingelogde coach-adminaccount (bestaande productbeheerdercontrole), onafhankelijk van actieve coachselectie. Bestaande Django-adminrechten behouden. Twaalf gerichte tests en manage.py check geslaagd.
