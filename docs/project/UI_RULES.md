@@ -326,3 +326,6 @@ More gebruikt native details/summary (muis, touch en toetsenbord), met pijltje e
 
 
 6 november — tegelnamen hoofdpagina vergroot naar uniforme1.6rem (ook More en compacte laptopvariant). Alle tegels centreren inhoud verticaal; lange titels mogen omlopen. More/compacte tegels minimaal80px om twee tekstregels te passen. Bestaande iconen/volgorde behouden. Elf gerichte tests en manage.py check geslaagd; geen visuele browsercontrole.
+
+
+6 november — Evaluations-tegel heeft een ☑-icoon in dezelfde planning-card-icon-cirkel als de andere hoofdtegels, voor coach en atleet. Decoratief icoon is aria-hidden.
