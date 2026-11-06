@@ -542,3 +542,7 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 
 7 november — Recente slaapduur-extremen krijgen afzonderlijke groene/rode kleurmarkeringen in Staff Team Overview. Geen migratie nodig.
 Validatie: 11 gerichte Staff Team Overview/vitals-tests en manage.py check geslaagd. Brede PlanningOverviewTests bevat daarnaast vijf fouten bij eerder gewijzigde plannerteksten/navigatie; niet onderdeel van deze slaapkleurwijziging. Mobiele tabelstructuur behouden; geen visuele browsercontrole uitgevoerd.
+
+
+7 november — Daily vitals gebruikt een daggrens om 08:00 lokale applicatietijd. Vóór 08:00 eindigt het veertiendaagse venster gisteren; ook de slaapkleur-recente dagen schuiven mee. Alleen laagste slaapduur rood en hoogste groen; gemiddelde en andere vitals blijven neutraal. Overige overzichtsdatums blijven ongewijzigd.
+Validatie daggrens: 12 gerichte tests geslaagd, inclusief 07:59:59 versus 08:00, venstergrenzen en kleur uitsluitend op slaapextremen; manage.py check geslaagd.

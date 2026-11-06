@@ -320,3 +320,6 @@ Gerichte chatcorrecties gebruiken alleen server-eigen meetpreview of de vorige g
 
 
 Sleep length-extremen vergelijken de bestaande veertien kalenderdagen inclusief vandaag (lokale applicatiedatum), met minimaal drie ingevulde waarden. Bij gelijke extremen telt de meest recente datum. Oudere extremen en volledig gelijke slaapduren blijven neutraal. Geen wijziging van gemiddelden, NA of toegangsrechten.
+
+
+7 november — Daily vitals gebruikt een daggrens om 08:00 lokale applicatietijd. Vóór 08:00 eindigt het veertiendaagse venster gisteren; ook de slaapkleur-recente dagen schuiven mee. Alleen laagste slaapduur rood en hoogste groen; gemiddelde en andere vitals blijven neutraal. Overige overzichtsdatums blijven ongewijzigd.

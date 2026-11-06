@@ -1946,7 +1946,35 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Year Planner")
         self.assertContains(response, "Standard Strength")
 
+    def test_vitals_day_changes_at_eight_local_time(self):
+        coach = get_user_model().objects.create_user(username="sleep-cutoff", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Sleep Cutoff", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+        day = date(2026, 11, 7)
+        for offset, hours in ((0, 10), (1, 9), (2, 7), (3, 8), (14, 6)):
+            AthleteDailyVital.objects.create(athlete=athlete, date=day - timedelta(days=offset), sleep_hours=hours, sleep_quality=hours)
+        for clock, expected_end, low, high in (
+            (time(7, 59, 59), day - timedelta(days=1), "", "sleep-extreme-green-dark"),
+            (time(8), day, "sleep-extreme-red-light", "sleep-extreme-green-dark"),
+        ):
+            with self.subTest(clock=clock), patch("core.views.coach.timezone.localtime", return_value=timezone.make_aware(datetime.combine(day, clock))):
+                response = self.client.get("/coach/daily-overview-other/?vital=summary")
+                cell = response.context["vital_rows"][0]["values"][0]
+                self.assertEqual(response.context["vitals_window_end"], expected_end)
+                self.assertEqual(response.context["vitals_window_start"], expected_end - timedelta(days=13))
+                self.assertEqual(cell["sample_count"], 4)
+                self.assertEqual(cell["low_class"], low)
+                self.assertEqual(cell["high_class"], high)
+                self.assertContains(response, f'class="{high}" title="Longest night:')
+                # Only sleep range endpoints receive color; average and other vitals do not.
+                self.assertNotIn("high_class", response.context["vital_rows"][0]["values"][1])
+                self.assertEqual(response.content.decode().count('class="sleep-extreme-'), 1 if clock.hour < 8 else 2)
+
     def test_sleep_extremes_use_recent_dates_in_fourteen_day_window(self):
+        local_noon = timezone.make_aware(datetime.combine(date.today(), time(12)))
+        clock = patch("core.views.coach.timezone.localtime", return_value=local_noon)
+        clock.start()
+        self.addCleanup(clock.stop)
         coach = get_user_model().objects.create_user(username="sleep-colors", is_staff=True)
         athlete = Athlete.objects.create(owner=coach, name="Sleep Colors", birth_year=2000, gender="X")
         self.client.force_login(coach)
@@ -1977,6 +2005,10 @@ class PlanningOverviewTests(TestCase):
                     self.assertContains(response, f'class="{high_class}" title="Longest night:')
 
     def test_daily_overview_other_shows_selected_vital_average(self):
+        local_noon = timezone.make_aware(datetime.combine(date.today(), time(12)))
+        clock = patch("core.views.coach.timezone.localtime", return_value=local_noon)
+        clock.start()
+        self.addCleanup(clock.stop)
         coach = get_user_model().objects.create_user(
             username="vitals-overview-coach",
             password="secret",

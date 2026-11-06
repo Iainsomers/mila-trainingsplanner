@@ -573,3 +573,6 @@ Garmin C/D-chat: gerichte afstandscorrectie binnen bestaande expliciet gemarkeer
 
 
 Staff Team Overview kleurt bij Sleep length de laagste en hoogste slaapduur afzonderlijk: kortste vandaag donkerrood, gisteren/eergisteren lichtrood; langste vandaag donkergroen, gisteren/eergisteren lichtgroen. Gemiddelde en andere vitals blijven neutraal.
+
+
+7 november — Daily vitals gebruikt een daggrens om 08:00 lokale applicatietijd. Vóór 08:00 eindigt het veertiendaagse venster gisteren; ook de slaapkleur-recente dagen schuiven mee. Alleen laagste slaapduur rood en hoogste groen; gemiddelde en andere vitals blijven neutraal. Overige overzichtsdatums blijven ongewijzigd.

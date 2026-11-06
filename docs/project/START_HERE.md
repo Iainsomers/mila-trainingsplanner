@@ -179,3 +179,6 @@ Nieuwste afspraak: groepszonelabel C/D telt uitsluitend zones met >=10% van de v
 
 
 7 november — Staff Team Overview: slaapduur low/high afzonderlijk gekleurd op basis van extremumdatum (vandaag donker, gisteren/eergisteren licht). Zie DATA_RULES voor gelijke waarden en veertiendaagse periode.
+
+
+7 november — Daily vitals gebruikt een daggrens om 08:00 lokale applicatietijd. Vóór 08:00 eindigt het veertiendaagse venster gisteren; ook de slaapkleur-recente dagen schuiven mee. Alleen laagste slaapduur rood en hoogste groen; gemiddelde en andere vitals blijven neutraal. Overige overzichtsdatums blijven ongewijzigd.

@@ -13248,13 +13248,14 @@ def daily_overview_other_view(request):
     vitals_open = bool(request.GET.get("vital"))
     show_na = request.GET.get("show_na") == "1"
     selected_vital = next((option for option in vital_options if option["key"] == selected_vital_key), vital_options[0])
-    vitals_window_start = today - timedelta(days=13)
+    vitals_today = today - timedelta(days=1) if current_time.hour < 8 else today
+    vitals_window_start = vitals_today - timedelta(days=13)
     vital_values = {}
     sleep_dates = {}
     if visible_vital_athlete_ids and selected_vital["key"] != "hr_zones":
         for vital in AthleteDailyVital.objects.filter(
             athlete_id__in=visible_vital_athlete_ids,
-            date__range=(vitals_window_start, today),
+            date__range=(vitals_window_start, vitals_today),
         ).only("athlete_id", "date", *(column["key"] for column in vital_columns)):
             if vital.sleep_hours is not None:
                 sleep_dates.setdefault(vital.athlete_id, []).append((float(vital.sleep_hours), vital.date))
@@ -13338,7 +13339,7 @@ def daily_overview_other_view(request):
                     if column["key"] == "sleep_hours":
                         for bound, value, color in (("low", min(values), "red"), ("high", max(values), "green")):
                             latest = max(day for hours, day in sleep_dates[athlete.id] if hours == value)
-                            age = (today - latest).days
+                            age = (vitals_today - latest).days
                             cell[bound] = f"{value:.1f}"
                             cell[f"{bound}_date"] = latest
                             cell[f"{bound}_class"] = (
@@ -13373,7 +13374,7 @@ def daily_overview_other_view(request):
         "vitals_open": vitals_open,
         "show_na": show_na,
         "vitals_window_start": vitals_window_start,
-        "vitals_window_end": today,
+        "vitals_window_end": vitals_today,
         "hr_zone_rows": hr_zone_rows,
         "meeting_requests": owned_meeting_requests,
         "overview_mode": requested_view,
