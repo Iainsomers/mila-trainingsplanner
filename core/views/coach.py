@@ -13251,18 +13251,17 @@ def daily_overview_other_view(request):
     vitals_today = today - timedelta(days=1) if current_time.hour < 8 else today
     vitals_window_start = vitals_today - timedelta(days=13)
     vital_values = {}
-    sleep_dates = {}
+    vital_dates = {}
     if visible_vital_athlete_ids and selected_vital["key"] != "hr_zones":
         for vital in AthleteDailyVital.objects.filter(
             athlete_id__in=visible_vital_athlete_ids,
             date__range=(vitals_window_start, vitals_today),
         ).only("athlete_id", "date", *(column["key"] for column in vital_columns)):
-            if vital.sleep_hours is not None:
-                sleep_dates.setdefault(vital.athlete_id, []).append((float(vital.sleep_hours), vital.date))
             for column in vital_columns:
                 value = getattr(vital, column["key"], None)
                 if value is not None:
                     vital_values.setdefault(vital.athlete_id, {}).setdefault(column["key"], []).append(float(value))
+                    vital_dates.setdefault(vital.athlete_id, {}).setdefault(column["key"], []).append((float(value), vital.date))
 
     vital_rows = []
     hr_zone_rows = []
@@ -13332,20 +13331,20 @@ def daily_overview_other_view(request):
             cells = []
             for column in vital_columns:
                 values = vital_values.get(athlete.id, {}).get(column["key"], [])
-                cell = {"key": column["key"], "value": "NA", "range": "", "sample_count": len(values)}
+                cell = {"key": column["key"], "label": column["label"], "value": "NA", "range": "", "sample_count": len(values)}
                 if len(values) >= 3:
                     cell["value"] = f"{sum(values) / len(values):.1f}{column['suffix']}"
                     cell["range"] = f"{min(values):.1f}–{max(values):.1f}"
-                    if column["key"] == "sleep_hours":
-                        for bound, value, color in (("low", min(values), "red"), ("high", max(values), "green")):
-                            latest = max(day for hours, day in sleep_dates[athlete.id] if hours == value)
-                            age = (vitals_today - latest).days
-                            cell[bound] = f"{value:.1f}"
-                            cell[f"{bound}_date"] = latest
-                            cell[f"{bound}_class"] = (
-                                f"sleep-extreme-{color}-{'dark' if age == 0 else 'light'}"
-                                if min(values) != max(values) and 0 <= age <= 2 else ""
-                            )
+                    low_color, high_color = ("green", "red") if column["key"] == "morning_hr" else ("red", "green")
+                    for bound, value, color in (("low", min(values), low_color), ("high", max(values), high_color)):
+                        latest = max(day for observed, day in vital_dates[athlete.id][column["key"]] if observed == value)
+                        age = (vitals_today - latest).days
+                        cell[bound] = f"{value:.1f}"
+                        cell[f"{bound}_date"] = latest
+                        cell[f"{bound}_class"] = (
+                            f"vital-extreme-{color}-{'dark' if age == 0 else 'light'}"
+                            if min(values) != max(values) and 0 <= age <= 2 else ""
+                        )
                 cells.append(cell)
             if show_na or any(cell["sample_count"] >= 3 for cell in cells):
                 vital_rows.append({"athlete": athlete, "values": cells})

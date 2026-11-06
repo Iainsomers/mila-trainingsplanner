@@ -1946,6 +1946,32 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Year Planner")
         self.assertContains(response, "Standard Strength")
 
+    def test_all_vital_extremes_color_direction_and_recency(self):
+        coach = get_user_model().objects.create_user(username="all-vital-colors", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Vital Colors", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+        day = date(2026, 11, 7)
+        for values, low_age, high_age in (
+            ((7, 8, 9, 8), 0, 2), ((9, 7, 8, 8), 1, 0),
+            ((8, 9, 7, 8), 2, 1), ((8, 8, 8, 9, 7), 4, 3),
+            ((8, 8, 8), None, None), ((9, 8, 7, 9), 2, 0),
+        ):
+            AthleteDailyVital.objects.filter(athlete=athlete).delete()
+            for offset, value in enumerate(values):
+                AthleteDailyVital.objects.create(athlete=athlete, date=day-timedelta(days=offset),
+                    sleep_hours=value, sleep_quality=value, morning_hr=value+40, hrv=value+50)
+            for clock in (time(7, 59), time(8)):
+                effective_day = day + timedelta(days=1) if clock.hour < 8 else day
+                with self.subTest(values=values, clock=clock), patch("core.views.coach.timezone.localtime", return_value=timezone.make_aware(datetime.combine(effective_day, clock))):
+                    response = self.client.get("/coach/daily-overview-other/?vital=summary")
+                    for cell in response.context["vital_rows"][0]["values"]:
+                        for bound, age in (("low", low_age), ("high", high_age)):
+                            color = "green" if (bound == "low") == (cell["key"] == "morning_hr") else "red"
+                            expected = f"vital-extreme-{color}-{'dark' if age == 0 else 'light'}" if age is not None and age <= 2 else ""
+                            self.assertEqual(cell[f"{bound}_class"], expected)
+                    self.assertEqual(response.content.decode().count('class="vital-extreme-'),
+                        4 * sum(age is not None and age <= 2 for age in (low_age, high_age)))
+
     def test_vitals_day_changes_at_eight_local_time(self):
         coach = get_user_model().objects.create_user(username="sleep-cutoff", is_staff=True)
         athlete = Athlete.objects.create(owner=coach, name="Sleep Cutoff", birth_year=2000, gender="X")
@@ -1954,8 +1980,8 @@ class PlanningOverviewTests(TestCase):
         for offset, hours in ((0, 10), (1, 9), (2, 7), (3, 8), (14, 6)):
             AthleteDailyVital.objects.create(athlete=athlete, date=day - timedelta(days=offset), sleep_hours=hours, sleep_quality=hours)
         for clock, expected_end, low, high in (
-            (time(7, 59, 59), day - timedelta(days=1), "", "sleep-extreme-green-dark"),
-            (time(8), day, "sleep-extreme-red-light", "sleep-extreme-green-dark"),
+            (time(7, 59, 59), day - timedelta(days=1), "", "vital-extreme-green-dark"),
+            (time(8), day, "vital-extreme-red-light", "vital-extreme-green-dark"),
         ):
             with self.subTest(clock=clock), patch("core.views.coach.timezone.localtime", return_value=timezone.make_aware(datetime.combine(day, clock))):
                 response = self.client.get("/coach/daily-overview-other/?vital=summary")
@@ -1965,10 +1991,10 @@ class PlanningOverviewTests(TestCase):
                 self.assertEqual(cell["sample_count"], 4)
                 self.assertEqual(cell["low_class"], low)
                 self.assertEqual(cell["high_class"], high)
-                self.assertContains(response, f'class="{high}" title="Longest night:')
-                # Only sleep range endpoints receive color; average and other vitals do not.
-                self.assertNotIn("high_class", response.context["vital_rows"][0]["values"][1])
-                self.assertEqual(response.content.decode().count('class="sleep-extreme-'), 1 if clock.hour < 8 else 2)
+                self.assertContains(response, f'class="{high}" title="Sleep length highest:')
+                # Both sleep metrics use the same direction; only range endpoints receive color.
+                self.assertEqual(response.context["vital_rows"][0]["values"][1]["high_class"], high)
+                self.assertEqual(response.content.decode().count('class="vital-extreme-'), 2 if clock.hour < 8 else 4)
 
     def test_sleep_extremes_use_recent_dates_in_fourteen_day_window(self):
         local_noon = timezone.make_aware(datetime.combine(date.today(), time(12)))
@@ -1980,13 +2006,13 @@ class PlanningOverviewTests(TestCase):
         self.client.force_login(coach)
         today = timezone.localdate()
         cases = [
-            ((7, 8, 9, 8), "sleep-extreme-red-dark", "sleep-extreme-green-light"),
-            ((9, 7, 8, 8), "sleep-extreme-red-light", "sleep-extreme-green-dark"),
-            ((8, 9, 7, 8), "sleep-extreme-red-light", "sleep-extreme-green-light"),
-            ((8, 8, 8, 7), "", "sleep-extreme-green-dark"),
+            ((7, 8, 9, 8), "vital-extreme-red-dark", "vital-extreme-green-light"),
+            ((9, 7, 8, 8), "vital-extreme-red-light", "vital-extreme-green-dark"),
+            ((8, 9, 7, 8), "vital-extreme-red-light", "vital-extreme-green-light"),
+            ((8, 8, 8, 7), "", "vital-extreme-green-dark"),
             ((8, 8, 8, 9, 7), "", ""),
             ((8, 8, 8, 8), "", ""),
-            ((9, 8, 7, 9), "sleep-extreme-red-light", "sleep-extreme-green-dark"),
+            ((9, 8, 7, 9), "vital-extreme-red-light", "vital-extreme-green-dark"),
         ]
         for values, low_class, high_class in cases:
             with self.subTest(values=values):
@@ -2000,9 +2026,9 @@ class PlanningOverviewTests(TestCase):
                 self.assertEqual(cell["high_class"], high_class)
                 self.assertEqual(cell["sample_count"], len(values))
                 if low_class:
-                    self.assertContains(response, f'class="{low_class}" title="Shortest night:')
+                    self.assertContains(response, f'class="{low_class}" title="Sleep length lowest:')
                 if high_class:
-                    self.assertContains(response, f'class="{high_class}" title="Longest night:')
+                    self.assertContains(response, f'class="{high_class}" title="Sleep length highest:')
 
     def test_daily_overview_other_shows_selected_vital_average(self):
         local_noon = timezone.make_aware(datetime.combine(date.today(), time(12)))

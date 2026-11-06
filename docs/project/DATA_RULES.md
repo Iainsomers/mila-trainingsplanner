@@ -322,4 +322,7 @@ Gerichte chatcorrecties gebruiken alleen server-eigen meetpreview of de vorige g
 Sleep length-extremen vergelijken de bestaande veertien kalenderdagen inclusief vandaag (lokale applicatiedatum), met minimaal drie ingevulde waarden. Bij gelijke extremen telt de meest recente datum. Oudere extremen en volledig gelijke slaapduren blijven neutraal. Geen wijziging van gemiddelden, NA of toegangsrechten.
 
 
-7 november — Daily vitals gebruikt een daggrens om 08:00 lokale applicatietijd. Vóór 08:00 eindigt het veertiendaagse venster gisteren; ook de slaapkleur-recente dagen schuiven mee. Alleen laagste slaapduur rood en hoogste groen; gemiddelde en andere vitals blijven neutraal. Overige overzichtsdatums blijven ongewijzigd.
+7 november — Daily vitals gebruikt een daggrens om 08:00 lokale applicatietijd. Vóór 08:00 eindigt het veertiendaagse venster gisteren; ook de slaapkleur-recente dagen schuiven mee. Alleen de laagste en hoogste waarden krijgen kleur; gemiddelden blijven neutraal. Overige overzichtsdatums blijven ongewijzigd.
+
+
+7 november — Extremumkleuren gelden voor alle vier Daily vitals. Sleep length, Sleep quality en HRV: laagste rood, hoogste groen. Morning HR: laagste groen, hoogste rood. Vandaag donker, één/twee dagen terug licht; oudere/volledig gelijke waarden neutraal, meest recente datum bij gedeeld extremum. Daggrens 08:00 en minimum drie waarden blijven gelden. Alleen range-eindpunten gekleurd, met datumtooltip; gemiddelden/NA en rechten ongewijzigd.

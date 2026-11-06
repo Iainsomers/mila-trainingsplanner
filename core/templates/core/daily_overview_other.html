@@ -4,11 +4,11 @@
 
 {% block extra_head %}
 <style>
-  .other-overview .sleep-extreme-green-dark { background: #176534; color: #fff; }
-  .other-overview .sleep-extreme-green-light { background: #d8efdc; color: #205c31; }
-  .other-overview .sleep-extreme-red-dark { background: #a52330; color: #fff; }
-  .other-overview .sleep-extreme-red-light { background: #f8dadd; color: #84232d; }
-  .other-overview [class*="sleep-extreme-"] { border-radius: 3px; padding: 1px 4px; font-weight: 600; }
+  .other-overview .vital-extreme-green-dark { background: #176534; color: #fff; }
+  .other-overview .vital-extreme-green-light { background: #d8efdc; color: #205c31; }
+  .other-overview .vital-extreme-red-dark { background: #a52330; color: #fff; }
+  .other-overview .vital-extreme-red-light { background: #f8dadd; color: #84232d; }
+  .other-overview [class*="vital-extreme-"] { border-radius: 3px; padding: 1px 4px; font-weight: 600; }
 
   .other-overview {
     max-width: 980px;
@@ -354,7 +354,7 @@
           <thead><tr><th>Athlete</th>{% for column in vital_columns %}<th class="text-end">{{ column.label }}</th>{% endfor %}</tr></thead>
           <tbody>
             {% for row in vital_rows %}
-              <tr><td>{{ row.athlete.name }}</td>{% for cell in row.values %}<td class="text-end" title="{{ cell.sample_count }} entries">{{ cell.value }}{% if cell.range %} <span class="text-muted" aria-label="{{ cell.range }}">({% if cell.key == "sleep_hours" %}<span class="{{ cell.low_class }}" title="Shortest night: {{ cell.low_date|date:'d-m-Y' }}">{{ cell.low }}</span>–<span class="{{ cell.high_class }}" title="Longest night: {{ cell.high_date|date:'d-m-Y' }}">{{ cell.high }}</span>{% else %}{{ cell.range }}{% endif %})</span>{% endif %}</td>{% endfor %}</tr>
+              <tr><td>{{ row.athlete.name }}</td>{% for cell in row.values %}<td class="text-end" title="{{ cell.sample_count }} entries">{{ cell.value }}{% if cell.range %} <span class="text-muted" aria-label="{{ cell.range }}">(<span class="{{ cell.low_class }}" title="{{ cell.label }} lowest: {{ cell.low_date|date:'d-m-Y' }}">{{ cell.low }}</span>–<span class="{{ cell.high_class }}" title="{{ cell.label }} highest: {{ cell.high_date|date:'d-m-Y' }}">{{ cell.high }}</span>)</span>{% endif %}</td>{% endfor %}</tr>
             {% empty %}
               <tr><td colspan="5" class="text-muted">No athletes found.</td></tr>
             {% endfor %}

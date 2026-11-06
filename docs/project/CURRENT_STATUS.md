@@ -544,5 +544,9 @@ Vervolg screenshot 5 november: afwijzing betreft een Z3-Z5-lap in WU/CD/herstel,
 Validatie: 11 gerichte Staff Team Overview/vitals-tests en manage.py check geslaagd. Brede PlanningOverviewTests bevat daarnaast vijf fouten bij eerder gewijzigde plannerteksten/navigatie; niet onderdeel van deze slaapkleurwijziging. Mobiele tabelstructuur behouden; geen visuele browsercontrole uitgevoerd.
 
 
-7 november — Daily vitals gebruikt een daggrens om 08:00 lokale applicatietijd. Vóór 08:00 eindigt het veertiendaagse venster gisteren; ook de slaapkleur-recente dagen schuiven mee. Alleen laagste slaapduur rood en hoogste groen; gemiddelde en andere vitals blijven neutraal. Overige overzichtsdatums blijven ongewijzigd.
+7 november — Daily vitals gebruikt een daggrens om 08:00 lokale applicatietijd. Vóór 08:00 eindigt het veertiendaagse venster gisteren; ook de slaapkleur-recente dagen schuiven mee. Alleen de laagste en hoogste waarden krijgen kleur; gemiddelden blijven neutraal. Overige overzichtsdatums blijven ongewijzigd.
 Validatie daggrens: 12 gerichte tests geslaagd, inclusief 07:59:59 versus 08:00, venstergrenzen en kleur uitsluitend op slaapextremen; manage.py check geslaagd.
+
+
+7 november — Extremumkleuren gelden voor alle vier Daily vitals. Sleep length, Sleep quality en HRV: laagste rood, hoogste groen. Morning HR: laagste groen, hoogste rood. Vandaag donker, één/twee dagen terug licht; oudere/volledig gelijke waarden neutraal, meest recente datum bij gedeeld extremum. Daggrens 08:00 en minimum drie waarden blijven gelden. Alleen range-eindpunten gekleurd, met datumtooltip; gemiddelden/NA en rechten ongewijzigd.
+Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremum/daggrenstests opnieuw geslaagd. manage.py check en diffcontrole geslaagd. Geen migratie; mobiele tabelstructuur behouden.

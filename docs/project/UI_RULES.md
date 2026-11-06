@@ -377,3 +377,6 @@ Year Planner: compacte bedieningsbalk en kleinere navigatieknoppen; drie aparte 
 
 
 Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met contrasterende tekst en datumtooltip. Dit werkt in dezelfde compacte, horizontaal scrollbare vitalstabel op mobiel.
+
+
+7 november — Extremumkleuren gelden voor alle vier Daily vitals. Sleep length, Sleep quality en HRV: laagste rood, hoogste groen. Morning HR: laagste groen, hoogste rood. Vandaag donker, één/twee dagen terug licht; oudere/volledig gelijke waarden neutraal, meest recente datum bij gedeeld extremum. Daggrens 08:00 en minimum drie waarden blijven gelden. Alleen range-eindpunten gekleurd, met datumtooltip; gemiddelden/NA en rechten ongewijzigd.
