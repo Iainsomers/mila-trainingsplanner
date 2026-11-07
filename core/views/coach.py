@@ -6279,6 +6279,11 @@ def _watch_c_merge_half_laps_from_raw(main_text, raw_laps):
 
 def _watch_c_order_main_by_laps(main_text, watch_loads, cd_text=""):
     """Align simple Watch C Main segments with measured lap order and counts."""
+    from core.watch_processing import match_repeating_distance_sets
+
+    mixed = match_repeating_distance_sets(main_text, watch_loads)
+    if mixed:
+        return mixed[0]
     segments = [segment.strip() for segment in str(main_text or "").split("+")]
     segment_pattern = re.compile(
         r"^(?:(\d+)\s*[x×]\s*)?(\d+)\s*m\s+(Z[1-5](?:>Z[1-5])?)"

@@ -23,6 +23,60 @@ class GarminCPushTests(TestCase):
             "startTimeInSeconds": self.start, "distanceInMeters": 1000, "durationInSeconds": 300}
         self.push_url = reverse("garmin_activity_push", args=[receiver_key()])
 
+    def test_mixed_distance_sets_and_existing_flat_clock_ignore_zone_drift(self):
+        from types import SimpleNamespace
+        from core.views.calendar import _annotate_slot_segment_display_times, _virtual_segment_from_text
+        from core.watch_processing import match_repeating_distance_sets, processed_main_reps
+
+        distances = [1700,1200,850] * 2
+        times = [351,233,158,334,220,144]
+        zones = ['Z2','Z2','Z3','Z3','Z3','Z4']
+        values = [(1950,580)]
+        measured_zones = {(1950,580):'Z1'}
+        for index, (distance, seconds, zone) in enumerate(zip(distances,times,zones)):
+            values.append((distance,seconds))
+            measured_zones[distance,seconds] = zone
+            if index < 5:
+                values.append((60,180 if index == 2 else 60))
+                measured_zones[values[-1]] = 'Z1'
+        values.append((2000,570))
+        measured_zones[values[-1]] = 'Z1'
+        GarminActivitySummary.objects.create(athlete=self.athlete, activity_id='mixed-distance-sets',
+            activity_start=datetime.fromtimestamp(self.start, dt_timezone.utc), activity_date='2026-10-31',
+            distance_m=sum(m for m,s in values), duration_s=sum(s for m,s in values),
+            analysis_data={'laps':[dict(distance=m,elapsed_time=s) for m,s in values]})
+        self.client.force_login(self.coach)
+        old_main = ' + '.join(f'1×{distance} m {zone}' for distance,zone in
+                             zip(distances,['Z2','Z2','Z3','Z3','Z2','Z4']))
+        with patch('core.views.polar_raw.lap_zone_paces',
+                   side_effect=lambda m,ms,a: (measured_zones.get((m,ms/1000),'Z1'),'NA')):
+            for model in ('c','d'):
+                url = reverse(f'garmin_type_{model}_ayc')
+                part = self.client.get(url,{'athlete':self.athlete.pk,'date':'2026-10-31'}).json()['results'][0]['parts'][0]
+                main = part['training_fields']['main']
+                self.assertEqual(main, '2×(1700 m - 1200 m - 850 m) Z2>Z4 p60 sp180')
+                loads = part['watch_loads']
+                self.assertEqual([(load['meters'],load['seconds']) for load in loads], values)
+                for text in (main,old_main):
+                    slot = SimpleNamespace(source=f'watch_{model}',watch_loads=loads,
+                        segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',text)]))
+                    reps = processed_main_reps(slot)
+                    self.assertEqual([r['distance_m'] for r in reps],distances)
+                    self.assertEqual([r['measured_seconds'] for r in reps],times)
+                loose_segments = [_virtual_segment_from_text('CORE',part.strip()) for part in old_main.split('+')]
+                loose_slot = SimpleNamespace(source=f'watch_{model}',watch_loads=loads)
+                loose_slot.segments = SimpleNamespace(all=lambda:loose_segments)
+                for segment in loose_segments:
+                    segment.slot = loose_slot
+                _annotate_slot_segment_display_times(loose_slot,self.athlete)
+                self.assertEqual([segment.display_text for segment in loose_segments], [
+                    '1700m - 5:51 - 3:26/km', '1200m - 3:53 - 3:14/km',
+                    '850m - 2:38 - 3:06/km', '1700m - 5:34 - 3:16/km',
+                    '1200m - 3:40 - 3:03/km', '850m - 2:24 - 2:49/km',
+                ])
+                missing = [load for load in loads if load['seconds'] != 220]
+                self.assertIsNone(match_repeating_distance_sets(old_main,missing))
+
     def test_easy_run_then_three_strides_preserves_all_laps_in_c_d_and_chat(self):
         from types import SimpleNamespace
         from urllib.parse import urlencode

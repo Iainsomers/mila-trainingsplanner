@@ -2498,6 +2498,25 @@ def _watch_actual_time_label(actual_loads, seg=None):
     return pace_label or duration_label
 
 
+def _single_watch_rep_display(seg, actual_loads):
+    """Render one measured Main rep without misleading range notation."""
+    if str(getattr(seg, "type", "") or "").upper() != "CORE" or len(actual_loads) != 1:
+        return ""
+    try:
+        reps = int(getattr(seg, "reps", None) or 1)
+        meters = float(actual_loads[0].get("meters") or 0)
+        seconds = float(actual_loads[0].get("seconds") or 0)
+    except (TypeError, ValueError, AttributeError):
+        return ""
+    if reps != 1 or meters <= 0 or seconds <= 0:
+        return ""
+    planned = _segment_rep_distances_m(seg)
+    distance = round(planned[0] if len(planned) == 1 else meters)
+    duration = _format_rep_time_seconds(seconds)
+    pace = _format_rep_time_seconds(seconds * 1000.0 / meters)
+    return f"{distance}m - {duration} - {pace}/km" if duration and pace else ""
+
+
 def _annotate_slot_segment_display_times(slot, athlete):
     if not slot:
         return slot
@@ -2507,23 +2526,55 @@ def _annotate_slot_segment_display_times(slot, athlete):
     except Exception:
         return slot
 
-    if str(getattr(slot, "source", "")) in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    source = str(getattr(slot, "source", ""))
+    ordered_single_rep_loads = {}
+    if source in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         from core.watch_processing import processed_main_reps
         slot.watch_main_reps = processed_main_reps(slot)
 
+        # C/D imports can contain several loose 1x distance segments. Bind
+        # those to the derived clock rows in chronology instead of letting
+        # every equal-distance segment collect every matching lap.
+        core_segments = [seg for seg in segments if str(getattr(seg, "type", "")).upper() == "CORE"]
+        rows = slot.watch_main_reps if isinstance(slot.watch_main_reps, list) else []
+        if source in {"watch_c", "watch_d"} and len(core_segments) == len(rows) and len(rows) >= 2:
+            pairs = []
+            for seg, row in zip(core_segments, rows):
+                distances = _segment_rep_distances_m(seg)
+                try:
+                    reps = int(getattr(seg, "reps", None) or 1)
+                    planned = float(distances[0]) if len(distances) == 1 else 0
+                    measured = float(row.get("measured_distance_m") or 0)
+                    target = float(row.get("distance_m") or 0)
+                except (TypeError, ValueError, AttributeError):
+                    pairs = []
+                    break
+                if reps != 1 or planned <= 0 or abs(planned - target) > 1:
+                    pairs = []
+                    break
+                pairs.append((seg, {
+                    "matched_rep": True,
+                    "meters": measured,
+                    "seconds": float(row.get("measured_seconds") or row.get("seconds") or 0),
+                    "average_hr": row.get("average_hr"),
+                    "hr_tail": row.get("hr_tail"),
+                }))
+            ordered_single_rep_loads = {id(seg): [load] for seg, load in pairs}
+
     for seg in segments:
         text = getattr(seg, "text", "") or ""
-        actual_loads = _watch_segment_loads(seg)
+        actual_loads = ordered_single_rep_loads.get(id(seg)) or _watch_segment_loads(seg)
         seg.flex_actual_loads_json = json.dumps(actual_loads, separators=(",", ":")) if actual_loads else ""
         # Only segments with measured Watch loads already carry actual timing.
         # A non-Main edit keeps the actual Main loads, while the edited WU/CD
         # (which has no measured load anymore) should still receive the normal
         # planned guidance.
         is_watch_segment = bool(actual_loads)
+        single_rep_display = _single_watch_rep_display(seg, actual_loads) if is_watch_segment else ""
         label = _watch_actual_time_label(actual_loads, seg) if is_watch_segment else _segment_rep_time_label(athlete, seg)
         hr_label = "" if is_watch_segment else _segment_hr_label(athlete, seg)
         display_labels = "; ".join(part for part in (label, hr_label) if part)
-        seg.display_text = f"{text} ({display_labels})" if text and display_labels else text
+        seg.display_text = single_rep_display or (f"{text} ({display_labels})" if text and display_labels else text)
     return slot
 
 

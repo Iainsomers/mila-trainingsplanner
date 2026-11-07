@@ -1,10 +1,88 @@
 """Persisted, display-ready output derived from a slot's raw Watch laps."""
 
+import math
 import re
+from statistics import median
 from core.watch_hr import tail_hr
 
 
 WATCH_SOURCES = {"watch_a", "watch_b", "watch_c", "watch_d"}
+
+
+def match_repeating_distance_sets(main, loads):
+    """Bind mixed-distance sets to single measured laps in recorded order."""
+    from core.training_text import split_main_segments
+
+    grouped = re.fullmatch(
+        r"\s*(\d+)\s*[×x*]\s*\(([^()]+)\)\s+Z[1-5](?:>Z[1-5])?"
+        r"(?:\s+p\d+)?(?:\s+sp\d+)?\s*", str(main or ""), re.I,
+    )
+    if grouped:
+        count = int(grouped[1])
+        items = [re.fullmatch(r"\s*(\d+)\s*m\s*", item, re.I) for item in grouped[2].split("-")]
+        if not 2 <= count <= 10 or not all(items):
+            return None
+        distances = [int(item[1]) for item in items] * count
+    else:
+        items = [re.fullmatch(r"(?:1\s*[×x*]\s*)?(\d+)\s*m\s+Z[1-5](?:>Z[1-5])?(?:\s+\([^()]+\))?(?:\s+p\d+)?", item, re.I)
+                 for item in split_main_segments(main)]
+        if not items or not all(items):
+            return None
+        distances = [int(item[1]) for item in items]
+    if not 4 <= len(distances) <= 30 or min(distances) < 400:
+        return None
+    width = next((size for size in range(2, len(distances)//2+1)
+                  if len(distances) % size == 0 and len(set(distances[:size])) > 1
+                  and distances == distances[:size] * (len(distances)//size)), None)
+    if width is None:
+        return None
+
+    work, pending, pauses = [], [], []
+    for load in loads:
+        if not isinstance(load, dict) or load.get("combined_outer") or load.get("segment", "CORE") != "CORE":
+            continue
+        try:
+            meters, seconds = float(load.get("meters") or 0), float(load.get("seconds") or 0)
+        except (ValueError, TypeError):
+            return None
+        if not math.isfinite(meters + seconds) or meters < 0 or seconds <= 0:
+            return None
+        if load.get("work_rep") is False or meters / seconds < 2.5:
+            pending.append((meters, seconds))
+            continue
+        if len(work) == len(distances):
+            return None
+        target = distances[len(work)]
+        if abs(meters-target) > max(30, target*.08):
+            return None
+        if pending:
+            rest_m, rest_s = map(sum, zip(*pending))
+            if rest_m > 600 or rest_s > 600 or meters/seconds < 1.2 * rest_m/rest_s:
+                return None
+            if work and float(work[-1]["meters"])/float(work[-1]["seconds"]) < 1.2 * rest_m/rest_s:
+                return None
+        else:
+            rest_s = 0
+        if work:
+            pauses.append(rest_s)
+        pending = []
+        work.append(load)
+    if len(work) != len(distances) or any(meters > 600 for meters, _ in pending):
+        return None
+
+    zones = sorted({str(load.get("zone")) for load in work} & set("12345"))
+    if not zones:
+        return None
+    zone = f"Z{zones[0]}" + (f">Z{zones[-1]}" if len(zones) > 1 else "")
+    inner = " - ".join(f"{distance} m" for distance in distances[:width])
+    text = f"{len(distances)//width}×({inner}) {zone}"
+    ordinary = [pause for index, pause in enumerate(pauses, 1) if index % width]
+    between = [pause for index, pause in enumerate(pauses, 1) if not index % width]
+    if ordinary and all(ordinary):
+        text += f" p{int(median(ordinary)+.5)}"
+    if between and all(between):
+        text += f" sp{int(median(between)+.5)}"
+    return text, list(zip(distances, work))
 
 
 def is_walking_load(meters, seconds):
@@ -95,6 +173,11 @@ def structured_segment_loads(segment, raw_loads):
     from core.watch_structure import short_sets_and_continuous, continuous_kilometre_run
     if str(getattr(segment, "type", "")).upper() != "CORE":
         return None
+    text = str(getattr(segment, "text", "") or "")
+    if "(" in text:
+        mixed = match_repeating_distance_sets(text, raw_loads)
+        if mixed:
+            return [dict(load, matched_rep=True, nominal_target_m=target) for target, load in mixed[1]]
     loads = [load for load in raw_loads if isinstance(load, dict) and not load.get("combined_outer")
              and str(load.get("segment") or "CORE").upper() in {"CORE", "CD"}]
     ai_groups = {}
@@ -243,13 +326,18 @@ def processed_main_reps(slot):
             if len(parts) > 1 else [segment]
         )
 
+    if len(expanded_segments) >= 4 and slot.source in {"watch_c", "watch_d"}:
+        mixed = match_repeating_distance_sets(" + ".join(seg.text for seg in expanded_segments), raw_loads)
+        if mixed:
+            expanded_segments = [_virtual_segment_from_text("CORE", mixed[0])]
+
     for segment in expanded_segments:
         structured = structured_segment_loads(segment, raw_loads)
         if structured is not None:
             for load in structured:
                 meters, seconds = float(load["meters"]), float(load["seconds"])
                 distance_match = re.search(r"(\d+)\s*m\b", str(segment.text), re.IGNORECASE)
-                target_m = int(distance_match.group(1)) if distance_match else round(meters)
+                target_m = load.get("nominal_target_m") or (int(distance_match.group(1)) if distance_match else round(meters))
                 output.append({"rep": len(output) + 1,
                     "distance_m": target_m,
                     "measured_distance_m": round(meters, 4),

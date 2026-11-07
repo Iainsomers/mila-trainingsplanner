@@ -553,3 +553,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 7 november - Garmin C/D ondersteunt een doorlopend Z1-blok met korte slotversnellingen in Main. Test met zestien lapmetingen uit de casus geeft 10000 m Z1 + 3x100 m Z5 p85, gemeten herstel 95/74 s en reptijden 19/18/18 s. De korte overgang van 3,48 m in 1 s blijft onderdeel van de duurloop. Gemeten preview en automatische analyse herkennen dit direct. De chat wordt getest met een gemockt AI-antwoord. Live AI-uitkomst en Render-uitrol zijn nog niet bevestigd.
+
+
+7 november - Garmin C/D vat herhaalde gemengde afstanden samen en kan het klokje voor bestaande losse onderdelen herstellen bij afwijkende zones. Synthetische regressie 2x(1700 m - 1200 m - 850 m) met wisselende zones controleert beide endpoints, alle zes klokregels en afwijzing bij een ontbrekende bronlap. Losse onderdelen met één herhaling worden in het dagdeel chronologisch aan precies één klokregel gekoppeld en compact weergegeven als `1700m - 5:51 - 3:26/km`, zonder misleidende pijlranges. De productieactiviteit is niet geïnspecteerd.
