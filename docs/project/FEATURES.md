@@ -579,3 +579,6 @@ Staff Team Overview kleurt bij Sleep length de laagste en hoogste slaapduur afzo
 
 
 7 november — Extremumkleuren gelden voor alle vier Daily vitals. Sleep length, Sleep quality en HRV: laagste rood, hoogste groen. Morning HR: laagste groen, hoogste rood. Vandaag donker, één/twee dagen terug licht; oudere/volledig gelijke waarden neutraal, meest recente datum bij gedeeld extremum. Daggrens 08:00 en minimum drie waarden blijven gelden. Alleen range-eindpunten gekleurd, met datumtooltip; gemiddelden/NA en rechten ongewijzigd.
+
+
+Garmin C/D toont een stabiele Z1-duurloop met een duidelijk gemeten slotserie van minstens drie korte versnellingen als twee blokken in Main. De gemeten preview herkent dit direct. De AI-chat kan dezelfde indeling voorstellen via continuous_main_laps.

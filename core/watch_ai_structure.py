@@ -23,6 +23,44 @@ class ValidatedDescription(str):
         return value
 
 
+def _continuous_easy_prefix(rows):
+    """A sustained easy block may end with a tiny recorded transition."""
+    last = rows[-1]
+    if 0 < last['distance_m'] <= 5 and 0 < last['duration_s'] <= 2 and last['zone'] in {'Z1', 'Z2'}:
+        rows = rows[:-1]
+    if len(rows) < 2 or sum(row['distance_m'] for row in rows) < 800:
+        return False
+    if any(row['zone'] != 'Z1' or row['duration_s'] <= 0 for row in rows):
+        return False
+    if (any(row.get('lap_intensity') in (1, 4, 5) for row in rows)
+            or sum((row.get('paused_s') or 0) >= 15 for row in rows) >= 2):
+        return False
+    speeds = [row['distance_m'] / row['duration_s'] for row in rows]
+    return all(map(math.isfinite, speeds)) and min(speeds) >= 2 and max(speeds) <= 1.25 * min(speeds)
+
+
+def infer_easy_run_with_strides(facts, *, rep_zone=None):
+    """Recognize an easy run followed by an unambiguous short interval series."""
+    first_work = next((i for i, row in enumerate(facts) if row['zone'] in {'Z3', 'Z4', 'Z5'}), None)
+    if not first_work or not _continuous_easy_prefix(facts[:first_work]):
+        return None
+    tail = facts[first_work:]
+    if len(tail) % 2 == 0:
+        finish = tail[-1]
+        if not (0 < finish['duration_s'] <= 600 and finish['distance_m'] <= 600
+                and finish['distance_m'] < 2 * finish['duration_s']):
+            return None
+    work = tail[::2]
+    if len(work) < 3 or any(row['zone'] not in {'Z3','Z4','Z5'}
+                            or not 70 <= row['distance_m'] <= 130
+                            or not 10 <= row['duration_s'] <= 35 for row in work):
+        return None
+    proposal = {'continuous_main_laps': [row['lap'] for row in facts[:first_work]],
+                'recovery_laps': [row['lap'] for row in tail[1::2]],
+                'groups': [{'target_meters':100, 'reps':[[row['lap']] for row in work]}]}
+    return validate_lap_structure({'confidence':1, 'lap_structure':proposal}, facts, rep_zone=rep_zone)
+
+
 def infer_lap_structure(facts, *, rep_zone=None):
     """Propose clear mixed time groups locally, then use the same validator.
 
@@ -136,6 +174,12 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
         cooldown = indices(proposal.get('cooldown_laps', []))
         recovery = indices(proposal.get('recovery_laps', []))
         stops = indices(proposal.get('stop_laps', []))
+        continuous = indices(proposal.get('continuous_main_laps', []))
+        if continuous:
+            reason = 'Continuous Main must be a consecutive easy running block before the interval series.'
+            if (requested_structure or continuous != list(range(continuous[0], continuous[-1]+1))
+                    or not _continuous_easy_prefix([by_id[i] for i in continuous])):
+                return reject()
         # A boundary may include a recorded walking transition. Preserve that
         # source lap as non-work recovery instead of adding walking to WU/CD
         # or rejecting an otherwise valid AI-selected interval structure.
@@ -230,6 +274,9 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             return reject()
         reason = 'Warmup must precede work, cooldown must follow work; leading recovery must be slow and trailing recovery immediately follow work.'
         first, last = blocks[0]['ids'][0], blocks[-1]['ids'][-1]
+        if continuous and (continuous[-1] >= first or any(i >= continuous[0] for i in warmup)):
+            reason = 'Continuous Main must follow warmup and precede all repetitions.'
+            return reject()
         if any(i >= first for i in warmup) or any(i <= last for i in cooldown):
             return reject()
         if any(i < first and by_id[i]["distance_m"]/by_id[i]["duration_s"] >= 2 for i in recovery):
@@ -341,8 +388,16 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             zones = sorted({by_id[i]['zone'] for i in ids} & {'Z1','Z2'})
             zone = (' '+(zones[0] if len(zones)==1 else zones[0]+'>'+zones[-1])) if zones else ''
             return f'{math.floor(meters/50+.5)*50} m{zone}'
+        if continuous:
+            meters = sum(by_id[i]['distance_m'] for i in continuous)
+            seconds = sum(by_id[i]['duration_s'] for i in continuous)
+            nominal = math.floor(meters/50+.5)*50
+            distance_parts.insert(0, f'{nominal} m Z1')
+            for i in continuous:
+                assignments[i-1].update(work_rep=True, ai_rep=continuous[0], ai_group=len(groups),
+                    ai_target_seconds=round(seconds), ai_nominal_m=nominal)
         fields = {'wu':boundary(warmup), 'main':' + '.join(distance_parts), 'cd':boundary(cooldown)}
-        time_fields = None if any(g.get('target_meters') is not None for g in groups) else dict(fields, main=' + '.join(time_parts))
+        time_fields = None if continuous or any(g.get('target_meters') is not None for g in groups) else dict(fields, main=' + '.join(time_parts))
         return {'training_fields':fields, 'time_fields':time_fields, 'assignments':assignments,
                 'description':description(fields)}
     except (KeyError, TypeError, ValueError, ZeroDivisionError, OverflowError):

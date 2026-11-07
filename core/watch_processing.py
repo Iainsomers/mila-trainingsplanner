@@ -110,8 +110,10 @@ def structured_segment_loads(segment, raw_loads):
         if nested:
             text = str(int(nested[1])*int(nested[2])) + '×' + text[nested.end():]
         distance = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*m\b", text, re.I)
+        continuous = re.fullmatch(r"\s*(\d+)\s*m(?:\s+Z[1-5](?:>Z[1-5])?)?\s*", text, re.I)
         timed = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*['′]", text)
         matches = (distance and int(distance[1]) == len(reps) and int(distance[2]) == first["ai_nominal_m"]
+                   or continuous and len(reps) == 1 and int(continuous[1]) == first["ai_nominal_m"]
                    or timed and int(timed[1]) == len(reps) and int(timed[2])*60 == first["ai_target_seconds"])
         if matches:
             return [{"matched_rep":True, "meters":sum(float(l["meters"]) for l in block),

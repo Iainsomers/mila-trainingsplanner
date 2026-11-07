@@ -550,3 +550,6 @@ Validatie daggrens: 12 gerichte tests geslaagd, inclusief 07:59:59 versus 08:00,
 
 7 november — Extremumkleuren gelden voor alle vier Daily vitals. Sleep length, Sleep quality en HRV: laagste rood, hoogste groen. Morning HR: laagste groen, hoogste rood. Vandaag donker, één/twee dagen terug licht; oudere/volledig gelijke waarden neutraal, meest recente datum bij gedeeld extremum. Daggrens 08:00 en minimum drie waarden blijven gelden. Alleen range-eindpunten gekleurd, met datumtooltip; gemiddelden/NA en rechten ongewijzigd.
 Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremum/daggrenstests opnieuw geslaagd. manage.py check en diffcontrole geslaagd. Geen migratie; mobiele tabelstructuur behouden.
+
+
+7 november - Garmin C/D ondersteunt een doorlopend Z1-blok met korte slotversnellingen in Main. Test met zestien lapmetingen uit de casus geeft 10000 m Z1 + 3x100 m Z5 p85, gemeten herstel 95/74 s en reptijden 19/18/18 s. De korte overgang van 3,48 m in 1 s blijft onderdeel van de duurloop. Gemeten preview en automatische analyse herkennen dit direct. De chat wordt getest met een gemockt AI-antwoord. Live AI-uitkomst en Render-uitrol zijn nog niet bevestigd.

@@ -23,6 +23,64 @@ class GarminCPushTests(TestCase):
             "startTimeInSeconds": self.start, "distanceInMeters": 1000, "durationInSeconds": 300}
         self.push_url = reverse("garmin_activity_push", args=[receiver_key()])
 
+    def test_easy_run_then_three_strides_preserves_all_laps_in_c_d_and_chat(self):
+        from types import SimpleNamespace
+        from urllib.parse import urlencode
+        from unittest.mock import MagicMock
+        from core.views.calendar import _virtual_segment_from_text
+        from core.views.garmin import CONSENT_VERSION
+        from core.watch_ai_structure import infer_easy_run_with_strides
+        from core.watch_processing import processed_main_reps
+
+        values = [(1005.27,327),(1000.84,308),(998.29,316),(1001.47,327),(997.8,318),
+                  (1000.28,321),(1002.78,324),(997.69,318),(998,322),(1003.04,315),
+                  (3.48047,1),(104.409,19),(109.641,95),(106.399,18),(95.3701,74),(110.54,18)]
+        facts = [dict(lap=i, distance_m=m, duration_s=s,
+                      zone='Z5' if i in (12,14,16) else 'Z2' if i == 11 else 'Z1')
+                 for i,(m,s) in enumerate(values,1)]
+        self.assertIsNone(infer_easy_run_with_strides(facts[:11]))
+        self.assertIsNone(infer_easy_run_with_strides(facts[:-2]))
+        too_fast_recovery = [dict(row,duration_s=20) if row['lap'] == 13 else row for row in facts]
+        self.assertIsNone(infer_easy_run_with_strides(too_fast_recovery))
+        GarminActivitySummary.objects.create(athlete=self.athlete, activity_id='easy-and-strides',
+            activity_start=datetime.fromtimestamp(self.start, dt_timezone.utc), activity_date='2026-10-31',
+            distance_m=sum(m for m,s in values), duration_s=sum(s for m,s in values),
+            analysis_data={'laps':[dict(distance=m,elapsed_time=s) for m,s in values]})
+        self.athlete.garmin_ai_consent_at = timezone.now()
+        self.athlete.garmin_ai_consent_version = CONSENT_VERSION
+        self.athlete.save()
+        self.client.force_login(self.coach)
+        proposal = dict(confidence=.96,lap_structure=dict(continuous_main_laps=list(range(1,12)),
+            recovery_laps=[13,15],groups=[dict(target_meters=100,reps=[[12],[14],[16]])]))
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(
+            {'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode()
+        with patch.dict('os.environ',{'OPENAI_API_KEY':'test'}), patch(
+                'core.views.polar_raw.urlopen',return_value=response) as ai, patch(
+                'core.views.polar_raw.lap_zone_paces',
+                side_effect=lambda m,ms,a: ('Z5' if m / (ms / 1000) > 5 else 'Z2' if m < 5 else 'Z1','NA')):
+            for model in ('c','d'):
+                url = reverse(f'garmin_type_{model}_ayc')
+                query = {'athlete':self.athlete.pk,'date':'2026-10-31'}
+                before = ai.call_count
+                for preview in ('measured',''):
+                    activity = self.client.get(url,{**query,'preview':preview}).json()['results'][0]
+                    self.assertEqual(activity['parts'][0]['ai_structure_status'],'measured_structure')
+                self.assertEqual(ai.call_count,before)
+                chat = self.client.post(url+'?'+urlencode({**query,'suggestion_session':activity['start']}),
+                    {'chat':json.dumps([{'role':'user','content':'10000m Z1//3*100m Z5'}])}).json()
+                self.assertTrue(chat['ok'],chat)
+                for item in (activity,chat['results'][0]):
+                    part = item['parts'][0]
+                    fields = part['training_fields']
+                    self.assertEqual(fields,{'wu':'','main':'10000 m Z1 + 3×100 m Z5 p85','cd':''})
+                    self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],values)
+                    slot = SimpleNamespace(source=f'watch_{model}',watch_loads=part['watch_loads'],
+                        segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',fields['main'])]))
+                    reps = processed_main_reps(slot)
+                    self.assertEqual([r['distance_m'] for r in reps],[10000,100,100,100])
+                    self.assertEqual([r['measured_seconds'] for r in reps],[sum(s for m,s in values[:11]),19,18,18])
+
     def test_suggestion_targets_one_activity_and_hides_athlete_diagnostics(self):
         from unittest.mock import MagicMock
         from core.tests_watch_ai_structure import split_distance_example

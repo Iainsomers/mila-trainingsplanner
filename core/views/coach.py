@@ -6019,6 +6019,7 @@ def garmin_type_c_ayc_view(request, model="C"):
 
     from .polar_raw import translate_model_b, type_a_watch_loads, lap_zone_paces
     from core.views.garmin import ai_allowed, fit_ai_allowed
+    from core.watch_ai_structure import apply_lap_structure, infer_easy_run_with_strides, infer_lap_structure
     results = []
     for session in sessions:
         allowed = fit_ai_allowed(athlete) if session.get('is_fit_upload') else ai_allowed(athlete)
@@ -6027,11 +6028,26 @@ def garmin_type_c_ayc_view(request, model="C"):
         if guided and not allowed:
             return JsonResponse({'ok':False, 'message':'AI permission is required to check a suggestion.', 'results':[]}, status=403)
         quick_preview = request.GET.get('preview') == 'measured'
-        translated = translate_model_b([session], 5, athlete, allow_ai=allowed and not quick_preview, allow_lap_structure=True, requested_structure=requested_structure, chat_messages=chat_messages)
-        if allowed and quick_preview:
+        measured_structure = None
+        if not guided:
+            raw_laps = (session.get('laps') or {}).get('laps') or []
+            facts = []
+            for index, lap in enumerate(raw_laps, 1):
+                meters, millis = lap['distanceMeters'], lap['durationMillis']
+                facts.append({'lap':index, 'distance_m':meters, 'duration_s':millis / 1000,
+                              'zone':lap_zone_paces(meters, millis, athlete)[0],
+                              'lap_intensity':lap.get('lapIntensity'),
+                              'paused_s':(lap.get('pausedDurationMillis') or 0) / 1000})
+            measured_structure = infer_easy_run_with_strides(facts)
+        translated = translate_model_b([session], 5, athlete, allow_ai=allowed and not quick_preview and not measured_structure, allow_lap_structure=True, requested_structure=requested_structure, chat_messages=chat_messages)
+        if measured_structure or (allowed and quick_preview):
             for item in translated:
                 for part in item.get('parts') or []:
-                    part['ai_structure_status'] = 'pending'
+                    if measured_structure:
+                        part['validated_lap_structure'] = measured_structure
+                        part['ai_structure_status'] = 'measured_structure'
+                    else:
+                        part['ai_structure_status'] = 'pending'
         if guided:
             parts = [p for item in translated for p in item.get('parts', [])]
             if not parts or any(not p.get('validated_lap_structure') for p in parts):
@@ -6045,7 +6061,6 @@ def garmin_type_c_ayc_view(request, model="C"):
     for session, result in zip(matched_sessions, results):
         for part in result.get("parts") or []:
             watch_loads = type_a_watch_loads(session, athlete)
-            from core.watch_ai_structure import apply_lap_structure, infer_lap_structure
             facts = [{'lap':index, 'distance_m':load['meters'], 'duration_s':load['seconds'],
                       'zone':'Z'+str(load.get('zone') or '')} for index, load in enumerate(watch_loads, 1)]
             structure = part.pop("validated_lap_structure", None) or infer_lap_structure(facts, rep_zone=lambda m, s: lap_zone_paces(m, s * 1000, athlete)[0])

@@ -326,3 +326,6 @@ Sleep length-extremen vergelijken de bestaande veertien kalenderdagen inclusief 
 
 
 7 november — Extremumkleuren gelden voor alle vier Daily vitals. Sleep length, Sleep quality en HRV: laagste rood, hoogste groen. Morning HR: laagste groen, hoogste rood. Vandaag donker, één/twee dagen terug licht; oudere/volledig gelijke waarden neutraal, meest recente datum bij gedeeld extremum. Daggrens 08:00 en minimum drie waarden blijven gelden. Alleen range-eindpunten gekleurd, met datumtooltip; gemiddelden/NA en rechten ongewijzigd.
+
+
+Garmin C/D duurblok met versnellingen (7 november 2026). Een doorlopend Main-blok bestaat uit opeenvolgende Z1-looplaps (minstens twee, samen minimaal 800 m), zonder FIT-intervalmarkering of meerdere langere timerpauzes. Het snelheidsverschil binnen het duurblok is maximaal 25%. Een gemeten overgangslap aan het eind van maximaal 5 m en 2 s in Z1/Z2 mag bij dat blok blijven. De automatische herkenning vereist een daaropvolgende reeks van minstens drie Z3-Z5-versnellingen rond 100 m en gemeten herstel. Dezelfde lapdekking, afstandsmarges en het snelheidscontrast van minimaal 20% tussen reps en herstel gelden. Afstanden, tijden en D-hartslagcorrectie volgen de gemeten bronlaps.

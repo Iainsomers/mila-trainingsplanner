@@ -800,6 +800,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             'If unsupported, return confidence 0. Derive warmup, cooldown and recovery from measurements.')
     if strict_lap_structure:
         prompt['output_schema'] = {key:prompt['output_schema'][key] for key in ('lap_structure','confidence')}
+        prompt['output_schema']['lap_structure']['continuous_main_laps'] = ['optional consecutive easy running lap numbers before the reps']
         prompt['task'] = (
             'Identify the performed running workout using only these recorded laps. Return lap_structure and numeric confidence from 0 to 1. '
             'Every original one-based lap number must appear exactly once in warmup_laps, cooldown_laps, recovery_laps, stop_laps or a work rep. '
@@ -807,6 +808,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             'For each group choose exactly one target: nominal target_meters (multiple of 50), or whole-minute target_seconds; omit or null the other. '
             'Distance targets allow GPS variation of max(30 meters, 8 percent of target). Different pace zones and progressive speeds do not require separate groups. '
             'Consecutive Z1 laps default to one continuous easy run, including the final partial lap. Autolaps and timer pauses alone are not Z1 repetitions. Only explicit interval markers or clear relative work/recovery override this. '
+            'When a sustained easy run is followed by strides, put the continuous running laps in continuous_main_laps and the strides in groups. For example, ten Z1 kilometre splits followed by a tiny 3m/1s transition and three fast 100m efforts separated by slow recoveries are 10000m easy + 3x100m. Include the tiny transition at the end of continuous_main_laps, and keep every measured recovery separate. '
             'Repeated work with slower recoveries is interval evidence. Automatic equal-distance splits without recovery are not. '
             'Determine work/recovery structure before intensity zones. Check every proposed warmup boundary: an opening lap matching later reps in distance and speed, followed by comparable slower recovery, belongs to the interval sequence even in Z1/Z2. Example: eight 500m efforts around 100s with 60s recoveries, then 208s recovery and eight more 500m efforts form 2x8x500m; keep all sixteen reps in one group with set_start_laps. A genuinely longer or clearly slower warmup remains warmup. '
             'If a longer recovery divides equal-size sets, use one group and set_start_laps containing the first work lap of every set, including the first rep. '
@@ -935,7 +937,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
                     return [numeric_tree(v) for v in value[:100]]
                 if isinstance(value,dict):
                     keys = {'lap_structure','confidence','warmup_laps','cooldown_laps','recovery_laps',
-                            'stop_laps','groups','target_meters','target_seconds','set_start_laps','reps'}
+                            'stop_laps','continuous_main_laps','groups','target_meters','target_seconds','set_start_laps','reps'}
                     return {k:numeric_tree(v) for k,v in value.items() if k in keys}
                 return None
             repair_body['messages'].append({'role':'assistant','content':json.dumps(numeric_tree(data))})
