@@ -462,7 +462,9 @@ class GarminCPushTests(TestCase):
         self.send({'activityDetails':[details]})
         saved=GarminActivitySummary.objects.get().analysis_data
         self.assertTrue(saved['heart_rate_samples'])
-        self.assertEqual(saved['laps'],[])
+        self.assertEqual([lap['elapsed_time'] for lap in saved['laps']],[150,150])
+        self.assertTrue(all(lap['distance'] is None for lap in saved['laps']))
+        self.assertEqual(saved['lap_data_status'],'available_time_only')
         self.assertNotIn('latitudeInDegree',json.dumps(saved))
         for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
             self.client.force_login(self.coach)
@@ -473,6 +475,8 @@ class GarminCPushTests(TestCase):
             self.assertEqual(item['activity_metrics']['max_hr'],170)
             self.assertEqual(item['activity_metrics']['active_kcal'],450)
             self.assertEqual(item['activity_metrics']['heart_rate_sample_count'],6)
+            self.assertEqual([row['duration'] for row in item['parts'][0]['manual']],
+                             ['00:02:30.000','00:02:30.000'])
             self.assertNotIn('watch_loads',item['parts'][0])
         from core.garmin_details import lap_data
         details['summary'].pop('averageHeartRateInBeatsPerMinute')
@@ -481,6 +485,34 @@ class GarminCPushTests(TestCase):
         self.assertIn('sample_average_hr',metrics)
         self.assertNotIn('average_hr',metrics)
         self.assertEqual(metrics['sample_max_hr'],170)
+
+    def test_distance_free_elliptical_keeps_and_recognizes_six_by_eight_laps(self):
+        durations = [600,480,180,481,179,479,181,480,180,481,180,479,600]
+        starts, elapsed = [], 0
+        for seconds in durations:
+            starts.append(self.start + elapsed)
+            elapsed += seconds
+        details = {'userId':'runner-id','activityId':999,'summaryId':'elliptical-laps',
+            'summary':dict(self.summary,activityId=999,activityType='ELLIPTICAL',
+                durationInSeconds=elapsed,averageHeartRateInBeatsPerMinute=132),
+            'laps':[{'startTimeInSeconds':timestamp} for timestamp in starts],
+            'samples':[{'startTimeInSeconds':self.start+second,'heartRate':145 if index%2==0 else 110}
+                       for index,(start,seconds) in enumerate(zip(starts,durations))
+                       for second in range(start-self.start,start-self.start+seconds,30)]}
+        details['summary'].pop('distanceInMeters')
+        self.assertEqual(self.send({'activityDetails':[details]}).status_code,200)
+        saved=GarminActivitySummary.objects.get(activity_id='999').analysis_data
+        self.assertEqual([lap['elapsed_time'] for lap in saved['laps']],durations)
+        self.assertTrue(all(lap['distance'] is None for lap in saved['laps']))
+        for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+            self.client.force_login(self.coach)
+            part=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'}).json()['results'][0]['parts'][0]
+            self.assertEqual(part['training_fields'],{'alt':"Elliptical 6×8' p180"})
+            self.assertEqual(len(part['manual']),13)
+            self.assertEqual(part['manual'][0]['duration'],'00:10:00.000')
+            self.assertEqual(part['manual'][1]['duration'],'00:08:00.000')
+            self.assertEqual(part['manual'][2]['duration'],'00:03:00.000')
+            self.assertEqual(part['manual'][0]['distance'],'NA')
 
     def test_non_running_previews_use_average_hr_plus_ten_in_both_models(self):
         self.athlete.zone_hr_bpm = {'1':'151','2':'152-168','3':'169-178','4':'179-184','5':'185-200'}
@@ -508,7 +540,7 @@ class GarminCPushTests(TestCase):
                     self.assertEqual(part['training_fields'],{'alt':expected})
                     self.assertIn(f'+ 10 = {hr+10} bpm',part['analysis_note'])
                     self.assertNotIn('watch_loads',part)
-                    self.assertEqual(part['manual'],[])
+                    self.assertEqual(len(part['manual']),2)
         cycling=GarminActivitySummary.objects.get(activity_id='103')
         self.assertEqual(cycling.analysis_data['activity_metrics']['sport'],'CYCLING')
         self.assertTrue(cycling.analysis_data['laps'])
@@ -751,8 +783,8 @@ class GarminCPushTests(TestCase):
         self.assertEqual(GarminActivitySummary.objects.count(), 2)
         missing = GarminActivitySummary.objects.get(activity_id="111")
         self.assertIsNone(missing.distance_m)
-        self.assertEqual(missing.analysis_data["lap_data_status"], "missing_distance")
-        self.assertEqual(missing.analysis_data["laps"], [])
+        self.assertEqual(missing.analysis_data["lap_data_status"], "available_time_only")
+        self.assertEqual([lap['elapsed_time'] for lap in missing.analysis_data["laps"]], [150,150])
         self.assertTrue(missing.analysis_data["details_received_at"])
         usable = GarminActivitySummary.objects.get(activity_id="456")
         self.assertEqual([lap["distance"] for lap in usable.analysis_data["laps"]], [500, 500])
@@ -766,7 +798,7 @@ class GarminCPushTests(TestCase):
         self.assertEqual(self.send({"activityDetails": [details]}).status_code, 200)
         saved = GarminActivitySummary.objects.get()
         self.assertEqual(saved.distance_m, 1000)
-        self.assertEqual(saved.analysis_data["laps"], [])
+        self.assertEqual([lap['elapsed_time'] for lap in saved.analysis_data["laps"]], [150,150])
 
     def test_successful_details_receipt_reports_laps_with_private_reference(self):
         import hashlib

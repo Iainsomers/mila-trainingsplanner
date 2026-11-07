@@ -5805,7 +5805,8 @@ def garmin_type_c_ayc_view(request, model="C"):
                for saved in uploaded_activities):
             continue
         parsed = received.analysis_data or {}
-        alt_part = alternative_part(athlete, parsed.get('activity_metrics') or {}, received.duration_s)
+        alt_part = alternative_part(athlete, parsed.get('activity_metrics') or {}, received.duration_s,
+                                    parsed.get('laps') if isinstance(parsed.get('laps'), list) else None)
         if alt_part is not None:
             summary_results.append({
                 'name': f'Garmin activity {received.activity_id}',
@@ -5816,7 +5817,9 @@ def garmin_type_c_ayc_view(request, model="C"):
                 'parts': [alt_part],
             })
             continue  # Non-running distance must never enter running recognition/loads.
-        if parsed.get("laps"):
+        has_distance_laps = any(isinstance(lap, dict) and lap.get('distance') is not None
+                                for lap in (parsed.get('laps') or []))
+        if parsed.get("laps") and (parsed.get("total_distance_m") is not None or has_distance_laps):
             # Older stored details lack total_timer_s; retain the received
             # Garmin summary duration without modifying the stored payload.
             if parsed.get('total_timer_s') is None and received.duration_s is not None:
@@ -5834,7 +5837,7 @@ def garmin_type_c_ayc_view(request, model="C"):
                 detail_message = "Activity Details have been received, but usable lap data is missing."
                 if parsed.get("lap_data_status") == "no_lap_markers":
                     detail_message = "Activity Details have been received. Garmin supplied no recorded lap boundaries for this activity."
-                elif parsed.get("lap_data_status") == "missing_distance":
+                elif parsed.get("lap_data_status") in {"missing_distance", "available_time_only"}:
                     detail_message = "Garmin supplied no total distance. For an indoor or non-running activity this can be normal. Available activity and heart-rate measurements are shown above; no running distance is estimated."
                     if not parsed.get('activity_metrics'):
                         detail_message += " No sport/heart-rate measurements are stored for this delivery. Resend Activity Details or upload the original FIT file to inspect those measurements."

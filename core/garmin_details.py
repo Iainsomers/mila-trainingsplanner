@@ -47,7 +47,7 @@ def lap_data(item):
         raise ValueError("Invalid activity details")
     if distance is None:
         # Garmin can omit distance on stationary/short activities. This is not
-        # a malformed batch: preserve the receipt without inventing lap metres.
+        # a malformed batch: preserve time-only laps without inventing metres.
         heart_samples = []
         for sample in samples:
             if not isinstance(sample,dict):
@@ -56,9 +56,31 @@ def lap_data(item):
             if timestamp is not None and start <= timestamp <= start+duration and hr is not None and 0 < hr < 300:
                 heart_samples.append({'timestamp':datetime.fromtimestamp(timestamp,timezone.utc).isoformat(),'heart_rate':hr})
         metrics = activity_metrics(summary, heart_samples)
-        return {"laps": [], "heart_rate_samples": heart_samples, "total_distance_m": None,
+        boundaries = sorted({number(lap.get("startTimeInSeconds")) for lap in laps if isinstance(lap, dict)
+                             and number(lap.get("startTimeInSeconds")) is not None
+                             and start <= number(lap.get("startTimeInSeconds")) < start + duration})
+        hr_points = sorted((datetime.fromisoformat(point["timestamp"]).timestamp(), point["heart_rate"])
+                           for point in heart_samples)
+        normalized_laps = []
+        if boundaries and boundaries[0] == start:
+            for index, timestamp in enumerate(boundaries):
+                lap_end = boundaries[index + 1] if index + 1 < len(boundaries) else start + duration
+                values = [hr for sample_time, hr in hr_points if timestamp <= sample_time < lap_end]
+                tail_start = max(timestamp, lap_end - max(15, (lap_end - timestamp) * .1))
+                tail = [hr for sample_time, hr in hr_points if tail_start <= sample_time < lap_end]
+                normalized_laps.append({
+                    "start_time": datetime.fromtimestamp(timestamp, timezone.utc).isoformat(),
+                    "distance": None,
+                    "elapsed_time": lap_end - timestamp,
+                    "avg_heart_rate": sum(values) / len(values) if values else None,
+                    "hr_tail": sum(tail) / len(tail) if tail else None,
+                })
+        lap_status = ("no_lap_markers" if not boundaries else
+                      "available_time_only" if len(normalized_laps) == len(boundaries) else
+                      "incomplete_lap_coverage")
+        return {"laps": normalized_laps, "heart_rate_samples": heart_samples, "total_distance_m": None,
                 "activity_metrics":metrics,
-                "total_elapsed_s": duration, "lap_data_status": "missing_distance",
+                "total_elapsed_s": duration, "lap_data_status": lap_status,
                 "received_lap_count": len(laps), "received_sample_count": len(samples)}
     points = sorted((number(sample.get("startTimeInSeconds")), number(sample.get("totalDistanceInMeters")))
                     for sample in samples if isinstance(sample, dict)
