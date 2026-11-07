@@ -25,6 +25,9 @@ class WatchAlternativesTests(SimpleTestCase):
         prefer_explicit_time_request([{'parts':[ambiguous]}],[{'role':'user','content':'Welke training was dit?'}])
         self.assertEqual(ambiguous['training_fields']['main'],'original')
         self.assertEqual([option['label'] for option in ambiguous['training_alternatives']],['Distance','Time'])
+        wrong = {'training_alternatives':deepcopy(options),'training_fields':{'main':'original'}}
+        self.assertFalse(prefer_explicit_time_request([{'parts':[wrong]}],[{'role':'user','content':"5×8'"}]))
+        self.assertEqual(wrong['training_fields']['main'],'original')
 
     def test_single_time_series_keeps_all_reps_for_c_and_d(self):
         values = [(997.78,242),(67.3198,64),(990.69,241),(91.9199,62),

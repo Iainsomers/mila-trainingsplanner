@@ -565,3 +565,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 7 november - Garmin C/D kiest bij één intervalreeks met werkblokken strak rond hetzelfde hele aantal minuten standaard Time. De screenshotreeks van vier werkblokken rond 8:00 wordt daardoor direct `4×8'`; Distance blijft als tweede handmatige keuze beschikbaar. Meerdere verschillende afstandsgroepen behouden Distance als standaard. Validatie: 66 gerichte Watch-/AI-/Garmin-tests, drie JavaScript-preview-/Chat-/Alternative-tests en `manage.py check` geslaagd.
+
+
+7 november - Vervolgfix voor expliciete Garmin Chat-tijdopdrachten: `4*8'` gaat niet meer eerst naar de AI. De lokaal herkende tijdvariant moet exact vier herhalingen van acht minuten bevatten en wordt dan direct gekozen; verkeerd aantal/duur blijft afgewezen. Exacte regressie met de productiecasus 8:00/8:01/8:00/8:01 en drie herstelrondes slaagt voor C en D, ook zonder AI-toestemming. Totaal 67 gerichte tests, twee JavaScripttests en `manage.py check` geslaagd.

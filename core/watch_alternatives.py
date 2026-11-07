@@ -6,22 +6,32 @@ from statistics import median
 
 
 _EXPLICIT_TIME_REQUEST_RE = re.compile(
-    r"(?<!\w)\d+\s*[x×*]\s*\d+(?:[.,]\d+)?\s*(?:['′’]|min(?:uut|uten)?\b)",
+    r"(?<!\w)(\d+)\s*[x×*]\s*(\d+)(?:[.,]\d+)?\s*(?:['′’]|min(?:uut|uten)?\b)",
     re.IGNORECASE,
 )
 
 
+def requested_time_reps(chat_messages):
+    """Return the explicit (count, whole minutes) request from the last message."""
+    if not chat_messages:
+        return None
+    match = _EXPLICIT_TIME_REQUEST_RE.search(str(chat_messages[-1].get("content") or ""))
+    return (int(match[1]), int(match[2])) if match else None
+
+
 def prefer_explicit_time_request(results, chat_messages):
     """Select time outright when the user's latest request states time reps."""
-    if not chat_messages:
-        return
-    latest = str(chat_messages[-1].get("content") or "")
-    if not _EXPLICIT_TIME_REQUEST_RE.search(latest):
-        return
+    requested = requested_time_reps(chat_messages)
+    if not requested:
+        return False
+    selected_any = False
     for session in results:
         for part in session.get("parts") or []:
             options = part.get("training_alternatives") or []
-            selected = next((option for option in options if option.get("label") == "Time"), None)
+            selected = next((option for option in options
+                if option.get("label") == "Time" and re.match(
+                    rf"^\s*{requested[0]}\s*[×x*]\s*{requested[1]}\s*['′’]",
+                    str((option.get("training_fields") or {}).get("main") or ""))), None)
             if not selected:
                 continue
             for key in ("training_fields", "description", "watch_loads"):
@@ -29,6 +39,10 @@ def prefer_explicit_time_request(results, chat_messages):
             # The request itself resolves the distance/time ambiguity. Keep a
             # single option so the UI does not ask the user to decide again.
             part["training_alternatives"] = [selected]
+            part["ai_structure_status"] = "measured_structure"
+            part["chat_reply"] = "The measured laps confirm the requested time repetitions."
+            selected_any = True
+    return selected_any
 
 
 def single_time_option(core):

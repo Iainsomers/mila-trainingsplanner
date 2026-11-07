@@ -214,6 +214,31 @@ class GarminCPushTests(TestCase):
                 self.assertEqual(time_fields['cd'],'1100 m Z1')
                 self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],values)
 
+    def test_chat_confirms_exact_four_by_eight_minutes_without_ai(self):
+        values = [(1779.24,480),(84.0601,62),(1781.23,481),(80.46,60),
+                  (1736.48,480),(73.1997,61),(1774.31,481)]
+        self.athlete.zone_speed_mps = {'1':4,'2':4.9,'3':5.5,'4':6,'5':6.5,'6':7}
+        self.athlete.save()
+        GarminActivitySummary.objects.create(athlete=self.athlete,activity_id='four-by-eight',
+            activity_start=datetime.fromtimestamp(self.start,dt_timezone.utc),activity_date='2026-10-31',
+            distance_m=sum(m for m,_ in values),duration_s=sum(s for _,s in values),
+            analysis_data={'laps':[{'distance':m,'elapsed_time':s} for m,s in values]})
+        self.client.force_login(self.coach)
+        with patch('core.views.polar_raw.urlopen',side_effect=AssertionError('Exact timed request needs no AI')):
+            for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+                url=reverse(route)
+                initial=self.client.get(url,{'athlete':self.athlete.pk,'date':'2026-10-31',
+                    'preview':'measured'}).json()['results'][0]
+                response=self.client.post(url+'?'+__import__('urllib.parse',fromlist=['urlencode']).urlencode({
+                    'athlete':self.athlete.pk,'date':'2026-10-31','suggestion_session':initial['start']}),
+                    {'chat':json.dumps([{'role':'user','content':"4*8'"}])})
+                self.assertEqual(response.status_code,200)
+                part=response.json()['results'][0]['parts'][0]
+                self.assertEqual(part['training_fields']['main'],"4×8' Z1 p61")
+                self.assertEqual([option['label'] for option in part['training_alternatives']],['Time'])
+                self.assertEqual(part['ai_structure_status'],'measured_structure')
+                self.assertIn('confirm',part['chat_reply'])
+
     def test_calendar_loads_combiner_without_oura_import(self):
         self.client.force_login(self.coach)
         response = self.client.get(reverse("athlete_year_calendar"), {"athlete": self.athlete.pk, "year": 2026})
