@@ -556,3 +556,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 7 november - Garmin C/D vat herhaalde gemengde afstanden samen en kan het klokje voor bestaande losse onderdelen herstellen bij afwijkende zones. Synthetische regressie 2x(1700 m - 1200 m - 850 m) met wisselende zones controleert beide endpoints, alle zes klokregels en afwijzing bij een ontbrekende bronlap. Losse onderdelen met één herhaling worden in het dagdeel chronologisch aan precies één klokregel gekoppeld en compact weergegeven als `1700m - 5:51 - 3:26/km`, zonder misleidende pijlranges. De productieactiviteit is niet geïnspecteerd.
+
+
+7 november - Een expliciete tijdsopdracht in de Garmin C/D-chat, zoals `4*8'`, `4×8 min` of `4 x 8 minuten`, selecteert direct de gevalideerde tijdvariant. De afstand/tijd-keuze blijft alleen zichtbaar wanneer de laatste gebruikersopdracht de eenheid niet vastlegt. De gemeten laps en validatie blijven leidend. Validatie: 66 gerichte Watch-alternatieven-, AI-structuur- en Garmin C-pushtests plus `manage.py check` geslaagd.

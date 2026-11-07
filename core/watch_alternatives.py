@@ -5,6 +5,32 @@ from copy import deepcopy
 from statistics import median
 
 
+_EXPLICIT_TIME_REQUEST_RE = re.compile(
+    r"(?<!\w)\d+\s*[x×*]\s*\d+(?:[.,]\d+)?\s*(?:['′’]|min(?:uut|uten)?\b)",
+    re.IGNORECASE,
+)
+
+
+def prefer_explicit_time_request(results, chat_messages):
+    """Select time outright when the user's latest request states time reps."""
+    if not chat_messages:
+        return
+    latest = str(chat_messages[-1].get("content") or "")
+    if not _EXPLICIT_TIME_REQUEST_RE.search(latest):
+        return
+    for session in results:
+        for part in session.get("parts") or []:
+            options = part.get("training_alternatives") or []
+            selected = next((option for option in options if option.get("label") == "Time"), None)
+            if not selected:
+                continue
+            for key in ("training_fields", "description", "watch_loads"):
+                part[key] = selected[key]
+            # The request itself resolves the distance/time ambiguity. Keep a
+            # single option so the UI does not ask the user to decide again.
+            part["training_alternatives"] = [selected]
+
+
 def single_time_option(core):
     """Recognize repeated whole-minute work bouts, independent of distance."""
     if len(core) < 5:

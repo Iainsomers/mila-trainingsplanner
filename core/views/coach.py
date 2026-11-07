@@ -6144,8 +6144,9 @@ def garmin_type_c_ayc_view(request, model="C"):
                     "display_candidate": display_candidate,
                     "final_main": final_main,
                 }
-    from core.watch_alternatives import add_training_alternatives
+    from core.watch_alternatives import add_training_alternatives, prefer_explicit_time_request
     add_training_alternatives(results)
+    prefer_explicit_time_request(results, chat_messages)
     for result in results:
         for part in result.get('parts') or []:
             review = part.pop('review_lap_structure',None)

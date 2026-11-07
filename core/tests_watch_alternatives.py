@@ -1,12 +1,31 @@
 from copy import deepcopy
 from types import SimpleNamespace
 from django.test import SimpleTestCase
-from core.watch_alternatives import add_training_alternatives, long_interval_options
+from core.watch_alternatives import add_training_alternatives, long_interval_options, prefer_explicit_time_request
 from core.garmin_d import apply_garmin_d
 from core.watch_processing import processed_main_reps
 
 
 class WatchAlternativesTests(SimpleTestCase):
+    def test_explicit_time_request_selects_time_without_ambiguity_choice(self):
+        options = [
+            dict(label='Distance',training_fields={'main':'4×1800 m Z1 p61'},
+                 description='distance',watch_loads=[{'kind':'distance'}]),
+            dict(label='Time',training_fields={'main':"4×8' Z1 p61"},
+                 description='time',watch_loads=[{'kind':'time'}]),
+        ]
+        for request in ("4*8'", '4 x 8 minuten', 'Maak er 4×8 min van'):
+            part = {'training_alternatives':deepcopy(options)}
+            prefer_explicit_time_request([{'parts':[part]}],[{'role':'user','content':request}])
+            self.assertEqual(part['training_fields']['main'],"4×8' Z1 p61")
+            self.assertEqual([option['label'] for option in part['training_alternatives']],['Time'])
+            self.assertEqual(part['watch_loads'],[{'kind':'time'}])
+
+        ambiguous = {'training_alternatives':deepcopy(options),'training_fields':{'main':'original'}}
+        prefer_explicit_time_request([{'parts':[ambiguous]}],[{'role':'user','content':'Welke training was dit?'}])
+        self.assertEqual(ambiguous['training_fields']['main'],'original')
+        self.assertEqual([option['label'] for option in ambiguous['training_alternatives']],['Distance','Time'])
+
     def test_single_time_series_keeps_all_reps_for_c_and_d(self):
         values = [(997.78,242),(67.3198,64),(990.69,241),(91.9199,62),
                   (1008.96,243),(95.0195,61),(1014.68,242),(126.16,80),

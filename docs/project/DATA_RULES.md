@@ -332,3 +332,6 @@ Garmin C/D duurblok met versnellingen (7 november 2026). Een doorlopend Main-blo
 
 
 Garmin C/D gemengde afstandssets (7 november 2026). Dezelfde volgorde van minstens twee verschillende afstanden moet volledig herhaald voorkomen in Main. Ieder onderdeel wordt in opnamevolgorde gekoppeld aan één gemeten lap binnen max(30 m, 8%). Gemeten tussenlaps moeten als herstel passen bij de aangrenzende inspanningen. Zones worden pas na die koppeling samengevat. Pauzes worden getoond als de bijbehorende pauzes allemaal gemeten zijn. Dit ondersteunt ook het klokje bij reeds opgeslagen losse Main-onderdelen. Wanneer zulke losse onderdelen elk één herhaling bevatten en volledig met de klokregels overeenkomen, toont het dagdeel per onderdeel alleen geplande afstand, gemeten tijd en gemeten tempo: `1500m - 6:00 - 4:00/km`.
+
+
+Garmin C/D expliciete tijdkeuze (7 november 2026). Bevat de laatste chatopdracht een herhalingsaantal en een expliciete tijdseenheid, bijvoorbeeld `4*8'`, `4×8 min` of `4 x 8 minuten`, dan wordt na de normale meetvalidatie de tijdvariant gekozen. De afstandsvariant wordt dan niet meer als twijfelkeuze aangeboden. Zonder expliciete tijdseenheid blijven beide volledig passende varianten beschikbaar; de regel verandert geen bronlaps of meetvalidatie.
