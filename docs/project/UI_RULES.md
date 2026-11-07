@@ -27,6 +27,7 @@ Bijgewerkt: 20 oktober 2026.
 - Plaats `New athlete`, de compacte tijdelijke opslagmelding en `Back` rechts in dezelfde kopregel; op mobiel mogen titel, selector en acties overzichtelijk afbreken.
 - Toon Z1-Z5 als compacte kaarten met de bestaande zonekleur als bovenrand en een zeer lichte afgeleide achtergrond. De uitleg voor HR-bereiken staat één keer boven de kaarten. Toon de eis dat zones oplopend sneller moeten worden alleen als validatiefout.
 - Groepeer Current times als Sprint (T4/T6), Middle Distance (T8/T1/T15), Long Distance (T3/T5/T10) en Road (THM/TM). Lijn `PR` en `Goal` per kaart gelijk uit, geef lege tijdsonderdelen rustige placeholders en houd ingevulde tijden visueel duidelijker.
+- Houd Current times compact: Sprint en Road staan op brede schermen naast elkaar; Middle Distance en Long Distance gebruiken ieder de volle breedte met drie tijden naast elkaar. Groepsvakken volgen hun inhoudshoogte, binnenkaarten gebruiken alleen een subtiele scheidingslijn en de formaatlegenda staat achter `Time formats`.
 - Houd de Athlete Input-tabs sticky bovenaan het venster tijdens verticaal scrollen; de tabs mogen op mobiel over meerdere regels afbreken.
 - Gebruik in de Race Calendar-popup dezelfde kolombreedtes voor de kop, atleetrij en afstandsrij. De afstandswaarde en de checkboxen moeten op desktop en mobiel exact onder Distance, Trainer, Athlete en Target uitlijnen.
 - In New, Plans, Wishes staat `Edit` alleen bij eigen wishes of voor de productbeheerder; andere gebruikers krijgen alleen de beschikbare like-actie.

@@ -80,7 +80,16 @@
   .zone-card > .form-label { font-weight: 700; }
   .pr-time-groups {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "sprint road"
+      "middle middle"
+      "long long";
+    align-items: start;
   }
+  .pr-time-group-sprint { grid-area: sprint; }
+  .pr-time-group-middle { grid-area: middle; }
+  .pr-time-group-long { grid-area: long; }
+  .pr-time-group-road { grid-area: road; }
   .pr-time-group {
     min-width: 0;
     padding: .8rem;
@@ -107,10 +116,11 @@
   }
   .pr-time-card {
     min-width: 0;
-    padding: .75rem;
-    border: 1px solid #e2e6ea;
-    border-radius: .45rem;
-    background: #fafbfc;
+    padding: .45rem .55rem .55rem;
+    border: 0;
+    border-top: 2px solid #e3e8ed;
+    border-radius: 0;
+    background: transparent;
   }
   .pr-time-card > .form-label {
     display: block;
@@ -130,8 +140,37 @@
     background: #fff;
     box-shadow: 0 1px 0 rgba(0, 0, 0, .08);
   }
+  .time-format-details {
+    margin-top: .65rem;
+    color: #6c757d;
+    font-size: .78rem;
+  }
+  .time-format-details summary {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    cursor: pointer;
+    list-style: none;
+  }
+  .time-format-details summary::-webkit-details-marker { display: none; }
+  .time-format-details summary::before {
+    content: "i";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid #9aa5b1;
+    border-radius: 50%;
+    font-size: .68rem;
+    font-weight: 700;
+  }
+  .time-format-details[open] > div { margin-top: .35rem; }
   @media (max-width: 1199.98px) {
-    .pr-time-groups { grid-template-columns: 1fr; }
+    .pr-time-groups {
+      grid-template-columns: 1fr;
+      grid-template-areas: "sprint" "middle" "long" "road";
+    }
   }
   @media (max-width: 575.98px) {
     .pr-time-grid { grid-template-columns: 1fr; }
@@ -837,14 +876,14 @@
           {% endfor %}
         </div>
 
-        <div class="mt-4">
+        <div class="mt-5">
           <div class="d-flex align-items-center gap-2 mb-2">
             <h6 class="mb-0">Current times</h6>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="fillMissingPbsBtn">Fill missing times</button>
+            <button type="button" class="btn btn-sm btn-link text-secondary p-0" id="fillMissingPbsBtn">Fill missing times</button>
           </div>
 
           <div class="pr-time-groups">
-            <section class="pr-time-group" aria-labelledby="sprint-times-title">
+            <section class="pr-time-group pr-time-group-sprint" aria-labelledby="sprint-times-title">
               <h6 class="pr-time-group-title" id="sprint-times-title">Sprint</h6>
               <div class="pr-time-grid">
                 <div class="col-md-2 pr-time-card">
@@ -859,7 +898,7 @@
                 </div>
               </div>
             </section>
-            <section class="pr-time-group" aria-labelledby="middle-times-title">
+            <section class="pr-time-group pr-time-group-middle" aria-labelledby="middle-times-title">
               <h6 class="pr-time-group-title" id="middle-times-title">Middle Distance</h6>
               <div class="pr-time-grid">
                 <div class="col-md-2 pr-time-card">
@@ -879,7 +918,7 @@
                 </div>
               </div>
             </section>
-            <section class="pr-time-group" aria-labelledby="long-times-title">
+            <section class="pr-time-group pr-time-group-long" aria-labelledby="long-times-title">
               <h6 class="pr-time-group-title" id="long-times-title">Long Distance</h6>
               <div class="pr-time-grid">
                 <div class="col-md-2 pr-time-card">
@@ -899,7 +938,7 @@
                 </div>
               </div>
             </section>
-            <section class="pr-time-group" aria-labelledby="road-times-title">
+            <section class="pr-time-group pr-time-group-road" aria-labelledby="road-times-title">
               <h6 class="pr-time-group-title" id="road-times-title">Road</h6>
               <div class="pr-time-grid">
                 <div class="col-md-2 pr-time-card">
@@ -916,10 +955,13 @@
             </section>
           </div>
 
-          <div class="form-text mt-2">
-            Fixed format: T4 ss.ss; T6/T8/T1/T15 mm:ss.ss; T3/T5/T10 mm:ss; THM/TM hh:mm:ss.
+          <details class="time-format-details">
+            <summary>Time formats</summary>
+            <div>T4 ss.ss; T6/T8/T1/T15 mm:ss.ss; T3/T5/T10 mm:ss; THM/TM hh:mm:ss.</div>
+          </details>
+          <div class="form-text mt-1">
             {% if mode == "edit" and athlete %}
-              <span id="targetPrSaveStatus" class="ms-2 text-muted"></span>
+              <span id="targetPrSaveStatus" class="text-muted"></span>
             {% endif %}
           </div>
         </div>
@@ -974,7 +1016,7 @@
             function setTargetPrStatus(text, cls) {
               if (!status) return;
               status.textContent = text || "";
-              status.className = "ms-2 " + (cls || "text-muted");
+              status.className = cls || "text-muted";
             }
 
             function targetPrFormData() {

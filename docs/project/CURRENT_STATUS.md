@@ -1,5 +1,10 @@
 # Actuele status
 
+## 8 november 2026 — compactere Current times-verdeling
+
+- De lege hoogte uit Current times is verwijderd: Sprint en Road delen de bovenste rij, Middle Distance en Long Distance staan als brede rijen met drie kaarten. Binnenkaarten zijn teruggebracht tot lichte scheidingslijnen.
+- De vaste-formaattekst is ingeklapt onder `Time formats`; `Fill missing times` is een rustige linkactie. Op smallere schermen blijven alle vier groepen onder elkaar staan.
+
 ## 8 november 2026 — gegroepeerde tijden en sticky Athlete Input-tabs
 
 - Current times is gegroepeerd in Sprint, Middle Distance, Long Distance en Road. `Doel` heet nu consequent `Goal`; PR/Goal-rijen hebben vaste uitlijning en lege tijdsdelen zijn visueel rustiger dan ingevulde waarden.
