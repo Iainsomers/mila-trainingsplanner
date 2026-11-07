@@ -23,8 +23,9 @@ Bijgewerkt: 20 oktober 2026.
 - Primaire acties zijn duidelijk; secundaire navigatie gebruikt een outline-stijl.
 - Voorkom horizontaal scrollen op mobiel behalve waar een bewust desktopoverzicht wordt gebruikt.
 - Gebruik het vaste MiLa-logo als browsericoon en als beginschermicoon op iOS en Android.
-- Toon in Athlete Input de geselecteerde atleetnaam voor trainers op een vaste plek boven de tabbladen, zodat die bij iedere tab zichtbaar blijft.
-- Plaats naast die atleetnaam compacte `<`- en `>`-knoppen om alfabetisch door de atleten van de actieve coachweergave te navigeren. Behoud het huidige tabblad; schakel de knop aan de lijstgrens uit.
+- Toon in Athlete Input voor trainers de atleetselector direct naast de paginatitel. Behoud bij wisselen het huidige tabblad. Atleten zelf zien op hun persoonlijke instellingen nooit een selector.
+- Plaats `New athlete`, de compacte tijdelijke opslagmelding en `Back` rechts in dezelfde kopregel; op mobiel mogen titel, selector en acties overzichtelijk afbreken.
+- Toon Z1-Z5 als compacte kaarten met de bestaande zonekleur als bovenrand en een zeer lichte afgeleide achtergrond. De uitleg voor HR-bereiken staat één keer boven de kaarten. Toon de eis dat zones oplopend sneller moeten worden alleen als validatiefout.
 - Gebruik in de Race Calendar-popup dezelfde kolombreedtes voor de kop, atleetrij en afstandsrij. De afstandswaarde en de checkboxen moeten op desktop en mobiel exact onder Distance, Trainer, Athlete en Target uitlijnen.
 - In New, Plans, Wishes staat `Edit` alleen bij eigen wishes of voor de productbeheerder; andere gebruikers krijgen alleen de beschikbare like-actie.
 - Als `See session km` is ingeschakeld, staat het sessietotaal als zwart `T`-getal compact rechtsboven in iedere sessiecel van de AYC, ook mobiel. Als `See session zones` is ingeschakeld, staan daar kleine kleurpillen met alleen de kilometers afgerond op 0,1 km naast; de kleur bepaalt de zone. Het weektotaal gebruikt dezelfde `T`-notatie, zonder `km`-tekst.

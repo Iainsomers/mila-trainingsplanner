@@ -10112,6 +10112,9 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertIn('id="see_session_km"', html)
         self.assertIn('id="see_session_km"\n            name="see_session_km"\n            checked', html)
         self.assertIn('class="zone-time-grid"', html)
+        self.assertEqual(html.count("zone-card zone-card-z"), 5)
+        self.assertEqual(html.count("Heart rate ranges: use"), 1)
+        self.assertNotIn("Zones must increase in speed from Z1 to Z5.", html)
         self.assertIn('class="pr-time-grid"', html)
         self.assertEqual(html.count('class="col-md-2 pr-time-card"'), 10)
         self.assertEqual(html.count('data-time-label="PR"'), 10)
@@ -10134,6 +10137,34 @@ class AthleteTimeInputFormatTests(TestCase):
         for zone in range(1, 6):
             self.assertRegex(html, rf'name="z{zone}_pace"[^>]+data-time-format="minutes-seconds"')
 
+    def test_zone_speed_warning_only_appears_after_invalid_order(self):
+        user = get_user_model().objects.create_user(
+            username="zone-order-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=user, name="Zone Order Athlete", birth_year=2000, gender="X"
+        )
+        self.client.force_login(user)
+
+        response = self.client.post(
+            f"/coach/athletes/{athlete.id}/edit/",
+            {
+                "active_tab": "zones",
+                "name": athlete.name,
+                "birth_year": "2000",
+                "gender": "X",
+                "zone_method": "manual",
+                "z1_pace": "5:00",
+                "z2_pace": "5:10",
+                "z3_pace": "4:30",
+                "z4_pace": "4:00",
+                "z5_pace": "3:30",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Zones must increase in speed from Z1 to Z5.")
+
     def test_fill_missing_pbs_accepts_blank_hundredths(self):
         source = get_template("core/coach_athlete_form.html").template.source
 
@@ -10146,6 +10177,9 @@ class AthleteTimeInputFormatTests(TestCase):
 
         self.assertIn('{% elif not self_view and athlete %}', source)
         self.assertIn('id="athleteInputSelector"', source)
+        self.assertIn('class="form-select athlete-input-selector"', source)
+        self.assertIn("athlete-header-actions", source)
+        self.assertIn("athlete-saved-notice", source)
         self.assertIn("{% for choice in athlete_choices %}", source)
         self.assertIn("choice.id == athlete.id", source)
         self.assertIn("?tab={{ active_tab }}", source)

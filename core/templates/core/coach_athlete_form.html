@@ -38,6 +38,32 @@
   .zone-time-grid {
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   }
+  .athlete-page-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .75rem;
+  }
+  .athlete-page-title-row h1 { margin: 0; }
+  .athlete-input-selector { width: min(320px, 100%); }
+  .athlete-saved-notice {
+    margin: 0;
+    padding: .4rem .7rem;
+    white-space: nowrap;
+  }
+  .zone-card {
+    min-width: 0;
+    padding: .75rem;
+    border: 1px solid #e2e6ea;
+    border-top-width: 5px;
+    border-radius: .45rem;
+  }
+  .zone-card-z1 { border-top-color: #deded4; background: #fdfdf8; }
+  .zone-card-z2 { border-top-color: #f7c6d0; background: #fff8fa; }
+  .zone-card-z3 { border-top-color: #f06f5f; background: #fff6f4; }
+  .zone-card-z4 { border-top-color: #8fcf8f; background: #f7fcf7; }
+  .zone-card-z5 { border-top-color: #82b8f3; background: #f5f9ff; }
+  .zone-card > .form-label { font-weight: 700; }
   .pr-time-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -68,32 +94,35 @@
   @media (max-width: 575.98px) {
     .pr-time-grid { grid-template-columns: 1fr; }
     .athlete-input-selector { width: 100%; }
+    .athlete-page-title-row { align-items: stretch; }
+    .athlete-page-title-row h1 { width: 100%; }
+    .athlete-header-actions { width: 100%; }
+    .athlete-saved-notice { order: -1; }
   }
 </style>
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div>
-      <h1 class="mb-1">
+    <div class="athlete-page-title-row">
+      <h1>
         {% if mode == "create" %}New athlete{% elif self_view %}Athlete settings{% else %}Athlete input{% endif %}
       </h1>
-      <div class="text-muted mb-0 d-flex align-items-center gap-2 flex-wrap">
-        {% if mode == "create" %}
-          Add an athlete.
-        {% elif not self_view and athlete %}
-          <label for="athleteInputSelector" class="mb-0">Athlete</label>
-          <select id="athleteInputSelector" class="form-select form-select-sm athlete-input-selector" style="width:min(320px, 100%);"
-                  aria-label="Select athlete"
-                  onchange="if(this.value){window.location.href=this.value;}">
-            {% for choice in athlete_choices %}
-              <option value="{% url 'coach_athlete_edit' choice.id %}?tab={{ active_tab }}" {% if choice.id == athlete.id %}selected{% endif %}>{{ choice.name }}</option>
-            {% endfor %}
-          </select>
-        {% else %}
-          {% if self_view %}&nbsp;{% endif %}
-        {% endif %}
-      </div>
+      {% if mode == "create" %}
+        <span class="text-muted">Add an athlete.</span>
+      {% elif not self_view and athlete %}
+        <label for="athleteInputSelector" class="visually-hidden">Athlete</label>
+        <select id="athleteInputSelector" class="form-select athlete-input-selector"
+                aria-label="Select athlete"
+                onchange="if(this.value){window.location.href=this.value;}">
+          {% for choice in athlete_choices %}
+            <option value="{% url 'coach_athlete_edit' choice.id %}?tab={{ active_tab }}" {% if choice.id == athlete.id %}selected{% endif %}>{{ choice.name }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap athlete-header-actions">
+      {% if saved_notice %}
+        <div class="alert alert-success athlete-saved-notice fade show" role="status" aria-live="polite">{{ saved_notice }}</div>
+      {% endif %}
       {% if self_view %}<a href="{% url 'password_change' %}" class="btn btn-sm btn-link text-muted">Change password</a>{% endif %}
       {% if not self_view and mode != "create" %}<a href="{% url 'coach_athlete_create' %}" class="btn btn-primary">New athlete</a>{% endif %}
       <a href="{% if self_view or mode != 'create' %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Back</a>
@@ -109,10 +138,6 @@
       </ul>
     </div>
   {% endif %}
-  {% if saved_notice %}
-    <div class="alert alert-success">{{ saved_notice }}</div>
-  {% endif %}
-
   <div class="card mb-3">
     <div class="card-body">
       <form method="post" id="athleteForm">
@@ -125,6 +150,14 @@
           document.addEventListener("DOMContentLoaded", function () {
             const form = document.getElementById("athleteForm");
             if (!form) return;
+
+            const savedNotice = document.querySelector(".athlete-saved-notice");
+            if (savedNotice) {
+              window.setTimeout(function () {
+                savedNotice.classList.remove("show");
+                window.setTimeout(function () { savedNotice.remove(); }, 200);
+              }, 3500);
+            }
 
             form.addEventListener("keydown", function (e) {
               const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
@@ -705,9 +738,10 @@
 
         <div class="mt-4">
           <h6 class="mb-2">Zones ({{ form.zone_input_unit_label }})</h6>
+          <div class="form-text mb-2">Heart rate ranges: use “160-170” or “max 170”.</div>
 
           <div class="zone-time-grid">
-            <div class="col-md-2">
+            <div class="col-md-2 zone-card zone-card-z1">
               <label class="form-label">Z1</label>
               <input name="z1_pace" class="form-control" value="{{ form.z1_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 12.5{% else %}e.g. 5:00{% endif %}">
@@ -715,9 +749,8 @@
                 {% if form.z1_other %}{{ form.z1_other }}{% else %}(not calculated yet){% endif %}
               </div>
               <input name="z1_hr" type="text" class="form-control form-control-sm mt-1" value="{{ form.z1_hr }}" placeholder="HR / zone">
-              <div class="form-text text-muted">Use "160-170" or "max 170"</div>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 zone-card zone-card-z2">
               <label class="form-label">Z2</label>
               <input name="z2_pace" class="form-control" value="{{ form.z2_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 13.5{% else %}e.g. 4:40{% endif %}">
@@ -725,9 +758,8 @@
                 {% if form.z2_other %}{{ form.z2_other }}{% else %}(not calculated yet){% endif %}
               </div>
               <input name="z2_hr" type="text" class="form-control form-control-sm mt-1" value="{{ form.z2_hr }}" placeholder="HR / zone">
-              <div class="form-text text-muted">Use "160-170" or "max 170"</div>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 zone-card zone-card-z3">
               <label class="form-label">Z3</label>
               <input name="z3_pace" class="form-control" value="{{ form.z3_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 14.5{% else %}e.g. 4:20{% endif %}">
@@ -735,9 +767,8 @@
                 {% if form.z3_other %}{{ form.z3_other }}{% else %}(not calculated yet){% endif %}
               </div>
               <input name="z3_hr" type="text" class="form-control form-control-sm mt-1" value="{{ form.z3_hr }}" placeholder="HR / zone">
-              <div class="form-text text-muted">Use "160-170" or "max 170"</div>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 zone-card zone-card-z4">
               <label class="form-label">Z4</label>
               <input name="z4_pace" class="form-control" value="{{ form.z4_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 15.5{% else %}e.g. 4:00{% endif %}">
@@ -745,9 +776,8 @@
                 {% if form.z4_other %}{{ form.z4_other }}{% else %}(not calculated yet){% endif %}
               </div>
               <input name="z4_hr" type="text" class="form-control form-control-sm mt-1" value="{{ form.z4_hr }}" placeholder="HR / zone">
-              <div class="form-text text-muted">Use "160-170" or "max 170"</div>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-2 zone-card zone-card-z5">
               <label class="form-label">Z5</label>
               <input name="z5_pace" class="form-control" value="{{ form.z5_pace }}" {% if form.zone_input_unit != 'kmh' %}data-time-format="minutes-seconds"{% endif %}
                      placeholder="{% if form.zone_input_unit == 'kmh' %}e.g. 16.5{% else %}e.g. 3:45{% endif %}">
@@ -755,13 +785,14 @@
                 {% if form.z5_other %}{{ form.z5_other }}{% else %}(not calculated yet){% endif %}
               </div>
               <input name="z5_hr" type="text" class="form-control form-control-sm mt-1" value="{{ form.z5_hr }}" placeholder="HR / zone">
-              <div class="form-text text-muted">Use "160-170" or "max 170"</div>
             </div>
           </div>
 
-          <div class="form-text mt-2">
-            Zones MUST increase in speed
-          </div>
+          {% for error in errors %}
+            {% if error == "Zones moeten oplopend sneller zijn (Z1 → Z5)." %}
+              <div class="text-danger small mt-2" role="alert">Zones must increase in speed from Z1 to Z5.</div>
+            {% endif %}
+          {% endfor %}
         </div>
 
         <div class="mt-4">

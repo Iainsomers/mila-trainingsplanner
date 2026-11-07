@@ -1,5 +1,10 @@
 # Actuele status
 
+## 7 november 2026 — compactere Athlete Input-kop en zones
+
+- Athlete Input toont voor trainers de alfabetische atleetselector naast de titel en de acties rechts in dezelfde kop. De opslagmelding is klein en verdwijnt automatisch; persoonlijke atleteninstellingen behouden bewust geen selector.
+- Z1-Z5 zijn herkenbare zonekaarten. De HR-notatie-uitleg staat één keer boven de kaarten en de snelheidsvolgordewaarschuwing verschijnt alleen na ongeldige invoer. De kop en kaarten breken op mobiel af zonder horizontaal scrollen.
+
 ## 7 november 2026 — afstandsgewogen kleuren voor samengestelde pills
 
 - Flex Planner, Athlete Diary en Trainer Planning kleuren samengestelde Main-herhalingen met een zone per onderdeel nu in de oorspronkelijke volgorde en naar de afstand van ieder onderdeel. `16*(400m z1-100m z3)` wordt daardoor 80% Z1 en 20% Z3 in plaats van een onjuiste enkele of gelijk verdeelde kleur.
