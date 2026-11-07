@@ -15,16 +15,13 @@
 
   table.year-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     table-layout: fixed;
   }
 
   .year-table th,
   .year-table td {
-    border: 0;
-    border-right: 1px solid #e1e5ea;
-    border-bottom: 1px solid #e1e5ea;
+    border: 1px solid #ccc;
     padding: 6px;
     vertical-align: top;
     text-align: left;
@@ -52,31 +49,14 @@
     padding: 1px 6px;
     border-radius: 8px;
     background: rgba(255,255,255,0.55);
-    color: #111;
-    max-width: 100%;
-    overflow-wrap: anywhere;
   }
 
-  .year-table-wrap {
-    max-height: max(260px, calc(100dvh - 145px));
-    overflow: auto;
-    border: 1px solid #d5dce4;
-    border-radius: 6px;
-  }
+  .weeklabel.phase-recovery { background: #f8f8f0 !important; }
+  .weeklabel.phase-aerobe   { background: #f06f5f !important; }
+  .weeklabel.phase-specific { background: #bfe7bf !important; }
+  .weeklabel.phase-intense  { background: #b7d7ff !important; }
+  .weeklabel.phase-taper    { background: #f2c200 !important; }
 
-  .year-table thead th { position: sticky; top: 0; z-index: 6; }
-  .year-table .weeklabel { position: sticky; left: 0; z-index: 3; }
-  .year-table thead th.weeklabel { z-index: 7; }
-  .weeklabel-inner { position: sticky; top: 43px; }
-  .year-table .session-label {
-    width: 40px;
-    background: #f5f7fa;
-    color: #44546a;
-    font-size: 10px;
-    text-align: center;
-    vertical-align: middle;
-    padding: 4px 1px;
-  }
 
   .sumcol {
     width: 90px;
@@ -133,7 +113,12 @@
   }
 
 
-  .year-table .current-week .weeklabel { box-shadow: inset 3px 0 #b68c23; }
+  .slotrow {
+  }
+
+  .current-week td {
+    background: #fff8cc;
+  }
 
   .slotrow {
     height: 48px;
@@ -355,11 +340,10 @@
     font-weight: 700;
   }
 
-  .year-table tbody .week-start-row > * { border-top: 2px solid #c7d0da; }
-  .year-table tbody .week-start-row.current-week > * { border-top-color: #b68c23; }
-  .year-table .current-week > td:last-child { border-right-color: #b68c23; }
-  .year-table .current-week.week-end-row > *,
-  .year-table .current-week > td[rowspan] { border-bottom-color: #b68c23; }
+  /* Thicker borders between weeks (apply to all columns) */
+  .year-table tbody tr.week-start-row td {
+    border-top: 3px solid #999;
+  }
 
   .week-report-col {
     width: 190px;
@@ -367,45 +351,53 @@
     background: #fafafa;
   }
 
-  .week-report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .week-report-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    height: 100%;
+  }
+
   .week-report-box {
-    text-align: left;
-    min-width: 0;
-    border: 1px solid #dce2e9;
-    border-radius: 5px;
-    padding: 5px;
-    background: #fff;
-    color: #25374b;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 3px;
+    min-height: 76px;
   }
-  .week-report-box:hover { border-color: #7a8da3; }
-  .week-report-title { display: block; font-size: 10px; font-weight: 700; }
-  .week-report-preview, .report-preview-text {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-    white-space: pre-line;
+
+  .week-report-title {
+    font-size: 10px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+
+  .week-report-field {
+    width: 100%;
+    min-height: 52px;
+    border: 0;
+    background: rgba(255,255,255,0.72);
     font-size: 11px;
-    line-height: 1.3;
-    color: #505e6d;
+    line-height: 1.2;
+    resize: vertical;
+    padding: 3px;
   }
-  .week-report-preview { min-height: 2.6em; }
-  .week-report-dialog {
-    width: min(620px, calc(100% - 24px));
-    max-height: calc(100dvh - 24px);
-    border: 1px solid #dce2e9;
-    border-radius: 10px;
-    padding: 16px;
+
+  .week-report-field:disabled {
+    background: rgba(255,255,255,0.35);
+    color: #555555;
   }
-  .week-report-dialog::backdrop { background: rgba(21, 40, 60, .35); }
-  .week-report-field { width: 100%; min-height: 140px; resize: vertical; }
+
+  .week-report-athlete { background: #fff8cc; }
+  .week-report-trainer { background: #dff0d8; }
+  .week-report-match { background: #ffd9a8; }
+  .week-report-injuries { background: #eadcff; }
 
   .daily-vitals-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 3px;
-    grid-auto-rows: minmax(22px, auto);
+    min-height: 54px;
   }
 
   .daily-vital-cell {
@@ -426,9 +418,7 @@
   .daily-vital-input {
     width: 100%;
     min-width: 0;
-    border: 1px solid transparent;
-    background: transparent;
-    font-variant-numeric: tabular-nums;
+    border: 1px solid #d0d0d0;
     border-radius: 4px;
     padding: 1px 3px;
     font-size: 11px;
@@ -436,8 +426,6 @@
     text-align: center;
   }
 
-  .daily-vital-input:hover, .daily-vital-input:focus { border-color: #a7b5c3; background: #fff; }
-  .daily-vital-input.is-invalid { border-color: #b42318; }
   .daily-vitals-avg {
     margin-top: 7px;
     font-size: 11px;
@@ -522,27 +510,55 @@
 
 
 
-  .comment-display { width: 100%; font-size: 11px; }
-  .report-preview-grid { display: grid; gap: 3px; }
-  .report-preview-half {
-    display: flex;
-    align-items: flex-start;
-    gap: 4px;
-    min-width: 0;
-    border: 1px solid #e1e5ea;
-    border-radius: 5px;
-    padding: 4px;
-    background: #f8fafc;
-    color: #25374b;
-    text-align: left;
+  .comment-display {
+    width: 100%;
+    min-height: 54px;
     font-size: 11px;
+    cursor: pointer;
+    overflow: hidden;
   }
-  .report-preview-half:hover:not(:disabled) { border-color: #7a8da3; }
-  .report-preview-top { display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto; }
-  .report-preview-status { cursor: inherit; }
-  .report-preview-rpe { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .report-preview-slot { font-weight: 700; color: #526578; }
-  .report-preview-text { min-width: 0; }
+
+  .report-preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    height: 100%;
+  }
+
+  .report-preview-grid.single {
+    grid-template-columns: 1fr;
+  }
+
+  .report-preview-half {
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    padding: 3px 4px;
+    background: #ffffff;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .report-preview-top {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+
+  .report-preview-rpe {
+    font-weight: 700;
+    color: #333333;
+  }
+
+  .report-preview-text {
+    color: #555555;
+    line-height: 1.2;
+    max-height: 26px;
+    overflow: hidden;
+    white-space: normal;
+    word-break: break-word;
+  }
 
   .evaluation-dialog { background:#fff; width:540px; max-width:95vw; max-height:92vh; max-height:92dvh; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.2); display:flex; flex-direction:column; }
   .evaluation-body { overflow-y:auto; min-height:0; }
@@ -667,6 +683,29 @@
 
 
 
+  .week-report-field {
+    cursor: text;
+  }
+
+  .week-report-field:focus {
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 3001 !important;
+    width: min(720px, 94vw) !important;
+    height: min(360px, 70vh) !important;
+    min-height: 260px !important;
+    padding: 12px !important;
+    border: 2px solid #333333 !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.28) !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    outline: none !important;
+  }
+
   .today-comment-display {
     width: 100%;
     min-height: 70px;
@@ -738,6 +777,12 @@
       line-height: 1.2;
     }
     .ayc-mobile-vitals-avg strong { display: block; font-size: .76rem; }
+    .ayc-mobile-phase { color: #111; border: 1px solid rgba(0,0,0,.12); }
+    .ayc-mobile-phase.phase-recovery { background: #f8f8f0; }
+    .ayc-mobile-phase.phase-aerobe { background: #f06f5f; }
+    .ayc-mobile-phase.phase-specific { background: #bfe7bf; }
+    .ayc-mobile-phase.phase-intense { background: #b7d7ff; }
+    .ayc-mobile-phase.phase-taper { background: #f2c200; }
     .ayc-mobile-day {
       border: 1px solid #d8d8d8;
       border-radius: 12px;
@@ -745,9 +790,10 @@
       overflow: hidden;
       background: #fff;
     }
-    .ayc-mobile-week.is-current-week .ayc-mobile-summary { border-color: #b68c23; }
-    .ayc-mobile-week.is-current-week .ayc-mobile-day.is-today { border-color: #b68c23; }
-    .ayc-mobile-week.is-current-week .ayc-mobile-day.is-today .ayc-mobile-day-head { box-shadow: inset 3px 0 #b68c23; }
+    .ayc-mobile-week.is-current-week .ayc-mobile-day { background: #fff9c4; border-color: #e5cf57; }
+    .ayc-mobile-week.is-current-week .ayc-mobile-day-head { background: #fff1a3; }
+    .ayc-mobile-week.is-current-week .ayc-mobile-day.is-today { border: 2px solid #d4a900; background: #ffe873; }
+    .ayc-mobile-week.is-current-week .ayc-mobile-day.is-today .ayc-mobile-day-head { background: #f5cf45; }
     .ayc-mobile-day-head {
       display: flex;
       justify-content: space-between;
@@ -779,28 +825,84 @@
     }
     .ayc-mobile-empty { color: #999; font-size: .85rem; }
     .ayc-mobile-rest { padding: 4px 0; color: #868e96; font-size: .9rem; font-style: italic; }
-    .ayc-mobile-evaluation { margin-top: 8px; }
-    .ayc-mobile-daily-vitals {
-      margin-top: 8px;
-      padding-top: 5px;
-      border-top: 1px solid #e1e5ea;
-      font-size: .78rem;
-      font-variant-numeric: tabular-nums;
+    .ayc-mobile-evaluation {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 9px;
+      border-top: 1px solid #eee;
+      cursor: pointer;
     }
-    .ayc-mobile-week-report { margin: 14px 0 4px; }
-    .ayc-mobile-week-report .week-report-box { padding: 7px; }
-    .ayc-mobile-week-report .week-report-title, .ayc-mobile-week-report .week-report-preview { font-size: .78rem; }
+    .ayc-mobile-evaluation-title { font-size: .82rem; font-weight: 700; }
+    .ayc-mobile-evaluation-hint { color: #6c757d; font-size: .75rem; }
+    .ayc-mobile-evaluation-done {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #198754;
+      color: #fff;
+      font-size: .9rem;
+      font-weight: 800;
+    }
+    .ayc-mobile-week-report {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin: 14px 0 4px;
+    }
+    .ayc-mobile-week-report .week-report-box { min-height: 112px; padding: 7px; }
+    .ayc-mobile-week-report .week-report-field { min-height: 78px; font-size: .78rem; }
     #mobileVitalsModal .modal-dialog { margin: 0; max-width: none; height: 100%; }
     #mobileVitalsModal .modal-content { min-height: 100%; border: 0; border-radius: 0; }
   }
 
   @media (max-width: 1200px) {
-    table.year-table { min-width: 1180px; }
-    .year-table .weeklabel { width: 72px; }
+    .year-table-wrap {
+      display: block;
+      width: max-content;
+      max-width: none;
+      overflow: visible;
+      touch-action: auto;
+    }
+
+    table.year-table {
+      width: 1072px !important;
+      min-width: 1072px !important;
+      max-width: none !important;
+      table-layout: fixed;
+    }
+
+    .year-table .weeklabel {
+      width: 72px;
+      min-width: 72px;
+    }
+
+    .year-table th.weeklabel,
+    .year-table td.weeklabel {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+    }
+
+    .year-table thead th.weeklabel {
+      z-index: 7;
+    }
 
     .year-table .sumcol {
       width: 90px;
       min-width: 90px;
+    }
+
+    .year-table th:not(.weeklabel):not(.sumcol),
+    .year-table td:not(.weeklabel):not(.sumcol) {
+      width: 130px;
+      min-width: 130px;
     }
 
     .year-table th,
@@ -831,7 +933,6 @@
 {% endblock %}
 
 {% block content %}
-{% load l10n %}
 <div class="container-fluid py-4 athlete-year-calendar-page">
 
   <div class="d-flex align-items-center justify-content-between mb-2">
@@ -895,10 +996,10 @@
              data-week-start="{{ w.week_start|date:'Y-m-d' }}"
              data-week-end="{{ w.week_end|date:'Y-m-d' }}"
              data-week-label="{{ w.week_start|date:'d M' }} – {{ w.week_end|date:'d M Y' }}">
-      <div class="ayc-mobile-summary">
+      <div class="ayc-mobile-summary{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" {% if w.week_phase_style %}style="{{ w.week_phase_style }}"{% endif %}>
         <div class="d-flex justify-content-between align-items-center gap-2">
           <div><div class="ayc-mobile-total-label">Total</div><div class="ayc-mobile-total">T {{ w.sum_tot_km }}</div></div>
-          {% include "core/partials/ayc_week_phase.html" %}
+          {% if w.week_phase_label %}<span class="week-phase-label ayc-mobile-phase phase-{{ w.week_phase }}">{{ w.week_phase_label }}</span>{% endif %}
         </div>
         <div class="ayc-mobile-zones">
           {% if w.has_z1 %}<span class="total-pill total-z1">Z1 {{ w.sum_z1_km }}</span>{% endif %}
@@ -936,10 +1037,10 @@
                     title="Daily vitals"
                     data-vitals-date="{{ mobile_day.day|date:'Y-m-d' }}"
                     data-vitals-label="{{ mobile_day.day|date:'l d-m' }}"
-                    data-vitals-sleep-hours="{% if vital and vital.sleep_hours != None %}{{ vital.sleep_hours|unlocalize }}{% endif %}"
-                    data-vitals-sleep-quality="{% if vital and vital.sleep_quality != None %}{{ vital.sleep_quality|unlocalize }}{% endif %}"
-                    data-vitals-morning-hr="{% if vital and vital.morning_hr != None %}{{ vital.morning_hr|unlocalize }}{% endif %}"
-                    data-vitals-hrv="{% if vital and vital.hrv != None %}{{ vital.hrv|unlocalize }}{% endif %}"
+                    data-vitals-sleep-hours="{% if vital and vital.sleep_hours != None %}{{ vital.sleep_hours }}{% endif %}"
+                    data-vitals-sleep-quality="{% if vital and vital.sleep_quality != None %}{{ vital.sleep_quality }}{% endif %}"
+                    data-vitals-morning-hr="{% if vital and vital.morning_hr != None %}{{ vital.morning_hr }}{% endif %}"
+                    data-vitals-hrv="{% if vital and vital.hrv != None %}{{ vital.hrv }}{% endif %}"
                     {% if mobile_day.day > today %}disabled{% endif %}>&hearts;</button>
             {% endwith %}
             {% endif %}
@@ -989,21 +1090,16 @@
                data-t2-watch-id="{% if d.check2.watch_activity_id %}{{ d.check2.watch_activity_id|escape }}{% endif %}"
                data-t2-watch-summary="{% if d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary|escape }}{% endif %}"
                data-t2-plan-text="{{ d.plan_text2|default:''|escape }}">
-            {% if mobile_day.day <= today or athlete_extended_edit_rights %}
-              {% include "core/partials/ayc_feedback_preview.html" %}
-            {% else %}
-              <div class="small text-muted">Evaluation available after training</div>
-            {% endif %}
-          </div>
-          {% endwith %}
-          {% endif %}
-          {% if show_daily_vitals %}
-          {% with vital=mobile_day.vitals %}
-          <div class="daily-vitals-grid ayc-mobile-daily-vitals" aria-label="Daily vitals">
-            <span title="Sleep hours">🛏 <span data-vital-preview="sleep_hours">{% if vital and vital.sleep_hours != None %}{{ vital.sleep_hours }}{% else %}—{% endif %}</span></span>
-            <span title="Sleep quality">💤 <span data-vital-preview="sleep_quality">{% if vital and vital.sleep_quality != None %}{{ vital.sleep_quality }}{% else %}—{% endif %}</span></span>
-            <span title="Morning heart rate">♥ <span data-vital-preview="morning_hr">{% if vital and vital.morning_hr != None %}{{ vital.morning_hr }}{% else %}—{% endif %}</span></span>
-            <span title="HRV">📈 <span data-vital-preview="hrv">{% if vital and vital.hrv != None %}{{ vital.hrv }}{% else %}—{% endif %}</span></span>
+            <div>
+              <div class="ayc-mobile-evaluation-title">Evaluation</div>
+              <div class="ayc-mobile-evaluation-hint">{% if mobile_day.day <= today %}Status, RPE and comment{% else %}Available after training{% endif %}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              {% if d.evaluation_done %}<span class="ayc-mobile-evaluation-done" title="Evaluation completed" aria-label="Evaluation completed">&#10003;</span>{% endif %}
+              {% if d.check1.pain or d.check2.pain %}<span class="ayc-mobile-evaluation-pain" title="Pain: {% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}Serious issue, talk to staff!{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Fit{% endif %}" aria-label="Pain: {% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}Serious issue, talk to staff!{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Fit{% endif %}">{% if d.check1.pain == 'serious_pain' or d.check2.pain == 'serious_pain' %}🔴{% elif d.check1.pain == 'some_pain' or d.check2.pain == 'some_pain' %}🟠{% else %}🟢{% endif %}</span>{% endif %}
+              {% if d.has_slot1 %}<button type="button" class="btn btn-sm btn-outline-secondary" data-evaluation-slot="1" {% if mobile_day.day > today and not athlete_extended_edit_rights %}disabled{% endif %}>AM</button>{% endif %}
+              {% if d.has_slot2 %}<button type="button" class="btn btn-sm btn-outline-secondary" data-evaluation-slot="2" {% if mobile_day.day > today and not athlete_extended_edit_rights %}disabled{% endif %}>PM</button>{% endif %}
+            </div>
           </div>
           {% endwith %}
           {% endif %}
@@ -1012,8 +1108,29 @@
       {% endfor %}
 
       {% if show_week_reports %}
-      <div class="ayc-mobile-week-report">
-        {% include "core/partials/ayc_week_report.html" %}
+      <div class="ayc-mobile-week-report" aria-label="Week report">
+        <div class="week-report-box week-report-athlete">
+          <div class="week-report-title">Comm Ath</div>
+          <textarea class="week-report-field"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="comm_athlete"
+                    {% if is_coach_user %}readonly{% endif %}>{% if w.week_report %}{{ w.week_report.comm_athlete }}{% endif %}</textarea>
+        </div>
+        <div class="week-report-box week-report-trainer">
+          <div class="week-report-title">Comm Trainer</div>
+          <textarea class="week-report-field"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="comm_trainer"
+                    {% if not is_coach_user %}readonly{% endif %}>{% if w.week_report %}{{ w.week_report.comm_trainer }}{% endif %}</textarea>
+        </div>
+        <div class="week-report-box week-report-match">
+          <div class="week-report-title">Matchreport</div>
+          <textarea class="week-report-field"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="match_report">{% if w.week_report %}{{ w.week_report.match_report }}{% endif %}</textarea>
+        </div>
+        <div class="week-report-box week-report-injuries">
+          <div class="week-report-title">Injuries</div>
+          <textarea class="week-report-field"
+                    data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="injuries">{% if w.week_report %}{{ w.week_report.injuries }}{% endif %}</textarea>
+        </div>
       </div>
       {% endif %}
     </section>
@@ -1386,14 +1503,13 @@
     })();
   </script>
 
-  <div class="year-table-wrap" tabindex="0" role="region" aria-label="Athlete Diary calendar">
+  <div class="year-table-wrap">
   <table class="year-table">
     <thead>
       <tr>
         <th class="weeklabel">Week</th>
         <th class="sumcol">Total</th>
         {% if show_week_reports %}<th class="week-report-col">Week report</th>{% endif %}
-        <th class="session-label" scope="col"><span class="visually-hidden">Session</span></th>
         <th>Mon</th>
         <th>Tue</th>
         <th>Wed</th>
@@ -1407,20 +1523,22 @@
     <tbody>
       {% for w in week_rows %}
         <tr class="slotrow week-start-row {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          <td class="weeklabel" rowspan="{{ ayc_rowspan }}">
-            <div class="weeklabel-inner">
-              <div>{{ w.week_start|date:"d-m" }}</div>
-              <div>{{ w.week_end|date:"d-m" }}</div>
-              {% include "core/partials/ayc_week_phase.html" %}
-              {% if show_daily_vitals %}
-                <div class="daily-vitals-avg">
-                  <span class="daily-vitals-avg-icon">🛏</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.sleep_hours }}</span>
-                  <span class="daily-vitals-avg-icon">💤</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.sleep_quality }}</span>
-                  <span class="daily-vitals-avg-icon">♥</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.morning_hr }}</span>
-                  <span class="daily-vitals-avg-icon">📈</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.hrv }}</span>
-                </div>
-              {% endif %}
-            </div>
+          <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="{{ ayc_rowspan }}" {% if w.week_phase_style %}style="{{ w.week_phase_style }}"{% endif %}>
+            <div>{{ w.week_start|date:"d-m" }}</div>
+            <div>{{ w.week_end|date:"d-m" }}</div>
+            {% if show_daily_vitals %}
+              <div class="daily-vitals-avg">
+                <span class="daily-vitals-avg-icon">🛏</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.sleep_hours }}</span>
+                <span class="daily-vitals-avg-icon">💤</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.sleep_quality }}</span>
+                <span class="daily-vitals-avg-icon">♥</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.morning_hr }}</span>
+                <span class="daily-vitals-avg-icon">📈</span><span class="daily-vitals-avg-value">{{ w.daily_vitals_avg.hrv }}</span>
+              </div>
+            {% endif %}
+            {% if w.week_phase_label %}
+              <div class="week-phase-wrap">
+                <span class="week-phase-label">{{ w.week_phase_label }}</span>
+              </div>
+            {% endif %}
           </td>
           <td class="sumcol week-summary-tooltip" rowspan="{{ ayc_rowspan }}" title="{{ w.sum_pct_tooltip }}" data-tooltip="{{ w.sum_pct_tooltip|escape }}">
             <div style="font-size:11px; line-height:1.35;">
@@ -1452,11 +1570,33 @@
 
           {% if show_week_reports %}
           <td class="week-report-col" rowspan="{{ ayc_rowspan }}">
-            {% include "core/partials/ayc_week_report.html" %}
+            <div class="week-report-grid">
+              <div class="week-report-box week-report-athlete">
+                <div class="week-report-title">Comm Ath</div>
+                <textarea class="week-report-field"
+                          data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="comm_athlete"
+                          {% if is_coach_user %}readonly{% endif %}>{% if w.week_report %}{{ w.week_report.comm_athlete }}{% endif %}</textarea>
+              </div>
+              <div class="week-report-box week-report-trainer">
+                <div class="week-report-title">Comm Trainer</div>
+                <textarea class="week-report-field"
+                          data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="comm_trainer"
+                          {% if not is_coach_user %}readonly{% endif %}>{% if w.week_report %}{{ w.week_report.comm_trainer }}{% endif %}</textarea>
+              </div>
+              <div class="week-report-box week-report-match">
+                <div class="week-report-title">Matchreport</div>
+                <textarea class="week-report-field"
+                          data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="match_report">{% if w.week_report %}{{ w.week_report.match_report }}{% endif %}</textarea>
+              </div>
+              <div class="week-report-box week-report-injuries">
+                <div class="week-report-title">Injuries</div>
+                <textarea class="week-report-field"
+                          data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="injuries">{% if w.week_report %}{{ w.week_report.injuries }}{% endif %}</textarea>
+              </div>
+            </div>
           </td>
           {% endif %}
 
-          <th scope="row" class="session-label">AM</th>
           {% for cell in w.cells1 %}
             <td>
               <div class="daycell">
@@ -1479,8 +1619,7 @@
           {% endfor %}
         </tr>
 
-        <tr class="slotrow {% if not show_training_reports and not show_daily_vitals %}week-end-row {% endif %}{% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          <th scope="row" class="session-label">PM</th>
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for cell in w.cells2 %}
             <td>
               <div class="emptyline">
@@ -1504,8 +1643,7 @@
         </tr>
 
         {% if show_training_reports %}
-        <tr class="slotrow {% if not show_daily_vitals %}week-end-row {% endif %}{% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          <th scope="row" class="session-label"><span class="visually-hidden">Feedback</span></th>
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for d in w.cells3 %}
             <td>
               <div class="comment-display"
@@ -1529,7 +1667,38 @@
                    data-t2-watch-summary="{% if d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary|escape }}{% endif %}"
                    data-t2-plan-text="{{ d.plan_text2|default:''|escape }}"
                    data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}">
-                {% include "core/partials/ayc_feedback_preview.html" %}
+                {% if d.has_slot1 or d.has_slot2 %}
+                  <div class="report-preview-grid{% if d.has_slot1 and not d.has_slot2 or d.has_slot2 and not d.has_slot1 %} single{% endif %}">
+                    {% if d.has_slot1 %}
+                      <div class="report-preview-half" data-evaluation-slot="1" role="button" tabindex="0" aria-label="Evaluate AM">
+                        <div class="report-preview-top">
+                          {% with status=d.check1.effective_status|default:"" %}
+                            <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
+                              {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                            </span>
+                          {% endwith %}
+                          <span class="report-preview-rpe">{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
+                          {% if d.check1.pain %}<span class="report-preview-pain" title="{% if d.check1.pain == 'no_pain' %}Fit{% elif d.check1.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}" aria-label="Pain: {% if d.check1.pain == 'no_pain' %}Fit{% elif d.check1.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}">{% if d.check1.pain == 'no_pain' %}🟢{% elif d.check1.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
+                        </div>
+                        <div class="report-preview-text">{% if d.check1.comment %}{{ d.check1.comment }}{% elif d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary }}{% endif %}</div>
+                      </div>
+                    {% endif %}
+                    {% if d.has_slot2 %}
+                      <div class="report-preview-half" data-evaluation-slot="2" role="button" tabindex="0" aria-label="Evaluate PM">
+                        <div class="report-preview-top">
+                          {% with status=d.check2.effective_status|default:"" %}
+                            <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
+                              {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
+                            </span>
+                          {% endwith %}
+                          <span class="report-preview-rpe">{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
+                          {% if d.check2.pain %}<span class="report-preview-pain" title="{% if d.check2.pain == 'no_pain' %}Fit{% elif d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}" aria-label="Pain: {% if d.check2.pain == 'no_pain' %}Fit{% elif d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}">{% if d.check2.pain == 'no_pain' %}🟢{% elif d.check2.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
+                        </div>
+                        <div class="report-preview-text">{% if d.check2.comment %}{{ d.check2.comment }}{% elif d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary }}{% endif %}</div>
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endif %}
               </div>
             </td>
           {% endfor %}
@@ -1537,8 +1706,7 @@
         {% endif %}
 
         {% if show_daily_vitals %}
-        <tr class="slotrow week-end-row {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          <th scope="row" class="session-label"><span class="visually-hidden">Vitals</span></th>
+        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for cell in w.cells4 %}
             <td>
               <div class="daily-vitals-grid">
@@ -1551,9 +1719,7 @@
                          min="0"
                          data-date="{{ cell.day|date:'Y-m-d' }}"
                          data-field="sleep_hours"
-                         aria-label="Sleep hours"
-                         placeholder="—"
-                         value="{% if cell.vitals and cell.vitals.sleep_hours != None %}{{ cell.vitals.sleep_hours|unlocalize }}{% endif %}">
+                         value="{% if cell.vitals and cell.vitals.sleep_hours != None %}{{ cell.vitals.sleep_hours }}{% endif %}">
                 </div>
                 <div class="daily-vital-cell">
                   <span class="daily-vital-icon" title="Sleep quality">💤</span>
@@ -1565,9 +1731,7 @@
                          max="10"
                          data-date="{{ cell.day|date:'Y-m-d' }}"
                          data-field="sleep_quality"
-                         aria-label="Sleep quality"
-                         placeholder="—"
-                         value="{% if cell.vitals and cell.vitals.sleep_quality != None %}{{ cell.vitals.sleep_quality|unlocalize }}{% endif %}">
+                         value="{% if cell.vitals and cell.vitals.sleep_quality != None %}{{ cell.vitals.sleep_quality }}{% endif %}">
                 </div>
                 <div class="daily-vital-cell">
                   <span class="daily-vital-icon" title="Morning heart rate">♥</span>
@@ -1578,9 +1742,7 @@
                          min="0"
                          data-date="{{ cell.day|date:'Y-m-d' }}"
                          data-field="morning_hr"
-                         aria-label="Morning heart rate"
-                         placeholder="—"
-                         value="{% if cell.vitals and cell.vitals.morning_hr != None %}{{ cell.vitals.morning_hr|unlocalize }}{% endif %}">
+                         value="{% if cell.vitals and cell.vitals.morning_hr != None %}{{ cell.vitals.morning_hr }}{% endif %}">
                 </div>
                 <div class="daily-vital-cell">
                   <span class="daily-vital-icon" title="HRV">📈</span>
@@ -1591,9 +1753,7 @@
                          min="0"
                          data-date="{{ cell.day|date:'Y-m-d' }}"
                          data-field="hrv"
-                         aria-label="HRV"
-                         placeholder="—"
-                         value="{% if cell.vitals and cell.vitals.hrv != None %}{{ cell.vitals.hrv|unlocalize }}{% endif %}">
+                         value="{% if cell.vitals and cell.vitals.hrv != None %}{{ cell.vitals.hrv }}{% endif %}">
                 </div>
               </div>
             </td>
@@ -1874,7 +2034,7 @@
   }
 
   function setupCheckToggles() {
-    document.querySelectorAll(".check-status-toggle:not(.report-preview-status)").forEach(function(el) {
+    document.querySelectorAll(".check-status-toggle").forEach(function(el) {
       el.addEventListener("click", function(event) {
         event.preventDefault();
         event.stopPropagation();
@@ -2736,6 +2896,9 @@
     fd.append("watch_activity_payload", watchVal("aypWatchActivityPayload"));
     return fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {method:"POST", body:fd, headers:{"X-CSRFToken":getCookie("csrftoken")}, credentials:"same-origin"});
   }
+  document.querySelectorAll(".report-preview-half[data-evaluation-slot]").forEach(function(el) {
+    el.addEventListener("keydown", function(event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); el.click(); } });
+  });
   document.querySelectorAll(".comment-display").forEach(function(el){
     el.addEventListener("click", function(event){
       event.preventDefault(); event.stopImmediatePropagation();
@@ -2884,7 +3047,41 @@
 })();
 </script>
 
+<script>
+(function() {
+  function getCookie(name) {
+    var v = null;
+    if (document.cookie) document.cookie.split(";").forEach(function(c){ c=c.trim(); if(c.substring(0,name.length+1)===(name+"=")) v=decodeURIComponent(c.substring(name.length+1)); });
+    return v;
+  }
 
+  function postWeekReport(el) {
+    if (!el || el.disabled || el.readOnly) return;
+    var weekStart = el.getAttribute("data-week-start") || "";
+    var field = el.getAttribute("data-field") || "";
+    if (!weekStart || !field) return;
+
+    var fd = new FormData();
+    fd.append("date", weekStart);
+    fd.append("week_start", weekStart);
+    fd.append("week_report_submit", "1");
+    fd.append("field", field);
+    fd.append("value", el.value || "");
+
+    fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
+      method: "POST",
+      body: fd,
+      headers: {"X-CSRFToken": getCookie("csrftoken")},
+      credentials: "same-origin"
+    });
+  }
+
+  document.querySelectorAll(".week-report-field").forEach(function(el) {
+    el.addEventListener("blur", function() { postWeekReport(el); });
+    el.addEventListener("change", function() { postWeekReport(el); });
+  });
+})();
+</script>
 
 <script>
 (function() {
@@ -2899,10 +3096,10 @@
     var raw = (el.value || "").trim().replace(",", ".");
     if (!raw) return "";
 
-    if (field === "sleep_hours" || field === "sleep_quality") {
+    if (field === "sleep_hours") {
       var f = parseFloat(raw);
       if (!Number.isFinite(f)) return "";
-      return f.toFixed(field === "sleep_hours" ? 2 : 1);
+      return f.toFixed(2);
     }
 
     var i = parseInt(raw, 10);
@@ -3042,10 +3239,6 @@
         activeVitalsButton.dataset.vitalsSleepQuality = fields.sleep_quality.value || "";
         activeVitalsButton.dataset.vitalsMorningHr = fields.morning_hr.value || "";
         activeVitalsButton.dataset.vitalsHrv = fields.hrv.value || "";
-        var dayCard = activeVitalsButton.closest(".ayc-mobile-day");
-        dayCard.querySelectorAll("[data-vital-preview]").forEach(function(preview) {
-          preview.textContent = fields[preview.dataset.vitalPreview].value || "—";
-        });
       }
       waitForModalToClose();
     }).catch(function() {
@@ -3058,81 +3251,6 @@
 {% endif %}
 
 <div id="modal-container"></div>
-
-{% if show_week_reports %}
-<dialog id="aycWeekReportDialog" class="week-report-dialog" aria-labelledby="aycWeekReportTitle">
-  <form id="aycWeekReportForm">
-    {% csrf_token %}
-    <label id="aycWeekReportTitle" class="fw-bold mb-2" for="aycWeekReportText">Week report</label>
-    <textarea id="aycWeekReportText" class="form-control week-report-field" name="value" rows="6"></textarea>
-    <p class="small text-danger mb-2" id="aycWeekReportError" role="alert" hidden></p>
-    <div class="d-flex justify-content-end gap-2 mt-2">
-      <button type="button" class="btn btn-sm btn-outline-secondary" id="aycWeekReportClose">Close</button>
-      <button type="submit" class="btn btn-sm btn-primary" id="aycWeekReportSave">Save</button>
-    </div>
-  </form>
-</dialog>
-<script>
-(function() {
-  const dialog = document.getElementById("aycWeekReportDialog");
-  const form = document.getElementById("aycWeekReportForm");
-  const field = document.getElementById("aycWeekReportText");
-  const title = document.getElementById("aycWeekReportTitle");
-  const error = document.getElementById("aycWeekReportError");
-  const close = document.getElementById("aycWeekReportClose");
-  const save = document.getElementById("aycWeekReportSave");
-  const previews = document.querySelectorAll(".week-report-box");
-  let activePreview;
-
-  previews.forEach(function(preview) {
-    preview.addEventListener("click", function() {
-      activePreview = preview;
-      title.textContent = preview.dataset.label;
-      field.value = preview.dataset.value;
-      field.readOnly = preview.dataset.readonly === "true";
-      save.hidden = field.readOnly;
-      error.hidden = true;
-      dialog.showModal();
-    });
-  });
-  close.addEventListener("click", function() { dialog.close(); });
-  dialog.addEventListener("cancel", function(event) {
-    if (save.disabled) event.preventDefault();
-  });
-  form.addEventListener("submit", async function(event) {
-    event.preventDefault();
-    if (!activePreview || field.readOnly || save.disabled) return;
-    const {weekStart, field: fieldName} = activePreview.dataset;
-    const value = field.value;
-    const data = new FormData(form);
-    data.set("date", weekStart);
-    data.set("week_start", weekStart);
-    data.set("week_report_submit", "1");
-    data.set("field", fieldName);
-    save.disabled = close.disabled = field.disabled = true;
-    error.hidden = true;
-    try {
-      const response = await fetch(window.location.href, {
-        method: "POST", body: data, credentials: "same-origin",
-        headers: {"X-Requested-With": "XMLHttpRequest"}
-      });
-      if (response.status !== 204) throw new Error("Week report save failed");
-      previews.forEach(function(preview) {
-        if (preview.dataset.weekStart !== weekStart || preview.dataset.field !== fieldName) return;
-        preview.dataset.value = value;
-        preview.querySelector(".week-report-preview").textContent = value.trim() ? value : "—";
-      });
-      dialog.close();
-    } catch (e) {
-      error.textContent = "Week report could not be saved. Try again.";
-      error.hidden = false;
-    } finally {
-      save.disabled = close.disabled = field.disabled = false;
-    }
-  });
-})();
-</script>
-{% endif %}
 
 <script>
 (function() {

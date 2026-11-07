@@ -380,6 +380,3 @@ Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met con
 
 
 7 november — Extremumkleuren gelden voor alle vier Daily vitals. Sleep length, Sleep quality en HRV: laagste rood, hoogste groen. Morning HR: laagste groen, hoogste rood. Vandaag donker, één/twee dagen terug licht; oudere/volledig gelijke waarden neutraal, meest recente datum bij gedeeld extremum. Daggrens 08:00 en minimum drie waarden blijven gelden. Alleen range-eindpunten gekleurd, met datumtooltip; gemiddelden/NA en rechten ongewijzigd.
-
-
-7 november — Athlete Diary gebruikt fasebadges, een dunne rand voor de huidige week en rustige tabelscheidingen. Desktop heeft vaste dagkoppen en weekkolom binnen de scrollbare kalender en AM/PM-labels voor de trainingsrijen. Weekrapportpreviews tonen maximaal twee regels. Dagelijkse vitals staan in een raster van twee bij twee, met op desktop pas een invoerrand bij hover of focus.
