@@ -218,7 +218,7 @@ De vier losse dagelijkse-vitaltabs zijn samengevoegd tot Daily vitals; HR zones 
 
 Camp details: Comments staat direct na Accommodation, als compact tekstvak van één regel dat verticaal vergroot kan worden. De kolom is sorteerbaar en blijft onderdeel van de horizontaal scrollbare deelnemerstabel op mobiel.
 
-Bij dubbelzinnige lange Garmin-intervalgroepen staan twee compacte knoppen Distance en Time boven de gegenereerde beschrijving, met de actieve keuze gevuld. Wisselen past de preview en de Use AM/PM-inhoud aan en verwijdert een eerder gecombineerde preview, zodat geen verouderde keuze wordt opgeslagen. De knoppen lopen op mobiel naar een volgende regel door.
+Bij dubbelzinnige lange Garmin-intervalgroepen staan twee compacte knoppen Distance en Time boven de gegenereerde beschrijving, met de actieve keuze gevuld. Time is actief bij één reeks die strak rond gelijke hele minuten ligt; Distance is actief bij meerdere duidelijke afstandsgroepen. Wisselen past de preview en de Use AM/PM-inhoud aan en verwijdert een eerder gecombineerde preview, zodat geen verouderde keuze wordt opgeslagen. De knoppen lopen op mobiel naar een volgende regel door.
 
 Details Camps heeft vooraan een smalle #-telkolom. De telling volgt uitsluitend de zichtbare rijvolgorde, begint bij 1 en loopt door over atleten en coaches. Na sorteren wordt opnieuw genummerd; dit zijn geen opgeslagen persoonsnummers.
 

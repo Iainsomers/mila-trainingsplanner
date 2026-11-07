@@ -42,9 +42,11 @@ class WatchAlternativesTests(SimpleTestCase):
         from core.views.calendar import _virtual_segment_from_text
         for source, result in [('watch_c',results),('watch_d',apply_garmin_d(deepcopy(results),athlete))]:
             part = result[0]['parts'][0]
-            self.assertEqual(part['training_alternatives'][0]['training_fields'],fields)
-            timed = part['training_alternatives'][1]
+            self.assertEqual([option['label'] for option in part['training_alternatives']],['Time','Distance'])
+            timed = part['training_alternatives'][0]
             self.assertEqual(timed['training_fields']['main'],"7×4' Z2 p63")
+            self.assertEqual(part['training_fields'],timed['training_fields'])
+            self.assertEqual(part['training_alternatives'][1]['training_fields'],fields)
             self.assertEqual([(l['meters'],l['seconds']) for l in timed['watch_loads']],
                              [(l['meters'],l['seconds']) for l in loads])
             segment = _virtual_segment_from_text('CORE',timed['training_fields']['main'])

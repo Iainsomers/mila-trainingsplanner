@@ -108,11 +108,16 @@ def add_training_alternatives(results):
                      'zone':'Z'+str(l.get('zone') or '')} for l in core]
             options = long_interval_options(laps, lambda lap: lap['zone'])
             timed_loads = loads
+            preferred = 'distance'
             if not options:
                 timed = single_time_option(core)
                 main = (part.get('training_fields') or {}).get('main')
                 if timed and main:
                     options = {'distance':main, 'time':timed}
+                    # This rule only succeeds when every work bout sits tightly
+                    # around the same whole-minute duration. Time is therefore
+                    # the stronger interpretation; keep Distance as an override.
+                    preferred = 'time'
                     timed_loads = deepcopy(loads)
                     main_loads = [l for l in timed_loads if l.get('segment') == 'CORE']
                     target = int(re.search(r"×(\d+)'", timed)[1]) * 60
@@ -124,7 +129,9 @@ def add_training_alternatives(results):
             if not options:
                 continue
             alternatives = []
-            for key, label in (('distance','Distance'), ('time','Time')):
+            order = (('time','Time'), ('distance','Distance')) if preferred == 'time' else (
+                ('distance','Distance'), ('time','Time'))
+            for key, label in order:
                 fields = dict(part.get('training_fields') or {})
                 fields['main'] = options[key]
                 alternatives.append({'label':label, 'training_fields':fields, 'watch_loads':timed_loads if key == 'time' else loads,

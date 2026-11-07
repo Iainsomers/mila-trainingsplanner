@@ -562,3 +562,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 7 november - Niet-hardloopactiviteiten met bekende sport en duur behouden nu Use/Add AM/PM wanneer gemiddelde HR + 10 niet exact in één ingestelde zone valt. De Alternative blijft dan bijvoorbeeld `Pilates 27'`, zonder verzonnen zone en met de bestaande uitleg over de zone-instellingen. C/D, AM/PM en zowel vervangen als toevoegen zijn gericht getest; `manage.py check` geslaagd.
+
+
+7 november - Garmin C/D kiest bij één intervalreeks met werkblokken strak rond hetzelfde hele aantal minuten standaard Time. De screenshotreeks van vier werkblokken rond 8:00 wordt daardoor direct `4×8'`; Distance blijft als tweede handmatige keuze beschikbaar. Meerdere verschillende afstandsgroepen behouden Distance als standaard. Validatie: 66 gerichte Watch-/AI-/Garmin-tests, drie JavaScript-preview-/Chat-/Alternative-tests en `manage.py check` geslaagd.
