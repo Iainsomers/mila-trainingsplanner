@@ -1,5 +1,10 @@
 # Actuele status
 
+## 7 november 2026 — afstandsgewogen kleuren voor samengestelde pills
+
+- Flex Planner, Athlete Diary en Trainer Planning kleuren samengestelde Main-herhalingen met een zone per onderdeel nu in de oorspronkelijke volgorde en naar de afstand van ieder onderdeel. `16*(400m z1-100m z3)` wordt daardoor 80% Z1 en 20% Z3 in plaats van een onjuiste enkele of gelijk verdeelde kleur.
+- De gerichte JavaScript-test bevat zes kleurgevallen en slaagt. `manage.py check` slaagt. De brede `PlanningOverviewTests` heeft vijf reeds bestaande, ongerelateerde fouten door verouderde namen en redirects op de Mila Planner-hoofdpagina.
+
 ## Laatste overdracht — 5 november 2026
 
 - Laatste codecommit `42c8470` staat op main: AI-opdracht voor samengestelde kilometerreps verduidelijkt; generieke validatiedrempel blijft bestaan als minimaal 20% hogere werksnelheid dan herstelsnelheid aan beide kanten. Geen nieuwe lokale 4x3000-patroonregel, geen wijziging van model of confidencegrenzen.

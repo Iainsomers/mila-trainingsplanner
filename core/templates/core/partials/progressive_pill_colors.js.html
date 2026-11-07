@@ -101,6 +101,24 @@
       return Array.from(zones).sort((a, b) => a - b).map(String);
     }
 
+    function flexCompoundZoneParts(text) {
+      const setMatch = (text || "").match(/\b\d+\s*(?:x|\*|×)\s*\(([^)]*)\)/i);
+      if (!setMatch) return [];
+
+      const parts = setMatch[1].split(/\s*(?:-|\+)\s*/).map((part) => part.trim()).filter(Boolean);
+      const parsed = parts.map((part) => {
+        const zoneMatch = part.match(/\bz\s*([1-6])\b/i);
+        const distanceMatch = part.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/i);
+        if (!zoneMatch || !distanceMatch) return null;
+        const value = Number(distanceMatch[1].replace(",", "."));
+        const unit = distanceMatch[2].toLowerCase();
+        const weight = (unit === "km" || unit === "k") ? value * 1000 : value;
+        return Number.isFinite(weight) && weight > 0 ? {zone: zoneMatch[1], weight} : null;
+      });
+      if (parsed.some((part) => !part)) return [];
+      return parsed;
+    }
+
     function flexZoneColor(zone) {
       const mapping = {
         "1": "#f8f8f0",
@@ -117,17 +135,27 @@
       document.querySelectorAll("[data-flex-segment]").forEach((el) => {
         const text = el.textContent || "";
         const tRange = flexProgressiveTKeys(text);
+        const compoundParts = tRange ? [] : flexCompoundZoneParts(text);
         const compoundZones = flexCompoundZones(text);
-        const zoneRange = tRange ? null : (compoundZones.length > 1 ? compoundZones : flexProgressiveZones(text));
-        const colors = (tRange || zoneRange || [])
-          .map((value) => tRange ? flexTColor(value) : flexZoneColor(value))
-          .filter(Boolean);
+        const zoneRange = (tRange || compoundParts.length > 1)
+          ? null
+          : (compoundZones.length > 1 ? compoundZones : flexProgressiveZones(text));
+        const colorParts = compoundParts.length > 1
+          ? compoundParts.map((part) => ({color: flexZoneColor(part.zone), weight: part.weight}))
+          : (tRange || zoneRange || []).map((value) => ({
+              color: tRange ? flexTColor(value) : flexZoneColor(value),
+              weight: 1
+            }));
+        const colors = colorParts.filter((part) => part.color && part.weight > 0);
         if (colors.length < 2) return;
 
-        const stops = colors.map((color, index) => {
-          const start = (100 * index / colors.length).toFixed(3);
-          const end = (100 * (index + 1) / colors.length).toFixed(3);
-          return `${color} ${start}%, ${color} ${end}%`;
+        const totalWeight = colors.reduce((total, part) => total + part.weight, 0);
+        let usedWeight = 0;
+        const stops = colors.map((part) => {
+          const start = (100 * usedWeight / totalWeight).toFixed(3);
+          usedWeight += part.weight;
+          const end = (100 * usedWeight / totalWeight).toFixed(3);
+          return `${part.color} ${start}%, ${part.color} ${end}%`;
         });
         el.style.background = `linear-gradient(30deg, ${stops.join(", ")})`;
       });
