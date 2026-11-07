@@ -10116,9 +10116,15 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertEqual(html.count("Heart rate ranges: use"), 1)
         self.assertNotIn("Zones must increase in speed from Z1 to Z5.", html)
         self.assertIn('class="pr-time-grid"', html)
+        self.assertIn('class="pr-time-groups"', html)
+        self.assertEqual(html.count('class="pr-time-group"'), 4)
+        for group_name in ("Sprint", "Middle Distance", "Long Distance", "Road"):
+            self.assertIn(f">{group_name}</h6>", html)
         self.assertEqual(html.count('class="col-md-2 pr-time-card"'), 10)
         self.assertEqual(html.count('data-time-label="PR"'), 10)
-        self.assertEqual(html.count('data-time-label="Doel"'), 10)
+        self.assertEqual(html.count('data-time-label="Goal"'), 10)
+        self.assertIn('id="athleteInputTabs"', html)
+        self.assertIn('athlete-tabs-sticky', html)
         for name in ("t4", "target_t4"):
             self.assertIn(f'name="{name}"', html)
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="seconds-hundredths"')

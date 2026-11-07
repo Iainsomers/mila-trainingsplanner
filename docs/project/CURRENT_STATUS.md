@@ -1,5 +1,10 @@
 # Actuele status
 
+## 8 november 2026 — gegroepeerde tijden en sticky Athlete Input-tabs
+
+- Current times is gegroepeerd in Sprint, Middle Distance, Long Distance en Road. `Doel` heet nu consequent `Goal`; PR/Goal-rijen hebben vaste uitlijning en lege tijdsdelen zijn visueel rustiger dan ingevulde waarden.
+- De Athlete Input-tabs blijven tijdens scrollen bovenaan zichtbaar en breken op mobiel af. Opslagvelden, tijdformaten, rechten en autosave van doelen zijn niet gewijzigd.
+
 ## 7 november 2026 — compactere Athlete Input-kop en zones
 
 - Athlete Input toont voor trainers de alfabetische atleetselector naast de titel en de acties rechts in dezelfde kop. De opslagmelding is klein en verdwijnt automatisch; persoonlijke atleteninstellingen behouden bewust geen selector.

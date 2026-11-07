@@ -26,6 +26,8 @@ Bijgewerkt: 20 oktober 2026.
 - Toon in Athlete Input voor trainers de atleetselector direct naast de paginatitel. Behoud bij wisselen het huidige tabblad. Atleten zelf zien op hun persoonlijke instellingen nooit een selector.
 - Plaats `New athlete`, de compacte tijdelijke opslagmelding en `Back` rechts in dezelfde kopregel; op mobiel mogen titel, selector en acties overzichtelijk afbreken.
 - Toon Z1-Z5 als compacte kaarten met de bestaande zonekleur als bovenrand en een zeer lichte afgeleide achtergrond. De uitleg voor HR-bereiken staat één keer boven de kaarten. Toon de eis dat zones oplopend sneller moeten worden alleen als validatiefout.
+- Groepeer Current times als Sprint (T4/T6), Middle Distance (T8/T1/T15), Long Distance (T3/T5/T10) en Road (THM/TM). Lijn `PR` en `Goal` per kaart gelijk uit, geef lege tijdsonderdelen rustige placeholders en houd ingevulde tijden visueel duidelijker.
+- Houd de Athlete Input-tabs sticky bovenaan het venster tijdens verticaal scrollen; de tabs mogen op mobiel over meerdere regels afbreken.
 - Gebruik in de Race Calendar-popup dezelfde kolombreedtes voor de kop, atleetrij en afstandsrij. De afstandswaarde en de checkboxen moeten op desktop en mobiel exact onder Distance, Trainer, Athlete en Target uitlijnen.
 - In New, Plans, Wishes staat `Edit` alleen bij eigen wishes of voor de productbeheerder; andere gebruikers krijgen alleen de beschikbare like-actie.
 - Als `See session km` is ingeschakeld, staat het sessietotaal als zwart `T`-getal compact rechtsboven in iedere sessiecel van de AYC, ook mobiel. Als `See session zones` is ingeschakeld, staan daar kleine kleurpillen met alleen de kilometers afgerond op 0,1 km naast; de kleur bepaalt de zone. Het weektotaal gebruikt dezelfde `T`-notatie, zonder `km`-tekst.
