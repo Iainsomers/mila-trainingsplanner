@@ -571,3 +571,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 7 november - Garmin Activity Details zonder afstand bewaren nu tijdslaps en lap-HR voor niet-hardloopactiviteiten. C/D tonen deze met afstand/tempo `NA`. Een regressie van exact 83 minuten (10' voorblok, 6×8' met p180, 10' nablok) levert voor beide modellen `Elliptical 6×8' p180` en alle dertien lapregels. Bestaande afstandsactiviteiten en batches met onbekende sport blijven gescheiden. 36 Garmin-tests, Alternative-JavaScripttest en `manage.py check` geslaagd. Eerder ontvangen afstandloze activiteiten moeten opnieuw als Activity Details worden aangeleverd omdat hun lapduren destijds niet zijn bewaard.
+
+
+7 november - Coach Athlete Info slaat de voormalige atletentabel over en opent direct de alfabetisch eerste toegankelijke atleet. Athlete input heeft nu een alfabetische selector die de actieve tab behoudt, plus New athlete en Back; na aanmaken opent het nieuwe profiel. De selector is beperkt tot de actieve coachweergave en ontbreekt volledig in persoonlijke Athlete settings. Tien gerichte Athlete Input-tests en `manage.py check` geslaagd; bestaande brede PlanningOverview-suite bevat ongerelateerde verouderde verwachtingen rond `/` en tegelteksten.

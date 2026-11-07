@@ -67,10 +67,11 @@
   }
   @media (max-width: 575.98px) {
     .pr-time-grid { grid-template-columns: 1fr; }
+    .athlete-input-selector { width: 100%; }
   }
 </style>
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <div>
       <h1 class="mb-1">
         {% if mode == "create" %}New athlete{% elif self_view %}Athlete settings{% else %}Athlete input{% endif %}
@@ -79,19 +80,14 @@
         {% if mode == "create" %}
           Add an athlete.
         {% elif not self_view and athlete %}
-          <span>Selected athlete: <span class="fw-semibold text-body">{{ athlete.name }}</span></span>
-          <span class="d-inline-flex align-items-center gap-1" aria-label="Navigate athletes alphabetically">
-            {% if previous_athlete %}
-              <a href="{% url 'coach_athlete_edit' previous_athlete.id %}?tab={{ active_tab }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Previous athlete" aria-label="Previous athlete">&lt;</a>
-            {% else %}
-              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" title="No previous athlete" aria-label="No previous athlete" disabled>&lt;</button>
-            {% endif %}
-            {% if next_athlete %}
-              <a href="{% url 'coach_athlete_edit' next_athlete.id %}?tab={{ active_tab }}" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Next athlete" aria-label="Next athlete">&gt;</a>
-            {% else %}
-              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" title="No next athlete" aria-label="No next athlete" disabled>&gt;</button>
-            {% endif %}
-          </span>
+          <label for="athleteInputSelector" class="mb-0">Athlete</label>
+          <select id="athleteInputSelector" class="form-select form-select-sm athlete-input-selector" style="width:min(320px, 100%);"
+                  aria-label="Select athlete"
+                  onchange="if(this.value){window.location.href=this.value;}">
+            {% for choice in athlete_choices %}
+              <option value="{% url 'coach_athlete_edit' choice.id %}?tab={{ active_tab }}" {% if choice.id == athlete.id %}selected{% endif %}>{{ choice.name }}</option>
+            {% endfor %}
+          </select>
         {% else %}
           {% if self_view %}&nbsp;{% endif %}
         {% endif %}
@@ -99,7 +95,8 @@
     </div>
     <div class="d-flex gap-2">
       {% if self_view %}<a href="{% url 'password_change' %}" class="btn btn-sm btn-link text-muted">Change password</a>{% endif %}
-      <a href="{% if self_view %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Back</a>
+      {% if not self_view and mode != "create" %}<a href="{% url 'coach_athlete_create' %}" class="btn btn-primary">New athlete</a>{% endif %}
+      <a href="{% if self_view or mode != 'create' %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>
 

@@ -11082,38 +11082,10 @@ def coach_plan_delete_view(request, plan_id: int):
 @login_required
 @require_GET
 def coach_athletes_view(request):
-    sort_mode = request.GET.get("sort", "name_asc")
-    sort_options = [
-        ("name_asc", "Name A-Z"),
-        ("name_desc", "Name Z-A"),
-        ("age_asc", "Age low-high"),
-        ("age_desc", "Age high-low"),
-    ]
-    ordering_by_sort = {
-        "name_asc": [Lower("name"), "id"],
-        "name_desc": [Lower("name").desc(), "id"],
-        "age_asc": ["-birth_year", Lower("name"), "id"],
-        "age_desc": ["birth_year", Lower("name"), "id"],
-    }
-    if sort_mode not in ordering_by_sort:
-        sort_mode = "name_asc"
-
-    athletes = list(_filter_owned(Athlete.objects.order_by(*ordering_by_sort[sort_mode]), request))
-    current_year = date.today().year
-    for athlete in athletes:
-        try:
-            athlete.age = current_year - int(athlete.birth_year)
-        except (TypeError, ValueError):
-            athlete.age = None
-    return render(
-        request,
-        "core/coach_athletes.html",
-        {
-            "athletes": athletes,
-            "sort_mode": sort_mode,
-            "sort_options": sort_options,
-        },
-    )
+    athlete = _filter_owned(Athlete.objects.order_by(Lower("name"), "id"), request).first()
+    if not athlete:
+        return redirect("coach_athlete_create")
+    return redirect("coach_athlete_edit", athlete_id=athlete.id)
 
 
 @login_required
@@ -11382,7 +11354,7 @@ def coach_athlete_create_view(request):
             form[f"z{z}_other"] = other_under.get(z, form.get(f"z{z}_other", "—"))
 
         if not errors:
-            Athlete.objects.create(
+            created_athlete = Athlete.objects.create(
                 owner=active_coach,
                 name=form["name"],
                 birth_year=int(birth_year),
@@ -11426,7 +11398,7 @@ def coach_athlete_create_view(request):
                 target_pr_400_s=target_t4_s,
                 is_private=form["is_private"],
             )
-            return redirect("coach_athletes")
+            return redirect("coach_athlete_edit", athlete_id=created_athlete.id)
 
     return render(
         request,
@@ -11848,6 +11820,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
 
     previous_athlete = None
     next_athlete = None
+    navigation_athletes = []
     if not self_view:
         navigation_athletes = list(
             _filter_owned(Athlete.objects.order_by(Lower("name"), "id"), request)
@@ -11877,6 +11850,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             "self_view": self_view,
             "previous_athlete": previous_athlete,
             "next_athlete": next_athlete,
+            "athlete_choices": navigation_athletes,
             "pause_mode_choices": CoachSettings.PAUSE_MODE_CHOICES,
         },
     )

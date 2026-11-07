@@ -73,6 +73,11 @@ Bijgewerkt: 20 oktober 2026.
 - Toon bij Daily vitals een compacte hartknop naast de datum; invoer gebeurt in een schermpassende popup. Plaats deze popup buiten de AYC/team-stackingcontext zodat de Bootstrap-backdrop nooit boven het formulier komt. Na opslaan sluit de popup volledig, inclusief backdrop en `modal-open`-status, zonder een paginareload tijdens de mobiele Bootstrap-transitie.
 - Toon de vier weekgemiddelden compact in het weeksamenvattingsblok en gebruik `NA` totdat minimaal drie waarden beschikbaar zijn.
 
+## Athlete Input
+
+- Coaches openen Athlete Info direct op een atleetprofiel. Boven de tabs staat één compacte alfabetische atleetselector; op mobiel gebruikt die de beschikbare breedte. New athlete en Back staan in dezelfde ombrekende kop.
+- De persoonlijke Athlete settings toont nooit een atleetselector: een atleet kan uitsluitend het eigen profiel openen.
+
 ## Desktop AYC
 
 - Behoud de brede tabel en volledige trainingsinformatie.

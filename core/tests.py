@@ -8320,11 +8320,11 @@ class SlotModalSaveTests(TestCase):
         self.assertNotContains(dashboard, "coach-c")
 
         self.client.post("/", {"coach_view_owner": str(coach_c.id)})
-        athletes_page = self.client.get("/coach/athletes/")
+        athletes_page = self.client.get("/coach/athletes/", follow=True)
         self.assertNotContains(athletes_page, "C athlete")
 
         self.client.post("/", {"coach_view_owner": str(coach_b.id)})
-        athletes_page = self.client.get("/coach/athletes/")
+        athletes_page = self.client.get("/coach/athletes/", follow=True)
         self.assertContains(athletes_page, "B athlete")
         self.assertNotContains(athletes_page, "C athlete")
 
@@ -10145,9 +10145,9 @@ class AthleteTimeInputFormatTests(TestCase):
         source = get_template("core/coach_athlete_form.html").template.source
 
         self.assertIn('{% elif not self_view and athlete %}', source)
-        self.assertIn('Selected athlete: <span class="fw-semibold text-body">{{ athlete.name }}</span>', source)
-        self.assertIn("previous_athlete.id", source)
-        self.assertIn("next_athlete.id", source)
+        self.assertIn('id="athleteInputSelector"', source)
+        self.assertIn("{% for choice in athlete_choices %}", source)
+        self.assertIn("choice.id == athlete.id", source)
         self.assertIn("?tab={{ active_tab }}", source)
 
     def test_athlete_input_navigation_is_alphabetical_and_scoped_to_active_coach(self):
@@ -10174,9 +10174,40 @@ class AthleteTimeInputFormatTests(TestCase):
         response = self.client.get(f"/coach/athletes/{current.id}/edit/?tab=base-planning")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, f'href="/coach/athletes/{previous.id}/edit/?tab=base-planning"', html=False)
-        self.assertContains(response, f'href="/coach/athletes/{following.id}/edit/?tab=base-planning"', html=False)
+        self.assertContains(response, f'value="/coach/athletes/{previous.id}/edit/?tab=base-planning"', html=False)
+        self.assertContains(response, f'value="/coach/athletes/{following.id}/edit/?tab=base-planning"', html=False)
         self.assertNotContains(response, f'/coach/athletes/{unrelated.id}/edit/', html=False)
+
+    def test_athlete_info_opens_first_accessible_athlete_with_selector(self):
+        coach = get_user_model().objects.create_user(
+            username="athlete-selector-coach", password="secret", is_staff=True)
+        second = Athlete.objects.create(owner=coach, name="Zoey Selector", birth_year=2000, gender="X")
+        first = Athlete.objects.create(owner=coach, name="Ada Selector", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+
+        response = self.client.get("/coach/athletes/")
+
+        self.assertRedirects(response, f"/coach/athletes/{first.id}/edit/", fetch_redirect_response=False)
+        page = self.client.get(response.url)
+        self.assertContains(page, 'id="athleteInputSelector"', html=False)
+        self.assertContains(page, f'value="/coach/athletes/{first.id}/edit/?tab=general"', html=False)
+        self.assertContains(page, f'value="/coach/athletes/{second.id}/edit/?tab=general"', html=False)
+        self.assertNotContains(page, '<table', html=False)
+
+    def test_personal_athlete_settings_never_shows_selector(self):
+        coach = get_user_model().objects.create_user(
+            username="athlete-settings-owner", password="secret", is_staff=True)
+        athlete_user = get_user_model().objects.create_user(
+            username="Personal Runner", password="secret")
+        Athlete.objects.create(owner=coach, name="Personal Runner", birth_year=2000, gender="X")
+        Athlete.objects.create(owner=coach, name="Other Runner", birth_year=2000, gender="X")
+        self.client.force_login(athlete_user)
+
+        response = self.client.get("/athlete/settings/")
+
+        self.assertEqual(response.status_code,200)
+        self.assertNotContains(response,'id="athleteInputSelector"',html=False)
+        self.assertContains(response,'Athlete settings')
 
     def test_trainer_and_athlete_can_change_see_session_km(self):
         User = get_user_model()
