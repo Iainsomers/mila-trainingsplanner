@@ -23,6 +23,50 @@ class GarminCPushTests(TestCase):
             "startTimeInSeconds": self.start, "distanceInMeters": 1000, "durationInSeconds": 300}
         self.push_url = reverse("garmin_activity_push", args=[receiver_key()])
 
+    def test_mixed_set_chat_validates_distance_drift_and_leading_walking(self):
+        from types import SimpleNamespace
+        from urllib.parse import urlencode
+
+        from core.views.calendar import _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+
+        values = [(3480.53,1134),(649.31,460),(1692.92,418),(47.3804,99),(1177.6,275),
+                  (47.21,90),(843.75,184),(154.89,241),(1684.42,412),(49.9307,102),
+                  (1156.79,265),(52,95),(849,175),(1900,620)]
+        zones = ['Z1','Z1','Z2','Z1','Z3','Z1','Z3','Z1','Z2','Z1','Z3','Z1','Z4','Z1']
+        measured_zones = dict(zip(values,zones))
+        GarminActivitySummary.objects.create(athlete=self.athlete, activity_id='mixed-distance-drift',
+            activity_start=datetime.fromtimestamp(self.start, dt_timezone.utc), activity_date='2026-10-31',
+            distance_m=sum(m for m,s in values), duration_s=sum(s for m,s in values),
+            analysis_data={'laps':[dict(distance=m,elapsed_time=s) for m,s in values]})
+        self.client.force_login(self.coach)
+        with patch('core.views.polar_raw.lap_zone_paces',
+                   side_effect=lambda m,ms,a: (measured_zones.get((m,ms/1000),'Z1'),'NA')), patch(
+                   'core.views.polar_raw.urlopen',side_effect=AssertionError('Explicit sets use measured laps')):
+            for model in ('c','d'):
+                url = reverse(f'garmin_type_{model}_ayc')
+                query = {'athlete':self.athlete.pk,'date':'2026-10-31'}
+                activity = self.client.get(url,query).json()['results'][0]
+                expected = '2×(1700 m - 1200 m - 850 m) Z2>Z4 p97 sp241'
+                self.assertEqual(activity['parts'][0]['training_fields']['main'],expected)
+                chat_url = url + '?' + urlencode({**query,'suggestion_session':activity['start']})
+                for message in ('2*(1700m-1200m-850m)', '2*(1700m-1200m-850m) z2>z4'):
+                    result = self.client.post(chat_url,{'chat':json.dumps([{'role':'user','content':message}])}).json()
+                    self.assertTrue(result['ok'],result)
+                    part = result['results'][0]['parts'][0]
+                    self.assertEqual(part['training_fields']['main'],expected)
+                    self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],values)
+                    slot = SimpleNamespace(source=f'watch_{model}',watch_loads=part['watch_loads'],
+                        segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',expected)]))
+                    reps = processed_main_reps(slot)
+                    self.assertEqual([r['distance_m'] for r in reps],[1700,1200,850]*2)
+                    self.assertEqual(reps[4]['measured_distance_m'],1156.79)
+                    self.assertEqual(reps[4]['measured_seconds'],265)
+                rejected = self.client.post(chat_url,{'chat':json.dumps([
+                    {'role':'user','content':'2*(1700m-1350m-850m)'}])}).json()
+                self.assertFalse(rejected['ok'])
+                self.assertEqual(rejected['results'],[])
+
     def test_mixed_distance_sets_and_existing_flat_clock_ignore_zone_drift(self):
         from types import SimpleNamespace
         from core.views.calendar import _annotate_slot_segment_display_times, _virtual_segment_from_text

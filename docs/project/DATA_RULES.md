@@ -338,3 +338,6 @@ Garmin C/D expliciete tijdkeuze (7 november 2026). Bevat de laatste chatopdracht
 
 
 Garmin tijdslaps zonder afstand (7 november 2026). Wanneer Activity Details geen totale afstand bevatten, worden geldige lapstarts vanaf de activiteitstart toch bewaard. De laptijd loopt tot de volgende lapstart en voor de laatste lap tot het activiteitseinde. Gemiddelde HR gebruikt samples binnen de lap; eind-HR gebruikt de laatste 10% met minimaal 15 seconden. Afstand en tempo blijven onbekend. Tijdintervalherkenning vereist een aaneengesloten afwisselend blok van minstens drie werkdelen rond hetzelfde hele aantal minuten (marge max 15 seconden of 6%) en herstel van 15-600 seconden, tevens maximaal 75% van de werkduur. Hoogstens omliggende voor-/nablokken worden buiten de samenvatting gelaten.
+
+
+Garmin C/D expliciete gemengde afstandssets (7 november 2026). Een complete setnotatie met minstens twee verschillende afstanden wordt lokaal getoetst zonder AI-aanroep. Ieder onderdeel moet in bronvolgorde passen binnen max(30 m, 8%). Bij automatische herkenning mag een later afgerond afstandslabel afwijken binnen die marge ten opzichte van de eerste set. Een gemeten wandelovergang van maximaal 600 s vooraf mag langer dan 600 m zijn. De grenzen voor herstel tussen de reps gelden afzonderlijk. Doelafstand en gemeten meters, seconden en zones blijven apart beschikbaar.

@@ -574,3 +574,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 7 november - Coach Athlete Info slaat de voormalige atletentabel over en opent direct de alfabetisch eerste toegankelijke atleet. Athlete input heeft nu een alfabetische selector die de actieve tab behoudt, plus New athlete en Back; na aanmaken opent het nieuwe profiel. De selector is beperkt tot de actieve coachweergave en ontbreekt volledig in persoonlijke Athlete settings. Tien gerichte Athlete Input-tests en `manage.py check` geslaagd; bestaande brede PlanningOverview-suite bevat ongerelateerde verouderde verwachtingen rond `/` en tegelteksten.
+
+
+7 november - Garmin C/D herkent gemengde sets bij GPS-afwijking (1156,79 m hoort bij 1200 m) en laat een voorafgaande wandelovergang van 649,31 m buiten de werkset. Expliciete chatnotatie gebruikt dezelfde meetcontrole. Regressie dekt beide routes, gemeten kloktijd 265 s en afwijzing van 1350 m. Laatste niet-zichtbare laps zijn synthetisch. 125 gerichte tests en manage.py check geslaagd.

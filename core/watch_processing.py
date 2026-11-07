@@ -9,33 +9,48 @@ from core.watch_hr import tail_hr
 WATCH_SOURCES = {"watch_a", "watch_b", "watch_c", "watch_d"}
 
 
+def requested_mixed_distance_sets(text):
+    """Read an explicit mixed-distance set without interpreting prose."""
+    grouped = re.fullmatch(
+        r"\s*(\d+)\s*[×x*]\s*\(([^()]+)\)(?:\s+Z[1-5](?:\s*>\s*Z[1-5])?)?"
+        r"(?:\s+p\d+)?(?:\s+sp\d+)?\s*", str(text or ""), re.I,
+    )
+    if not grouped:
+        return None
+    count = int(grouped[1])
+    items = [re.fullmatch(r"\s*(\d+)\s*m\s*", item, re.I) for item in grouped[2].split("-")]
+    if not 2 <= count <= 10 or len(items) * count > 30 or not all(items):
+        return None
+    distances = [int(item[1]) for item in items]
+    if len(set(distances)) < 2 or min(distances) < 400:
+        return None
+    return count, distances
+
+
 def match_repeating_distance_sets(main, loads):
     """Bind mixed-distance sets to single measured laps in recorded order."""
     from core.training_text import split_main_segments
 
-    grouped = re.fullmatch(
-        r"\s*(\d+)\s*[×x*]\s*\(([^()]+)\)\s+Z[1-5](?:>Z[1-5])?"
-        r"(?:\s+p\d+)?(?:\s+sp\d+)?\s*", str(main or ""), re.I,
-    )
+    grouped = requested_mixed_distance_sets(main)
     if grouped:
-        count = int(grouped[1])
-        items = [re.fullmatch(r"\s*(\d+)\s*m\s*", item, re.I) for item in grouped[2].split("-")]
-        if not 2 <= count <= 10 or not all(items):
-            return None
-        distances = [int(item[1]) for item in items] * count
+        count, pattern = grouped
+        width = len(pattern)
+        distances = pattern * count
     else:
         items = [re.fullmatch(r"(?:1\s*[×x*]\s*)?(\d+)\s*m\s+Z[1-5](?:>Z[1-5])?(?:\s+\([^()]+\))?(?:\s+p\d+)?", item, re.I)
                  for item in split_main_segments(main)]
         if not items or not all(items):
             return None
         distances = [int(item[1]) for item in items]
-    if not 4 <= len(distances) <= 30 or min(distances) < 400:
-        return None
-    width = next((size for size in range(2, len(distances)//2+1)
-                  if len(distances) % size == 0 and len(set(distances[:size])) > 1
-                  and distances == distances[:size] * (len(distances)//size)), None)
-    if width is None:
-        return None
+        if not 4 <= len(distances) <= 30 or min(distances) < 400:
+            return None
+        width = next((size for size in range(2, len(distances)//2+1)
+                      if len(distances) % size == 0 and len(set(distances[:size])) > 1
+                      and all(abs(distance-target) <= max(30, target*.08)
+                              for distance,target in zip(distances, distances[:size] * (len(distances)//size)))), None)
+        if width is None:
+            return None
+        distances = distances[:width] * (len(distances)//width)
 
     work, pending, pauses = [], [], []
     for load in loads:
@@ -57,7 +72,9 @@ def match_repeating_distance_sets(main, loads):
             return None
         if pending:
             rest_m, rest_s = map(sum, zip(*pending))
-            if rest_m > 600 or rest_s > 600 or meters/seconds < 1.2 * rest_m/rest_s:
+            # A walking transfer before the first effort is not a rep pause.
+            leading_walk = not work and all(is_walking_load(m,s) for m,s in pending)
+            if (rest_m > 600 and not leading_walk) or rest_s > 600 or meters/seconds < 1.2 * rest_m/rest_s:
                 return None
             if work and float(work[-1]["meters"])/float(work[-1]["seconds"]) < 1.2 * rest_m/rest_s:
                 return None

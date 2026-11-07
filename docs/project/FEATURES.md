@@ -588,3 +588,6 @@ Staff Team Overview kleurt bij Sleep length de laagste en hoogste slaapduur afzo
 
 
 Garmin C/D toont een stabiele Z1-duurloop met een duidelijk gemeten slotserie van minstens drie korte versnellingen als twee blokken in Main. De gemeten preview herkent dit direct. De AI-chat kan dezelfde indeling voorstellen via continuous_main_laps.
+
+
+Garmin C/D controleert een expliciete chatinvoer zoals 2*(1700m-1200m-850m) rechtstreeks tegen de bronlaps. Bij een match krijgt de preview de gevraagde setstructuur met gemeten zones en pauzes.

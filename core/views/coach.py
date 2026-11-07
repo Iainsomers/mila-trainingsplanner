@@ -5775,7 +5775,11 @@ def garmin_type_c_ayc_view(request, model="C"):
             return JsonResponse({'ok':False,'message':'Please send a shorter message.','results':[]},status=400)
     guided = bool(suggestion or chat_messages)
     from core.watch_alternatives import requested_time_reps
+    from core.watch_processing import match_repeating_distance_sets, requested_mixed_distance_sets
     local_time_request = requested_time_reps(chat_messages)
+    chat_text = chat_messages[-1]['content'] if chat_messages else ''
+    local_mixed_request = requested_mixed_distance_sets(chat_text)
+    local_request = local_time_request or local_mixed_request
     requested_structure = None
     if suggestion:
         from core.watch_ai_structure import parse_structure_suggestion
@@ -5983,7 +5987,7 @@ def garmin_type_c_ayc_view(request, model="C"):
             "model": model,
         })
 
-    if chat_messages:
+    if chat_messages and not local_mixed_request:
         selected_session = next((s for s in sessions if s.get('startTime','') == request.GET.get('suggestion_session')),None)
         if selected_session:
             from core.views.garmin import ai_allowed, fit_ai_allowed
@@ -6030,7 +6034,7 @@ def garmin_type_c_ayc_view(request, model="C"):
         allowed = fit_ai_allowed(athlete) if session.get('is_fit_upload') else ai_allowed(athlete)
         if guided and session.get('startTime', '') != request.GET.get('suggestion_session'):
             continue
-        if guided and not allowed and not local_time_request:
+        if guided and not allowed and not local_request:
             return JsonResponse({'ok':False, 'message':'AI permission is required to check a suggestion.', 'results':[]}, status=403)
         quick_preview = request.GET.get('preview') == 'measured'
         measured_structure = None
@@ -6045,7 +6049,7 @@ def garmin_type_c_ayc_view(request, model="C"):
                               'paused_s':(lap.get('pausedDurationMillis') or 0) / 1000})
             measured_structure = infer_easy_run_with_strides(facts)
         translated = translate_model_b([session], 5, athlete,
-            allow_ai=allowed and not quick_preview and not measured_structure and not local_time_request,
+            allow_ai=allowed and not quick_preview and not measured_structure and not local_request,
             allow_lap_structure=True, requested_structure=requested_structure, chat_messages=chat_messages)
         if measured_structure or (allowed and quick_preview):
             for item in translated:
@@ -6057,7 +6061,7 @@ def garmin_type_c_ayc_view(request, model="C"):
                         part['ai_structure_status'] = 'pending'
         if guided:
             parts = [p for item in translated for p in item.get('parts', [])]
-            if not local_time_request and (not parts or any(not p.get('validated_lap_structure') for p in parts)):
+            if not local_request and (not parts or any(not p.get('validated_lap_structure') for p in parts)):
                 reason = next((p.get('ai_structure_reason') for p in parts if p.get('ai_structure_reason')), '')
                 message = 'No matching structure could be confirmed.'
                 if show_diagnostics and reason:
@@ -6153,6 +6157,21 @@ def garmin_type_c_ayc_view(request, model="C"):
                 }
     from core.watch_alternatives import add_training_alternatives, prefer_explicit_time_request
     add_training_alternatives(results)
+    if local_mixed_request:
+        from core.watch_ai_structure import description
+
+        parts = [part for result in results for part in result.get('parts', [])]
+        mixed = match_repeating_distance_sets(chat_text, parts[0].get('watch_loads', [])) if len(parts) == 1 else None
+        if not mixed:
+            return JsonResponse({'ok':False, 'message':'No matching structure could be confirmed.',
+                'chat_reply':'The measured laps do not confirm that sequence of distances.',
+                'results':[]})
+        part = parts[0]
+        part['training_fields']['main'] = mixed[0]
+        part['description'] = description(part['training_fields'])
+        part['ai_structure_status'] = 'measured_structure'
+        part['chat_reply'] = 'De gemeten laps bevestigen deze afstandsvolgorde.'
+        part.pop('training_alternatives', None)
     local_time_selected = prefer_explicit_time_request(results, chat_messages)
     if local_time_request and not local_time_selected:
         return JsonResponse({'ok':False, 'message':'No matching structure could be confirmed.',
