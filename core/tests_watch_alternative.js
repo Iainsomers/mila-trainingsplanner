@@ -17,7 +17,7 @@ function checkButtons() {
   const render = new Function('document','renderTypeALaps','useWatchTraining','watchChats',
     renderSource.replace('{{ is_coach_user|yesno:"true,false" }}', 'false') + '\nreturn renderTypeAResults;')({createElement:element},()=>{},(...args)=>invoked.push(args), {});
   for (const model of ['C','D']) {
-    for (const fields of [{alt:"Pilates 46' Z1"},{main:'4x400m Z3'}]) {
+    for (const fields of [{alt:"Pilates 27'"},{alt:"Pilates 46' Z1"},{main:'4x400m Z3'}]) {
       const parent=element('div');
       render(parent,[{parts:[{description:'Training',training_fields:fields}]}],'',model);
       const flatten = node => [node,...node.children.flatMap(flatten)];

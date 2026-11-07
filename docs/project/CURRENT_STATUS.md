@@ -559,3 +559,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 7 november - Een expliciete tijdsopdracht in de Garmin C/D-chat, zoals `4*8'`, `4×8 min` of `4 x 8 minuten`, selecteert direct de gevalideerde tijdvariant. De afstand/tijd-keuze blijft alleen zichtbaar wanneer de laatste gebruikersopdracht de eenheid niet vastlegt. De gemeten laps en validatie blijven leidend. Validatie: 66 gerichte Watch-alternatieven-, AI-structuur- en Garmin C-pushtests plus `manage.py check` geslaagd.
+
+
+7 november - Niet-hardloopactiviteiten met bekende sport en duur behouden nu Use/Add AM/PM wanneer gemiddelde HR + 10 niet exact in één ingestelde zone valt. De Alternative blijft dan bijvoorbeeld `Pilates 27'`, zonder verzonnen zone en met de bestaande uitleg over de zone-instellingen. C/D, AM/PM en zowel vervangen als toevoegen zijn gericht getest; `manage.py check` geslaagd.

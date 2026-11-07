@@ -493,12 +493,14 @@ class GarminCPushTests(TestCase):
         self.athlete.zone_hr_bpm={'1':'151','2':'152-168'}
         missing=alternative_part(self.athlete,{'sport':'PILATES'},2771)
         self.assertEqual(missing['description'],"Pilates 46'")
-        self.assertNotIn('training_fields',missing)
+        self.assertEqual(missing['training_fields'],{'alt':"Pilates 46'"})
         for value in (None, 0, float('nan'), True, 999):
             metrics={'sport':'ELLIPTICAL','average_hr':value}
-            self.assertNotIn('training_fields',alternative_part(self.athlete,metrics,5408))
+            self.assertEqual(alternative_part(self.athlete,metrics,5408)['training_fields'],
+                             {'alt':"Elliptical 90'"})
         self.athlete.zone_hr_bpm={}
-        self.assertNotIn('training_fields',alternative_part(self.athlete,{'sport':'ELLIPTICAL','average_hr':143},5408))
+        self.assertEqual(alternative_part(self.athlete,{'sport':'ELLIPTICAL','average_hr':143},5408)['training_fields'],
+                         {'alt':"Elliptical 90'"})
         self.athlete.zone_hr_bpm={'1':'151','2':'152-168'}
         sampled=alternative_part(self.athlete,{'sport':'ELLIPTICAL','sample_average_hr':143},5408)
         self.assertEqual(sampled['training_fields'],{'alt':"Elliptical 90' Z2"})

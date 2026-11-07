@@ -30,8 +30,11 @@ def alternative_part(athlete, metrics, duration_s):
     # Whole minutes, nearest minute, with at least one minute for short sessions.
     text = f"{label} {max(1, math.floor(seconds / 60 + .5))}'"
     part['description'] = text + (f' Z{zone}' if zone else '')
+    # Sport and duration are sufficient for a usable Alternative. Heart rate
+    # only enriches it with a zone; missing/mismatching zones must not hide the
+    # Use/Add actions for an otherwise valid non-running activity.
+    part['training_fields'] = {'alt': part['description']}
     if zone:
-        part['training_fields'] = {'alt': part['description']}
         part['analysis_note'] = f'Alternative · Zone from average HR {average:g} + 10 = {average + 10:g} bpm.'
     else:
         part['analysis_note'] = ('Average HR is missing. Alternative cannot be assigned a zone.'
