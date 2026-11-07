@@ -10120,6 +10120,13 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertEqual(html.count('<section class="pr-time-group '), 4)
         for group_name in ("Sprint", "Middle Distance", "Long Distance", "Road"):
             self.assertIn(f">{group_name}</h6>", html)
+        sprint_group = html.split('<section class="pr-time-group pr-time-group-sprint"', 1)[1].split('</section>', 1)[0]
+        middle_group = html.split('<section class="pr-time-group pr-time-group-middle"', 1)[1].split('</section>', 1)[0]
+        self.assertIn('name="t4"', sprint_group)
+        self.assertNotIn('name="pr_600"', sprint_group)
+        self.assertIn('name="pr_600"', middle_group)
+        for name in ("pr_800", "pr_1000", "pr_1500"):
+            self.assertIn(f'name="{name}"', middle_group)
         self.assertEqual(html.count('class="col-md-2 pr-time-card"'), 10)
         self.assertEqual(html.count('data-time-label="PR"'), 10)
         self.assertEqual(html.count('data-time-label="Goal"'), 10)

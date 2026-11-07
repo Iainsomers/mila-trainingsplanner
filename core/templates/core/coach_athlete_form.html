@@ -79,11 +79,10 @@
   .zone-card-z5 { border-top-color: #82b8f3; background: #f5f9ff; }
   .zone-card > .form-label { font-weight: 700; }
   .pr-time-groups {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-template-areas:
-      "sprint road"
-      "middle middle"
-      "long long";
+      "sprint middle middle middle middle"
+      "long long long road road";
     align-items: start;
   }
   .pr-time-group-sprint { grid-area: sprint; }
@@ -891,16 +890,16 @@
                   <input name="t4" class="form-control" value="{{ form.t4 }}" data-time-format="seconds-hundredths" data-time-label="PR">
                   <input name="target_t4" class="form-control form-control-sm mt-1" value="{{ form.target_t4 }}" data-time-format="seconds-hundredths" data-time-label="Goal">
                 </div>
-                <div class="col-md-2 pr-time-card">
-                  <label class="form-label">T6</label>
-                  <input name="pr_600" class="form-control" value="{{ form.pr_600 }}" data-time-format="minutes-seconds-hundredths" data-time-label="PR">
-                  <input name="target_pr_600" class="form-control form-control-sm mt-1" value="{{ form.target_pr_600 }}" data-time-format="minutes-seconds-hundredths" data-time-label="Goal">
-                </div>
               </div>
             </section>
             <section class="pr-time-group pr-time-group-middle" aria-labelledby="middle-times-title">
               <h6 class="pr-time-group-title" id="middle-times-title">Middle Distance</h6>
               <div class="pr-time-grid">
+                <div class="col-md-2 pr-time-card">
+                  <label class="form-label">T6</label>
+                  <input name="pr_600" class="form-control" value="{{ form.pr_600 }}" data-time-format="minutes-seconds-hundredths" data-time-label="PR">
+                  <input name="target_pr_600" class="form-control form-control-sm mt-1" value="{{ form.target_pr_600 }}" data-time-format="minutes-seconds-hundredths" data-time-label="Goal">
+                </div>
                 <div class="col-md-2 pr-time-card">
                   <label class="form-label">T8</label>
                   <input name="pr_800" class="form-control" value="{{ form.pr_800 }}" data-time-format="minutes-seconds-hundredths" data-time-label="PR">

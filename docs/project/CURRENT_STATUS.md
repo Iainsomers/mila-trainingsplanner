@@ -1,5 +1,9 @@
 # Actuele status
 
+## 8 november 2026 — atletieklogische Current times-groepen
+
+- T6 (600 m) staat nu bij Middle Distance in plaats van Sprint. De brede layout loopt van een smal Sprint-blok naar een breed Middle Distance-blok en vervolgens van Long Distance naar Road; Sprint en Road staan niet meer naast elkaar.
+
 ## 8 november 2026 — compactere Current times-verdeling
 
 - De lege hoogte uit Current times is verwijderd: Sprint en Road delen de bovenste rij, Middle Distance en Long Distance staan als brede rijen met drie kaarten. Binnenkaarten zijn teruggebracht tot lichte scheidingslijnen.
