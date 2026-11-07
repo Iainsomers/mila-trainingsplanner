@@ -1,5 +1,9 @@
 # Actuele status
 
+## 8 november 2026 — Zones-tab past compacter in één scherm
+
+- Verticale marges en padding rond de kop, tabs, zones, tijdsgroepen, formaatinfo en Save/Cancel zijn verkleind zonder de invoervelden zelf te verkleinen. Het interne `Athlete ID` onder het formulier is verwijderd.
+
 ## 8 november 2026 — atletieklogische Current times-groepen
 
 - T6 (600 m) staat nu bij Middle Distance in plaats van Sprint. De brede layout loopt van een smal Sprint-blok naar een breed Middle Distance-blok en vervolgens van Long Distance naar Road; Sprint en Road staan niet meer naast elkaar.

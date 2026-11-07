@@ -10134,6 +10134,7 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertIn('athlete-tabs-sticky', html)
         self.assertIn('class="time-format-details"', html)
         self.assertNotIn("Fixed format:", html)
+        self.assertNotIn("Athlete ID:", html)
         for name in ("t4", "target_t4"):
             self.assertIn(f'name="{name}"', html)
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="seconds-hundredths"')
