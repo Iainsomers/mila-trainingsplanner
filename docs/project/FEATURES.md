@@ -582,3 +582,9 @@ Staff Team Overview kleurt bij Sleep length de laagste en hoogste slaapduur afzo
 
 
 Garmin C/D toont een stabiele Z1-duurloop met een duidelijk gemeten slotserie van minstens drie korte versnellingen als twee blokken in Main. De gemeten preview herkent dit direct. De AI-chat kan dezelfde indeling voorstellen via continuous_main_laps.
+
+
+7 november — Athlete Diary toont weekrapporten op desktop en mobiel als vier previews. Open een preview voor de volledige tekst en sla wijzigingen expliciet per veld op. Feedback blijft per AM/PM bereikbaar en toont status, RPE en de eerste regels. Mobiel staan de vier dagelijkse vitals ook op de dagkaart.
+
+
+Garmin C/D vat een herhaalde reeks verschillende afstanden samen als sets wanneer de al herkende onderdelen één voor één aan gemeten werkstukken gekoppeld kunnen worden. Het klokje gebruikt dezelfde koppeling bij bestaande imports met losse onderdelen.

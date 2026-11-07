@@ -1,0 +1,6 @@
+<button type="button" class="week-report-box" data-week-start="{{ w.week_start|date:'Y-m-d' }}"
+        data-field="{{ field }}" data-label="{{ label }}" data-value="{{ value|default_if_none:'' }}"
+        {% if readonly %}data-readonly="true"{% endif %}>
+  <span class="week-report-title">{{ label }}</span>
+  <span class="week-report-preview">{{ value|default:"—" }}</span>
+</button>

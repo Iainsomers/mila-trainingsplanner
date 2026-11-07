@@ -8038,6 +8038,30 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('id="mobileVitalsModal"', template_source)
         self.assertIn('class="ayc-mobile-vitals-avg"', template_source)
         self.assertIn('document.body.appendChild(modalEl);', template_source)
+        self.assertIn('id="aycWeekReportDialog"', template_source)
+        self.assertIn('data-vital-preview="sleep_quality"', template_source)
+
+    def test_week_report_preview_save_updates_only_selected_field(self):
+        coach, _, athlete = self._user_plan_and_athlete()
+        athlete.week_report_enabled = True
+        athlete.save(update_fields=["week_report_enabled"])
+        week = date(2026, 11, 2)
+        report = AthleteWeekReport.objects.create(athlete=athlete, week_start=week, comm_athlete="Athlete feedback")
+        url = f"/athlete/year/?year={week.year}&athlete={athlete.id}"
+        data = {"date": week.isoformat(), "week_start": week.isoformat(), "week_report_submit": "1",
+                "field": "comm_trainer", "value": "First line\nSecond line"}
+
+        response = self.client.post(url, data, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(response.status_code, 204)
+        report.refresh_from_db()
+        self.assertEqual(report.comm_trainer, data["value"])
+        self.assertEqual(report.updated_by, coach)
+        response = self.client.post(url, {**data, "field": "comm_athlete"}, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertNotEqual(response.status_code, 204)
+        report.refresh_from_db()
+        self.assertEqual(report.comm_athlete, "Athlete feedback")
+        page = self.client.get(url)
+        self.assertContains(page, 'data-value="First line\nSecond line"', count=2)
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()

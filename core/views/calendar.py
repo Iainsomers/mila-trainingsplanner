@@ -3404,7 +3404,9 @@ def athlete_year_calendar_view(request):
                         )
                         setattr(report, field, value)
                         report.updated_by = request.user
-                        report.save()
+                        report.save(update_fields=[field, "updated_by", "updated_at"])
+                        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                            return HttpResponse(status=204)
 
                 elif daily_vitals_submit is not None:
                     if d > today and not is_ayc_coach:

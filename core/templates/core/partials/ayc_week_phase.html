@@ -1,0 +1,5 @@
+{% if w.week_phase_style %}
+  <div class="week-phase-wrap">
+    <span class="week-phase-label" style="{{ w.week_phase_style }}">{{ w.week_phase_label|default:"Mixed" }}</span>
+  </div>
+{% endif %}
