@@ -6,10 +6,63 @@
   <style>
     {% if embedded %}
       nav,
-      .navbar {
+      .navbar,
+      .mila-logout {
         display: none !important;
       }
+      html, body { overflow: hidden; }
+      .mila-page-content { padding: 0 !important; }
+      .base-planning-page { padding: .35rem 0 0 !important; }
     {% endif %}
+
+    .base-action-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1010;
+      padding: .55rem .65rem;
+      border: 1px solid #dfe5eb;
+      border-radius: .45rem;
+      background: rgba(255, 255, 255, .97);
+      box-shadow: 0 2px 8px rgba(30, 50, 70, .06);
+    }
+
+    .base-block {
+      border: 1px solid #dfe5eb;
+      border-radius: .5rem;
+      background: #fff;
+    }
+
+    .base-block > summary {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      padding: .65rem .8rem;
+      cursor: pointer;
+      list-style: none;
+    }
+    .base-block > summary::-webkit-details-marker { display: none; }
+    .base-block > summary::before {
+      content: "▸";
+      flex: 0 0 auto;
+      color: #2e7d5b;
+      font-size: .85rem;
+    }
+    .base-block[open] > summary::before { transform: rotate(90deg); }
+    .base-block-title { min-width: 0; font-weight: 700; }
+    .base-block-summary-meta { color: #68737d; font-size: .82rem; }
+    .base-block-body { padding: 0 .8rem .8rem; }
+    .base-block-editor {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.6fr) minmax(260px, 1fr) auto;
+      align-items: end;
+      gap: .65rem;
+      margin-bottom: .7rem;
+      padding-top: .65rem;
+      border-top: 1px solid #edf0f2;
+    }
+    .base-period-fields { display: flex; align-items: center; gap: .4rem; }
+    .base-period-fields input { min-width: 0; }
+    .base-period-arrow { color: #6c757d; }
 
     .base-week-grid {
       display: grid;
@@ -19,7 +72,7 @@
 
     .base-day-column {
       border: 1px solid #d2d2d2;
-      background: #fafafa;
+      background: #fcfcfc;
       min-width: 0;
     }
 
@@ -33,7 +86,7 @@
 
     .base-slot-button {
       width: 100%;
-      min-height: 74px;
+      min-height: 66px;
       border: 0;
       border-bottom: 1px solid #e2e2e2;
       background: #fff;
@@ -114,12 +167,19 @@
       .base-week-grid {
         grid-template-columns: repeat(2, minmax(140px, 1fr));
       }
+      .base-block-editor { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 575.98px) {
+      .base-week-grid { grid-template-columns: 1fr; }
+      .base-slot-button { min-height: 48px; }
+      .base-block > summary { align-items: flex-start; flex-wrap: wrap; }
+      .base-block-summary-meta { width: 100%; padding-left: 1.25rem; }
     }
   </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 base-planning-page">
   {% if not embedded %}
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div>
@@ -151,8 +211,7 @@
   {% endif %}
 
   {% if not read_only %}
-  <div class="card mb-3">
-    <div class="card-body">
+  <div class="base-action-bar mb-3">
       <div class="d-flex flex-wrap align-items-end gap-2">
         {% if not embedded %}
           <form method="get">
@@ -174,7 +233,7 @@
             <input type="hidden" name="kind" value="{{ planning_kind }}">
             {% if embedded %}<input type="hidden" name="embedded" value="1">{% endif %}
             <select name="copy_from_athlete_id" class="form-select form-select-sm" onchange="if (this.value) this.form.submit();">
-              <option value="">Copy van...</option>
+              <option value="">Copy from...</option>
               {% for athlete in athletes %}
                 {% if athlete.id != selected_athlete.id %}
                   <option value="{{ athlete.id }}">{{ athlete.name }}</option>
@@ -188,7 +247,6 @@
           <span id="baseAutosaveStatus" class="small text-muted"></span>
         {% endif %}
       </div>
-    </div>
   </div>
   {% endif %}
 
@@ -205,23 +263,32 @@
           {% with block=item.block %}
             <input type="hidden" name="block_id" value="{{ block.id }}">
 
-            <div class="card mb-4">
-              <div class="card-body">
-                <div class="row g-3 align-items-end mb-3">
-                  <div class="col-md-4">
+            <details class="base-block mb-3" data-base-block-id="{{ block.id }}" {% if forloop.first %}open{% endif %}>
+              <summary>
+                <span class="base-block-title">{{ block.label|default:"Untitled block" }}</span>
+                <span class="base-block-summary-meta">{{ block.start_md }} → {{ block.end_md }} · {{ item.training_count }} training{{ item.training_count|pluralize }}/week</span>
+              </summary>
+              <div class="base-block-body">
+                <div class="base-block-editor">
+                  <div>
+                    <label class="form-label small mb-1">Block name</label>
                     <input name="block_{{ block.id }}_label" class="form-control form-control-sm" value="{{ block.label }}" placeholder="Name">
                   </div>
-                  <div class="col-md-2">
-                    <input name="block_{{ block.id }}_start" class="form-control form-control-sm" value="{{ block.start_md }}" placeholder="DD-MM">
-                  </div>
-                  <div class="col-md-2">
-                    <input name="block_{{ block.id }}_end" class="form-control form-control-sm" value="{{ block.end_md }}" placeholder="DD-MM">
-                  </div>
-                  <div class="col-md-4">
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                      <button type="submit" name="action" value="copy_block:{{ block.id }}" class="btn btn-outline-secondary btn-sm">Copy block</button>
-                      <button type="submit" name="action" value="delete_block:{{ block.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this block?');">Delete</button>
+                  <div>
+                    <label class="form-label small mb-1">Period</label>
+                    <div class="base-period-fields">
+                      <input name="block_{{ block.id }}_start" class="form-control form-control-sm" value="{{ block.start_md }}" placeholder="DD-MM" aria-label="Start date">
+                      <span class="base-period-arrow" aria-hidden="true">→</span>
+                      <input name="block_{{ block.id }}_end" class="form-control form-control-sm" value="{{ block.end_md }}" placeholder="DD-MM" aria-label="End date">
                     </div>
+                  </div>
+                  <div class="dropdown">
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Actions</button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      <li><button type="submit" name="action" value="copy_block:{{ block.id }}" class="dropdown-item">Copy block</button></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><button type="submit" name="action" value="delete_block:{{ block.id }}" class="dropdown-item text-danger" onclick="return confirm('Delete this block?');">Delete block</button></li>
+                    </ul>
                   </div>
                 </div>
 
@@ -241,7 +308,7 @@
                   {% endfor %}
                 </div>
               </div>
-            </div>
+            </details>
           {% endwith %}
         {% endfor %}
       {% else %}
@@ -262,6 +329,46 @@
     </div>
   {% endif %}
 </div>
+
+{% if embedded %}
+<script>
+  (function () {
+    const storageKey = "mila-base-blocks-{{ selected_athlete.id|default:'none' }}-{{ planning_kind }}";
+    const blocks = Array.from(document.querySelectorAll("details[data-base-block-id]"));
+    try {
+      const savedOpenIds = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+      if (Array.isArray(savedOpenIds)) {
+        blocks.forEach((block) => { block.open = savedOpenIds.includes(block.dataset.baseBlockId); });
+      }
+    } catch (error) {}
+
+    function reportHeight() {
+      const content = document.querySelector(".mila-page-content");
+      window.parent.postMessage({
+        type: "mila-embedded-planner-height",
+        height: Math.ceil(content ? content.scrollHeight : document.body.scrollHeight)
+      }, window.location.origin);
+    }
+
+    blocks.forEach((block) => {
+      block.addEventListener("toggle", function () {
+        try {
+          sessionStorage.setItem(storageKey, JSON.stringify(
+            blocks.filter((item) => item.open).map((item) => item.dataset.baseBlockId)
+          ));
+        } catch (error) {}
+        window.setTimeout(reportHeight, 0);
+      });
+    });
+
+    window.addEventListener("load", reportHeight);
+    if (window.ResizeObserver) {
+      new ResizeObserver(reportHeight).observe(document.body);
+    }
+    reportHeight();
+  })();
+</script>
+{% endif %}
 
 {% if not read_only %}
 <div class="modal fade" id="baseSlotModal" tabindex="-1" aria-hidden="true">
@@ -321,7 +428,7 @@
           <select id="baseSlotTrainerPlan" class="form-select form-select-sm">
             <option value="">Choose group...</option>
             {% for plan in trainer_plans %}
-              <option value="{{ plan.id }}">{{ plan.name }}</option>
+              <option value="{{ plan.id }}">{{ plan.display_name }}</option>
             {% endfor %}
           </select>
         </div>

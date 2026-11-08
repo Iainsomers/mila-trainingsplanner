@@ -6075,7 +6075,29 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(editable_slot.training_text, "CORE=5 km z2")
 
     def test_base_planning_slot_autosave_uses_full_form_save_path(self):
-        _, _, athlete = self._user_plan_and_athlete()
+        user, _, athlete = self._user_plan_and_athlete()
+        strength_plan = TrainingPlan.objects.create(
+            owner=user,
+            name="CORE Atverni",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        layout_block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Layout block",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+            sort_order=1,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=layout_block,
+            weekday=0,
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=strength_plan,
+        )
         page = self.client.get(f"/planning/base/?athlete={athlete.id}")
 
         self.assertEqual(page.status_code, 200)
@@ -6084,6 +6106,13 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(page, "const data = new FormData(planningForm);")
         self.assertContains(page, 'data.set("action", "save");')
         self.assertNotContains(page, 'data.set("action", "autosave_slot");')
+        self.assertContains(page, 'class="base-action-bar')
+        self.assertContains(page, 'class="base-block')
+        self.assertContains(page, 'class="base-block-summary-meta"')
+        self.assertContains(page, '>Actions</button>')
+        self.assertContains(page, 'class="base-period-arrow"')
+        self.assertContains(page, "Strength Atverni")
+        self.assertNotContains(page, ">CORE Atverni<")
 
     def test_base_planning_block_copy_keeps_slots(self):
         user, plan, athlete = self._user_plan_and_athlete()
@@ -6122,7 +6151,7 @@ class SlotModalSaveTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        copied = AthleteBasePlanningBlock.objects.get(athlete=athlete, label="Winter copy")
+        copied = AthleteBasePlanningBlock.objects.get(athlete=athlete, label="Block 2")
         self.assertEqual((copied.start_month, copied.start_day, copied.end_month, copied.end_day), (1, 1, 3, 31))
         copied_slots = {
             (slot.weekday, slot.slot_index): slot
@@ -7935,6 +7964,7 @@ class SlotModalSaveTests(TestCase):
         )
         self.assertEqual(base_response.status_code, 200)
         self.assertContains(base_response, "View only")
+        self.assertNotContains(base_response, 'class="mila-logout"')
 
     def test_athlete_with_base_planning_rights_can_edit_and_only_use_own_trainers_groups(self):
         coach = get_user_model().objects.create_user(
@@ -10148,6 +10178,9 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertNotIn(">Training calendar</label>", html)
         self.assertIn('class="connections-details"', html)
         self.assertRegex(html, r'class="[^"]*athlete-form-actions')
+        self.assertEqual(html.count('class="embedded-planner-frame"'), 2)
+        self.assertIn("mila-embedded-planner-height", html)
+        self.assertNotIn("min-height:780px", html)
         for name in ("t4", "target_t4"):
             self.assertIn(f'name="{name}"', html)
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="seconds-hundredths"')

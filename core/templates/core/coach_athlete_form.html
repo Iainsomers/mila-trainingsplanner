@@ -899,16 +899,20 @@
           {% if mode == "edit" and athlete %}
             <div class="tab-pane fade {% if active_tab == 'base-planning' %}show active{% endif %}" id="base-planning-pane" role="tabpanel" aria-labelledby="base-planning-tab">
               <iframe
+                class="embedded-planner-frame"
                 src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=base{% if self_view and not form.can_change_base_planning %}&readonly=1{% endif %}"
-                style="width:100%; min-height:780px; border:1px solid #ddd; border-radius:6px;"
+                style="width:100%; min-height:320px; border:0;"
                 title="Athlete base planning"
+                scrolling="no"
               ></iframe>
             </div>
             <div class="tab-pane fade {% if active_tab == 'ideal-week' %}show active{% endif %}" id="ideal-week-pane" role="tabpanel" aria-labelledby="ideal-week-tab">
               <iframe
+                class="embedded-planner-frame"
                 src="{% url 'athlete_base_planning' %}?athlete={{ athlete.id }}&embedded=1&kind=ideal"
-                style="width:100%; min-height:780px; border:1px solid #ddd; border-radius:6px;"
+                style="width:100%; min-height:320px; border:0;"
                 title="Ideal week"
+                scrolling="no"
               ></iframe>
             </div>
           {% endif %}
@@ -919,6 +923,17 @@
           <a href="{% if self_view %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
         </div>
       </form>
+      <script>
+        window.addEventListener("message", function (event) {
+          if (event.origin !== window.location.origin || !event.data || event.data.type !== "mila-embedded-planner-height") return;
+          const frames = Array.from(document.querySelectorAll(".embedded-planner-frame"));
+          const sourceFrame = frames.find((frame) => frame.contentWindow === event.source);
+          const height = Number(event.data.height);
+          if (sourceFrame && Number.isFinite(height) && height > 0) {
+            sourceFrame.style.height = Math.max(320, height + 4) + "px";
+          }
+        });
+      </script>
       {% if self_view and athlete.garmin_connection_enabled %}
       <form method="post" action="{% url 'garmin_withdraw' %}" class="mt-3">
         {% csrf_token %}

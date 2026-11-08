@@ -8743,7 +8743,7 @@ def athlete_base_planning_view(request):
                     target_block = AthleteBasePlanningBlock.objects.create(
                         athlete=selected_athlete,
                         planning_kind=planning_kind,
-                        label=f"{source_block.label or 'Block'} copy",
+                        label=f"Block {sort_order}",
                         start_month=source_block.start_month,
                         start_day=source_block.start_day,
                         end_month=source_block.end_month,
@@ -8846,11 +8846,23 @@ def athlete_base_planning_view(request):
         else set()
     )
     blocks = []
+    def base_planning_display_name(value):
+        return re.sub(r"^\s*CORE2?\b", "Strength", value or "", flags=re.IGNORECASE)
+
     if selected_athlete:
         block_qs = _base_planning_edit_blocks(selected_athlete, planning_kind)
         for block in block_qs:
             _ensure_base_block_slots(block)
-        blocks = [{"block": block, "rows": _base_planning_rows(block)} for block in block_qs]
+        blocks = []
+        for block in block_qs:
+            rows = _base_planning_rows(block)
+            training_count = sum(
+                1
+                for row in rows
+                for slot in (row.get("am"), row.get("pm"))
+                if slot and slot.mode != AthleteBasePlanningSlot.MODE_REST
+            )
+            blocks.append({"block": block, "rows": rows, "training_count": training_count})
         # An athlete may still have an already-assigned shared group from a
         # different coach. Keep displaying that assignment, but do not add it
         # to the selectable options; new choices remain limited to the own
@@ -8875,6 +8887,18 @@ def athlete_base_planning_view(request):
                     ):
                         slot.shared_plan_unavailable = True
 
+        for item in blocks:
+            for row in item["rows"]:
+                for slot in (row.get("am"), row.get("pm")):
+                    if slot and slot.trainer_plan:
+                        slot.trainer_plan_display_name = base_planning_display_name(slot.trainer_plan.name)
+
+    trainer_plans = list(
+        _base_planning_trainer_plans_for_request(request, selected_athlete).order_by(Lower("name"))
+    )
+    for plan in trainer_plans:
+        plan.display_name = base_planning_display_name(plan.name)
+
     return render(
         request,
         "core/athlete_base_planning.html",
@@ -8882,7 +8906,7 @@ def athlete_base_planning_view(request):
             "athletes": athletes,
             "selected_athlete": selected_athlete,
             "blocks": blocks,
-            "trainer_plans": _base_planning_trainer_plans_for_request(request, selected_athlete).order_by(Lower("name")),
+            "trainer_plans": trainer_plans,
             "available_trainer_plan_ids": available_trainer_plan_ids,
             "errors": errors,
             "saved": saved,

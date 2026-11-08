@@ -154,7 +154,7 @@
   </head>
 
   <body>
-    {% if request.user.is_authenticated %}
+    {% if request.user.is_authenticated and not embedded %}
       <form method="post" action="{% url 'logout' %}" class="mila-logout">
         {% csrf_token %}
         <button type="submit" class="btn btn-sm btn-outline-secondary bg-white">Logout</button>

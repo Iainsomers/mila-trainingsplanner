@@ -13,7 +13,7 @@
     {% if slot.shared_plan_unavailable %}
       <span class="base-pill base-pill-rest">Rest</span>
     {% elif slot.mode == "trainer" and slot.trainer_plan %}
-      <span class="base-pill base-pill-group">{{ slot.trainer_plan.name }}</span>
+      <span class="base-pill base-pill-group">{{ slot.trainer_plan_display_name }}</span>
     {% elif slot.mode == "training" and slot.training_text %}
       {% for part in slot.display_parts %}
         <span class="base-pill {{ part.pill_class }}">{{ part.text }}</span>

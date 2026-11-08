@@ -1,5 +1,11 @@
 # Actuele status
 
+## 8 november 2026 — Base planning naadloos en inklapbaar
+
+- Het Base planning-/Ideal week-tabblad heeft geen zichtbare tweede pagina, Logout of eigen scrollbar meer. De iframehoogte volgt automatisch de inhoud en de actiebalk blijft sticky.
+- Blokken zijn inklapbaar en tonen in de kop naam, periode en trainingen per week. Naam en datumbereik staan compact bij elkaar; Copy/Delete zitten onder Actions. Mobiel toont één dag per rij. Nieuwe blokkopieën heten automatisch `Block N`.
+- Bestaande groepsnamen die zichtbaar met `CORE` of `CORE2` beginnen, worden in deze planner presentatief als `Strength` getoond; opgeslagen plannamen en interne typen veranderen niet.
+
 ## 8 november 2026 — General-instellingen gegroepeerd
 
 - Athlete Input > General gebruikt op desktop twee kolommen met Basic information, Athlete Diary, Athlete permissions en Training defaults; mobiel wordt dit één kolom. Weeks visible ahead staat bij Athlete Diary en WU/CD staat compact op één regel.
