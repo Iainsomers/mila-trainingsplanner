@@ -39,9 +39,9 @@
     box-shadow: 0 1px 0 rgba(0,0,0,.04);
   }
 
-  .year-table .weekend-head { background: #e9eef2; }
-  .year-table .weekend-cell { background: #f7f9fb; }
-  .year-table .current-week .weekend-cell { background: #fff3b8; }
+  .year-table .weekend-head { background: #f2f4f6; }
+  .year-table .weekend-cell { background: #fbfcfd; }
+  .year-table .current-week .weekend-cell { background: #fff7d6; }
 
   .weeklabel {
     width: 72px;
@@ -397,11 +397,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    min-height: 30px;
-    border: 1px solid #d0d0d0;
-    border-radius: 6px;
-    background: #fff;
+    gap: 4px;
+    min-height: 34px;
+    border: 0;
+    border-bottom: 1px solid #d9dde1;
+    border-radius: 0;
+    background: transparent;
+    padding: 2px 0 5px;
   }
 
   .week-report-summary-label {
@@ -627,7 +629,7 @@
     overflow: hidden;
   }
 
-  .year-table .comment-display { min-height: 36px; }
+  .year-table .comment-display { min-height: 48px; }
 
   .report-preview-grid {
     display: grid;
@@ -642,7 +644,7 @@
 
   .report-preview-half {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 4px;
     border: 0;
     border-radius: 6px;
@@ -675,8 +677,12 @@
     color: #555555;
     line-height: 1.2;
     overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    max-height: 2.4em;
   }
 
   .evaluation-dialog { background:#fff; width:540px; max-width:95vw; max-height:92vh; max-height:92dvh; border-radius:8px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,.2); display:flex; flex-direction:column; }

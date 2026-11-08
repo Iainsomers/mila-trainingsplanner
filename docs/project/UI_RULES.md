@@ -407,6 +407,8 @@ Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met con
 
 8 november — Ingevulde Week report-indicatoren zijn groter, volledig verzadigd en hebben een contrasterende ring; lege indicatoren zijn uniform lichtgrijs. Sessies hebben een rustige scheiding tussen de kleine totaal-/zone-/klokinformatie en de trainingsinhoud, met constante regelafstand. De vier Daily vitals staan desktop in één rustige gedeelde invoergroep met randloze velden en alleen een duidelijke focusmarkering. Feedbackpresentatie is in deze stap bewust niet verder aangepast.
 
+8 november — Desktopfeedback in Athlete Diary toont naast de compacte status maximaal twee regels commentaar in plaats van één sterk afgekorte regel; de volledige tekst blijft via de tooltip beschikbaar. Weekendmarkering is bewust zeer licht, ook in de actuele gele week. De ingeklapte Week report-samenvatting heeft geen losse knopkaart meer maar sluit met een eenvoudige scheidingslijn aan op de Week- en Total-kolommen.
+
 
 8 november — Sleep quality wordt in Daily vitals altijd met één decimaal getoond, ook bij gehele waarden. Athlete Diary gebruikt lichte gewone cellijnen en een duidelijke donkere bovengrens per week; de dagkop blijft bij scrollen sticky. Zaterdag en zondag hebben een subtiele afwijkende achtergrond. Mobiel blijft de weeksamenvatting staan en wordt via zeven compacte dagknoppen steeds één volledige dagkaart getoond; de huidige dag opent standaard in de actuele week.
 

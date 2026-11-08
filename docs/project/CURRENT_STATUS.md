@@ -1,5 +1,11 @@
 # Actuele status
 
+## 8 november 2026 — Athlete Diary-feedback en subtielere weekindeling
+
+- Desktopfeedback toont maximaal twee regels commentaar naast de compacte status, met de volledige tekst in de bestaande tooltip.
+- De weekendtint is teruggebracht zodat hij de actuele gele week niet meer overheerst.
+- De ingeklapte Week report-samenvatting is visueel geïntegreerd met Week en Total: geen los wit knopvlak, wel een rustige scheidingslijn. Gedrag en opslag zijn ongewijzigd.
+
 ## 8 november 2026 — Athlete Diary-navigatie en Week report compacter
 
 - De desktopkop heeft duidelijke labels voor Year, Athlete en History, plus Previous week, Today en Next week. Zones & times en Today's training blijven afzonderlijke acties met hun bestaande functies.
