@@ -8069,6 +8069,24 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('class="ayc-mobile-vitals-avg"', template_source)
         self.assertIn('document.body.appendChild(modalEl);', template_source)
 
+    def test_desktop_ayc_has_compact_navigation_and_collapsible_week_reports(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        athlete.week_report_enabled = True
+        athlete.save(update_fields=["week_report_enabled"])
+
+        response = self.client.get(f"/athlete/year/?year=2026&athlete={athlete.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="aycDesktopPrev"', html=False)
+        self.assertContains(response, 'id="aycDesktopToday"', html=False)
+        self.assertContains(response, 'id="aycDesktopNext"', html=False)
+        self.assertContains(response, "Zones &amp; times")
+        self.assertContains(response, "Today's training")
+        self.assertContains(response, 'class="week-report-details"', html=False)
+        self.assertContains(response, 'class="week-report-indicator', html=False)
+        self.assertContains(response, 'class="week-report-col">Report</th>', html=False)
+        self.assertContains(response, 'table.classList.toggle("week-report-expanded"', html=False)
+
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()
 

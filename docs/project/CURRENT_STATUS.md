@@ -1,5 +1,11 @@
 # Actuele status
 
+## 8 november 2026 — Athlete Diary-navigatie en Week report compacter
+
+- De desktopkop heeft duidelijke labels voor Year, Athlete en History, plus Previous week, Today en Next week. Zones & times en Today's training blijven afzonderlijke acties met hun bestaande functies.
+- Week en Total zijn smaller. Week report is standaard een smalle kolom met vier kleurindicatoren; openen toont de bestaande vier tekstvelden en verbreedt de kolom tijdelijk. Maximaal één weekrapport staat tegelijk open.
+- Mobiele Diary-weergave, weekrapportopslag, rechten en trainingsinhoud zijn niet gewijzigd.
+
 ## 8 november 2026 — Race Calendar compacter en rustiger
 
 - In de Year Planner is er tijdens Race Calendar-weergave nog maar één terugactie: de schakelknop wordt `← Year Planner` en de gewone Back-knop verdwijnt tijdelijk.

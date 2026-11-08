@@ -32,7 +32,7 @@
   }
 
   .weeklabel {
-    width: 84px;
+    width: 72px;
     font-weight: bold;
     background: #fafafa;
   }
@@ -59,7 +59,7 @@
 
 
   .sumcol {
-    width: 90px;
+    width: 78px;
     background: #fafafa;
   }
 
@@ -346,10 +346,44 @@
   }
 
   .week-report-col {
-    width: 190px;
-    min-width: 190px;
+    width: 68px;
+    min-width: 68px;
     background: #fafafa;
   }
+
+  .year-table.week-report-expanded .week-report-col {
+    width: 190px;
+    min-width: 190px;
+  }
+
+  .week-report-details > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 30px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  .week-report-details > summary::-webkit-details-marker { display: none; }
+  .week-report-details[open] > summary { margin-bottom: 5px; }
+  .week-report-indicator {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,.18);
+    opacity: .42;
+  }
+  .week-report-indicator.has-content { opacity: 1; box-shadow: 0 0 0 1px rgba(0,0,0,.07); }
+  .week-report-indicator-athlete { background: #e8cf42; }
+  .week-report-indicator-trainer { background: #78b96a; }
+  .week-report-indicator-match { background: #ee9b43; }
+  .week-report-indicator-injuries { background: #9b7bc5; }
+  .week-report-details:not([open]) .week-report-grid { display: none; }
 
   .week-report-grid {
     display: grid;
@@ -392,6 +426,20 @@
   .week-report-trainer { background: #dff0d8; }
   .week-report-match { background: #ffd9a8; }
   .week-report-injuries { background: #eadcff; }
+
+  .ayc-desktop-controls {
+    display: flex;
+    align-items: end;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .ayc-control-field { display: flex; flex-direction: column; gap: 2px; }
+  .ayc-control-label { color: #6c757d; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .ayc-control-year { width: 100px; }
+  .ayc-control-athlete { width: 220px; }
+  .ayc-control-history { width: 150px; }
+  .ayc-week-navigation { display: inline-flex; gap: 4px; margin-left: 4px; }
+  .ayc-control-tools { display: inline-flex; gap: 4px; }
 
   .daily-vitals-grid {
     display: grid;
@@ -899,8 +947,8 @@
       min-width: 90px;
     }
 
-    .year-table th:not(.weeklabel):not(.sumcol),
-    .year-table td:not(.weeklabel):not(.sumcol) {
+    .year-table th:not(.weeklabel):not(.sumcol):not(.week-report-col),
+    .year-table td:not(.weeklabel):not(.sumcol):not(.week-report-col) {
       width: 130px;
       min-width: 130px;
     }
@@ -949,20 +997,36 @@
   </div>
 
   <form method="get" class="mb-3 ayc-desktop-controls">
-    <input name="year" value="{{ year }}" class="form-control form-control-sm" style="width:120px; display:inline-block;">
-    <select name="athlete" class="form-control form-control-sm" style="width:220px; display:inline-block;" onchange="this.form.submit()">
+    <label class="ayc-control-field">
+      <span class="ayc-control-label">Year</span>
+      <input name="year" value="{{ year }}" class="form-control form-control-sm ayc-control-year">
+    </label>
+    <label class="ayc-control-field">
+      <span class="ayc-control-label">Athlete</span>
+      <select name="athlete" class="form-select form-select-sm ayc-control-athlete" onchange="this.form.submit()">
       <option value="" {% if not selected_athlete_id %}selected{% endif %}>(all athletes)</option>
       {% for athlete in athletes %}
         <option value="{{ athlete.id }}" {% if selected_athlete_id == athlete.id|stringformat:"s" %}selected{% endif %}>{{ athlete.name }}</option>
       {% endfor %}
-    </select>
-    <select name="hide" class="form-control form-control-sm" style="width:180px; display:inline-block;" onchange="this.form.submit()">
-      <option value="none" {% if hide_mode == "none" %}selected{% endif %}>no hiding</option>
-      <option value="t1" {% if hide_mode == "t1" %}selected{% endif %}>hide t-1 week</option>
-      <option value="t4" {% if hide_mode == "t4" %}selected{% endif %}>hide t-4 weeks</option>
-    </select>
-    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">zones/times</button>
-    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#todayTrainingModal">today</button>
+      </select>
+    </label>
+    <label class="ayc-control-field">
+      <span class="ayc-control-label">History</span>
+      <select name="hide" class="form-select form-select-sm ayc-control-history" onchange="this.form.submit()">
+        <option value="none" {% if hide_mode == "none" %}selected{% endif %}>All weeks</option>
+        <option value="t1" {% if hide_mode == "t1" %}selected{% endif %}>From last week</option>
+        <option value="t4" {% if hide_mode == "t4" %}selected{% endif %}>From last 4 weeks</option>
+      </select>
+    </label>
+    <div class="ayc-week-navigation" aria-label="Week navigation">
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="aycDesktopPrev">← Previous week</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="aycDesktopToday">Today</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="aycDesktopNext">Next week →</button>
+    </div>
+    <div class="ayc-control-tools">
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">Zones &amp; times</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#todayTrainingModal">Today's training</button>
+    </div>
     {% if show_oura_vitals_import %}
     <button type="button" class="btn btn-sm btn-outline-primary" data-oura-import-open>Use Oura data</button>
     {% endif %}
@@ -1509,7 +1573,7 @@
       <tr>
         <th class="weeklabel">Week</th>
         <th class="sumcol">Total</th>
-        {% if show_week_reports %}<th class="week-report-col">Week report</th>{% endif %}
+        {% if show_week_reports %}<th class="week-report-col">Report</th>{% endif %}
         <th>Mon</th>
         <th>Tue</th>
         <th>Wed</th>
@@ -1522,7 +1586,7 @@
 
     <tbody>
       {% for w in week_rows %}
-        <tr class="slotrow week-start-row {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+        <tr class="slotrow week-start-row {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}" data-week-start="{{ w.week_start|date:'Y-m-d' }}">
           <td class="weeklabel{% if w.week_phase %} phase-{{ w.week_phase }}{% endif %}" rowspan="{{ ayc_rowspan }}" {% if w.week_phase_style %}style="{{ w.week_phase_style }}"{% endif %}>
             <div>{{ w.week_start|date:"d-m" }}</div>
             <div>{{ w.week_end|date:"d-m" }}</div>
@@ -1570,7 +1634,14 @@
 
           {% if show_week_reports %}
           <td class="week-report-col" rowspan="{{ ayc_rowspan }}">
-            <div class="week-report-grid">
+            <details class="week-report-details">
+              <summary aria-label="Open week report for {{ w.week_start|date:'d-m-Y' }}" title="Open week report">
+                <span class="week-report-indicator week-report-indicator-athlete{% if w.week_report.comm_athlete %} has-content{% endif %}" title="Athlete comment"></span>
+                <span class="week-report-indicator week-report-indicator-trainer{% if w.week_report.comm_trainer %} has-content{% endif %}" title="Trainer comment"></span>
+                <span class="week-report-indicator week-report-indicator-match{% if w.week_report.match_report %} has-content{% endif %}" title="Match report"></span>
+                <span class="week-report-indicator week-report-indicator-injuries{% if w.week_report.injuries %} has-content{% endif %}" title="Injuries"></span>
+              </summary>
+              <div class="week-report-grid">
               <div class="week-report-box week-report-athlete">
                 <div class="week-report-title">Comm Ath</div>
                 <textarea class="week-report-field"
@@ -1593,7 +1664,8 @@
                 <textarea class="week-report-field"
                           data-week-start="{{ w.week_start|date:'Y-m-d' }}" data-field="injuries">{% if w.week_report %}{{ w.week_report.injuries }}{% endif %}</textarea>
               </div>
-            </div>
+              </div>
+            </details>
           </td>
           {% endif %}
 
@@ -1991,6 +2063,56 @@
   })();
 </script>
 
+
+<script>
+(function() {
+  var table = document.querySelector(".year-table");
+  if (!table) return;
+
+  var weekRows = Array.from(table.querySelectorAll("tr.week-start-row[data-week-start]"));
+  var currentIndex = weekRows.findIndex(function(row) { return row.classList.contains("current-week"); });
+  if (currentIndex < 0) currentIndex = 0;
+
+  function updateWeekButtons() {
+    var previous = document.getElementById("aycDesktopPrev");
+    var next = document.getElementById("aycDesktopNext");
+    if (previous) previous.disabled = currentIndex === 0;
+    if (next) next.disabled = currentIndex === weekRows.length - 1;
+  }
+
+  function goToWeek(index) {
+    if (!weekRows.length) return;
+    currentIndex = Math.max(0, Math.min(index, weekRows.length - 1));
+    weekRows[currentIndex].scrollIntoView({behavior: "smooth", block: "start"});
+    updateWeekButtons();
+  }
+
+  var previous = document.getElementById("aycDesktopPrev");
+  var todayButton = document.getElementById("aycDesktopToday");
+  var next = document.getElementById("aycDesktopNext");
+  if (previous) previous.addEventListener("click", function() { goToWeek(currentIndex - 1); });
+  if (todayButton) todayButton.addEventListener("click", function() {
+    var todayIndex = weekRows.findIndex(function(row) { return row.classList.contains("current-week"); });
+    goToWeek(todayIndex >= 0 ? todayIndex : 0);
+  });
+  if (next) next.addEventListener("click", function() { goToWeek(currentIndex + 1); });
+  updateWeekButtons();
+
+  var reportDetails = Array.from(table.querySelectorAll(".week-report-details"));
+  function syncReportWidth() {
+    table.classList.toggle("week-report-expanded", reportDetails.some(function(detail) { return detail.open; }));
+  }
+  reportDetails.forEach(function(detail) {
+    detail.addEventListener("toggle", function() {
+      if (detail.open) {
+        reportDetails.forEach(function(other) { if (other !== detail) other.open = false; });
+      }
+      syncReportWidth();
+    });
+  });
+  syncReportWidth();
+})();
+</script>
 
 <script>
 (function() {
