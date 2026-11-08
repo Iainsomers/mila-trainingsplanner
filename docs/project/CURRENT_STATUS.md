@@ -6,7 +6,8 @@
 - Week en Total zijn smaller. Week report toont in de compacte stand het label Week report met vier kleurindicatoren; openen toont de bestaande vier tekstvelden en verbreedt de kolom tijdelijk. Maximaal één weekrapport staat tegelijk open.
 - AM en PM zijn in iedere desktopdagcel expliciet gelabeld. Gewone tabelranden zijn lichter en evaluatiekaarten hebben geen afzonderlijke harde rand meer; invoervelden en statuskleuren blijven herkenbaar.
 - Ingevulde Week report-bolletjes zijn groter, donker verzadigd en voorzien van een contrasterende ring; lege onderdelen zijn uniform lichtgrijs. Trainingssamenvatting en trainingsinhoud hebben een rustige vaste hiërarchie. De vier Daily vitals delen op desktop één rustige invoergroep met randloze velden en zichtbare focus.
-- Sleep quality toont altijd één decimaal. Weekgrenzen zijn sterker dan gewone cellijnen, dagkoppen zijn sticky en weekenden licht gemarkeerd. Mobiel staat de weeksamenvatting boven zeven dagknoppen en wordt steeds één volledige dagkaart getoond; de actuele dag is standaard geselecteerd. Feedbackopmaak is niet verder gewijzigd.
+- Sleep quality toont altijd één decimaal. Weekgrenzen zijn sterker dan gewone cellijnen, dagkoppen zijn sticky en weekenden licht gemarkeerd. Mobiel staat de weeksamenvatting boven zeven dagknoppen en wordt steeds één volledige dagkaart getoond; de actuele dag is standaard geselecteerd.
+- Desktopfeedback is per dagdeel één compacte regel met status, RPE, pijnindicator en afgekorte tekst. De volledige tekst blijft via tooltip en popup beschikbaar; de mobiele evaluatiepresentatie is niet gewijzigd.
 - Mobiele Diary-weergave, weekrapportopslag, rechten en trainingsinhoud zijn niet gewijzigd.
 
 ## 8 november 2026 — Race Calendar compacter en rustiger

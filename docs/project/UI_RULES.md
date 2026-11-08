@@ -408,7 +408,10 @@ Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met con
 8 november — Ingevulde Week report-indicatoren zijn groter, volledig verzadigd en hebben een contrasterende ring; lege indicatoren zijn uniform lichtgrijs. Sessies hebben een rustige scheiding tussen de kleine totaal-/zone-/klokinformatie en de trainingsinhoud, met constante regelafstand. De vier Daily vitals staan desktop in één rustige gedeelde invoergroep met randloze velden en alleen een duidelijke focusmarkering. Feedbackpresentatie is in deze stap bewust niet verder aangepast.
 
 
-8 november — Sleep quality wordt in Daily vitals altijd met één decimaal getoond, ook bij gehele waarden. Athlete Diary gebruikt lichte gewone cellijnen en een duidelijke donkere bovengrens per week; de dagkop blijft bij scrollen sticky. Zaterdag en zondag hebben een subtiele afwijkende achtergrond. Mobiel blijft de weeksamenvatting staan en wordt via zeven compacte dagknoppen steeds één volledige dagkaart getoond; de huidige dag opent standaard in de actuele week. Feedbackpresentatie blijft bewust ongewijzigd.
+8 november — Sleep quality wordt in Daily vitals altijd met één decimaal getoond, ook bij gehele waarden. Athlete Diary gebruikt lichte gewone cellijnen en een duidelijke donkere bovengrens per week; de dagkop blijft bij scrollen sticky. Zaterdag en zondag hebben een subtiele afwijkende achtergrond. Mobiel blijft de weeksamenvatting staan en wordt via zeven compacte dagknoppen steeds één volledige dagkaart getoond; de huidige dag opent standaard in de actuele week.
+
+
+8 november — Desktopfeedback per dagdeel staat compact op één regel met status, RPE, pijnindicator en maximaal één tekstregel. Langere tekst is volledig beschikbaar via de tooltip en de bestaande evaluatiepopup. AM en PM blijven afzonderlijk aanklikbaar; opslag, rechten en mobiele evaluatiekaarten zijn ongewijzigd.
 
 
 8 november — Bij losse Garmin C/D-afstandsblokken in dezelfde training krijgt elk Main-segment de bijbehorende klokregels. Een blok met meerdere reps toont één gemiddelde gemeten reptijd en één tempo op basis van de gezamenlijke afstand. Een losse rep toont zijn eigen tijd en tempo. De Diary gebruikt dezelfde segmenttekst op desktop en mobiel.

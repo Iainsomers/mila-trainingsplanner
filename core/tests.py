@@ -8110,6 +8110,9 @@ class SlotModalSaveTests(TestCase):
         self.assertIn(".daily-vital-input:focus", template_source)
         self.assertIn('class="training-content"', slot_partial)
         self.assertIn('function selectDay(week, day)', template_source)
+        self.assertIn("text-overflow: ellipsis", template_source)
+        self.assertIn('class="report-preview-text" title=', template_source)
+        self.assertIn(".year-table .comment-display { min-height: 36px; }", template_source)
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()
