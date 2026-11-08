@@ -10110,7 +10110,7 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
         self.assertIn('id="see_session_km"', html)
-        self.assertIn('id="see_session_km"\n            name="see_session_km"\n            checked', html)
+        self.assertRegex(html, r'id="see_session_km"[^>]*checked')
         self.assertIn('class="zone-time-grid"', html)
         self.assertEqual(html.count("zone-card zone-card-z"), 5)
         self.assertEqual(html.count("Heart rate ranges: use"), 1)
@@ -10135,6 +10135,14 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertIn('class="time-format-details"', html)
         self.assertNotIn("Fixed format:", html)
         self.assertNotIn("Athlete ID:", html)
+        for section_title in ("Basic information", "Athlete Diary", "Athlete permissions", "Training defaults", "Connections"):
+            self.assertIn(section_title, html)
+        diary_section = html.split('>Athlete Diary</h6>', 1)[1].split('</section>', 1)[0]
+        self.assertIn('name="view_weeks_ahead"', diary_section)
+        self.assertIn('name="training_reports_enabled"', diary_section)
+        self.assertIn('name="see_session_km"', diary_section)
+        self.assertIn('class="connections-details"', html)
+        self.assertRegex(html, r'class="[^"]*athlete-form-actions')
         for name in ("t4", "target_t4"):
             self.assertIn(f'name="{name}"', html)
             self.assertRegex(html, rf'name="{name}"[^>]+data-time-format="seconds-hundredths"')

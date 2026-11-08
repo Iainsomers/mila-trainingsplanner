@@ -11855,6 +11855,15 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             if current_index + 1 < len(navigation_athletes):
                 next_athlete = navigation_athletes[current_index + 1]
 
+    connection_keys = ("oura_auto_import_enabled",) if self_view else (
+        "garmin_fit_upload_enabled",
+        "garmin_connection_enabled",
+        "oura_connection_enabled",
+        "oura_auto_import_enabled",
+        "polar_enabled",
+    )
+    connection_enabled_count = sum(bool(form.get(key)) for key in connection_keys)
+
     return render(
         request,
         "core/coach_athlete_form.html",
@@ -11871,6 +11880,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             "next_athlete": next_athlete,
             "athlete_choices": navigation_athletes,
             "pause_mode_choices": CoachSettings.PAUSE_MODE_CHOICES,
+            "connection_enabled_count": connection_enabled_count,
         },
     )
 

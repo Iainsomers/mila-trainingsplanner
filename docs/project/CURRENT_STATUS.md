@@ -1,5 +1,10 @@
 # Actuele status
 
+## 8 november 2026 — General-instellingen gegroepeerd
+
+- Athlete Input > General gebruikt op desktop twee kolommen met Basic information, Athlete Diary, Athlete permissions en Training defaults; mobiel wordt dit één kolom. Weeks visible ahead staat bij Athlete Diary en WU/CD staat compact op één regel.
+- Connections is inklapbaar en toont het aantal ingeschakelde opties. Automatische Oura-import staat direct onder Oura-toegang en is in de coachweergave uitgeschakeld zolang Oura-toegang uitstaat. Save/Cancel blijft als sticky actiebalk zichtbaar.
+
 ## 8 november 2026 — Zones-tab past compacter in één scherm
 
 - Verticale marges en padding rond de kop, tabs, zones, tijdsgroepen, formaatinfo en Save/Cancel zijn verkleind zonder de invoervelden zelf te verkleinen. Het interne `Athlete ID` onder het formulier is verwijderd.

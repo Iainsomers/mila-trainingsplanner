@@ -168,6 +168,73 @@
   .athlete-input-card > .card-body {
     padding: .75rem 1rem;
   }
+  .general-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+  }
+  .general-settings-card {
+    min-width: 0;
+    padding: .8rem;
+    border: 1px solid #dfe5eb;
+    border-top: 3px solid #2e7d5b;
+    border-radius: .5rem;
+    background: #fff;
+  }
+  .general-settings-card-wide { grid-column: 1 / -1; }
+  .general-settings-title {
+    margin: 0 0 .65rem;
+    color: #2e7d5b;
+    font-size: .88rem;
+    font-weight: 700;
+  }
+  .general-settings-card .form-check { margin-bottom: .45rem; }
+  .general-settings-card .form-check:last-child { margin-bottom: 0; }
+  .general-settings-card .form-text { font-size: .78rem; line-height: 1.25; }
+  .setting-help { margin: -.25rem 0 .55rem 1.5rem; }
+  .settings-inline-row {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: .75rem;
+  }
+  .settings-inline-row .form-check { min-width: 8rem; margin-bottom: .45rem; }
+  .settings-inline-number { width: 9rem; }
+  .connections-details > summary {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    cursor: pointer;
+    list-style: none;
+  }
+  .connections-details > summary::-webkit-details-marker { display: none; }
+  .connections-details > summary::before { content: "▸"; color: #2e7d5b; }
+  .connections-details[open] > summary::before { content: "▾"; }
+  .connections-count {
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    background: #eef3f0;
+    color: #496257;
+    font-size: .72rem;
+    font-weight: 600;
+  }
+  .connection-settings-body { margin-top: .75rem; }
+  .connection-dependent {
+    margin: -.1rem 0 .65rem 1.5rem;
+    padding-left: .7rem;
+    border-left: 2px solid #dfe5eb;
+  }
+  .athlete-form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1015;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding: .55rem 1rem;
+    border-top: 1px solid #dfe5eb;
+    background: rgba(255, 255, 255, .96);
+    backdrop-filter: blur(4px);
+  }
   @media (max-width: 1199.98px) {
     .pr-time-groups {
       grid-template-columns: 1fr;
@@ -181,6 +248,9 @@
     .athlete-page-title-row h1 { width: 100%; }
     .athlete-header-actions { width: 100%; }
     .athlete-saved-notice { order: -1; }
+    .general-settings-grid { grid-template-columns: 1fr; }
+    .general-settings-card-wide { grid-column: auto; }
+    .settings-inline-number { width: calc(50% - .4rem); }
   }
 </style>
 <div class="container py-3">
@@ -240,6 +310,19 @@
                 savedNotice.classList.remove("show");
                 window.setTimeout(function () { savedNotice.remove(); }, 200);
               }, 3500);
+            }
+
+            const ouraAccess = document.getElementById("oura_connection_enabled");
+            const ouraAutoImport = document.getElementById("oura_auto_import_enabled");
+            function updateOuraAutoImportState() {
+              if (!ouraAccess || !ouraAutoImport) return;
+              ouraAutoImport.disabled = !ouraAccess.checked;
+              const dependent = ouraAutoImport.closest(".connection-dependent");
+              if (dependent) dependent.classList.toggle("opacity-50", !ouraAccess.checked);
+            }
+            if (ouraAccess) {
+              ouraAccess.addEventListener("change", updateOuraAutoImportState);
+              updateOuraAutoImportState();
             }
 
             form.addEventListener("keydown", function (e) {
@@ -527,294 +610,121 @@
         <div class="tab-content">
           <div class="tab-pane fade {% if not active_tab or active_tab == 'general' %}show active{% endif %}" id="general-pane" role="tabpanel" aria-labelledby="general-tab">
 
-        <div class="mb-3">
-          <label class="form-label">Name</label>
-          <input name="name" class="form-control" value="{{ form.name }}" required>
-        </div>
+            <div class="general-settings-grid">
+              <section class="general-settings-card">
+                <h6 class="general-settings-title">Basic information</h6>
+                <div class="mb-2">
+                  <label class="form-label" for="athlete-name">Name</label>
+                  <input id="athlete-name" name="name" class="form-control" value="{{ form.name }}" required>
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <label class="form-label" for="athlete-year">Year</label>
+                    <input id="athlete-year" name="birth_year" class="form-control" value="{{ form.birth_year }}" placeholder="e.g. 2008">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="athlete-sex">Sex</label>
+                    <select id="athlete-sex" name="gender" class="form-select">
+                      <option value="M" {% if form.gender == "M" %}selected{% endif %}>M</option>
+                      <option value="V" {% if form.gender == "V" %}selected{% endif %}>V</option>
+                      <option value="X" {% if form.gender == "X" %}selected{% endif %}>X</option>
+                    </select>
+                  </div>
+                </div>
+                {% if not self_view %}
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="is_private" name="is_private" {% if form.is_private %}checked{% endif %}>
+                    <label class="form-check-label" for="is_private">Private (only visible to me)</label>
+                  </div>
+                {% endif %}
+                {% if self_view %}
+                  <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                    {% if meeting_requested_at %}
+                      <span class="text-success">Meeting requested on {{ meeting_requested_at|date:"d-m-Y" }}</span>
+                      <button type="submit" class="btn btn-sm btn-outline-danger" name="meeting_action" value="cancel" aria-label="Cancel meeting request" title="Cancel meeting request">×</button>
+                    {% else %}
+                      <button type="submit" class="btn btn-sm btn-outline-primary" name="meeting_action" value="request">Request meeting</button>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </section>
 
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Year</label>
-            <input name="birth_year" class="form-control" value="{{ form.birth_year }}" placeholder="e.g. 2008">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Sex</label>
-            <select name="gender" class="form-select">
-              <option value="M" {% if form.gender == "M" %}selected{% endif %}>M</option>
-              <option value="V" {% if form.gender == "V" %}selected{% endif %}>V</option>
-              <option value="X" {% if form.gender == "X" %}selected{% endif %}>X</option>
-            </select>
-          </div>
-        </div>
+              <section class="general-settings-card">
+                <h6 class="general-settings-title">Athlete Diary</h6>
+                {% if not self_view %}
+                  <div class="mb-2">
+                    <label class="form-label" for="view_weeks_ahead">Weeks visible ahead</label>
+                    <input id="view_weeks_ahead" name="view_weeks_ahead" type="number" min="0" class="form-control form-control-sm" value="{{ form.view_weeks_ahead|default_if_none:2 }}" style="width:5rem;">
+                    <div class="form-text">0 = through today, 1 = this week, 2 = this and next week. Races remain visible.</div>
+                  </div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="training_reports_enabled" name="training_reports_enabled" {% if form.training_reports_enabled %}checked{% endif %}><label class="form-check-label" for="training_reports_enabled">Training reports</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="week_report_enabled" name="week_report_enabled" {% if form.week_report_enabled %}checked{% endif %}><label class="form-check-label" for="week_report_enabled">Week report</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="daily_vitals_enabled" name="daily_vitals_enabled" {% if form.daily_vitals_enabled %}checked{% endif %}><label class="form-check-label" for="daily_vitals_enabled">Daily vitals</label></div>
+                {% endif %}
+                {% if mode == "edit" and athlete %}
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="see_session_km" name="see_session_km" {% if form.see_session_km %}checked{% endif %}><label class="form-check-label" for="see_session_km">See session km</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="see_session_zones" name="see_session_zones" {% if form.see_session_zones %}checked{% endif %}><label class="form-check-label" for="see_session_zones">See session zones</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="start_on_ayc" name="start_on_ayc" {% if form.start_on_ayc %}checked{% endif %}><label class="form-check-label" for="start_on_ayc">Start on Diary</label></div>
+                {% endif %}
+              </section>
 
-        {% if self_view %}
-          <div class="mt-3 d-flex align-items-center gap-2 flex-wrap">
-            {% if meeting_requested_at %}
-              <span class="text-success">Meeting requested on {{ meeting_requested_at|date:"d-m-Y" }}</span>
-              <button type="submit" class="btn btn-sm btn-outline-danger" name="meeting_action" value="cancel" aria-label="Cancel meeting request" title="Cancel meeting request">×</button>
-            {% else %}
-              <button type="submit" class="btn btn-sm btn-outline-primary" name="meeting_action" value="request">Request meeting</button>
-            {% endif %}
-          </div>
-        {% endif %}
+              {% if not self_view %}
+              <section class="general-settings-card">
+                <h6 class="general-settings-title">Athlete permissions</h6>
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="year_planner_training_enabled" name="year_planner_training_enabled" {% if form.year_planner_training_enabled %}checked{% endif %}><label class="form-check-label" for="year_planner_training_enabled">Training calendar</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="year_planner_whereabouts_enabled" name="year_planner_whereabouts_enabled" {% if form.year_planner_whereabouts_enabled %}checked{% endif %}><label class="form-check-label" for="year_planner_whereabouts_enabled">Whereabouts</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="extended_edit_rights" name="extended_edit_rights" {% if form.extended_edit_rights %}checked{% endif %}><label class="form-check-label" for="extended_edit_rights">Extended edit rights</label></div>
+                <div class="form-text setting-help">Edit future training and add training to an empty AM or PM slot.</div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="can_change_base_planning" name="can_change_base_planning" {% if form.can_change_base_planning %}checked{% endif %}><label class="form-check-label" for="can_change_base_planning">Can change base planning</label></div>
+                {% if mode == "edit" and athlete %}
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="see_desired_improvement_points" name="see_desired_improvement_points" {% if form.see_desired_improvement_points %}checked{% endif %}><label class="form-check-label" for="see_desired_improvement_points">See desired improvement points</label></div>
+                {% endif %}
+              </section>
+              {% endif %}
 
-        {% if not self_view %}
-        <div class="mt-3 mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="is_private"
-            name="is_private"
-            {% if form.is_private %}checked{% endif %}
-          >
-          <label class="form-check-label" for="is_private">
-            Private (only visible to me)
-          </label>
-        </div>
+              <section class="general-settings-card">
+                <h6 class="general-settings-title">Training defaults</h6>
+                {% if mode == "edit" and not self_view %}
+                  <div class="mb-2">
+                    <label class="form-label" for="athlete-pause-mode">P(ause)mode</label>
+                    <select class="form-select form-select-sm" id="athlete-pause-mode" name="pause_mode">
+                      {% for value, label in pause_mode_choices %}<option value="{{ value }}" {% if form.pause_mode == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                  </div>
+                {% endif %}
+                <div class="settings-inline-row">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="auto_wucd_enabled" name="auto_wucd_enabled" {% if form.auto_wucd_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="auto_wucd_enabled">Auto WU/CD</label>
+                  </div>
+                  <div class="settings-inline-number"><label class="form-label" for="auto_wu_m">WU m</label><input id="auto_wu_m" name="auto_wu_m" type="number" min="0" step="100" class="form-control form-control-sm" value="{{ form.auto_wu_m }}"></div>
+                  <div class="settings-inline-number"><label class="form-label" for="auto_cd_m">CD m</label><input id="auto_cd_m" name="auto_cd_m" type="number" min="0" step="100" class="form-control form-control-sm" value="{{ form.auto_cd_m }}"></div>
+                </div>
+              </section>
 
-        <div class="mb-3">
-          <label class="form-label d-block">Weeks visible ahead</label>
-          <input name="view_weeks_ahead" type="number" min="0" class="form-control form-control-sm d-inline-block" value="{{ form.view_weeks_ahead|default_if_none:2 }}" style="width:5rem;">
-          <div class="form-text">0 = only today and earlier, 1 = this week, 2 = this week and next week. Race/Race! remains visible.</div>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label d-block">Athlete Diary reports</label>
-
-          <div class="form-check">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="training_reports_enabled"
-              name="training_reports_enabled"
-              {% if form.training_reports_enabled %}checked{% endif %}
-            >
-            <label class="form-check-label" for="training_reports_enabled">
-              Training reports
-            </label>
-          </div>
-
-          <div class="form-check">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="week_report_enabled"
-              name="week_report_enabled"
-              {% if form.week_report_enabled %}checked{% endif %}
-            >
-            <label class="form-check-label" for="week_report_enabled">
-              Week report
-            </label>
-          </div>
-
-          <div class="form-check">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="daily_vitals_enabled"
-              name="daily_vitals_enabled"
-              {% if form.daily_vitals_enabled %}checked{% endif %}
-            >
-            <label class="form-check-label" for="daily_vitals_enabled">
-              Daily vitals
-            </label>
-          </div>
-
-          <div class="form-text">Training reports controls the existing 3rd row in the Athlete Diary. Existing report data is preserved when hidden.</div>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label d-block">Year Planner visibility</label>
-
-          <div class="form-check">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="year_planner_training_enabled"
-              name="year_planner_training_enabled"
-              {% if form.year_planner_training_enabled %}checked{% endif %}
-            >
-            <label class="form-check-label" for="year_planner_training_enabled">
-              Training calendar
-            </label>
-          </div>
-
-          <div class="form-check">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="year_planner_whereabouts_enabled"
-              name="year_planner_whereabouts_enabled"
-              {% if form.year_planner_whereabouts_enabled %}checked{% endif %}
-            >
-            <label class="form-check-label" for="year_planner_whereabouts_enabled">
-              Whereabouts
-            </label>
-          </div>
-
-          <div class="form-text">Controls whether the athlete can see their own Year Planner rows. Shared athlete and related-coach whereabouts are controlled in Coach Settings.</div>
-        </div>
-
-        <div class="mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="extended_edit_rights"
-            name="extended_edit_rights"
-            {% if form.extended_edit_rights %}checked{% endif %}
-          >
-          <label class="form-check-label" for="extended_edit_rights">
-            Extended edit rights
-          </label>
-          <div class="form-text">Lets the athlete edit future training and add a training to an empty AM or PM slot.</div>
-        </div>
-
-        {% if mode == "edit" and not self_view %}
-        <div class="mb-3">
-          <label class="form-label" for="athlete-pause-mode">P(ause)mode</label>
-          <select class="form-select" id="athlete-pause-mode" name="pause_mode">
-            {% for value, label in pause_mode_choices %}
-              <option value="{{ value }}" {% if form.pause_mode == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-          <div class="form-text">Defaults to the coach setting. A different choice here overrides it for this athlete.</div>
-        </div>
-        {% endif %}
-
-        <div class="mb-3 form-check">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="can_change_base_planning"
-              name="can_change_base_planning"
-              {% if form.can_change_base_planning %}checked{% endif %}
-            >
-            <label class="form-check-label" for="can_change_base_planning">
-              Can change base planning
-            </label>
-            <div class="form-text">Lets the athlete edit their base planning, including individual training and groups from their own trainer.</div>
-        </div>
-        {% endif %}
-
-        {% if mode == "edit" and athlete %}
-        <div class="mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="see_session_km"
-            name="see_session_km"
-            {% if form.see_session_km %}checked{% endif %}
-          >
-          <label class="form-check-label" for="see_session_km">See session km</label>
-          <div class="form-text">Show total running distance in each session in the Athlete Diary, excluding Alternative.</div>
-        </div>
-        <div class="mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="see_session_zones"
-            name="see_session_zones"
-            {% if form.see_session_zones %}checked{% endif %}
-          >
-          <label class="form-check-label" for="see_session_zones">See session zones</label>
-          <div class="form-text">Show the running distance per zone beside the session total.</div>
-        </div>
-        <div class="mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="start_on_ayc"
-            name="start_on_ayc"
-            {% if form.start_on_ayc %}checked{% endif %}
-          >
-          <label class="form-check-label" for="start_on_ayc">Start on Diary</label>
-          <div class="form-text">Open your Athlete Diary after login instead of Mila Planner.</div>
-        </div>
-        <div class="mb-3 form-check">
-          <input class="form-check-input" type="checkbox" id="oura_auto_import_enabled" name="oura_auto_import_enabled" {% if form.oura_auto_import_enabled %}checked{% endif %}>
-          <label class="form-check-label" for="oura_auto_import_enabled">Automatically import Oura vitals</label>
-          <div class="form-text">Requires an allowed, connected Oura account. Checks every 10 minutes from 06:30 through 08:00, otherwise hourly, in your device's last known time zone. Imports only when Readiness is available and fills empty fields only.</div>
-          <div class="form-text">Time zone: {{ athlete.device_time_zone|default:"Waiting for the athlete to open MiLa on their device" }}.</div>
-          {% if athlete.oura_last_check_at %}<div class="form-text">Last automatic check: {{ athlete.oura_last_check_at|timesince }} ago.</div>{% endif %}
-        </div>
-        {% if not self_view %}
-        <div class="mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="see_desired_improvement_points"
-            name="see_desired_improvement_points"
-            {% if form.see_desired_improvement_points %}checked{% endif %}
-          >
-          <label class="form-check-label" for="see_desired_improvement_points">See desired improvement points</label>
-          <div class="form-text">Allow the athlete to view and fill in their own comments in Desired Improvements. Coach comments remain hidden.</div>
-        </div>
-        <div class="mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="garmin_fit_upload_enabled"
-            name="garmin_fit_upload_enabled"
-            {% if form.garmin_fit_upload_enabled %}checked{% endif %}
-          >
-          <label class="form-check-label" for="garmin_fit_upload_enabled">Allow Garmin FIT uploads</label>
-          <div class="form-text">Show this athlete in the coach's Garmin upload tab. This setting is coach-only.</div>
-        </div>
-        <div class="mb-3 form-check">
-          <input class="form-check-input" type="checkbox" id="garmin_connection_enabled" name="garmin_connection_enabled" {% if form.garmin_connection_enabled %}checked{% endif %}>
-          <label class="form-check-label" for="garmin_connection_enabled">Allow Garmin Connection</label>
-          <div class="form-text">Show the Garmin connection tile on this athlete's dashboard. Turning this off disconnects Garmin. The athlete controls AI consent.</div>
-        </div>
-        <div class="mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="oura_connection_enabled"
-            name="oura_connection_enabled"
-            {% if form.oura_connection_enabled %}checked{% endif %}
-          >
-          <label class="form-check-label" for="oura_connection_enabled">Allow Oura connection</label>
-          <div class="form-text">Show Oura settings on the athlete dashboard. Turning this off disconnects Oura and removes the stored connection. This setting is coach-only.</div>
-        </div>
-        <div class="mb-3 form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="polar_enabled"
-            name="polar_enabled"
-            {% if form.polar_enabled %}checked{% endif %}
-          >
-          <label class="form-check-label" for="polar_enabled">Allow Polar access</label>
-          <div class="form-text">Show Polar tools and allow Polar access for this athlete. This setting is coach-only.</div>
-        </div>
-        {% endif %}
-        {% endif %}
-
-        <div class="mt-3 mb-3">
-          <label class="form-label d-block">WU/CD settings</label>
-          <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-              <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  id="auto_wucd_enabled"
-                  name="auto_wucd_enabled"
-                  {% if form.auto_wucd_enabled %}checked{% endif %}
-                >
-                <label class="form-check-label" for="auto_wucd_enabled">Auto WU/CD</label>
-              </div>
+              {% if mode == "edit" and athlete %}
+              <section class="general-settings-card general-settings-card-wide">
+                <details class="connections-details">
+                  <summary><span class="general-settings-title mb-0">Connections</span><span class="connections-count">{{ connection_enabled_count }} enabled</span></summary>
+                  <div class="connection-settings-body">
+                    {% if not self_view %}
+                      <div class="form-check"><input class="form-check-input" type="checkbox" id="garmin_fit_upload_enabled" name="garmin_fit_upload_enabled" {% if form.garmin_fit_upload_enabled %}checked{% endif %}><label class="form-check-label" for="garmin_fit_upload_enabled">Allow Garmin FIT uploads</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" id="garmin_connection_enabled" name="garmin_connection_enabled" {% if form.garmin_connection_enabled %}checked{% endif %}><label class="form-check-label" for="garmin_connection_enabled">Allow Garmin Connection</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" id="oura_connection_enabled" name="oura_connection_enabled" {% if form.oura_connection_enabled %}checked{% endif %}><label class="form-check-label" for="oura_connection_enabled">Allow Oura connection</label></div>
+                    {% endif %}
+                    <div class="connection-dependent">
+                      <div class="form-check"><input class="form-check-input" type="checkbox" id="oura_auto_import_enabled" name="oura_auto_import_enabled" {% if form.oura_auto_import_enabled %}checked{% endif %}><label class="form-check-label" for="oura_auto_import_enabled">Automatically import Oura vitals</label></div>
+                      <div class="form-text">Requires Oura access and a connected account. Time zone: {{ athlete.device_time_zone|default:"waiting for the athlete's device" }}.</div>
+                      {% if athlete.oura_last_check_at %}<div class="form-text">Last check: {{ athlete.oura_last_check_at|timesince }} ago.</div>{% endif %}
+                    </div>
+                    {% if not self_view %}
+                      <div class="form-check"><input class="form-check-input" type="checkbox" id="polar_enabled" name="polar_enabled" {% if form.polar_enabled %}checked{% endif %}><label class="form-check-label" for="polar_enabled">Allow Polar access</label></div>
+                    {% endif %}
+                  </div>
+                </details>
+              </section>
+              {% endif %}
             </div>
-            <div class="col-md-3">
-              <label class="form-label">WU m</label>
-              <input name="auto_wu_m" type="number" min="0" step="100" class="form-control" value="{{ form.auto_wu_m }}">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">CD m</label>
-              <input name="auto_cd_m" type="number" min="0" step="100" class="form-control" value="{{ form.auto_cd_m }}">
-            </div>
-          </div>
-        </div>
 
           </div>
           <div class="tab-pane fade {% if active_tab == 'zones' %}show active{% endif %}" id="zones-pane" role="tabpanel" aria-labelledby="zones-tab">
@@ -987,7 +897,7 @@
           {% endif %}
         </div>
 
-        <div class="mt-2 d-flex gap-2 {% if active_tab == 'base-planning' or active_tab == 'ideal-week' %}d-none{% endif %}" id="athleteFormActions">
+        <div class="mt-2 d-flex gap-2 athlete-form-actions {% if active_tab == 'base-planning' or active_tab == 'ideal-week' %}d-none{% endif %}" id="athleteFormActions">
           <button type="submit" class="btn btn-primary">Save</button>
           <a href="{% if self_view %}{% url 'planning_overview' %}{% else %}{% url 'coach_athletes' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
         </div>
