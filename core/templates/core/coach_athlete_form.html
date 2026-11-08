@@ -192,6 +192,20 @@
   .general-settings-card .form-check:last-child { margin-bottom: 0; }
   .general-settings-card .form-text { font-size: .78rem; line-height: 1.25; }
   .setting-help { margin: -.25rem 0 .55rem 1.5rem; }
+  .permission-subgroup {
+    margin-top: .65rem;
+    padding: .55rem 0 0 .75rem;
+    border-top: 1px solid #e4e9ee;
+    border-left: 2px solid #dce7e1;
+  }
+  .permission-subgroup-title {
+    margin: 0 0 .45rem;
+    color: #5f6b76;
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+  }
   .settings-inline-row {
     display: flex;
     align-items: end;
@@ -670,12 +684,15 @@
 
               {% if not self_view %}
               <section class="general-settings-card">
-                <h6 class="general-settings-title">Athlete permissions</h6>
+                <h6 class="general-settings-title">Planner permissions</h6>
                 <div class="form-check"><input class="form-check-input" type="checkbox" id="year_planner_training_enabled" name="year_planner_training_enabled" {% if form.year_planner_training_enabled %}checked{% endif %}><label class="form-check-label" for="year_planner_training_enabled">Periodisation and race calendar</label></div>
-                <div class="form-check"><input class="form-check-input" type="checkbox" id="year_planner_whereabouts_enabled" name="year_planner_whereabouts_enabled" {% if form.year_planner_whereabouts_enabled %}checked{% endif %}><label class="form-check-label" for="year_planner_whereabouts_enabled">Whereabouts</label></div>
-                <div class="form-check"><input class="form-check-input" type="checkbox" id="extended_edit_rights" name="extended_edit_rights" {% if form.extended_edit_rights %}checked{% endif %}><label class="form-check-label" for="extended_edit_rights">Extended edit rights</label></div>
-                <div class="form-text setting-help">Edit future training and add training to an empty AM or PM slot.</div>
-                <div class="form-check"><input class="form-check-input" type="checkbox" id="can_change_base_planning" name="can_change_base_planning" {% if form.can_change_base_planning %}checked{% endif %}><label class="form-check-label" for="can_change_base_planning">Can change base planning</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="year_planner_whereabouts_enabled" name="year_planner_whereabouts_enabled" {% if form.year_planner_whereabouts_enabled %}checked{% endif %}><label class="form-check-label" for="year_planner_whereabouts_enabled">Whereabouts calendar</label></div>
+                <div class="permission-subgroup">
+                  <div class="permission-subgroup-title">Editing</div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="extended_edit_rights" name="extended_edit_rights" {% if form.extended_edit_rights %}checked{% endif %}><label class="form-check-label" for="extended_edit_rights">Extended edit rights</label></div>
+                  <div class="form-text setting-help">Edit future training and add training to an empty AM or PM slot.</div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="can_change_base_planning" name="can_change_base_planning" {% if form.can_change_base_planning %}checked{% endif %}><label class="form-check-label" for="can_change_base_planning">Can change base planning</label></div>
+                </div>
                 {% if mode == "edit" and athlete %}
                   <div class="form-check"><input class="form-check-input" type="checkbox" id="see_desired_improvement_points" name="see_desired_improvement_points" {% if form.see_desired_improvement_points %}checked{% endif %}><label class="form-check-label" for="see_desired_improvement_points">See desired improvement points</label></div>
                 {% endif %}

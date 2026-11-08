@@ -4,6 +4,7 @@
 
 - Athlete Input > General gebruikt op desktop twee kolommen met Basic information, Athlete Diary, Athlete permissions en Training defaults; mobiel wordt dit één kolom. Weeks visible ahead staat bij Athlete Diary en WU/CD staat compact op één regel.
 - De voormalige optie `Training calendar` heet in Athlete permissions nu `Periodisation and race calendar`, passend bij de inhoud van die Year Planner-laag.
+- Het blok heet nu `Planner permissions`; `Whereabouts` heet `Whereabouts calendar` en de twee schrijfrechten staan apart gegroepeerd onder `Editing`.
 - Connections is inklapbaar en toont het aantal ingeschakelde opties. Automatische Oura-import staat direct onder Oura-toegang en is in de coachweergave uitgeschakeld zolang Oura-toegang uitstaat. Save/Cancel blijft als sticky actiebalk zichtbaar.
 
 ## 8 november 2026 — Zones-tab past compacter in één scherm

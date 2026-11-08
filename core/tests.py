@@ -10135,13 +10135,16 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertIn('class="time-format-details"', html)
         self.assertNotIn("Fixed format:", html)
         self.assertNotIn("Athlete ID:", html)
-        for section_title in ("Basic information", "Athlete Diary", "Athlete permissions", "Training defaults", "Connections"):
+        for section_title in ("Basic information", "Athlete Diary", "Planner permissions", "Training defaults", "Connections"):
             self.assertIn(section_title, html)
         diary_section = html.split('>Athlete Diary</h6>', 1)[1].split('</section>', 1)[0]
         self.assertIn('name="view_weeks_ahead"', diary_section)
         self.assertIn('name="training_reports_enabled"', diary_section)
         self.assertIn('name="see_session_km"', diary_section)
         self.assertIn("Periodisation and race calendar", html)
+        self.assertIn("Whereabouts calendar", html)
+        self.assertIn('class="permission-subgroup"', html)
+        self.assertIn(">Editing</div>", html)
         self.assertNotIn(">Training calendar</label>", html)
         self.assertIn('class="connections-details"', html)
         self.assertRegex(html, r'class="[^"]*athlete-form-actions')
