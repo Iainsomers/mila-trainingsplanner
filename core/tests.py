@@ -8072,7 +8072,13 @@ class SlotModalSaveTests(TestCase):
     def test_desktop_ayc_has_compact_navigation_and_collapsible_week_reports(self):
         _, _, athlete = self._user_plan_and_athlete()
         athlete.week_report_enabled = True
-        athlete.save(update_fields=["week_report_enabled"])
+        athlete.daily_vitals_enabled = True
+        athlete.save(update_fields=["week_report_enabled", "daily_vitals_enabled"])
+        AthleteDailyVital.objects.create(
+            athlete=athlete,
+            date=date(2026, 11, 8),
+            sleep_quality=Decimal("7.0"),
+        )
 
         response = self.client.get(f"/athlete/year/?year=2026&athlete={athlete.id}")
 
@@ -8089,12 +8095,21 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, 'class="daypart-label">AM</span>', html=False)
         self.assertContains(response, 'class="daypart-label">PM</span>', html=False)
         self.assertContains(response, 'table.classList.toggle("week-report-expanded"', html=False)
+        self.assertContains(response, 'data-vitals-sleep-quality="7.0"', html=False)
+        self.assertContains(response, 'data-field="sleep_quality"', html=False)
+        self.assertContains(response, 'value="7.0"', html=False)
+        self.assertContains(response, 'class="weekend-head">Sat</th>', html=False)
+        self.assertContains(response, 'class="weekend-cell"', html=False)
+        self.assertContains(response, 'class="ayc-mobile-day-nav"', html=False)
+        self.assertContains(response, 'data-day-target=', html=False)
+        self.assertContains(response, 'position: sticky', html=False)
         template_source = get_template("core/athlete_year_calendar.html").template.source
         slot_partial = get_template("core/partials/ayc_slot_segments.html").template.source
         self.assertIn(".week-report-indicator-trainer.has-content", template_source)
         self.assertIn("background: #138a4b !important", template_source)
         self.assertIn(".daily-vital-input:focus", template_source)
         self.assertIn('class="training-content"', slot_partial)
+        self.assertIn('function selectDay(week, day)', template_source)
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()

@@ -21,7 +21,7 @@
 
   .year-table th,
   .year-table td {
-    border: 1px solid #dfe3e6;
+    border: 1px solid #edf0f2;
     padding: 6px;
     vertical-align: top;
     text-align: left;
@@ -30,6 +30,18 @@
   .year-table th {
     background: #f5f5f5;
   }
+
+  .year-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    border-bottom: 2px solid #8f969d;
+    box-shadow: 0 1px 0 rgba(0,0,0,.04);
+  }
+
+  .year-table .weekend-head { background: #e9eef2; }
+  .year-table .weekend-cell { background: #f7f9fb; }
+  .year-table .current-week .weekend-cell { background: #fff3b8; }
 
   .weeklabel {
     width: 72px;
@@ -364,7 +376,7 @@
 
   /* Thicker borders between weeks (apply to all columns) */
   .year-table tbody tr.week-start-row td {
-    border-top: 3px solid #999;
+    border-top: 4px solid #858c93;
   }
 
   .week-report-col {
@@ -887,6 +899,29 @@
       overflow: hidden;
       background: #fff;
     }
+    .ayc-mobile-day-nav {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 4px;
+      margin: 0 0 10px;
+    }
+    .ayc-mobile-day-tab {
+      min-width: 0;
+      padding: 5px 1px;
+      border: 1px solid #d4d9de;
+      border-radius: 6px;
+      background: #fff;
+      color: #495057;
+      font-size: .7rem;
+      line-height: 1.05;
+      text-align: center;
+    }
+    .ayc-mobile-day-tab small { display: block; margin-top: 2px; font-size: .62rem; }
+    .ayc-mobile-day-tab.is-weekend { background: #f1f4f6; }
+    .ayc-mobile-day-tab.is-active { border-color: #2e7d5b; background: #e5f3ec; color: #155d40; font-weight: 800; }
+    .ayc-mobile-day { display: none; }
+    .ayc-mobile-day.is-active-day { display: block; }
+    .ayc-mobile-day.is-weekend:not(.is-today) { background: #f7f9fb; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day { background: #fff9c4; border-color: #e5cf57; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day-head { background: #fff1a3; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day.is-today { border: 2px solid #d4a900; background: #ffe873; }
@@ -988,7 +1023,7 @@
     }
 
     .year-table thead th.weeklabel {
-      z-index: 7;
+      z-index: 15;
     }
 
     .year-table .sumcol {
@@ -1136,8 +1171,20 @@
         {% endif %}
       </div>
 
+      <div class="ayc-mobile-day-nav" role="tablist" aria-label="Days in this week">
+        {% for mobile_day in w.mobile_days %}
+          <button type="button"
+                  class="ayc-mobile-day-tab{% if forloop.first %} is-active{% endif %}{% if forloop.counter > 5 %} is-weekend{% endif %}"
+                  data-day-target="{{ mobile_day.day|date:'Y-m-d' }}"
+                  role="tab"
+                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+            {{ mobile_day.day|date:'D' }}<small>{{ mobile_day.day|date:'d' }}</small>
+          </button>
+        {% endfor %}
+      </div>
+
       {% for mobile_day in w.mobile_days %}
-      <article class="ayc-mobile-day{% if mobile_day.day == today %} is-today{% endif %}" data-day="{{ mobile_day.day|date:'Y-m-d' }}">
+      <article class="ayc-mobile-day{% if forloop.first %} is-active-day{% endif %}{% if forloop.counter > 5 %} is-weekend{% endif %}{% if mobile_day.day == today %} is-today{% endif %}" data-day="{{ mobile_day.day|date:'Y-m-d' }}">
         <div class="ayc-mobile-day-head">
           <span>{{ mobile_day.day|date:'l' }}</span>
           <span class="ayc-mobile-day-date">
@@ -1151,7 +1198,7 @@
                     data-vitals-date="{{ mobile_day.day|date:'Y-m-d' }}"
                     data-vitals-label="{{ mobile_day.day|date:'l d-m' }}"
                     data-vitals-sleep-hours="{% if vital and vital.sleep_hours != None %}{{ vital.sleep_hours }}{% endif %}"
-                    data-vitals-sleep-quality="{% if vital and vital.sleep_quality != None %}{{ vital.sleep_quality }}{% endif %}"
+                    data-vitals-sleep-quality="{% if vital and vital.sleep_quality != None %}{{ vital.sleep_quality|floatformat:'1u' }}{% endif %}"
                     data-vitals-morning-hr="{% if vital and vital.morning_hr != None %}{{ vital.morning_hr }}{% endif %}"
                     data-vitals-hrv="{% if vital and vital.hrv != None %}{{ vital.hrv }}{% endif %}"
                     {% if mobile_day.day > today %}disabled{% endif %}>&hearts;</button>
@@ -1484,6 +1531,31 @@
       var previous = document.getElementById("aycMobilePrev");
       var next = document.getElementById("aycMobileNext");
 
+      function selectDay(week, day) {
+        var buttons = Array.from(week.querySelectorAll(".ayc-mobile-day-tab"));
+        var cards = Array.from(week.querySelectorAll(".ayc-mobile-day"));
+        buttons.forEach(function(button) {
+          var active = button.dataset.dayTarget === day;
+          button.classList.toggle("is-active", active);
+          button.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        cards.forEach(function(card) {
+          card.classList.toggle("is-active-day", card.dataset.day === day);
+        });
+      }
+
+      weeks.forEach(function(week) {
+        var buttons = Array.from(week.querySelectorAll(".ayc-mobile-day-tab"));
+        if (!buttons.length) return;
+        var initialDay = week.dataset.weekStart <= today && today <= week.dataset.weekEnd
+          ? today
+          : buttons[0].dataset.dayTarget;
+        selectDay(week, initialDay);
+        buttons.forEach(function(button) {
+          button.addEventListener("click", function() { selectDay(week, button.dataset.dayTarget); });
+        });
+      });
+
       function showWeek(index, scrollToTop) {
         currentIndex = Math.max(0, Math.min(index, weeks.length - 1));
         weeks.forEach(function (week, i) {
@@ -1628,8 +1700,8 @@
         <th>Wed</th>
         <th>Thu</th>
         <th>Fri</th>
-        <th>Sat</th>
-        <th>Sun</th>
+        <th class="weekend-head">Sat</th>
+        <th class="weekend-head">Sun</th>
       </tr>
     </thead>
 
@@ -1722,7 +1794,7 @@
           {% endif %}
 
           {% for cell in w.cells1 %}
-            <td>
+            <td{% if forloop.counter > 5 %} class="weekend-cell"{% endif %}>
               <div class="daycell">
                 <span class="daypart-label">AM</span>
                 {% if cell.slot %}
@@ -1746,7 +1818,7 @@
 
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for cell in w.cells2 %}
-            <td>
+            <td{% if forloop.counter > 5 %} class="weekend-cell"{% endif %}>
               <div class="emptyline">
                 <span class="daypart-label">PM</span>
                 {% if cell.slot %}
@@ -1771,7 +1843,7 @@
         {% if show_training_reports %}
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for d in w.cells3 %}
-            <td>
+            <td{% if forloop.counter > 5 %} class="weekend-cell"{% endif %}>
               <div class="comment-display"
                    data-date="{{ d.day|date:'Y-m-d' }}"
                    data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
@@ -1834,7 +1906,7 @@
         {% if show_daily_vitals %}
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for cell in w.cells4 %}
-            <td>
+            <td{% if forloop.counter > 5 %} class="weekend-cell"{% endif %}>
               <div class="daily-vitals-grid">
                 <div class="daily-vital-cell">
                   <span class="daily-vital-icon" title="Sleep hours">🛏</span>
@@ -1857,7 +1929,7 @@
                          max="10"
                          data-date="{{ cell.day|date:'Y-m-d' }}"
                          data-field="sleep_quality"
-                         value="{% if cell.vitals and cell.vitals.sleep_quality != None %}{{ cell.vitals.sleep_quality }}{% endif %}">
+                         value="{% if cell.vitals and cell.vitals.sleep_quality != None %}{{ cell.vitals.sleep_quality|floatformat:'1u' }}{% endif %}">
                 </div>
                 <div class="daily-vital-cell">
                   <span class="daily-vital-icon" title="Morning heart rate">♥</span>
