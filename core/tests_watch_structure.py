@@ -113,6 +113,30 @@ class ShortSetsStructureTests(SimpleTestCase):
         segment = SimpleNamespace(type="CORE", slot=SimpleNamespace(source="watch_c"))
         self.assertIn("-->", _watch_actual_time_label(loads, segment))
 
+    def test_garmin_mixed_main_displays_one_time_and_pace_per_segment(self):
+        from types import SimpleNamespace
+        from django.template.loader import render_to_string
+        from core.views.calendar import _annotate_slot_segment_display_times, _virtual_segment_from_text
+
+        values = [(3578.77,736,2),(175.69,218,1),(3579.66,740,2),(170.95,239,1),
+                  (2978.53,614,2),(43.5801,30,1),(999.98,181,4),(9.06984,2,1)]
+        loads = [dict(segment="CORE", meters=m, seconds=s, zone=str(z)) for m,s,z in values]
+        for source in ("watch_c", "watch_d"):
+            segments = [_virtual_segment_from_text("CORE", text) for text in
+                        ("2×3600 m Z2 p218", "1×3000 m Z2", "1×1000 m Z4")]
+            slot = SimpleNamespace(source=source, watch_loads=loads, segments=SimpleNamespace(all=lambda:segments))
+            for segment in segments:
+                segment.slot = slot
+            _annotate_slot_segment_display_times(slot, None)
+            expected = ["2×3600 m Z2 p218 (12:18 · 3:26 min/km)",
+                        "3000m - 10:14 - 3:26/km", "1000m - 3:01 - 3:01/km"]
+            self.assertEqual([segment.display_text for segment in segments], expected)
+            self.assertEqual([row["measured_seconds"] for row in slot.watch_main_reps], [736,740,614,181])
+            # Desktop and mobile Diary both include this segment partial.
+            for segment, label in zip(segments, expected):
+                html = render_to_string("core/partials/segment_display.html", {"seg":segment})
+                self.assertIn(label, html)
+
     def test_two_kilometres_and_short_remainder_are_one_continuous_run(self):
         from types import SimpleNamespace
         from core.watch_structure import continuous_kilometre_run

@@ -2527,51 +2527,64 @@ def _annotate_slot_segment_display_times(slot, athlete):
         return slot
 
     source = str(getattr(slot, "source", ""))
-    ordered_single_rep_loads = {}
+    ordered_rep_loads = {}
     if source in {"watch_a", "watch_b", "watch_c", "watch_d"}:
         from core.watch_processing import processed_main_reps
         slot.watch_main_reps = processed_main_reps(slot)
 
-        # C/D imports can contain several loose 1x distance segments. Bind
-        # those to the derived clock rows in chronology instead of letting
-        # every equal-distance segment collect every matching lap.
+        # Bind separate distance blocks to their own clock rows, including
+        # a repeated distance block followed by single efforts.
         core_segments = [seg for seg in segments if str(getattr(seg, "type", "")).upper() == "CORE"]
         rows = slot.watch_main_reps if isinstance(slot.watch_main_reps, list) else []
-        if source in {"watch_c", "watch_d"} and len(core_segments) == len(rows) and len(rows) >= 2:
+        if source in {"watch_c", "watch_d"} and len(core_segments) >= 2:
             pairs = []
-            for seg, row in zip(core_segments, rows):
+            offset = 0
+            for seg in core_segments:
                 distances = _segment_rep_distances_m(seg)
                 try:
                     reps = int(getattr(seg, "reps", None) or 1)
                     planned = float(distances[0]) if len(distances) == 1 else 0
-                    measured = float(row.get("measured_distance_m") or 0)
-                    target = float(row.get("distance_m") or 0)
+                    block = rows[offset:offset + reps]
+                    loads = [{
+                        "matched_rep": True,
+                        "meters": float(row.get("measured_distance_m") or 0),
+                        "seconds": float(row.get("measured_seconds") or row.get("seconds") or 0),
+                        "average_hr": row.get("average_hr"),
+                        "hr_tail": row.get("hr_tail"),
+                    } for row in block if abs(planned - float(row.get("distance_m") or 0)) <= 1]
                 except (TypeError, ValueError, AttributeError):
-                    pairs = []
                     break
-                if reps != 1 or planned <= 0 or abs(planned - target) > 1:
-                    pairs = []
+                if reps > 1 and not re.match(r"^\s*\d+\s*[×x*]\s*\d+(?:[.,]\d+)?\s*(?:km|m)\b",
+                                              getattr(seg, "text", "") or "", re.I):
                     break
-                pairs.append((seg, {
-                    "matched_rep": True,
-                    "meters": measured,
-                    "seconds": float(row.get("measured_seconds") or row.get("seconds") or 0),
-                    "average_hr": row.get("average_hr"),
-                    "hr_tail": row.get("hr_tail"),
-                }))
-            ordered_single_rep_loads = {id(seg): [load] for seg, load in pairs}
+                if planned <= 0 or reps < 1 or len(loads) != reps or any(
+                    load["meters"] <= 0 or load["seconds"] <= 0 for load in loads
+                ):
+                    break
+                pairs.append((id(seg), loads))
+                offset += reps
+            if len(pairs) == len(core_segments) and offset == len(rows):
+                ordered_rep_loads = dict(pairs)
 
     for seg in segments:
         text = getattr(seg, "text", "") or ""
-        actual_loads = ordered_single_rep_loads.get(id(seg)) or _watch_segment_loads(seg)
+        matched_loads = ordered_rep_loads.get(id(seg))
+        single_match = matched_loads if matched_loads and len(matched_loads) == 1 else None
+        actual_loads = single_match or _watch_segment_loads(seg)
         seg.flex_actual_loads_json = json.dumps(actual_loads, separators=(",", ":")) if actual_loads else ""
         # Only segments with measured Watch loads already carry actual timing.
         # A non-Main edit keeps the actual Main loads, while the edited WU/CD
         # (which has no measured load anymore) should still receive the normal
         # planned guidance.
-        is_watch_segment = bool(actual_loads)
+        is_watch_segment = bool(matched_loads or actual_loads)
         single_rep_display = _single_watch_rep_display(seg, actual_loads) if is_watch_segment else ""
-        label = _watch_actual_time_label(actual_loads, seg) if is_watch_segment else _segment_rep_time_label(athlete, seg)
+        if matched_loads and len(matched_loads) > 1:
+            seconds = sum(load["seconds"] for load in matched_loads)
+            meters = sum(load["meters"] for load in matched_loads)
+            label = (f"{_format_rep_time_seconds(seconds / len(matched_loads))} · "
+                     f"{_format_min_km_range([seconds * 1000 / meters])}")
+        else:
+            label = _watch_actual_time_label(actual_loads, seg) if is_watch_segment else _segment_rep_time_label(athlete, seg)
         hr_label = "" if is_watch_segment else _segment_hr_label(athlete, seg)
         display_labels = "; ".join(part for part in (label, hr_label) if part)
         seg.display_text = single_rep_display or (f"{text} ({display_labels})" if text and display_labels else text)

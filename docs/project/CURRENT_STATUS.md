@@ -625,3 +625,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 7 november - Garmin C/D herkent gemengde sets bij GPS-afwijking (1156,79 m hoort bij 1200 m) en laat een voorafgaande wandelovergang van 649,31 m buiten de werkset. Expliciete chatnotatie gebruikt dezelfde meetcontrole. Regressie dekt beide routes, gemeten kloktijd 265 s en afwijzing van 1350 m. Laatste niet-zichtbare laps zijn synthetisch. 125 gerichte tests en manage.py check geslaagd.
+
+
+8 november — De Main-weergave voor 5 november AM is getest met 2×3600 m, 1×3000 m en 1×1000 m. De bijbehorende tijden en tempos zijn 12:18 / 3:26, 10:14 / 3:26 en 3:01 / 3:01 per km. De segmentlabels gebruiken alleen de passende gemeten klokregels.
