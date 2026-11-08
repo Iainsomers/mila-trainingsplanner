@@ -8105,6 +8105,7 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, 'position: sticky', html=False)
         template_source = get_template("core/athlete_year_calendar.html").template.source
         slot_partial = get_template("core/partials/ayc_slot_segments.html").template.source
+        feedback_partial = get_template("core/partials/ayc_session_feedback.html").template.source
         self.assertIn(".week-report-indicator-trainer.has-content", template_source)
         self.assertIn("background: #138a4b !important", template_source)
         self.assertIn(".daily-vital-input:focus", template_source)
@@ -8112,10 +8113,13 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('function selectDay(week, day)', template_source)
         self.assertIn("-webkit-line-clamp: 2", template_source)
         self.assertIn("overflow-wrap: anywhere", template_source)
-        self.assertIn('class="report-preview-text" title=', template_source)
-        self.assertIn(".year-table .comment-display { min-height: 62px; }", template_source)
+        self.assertIn('class="report-preview-text" title=', feedback_partial)
+        self.assertIn('data-evaluation-slot="{{ evaluation_slot }}"', feedback_partial)
+        self.assertIn('with d=cell.report evaluation_slot=1', template_source)
+        self.assertIn('with d=cell.report evaluation_slot=2', template_source)
+        self.assertIn(".year-table .comment-display { min-height: 30px; margin-top: 4px; }", template_source)
         self.assertIn("grid-template-columns: 1fr;", template_source)
-        self.assertIn("min-height: 58px;", template_source)
+        self.assertIn("min-height: 28px;", template_source)
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()

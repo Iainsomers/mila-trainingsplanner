@@ -3718,7 +3718,7 @@ def athlete_year_calendar_view(request):
         and selected_athlete.oura_connection_enabled
         and OuraConnection.objects.filter(athlete=selected_athlete).exists()
     )
-    ayc_rowspan = 2 + (1 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
+    ayc_rowspan = 2 + (1 if show_daily_vitals else 0)
     is_coach_user = is_ayc_coach
     coach_can_edit_training = bool(
         is_coach_user
@@ -4208,7 +4208,7 @@ def athlete_year_calendar_view(request):
             if selected_athlete:
                 comment = comment_map.get(day)
 
-            cells3.append({
+            report_cell = {
                 "day": day,
                 "comment": comment,
                 "check1": check1,
@@ -4228,7 +4228,10 @@ def athlete_year_calendar_view(request):
                 "training_text2": _slot_evaluation_training_text(slot2),
                 "plan_text1": _slot_watch_plan_text(slot1),
                 "plan_text2": _slot_watch_plan_text(slot2),
-            })
+            }
+            cells3.append(report_cell)
+            cells1[-1]["report"] = report_cell
+            cells2[-1]["report"] = report_cell
             if athlete_self_view and show_training_reports and reminder_start <= day <= reminder_end:
                 for reminder_slot_index, reminder_slot, reminder_check, reminder_label in (
                     (1, slot1, check1, "AM"),

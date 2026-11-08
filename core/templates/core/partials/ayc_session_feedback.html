@@ -1,0 +1,46 @@
+<div class="comment-display"
+     data-date="{{ d.day|date:'Y-m-d' }}"
+     data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
+     data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
+     data-t1-rpe="{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% endif %}"
+     data-t1-pain="{% if d.check1.pain %}{{ d.check1.pain }}{% endif %}"
+     data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
+     data-t1-watch-id="{% if d.check1.watch_activity_id %}{{ d.check1.watch_activity_id|escape }}{% endif %}"
+     data-t1-watch-summary="{% if d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary|escape }}{% endif %}"
+     data-t1-training="{{ d.training_text1|default:''|escape }}"
+     data-t1-plan-text="{{ d.plan_text1|default:''|escape }}"
+     data-t2-enabled="{% if d.has_slot2 %}1{% else %}0{% endif %}"
+     data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
+     data-t2-rpe="{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% endif %}"
+     data-t2-pain="{% if d.check2.pain %}{{ d.check2.pain }}{% endif %}"
+     data-t2-comment="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% endif %}"
+     data-t2-watch-id="{% if d.check2.watch_activity_id %}{{ d.check2.watch_activity_id|escape }}{% endif %}"
+     data-t2-watch-summary="{% if d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary|escape }}{% endif %}"
+     data-t2-training="{{ d.training_text2|default:''|escape }}"
+     data-t2-plan-text="{{ d.plan_text2|default:''|escape }}"
+     data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}">
+  <div class="report-preview-grid single">
+    <div class="report-preview-half" data-evaluation-slot="{{ evaluation_slot }}" role="button" tabindex="0" aria-label="Evaluate {% if evaluation_slot == 1 %}AM{% else %}PM{% endif %}">
+      <div class="report-preview-top">
+        {% if evaluation_slot == 1 %}
+          {% with status=d.check1.effective_status|default:"" %}
+            <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">{% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}</span>
+          {% endwith %}
+          <span class="report-preview-rpe">{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
+          {% if d.check1.pain %}<span class="report-preview-pain" title="{% if d.check1.pain == 'no_pain' %}Fit{% elif d.check1.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}" aria-label="Pain: {% if d.check1.pain == 'no_pain' %}Fit{% elif d.check1.pain == 'some_pain' %}Some issues{% else %}Serious issue{% endif %}">{% if d.check1.pain == 'no_pain' %}🟢{% elif d.check1.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
+        {% else %}
+          {% with status=d.check2.effective_status|default:"" %}
+            <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">{% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}</span>
+          {% endwith %}
+          <span class="report-preview-rpe">{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
+          {% if d.check2.pain %}<span class="report-preview-pain" title="{% if d.check2.pain == 'no_pain' %}Fit{% elif d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}" aria-label="Pain: {% if d.check2.pain == 'no_pain' %}Fit{% elif d.check2.pain == 'some_pain' %}Some issues{% else %}Serious issue{% endif %}">{% if d.check2.pain == 'no_pain' %}🟢{% elif d.check2.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
+        {% endif %}
+      </div>
+      {% if evaluation_slot == 1 %}
+        <div class="report-preview-text" title="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% elif d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary|escape }}{% endif %}">{% if d.check1.comment %}{{ d.check1.comment }}{% elif d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary }}{% endif %}</div>
+      {% else %}
+        <div class="report-preview-text" title="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% elif d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary|escape }}{% endif %}">{% if d.check2.comment %}{{ d.check2.comment }}{% elif d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary }}{% endif %}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>

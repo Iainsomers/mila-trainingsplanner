@@ -629,13 +629,13 @@
     overflow: hidden;
   }
 
-  .year-table .comment-display { min-height: 62px; }
+  .year-table .comment-display { min-height: 30px; margin-top: 4px; }
 
   .report-preview-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 2px;
-    min-height: 58px;
+    min-height: 28px;
   }
 
   .report-preview-grid.single {
@@ -1829,6 +1829,9 @@
                 {% endif %}
                 {% if not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
               </div>
+              {% if show_training_reports and cell.report.has_slot1 %}
+                {% include "core/partials/ayc_session_feedback.html" with d=cell.report evaluation_slot=1 %}
+              {% endif %}
             </td>
           {% endfor %}
         </tr>
@@ -1853,72 +1856,12 @@
                 {% endif %}
                 {% if not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
               </div>
+              {% if show_training_reports and cell.report.has_slot2 %}
+                {% include "core/partials/ayc_session_feedback.html" with d=cell.report evaluation_slot=2 %}
+              {% endif %}
             </td>
           {% endfor %}
         </tr>
-
-        {% if show_training_reports %}
-        <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
-          {% for d in w.cells3 %}
-            <td{% if forloop.counter > 5 %} class="weekend-cell"{% endif %}>
-              <div class="comment-display"
-                   data-date="{{ d.day|date:'Y-m-d' }}"
-                   data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
-                   data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
-                   data-t1-rpe="{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% endif %}"
-                   data-t1-pain="{% if d.check1.pain %}{{ d.check1.pain }}{% endif %}"
-                   data-t1-comment="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% endif %}"
-                   data-t1-watch-id="{% if d.check1.watch_activity_id %}{{ d.check1.watch_activity_id|escape }}{% endif %}"
-                   data-t1-watch-summary="{% if d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary|escape }}{% endif %}"
-                   data-t1-training="{{ d.training_text1|default:''|escape }}"
-               data-t2-training="{{ d.training_text2|default:''|escape }}"
-               data-t1-plan-text="{{ d.plan_text1|default:''|escape }}"
-                   data-t2-enabled="{% if d.has_slot2 %}1{% else %}0{% endif %}"
-                   data-t2-status="{% if d.check2 %}{{ d.check2.effective_status }}{% endif %}"
-                   data-t2-rpe="{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% endif %}"
-                   data-t2-pain="{% if d.check2.pain %}{{ d.check2.pain }}{% endif %}"
-                   data-t2-comment="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% endif %}"
-                   data-t2-watch-id="{% if d.check2.watch_activity_id %}{{ d.check2.watch_activity_id|escape }}{% endif %}"
-                   data-t2-watch-summary="{% if d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary|escape }}{% endif %}"
-                   data-t2-plan-text="{{ d.plan_text2|default:''|escape }}"
-                   data-text="{% if d.comment %}{{ d.comment.text|escape }}{% endif %}">
-                {% if d.has_slot1 or d.has_slot2 %}
-                  <div class="report-preview-grid{% if d.has_slot1 and not d.has_slot2 or d.has_slot2 and not d.has_slot1 %} single{% endif %}">
-                    {% if d.has_slot1 %}
-                      <div class="report-preview-half" data-evaluation-slot="1" role="button" tabindex="0" aria-label="Evaluate AM">
-                        <div class="report-preview-top">
-                          {% with status=d.check1.effective_status|default:"" %}
-                            <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
-                              {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
-                            </span>
-                          {% endwith %}
-                          <span class="report-preview-rpe">{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% else %}—{% endif %}</span>
-                          {% if d.check1.pain %}<span class="report-preview-pain" title="{% if d.check1.pain == 'no_pain' %}Fit{% elif d.check1.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}" aria-label="Pain: {% if d.check1.pain == 'no_pain' %}Fit{% elif d.check1.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}">{% if d.check1.pain == 'no_pain' %}🟢{% elif d.check1.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
-                        </div>
-                        <div class="report-preview-text" title="{% if d.check1.comment %}{{ d.check1.comment|escape }}{% elif d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary|escape }}{% endif %}">{% if d.check1.comment %}{{ d.check1.comment }}{% elif d.check1.watch_activity_summary %}{{ d.check1.watch_activity_summary }}{% endif %}</div>
-                      </div>
-                    {% endif %}
-                    {% if d.has_slot2 %}
-                      <div class="report-preview-half" data-evaluation-slot="2" role="button" tabindex="0" aria-label="Evaluate PM">
-                        <div class="report-preview-top">
-                          {% with status=d.check2.effective_status|default:"" %}
-                            <span class="check-status-toggle status-{% if status %}{{ status }}{% else %}none{% endif %}">
-                              {% if status == "done_as_planned" %}✓{% elif status == "too_hard_fast" %}↑{% elif status == "adjusted_ok" %}✓{% elif status == "lighter_slower" %}↓{% elif status == "not_done" %}✕{% endif %}
-                            </span>
-                          {% endwith %}
-                          <span class="report-preview-rpe">{% if d.check2.rpe != None %}{{ d.check2.rpe }}{% else %}—{% endif %}</span>
-                          {% if d.check2.pain %}<span class="report-preview-pain" title="{% if d.check2.pain == 'no_pain' %}Fit{% elif d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}" aria-label="Pain: {% if d.check2.pain == 'no_pain' %}Fit{% elif d.check2.pain == 'some_pain' %}Some issues, pls explain!{% else %}Serious issue, talk to staff!{% endif %}">{% if d.check2.pain == 'no_pain' %}🟢{% elif d.check2.pain == 'some_pain' %}🟠{% else %}🔴{% endif %}</span>{% endif %}
-                        </div>
-                        <div class="report-preview-text" title="{% if d.check2.comment %}{{ d.check2.comment|escape }}{% elif d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary|escape }}{% endif %}">{% if d.check2.comment %}{{ d.check2.comment }}{% elif d.check2.watch_activity_summary %}{{ d.check2.watch_activity_summary }}{% endif %}</div>
-                      </div>
-                    {% endif %}
-                  </div>
-                {% endif %}
-              </div>
-            </td>
-          {% endfor %}
-        </tr>
-        {% endif %}
 
         {% if show_daily_vitals %}
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
@@ -3208,15 +3151,16 @@
     document.querySelectorAll(".pending-evaluation-open").forEach(function(button) {
       button.addEventListener("click", function() {
         var date = button.getAttribute("data-evaluation-date") || "";
+        var slot = button.getAttribute("data-evaluation-slot") || "";
         var target = null;
         document.querySelectorAll(".comment-display").forEach(function(candidate) {
-          if (!target && candidate.getAttribute("data-date") === date) {
+          if (!target && candidate.getAttribute("data-date") === date && candidate.querySelector('[data-evaluation-slot="' + slot + '"]')) {
             target = candidate;
           }
         });
         pendingEvaluationModal.classList.remove("is-visible");
         if (target) {
-          var slotButton = target.querySelector('[data-evaluation-slot="' + button.getAttribute("data-evaluation-slot") + '"]');
+          var slotButton = target.querySelector('[data-evaluation-slot="' + slot + '"]');
           (slotButton || target).click();
         }
       });
