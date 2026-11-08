@@ -10141,6 +10141,8 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertIn('name="view_weeks_ahead"', diary_section)
         self.assertIn('name="training_reports_enabled"', diary_section)
         self.assertIn('name="see_session_km"', diary_section)
+        self.assertIn("Periodisation and race calendar", html)
+        self.assertNotIn(">Training calendar</label>", html)
         self.assertIn('class="connections-details"', html)
         self.assertRegex(html, r'class="[^"]*athlete-form-actions')
         for name in ("t4", "target_t4"):
