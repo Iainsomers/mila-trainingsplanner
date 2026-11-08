@@ -830,7 +830,7 @@
               aria-expanded="false" aria-controls="yearRacePanel">Race Calendar</button>
       {% if show_detailed_camps %}<a href="{% url 'detailed_camps' %}" class="btn year-race-toggle year-camps-link">Camps</a>{% endif %}
       </div>
-      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary" id="yearPlannerBack">Back</a>
 
     </div>
   </div>
@@ -1156,13 +1156,15 @@
     const races = document.getElementById("yearRacePanel");
     const planning = document.getElementById("yearPlanningPanel");
     const frame = document.getElementById("yearRaceFrame");
+    const plannerBack = document.getElementById("yearPlannerBack");
     const opening = races.hidden;
     if (!opening) { window.location.reload(); return; }
     if (opening && !frame.hasAttribute("src")) frame.src = frame.dataset.src;
     races.hidden = !opening;
     planning.hidden = opening;
     this.setAttribute("aria-expanded", String(opening));
-    this.textContent = opening ? "Back to Yearplanner" : "Race Calendar";
+    this.textContent = opening ? "← Year Planner" : "Race Calendar";
+    if (plannerBack) plannerBack.hidden = opening;
   });
 </script>
 <script>

@@ -9891,11 +9891,22 @@ def race_calendar_view(request):
 
     period_options = [
         {"key": "season", "label": f"{year}/{str(year + 1)[-2:]}", "year": year},
-        {"key": "current_next", "label": "Current / next month", "year": today.year},
-        {"key": "outdoor", "label": f"Outdoor {year}", "year": year},
-        {"key": "indoor", "label": f"Indoor {year}/{str(year + 1)[-2:]}", "year": year},
-        {"key": "full", "label": f"Full year {year}", "year": year},
+        {"key": "current_next", "label": "Current + next", "year": today.year},
+        {"key": "outdoor", "label": "Outdoor", "year": year},
+        {"key": "indoor", "label": "Indoor", "year": year},
+        {"key": "full", "label": "Full year", "year": year},
     ]
+
+    race_month_groups = []
+    for row in race_rows:
+        month_key = row["race"].date.strftime("%Y-%m")
+        if not race_month_groups or race_month_groups[-1]["key"] != month_key:
+            race_month_groups.append({
+                "key": month_key,
+                "label": f"{month_names[row['race'].date.month - 1]} {row['race'].date.year}",
+                "rows": [],
+            })
+        race_month_groups[-1]["rows"].append(row)
 
     response = render(request, "core/race_calendar.html", {
         "embedded_in_year_planner": view_mode == "year_list",
@@ -9908,6 +9919,7 @@ def race_calendar_view(request):
         "period_options": period_options,
         "race_rows": race_rows,
         "race_columns": race_columns,
+        "race_month_groups": race_month_groups,
         "race_rows_by_id": race_rows_by_id,
         "month_rows": month_rows,
         "distance_choices": RaceEventDistance.DISTANCE_CHOICES,

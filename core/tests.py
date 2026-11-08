@@ -9518,6 +9518,9 @@ class RaceSelectDisplayTests(TestCase):
         self.client.force_login(coach)
         planner = self.client.get("/planning/year/?year=2026")
         self.assertContains(planner, 'id="yearRaceToggle"')
+        self.assertContains(planner, 'id="yearPlannerBack"')
+        self.assertContains(planner, 'plannerBack.hidden = opening')
+        self.assertContains(planner, 'opening ? "← Year Planner"')
         self.assertContains(planner, "view=year_list")
 
         response = self.client.post("/race-calendar/?view=year_list&year=2026", {
@@ -9665,7 +9668,7 @@ class RaceSelectDisplayTests(TestCase):
         self.assertNotContains(participating_calendar, '<span class="race-calendar-count">', html=False)
 
         planning_response = self.client.get("/planning/")
-        self.assertContains(planning_response, 'href="/race-calendar/"', html=False)
+        self.assertNotContains(planning_response, 'href="/race-calendar/"', html=False)
         self.assertNotContains(planning_response, "/race-select/?scope=athlete", html=False)
 
     def test_race_agreement_changes_pending_pill_to_filled_target_pill(self):
@@ -9808,10 +9811,14 @@ class RaceSelectDisplayTests(TestCase):
         self.assertContains(response, f'value="plan:{trainer_plan.id}"', html=False)
         self.assertContains(response, "Race group")
         self.assertContains(response, f'data-plan-ids="{trainer_plan.id}"', html=False)
-        self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
-        self.assertNotContains(response, 'race-participant-badge', html=False)
-        self.assertContains(response, 'class="card race-filter-card"', html=False)
-        self.assertContains(response, "grid-template-columns: repeat(2, minmax(0, 1fr))", html=False)
+        self.assertContains(response, 'class="race-distance-participants">· 1</span>', html=False)
+        self.assertContains(response, 'class="race-participant-badge"', html=False)
+        self.assertContains(response, 'class="race-filter-panel', html=False)
+        self.assertContains(response, 'class="race-filter-form"', html=False)
+        self.assertContains(response, 'class="race-add-panel', html=False)
+        self.assertContains(response, 'class="race-month-group"', html=False)
+        self.assertContains(response, "max-width: 1480px", html=False)
+        self.assertContains(response, "grid-template-columns: repeat(auto-fit, minmax(410px, 1fr))", html=False)
         self.assertContains(response, f'value="athlete:{athlete.id}"', html=False)
 
         trainer_auto_save = self.client.post(
@@ -9868,8 +9875,8 @@ class RaceSelectDisplayTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Shared filtered race")
         self.assertNotContains(response, "Other athlete race")
-        self.assertContains(response, 'class="race-distance-count">1</span>', html=False)
-        self.assertNotContains(response, 'class="race-distance-count">2</span>', html=False)
+        self.assertContains(response, 'class="race-distance-participants">· 1</span>', html=False)
+        self.assertNotContains(response, 'class="race-distance-participants">· 2</span>', html=False)
         self.assertContains(response, f'value="plan:{trainer_plan.id}" selected', html=False)
         self.assertContains(response, f'value="athlete:{athlete_one.id}" selected', html=False)
         top_athlete_selector = response.content.decode().split('id="raceAthlete"', 1)[1].split('</select>', 1)[0]

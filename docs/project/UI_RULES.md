@@ -397,3 +397,6 @@ Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met con
 
 
 7 november — Extremumkleuren gelden voor alle vier Daily vitals. Sleep length, Sleep quality en HRV: laagste rood, hoogste groen. Morning HR: laagste groen, hoogste rood. Vandaag donker, één/twee dagen terug licht; oudere/volledig gelijke waarden neutraal, meest recente datum bij gedeeld extremum. Daggrens 08:00 en minimum drie waarden blijven gelden. Alleen range-eindpunten gekleurd, met datumtooltip; gemiddelden/NA en rechten ongewijzigd.
+
+
+8 november — Race Calendar gebruikt binnen de Year Planner één navigatieroute: bij openen verdwijnt de gewone Back-knop en wordt de Race Calendar-knop `← Year Planner`. Periode- en jaarkeuze staan op één compacte regel. Add race is standaard ingeklapt; filters passen direct toe en zijn op mobiel standaard ingeklapt. Wedstrijden staan primair, gegroepeerd per maand, in lichte kaarten met een gekleurde linker statusrand en een afzonderlijke deelnemersteller. De inhoud is gecentreerd tot maximaal 1480px; op mobiel staan filters en wedstrijdkaarten in één kolom.

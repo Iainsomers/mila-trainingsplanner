@@ -1,5 +1,12 @@
 # Actuele status
 
+## 8 november 2026 — Race Calendar compacter en rustiger
+
+- In de Year Planner is er tijdens Race Calendar-weergave nog maar één terugactie: de schakelknop wordt `← Year Planner` en de gewone Back-knop verdwijnt tijdelijk.
+- Jaar- en periodekeuze staan op één compacte regel. Add race is standaard ingeklapt; de compacte filters passen direct toe en klappen op mobiel standaard dicht.
+- Wedstrijden zijn de primaire inhoud, per maand gegroepeerd en weergegeven als lichte kaarten met een gekleurde linker statusrand. Afstanden en het totale aantal deelnemers hebben een vaste, afzonderlijke plek.
+- De kalenderinhoud is gecentreerd met een maximale breedte van 1480px. Op mobiel staan filters en wedstrijdkaarten in één kolom.
+
 ## 8 november 2026 — Base planning naadloos en inklapbaar
 
 - Het Base planning-/Ideal week-tabblad heeft geen zichtbare tweede pagina, Logout of eigen scrollbar meer. De iframehoogte volgt automatisch de inhoud en de actiebalk blijft sticky.

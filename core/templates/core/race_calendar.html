@@ -10,6 +10,7 @@
 </style>
 {% endif %}
 <div class="container-fluid py-4 race-calendar-page">
+<div class="race-calendar-shell">
 
   {% if not embedded_in_year_planner %}
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -24,24 +25,12 @@
   </div>
 
   {% endif %}
-  <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
-    <div class="d-flex align-items-center gap-2">
+  <div class="race-period-bar mb-3">
+    <span class="small text-muted">Period</span>
+    <div class="d-flex align-items-center gap-1 flex-wrap">
       {% if period_mode != "current_next" %}
         <a href="?year={{ previous_year }}&view={{ view_mode }}&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">← {{ previous_year }}</a>
-        <a href="?year={{ next_year }}&view={{ view_mode }}&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">{{ next_year }} →</a>
       {% endif %}
-    </div>
-
-    {% if not embedded_in_year_planner %}
-    <div class="btn-group btn-group-sm" role="group" aria-label="View mode">
-      <a href="?year={{ year }}&view=list&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
-      <a href="?year={{ year }}&view=calendar&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
-    </div>
-    {% endif %}
-  </div>
-
-  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-    <span class="small text-muted">Period:</span>
     <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Period">
       {% for option in period_options %}
         <a href="?year={{ option.year }}&view={{ view_mode }}&period={{ option.key }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}"
@@ -50,12 +39,22 @@
         </a>
       {% endfor %}
     </div>
+      {% if period_mode != "current_next" %}
+        <a href="?year={{ next_year }}&view={{ view_mode }}&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn btn-sm btn-outline-secondary">{{ next_year }} →</a>
+      {% endif %}
+    </div>
+    {% if not embedded_in_year_planner %}
+      <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="View mode">
+        <a href="?year={{ year }}&view=list&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'list' %}btn-primary{% else %}btn-outline-primary{% endif %}">List</a>
+        <a href="?year={{ year }}&view=calendar&period={{ period_mode }}&race_group={{ race_group|urlencode }}&race_athlete={{ race_athlete|urlencode }}&race_type_filter={{ race_type_filter|urlencode }}&show_all={% if show_all_races %}1{% else %}0{% endif %}" class="btn {% if view_mode == 'calendar' %}btn-primary{% else %}btn-outline-primary{% endif %}">Calendar</a>
+      </div>
+    {% endif %}
   </div>
 
-  <div class="race-toolbar{% if is_athlete_user %} race-toolbar-single{% endif %} mb-4">
-  <div class="card race-add-card">
-    <div class="card-body">
-      <h5 class="card-title">Add Race</h5>
+  <details class="race-add-panel mb-3" {% if errors %}open{% endif %}>
+    <summary class="btn btn-primary btn-sm">+ Add race</summary>
+    <div class="card race-add-card mt-2">
+      <div class="card-body">
 
       {% if errors %}
         <div class="alert alert-danger py-2">
@@ -104,17 +103,18 @@
           <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request.POST.end_date }}" {% if request.POST.multiple_days != '1' %}disabled{% endif %}>
         </div>
       </form>
+      </div>
     </div>
-  </div>
+  </details>
   {% if not is_athlete_user %}
-  <div class="card race-filter-card">
-    <div class="card-body">
-      <h5 class="card-title">Race Filter</h5>
-      <form method="get" class="row g-2 align-items-end">
+  <details class="race-filter-panel mb-3" open>
+    <summary>Filters</summary>
+    <div class="race-filter-bar">
+      <form method="get" class="race-filter-form">
         <input type="hidden" name="year" value="{{ year }}">
         <input type="hidden" name="view" value="{{ view_mode }}">
         <input type="hidden" name="period" value="{{ period_mode }}">
-        <div class="col-12 col-sm-4">
+        <div class="race-filter-field">
           <label class="form-label small mb-1" for="raceGroup">Group</label>
           <select class="form-select form-select-sm" id="raceGroup" name="race_group" onchange="this.form.race_athlete.value='all'; this.form.querySelector('[name=show_all]').checked=false; this.form.submit()">
             <option value="all" {% if race_group == 'all' %}selected{% endif %}>All</option>
@@ -123,7 +123,7 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-12 col-sm-4">
+        <div class="race-filter-field">
           <label class="form-label small mb-1" for="raceAthlete">Athlete</label>
           <select class="form-select form-select-sm" id="raceAthlete" name="race_athlete" onchange="this.form.querySelector('[name=show_all]').checked=false; this.form.submit()">
             <option value="all" {% if race_athlete == 'all' %}selected{% endif %}>All</option>
@@ -132,7 +132,7 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-12 col-sm-4">
+        <div class="race-filter-field">
           <label class="form-label small mb-1" for="raceTypeFilter">Race Type</label>
           <select class="form-select form-select-sm" id="raceTypeFilter" name="race_type_filter" onchange="this.form.submit()">
             <option value="all" {% if race_type_filter == 'all' %}selected{% endif %}>All</option>
@@ -141,18 +141,16 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-12 d-flex align-items-center justify-content-between gap-2">
+        <div class="race-filter-check">
           <label class="form-check mb-0">
             <input class="form-check-input" type="checkbox" name="show_all" value="1" {% if show_all_races %}checked{% endif %} onchange="this.form.submit()">
             <span class="form-check-label small">Show all races</span>
           </label>
-          <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
         </div>
       </form>
     </div>
-  </div>
+  </details>
   {% endif %}
-  </div>
 
   {% if view_mode == "calendar" %}
     <div class="year-calendar-grid">
@@ -209,9 +207,11 @@
 
         {% if race_rows %}
           <div class="race-list-columns">
-            {% for column in race_columns %}
-            <div class="race-list">
-            {% for row in column %}
+            {% for month in race_month_groups %}
+            <section class="race-month-group">
+              <h6 class="race-month-heading">{{ month.label }}</h6>
+              <div class="race-list">
+            {% for row in month.rows %}
               {% with race=row.race distances=row.distances %}
                 <button type="button" class="race-list-item race-type-{{ race.race_type }}"
                         data-show-counts="1"
@@ -220,23 +220,24 @@
                   <span class="race-list-date">{{ race.date|date:"d-m-Y" }}{% if race.end_date %}<br>– {{ race.end_date|date:"d-m-Y" }}{% endif %}</span>
                   <span class="race-list-main">
                     <strong class="race-list-name">{{ race.name }}</strong>
-                    <span class="race-distance-count race-attendance-count" data-attendance-count title="Attend without distance" {% if not row.attendance_only_count %}hidden{% endif %}>{{ row.attendance_only_count }}</span>
                     <span class="race-list-distances">
                       {% for distance_row in row.distance_rows %}
                         <span class="race-list-distance-wrap{% if is_athlete_user and not distance_row.selection_class %} d-none{% endif %}" data-distance-id="{{ distance_row.distance.id }}">
                           <span class="badge {% if is_athlete_user %}race-choice-pill {{ distance_row.selection_class }}{% else %}text-bg-light border{% endif %}">{{ distance_row.distance.display_distance }}</span>
-                          {% if distance_row.participant_count %}<span class="race-distance-count">{{ distance_row.participant_count }}</span>{% endif %}
+                          {% if distance_row.participant_count %}<span class="race-distance-participants">· {{ distance_row.participant_count }}</span>{% endif %}
                         </span>
                       {% empty %}
                         <span class="text-muted small">No distances yet.</span>
                       {% endfor %}
                     </span>
                   </span>
+                  {% if not is_athlete_user %}<span class="race-participant-badge" title="Participants">👤 {{ row.participant_count }}</span>{% endif %}
                   <span class="race-list-open" aria-hidden="true">›</span>
                 </button>
               {% endwith %}
             {% endfor %}
-            </div>
+              </div>
+            </section>
             {% endfor %}
           </div>
         {% else %}
@@ -461,6 +462,7 @@
   </div>
 
 </div>
+</div>
 
 
 <script>
@@ -468,9 +470,14 @@
   // Team branding wraps the calendar in its own stacking context. Keep all
   // Bootstrap race dialogs at document level so their backdrop cannot cover
   // the dialog and block every control behind it.
-  document.querySelectorAll(".race-calendar-page > .modal").forEach(function(modal) {
+  document.querySelectorAll(".race-calendar-page .modal").forEach(function(modal) {
     if (modal.parentElement !== document.body) document.body.appendChild(modal);
   });
+
+  var filterPanel = document.querySelector(".race-filter-panel");
+  if (filterPanel && window.matchMedia("(max-width: 576px)").matches) {
+    filterPanel.open = false;
+  }
 
   var addRaceModal = document.getElementById("addRaceDateModal");
   if (addRaceModal) {
@@ -580,32 +587,33 @@
     var listRow = document.querySelector('.race-list-item[data-race-id="' + modal.dataset.raceId + '"]');
     if (!listRow || listRow.dataset.showCounts !== '1') return;
     var counts = {};
-    var attendanceOnly = 0;
+    var totalParticipants = 0;
     modal.querySelectorAll('.race-entry-athlete[data-race-count-scope="1"]').forEach(function(athleteRow) {
       var attend = athleteRow.querySelector('[data-race-attend]');
-      if (attend && attend.checked && !athleteRow.querySelector('input[data-race-role]:checked')) attendanceOnly += 1;
+      var participates = !!(attend && attend.checked);
       athleteRow.querySelectorAll('.race-entry-distance').forEach(function(distanceRow) {
         if (distanceRow.querySelector('input[data-race-role]:checked')) {
+          participates = true;
           var id = distanceRow.dataset.distanceId;
           counts[id] = (counts[id] || 0) + 1;
         }
       });
+      if (participates) totalParticipants += 1;
     });
-    var attendanceBadge = listRow.querySelector('[data-attendance-count]');
-    if (attendanceBadge) {
-      attendanceBadge.textContent = String(attendanceOnly);
-      attendanceBadge.hidden = attendanceOnly === 0;
+    var participantBadge = listRow.querySelector('.race-participant-badge');
+    if (participantBadge) {
+      participantBadge.textContent = '👤 ' + String(totalParticipants);
     }
     listRow.querySelectorAll('.race-list-distance-wrap').forEach(function(wrapper) {
       var count = counts[wrapper.dataset.distanceId] || 0;
-      var badge = wrapper.querySelector('.race-distance-count');
-      if (!count) { if (badge) badge.remove(); return; }
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'race-distance-count';
-        wrapper.appendChild(badge);
+      var countText = wrapper.querySelector('.race-distance-participants');
+      if (!count) { if (countText) countText.remove(); return; }
+      if (!countText) {
+        countText = document.createElement('span');
+        countText.className = 'race-distance-participants';
+        wrapper.appendChild(countText);
       }
-      badge.textContent = String(count);
+      countText.textContent = '· ' + String(count);
     });
   }
 
@@ -703,6 +711,47 @@
   });
 </script>
 <style>
+  .race-calendar-shell {
+    width: 100%;
+    max-width: 1480px;
+    margin: 0 auto;
+  }
+  .race-period-bar {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    flex-wrap: wrap;
+  }
+  .race-add-panel > summary {
+    display: inline-flex;
+    width: auto;
+    list-style: none;
+    cursor: pointer;
+  }
+  .race-add-panel > summary::-webkit-details-marker,
+  .race-filter-panel > summary::-webkit-details-marker { display: none; }
+  .race-add-card { max-width: 720px; }
+  .race-filter-panel {
+    border: 1px solid #dfe5eb;
+    border-radius: .5rem;
+    background: #fff;
+  }
+  .race-filter-panel > summary {
+    display: none;
+    padding: .55rem .7rem;
+    color: #2e7d5b;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .race-filter-bar { padding: .65rem .75rem; }
+  .race-filter-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+    align-items: end;
+    gap: .65rem;
+  }
+  .race-filter-check { padding-bottom: .35rem; white-space: nowrap; }
+
   .year-calendar-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -809,83 +858,79 @@
     min-width: 0;
   }
 
-  .race-list-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
-  .race-list:empty { display: none; }
-  @media (max-width: 1199.98px) {
-    .race-list-columns { grid-template-columns: 1fr; gap: 0; }
+  .race-list-columns { display: grid; gap: 1rem; }
+  .race-month-group { min-width: 0; }
+  .race-month-heading {
+    margin: 0 0 .45rem;
+    color: #2e7d5b;
+    font-size: .9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .02em;
   }
+  .race-list:empty { display: none; }
   .race-list {
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    overflow: hidden;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(410px, 1fr));
+    gap: .55rem;
   }
 
   .race-list-item {
     display: grid;
-    grid-template-columns: 94px minmax(0, 1fr) auto;
-    gap: 12px;
+    grid-template-columns: 96px minmax(0, 1fr) auto auto;
+    gap: .65rem;
     align-items: center;
     width: 100%;
-    min-height: 42px;
-    padding: 6px 12px;
-    border: 3px solid #ff7a00;
-    border-left-width: 6px;
-    background: #ffffff;
+    min-height: 54px;
+    padding: .55rem .7rem;
+    border: 1px solid #e0e4e8;
+    border-left: 5px solid #ff7a00;
+    border-radius: .45rem;
+    background: #fbfcfd;
     color: inherit;
     text-align: left;
+    box-shadow: 0 1px 2px rgba(30, 50, 70, .04);
   }
 
-  .race-list-item.race-type-championship { border-color: #cc0000; }
-  .race-list-item.race-type-diamond_l { border-color: #ff8ac8; }
-  .race-list-item.race-type-race_gold { border-color: #d4af37; }
-  .race-list-item.race-type-race_silver { border-color: #c0c0c0; }
-  .race-list-item.race-type-race_bronze { border-color: #cd7f32; }
-  .race-list-item.race-type-race_other { border-color: #ff7a00; }
-  .race-list-item:hover { background: #fff8ec; }
+  .race-list-item.race-type-championship { border-left-color: #cc0000; }
+  .race-list-item.race-type-diamond_l { border-left-color: #ff8ac8; }
+  .race-list-item.race-type-race_gold { border-left-color: #d4af37; }
+  .race-list-item.race-type-race_silver { border-left-color: #c0c0c0; }
+  .race-list-item.race-type-race_bronze { border-left-color: #cd7f32; }
+  .race-list-item.race-type-race_other { border-left-color: #ff7a00; }
+  .race-list-item:hover { background: #fff; box-shadow: 0 2px 6px rgba(30, 50, 70, .1); }
   .race-list-date { color: #6c757d; font-size: .86rem; }
   .race-list-main {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 15px minmax(0, 1fr);
-    gap: 8px;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    align-items: flex-start;
     min-width: 0;
   }
   .race-list-name { min-width: 0; overflow-wrap: anywhere; }
   .race-list-distances { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .race-list-distances .badge { line-height: 1.1; }
   .race-list-open { color: #6c757d; font-size: 1.5rem; line-height: 1; }
-  .race-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: stretch; max-width: 1040px; }
-  .race-toolbar-single { grid-template-columns: minmax(0, 520px); }
-  .race-add-card,
-  .race-filter-card { width: 100%; }
-  .race-list-distance-wrap { position: relative; display: inline-flex; padding-top: 3px; padding-right: 3px; }
+  .race-list-distance-wrap { display: inline-flex; align-items: center; gap: .15rem; }
+  .race-distance-participants { color: #6c757d; font-size: .72rem; font-weight: 600; }
+  .race-participant-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.3rem;
+    padding: .18rem .4rem;
+    border-radius: 999px;
+    background: #e9f6ef;
+    color: #176b43;
+    font-size: .72rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
   .race-choice-pill { border: 2px solid transparent; }
   .race-choice-pending { background: #fff; border-color: #ff7a00; color: #8a4300; }
   .race-choice-target-pending { background: #fff; border-color: #cc0000; color: #990000; }
   .race-choice-confirmed { background: #ff7a00; border-color: #ff7a00; color: #111; }
   .race-choice-target-confirmed { background: #cc0000; border-color: #cc0000; color: #fff; }
-  .race-distance-count {
-    position: absolute;
-    top: -4px;
-    right: -2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 15px;
-    height: 15px;
-    padding: 0 4px;
-    border-radius: 999px;
-    background: #198754;
-    color: #fff;
-    font-size: .58rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .race-attendance-count { position: static; justify-self: center; }
-  .race-attendance-count[hidden] { display: none; }
-  .race-list-distances { grid-column: 3; }
-
   .race-entry-list {
     --race-entry-grid-columns: minmax(130px, 1fr) 54px 130px 64px 64px 64px;
     --race-entry-distance-columns: 54px 130px 64px 64px 64px;
@@ -937,27 +982,32 @@
   .race-distance-management:not([open]) { padding-bottom: 0; }
 
   @media (max-width: 992px) {
-    .race-toolbar { grid-template-columns: 1fr; }
+    .race-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .year-calendar-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
   @media (max-width: 576px) {
+    .race-calendar-page { padding-inline: .5rem !important; }
+    .race-period-bar { align-items: flex-start; }
+    .race-period-bar > .small { width: 100%; }
+    .race-filter-panel > summary { display: block; }
+    .race-filter-bar { padding-top: 0; }
+    .race-filter-form { grid-template-columns: 1fr; }
+    .race-filter-check { padding-bottom: 0; }
     .year-calendar-grid {
       grid-template-columns: 1fr;
     }
 
+    .race-list { grid-template-columns: 1fr; }
     .race-list-item {
-      grid-template-columns: 86px minmax(0, 1fr) auto;
-      gap: 6px;
-      padding: 6px 8px;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: .35rem;
+      padding: .55rem .6rem;
     }
-
-    .race-list-main {
-      grid-template-columns: minmax(0, .8fr) 15px minmax(0, 1.2fr);
-      gap: 6px;
-    }
+    .race-list-date { grid-column: 1 / -1; }
+    .race-list-main { grid-column: 1; }
 
     .race-entry-list {
       --race-entry-grid-columns: minmax(0, 1fr) 36px 52px 36px 36px 36px;
