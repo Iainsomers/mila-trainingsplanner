@@ -22,6 +22,7 @@
   </div>
 {% endif %}
 {% endwith %}
+<div class="training-content">
 {% if cell.slot.text %}
   <span data-flex-segment data-flex-zone="" data-flex-t="" data-flex-special="" data-flex-type="" data-flex-reps="" data-flex-distance="" data-flex-duration="" data-flex-norm="">{{ cell.slot.text|linebreaksbr }}</span>
 {% else %}
@@ -31,3 +32,4 @@
     {% endif %}
   {% endfor %}
 {% endif %}
+</div>

@@ -8089,6 +8089,12 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, 'class="daypart-label">AM</span>', html=False)
         self.assertContains(response, 'class="daypart-label">PM</span>', html=False)
         self.assertContains(response, 'table.classList.toggle("week-report-expanded"', html=False)
+        template_source = get_template("core/athlete_year_calendar.html").template.source
+        slot_partial = get_template("core/partials/ayc_slot_segments.html").template.source
+        self.assertIn(".week-report-indicator-trainer.has-content", template_source)
+        self.assertIn("background: #138a4b !important", template_source)
+        self.assertIn(".daily-vital-input:focus", template_source)
+        self.assertIn('class="training-content"', slot_partial)
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()
