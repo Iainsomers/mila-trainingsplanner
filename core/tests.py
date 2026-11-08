@@ -8117,7 +8117,9 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('data-evaluation-slot="{{ evaluation_slot }}"', feedback_partial)
         self.assertIn('with d=cell.report evaluation_slot=1', template_source)
         self.assertIn('with d=cell.report evaluation_slot=2', template_source)
-        self.assertIn(".year-table .comment-display { min-height: 30px; margin-top: 4px; }", template_source)
+        self.assertIn('class="slotrow session-feedback-row', template_source)
+        self.assertIn(".year-table .comment-display { min-height: 30px; }", template_source)
+        self.assertIn(".session-feedback-row td", template_source)
         self.assertIn("grid-template-columns: 1fr;", template_source)
         self.assertIn("min-height: 28px;", template_source)
 

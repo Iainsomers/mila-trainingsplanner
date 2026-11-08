@@ -3718,7 +3718,7 @@ def athlete_year_calendar_view(request):
         and selected_athlete.oura_connection_enabled
         and OuraConnection.objects.filter(athlete=selected_athlete).exists()
     )
-    ayc_rowspan = 2 + (1 if show_daily_vitals else 0)
+    ayc_rowspan = 2 + (2 if show_training_reports else 0) + (1 if show_daily_vitals else 0)
     is_coach_user = is_ayc_coach
     coach_can_edit_training = bool(
         is_coach_user

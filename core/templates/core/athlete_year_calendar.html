@@ -629,7 +629,12 @@
     overflow: hidden;
   }
 
-  .year-table .comment-display { min-height: 30px; margin-top: 4px; }
+  .year-table .comment-display { min-height: 30px; }
+
+  .session-feedback-row td {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
 
   .report-preview-grid {
     display: grid;
@@ -1829,12 +1834,21 @@
                 {% endif %}
                 {% if not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
               </div>
-              {% if show_training_reports and cell.report.has_slot1 %}
+            </td>
+          {% endfor %}
+        </tr>
+
+        {% if show_training_reports %}
+        <tr class="slotrow session-feedback-row {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          {% for cell in w.cells1 %}
+            <td{% if forloop.counter > 5 %} class="weekend-cell"{% endif %}>
+              {% if cell.report.has_slot1 %}
                 {% include "core/partials/ayc_session_feedback.html" with d=cell.report evaluation_slot=1 %}
               {% endif %}
             </td>
           {% endfor %}
         </tr>
+        {% endif %}
 
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
           {% for cell in w.cells2 %}
@@ -1856,12 +1870,21 @@
                 {% endif %}
                 {% if not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
               </div>
-              {% if show_training_reports and cell.report.has_slot2 %}
+            </td>
+          {% endfor %}
+        </tr>
+
+        {% if show_training_reports %}
+        <tr class="slotrow session-feedback-row {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">
+          {% for cell in w.cells2 %}
+            <td{% if forloop.counter > 5 %} class="weekend-cell"{% endif %}>
+              {% if cell.report.has_slot2 %}
                 {% include "core/partials/ayc_session_feedback.html" with d=cell.report evaluation_slot=2 %}
               {% endif %}
             </td>
           {% endfor %}
         </tr>
+        {% endif %}
 
         {% if show_daily_vitals %}
         <tr class="slotrow {% if today >= w.week_start and today <= w.week_end %}current-week{% endif %}">

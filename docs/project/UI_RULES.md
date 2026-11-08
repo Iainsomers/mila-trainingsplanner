@@ -409,7 +409,7 @@ Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met con
 
 8 november — Desktopfeedback in Athlete Diary toont naast de compacte status maximaal twee regels commentaar in plaats van één sterk afgekorte regel; de volledige tekst blijft via de tooltip beschikbaar. Weekendmarkering is bewust zeer licht, ook in de actuele gele week. De ingeklapte Week report-samenvatting heeft geen losse knopkaart meer maar sluit met een eenvoudige scheidingslijn aan op de Week- en Total-kolommen.
 
-8 november — Desktopfeedback staat direct onder de bijbehorende AM- of PM-sessie in dezelfde dagcel. De losse gecombineerde feedbackrij is vervallen. Iedere sessie behoudt de eigen aanklikbare status, RPE, pijnindicator en maximaal twee commentaarregels over de volledige dagbreedte. Mobiele evaluatiekaarten blijven ongewijzigd.
+8 november — Desktopfeedback staat in een vaste, over alle dagen uitgelijnde rij direct onder de bijbehorende AM- of PM-sessierij. AM en PM blijven dus gescheiden en visueel gekoppeld aan hun training, zonder verticale verspringing door uiteenlopende trainingsinhoud. Iedere sessie behoudt de eigen aanklikbare status, RPE, pijnindicator en maximaal twee commentaarregels. Mobiele evaluatiekaarten blijven ongewijzigd.
 
 
 8 november — Sleep quality wordt in Daily vitals altijd met één decimaal getoond, ook bij gehele waarden. Athlete Diary gebruikt lichte gewone cellijnen en een duidelijke donkere bovengrens per week; de dagkop blijft bij scrollen sticky. Zaterdag en zondag hebben een subtiele afwijkende achtergrond. Mobiel blijft de weeksamenvatting staan en wordt via zeven compacte dagknoppen steeds één volledige dagkaart getoond; de huidige dag opent standaard in de actuele week.

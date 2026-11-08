@@ -2,7 +2,7 @@
 
 ## 8 november 2026 — Athlete Diary-feedback en subtielere weekindeling
 
-- Desktopfeedback staat direct onder de bijbehorende AM- of PM-sessie; de losse gecombineerde feedbackrij is vervallen. Iedere sessie toont maximaal twee regels commentaar naast de status, met de volledige tekst in de bestaande tooltip.
+- Desktopfeedback staat in vaste, over alle dagen uitgelijnde rijen direct onder respectievelijk AM en PM. Daardoor blijft iedere evaluatie bij het juiste dagdeel zonder verticale verspringing door verschillende trainingshoogtes. Iedere sessie toont maximaal twee regels commentaar naast de status, met de volledige tekst in de bestaande tooltip.
 - De weekendtint is teruggebracht zodat hij de actuele gele week niet meer overheerst.
 - De ingeklapte Week report-samenvatting is visueel geïntegreerd met Week en Total: geen los wit knopvlak, wel een rustige scheidingslijn. Gedrag en opslag zijn ongewijzigd.
 
