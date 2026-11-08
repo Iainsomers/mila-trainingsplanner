@@ -3,7 +3,8 @@
 ## 8 november 2026 — Athlete Diary-navigatie en Week report compacter
 
 - De desktopkop heeft duidelijke labels voor Year, Athlete en History, plus Previous week, Today en Next week. Zones & times en Today's training blijven afzonderlijke acties met hun bestaande functies.
-- Week en Total zijn smaller. Week report is standaard een smalle kolom met vier kleurindicatoren; openen toont de bestaande vier tekstvelden en verbreedt de kolom tijdelijk. Maximaal één weekrapport staat tegelijk open.
+- Week en Total zijn smaller. Week report toont in de compacte stand het label Week report met vier kleurindicatoren; openen toont de bestaande vier tekstvelden en verbreedt de kolom tijdelijk. Maximaal één weekrapport staat tegelijk open.
+- AM en PM zijn in iedere desktopdagcel expliciet gelabeld. Gewone tabelranden zijn lichter en evaluatiekaarten hebben geen afzonderlijke harde rand meer; invoervelden en statuskleuren blijven herkenbaar.
 - Mobiele Diary-weergave, weekrapportopslag, rechten en trainingsinhoud zijn niet gewijzigd.
 
 ## 8 november 2026 — Race Calendar compacter en rustiger

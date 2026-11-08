@@ -8084,7 +8084,10 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, "Today's training")
         self.assertContains(response, 'class="week-report-details"', html=False)
         self.assertContains(response, 'class="week-report-indicator', html=False)
+        self.assertContains(response, 'class="week-report-summary-label">Week report</span>', html=False)
         self.assertContains(response, 'class="week-report-col">Report</th>', html=False)
+        self.assertContains(response, 'class="daypart-label">AM</span>', html=False)
+        self.assertContains(response, 'class="daypart-label">PM</span>', html=False)
         self.assertContains(response, 'table.classList.toggle("week-report-expanded"', html=False)
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):

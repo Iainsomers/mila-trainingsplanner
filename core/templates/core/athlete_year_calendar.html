@@ -21,7 +21,7 @@
 
   .year-table th,
   .year-table td {
-    border: 1px solid #ccc;
+    border: 1px solid #dfe3e6;
     padding: 6px;
     vertical-align: top;
     text-align: left;
@@ -130,6 +130,16 @@
 
   .emptyline {
     min-height: 18px;
+  }
+
+  .daypart-label {
+    display: block;
+    margin-bottom: 2px;
+    color: #6c757d;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .04em;
   }
 
   .slotbox {
@@ -346,8 +356,8 @@
   }
 
   .week-report-col {
-    width: 68px;
-    min-width: 68px;
+    width: 92px;
+    min-width: 92px;
     background: #fafafa;
   }
 
@@ -360,6 +370,7 @@
     list-style: none;
     cursor: pointer;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 3px;
@@ -368,6 +379,16 @@
     border-radius: 6px;
     background: #fff;
   }
+
+  .week-report-summary-label {
+    color: #495057;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .week-report-indicators { display: inline-flex; gap: 3px; }
 
   .week-report-details > summary::-webkit-details-marker { display: none; }
   .week-report-details[open] > summary { margin-bottom: 5px; }
@@ -578,10 +599,10 @@
   }
 
   .report-preview-half {
-    border: 1px solid #d0d0d0;
+    border: 0;
     border-radius: 6px;
     padding: 3px 4px;
-    background: #ffffff;
+    background: rgba(255,255,255,.72);
     min-width: 0;
     overflow: hidden;
   }
@@ -1636,10 +1657,13 @@
           <td class="week-report-col" rowspan="{{ ayc_rowspan }}">
             <details class="week-report-details">
               <summary aria-label="Open week report for {{ w.week_start|date:'d-m-Y' }}" title="Open week report">
-                <span class="week-report-indicator week-report-indicator-athlete{% if w.week_report.comm_athlete %} has-content{% endif %}" title="Athlete comment"></span>
-                <span class="week-report-indicator week-report-indicator-trainer{% if w.week_report.comm_trainer %} has-content{% endif %}" title="Trainer comment"></span>
-                <span class="week-report-indicator week-report-indicator-match{% if w.week_report.match_report %} has-content{% endif %}" title="Match report"></span>
-                <span class="week-report-indicator week-report-indicator-injuries{% if w.week_report.injuries %} has-content{% endif %}" title="Injuries"></span>
+                <span class="week-report-summary-label">Week report</span>
+                <span class="week-report-indicators" aria-hidden="true">
+                  <span class="week-report-indicator week-report-indicator-athlete{% if w.week_report.comm_athlete %} has-content{% endif %}" title="Athlete comment"></span>
+                  <span class="week-report-indicator week-report-indicator-trainer{% if w.week_report.comm_trainer %} has-content{% endif %}" title="Trainer comment"></span>
+                  <span class="week-report-indicator week-report-indicator-match{% if w.week_report.match_report %} has-content{% endif %}" title="Match report"></span>
+                  <span class="week-report-indicator week-report-indicator-injuries{% if w.week_report.injuries %} has-content{% endif %}" title="Injuries"></span>
+                </span>
               </summary>
               <div class="week-report-grid">
               <div class="week-report-box week-report-athlete">
@@ -1672,6 +1696,7 @@
           {% for cell in w.cells1 %}
             <td>
               <div class="daycell">
+                <span class="daypart-label">AM</span>
                 {% if cell.slot %}
                   <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                     {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
@@ -1695,6 +1720,7 @@
           {% for cell in w.cells2 %}
             <td>
               <div class="emptyline">
+                <span class="daypart-label">PM</span>
                 {% if cell.slot %}
                   <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                     {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
