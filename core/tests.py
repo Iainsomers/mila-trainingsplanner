@@ -8113,7 +8113,9 @@ class SlotModalSaveTests(TestCase):
         self.assertIn("-webkit-line-clamp: 2", template_source)
         self.assertIn("overflow-wrap: anywhere", template_source)
         self.assertIn('class="report-preview-text" title=', template_source)
-        self.assertIn(".year-table .comment-display { min-height: 48px; }", template_source)
+        self.assertIn(".year-table .comment-display { min-height: 62px; }", template_source)
+        self.assertIn("grid-template-columns: 1fr;", template_source)
+        self.assertIn("min-height: 58px;", template_source)
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()
