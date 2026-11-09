@@ -943,6 +943,8 @@
     .ayc-mobile-day-tab.is-active { border-color: #2e7d5b; background: #e5f3ec; color: #155d40; font-weight: 800; }
     .ayc-mobile-day { display: none; }
     .ayc-mobile-day.is-active-day { display: block; }
+    .ayc-mobile.is-week-view .ayc-mobile-day { display: block; }
+    .ayc-mobile.is-week-view .ayc-mobile-day-nav { display: none; }
     .ayc-mobile-day.is-weekend:not(.is-today) { background: #f7f9fb; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day { background: #fff9c4; border-color: #e5cf57; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day-head { background: #fff1a3; }
@@ -1138,7 +1140,7 @@
     {% endif %}
   </form>
 
-  <div class="ayc-mobile">
+  <div class="ayc-mobile{% if mobile_diary_week_view %} is-week-view{% endif %}">
     <div class="ayc-mobile-toolbar">
       {% if is_coach_user %}
       <form method="get">

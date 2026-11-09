@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-11-09 — Mobiele Diary blijft standaard compact
+
+De mobiele Diary blijft voor bestaande en nieuwe atleten standaard een één-dagweergave. Een volledige week onder elkaar is een expliciete instelling per atleet (`Week view in mob diary`) en verandert de desktopweergave niet.
+
 ## 2026-11-05 — AI kiest repgroepering; meetcontroles houden een drempel
 
 Bij samengestelde kilometer-autolaps moet de AI de werkreps en herstelgrenzen bepalen; voeg geen lokale herkenningsregel toe voor een afzonderlijke trainingscasus. De generieke validator bewaakt volledige brongegevens en minimaal 20% hogere werksnelheid dan de herstelsnelheid bij beide aangrenzende reps (ratio >=1.2), herstelduur/afstand en bestaande confidencegrenzen. Automatische acceptatie vraagt >=0.75; lagere geldige scores vanaf 0.50 zijn uitsluitend expliciet te beoordelen. Model niet verzwaren of confidence verhogen om een casus te laten slagen. Niet-hardloop-ALT-beschrijvingen gebruiken de afzonderlijke expliciete rekenregel gemiddelde HR +10 en vereisen geen AI.

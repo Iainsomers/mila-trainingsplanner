@@ -1,5 +1,11 @@
 # Actuele status
 
+## 9 november 2026 — Optionele mobiele weekweergave
+
+- Athlete Input > General > Athlete Diary bevat `Week view in mob diary`.
+- De optie staat standaard uit en behoudt dan de compacte mobiele weergave met één dag tegelijk.
+- Ingeschakeld toont de mobiele Diary alle zeven dagen onder elkaar; desktopgedrag blijft gelijk.
+
 ## 9 november 2026 — Progressieve zone binnen herhaalset
 
 - Setnotatie accepteert nu een progressieve zone binnen de haakjes, bijvoorbeeld `2*(300m z2-200m z3>z4)`.

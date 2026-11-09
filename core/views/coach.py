@@ -11536,6 +11536,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "view_weeks_ahead": getattr(athlete, "view_weeks_ahead", 2),
         "training_reports_enabled": getattr(athlete, "training_reports_enabled", True),
         "start_on_ayc": getattr(athlete, "start_on_ayc", False),
+        "mobile_diary_week_view": getattr(athlete, "mobile_diary_week_view", False),
         "see_session_km": getattr(athlete, "see_session_km", True),
         "see_session_zones": getattr(athlete, "see_session_zones", True),
         "see_desired_improvement_points": getattr(athlete, "see_desired_improvement_points", False),
@@ -11594,6 +11595,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["see_session_km"] = (request.POST.get("see_session_km") == "on")
         form["see_session_zones"] = (request.POST.get("see_session_zones") == "on")
         form["start_on_ayc"] = (request.POST.get("start_on_ayc") == "on")
+        form["mobile_diary_week_view"] = (request.POST.get("mobile_diary_week_view") == "on")
         form["oura_auto_import_enabled"] = request.POST.get("oura_auto_import_enabled") == "on"
         if self_view:
             form["see_desired_improvement_points"] = getattr(athlete, "see_desired_improvement_points", False)
@@ -11813,6 +11815,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.see_session_km = form["see_session_km"]
             athlete.see_session_zones = form["see_session_zones"]
             athlete.start_on_ayc = form["start_on_ayc"]
+            athlete.mobile_diary_week_view = form["mobile_diary_week_view"]
             if athlete.oura_auto_import_enabled != form["oura_auto_import_enabled"]:
                 athlete.oura_next_check_at = None
             athlete.oura_auto_import_enabled = form["oura_auto_import_enabled"]

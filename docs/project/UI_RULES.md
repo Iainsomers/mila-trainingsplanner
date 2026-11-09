@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- De mobiele Athlete Diary gebruikt standaard de compacte dagselector met één zichtbare dag. Alleen wanneer de atleetinstelling `Week view in mob diary` aanstaat, verdwijnt de dagselector en worden maandag tot en met zondag als volledige kaarten onder elkaar getoond.
+
 Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
