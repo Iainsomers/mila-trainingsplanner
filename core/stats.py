@@ -15,7 +15,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v22"
+STATS_SCHEMA_VERSION = "v23"
 
 
 def active_pause_distance_m(text, reps, speed_mps, pause_mode):
@@ -136,8 +136,8 @@ def _empty_zone_bucket(speeds: dict):
 
 
 def _empty_alt_bucket():
-    # Minutes only, Z1-Z3 only
-    return {z: {"duration_s": 0} for z in ("1", "2", "3")}
+    # Alternative load is duration-only and can use every training zone.
+    return {z: {"duration_s": 0} for z in ("1", "2", "3", "4", "5", "6")}
 
 
 def _empty_t_bucket():

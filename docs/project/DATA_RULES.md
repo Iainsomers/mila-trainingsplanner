@@ -345,5 +345,7 @@ Garmin C/D expliciete gemengde afstandssets (7 november 2026). Een complete setn
 
 Progressieve zones binnen herhaalsets: zowel serverstatistiek als de live Flex Planner-herberekening verdeelt alleen de afstand van het betreffende onderdeel gelijk over de volledige zone-range. `2*(300m z2-200m z3>z4)` levert dus Z2 600 m, Z3 200 m en Z4 200 m; de visuele kleurverdeling gebruikt dezelfde gewichten.
 
+Alternative-belasting is tijdgebaseerd en ondersteunt Z1 tot en met Z6. Een herhaling zoals `3x 8' z4` telt als 24 minuten ALT Z4; deze minuten blijven gescheiden van loopafstand en loopzones.
+
 
 Garmin C/D gemengde tijdsuggestie (9 november 2026). De lokale controle vergelijkt alle expliciete blokken. Een aaneengesloten reeks van minstens drie gelijke tijdreps met gemeten herstel mag worden gevolgd door één afwijkend werkblok dat binnen de bestaande hele-minutenmarge valt. De voorafgaande herstelronde voldoet aan dezelfde herstelcontrole. Een expliciete slotafstand is toegestaan als de gemeten afstand binnen max(30 m, 8%) ligt. De werkelijk gemeten meters en seconden blijven leidend in het klokje.

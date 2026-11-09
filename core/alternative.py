@@ -24,6 +24,6 @@ def zone_durations(text, fallback_zone, stored_seconds, duration_for_text):
         seconds = (int(repeated.group(1))*duration_for_text(repeated.group(2))
                    if repeated else duration_for_text(part))
         seconds = seconds or (stored_seconds if len(parts) <= 1 else 0)
-        if seconds > 0 and all(z in {'1','2','3'} for z in zones):
+        if seconds > 0 and all(z in {'1','2','3','4','5','6'} for z in zones):
             output.extend((zone, seconds/len(zones)) for zone in zones)
     return output

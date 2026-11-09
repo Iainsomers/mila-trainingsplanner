@@ -2987,7 +2987,7 @@ def _ayc_slot_session_zones(slot, athlete=None, pause_mode=None):
 
 def _ayc_slot_session_alt_zones(slot, athlete=None, pause_mode=None):
     """Alternative minutes per zone, separate from measured running km."""
-    totals = {str(zone): 0.0 for zone in range(1, 4)}
+    totals = {str(zone): 0.0 for zone in range(1, 7)}
     for load in _ayc_slot_loads_for_totals(slot, athlete, pause_mode):
         if load.get('kind') != 'alt':
             continue
@@ -4287,6 +4287,9 @@ def athlete_year_calendar_view(request):
         alt_z1_min = 0
         alt_z2_min = 0
         alt_z3_min = 0
+        alt_z4_min = 0
+        alt_z5_min = 0
+        alt_z6_min = 0
 
         if selected_athlete:
             for cell in cells1 + cells2:
@@ -4303,6 +4306,12 @@ def athlete_year_calendar_view(request):
                             alt_z2_min += minutes
                         elif zone == "3":
                             alt_z3_min += minutes
+                        elif zone == "4":
+                            alt_z4_min += minutes
+                        elif zone == "5":
+                            alt_z5_min += minutes
+                        elif zone == "6":
+                            alt_z6_min += minutes
                         continue
 
                     zone = str(load.get("zone") or "")
@@ -4345,7 +4354,9 @@ def athlete_year_calendar_view(request):
         has_z = {z: (z_m[z] > 0) for z in ("1", "2", "3", "4", "5", "6")}
         has_race = (race_m > 0)
         has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "1000", "800", "600", "TM", "THM", "T4")}
-        has_alt = (alt_z1_min > 0 or alt_z2_min > 0 or alt_z3_min > 0)
+        has_alt = any(value > 0 for value in (
+            alt_z1_min, alt_z2_min, alt_z3_min, alt_z4_min, alt_z5_min, alt_z6_min
+        ))
 
         def _vitals_week_avg(field_name, decimals=0):
             values = []
@@ -4438,6 +4449,9 @@ def athlete_year_calendar_view(request):
             "alt_z1_min": alt_z1_min,
             "alt_z2_min": alt_z2_min,
             "alt_z3_min": alt_z3_min,
+            "alt_z4_min": alt_z4_min,
+            "alt_z5_min": alt_z5_min,
+            "alt_z6_min": alt_z6_min,
             "has_alt": has_alt,
             "sum_pct_tooltip": sum_pct_tooltip,
         })

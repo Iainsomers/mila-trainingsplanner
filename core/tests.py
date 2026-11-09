@@ -5922,8 +5922,8 @@ class SlotModalSaveTests(TestCase):
             slot=completed_slot,
             order=2,
             type="ALT",
-            text="10' z2",
-            duration_s=600,
+            text="10' z2 // 3x 8' z4",
+            duration_s=2040,
             zone="2",
         )
         AthleteDayCheck.objects.create(
@@ -5941,12 +5941,15 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(week["sum_tot_km"], "2.0")
         self.assertEqual(week["alt_z1_min"], 0)
         self.assertEqual(week["alt_z2_min"], 10)
+        self.assertEqual(week["alt_z4_min"], 24)
         cell = next(cell for row in response.context['week_rows'] for cell in row['cells2'] if cell['day']==day)
-        self.assertEqual(cell['session_alt_zones'],[{'zone':'2','minutes':'10'}])
+        self.assertEqual(cell['session_alt_zones'],[{'zone':'2','minutes':'10'}, {'zone':'4','minutes':'24'}])
         self.assertContains(response,'class="session-alt-label">A</span>')
         self.assertContains(response,'class="session-zone-pill session-zone-z2" title="Alternative Z2: 10 min">10</span>')
+        self.assertContains(response,'class="session-zone-pill session-zone-z4" title="Alternative Z4: 24 min">24</span>')
 
         self.assertContains(response,'ALT Z2 10 min')
+        self.assertContains(response,'ALT Z4 24 min')
         self.assertNotContains(response,'ALT Z1 30 min')
 
     def test_base_planning_autosave_allows_intermediate_overlapping_blocks(self):
@@ -11028,7 +11031,7 @@ class FlexPlannerAltTotalsTests(TestCase):
         stats = athlete_week_stats(plan, athlete, week_start)
         self.assertEqual(
             {zone: values["duration_s"] for zone, values in stats["alt_zones"].items()},
-            {"1": 1200, "2": 600, "3": 600},
+            {"1": 1200, "2": 600, "3": 600, "4": 0, "5": 0, "6": 0},
         )
 
     def test_progressive_zone_range_includes_intermediate_zones(self):

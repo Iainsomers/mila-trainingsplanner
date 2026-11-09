@@ -25,7 +25,7 @@ function flexAlternativeLoads(text, fallbackZone, storedSeconds, durationForText
       zones = [match ? match[1] : fallbackZone];
     }
     const seconds = durationForText(part) || (parts.length <= 1 ? storedSeconds : 0);
-    return seconds > 0 && zones.every(z => ['1','2','3'].includes(z))
+    return seconds > 0 && zones.every(z => ['1','2','3','4','5','6'].includes(z))
       ? zones.map(zone => ({kind:'alt', zone:zone, seconds:seconds/zones.length})) : [];
   });
 }

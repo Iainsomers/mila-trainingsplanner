@@ -41,3 +41,12 @@ class AlternativeProgressionTests(SimpleTestCase):
             seg = SimpleNamespace(type='ALT',text=text,zone='2',duration_s=None)
             self.assertEqual(_alt_zone_durations(seg),expected)
             self.assertEqual(sum(s for _,s in expected),540)
+
+    def test_high_alternative_zones_are_counted(self):
+        seg = SimpleNamespace(
+            type='ALT',
+            text="30' warm up // 3x 8' z4 (40\" @ 350w / 20\" @ 250w) p6' // 30' cooldown",
+            zone='1',
+            duration_s=None,
+        )
+        self.assertEqual(_alt_zone_durations(seg), [('1',1800), ('4',1440), ('1',1800)])

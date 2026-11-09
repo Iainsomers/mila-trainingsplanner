@@ -1,5 +1,11 @@
 # Actuele status
 
+## 9 november 2026 — Alternative-minuten in Z4–Z6
+
+- Alternative telt nu minuten in alle zones Z1 tot en met Z6; voorheen werden Z4–Z6 bewust weggefilterd.
+- Een invoer zoals `3x 8' z4` levert 24 minuten ALT Z4 in de sessiekop en de weektotalen van Athlete Diary.
+- Flex Planner gebruikt dezelfde zoneregel. Alternative-minuten blijven los van de hardloopkilometers.
+
 ## 9 november 2026 — Optionele mobiele weekweergave
 
 - Athlete Input > General > Athlete Diary bevat `Week view in mob diary`.

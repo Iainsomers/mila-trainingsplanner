@@ -840,7 +840,7 @@
         const zMeters = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         const zSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         const tMeters = {"10000": 0, "5000": 0, "3000": 0, "1500": 0, "1000": 0, "800": 0, "600": 0, "TM": 0, "THM": 0, "T4": 0};
-        const altSeconds = {"1": 0, "2": 0, "3": 0};
+        const altSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         let raceMeters = 0;
         let raceSeconds = 0;
 
@@ -887,6 +887,14 @@
         line = "";
         ["4", "5", "6"].forEach((z) => {
           if (zMeters[z] > 0) line += flexPill("pill-z" + z, "Z" + z, flexKm(zMeters[z]));
+        });
+        if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
+
+        line = "";
+        ["4", "5", "6"].forEach((z) => {
+          if (altSeconds[z] > 0) {
+            line += flexPill("pill-z" + z, "ALT Z" + z, Number((altSeconds[z] / 60).toFixed(1)) + "'");
+          }
         });
         if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
 
