@@ -6,7 +6,7 @@ from statistics import median
 
 
 _EXPLICIT_TIME_REQUEST_RE = re.compile(
-    r"(?<!\w)(\d+)\s*[x×*]\s*(\d+)(?:[.,]\d+)?\s*(?:['′’]|min(?:uut|uten)?\b)",
+    r"(?<!\w)(\d+)\s*[x×*]\s*(\d+)\s*(?:['′’]|min(?:uut|uten)?\b)",
     re.IGNORECASE,
 )
 
@@ -24,14 +24,16 @@ def prefer_explicit_time_request(results, chat_messages):
     requested = requested_time_reps(chat_messages)
     if not requested:
         return False
+    from core.training_text import split_main_segments
+
+    text = str(chat_messages[-1].get("content") or "")
+    requested_blocks = split_main_segments(text, split_hyphens=False)
     selected_any = False
     for session in results:
         for part in session.get("parts") or []:
             options = part.get("training_alternatives") or []
-            selected = next((option for option in options
-                if option.get("label") == "Time" and re.match(
-                    rf"^\s*{requested[0]}\s*[×x*]\s*{requested[1]}\s*['′’]",
-                    str((option.get("training_fields") or {}).get("main") or ""))), None)
+            selected = next((candidate for option in options if option.get("label") == "Time"
+                             if (candidate := _match_time_request(option, requested, requested_blocks))), None)
             if not selected:
                 continue
             for key in ("training_fields", "description", "watch_loads"):
@@ -43,6 +45,46 @@ def prefer_explicit_time_request(results, chat_messages):
             part["chat_reply"] = "The measured laps confirm the requested time repetitions."
             selected_any = True
     return selected_any
+
+
+def _match_time_request(option, requested, requested_blocks):
+    """Confirm all explicit blocks before returning a selectable preview."""
+    from core.training_text import split_main_segments
+
+    fields = option.get("training_fields") or {}
+    blocks = split_main_segments(fields.get("main"), split_hyphens=False)
+    if len(blocks) != len(requested_blocks):
+        return None
+    for index, (block, requested_text) in enumerate(zip(blocks, requested_blocks)):
+        timed = _EXPLICIT_TIME_REQUEST_RE.match(block)
+        asked = requested if index == 0 else requested_time_reps([{"content": requested_text}])
+        if timed and asked == (int(timed[1]), int(timed[2])):
+            continue
+        distance = re.fullmatch(r"(?:1\s*[×x*]\s*)?(\d+)\s*m(?:\s+z[1-5])?", requested_text, re.I)
+        if index != 1 or len(blocks) != 2 or not distance or not timed or timed[1] != "1":
+            return None
+        work = [load for load in option["watch_loads"] if load.get("ai_group") == 1 and load.get("work_rep")]
+        target = int(distance[1])
+        if len(work) != 1 or target <= 0 or abs(float(work[0]["meters"]) - target) > max(30, target * .08):
+            return None
+        selected = deepcopy(option)
+        for load in selected["watch_loads"]:
+            if load.get("ai_group") == 1 and load.get("work_rep"):
+                load["ai_nominal_m"] = target
+        blocks[index] = f"1×{target} m" + block[timed.end():]
+        selected["training_fields"]["main"] = " + ".join(blocks)
+        from core.watch_ai_structure import description
+        selected["description"] = description(selected["training_fields"])
+        return selected
+    return option
+
+
+def _valid_time_recovery(lap, neighbors):
+    meters, seconds = float(lap['meters']), float(lap['seconds'])
+    return (math.isfinite(meters + seconds) and 30 <= seconds <= 600 and 0 <= meters <= 600
+            and str(lap.get('zone')) in {'1', '', 'None'}
+            and all(float(work['meters']) / float(work['seconds']) >= 1.4 * meters / seconds
+                    for work in neighbors))
 
 
 def single_time_option(core):
@@ -59,18 +101,37 @@ def single_time_option(core):
             return None
         if any(not math.isfinite(float(l['meters'])) or float(l['meters']) / s < 2.5 for l, s in zip(work, seconds)):
             return None
-        for i, lap in enumerate(recovery):
-            m, s = float(lap['meters']), float(lap['seconds'])
-            neighbors = work[i:i+2]
-            if (not math.isfinite(m+s) or not 30 <= s <= 600 or not 0 <= m <= 600
-                    or str(lap.get('zone')) not in {'1', '', 'None'}
-                    or any(float(w['meters'])/float(w['seconds']) < 1.4*m/s for w in neighbors)):
-                return None
+        if any(not _valid_time_recovery(lap, work[i:i+2]) for i, lap in enumerate(recovery)):
+            return None
         zones = sorted({'Z'+str(l.get('zone')) for l in work} & {'Z1','Z2','Z3','Z4','Z5'})
         zone = (' ' + (zones[0] if len(zones)==1 else zones[0]+'>'+zones[-1])) if zones else ''
         rests = [float(l['seconds']) for l in recovery[:len(work)-1]]
         pause = f' p{int(math.floor(median(rests)+.5))}'
         return f"{len(work)}×{target//60}'{zone}{pause}"
+    except (KeyError, TypeError, ValueError, ZeroDivisionError, OverflowError):
+        return None
+
+
+def _time_option_with_finish(core):
+    """Recognize a repeated timed prefix and one distinct final work lap."""
+    if len(core) < 7 or len(core) % 2 == 0:
+        return None
+    prefix = single_time_option(core[:-2])
+    if not prefix:
+        return None
+    try:
+        last = core[-1]
+        meters, seconds = float(last["meters"]), float(last["seconds"])
+        if not math.isfinite(meters + seconds) or not 120 <= seconds <= 1815 or meters / seconds < 2.5:
+            return None
+        target = int(math.floor(seconds / 60 + .5)) * 60
+        prefix_target = int(_EXPLICIT_TIME_REQUEST_RE.match(prefix)[2]) * 60
+        if (target == prefix_target or abs(seconds - target) > max(15, target * .06)
+                or not _valid_time_recovery(core[-2], [core[-3], last])):
+            return None
+        zone = str(last.get("zone") or "")
+        zone_text = f" Z{zone}" if zone in {"1","2","3","4","5"} else ""
+        return f"{prefix} + 1×{target//60}'{zone_text}", target
     except (KeyError, TypeError, ValueError, ZeroDivisionError, OverflowError):
         return None
 
@@ -123,8 +184,12 @@ def add_training_alternatives(results):
             options = long_interval_options(laps, lambda lap: lap['zone'])
             timed_loads = loads
             preferred = 'distance'
+            finish = None
             if not options:
                 timed = single_time_option(core)
+                finish = _time_option_with_finish(core) if not timed else None
+                if finish:
+                    timed = finish[0]
                 main = (part.get('training_fields') or {}).get('main')
                 if timed and main:
                     options = {'distance':main, 'time':timed}
@@ -139,7 +204,12 @@ def add_training_alternatives(results):
                     for index, load in enumerate(main_loads):
                         load.update(work_rep=index % 2 == 0)
                         if index % 2 == 0:
-                            load.update(ai_rep=index+1, ai_group=0, ai_target_seconds=target, ai_nominal_m=nominal)
+                            if finish and index == len(main_loads) - 1:
+                                finish_nominal = int(math.floor(float(load['meters'])/50+.5))*50
+                                load.update(ai_rep=index+1, ai_group=1, ai_target_seconds=finish[1],
+                                            ai_nominal_m=finish_nominal)
+                            else:
+                                load.update(ai_rep=index+1, ai_group=0, ai_target_seconds=target, ai_nominal_m=nominal)
             if not options:
                 continue
             alternatives = []
@@ -152,3 +222,5 @@ def add_training_alternatives(results):
                     'description':f"WU: {fields.get('wu') or 'none'} · Main: {fields['main']} · CD: {fields.get('cd') or 'none'}"})
             part['training_alternatives'] = alternatives
             part.update({key: alternatives[0][key] for key in ('training_fields','description')})
+            if finish:
+                part['watch_loads'] = timed_loads

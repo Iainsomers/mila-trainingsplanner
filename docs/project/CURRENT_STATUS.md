@@ -657,3 +657,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 8 november — De Main-weergave voor 5 november AM is getest met 2×3600 m, 1×3000 m en 1×1000 m. De bijbehorende tijden en tempos zijn 12:18 / 3:26, 10:14 / 3:26 en 3:01 / 3:01 per km. De segmentlabels gebruiken alleen de passende gemeten klokregels.
+
+
+9 november — Garmin C/D groepeert 7:59, 8:00 en 8:01 als 3x8 minuten met p61 en behoudt 9:49 als apart slotblok. De chat accepteert 10 minuten of 2100 m als passende notatie voor dat slotblok. Regressie op de zeven bronlaps controleert beide modellen, de klok en onpassende voorstellen.

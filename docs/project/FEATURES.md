@@ -593,3 +593,6 @@ Garmin C/D toont een stabiele Z1-duurloop met een duidelijk gemeten slotserie va
 
 
 Garmin C/D controleert een expliciete chatinvoer zoals 2*(1700m-1200m-850m) rechtstreeks tegen de bronlaps. Bij een match krijgt de preview de gevraagde setstructuur met gemeten zones en pauzes.
+
+
+Garmin C/D herkent ook een reeks van minstens drie vrijwel gelijke tijdreps met een apart slotblok. De gemeten preview toont de reeks en het slotblok afzonderlijk. In chat kan het slotblok als hele minuten of als passende doelafstand worden aangevraagd.

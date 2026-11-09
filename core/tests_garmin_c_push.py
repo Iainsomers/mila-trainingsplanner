@@ -258,6 +258,42 @@ class GarminCPushTests(TestCase):
                 self.assertEqual(time_fields['cd'],'1100 m Z1')
                 self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],values)
 
+    def test_timed_repetitions_with_distinct_finish_in_preview_and_chat(self):
+        from types import SimpleNamespace
+        from urllib.parse import urlencode
+        from core.views.calendar import _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+
+        values = [(1753.7,479),(89.7101,61),(1778.25,480),(68.7002,61),
+                  (1748.64,481),(93.7402,61),(2117.09,589)]
+        GarminActivitySummary.objects.create(athlete=self.athlete,activity_id='time-with-finish',
+            activity_start=datetime.fromtimestamp(self.start, dt_timezone.utc),activity_date='2026-10-31',
+            distance_m=sum(m for m,_ in values),duration_s=sum(s for _,s in values),
+            analysis_data={'laps':[dict(distance=m,elapsed_time=s) for m,s in values]})
+        self.client.force_login(self.coach)
+        timed = "3×8' Z1 p61 + 1×10' Z1"
+        distance = "3×8' Z1 p61 + 1×2100 m Z1"
+        with patch('core.views.polar_raw.lap_zone_paces',return_value=('Z1','NA')), patch(
+                'core.views.polar_raw.urlopen',side_effect=AssertionError('Measured recognition')):
+            for model in ('c','d'):
+                url = reverse(f'garmin_type_{model}_ayc')
+                query = {'athlete':self.athlete.pk,'date':'2026-10-31','preview':'measured'}
+                result = self.client.get(url,query).json()['results'][0]
+                self.assertEqual(result['parts'][0]['training_fields']['main'],timed)
+                chat_url = url + '?' + urlencode({**query,'suggestion_session':result['start']})
+                for message, expected in (("3*8' z1//1*10' z1",timed),("3*8' z1 // 2100m",distance)):
+                    chat = self.client.post(chat_url,{'chat':json.dumps([{'role':'user','content':message}])}).json()
+                    self.assertTrue(chat['ok'],chat)
+                    part = chat['results'][0]['parts'][0]
+                    self.assertEqual(part['training_fields']['main'],expected)
+                    self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],values)
+                    slot = SimpleNamespace(source=f'watch_{model}',watch_loads=part['watch_loads'],
+                        segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',expected)]))
+                    self.assertEqual([row['measured_seconds'] for row in processed_main_reps(slot)],[479,480,481,589])
+                for message in ("4*8' z1","3*8' z1 // 1*8' z1","3*8' z1 // 3000m"):
+                    rejected = self.client.post(chat_url,{'chat':json.dumps([{'role':'user','content':message}])}).json()
+                    self.assertFalse(rejected['ok'])
+
     def test_chat_confirms_exact_four_by_eight_minutes_without_ai(self):
         values = [(1779.24,480),(84.0601,62),(1781.23,481),(80.46,60),
                   (1736.48,480),(73.1997,61),(1774.31,481)]
