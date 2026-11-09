@@ -28,6 +28,10 @@ _T_RE = re.compile(r"\b(?:TM|THM|T4|T\s*(10|5|3|15|1|8|6|600|800|1000|1500|3000|
 
 # --- Zone & reguliere parsing ---
 _ZONE_RE = re.compile(r"Z\s*([1-6])\b", re.IGNORECASE)
+_PROGRESSIVE_ZONE_RE = re.compile(
+    r"\bZ\s*([1-6])\s*>\s*Z?\s*([1-6])\b",
+    re.IGNORECASE,
+)
 
 _DURATION_APOS_RE = re.compile(r"(\d+)\s*['’‘´`′]", re.IGNORECASE)
 _DURATION_MINWORD_RE = re.compile(r"(\d+)\s*min\b", re.IGNORECASE)
@@ -185,7 +189,8 @@ def _resolve_zone_and_t(s: str, zone_required: bool, raw: str):
 
 
 def _clean_set_token(token: str) -> str:
-    cleaned = _ZONE_RE.sub("", token or "")
+    cleaned = _PROGRESSIVE_ZONE_RE.sub("", token or "")
+    cleaned = _ZONE_RE.sub("", cleaned)
     cleaned = _T_RE.sub("", cleaned)
     return cleaned.strip()
 

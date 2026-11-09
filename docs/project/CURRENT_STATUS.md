@@ -1,5 +1,11 @@
 # Actuele status
 
+## 9 november 2026 — Progressieve zone binnen herhaalset
+
+- Setnotatie accepteert nu een progressieve zone binnen de haakjes, bijvoorbeeld `2*(300m z2-200m z3>z4)`.
+- De afstand van alleen het progressieve onderdeel wordt verdeeld over de genoemde zone-range; in dit voorbeeld telt 600 m als Z2, 200 m als Z3 en 200 m als Z4.
+- Dezelfde notatie buiten haakjes en bestaande samengestelde afstands- en tijdsets blijven ongewijzigd.
+
 ## 8 november 2026 — Athlete Diary-feedback en subtielere weekindeling
 
 - Desktopfeedback staat in vaste, over alle dagen uitgelijnde rijen direct onder respectievelijk AM en PM. Daardoor blijft iedere evaluatie bij het juiste dagdeel zonder verticale verspringing door verschillende trainingshoogtes. Iedere sessie toont maximaal twee regels commentaar naast de status, met de volledige tekst in de bestaande tooltip.

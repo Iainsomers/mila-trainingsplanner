@@ -48,6 +48,7 @@ Onder meer ondersteund:
 - T-progressies lopen via tussenliggende labels, bijvoorbeeld `t15>t4` splitst over T15, T1, T8, T6 en T4;
 - `2*(600m-400m) t15`;
 - `5*(1000m z3-200m t8)`;
+- progressieve zones mogen ook per onderdeel binnen een herhaalset staan, bijvoorbeeld `2*(300m z2-200m z3>z4)`; het progressieve onderdeel wordt over de tussenliggende zones verdeeld;
 - Watch A/B/C-samenvattingen mogen tempo's tussen haakjes en `+` binnen een herhaalset tonen; bij opslaan worden die displaytekens omgezet naar de bestaande parsernotatie.
 - De ruwe `watch_loads` blijven ongewijzigd en zijn leidend voor bestaande afstands- en zonetotalen. Een aparte, opgeslagen `watch_main_reps`-laag koppelt alleen gemeten Main-laps aan de herhalingsafstand van het opgeslagen Main-plan; herstel-laps en niet-herkende tijdblokken worden niet als reps gepresenteerd. De popup toont de nette geplande rep-afstand (bijvoorbeeld 200 m of 150 m); de werkelijk gemeten meters blijven apart bewaard en worden gebruikt voor het berekende tempo. Na Use AM/PM wordt de getoonde tijd van herhaalde Main-reps omgerekend met gemeten seconden × herkende repafstand / gemeten afstand. De afgeleide rep bewaart ook measured_seconds en measured_distance_m; tempo blijft gebaseerd op de oorspronkelijke meting. Een doorlopend blok houdt zijn opgetelde gemeten tijd. De ruwe Watch-tabel en loads veranderen niet.
 - minuten met `'` en seconden met `"`;

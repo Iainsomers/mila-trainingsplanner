@@ -431,23 +431,38 @@ def _compound_rep_loads(seg, default_zone: str, speeds: dict):
 
         dist_m = _compound_distance_to_m(dm.group(1), dm.group(2))
 
-        zm = _COMPOUND_ZONE_RE.search(part)
-        part_zone = str(zm.group(1)) if zm else str(default_zone or "")
-        if not part_zone or part_zone not in speeds:
-            return None
-
         tm = _COMPOUND_T_RE.search(part)
         part_t = _normalize_compound_t_type(tm.group(1)) if tm else default_t
 
         nm = int(outer_reps * dist_m)
-        speed = float(speeds[part_zone])
-        dur = _dur_s(seg, nm, speed)
+        progressive_match = _PROGRESSIVE_ZONE_RE.search(part)
+        if progressive_match:
+            part_zones = _progressive_zone_range(
+                progressive_match.group(1),
+                progressive_match.group(2),
+            )
+            if not part_zones or any(part_zone not in speeds for part_zone in part_zones):
+                return None
+            for part_zone, zone_nm in zip(part_zones, _split_int_total(nm, len(part_zones))):
+                speed = float(speeds[part_zone])
+                loads.append({
+                    "zone": part_zone,
+                    "t_type": part_t,
+                    "distance_m": zone_nm,
+                    "duration_s": _dur_s(seg, zone_nm, speed),
+                })
+            continue
 
+        zm = _COMPOUND_ZONE_RE.search(part)
+        part_zone = str(zm.group(1)) if zm else str(default_zone or "")
+        if not part_zone or part_zone not in speeds:
+            return None
+        speed = float(speeds[part_zone])
         loads.append({
             "zone": part_zone,
             "t_type": part_t,
             "distance_m": nm,
-            "duration_s": dur,
+            "duration_s": _dur_s(seg, nm, speed),
         })
 
     return loads or None

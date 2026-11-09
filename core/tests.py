@@ -10760,6 +10760,61 @@ class FlexPlannerAltTotalsTests(TestCase):
             ["3x2000m z2 p107", "2x1000m z2 p40"],
         )
 
+    def test_compound_set_accepts_progressive_zone_inside_parentheses(self):
+        from core.parser import parse_segment_text
+        from core.stats import athlete_week_stats
+
+        text = "2*(300m z2-200m z3>z4)"
+        parsed = parse_segment_text(text)
+        self.assertTrue(parsed.ok, parsed.message)
+        self.assertEqual(parsed.distance_m, 1000)
+        self.assertEqual(parsed.rep_distance_m, 500)
+
+        trainer = get_user_model().objects.create_user(username="compoundprogresscoach", is_staff=True)
+        athlete = Athlete.objects.create(
+            owner=trainer,
+            name="Compound Progressive Athlete",
+            birth_year=2000,
+            gender="X",
+            zone_speed_mps={"1": 3.0, "2": 3.5, "3": 4.0, "4": 4.5, "5": 5.0},
+        )
+        week_start = date(2026, 11, 30)
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Flex Planner Compound progressive plan",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        self.client.force_login(trainer)
+        response = self.client.post(
+            f"/slot-modal/{week_start.year}/{week_start.month}/{week_start.day}/1/",
+            {
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "source": "flex",
+                "core_text": text,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            TrainingSegment.objects.filter(slot__plan=plan, type="CORE").exists(),
+            response.content.decode(),
+        )
+        segment = TrainingSegment.objects.get(
+            slot__plan=plan,
+            slot__athlete=athlete,
+            slot__date=week_start,
+            slot__slot_index=1,
+            type="CORE",
+        )
+        self.assertEqual(segment.text, text)
+        self.assertEqual(segment.norm_distance_m, 1000)
+
+        stats = athlete_week_stats(plan, athlete, week_start)
+        self.assertEqual(stats["zones"]["2"]["distance_m"], 600)
+        self.assertEqual(stats["zones"]["3"]["distance_m"], 200)
+        self.assertEqual(stats["zones"]["4"]["distance_m"], 200)
+
     def test_flex_plus_saves_main_as_two_segments_and_both_zones_count(self):
         from core.stats import athlete_week_stats
 

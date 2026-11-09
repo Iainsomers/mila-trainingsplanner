@@ -2063,10 +2063,24 @@ def _segment_compound_rep_parts(seg):
         if value <= 0:
             return []
 
+        progressive_match = re.search(
+            r"\bz\s*([1-6])\s*>\s*z?\s*([1-6])\b",
+            part,
+            re.IGNORECASE,
+        )
         zone_match = re.search(r"\bz\s*([1-6])\b", part, re.IGNORECASE)
+        zones = []
+        if progressive_match:
+            start_zone = int(progressive_match.group(1))
+            end_zone = int(progressive_match.group(2))
+            step = 1 if end_zone >= start_zone else -1
+            zones = [str(zone) for zone in range(start_zone, end_zone + step, step)]
+        elif zone_match:
+            zones = [str(zone_match.group(1))]
         parts.append({
             "distance_m": value,
             "zone": str(zone_match.group(1)) if zone_match else "",
+            "zones": zones,
         })
 
     return parts if len(parts) > 1 else []
@@ -2280,16 +2294,16 @@ def _segment_compound_part_zone_labels(seg, distances_m):
     if not compound_parts or len(compound_parts) != len(distances_m):
         return []
 
-    zones = [part.get("zone") or "" for part in compound_parts]
-    if not any(zones):
+    zone_groups = [part.get("zones") or ([part.get("zone")] if part.get("zone") else []) for part in compound_parts]
+    if not any(zone_groups):
         return []
 
     fallback_zones = [
         zone for zone in _segment_zone_labels(seg)
-        if zone not in zones
+        if all(zone not in group for group in zone_groups)
     ]
     fallback_zone = fallback_zones[0] if fallback_zones else ""
-    return [zone or fallback_zone for zone in zones]
+    return [group or ([fallback_zone] if fallback_zone else []) for group in zone_groups]
 
 
 def _segment_rep_time_label(athlete, seg):
@@ -2339,18 +2353,17 @@ def _segment_rep_time_label(athlete, seg):
     if any(distance_time_candidates):
         return _format_rep_time_range_parts(distance_time_candidates)
 
-    part_zone_labels = _segment_compound_part_zone_labels(seg, distances_m)
-    if part_zone_labels:
-        for index, zone in enumerate(part_zone_labels):
-            if not zone:
-                continue
-            speed = _zone_speed_mps(athlete, f"Z{zone}")
-            try:
-                speed = float(speed or 0)
-            except Exception:
-                speed = 0
-            if speed > 0 and index < len(distances_m):
-                distance_time_candidates[index].append(distances_m[index] / speed)
+    part_zone_groups = _segment_compound_part_zone_labels(seg, distances_m)
+    if part_zone_groups:
+        for index, zones in enumerate(part_zone_groups):
+            for zone in zones:
+                speed = _zone_speed_mps(athlete, f"Z{zone}")
+                try:
+                    speed = float(speed or 0)
+                except Exception:
+                    speed = 0
+                if speed > 0 and index < len(distances_m):
+                    distance_time_candidates[index].append(distances_m[index] / speed)
 
         if any(distance_time_candidates):
             return _format_rep_time_range_parts(distance_time_candidates)
