@@ -3036,19 +3036,17 @@
               });
               actions.appendChild(button);
             });
-            if (!fields.main && (fields.alt || fields.alternative)) {
-              [1, 2].forEach(function(slotIndex) {
-                var button = document.createElement("button");
-                button.type = "button";
-                button.className = "btn btn-sm btn-outline-primary";
-                button.textContent = slotIndex === 1 ? "Add AM" : "Add PM";
-                button.addEventListener("click", function(event) {
-                  event.preventDefault();
-                  useWatchTraining(fields, [], slotIndex, button, model, true);
-                });
-                actions.appendChild(button);
+            [1, 2].forEach(function(slotIndex) {
+              var button = document.createElement("button");
+              button.type = "button";
+              button.className = "btn btn-sm btn-outline-primary";
+              button.textContent = slotIndex === 1 ? "Add AM" : "Add PM";
+              button.addEventListener("click", function(event) {
+                event.preventDefault();
+                useWatchTraining(fields, fields.main ? (part.watch_loads || []) : [], slotIndex, button, model, true);
               });
-            }
+              actions.appendChild(button);
+            });
             description.appendChild(actions);
           }
           box.appendChild(description);
@@ -3063,7 +3061,7 @@
       parent.appendChild(box);
     });
   }
-  function useWatchTraining(fields, watchLoads, slotIndex, button, model, addAlternative) {
+  function useWatchTraining(fields, watchLoads, slotIndex, button, model, add) {
     if (!activeDate || !activeAthlete || !fields || !(fields.main || fields.alt || fields.alternative)) return;
     var originalLabel = button.textContent;
     button.disabled = true;
@@ -3075,7 +3073,11 @@
     formData.append("wu_text", fields.wu || "");
     formData.append("core_text", fields.main || "");
     formData.append("alt_text", fields.alt || fields.alternative || "");
-    if (!fields.main && (fields.alt || fields.alternative)) formData.append("watch_fields", addAlternative ? "alternative" : "alternative_replace");
+    if (!fields.main && (fields.alt || fields.alternative)) {
+      formData.append("watch_fields", add ? "alternative" : "alternative_replace");
+    } else if (add) {
+      formData.append("watch_fields", "running_add");
+    }
     formData.append("cd_text", fields.cd || "");
     formData.append("watch_origin", "watch_" + String(model || "A").toLowerCase());
     formData.append("watch_loads", JSON.stringify(watchLoads || []));

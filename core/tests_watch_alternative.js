@@ -6,7 +6,7 @@ const template = fs.readFileSync(path.join(__dirname, 'templates/core/athlete_ye
 const source = template.slice(template.indexOf('  function useWatchTraining('),
   template.indexOf('  function hideSuggestInputPlaceholder('));
 
-// Render the actual action row: only Alternative has Add, and it wraps on narrow screens.
+// Render the actual action row and check that it wraps on narrow screens.
 function checkButtons() {
   const renderSource = template.slice(template.indexOf('  function renderTypeAResults('),
     template.indexOf('  function useWatchTraining('));
@@ -19,20 +19,20 @@ function checkButtons() {
   for (const model of ['C','D']) {
     for (const fields of [{alt:"Pilates 27'"},{alt:"Pilates 46' Z1"},{main:'4x400m Z3'}]) {
       const parent=element('div');
-      render(parent,[{parts:[{description:'Training',training_fields:fields}]}],'',model);
+      const loads=[{meters:400,seconds:80}];
+      render(parent,[{parts:[{description:'Training',training_fields:fields,watch_loads:loads}]}],'',model);
       const flatten = node => [node,...node.children.flatMap(flatten)];
       const nodes=flatten(parent);
       const buttons=nodes.filter(node=>node.tag==='button');
       assert.deepEqual(buttons.map(button=>button.textContent),fields.alt ?
-        ['Use AM','Use PM','Add AM','Add PM'] : ['Send','Chat','Use AM','Use PM']);
+        ['Use AM','Use PM','Add AM','Add PM'] : ['Send','Chat','Use AM','Use PM','Add AM','Add PM']);
       const actionRow=nodes.find(node=>node.children.includes(buttons.find(b=>b.textContent==='Use AM')));
       assert.ok(actionRow.className.includes('flex-wrap'));
       for (const button of buttons.filter(b=>['Use AM','Use PM','Add AM','Add PM'].includes(b.textContent))) button.listeners.click({preventDefault(){}});
-      if(fields.alt) {
-        assert.equal(invoked.at(-1)[5],true);
-        assert.equal(invoked.at(-2)[5],true);
-        assert.equal(invoked.at(-3)[5],undefined);
-      }
+      assert.equal(invoked.at(-1)[5],true);
+      assert.equal(invoked.at(-2)[5],true);
+      assert.equal(invoked.at(-3)[5],undefined);
+      assert.deepEqual(invoked.at(-1)[1],fields.main ? loads : []);
     }
   }
 }
@@ -66,6 +66,11 @@ async function check() {
       await new Promise(resolve => setImmediate(resolve));
       assert.equal(saved.data.get('watch_fields'), null);
       assert.equal(saved.data.get('core_text'), '4*400m Z3');
+      const loads = [{meters:400,seconds:80}];
+      save({main:'4*400m Z3'}, loads, slot, {textContent:'Add'}, model, true);
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(saved.data.get('watch_fields'), 'running_add');
+      assert.deepEqual(JSON.parse(saved.data.get('watch_loads')),loads);
     }
   }
   console.log('Watch Alternative save handler: C/D, AM/PM and running imports passed.');

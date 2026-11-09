@@ -421,3 +421,6 @@ Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met con
 
 
 8 november — Bij losse Garmin C/D-afstandsblokken in dezelfde training krijgt elk Main-segment de bijbehorende klokregels. Een blok met meerdere reps toont één gemiddelde gemeten reptijd en één tempo op basis van de gezamenlijke afstand. Een losse rep toont zijn eigen tijd en tempo. De Diary gebruikt dezelfde segmenttekst op desktop en mobiel.
+
+
+Athlete Diary toont bij loopresultaten Add AM en Add PM naast Use AM en Use PM. De actieregel kan op smalle schermen omlopen.

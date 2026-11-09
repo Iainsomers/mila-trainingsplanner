@@ -349,3 +349,6 @@ Alternative-belasting is tijdgebaseerd en ondersteunt Z1 tot en met Z6. Een herh
 
 
 Garmin C/D gemengde tijdsuggestie (9 november 2026). De lokale controle vergelijkt alle expliciete blokken. Een aaneengesloten reeks van minstens drie gelijke tijdreps met gemeten herstel mag worden gevolgd door één afwijkend werkblok dat binnen de bestaande hele-minutenmarge valt. De voorafgaande herstelronde voldoet aan dezelfde herstelcontrole. Een expliciete slotafstand is toegestaan als de gemeten afstand binnen max(30 m, 8%) ligt. De werkelijk gemeten meters en seconden blijven leidend in het klokje.
+
+
+Watch Add voor looptraining schrijft WU/Main/CD en de horlogedata. Bestaande Alternative-segmenten worden behouden, ook wanneer de zichtbare training eerst naar een persoonlijke override wordt gekopieerd. De Watch-versie bevat beide soorten training.

@@ -19,7 +19,7 @@ async function check(model, coach, success) {
   vm.createContext(context); vm.runInContext(source.replace('{{ is_coach_user|yesno:"true,false" }}',String(coach)),context);
   context.renderTypeAResults(parent,[current],'',model);
   const nodes=flatten(parent), buttons=nodes.filter(n=>n.tag==='button');
-  assert.deepEqual(buttons.map(n=>n.textContent),['Send','Chat','Use AM','Use PM']);
+  assert.deepEqual(buttons.map(n=>n.textContent),['Send','Chat','Use AM','Use PM','Add AM','Add PM']);
   assert.equal(nodes.some(n=>(n.textContent||'').includes('Private coach diagnostic')),coach);
   const input=nodes.find(n=>n.tag==='textarea'); input.value='2x(8x500m)';
   buttons[0].listeners.click();

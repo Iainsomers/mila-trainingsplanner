@@ -105,6 +105,39 @@ class WatchOriginalPlanTests(TestCase):
         self.assertFalse(slot.segments.filter(type__in=['WU','CD','ALT']).exists())
         self.assertEqual(set(slot.segments.values_list('type',flat=True)),{'MOB','SPR','CORE2','CORE'})
 
+    def test_running_add_preserves_alternative_and_imports_measured_reps(self):
+        for index, origin in ((1, "watch_c"), (2, "watch_d")):
+            if index == 1:
+                original = self.original(index)
+            else:
+                original = TrainingSlot.objects.create(plan=self.plan,date=self.day,slot_index=index)
+            self.add_protected_fields(original)
+            alt = original.segments.get(type="ALT")
+            before = list(original.segments.values())
+            self.assertEqual(self.client.post(self.url(index),{
+                "watch_fields":"running_add","watch_origin":origin,
+            }).status_code,400)
+            loads = [{"segment":"CORE","meters":400,"seconds":80,"zone":"3"}]
+            response = self.client.post(self.url(index),{
+                "watch_fields":"running_add","watch_origin":origin,
+                "wu_text":"900m Z1","core_text":"1×400m Z3","cd_text":"600m Z1",
+                "alt_text":"20' Z2 cycling","watch_loads":json.dumps(loads),
+            })
+            self.assertEqual(response.status_code,200)
+            slot = TrainingSlot.objects.get(plan=self.plan,date=self.day,slot_index=index,athlete=self.athlete)
+            saved_alt = slot.segments.get(type="ALT")
+            self.assertEqual((saved_alt.text,saved_alt.duration_s,saved_alt.zone),(alt.text,1800,"1"))
+            if index == 1:
+                self.assertEqual(saved_alt.pk,alt.pk)
+            else:
+                self.assertEqual(list(original.segments.values()),before)
+            self.assertEqual(slot.source,origin)
+            self.assertEqual(slot.watch_loads,loads)
+            self.assertEqual(slot.watch_main_reps[0]["measured_seconds"],80)
+            self.assertEqual(slot.segments.get(type="WU").text,"900m Z1")
+            self.assertEqual(slot.segments.get(type="CD").text,"600m Z1")
+            self.assertIn(alt.text,[item["text"] for item in slot.watch_training_snapshot["segments"]])
+
     def test_alternative_use_replaces_running_fields_but_preserves_other_blocks(self):
         for index in (1,2):
             slot=self.original(index)

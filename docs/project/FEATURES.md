@@ -598,3 +598,6 @@ Garmin C/D controleert een expliciete chatinvoer zoals 2*(1700m-1200m-850m) rech
 
 
 Garmin C/D herkent ook een reeks van minstens drie vrijwel gelijke tijdreps met een apart slotblok. De gemeten preview toont de reeks en het slotblok afzonderlijk. In chat kan het slotblok als hele minuten of als passende doelafstand worden aangevraagd.
+
+
+9 november — Bij een loopresultaat in Athlete Diary voegen Add AM en Add PM de looptraining toe naast de bestaande Alternative. Ze vervangen de loopvelden WU, Main en CD in het gekozen dagdeel en nemen de gemeten looplaps mee.

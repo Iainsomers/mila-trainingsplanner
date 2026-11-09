@@ -1449,8 +1449,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     preserve_watch_fields = (request.POST.get('watch_origin') or '').strip().lower() in {'watch_a','watch_b','watch_c','watch_d'}
     alternative_only = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative'
     alternative_replace = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative_replace'
+    running_add = preserve_watch_fields and request.POST.get('watch_fields') == 'running_add'
     if (alternative_only or alternative_replace) and not (request.POST.get('alt_text') or '').strip():
         return HttpResponse('Alternative training required.', status=400)
+    if running_add and not (request.POST.get('core_text') or '').strip():
+        return HttpResponse('Main training required.', status=400)
+    watch_replaced_types = {'ALT'} if alternative_only else {'WU', 'CORE', 'CD'}
+    if not running_add:
+        watch_replaced_types.add('ALT')
     # Trainingsbuilder toggles (uit session)
     tb_show_wu = _tb_flag(request, "tb_show_wu", True)
     tb_show_mob = _tb_flag(request, "tb_show_mob", True)
@@ -1746,7 +1752,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 {field.attname:getattr(segment,field.attname) for field in TrainingSegment._meta.concrete_fields
                  if field.attname not in {'id','slot_id'} and hasattr(segment,field.attname)}
                 for segment in original_slot.segments.all()
-                if segment.type not in ({'ALT'} if alternative_only else {'WU','CORE','ALT','CD'})
+                if segment.type not in watch_replaced_types
             ]
         if not alternative_only and str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
             original_watch_plan = {"segments": _week_segment_payload(original_slot), "segment_order":getattr(original_slot, "segment_order", [])}
@@ -1760,7 +1766,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if preserve_watch_fields and watch_preserve_source and getattr(watch_preserve_source,'pk',None) != slot.pk:
         # The visible training can be inherited from a shared/base plan. Copy
         # its non-watch fields into the personal override without reparsing.
-        slot.segments.exclude(type__in=['ALT'] if alternative_only else ['WU','CORE','ALT','CD']).delete()
+        slot.segments.exclude(type__in=watch_replaced_types).delete()
         for payload in protected_watch_segments:
             slot.segments.create(**payload)
         if alternative_only:
@@ -1791,6 +1797,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     core_text = (request.POST.get("core_text") or "").strip()
     core2_text = (request.POST.get("core2_text") or "").strip() if tb_show_core2 else ""
     alt_text = (request.POST.get("alt_text") or "").strip()
+    if running_add:
+        alt_text = ""
     cd_text = (request.POST.get("cd_text") or "").strip() if tb_show_cd else ""
     if preserve_watch_fields:
         mob_text = sprint_text = core2_text = ''
@@ -2217,7 +2225,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         slot.segments.filter(type="CORE").delete()
 
     # Save ALT as separate blocks so // keeps Z1-Z3 minutes independent.
-    slot.segments.filter(type="ALT").delete()
+    if not running_add:
+        slot.segments.filter(type="ALT").delete()
     for index, (alt_part, parsed) in enumerate(zip(alt_parts, alt_parses)):
         alt_seg = slot.segments.create(
             type="ALT",

@@ -666,3 +666,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 9 november — Garmin C/D groepeert 7:59, 8:00 en 8:01 als 3x8 minuten met p61 en behoudt 9:49 als apart slotblok. De chat accepteert 10 minuten of 2100 m als passende notatie voor dat slotblok. Regressie op de zeven bronlaps controleert beide modellen, de klok en onpassende voorstellen.
+
+
+9 november — Add AM/PM voor looptraining in Athlete Diary. Tests dekken behoud van Alternative bij directe en overgeerfde training, import van gemeten reps, actieknoppen en de ombrekende actieregel.
