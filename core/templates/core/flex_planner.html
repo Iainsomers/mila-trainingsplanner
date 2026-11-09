@@ -632,13 +632,24 @@
         const zm = part.match(/\bz\s*([1-6])\b/i);
         const partTKey = flexTKey(part);
         const tKey = partTKey || (zm ? "" : flexTKey(s));
-        const zone = zm ? zm[1] : (flexZoneForTKey(tKey) || fallbackZone);
-        loads.push({
-          zone: zone,
-          meters: reps * flexMetersFromValue(dm[1], dm[2]),
-          tKey: tKey,
-          race: /race/i.test(s)
-        });
+        const meters = reps * flexMetersFromValue(dm[1], dm[2]);
+        const progressiveZones = flexProgressiveZones(part);
+        if (progressiveZones && progressiveZones.length > 1) {
+          progressiveZones.forEach((zone) => loads.push({
+            zone: zone,
+            meters: meters / progressiveZones.length,
+            tKey: tKey,
+            race: /race/i.test(s)
+          }));
+        } else {
+          const zone = zm ? zm[1] : (flexZoneForTKey(tKey) || fallbackZone);
+          loads.push({
+            zone: zone,
+            meters: meters,
+            tKey: tKey,
+            race: /race/i.test(s)
+          });
+        }
       }
       return loads;
     }

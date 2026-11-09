@@ -106,14 +106,19 @@
       if (!setMatch) return [];
 
       const parts = setMatch[1].split(/\s*(?:-|\+)\s*/).map((part) => part.trim()).filter(Boolean);
-      const parsed = parts.map((part) => {
+      const parsed = parts.flatMap((part) => {
         const zoneMatch = part.match(/\bz\s*([1-6])\b/i);
         const distanceMatch = part.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/i);
-        if (!zoneMatch || !distanceMatch) return null;
+        if (!zoneMatch || !distanceMatch) return [null];
         const value = Number(distanceMatch[1].replace(",", "."));
         const unit = distanceMatch[2].toLowerCase();
         const weight = (unit === "km" || unit === "k") ? value * 1000 : value;
-        return Number.isFinite(weight) && weight > 0 ? {zone: zoneMatch[1], weight} : null;
+        if (!Number.isFinite(weight) || weight <= 0) return [null];
+        const progressiveZones = flexProgressiveZones(part);
+        if (progressiveZones && progressiveZones.length > 1) {
+          return progressiveZones.map((zone) => ({zone, weight: weight / progressiveZones.length}));
+        }
+        return [{zone: zoneMatch[1], weight}];
       });
       if (parsed.some((part) => !part)) return [];
       return parsed;

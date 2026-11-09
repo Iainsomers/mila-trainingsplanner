@@ -10,6 +10,7 @@
 
 - Setnotatie accepteert nu een progressieve zone binnen de haakjes, bijvoorbeeld `2*(300m z2-200m z3>z4)`.
 - De afstand van alleen het progressieve onderdeel wordt verdeeld over de genoemde zone-range; in dit voorbeeld telt 600 m als Z2, 200 m als Z3 en 200 m als Z4.
+- De live herberekening van de Flex Planner en de meerkleurige trainingspill volgen nu dezelfde verdeling; een nieuwe statistiekcacheversie voorkomt oude weektotalen na uitrol.
 - Dezelfde notatie buiten haakjes en bestaande samengestelde afstands- en tijdsets blijven ongewijzigd.
 
 ## 8 november 2026 — Athlete Diary-feedback en subtielere weekindeling

@@ -15,7 +15,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v21"
+STATS_SCHEMA_VERSION = "v22"
 
 
 def active_pause_distance_m(text, reps, speed_mps, pause_mode):
