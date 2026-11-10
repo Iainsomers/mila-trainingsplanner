@@ -1535,6 +1535,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         mob_seg = visible_slot.segments.filter(type="MOB").order_by("order", "id").first() if visible_slot else None
         sprint_seg = visible_slot.segments.filter(type="SPR").order_by("order", "id").first() if visible_slot else None
         core_segs = list(visible_slot.segments.filter(type="CORE").order_by("order", "id")) if visible_slot else []
+        core_text = " // ".join(seg.text for seg in core_segs if seg.text)
+        if getattr(visible_slot, "source", "") in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+            core_text = normalize_watch_main_text(core_text)
         core2_seg = visible_slot.segments.filter(type="CORE2").order_by("order", "id").first() if visible_slot else None
         alt_segs = list(visible_slot.segments.filter(type="ALT").order_by("order", "id")) if visible_slot else []
         cd_seg = visible_slot.segments.filter(type="CD").order_by("order", "id").first() if visible_slot else None
@@ -1559,7 +1562,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "standard_strength_programs": _standard_strength_programs_for_user(request),
                 "selected_standard_strength_id": str(getattr(mob_seg, "standard_strength_program_id", "") or ""),
                 "sprint_text": (sprint_seg.text if (sprint_seg and tb_show_sprint) else ""),
-                "core_text": (" // ".join(seg.text for seg in core_segs if seg.text) if core_segs else ""),
+                "core_text": core_text,
                 "core2_text": (core2_seg.text if (core2_seg and tb_show_core2) else ""),
                 "alt_text": (" // ".join(seg.text for seg in alt_segs if seg.text) if alt_segs else ""),
                 "cd_text": (cd_seg.text if (cd_seg and tb_show_cd) else ""),

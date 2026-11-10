@@ -4,19 +4,17 @@ import re
 
 
 def normalize_watch_main_text(text):
-    """Make Watch A/B display notation acceptable to the planner parser.
+    """Use planner separators for Watch summaries.
 
     Watch summaries may include a pace after every zone and use ``+`` inside
     repeated sets.  The planner's set grammar uses ``-`` between distance
-    items and treats the pace as display-only, so normalize those details
-    before the text is saved as a training slot.
+    items and ``//`` between independent Main blocks. Pace is display-only.
     """
     value = str(text or "").strip()
     if not value:
         return value
     value = re.sub(r"(Z[1-6])\s*\(\s*\d{1,3}:\d{2}\s*/?\s*(?:km)?\s*\)", r"\1", value, flags=re.IGNORECASE)
-    value = re.sub(r"\s*\+\s*", " - ", value)
-    return value
+    return " // ".join(re.sub(r"\s*\+\s*", " - ", part) for part in split_main_segments(value))
 
 
 def split_main_segments(text, *, split_hyphens=True):
@@ -63,7 +61,8 @@ def split_main_segments(text, *, split_hyphens=True):
             left = value[start:index].strip()
             right = value[index + 1:].lstrip()
             right_starts_distance = re.match(
-                r"(?:\d+\s*(?:x|\*|×)\s*)?\d+(?:[.,]\d+)?\s*(?:(?:km|k|m)\b|['′])",
+                r"(?:\d+\s*[x*×]\s*\(\s*)?(?:\d+\s*[x*×]\s*)?"
+                r"\d+(?:[.,]\d+)?\s*(?:(?:km|k|m)\b|['′])",
                 right,
                 re.IGNORECASE,
             )

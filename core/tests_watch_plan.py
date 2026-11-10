@@ -105,6 +105,29 @@ class WatchOriginalPlanTests(TestCase):
         self.assertFalse(slot.segments.filter(type__in=['WU','CD','ALT']).exists())
         self.assertEqual(set(slot.segments.values_list('type',flat=True)),{'MOB','SPR','CORE2','CORE'})
 
+    def test_strides_and_nested_sets_save_as_separate_main_segments(self):
+        first = "3×50 m Z1>Z2 p142"
+        second = "3×(200 m - 180 m - 140 m) Z3>Z5 p122 sp252"
+        expected = f"{first} // {second}"
+        for index, origin in ((1, "watch_c"), (2, "watch_d")):
+            slot = self.original(index)
+            slot.source = origin
+            slot.save(update_fields=["source"])
+            slot.segments.filter(type="CORE").delete()
+            slot.segments.create(type="CORE", text=f"{first} - {second}", order=3)
+            self.assertEqual(self.client.get(self.url(index)).context["core_text"], expected)
+            clone = _clone_slot_for_display(slot)
+            self.assertEqual([seg.text for seg in clone.segments.all() if seg.type == "CORE"], [first,second])
+            response = self.client.post(self.url(index),{
+                "core_text":f"{first} + {second}","watch_origin":origin,
+            })
+            self.assertEqual(response.status_code,200)
+            segments = list(slot.segments.filter(type="CORE").order_by("order","id"))
+            self.assertEqual([seg.text for seg in segments],[first,second])
+            self.assertEqual([seg.norm_distance_m for seg in segments],[150,1560])
+            self.assertNotEqual(segments[0].zone,segments[1].zone)
+            self.assertEqual(self.client.get(self.url(index)).context["core_text"],expected)
+
     def test_running_add_preserves_alternative_and_imports_measured_reps(self):
         for index, origin in ((1, "watch_c"), (2, "watch_d")):
             if index == 1:

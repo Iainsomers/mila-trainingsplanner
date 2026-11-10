@@ -355,3 +355,6 @@ Watch Add voor looptraining schrijft WU/Main/CD en de horlogedata. Bestaande Alt
 
 
 Korte Garmin-sets na strides (10 november 2026). Automatische herkenning vereist herhaalde dalende afstanden met duidelijk langere gemeten setpauzes. Doelafstanden volgen de mediaan per positie, afgerond op 10 m, en iedere werkronde moet binnen max(30 m, 8%) vallen. Expliciete chat controleert ook WU/CD en het aantal en de afstand van de reeds herkende strides. Het klokje bewaart de opnamevolgorde en oorspronkelijke meters en tijden.
+
+
+10 november — Bij horloge-import wordt de scheiding tussen zelfstandige Main-blokken opgeslagen als //, ook als een blok begint met een geneste set. Binnen sethaakjes blijft het streepje de afstandsscheiding. Oude teksten met een los streepje voor een geneste set worden als afzonderlijke blokken gelezen.

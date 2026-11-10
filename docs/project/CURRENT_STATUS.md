@@ -672,3 +672,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 10 november — Garmin C/D test met 31 lapmetingen voor 3x50 m en 3x(200m-180m-140m). Volledige chatsuggestie met 200m-190m-150m passeert de meetcontrole, met behoud van de gemeten 140,87 m en 22 s voor lap 16. Een onpassend doel van 200 m voor de derde rep wordt afgewezen.
+
+
+10 november — Garmin Main-scheiding voor strides gevolgd door gemengde sets hersteld. Regressie voor C/D controleert de oude tekst, de // in het formulier, losse zonekleuren en afstanden van 150 en 1560 m bij opslaan. 147 gerichte tests en manage.py check geslaagd.
