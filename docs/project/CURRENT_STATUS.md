@@ -1,5 +1,11 @@
 # Actuele status
 
+## 10 november 2026 — Gemeten-repsklokje in Individual Planner
+
+- Polar/Garmin-trainingen tonen in Individual Planner nu hetzelfde klokje als in Athlete Diary.
+- De popup gebruikt de reeds opgeslagen gemeten Main-reps/splits en toont afstand, tijd, tempo en beschikbare hartslagwaarden.
+- Het klokje is een eigen actie en opent niet tegelijk het trainingsformulier; geplande trainingen krijgen geen klokje.
+
 ## 9 november 2026 — Alternative-minuten in Z4–Z6
 
 - Alternative telt nu minuten in alle zones Z1 tot en met Z6; voorheen werden Z4–Z6 bewust weggefilterd.

@@ -292,6 +292,31 @@
     .flex-session-zone-z5 { background-color: #b7d7ff; }
     .flex-session-zone-z6 { background-color: #f2c200; }
 
+    .flex-watch-indicator {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border: 1px solid #7b8792;
+      border-radius: 50%;
+      background: #fff;
+      color: #4f5b66;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 16px;
+      cursor: pointer;
+    }
+
+    .flex-watch-indicator svg {
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.25;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
     .flex-report-btn,
     .flex-delete-btn,
     .flex-copy-btn,
@@ -483,7 +508,7 @@
     }
 
     document.addEventListener("click", (event) => {
-      if (event.target.closest("[data-flex-copy-btn], [data-flex-paste-btn], [data-flex-week-copy-btn], [data-flex-week-paste-btn], [data-flex-delete-btn], [data-flex-report-btn], [data-strength-href]")) {
+      if (event.target.closest("[data-flex-copy-btn], [data-flex-paste-btn], [data-flex-week-copy-btn], [data-flex-week-paste-btn], [data-flex-delete-btn], [data-flex-report-btn], [data-flex-watch-reps-btn], [data-strength-href]")) {
         return;
       }
       const flexCell = event.target.closest(".flex-cell[hx-get]");
@@ -1448,7 +1473,7 @@
                         {% include "core/partials/whereabout_dots.html" with cell=cell %}
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}"><span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
+                            {% include "core/partials/flex_session_summary.html" with cell=cell %}
                             {% for seg in cell.slot.display_segments %}
                               <div class="training-segment-line">{% include "core/partials/segment_display.html" with seg=seg %}</div>
                             {% endfor %}
@@ -1469,7 +1494,7 @@
                         {% include "core/partials/whereabout_dots.html" with cell=cell %}
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}"><span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
+                            {% include "core/partials/flex_session_summary.html" with cell=cell %}
                             {% for seg in cell.slot.display_segments %}
                               <div class="training-segment-line">{% include "core/partials/segment_display.html" with seg=seg %}</div>
                             {% endfor %}
@@ -1535,7 +1560,7 @@
                         {% include "core/partials/whereabout_dots.html" with cell=cell %}
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}"><span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
+                            {% include "core/partials/flex_session_summary.html" with cell=cell %}
                             {% for seg in cell.slot.display_segments %}
                               <div class="training-segment-line">{% include "core/partials/segment_display.html" with seg=seg %}</div>
                             {% endfor %}
@@ -1556,7 +1581,7 @@
                         {% include "core/partials/whereabout_dots.html" with cell=cell %}
                         {% if cell.slot %}
                           <div class="flex-celltext">
-                            {% if cell.session_km or cell.session_zones %}<div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}"><span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>{% if cell.session_zones %}<span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>{% endif %}</div>{% endif %}
+                            {% include "core/partials/flex_session_summary.html" with cell=cell %}
                             {% for seg in cell.slot.display_segments %}
                               <div class="training-segment-line">{% include "core/partials/segment_display.html" with seg=seg %}</div>
                             {% endfor %}
@@ -1630,6 +1655,106 @@
     </div>
   </div>
 </div>
+
+<div id="flexWatchRepsPopup" role="dialog" aria-modal="true" aria-labelledby="flexWatchRepsTitle" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:10001; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; width:520px; max-width:100%; max-height:90vh; overflow:auto; border-radius:8px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h5 id="flexWatchRepsTitle" class="mb-0">Measured Main reps</h5>
+      <button type="button" id="flexWatchRepsClose" class="btn btn-sm btn-outline-secondary" aria-label="Close">×</button>
+    </div>
+    <div id="flexWatchRepsBody" class="small"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  function formatDuration(value) {
+    if (!Number.isFinite(value) || value <= 0) return "—";
+    var tenths = Math.round(value * 10);
+    var seconds = Math.floor(tenths / 10);
+    var tenth = tenths % 10;
+    var minutes = Math.floor(seconds / 60);
+    return (minutes ? minutes + ":" + String(seconds % 60).padStart(2, "0") : String(seconds)) + "." + tenth;
+  }
+
+  function formatPace(value) {
+    if (!Number.isFinite(value) || value <= 0) return "—";
+    var seconds = Math.round(value);
+    return Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+  }
+
+  function closePopup() {
+    document.getElementById("flexWatchRepsPopup").style.display = "none";
+  }
+
+  document.addEventListener("click", function(event) {
+    var button = event.target.closest("[data-flex-watch-reps-btn]");
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    var model = button.getAttribute("data-watch-model") || "Watch";
+    var reps = [];
+    try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
+    var hasSplits = Array.isArray(reps) && reps.some(function(rep) { return Array.isArray(rep.splits) && rep.splits.length; });
+    if (hasSplits) {
+      var splitRows = [];
+      reps.forEach(function(rep) {
+        if (Array.isArray(rep.splits) && rep.splits.length) splitRows.push.apply(splitRows, rep.splits);
+        else splitRows.push(rep);
+      });
+      reps = splitRows;
+    }
+    document.getElementById("flexWatchRepsTitle").textContent = (hasSplits ? "Recorded splits — " : "Measured Main reps — ") + model;
+    var body = document.getElementById("flexWatchRepsBody");
+    body.replaceChildren();
+    if (!Array.isArray(reps) || !reps.length) {
+      var empty = document.createElement("div");
+      empty.className = "text-muted";
+      empty.textContent = "No processed Main rep data is available for this training.";
+      body.appendChild(empty);
+    } else {
+      var useEndHr = /Garmin [CD]/.test(model);
+      var explanation = document.createElement("div");
+      explanation.className = "small text-muted mb-2";
+      explanation.textContent = hasSplits ? "Split times are adjusted to the shown distance. The final short lap keeps its measured time. Stops remain included." : "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
+      if (useEndHr) explanation.textContent += " End HR: last 10% of measured rep time, minimum 15s; Avg HR for reps under 15s.";
+      body.appendChild(explanation);
+      var table = document.createElement("table");
+      table.className = "table table-sm table-striped mb-0";
+      var thead = document.createElement("thead");
+      var header = document.createElement("tr");
+      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Avg HR", useEndHr ? "End HR" : "Last 15s HR"].forEach(function(label) {
+        var th = document.createElement("th"); th.scope = "col"; th.textContent = label; header.appendChild(th);
+      });
+      thead.appendChild(header); table.appendChild(thead);
+      var tbody = document.createElement("tbody");
+      reps.forEach(function(rep, index) {
+        var tr = document.createElement("tr");
+        var distance = Number(rep.distance_m);
+        var values = [
+          String(rep.rep || index + 1),
+          Number.isFinite(distance) ? Math.round(distance) + " m" : "—",
+          formatDuration(Number(rep.seconds)),
+          formatPace(Number(rep.pace_seconds_per_km)),
+          Number(rep.average_hr) > 0 ? String(Math.round(Number(rep.average_hr))) : "NA",
+          Number(useEndHr ? rep.hr_tail : rep.average_hr_last_15) > 0 ? String(Math.round(Number(useEndHr ? rep.hr_tail : rep.average_hr_last_15))) : "NA"
+        ];
+        values.forEach(function(value) { var td = document.createElement("td"); td.textContent = value; tr.appendChild(td); });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody); body.appendChild(table);
+    }
+    document.getElementById("flexWatchRepsPopup").style.display = "flex";
+    document.getElementById("flexWatchRepsClose").focus();
+  });
+
+  document.getElementById("flexWatchRepsClose").addEventListener("click", closePopup);
+  document.getElementById("flexWatchRepsPopup").addEventListener("click", function(event) {
+    if (event.target === this) closePopup();
+  });
+  document.addEventListener("keydown", function(event) { if (event.key === "Escape") closePopup(); });
+})();
+</script>
 
 <div id="modal-container"></div>
 

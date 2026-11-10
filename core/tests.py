@@ -10633,6 +10633,54 @@ class WatchProcessedMainRepTests(TestCase):
         )
         self.assertNotIn("watch-source-indicator", planned_html)
 
+    def test_flex_planner_shows_measured_reps_clock_for_watch_training(self):
+        coach = get_user_model().objects.create_user(
+            username="flex-watch-clock", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="Flex Clock Athlete", birth_year=2000, gender="X"
+        )
+        plan = TrainingPlan.objects.create(owner=coach, name="Flex clock plan")
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        monday = date(2026, 11, 9)
+        slot = TrainingSlot.objects.create(
+            plan=plan,
+            athlete=athlete,
+            date=monday,
+            slot_index=1,
+            source="watch_c",
+            watch_loads=[
+                {"segment": "CORE", "zone": "3", "meters": 800, "seconds": 180},
+                {"segment": "CORE", "zone": "3", "meters": 800, "seconds": 178},
+            ],
+        )
+        slot.segments.create(
+            type="CORE", text="2x800m z3", order=1, reps=2,
+            distance_m=800, norm_distance_m=1600, zone="3",
+        )
+        self.client.force_login(coach)
+
+        response = self.client.get(
+            f"/flex-planner/?start={monday.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        cell = response.context["week_rows"][0]["athlete_rows"][0]["am_cells"][0]
+        self.assertEqual(cell["watch_source"], "watch_c")
+        self.assertEqual(len(json.loads(cell["watch_main_reps_json"])), 2)
+        self.assertContains(response, 'data-flex-watch-reps-btn')
+        self.assertContains(response, 'data-watch-model="Garmin C"')
+        self.assertContains(response, 'id="flexWatchRepsPopup"')
+
+        slot.source = "planned"
+        slot.watch_loads = []
+        slot.watch_main_reps = []
+        slot.save(update_fields=["source", "watch_loads", "watch_main_reps"])
+        planned = self.client.get(
+            f"/flex-planner/?start={monday.isoformat()}&weeks=1&athletes={athlete.id}"
+        )
+        self.assertNotContains(planned, 'data-watch-model="Garmin C"')
+
     def test_watch_main_time_label_ignores_short_recovery_laps(self):
         segment = TrainingSegment(
             type="CORE",

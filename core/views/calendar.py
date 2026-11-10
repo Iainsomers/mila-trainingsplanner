@@ -1561,6 +1561,10 @@ def flex_planner_view(request):
                             athlete,
                             athlete.pause_mode or coach_settings.pause_mode,
                         ) if getattr(athlete, "see_session_zones", True) else [],
+                        "watch_source": getattr(slot, "watch_display_source", getattr(slot, "source", "")) if slot else "",
+                        "watch_main_reps_json": json.dumps(
+                            getattr(slot, "watch_main_reps", []) or [], separators=(",", ":")
+                        ),
                         "whereabouts": whereabouts_dots.get((athlete.id, day), []),
                     })
 

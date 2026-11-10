@@ -1,0 +1,13 @@
+{% if cell.session_km or cell.session_zones or cell.watch_source == "watch_a" or cell.watch_source == "watch_b" or cell.watch_source == "watch_c" or cell.watch_source == "watch_d" %}
+  <div class="flex-session-summary{% if cell.check %} flex-session-summary-with-report{% endif %}">
+    <span class="flex-session-km-label">{% if show_session_km and cell.session_km %}T {{ cell.session_km }}{% endif %}</span>
+    {% if cell.session_zones %}
+      <span class="flex-session-zone-pills">{% for item in cell.session_zones %}<span class="flex-session-zone-pill flex-session-zone-z{{ item.zone }}">{{ item.km }}</span>{% endfor %}</span>
+    {% endif %}
+    {% if cell.watch_source == "watch_a" or cell.watch_source == "watch_b" or cell.watch_source == "watch_c" or cell.watch_source == "watch_d" %}
+      <button type="button" class="flex-watch-indicator" data-flex-watch-reps-btn data-watch-model="{% if cell.watch_source == 'watch_a' %}Polar A{% elif cell.watch_source == 'watch_b' %}Polar B{% elif cell.watch_source == 'watch_c' %}Garmin C{% else %}Garmin D{% endif %}" data-main-reps="{{ cell.watch_main_reps_json|default:'[]'|escape }}" title="View measured Main reps" aria-label="View measured Main reps">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.25V8l2.5 1.5"/></svg>
+      </button>
+    {% endif %}
+  </div>
+{% endif %}
