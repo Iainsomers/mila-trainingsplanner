@@ -96,6 +96,8 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Desktop AYC
 
+- De knoppen `Previous week`, `Today` en `Next week` verplaatsen op desktop het interne kalenderpaneel naar de bedoelde week. De pagina zelf en de horizontale positie van de kalender mogen daarbij niet verspringen; de bedieningsbalk blijft zichtbaar.
+
 - Behoud de brede tabel en volledige trainingsinformatie.
 - Trainerselectie blijft beschikbaar voor trainers.
 - Toon alle trainingsonderdelen, zones en tijden.

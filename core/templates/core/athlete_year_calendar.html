@@ -43,6 +43,15 @@
   .year-table .weekend-cell { background: #fbfcfd; }
   .year-table .current-week .weekend-cell { background: #fff7d6; }
 
+  @media (min-width: 1201px) {
+    .year-table-wrap {
+      max-height: calc(100vh - 270px);
+      min-height: 360px;
+      overflow: auto;
+      scrollbar-gutter: stable;
+    }
+  }
+
   .weeklabel {
     width: 72px;
     font-weight: bold;
@@ -2186,6 +2195,7 @@
   var table = document.querySelector(".year-table");
   if (!table) return;
 
+  var tableWrap = table.closest(".year-table-wrap");
   var weekRows = Array.from(table.querySelectorAll("tr.week-start-row[data-week-start]"));
   var currentIndex = weekRows.findIndex(function(row) { return row.classList.contains("current-week"); });
   if (currentIndex < 0) currentIndex = 0;
@@ -2200,7 +2210,18 @@
   function goToWeek(index) {
     if (!weekRows.length) return;
     currentIndex = Math.max(0, Math.min(index, weekRows.length - 1));
-    weekRows[currentIndex].scrollIntoView({behavior: "smooth", block: "start"});
+    var row = weekRows[currentIndex];
+    if (tableWrap && tableWrap.scrollHeight > tableWrap.clientHeight) {
+      var headerHeight = table.tHead ? table.tHead.getBoundingClientRect().height : 0;
+      tableWrap.scrollTo({
+        top: Math.max(0, row.offsetTop - headerHeight),
+        left: tableWrap.scrollLeft,
+        behavior: "smooth"
+      });
+    } else {
+      var top = window.scrollY + row.getBoundingClientRect().top;
+      window.scrollTo({top: Math.max(0, top - 8), left: window.scrollX, behavior: "smooth"});
+    }
     updateWeekButtons();
   }
 
