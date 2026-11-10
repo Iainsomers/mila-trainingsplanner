@@ -7145,6 +7145,17 @@ def _year_planner_selected_races(athlete_ids, owner, start_date, end_date):
     )
 
 
+def _year_planner_championships(owner, start_date, end_date):
+    return RaceEvent.objects.filter(
+        owner=owner,
+        race_type="championship",
+        date__lte=end_date,
+    ).filter(
+        Q(end_date__gte=start_date)
+        | Q(end_date__isnull=True, date__gte=start_date)
+    ).order_by("date", "name", "id")
+
+
 @login_required
 @require_GET
 def year_planner_view(request):
@@ -7289,6 +7300,16 @@ def year_planner_view(request):
     }
     owner = athlete.owner if is_athlete_user and athlete.owner_id else _active_coach_user(request)
     race_days = {}
+    basis_championships_by_day = {}
+    if has_basis_rows and show_training:
+        for championship in _year_planner_championships(owner, start_date, end_date):
+            championship.selected_distances = []
+            first_day = max(championship.date, start_date)
+            last_day = min(championship.last_date, end_date)
+            for offset in range((last_day - first_day).days + 1):
+                basis_championships_by_day.setdefault(
+                    first_day + timedelta(days=offset), []
+                ).append(championship)
     selected_races = _year_planner_selected_races(selected_ids, owner, start_date, end_date)
     for race_entry in selected_races:
         race = race_entry.race_distance.race
@@ -7416,6 +7437,7 @@ def year_planner_view(request):
             base_cells.append({
                 "date": day,
                 "payload": _year_planner_entry_payload(entry_map.get((None, row_basis_plan.id, day))),
+                "races": basis_championships_by_day.get(day, []),
                 "where_ranges": base_range_cells.get(day, []),
             })
         rows.append({
@@ -7620,6 +7642,9 @@ def year_planner_training_batch_view(request):
                 protected_races += [entry.race for entry in _year_planner_attendances([athlete_obj.id], owner, min(days), max(days))]
                 for race in protected_races:
                     days = {day: value for day, value in days.items() if not race.date <= day <= race.last_date}
+            elif basis_plan:
+                for race in _year_planner_championships(owner, min(days), max(days)):
+                    days = {day: value for day, value in days.items() if not race.date <= day <= race.last_date}
             if not days:
                 continue
             entries = YearPlannerEntry.objects.filter(owner=owner, athlete=athlete_obj, basis_plan=basis_plan, date__in=days)
@@ -7672,7 +7697,10 @@ def year_planner_training_resize_view(request):
     except LookupError:
         return JsonResponse({"ok": False}, status=404)
     owner = _active_coach_user(request)
-    if athlete_obj and (_year_planner_selected_races([athlete_obj.id], owner, min(start, source_start), max(end, source_end)).exists() or _year_planner_attendances([athlete_obj.id], owner, min(start, source_start), max(end, source_end)).exists()):
+    range_start, range_end = min(start, source_start), max(end, source_end)
+    if athlete_obj and (_year_planner_selected_races([athlete_obj.id], owner, range_start, range_end).exists() or _year_planner_attendances([athlete_obj.id], owner, range_start, range_end).exists()):
+        return JsonResponse({"ok": False, "error": "Race days cannot be resized"}, status=409)
+    if basis_plan and _year_planner_championships(owner, range_start, range_end).exists():
         return JsonResponse({"ok": False, "error": "Race days cannot be resized"}, status=409)
     with transaction.atomic():
         # Default ordering joins the nullable athlete for its name. PostgreSQL
@@ -7722,6 +7750,8 @@ def year_planner_entry_save_view(request):
 
     if athlete_obj and (_year_planner_selected_races([athlete_obj.id], owner, entry_date, entry_date).exists() or _year_planner_attendances([athlete_obj.id], owner, entry_date, entry_date).exists()):
         return JsonResponse({"ok": False, "error": "Race day: training phase cannot be changed"}, status=409)
+    if basis_plan and _year_planner_championships(owner, entry_date, entry_date).exists():
+        return JsonResponse({"ok": False, "error": "Championship day: training phase cannot be changed"}, status=409)
 
     allowed_training = {choice[0] for choice in YearPlannerEntry.TRAINING_CHOICES}
     if training_type not in allowed_training:

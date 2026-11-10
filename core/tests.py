@@ -4273,6 +4273,78 @@ class YearPlannerTests(TestCase):
             response = self.client.post("/planning/year/entry/", json.dumps({"scope": f"athlete-{athlete.id}", "date": day, "training": "aerobe"}), content_type="application/json")
             self.assertEqual(response.status_code, expected_status)
 
+    def test_championships_fill_and_protect_all_selected_basis_rows(self):
+        import json
+        coach, athlete = self._coach_and_athlete()
+        plan = TrainingPlan.objects.create(
+            owner=coach,
+            name="Middle distance",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        championship = RaceEvent.objects.create(
+            owner=coach,
+            name="European championships",
+            date="2026-10-29",
+            end_date="2026-10-30",
+            race_type="championship",
+        )
+        RaceEvent.objects.create(
+            owner=coach,
+            name="Ordinary race",
+            date="2026-10-29",
+            race_type="race_gold",
+        )
+        page = self.client.get(
+            f"/planning/year/?year=2026&period=full&basis=1&basis_plans={plan.id}"
+        )
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual([row["label"] for row in page.context["rows"]], [
+            "Basis - All",
+            "Basis - Middle distance",
+        ])
+        for row in page.context["rows"]:
+            race_cells = [cell for cell in row["cells"] if cell["races"]]
+            self.assertEqual(
+                [cell["date"] for cell in race_cells],
+                [date(2026, 10, 29), date(2026, 10, 30)],
+            )
+            self.assertTrue(all(
+                [race.id for race in cell["races"]] == [championship.id]
+                for cell in race_cells
+            ))
+        self.assertContains(page, "European championships")
+        self.assertNotContains(page, "Ordinary race")
+        self.assertContains(page, 'data-year-race-locked="1"', count=4)
+
+        all_scope = page.context["rows"][0]["scope"]
+        blocked = self.client.post(
+            "/planning/year/entry/",
+            json.dumps({
+                "scope": all_scope,
+                "date": "2026-10-29",
+                "training": "aerobe",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(blocked.status_code, 409)
+        batch = self.client.post(
+            "/planning/year/training/batch/",
+            json.dumps({"cells": [
+                {"scope": all_scope, "date": "2026-10-29", "training": "aerobe"},
+                {"scope": all_scope, "date": "2026-10-31", "training": "aerobe"},
+            ]}),
+            content_type="application/json",
+        )
+        self.assertEqual(batch.status_code, 200)
+        self.assertFalse(YearPlannerEntry.objects.filter(
+            basis_plan_id=all_scope.removeprefix("basis-plan-"),
+            date=date(2026, 10, 29),
+        ).exists())
+        self.assertTrue(YearPlannerEntry.objects.filter(
+            basis_plan_id=all_scope.removeprefix("basis-plan-"),
+            date=date(2026, 10, 31),
+        ).exists())
+
     def test_resize_periodisation_extends_and_shortens_one_edge(self):
         import json
         coach, athlete = self._coach_and_athlete()
