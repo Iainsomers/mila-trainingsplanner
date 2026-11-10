@@ -669,3 +669,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 9 november — Add AM/PM voor looptraining in Athlete Diary. Tests dekken behoud van Alternative bij directe en overgeerfde training, import van gemeten reps, actieknoppen en de ombrekende actieregel.
+
+
+10 november — Garmin C/D test met 31 lapmetingen voor 3x50 m en 3x(200m-180m-140m). Volledige chatsuggestie met 200m-190m-150m passeert de meetcontrole, met behoud van de gemeten 140,87 m en 22 s voor lap 16. Een onpassend doel van 200 m voor de derde rep wordt afgewezen.

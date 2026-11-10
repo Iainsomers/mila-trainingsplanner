@@ -22,9 +22,64 @@ def requested_mixed_distance_sets(text):
     if not 2 <= count <= 10 or len(items) * count > 30 or not all(items):
         return None
     distances = [int(item[1]) for item in items]
-    if len(set(distances)) < 2 or min(distances) < 400:
+    if len(set(distances)) < 2 or min(distances) < 100:
         return None
     return count, distances
+
+
+def mixed_distance_chat_request(text):
+    """Read either a mixed set alone or WU // strides // set // CD."""
+    parts = [part.strip() for part in str(text or "").split("//")]
+    if len(parts) == 1 and requested_mixed_distance_sets(parts[0]):
+        return parts
+    if (len(parts) == 4 and requested_mixed_distance_sets(parts[2])
+            and all(re.fullmatch(r"\d+\s*m", part, re.I) for part in (parts[0], parts[3]))
+            and re.fullmatch(r"\d+\s*[×x*]\s*\d+\s*m", parts[1], re.I)):
+        return parts
+    return None
+
+
+def _short_set_tail(loads):
+    """Separate an already identified strides prefix from the work series."""
+    work = [(i, load) for i, load in enumerate(loads)
+            if isinstance(load, dict) and load.get("segment") == "CORE" and load.get("work_rep") is True]
+    strides = []
+    for index, load in work:
+        if load.get("nominal_rep_m") != 50:
+            return strides, loads[index:] if strides else loads
+        strides.append(load)
+    return [], loads
+
+
+def match_mixed_distance_chat(parts, preview):
+    """Check the explicit phases and retain the measured boundary fields."""
+    fields = preview.get("training_fields") or {}
+    loads = preview.get("watch_loads") or []
+    mixed_text = parts[-2] if len(parts) == 4 else parts[0]
+    _, distances = requested_mixed_distance_sets(mixed_text)
+    strides, _ = _short_set_tail(loads) if max(distances) <= 250 else ([], loads)
+    from core.training_text import split_main_segments
+
+    first_main = next(iter(split_main_segments(fields.get("main"))), "")
+    prefix = re.match(r"^(\d+)\s*[×x*]\s*(\d+)\s*m\b", first_main, re.I) if strides else None
+    if strides and (not prefix or int(prefix[1]) != len(strides)):
+        return None
+    if len(parts) == 4:
+        for field, segment, asked in (("wu","WU",parts[0]), ("cd","CD",parts[3])):
+            nominal = re.match(r"^(\d+)\s*m\b", fields.get(field, ""), re.I)
+            target = int(re.match(r"\d+", asked)[0])
+            measured = sum(float(load["meters"]) for load in loads if load.get("segment") == segment)
+            if not nominal or int(nominal[1]) != target or abs(measured - target) > max(30, target * .08):
+                return None
+        asked = [int(value) for value in re.findall(r"\d+", parts[1])]
+        if not prefix or asked != [int(prefix[1]), int(prefix[2])]:
+            return None
+        if any(abs(float(load["meters"]) - asked[1]) > max(30, asked[1] * .08) for load in strides):
+            return None
+    match = match_repeating_distance_sets(mixed_text, loads)
+    if match:
+        return f"{first_main} + {match[0]}" if strides else match[0]
+    return None
 
 
 def match_repeating_distance_sets(main, loads):
@@ -36,6 +91,8 @@ def match_repeating_distance_sets(main, loads):
         count, pattern = grouped
         width = len(pattern)
         distances = pattern * count
+        if max(pattern) <= 250:
+            _, loads = _short_set_tail(loads)
     else:
         items = [re.fullmatch(r"(?:1\s*[×x*]\s*)?(\d+)\s*m\s+Z[1-5](?:>Z[1-5])?(?:\s+\([^()]+\))?(?:\s+p\d+)?", item, re.I)
                  for item in split_main_segments(main)]
@@ -194,7 +251,9 @@ def structured_segment_loads(segment, raw_loads):
     if "(" in text:
         mixed = match_repeating_distance_sets(text, raw_loads)
         if mixed:
-            return [dict(load, matched_rep=True, nominal_target_m=target) for target, load in mixed[1]]
+            positions = {id(load): index for index, load in enumerate(raw_loads)}
+            return [dict(load, matched_rep=True, nominal_target_m=target, _lap_order=positions[id(load)])
+                    for target, load in mixed[1]]
     loads = [load for load in raw_loads if isinstance(load, dict) and not load.get("combined_outer")
              and str(load.get("segment") or "CORE").upper() in {"CORE", "CD"}]
     ai_groups = {}
@@ -364,6 +423,8 @@ def processed_main_reps(slot):
                     "average_hr_last_15": load.get("average_hr_last_15")})
                 output[-1]["average_hr"] = load.get("average_hr")
                 output[-1]["hr_tail"] = load.get("hr_tail") if "hr_tail" in load else tail_hr([load])
+                if "_lap_order" in load:
+                    output[-1]["_lap_order"] = load["_lap_order"]
                 if load.get("split_loads"):
                     splits = []
                     for index, split in enumerate(load["split_loads"], 1):

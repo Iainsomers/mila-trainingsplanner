@@ -601,3 +601,6 @@ Garmin C/D herkent ook een reeks van minstens drie vrijwel gelijke tijdreps met 
 
 
 9 november — Bij een loopresultaat in Athlete Diary voegen Add AM en Add PM de looptraining toe naast de bestaande Alternative. Ze vervangen de loopvelden WU, Main en CD in het gekozen dagdeel en nemen de gemeten looplaps mee.
+
+
+10 november — Garmin C/D kan korte versnellingen gevolgd door dalende afstandssets in opnamevolgorde tonen. Expliciete chatnotatie zoals 4800m//3*50m//3*(200m-190m-150m)//1950m wordt lokaal tegen alle vier fasen getoetst.

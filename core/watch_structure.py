@@ -109,6 +109,35 @@ def alternating_medium_repetitions(laps, zone_for_lap):
             'wu_end': 0, 'cooldown_start': len(rows), 'work_indices': work, 'work_distances': nominal}
 
 
+def _descending_short_sets(rows, work, laps, zone_for_lap):
+    """Recognize repeated descending distances after the strides."""
+    longer = [i for i in work if rows[i][0] >= 100]
+    if not 6 <= len(longer) <= 30 or longer[0] == work[0] or work[-len(longer):] != longer:
+        return None
+    gaps = [sum(rows[i][1] for i in range(left + 1, right)) for left, right in zip(longer, longer[1:])]
+    for width in range(3, len(longer) // 2 + 1):
+        if len(longer) % width:
+            continue
+        ordinary = [gap for index, gap in enumerate(gaps, 1) if index % width]
+        between = [gap for index, gap in enumerate(gaps, 1) if not index % width]
+        if not all(ordinary) or min(between) < 1.5 * median(ordinary):
+            continue
+        targets = [10 * round(median(rows[i][0] for i in longer[offset::width]) / 10)
+                   for offset in range(width)]
+        if any(left <= right for left, right in zip(targets, targets[1:])):
+            continue
+        from core.watch_processing import match_repeating_distance_sets
+
+        loads = [dict(segment="CORE", meters=rows[i][0], seconds=rows[i][1],
+                      zone=zone_for_lap(laps[i]).removeprefix("Z"), work_rep=i in longer)
+                 for i in range(longer[0], longer[-1] + 1)]
+        text = f"{len(longer) // width}×(" + " - ".join(f"{target} m" for target in targets) + ")"
+        matched = match_repeating_distance_sets(text, loads)
+        if matched:
+            return matched[0], dict(zip(longer, targets * (len(longer) // width)))
+    return None
+
+
 def mixed_short_repetitions(laps, zone_for_lap):
     """Keep short work/recovery laps visible after an easy lead-in.
 
@@ -186,7 +215,10 @@ def mixed_short_repetitions(laps, zone_for_lap):
     for i in work:
         grouped.setdefault(nominal_by_index[i], []).append(i)
     groups = list(grouped.values())
+    mixed = _descending_short_sets(rows, work, laps, zone_for_lap)
     for group in groups:
+        if mixed and group[0] in mixed[1]:
+            continue
         nominal = nominal_by_index[group[0]]
         label = (f'{len(group)}×' if len(group) > 1 else '') + f'{nominal} m' + zone_label(group)
         # Use the recovery immediately following each work lap; a separate
@@ -195,6 +227,9 @@ def mixed_short_repetitions(laps, zone_for_lap):
         if recovery:
             label += f' p{int(math.floor(median(recovery) + .5))}'
         main.append(label)
+    if mixed:
+        main.append(mixed[0])
+        nominal_by_index.update(mixed[1])
     cooldown_start = work[-1] + 1
     # Preserve later repeated distance blocks instead of ending recognition
     # at the strides. Every remaining lap must be explained.

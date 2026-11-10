@@ -5775,10 +5775,10 @@ def garmin_type_c_ayc_view(request, model="C"):
             return JsonResponse({'ok':False,'message':'Please send a shorter message.','results':[]},status=400)
     guided = bool(suggestion or chat_messages)
     from core.watch_alternatives import requested_time_reps
-    from core.watch_processing import match_repeating_distance_sets, requested_mixed_distance_sets
+    from core.watch_processing import match_mixed_distance_chat, mixed_distance_chat_request
     local_time_request = requested_time_reps(chat_messages)
     chat_text = chat_messages[-1]['content'] if chat_messages else ''
-    local_mixed_request = requested_mixed_distance_sets(chat_text)
+    local_mixed_request = mixed_distance_chat_request(chat_text)
     local_request = local_time_request or local_mixed_request
     requested_structure = None
     if suggestion:
@@ -6161,13 +6161,13 @@ def garmin_type_c_ayc_view(request, model="C"):
         from core.watch_ai_structure import description
 
         parts = [part for result in results for part in result.get('parts', [])]
-        mixed = match_repeating_distance_sets(chat_text, parts[0].get('watch_loads', [])) if len(parts) == 1 else None
+        mixed = match_mixed_distance_chat(local_mixed_request, parts[0]) if len(parts) == 1 else None
         if not mixed:
             return JsonResponse({'ok':False, 'message':'No matching structure could be confirmed.',
                 'chat_reply':'The measured laps do not confirm that sequence of distances.',
                 'results':[]})
         part = parts[0]
-        part['training_fields']['main'] = mixed[0]
+        part['training_fields']['main'] = mixed
         part['description'] = description(part['training_fields'])
         part['ai_structure_status'] = 'measured_structure'
         part['chat_reply'] = 'De gemeten laps bevestigen deze afstandsvolgorde.'

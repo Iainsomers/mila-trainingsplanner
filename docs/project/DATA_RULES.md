@@ -352,3 +352,6 @@ Garmin C/D gemengde tijdsuggestie (9 november 2026). De lokale controle vergelij
 
 
 Watch Add voor looptraining schrijft WU/Main/CD en de horlogedata. Bestaande Alternative-segmenten worden behouden, ook wanneer de zichtbare training eerst naar een persoonlijke override wordt gekopieerd. De Watch-versie bevat beide soorten training.
+
+
+Korte Garmin-sets na strides (10 november 2026). Automatische herkenning vereist herhaalde dalende afstanden met duidelijk langere gemeten setpauzes. Doelafstanden volgen de mediaan per positie, afgerond op 10 m, en iedere werkronde moet binnen max(30 m, 8%) vallen. Expliciete chat controleert ook WU/CD en het aantal en de afstand van de reeds herkende strides. Het klokje bewaart de opnamevolgorde en oorspronkelijke meters en tijden.
