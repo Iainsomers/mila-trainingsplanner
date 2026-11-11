@@ -2433,6 +2433,8 @@ def _segment_hr_label(athlete, seg):
         value = str(raw_value).strip()
         if not value:
             continue
+        if zone == "1" and value.isdigit():
+            value = f"<{value}"
         label = f"HR{value}"
         if label not in labels:
             labels.append(label)

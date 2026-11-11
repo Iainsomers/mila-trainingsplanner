@@ -9375,7 +9375,7 @@ class SegmentRepTimeDisplayTests(TestCase):
             zone="2",
         )
 
-        self.assertEqual(_segment_hr_label(athlete, segment), "HR160/HR145")
+        self.assertEqual(_segment_hr_label(athlete, segment), "HR160/HR<145")
 
     def test_progressive_zone_hr_label_uses_arrow(self):
         athlete = Athlete.objects.create(
@@ -9397,7 +9397,7 @@ class SegmentRepTimeDisplayTests(TestCase):
         )
         segment = TrainingSegment(type="CORE", text="1000m z1>z4")
 
-        self.assertEqual(_segment_hr_label(athlete, segment), "HR145-->HR155-->HR165")
+        self.assertEqual(_segment_hr_label(athlete, segment), "HR<145-->HR155-->HR165")
 
     def test_display_text_includes_hr_next_to_indicative_time(self):
         athlete = Athlete.objects.create(

@@ -428,3 +428,6 @@ Sleep length toont kleur afzonderlijk op low/high in de bestaande range, met con
 
 
 Athlete Diary toont bij loopresultaten Add AM en Add PM naast Use AM en Use PM. De actieregel kan op smalle schermen omlopen.
+
+
+11 november — Een losse numerieke Z1-hartslagbovengrens wordt bij segmenten weergegeven als HR<145 (met de eigen ingestelde waarde). Expliciet ingevulde intervallen en andere zonelabels behouden hun notatie.
