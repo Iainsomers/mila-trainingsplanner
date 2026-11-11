@@ -303,7 +303,14 @@ def structured_segment_loads(segment, raw_loads):
                          "hr_tail": tail_hr(work[i:i+2]),
                          "average_hr_last_15": work[i+1].get("average_hr_last_15")}
                         for i in range(0, len(work), 2)]
-    from core.watch_alternatives import long_interval_options
+    from core.watch_alternatives import long_interval_options, single_time_option
+    timed_match = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*['′]", text)
+    if timed_match:
+        core = [load for load in loads if str(load.get("segment") or "CORE").upper() == "CORE"]
+        measured_time = single_time_option(core)
+        measured_match = re.match(r"^(\d+)×(\d+)'", measured_time or "")
+        if measured_match and timed_match.groups() == measured_match.groups():
+            return [dict(load, matched_rep=True) for load in core[::2]]
     alternatives = long_interval_options(laps, lambda lap: "Z" + lap["zone"])
     if alternatives:
         match_time = re.match(r"^\s*(\d+)\s*[x×*]\s*(\d+)\s*['′]", text)

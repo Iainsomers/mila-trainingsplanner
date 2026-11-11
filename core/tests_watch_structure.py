@@ -113,6 +113,27 @@ class ShortSetsStructureTests(SimpleTestCase):
         segment = SimpleNamespace(type="CORE", slot=SimpleNamespace(source="watch_c"))
         self.assertIn("-->", _watch_actual_time_label(loads, segment))
 
+    def test_ten_minute_reps_exclude_recovery_pace_in_existing_diary_slots(self):
+        from types import SimpleNamespace
+        from core.views.calendar import _annotate_slot_segment_display_times, _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+        from core.watch_alternatives import add_training_alternatives
+
+        values = [(2194.54,600),(84.9399,60),(2214.75,601),(39.0498,63),(2174.61,607)]
+        for source in ("watch_c","watch_d"):
+            loads = [dict(segment="CORE",meters=m,seconds=s,zone="1") for m,s in values]
+            segment = _virtual_segment_from_text("CORE","3×10' Z1 p62")
+            slot = SimpleNamespace(source=source,watch_loads=loads,segments=SimpleNamespace(all=lambda:[segment]))
+            segment.slot = slot
+            _annotate_slot_segment_display_times(slot,None)
+            self.assertEqual(segment.display_text,"3×10' Z1 p62 (4:39-->4:31 min/km)")
+            self.assertEqual([r["measured_seconds"] for r in processed_main_reps(slot)],[600,601,607])
+            self.assertEqual([(l["meters"],l["seconds"]) for l in slot.watch_loads],values)
+            part = {"training_fields":{"main":"3×2200 m Z1"},"watch_loads":loads}
+            add_training_alternatives([{"parts":[part]}])
+            self.assertEqual(part["training_fields"]["main"],"3×10' Z1 p62")
+            self.assertEqual([load["work_rep"] for load in part["watch_loads"]],[True,False,True,False,True])
+
     def test_garmin_mixed_main_displays_one_time_and_pace_per_segment(self):
         from types import SimpleNamespace
         from django.template.loader import render_to_string

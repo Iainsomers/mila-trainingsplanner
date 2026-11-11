@@ -683,3 +683,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 10 november — Garmin Main-scheiding voor strides gevolgd door gemengde sets hersteld. Regressie voor C/D controleert de oude tekst, de // in het formulier, losse zonekleuren en afstanden van 150 en 1560 m bij opslaan. 147 gerichte tests en manage.py check geslaagd.
+
+
+11 november — Tempovermelding bij 3x10 minuten gecorrigeerd. Test met vijf aangeleverde laps geeft 4:39-->4:31 min/km en kloktijden600/601/607s voor C en D, ook voor eerder opgeslagen loads zonder repmarkeringen.

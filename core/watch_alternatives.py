@@ -221,6 +221,4 @@ def add_training_alternatives(results):
                 alternatives.append({'label':label, 'training_fields':fields, 'watch_loads':timed_loads if key == 'time' else loads,
                     'description':f"WU: {fields.get('wu') or 'none'} · Main: {fields['main']} · CD: {fields.get('cd') or 'none'}"})
             part['training_alternatives'] = alternatives
-            part.update({key: alternatives[0][key] for key in ('training_fields','description')})
-            if finish:
-                part['watch_loads'] = timed_loads
+            part.update({key: alternatives[0][key] for key in ('training_fields','description','watch_loads')})

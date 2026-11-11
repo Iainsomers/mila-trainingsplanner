@@ -359,3 +359,6 @@ Korte Garmin-sets na strides (10 november 2026). Automatische herkenning vereist
 
 
 10 november — Bij horloge-import wordt de scheiding tussen zelfstandige Main-blokken opgeslagen als //, ook als een blok begint met een geneste set. Binnen sethaakjes blijft het streepje de afstandsscheiding. Oude teksten met een los streepje voor een geneste set worden als afzonderlijke blokken gelezen.
+
+
+11 november — Een herkende tijdsvariant bewaart de bijbehorende expliciete werk-/herstelkoppeling bij de standaardselectie. Bij bestaande tijdtrainingen zonder die koppeling toetst de Diary de complete reeks opnieuw met dezelfde herkenningsregels. Het getoonde tempobereik gebruikt uitsluitend de bevestigde werkreps.
