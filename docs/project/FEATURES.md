@@ -402,6 +402,8 @@ Staff Team Overview > Vitals heeft één Daily vitals-tab voor Sleep length, Sle
 
 Details Camps toont per deelnemer Comments direct na Accommodation. Het compacte tekstveld ondersteunt meerdere regels, maximaal 2000 tekens, automatische opslag, sorteren en de bestaande Copy/Paste-actie. Bewerkrechten volgen dezelfde deelnemerrechten als de reisgegevens; read-only rijen tonen opgeslagen opmerkingen.
 
+Details Camps bewaart vervoer per deelnemer in twee richtingen: `Transport from Airport to Camp` en `Transport from Camp to Airport`. Het voormalige veld `Rental Car Info` wordt met behoud van bestaande inhoud de heenrichting. Beide velden ondersteunen automatisch opslaan, sorteren en Copy/Paste en volgen dezelfde deelnemerrechten als de overige kampgegevens.
+
 Garmin C/D bieden bij herhaalde lange intervalgroepen die zowel bij vaste afstanden als hele minuten passen twee keuzes: Distance en Time. De gekozen beschrijving en bijbehorende HR-zonecontrole worden door Use AM/PM en Combine overgenomen. Bij meerdere duidelijk verschillende afstandsgroepen staat Distance standaard geselecteerd. Bij één reeks waarvan alle werkblokken strak rond hetzelfde hele aantal minuten liggen, staat Time standaard geselecteerd en blijft Distance als handmatige keuze beschikbaar. Dezelfde meetlaps bepalen altijd de kilometers; de klok behoudt alle reps bij beide keuzes.
 
 Een expliciete Chat-opdracht met één tijdsreeks, zoals `4*8'`, wordt eerst lokaal vergeleken met de reeds herkende gemeten tijdvariant. Alleen exact overeenkomende aantallen en hele minuten worden gekozen; hiervoor is geen AI-aanroep of AI-toestemming nodig. Een afwijkende vraag, bijvoorbeeld vijf herhalingen bij vier gemeten werkblokken, blijft afgewezen.

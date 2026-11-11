@@ -116,6 +116,7 @@ Bijgewerkt: 5 november 2026.
 
 - Coach Settings bevat als eerste instelling een opgeslagen aan/uitknop `Planning Camps`, standaard uit.
 - Bij inschakeling verschijnt `Details Camps` in de Coach plannings-sectie. Genoemde Camp-whereabouts worden per kampnaam samengevoegd; het overzicht bevat atleten en toegankelijke coaches met ieder hun eigen aankomst- en vertrekdatum. Per deelnemer zijn die datums en in-/uitvluchtgegevens automatisch opgeslagen; datums werken rechtstreeks de Year Planner-range bij. De campdetailtabel sorteert op alle inhoudelijke kolommen, heeft Copy/Paste en een delete-knop per bewerkbare deelnemersregel en markeert coachregels lichtgeel.
+- Details Camps heeft twee afzonderlijke vervoerskolommen voor luchthaven → kamp en kamp → luchthaven, compact herkenbaar aan richtingssymbolen met volledige toegankelijke labels. Bestaande Rental Car Info wordt door migratie 0148 zonder dataverlies de heenrichting; beide richtingen doen mee met autosave, sorteren en Copy/Paste.
 
 ## Belangrijk werkend gedrag
 

@@ -193,3 +193,5 @@ Migratie 0145_coachsettings_under_dev_enabled voegt de standaard uitgeschakelde 
 
 
 Migratie0146_trainingplan_year_basis_kind voegt de interne jaarbasis-plansoort toe (choices). Lokaal gemigreerd; meegaan met bestaande Render-migratiestap. Interne plannen uitsluiten uit algemene gebruikersplanningslijsten.
+
+Migratie 0148_yearplannerwhereabout_transport_fields hernoemt `rental_car_info` databehoudend naar `transport_airport_to_camp` en voegt `transport_camp_to_airport` toe. Render moet deze via de bestaande migratiestap uitvoeren.

@@ -10717,7 +10717,8 @@ def _detailed_camps_for_owner(owner, coach_ids, athlete_id=None, include_all_coa
             "arrival_flight_time": range_obj.arrival_flight_time,
             "departure_flight_number": range_obj.departure_flight_number,
             "departure_flight_time": range_obj.departure_flight_time,
-            "rental_car_info": range_obj.rental_car_info,
+            "transport_airport_to_camp": range_obj.transport_airport_to_camp,
+            "transport_camp_to_airport": range_obj.transport_camp_to_airport,
             "accommodation": range_obj.accommodation,
             "camp_comments": range_obj.camp_comments,
         })
@@ -10729,7 +10730,8 @@ def _detailed_camps_for_owner(owner, coach_ids, athlete_id=None, include_all_coa
             "arrival_flight_time",
             "departure_flight_number",
             "departure_flight_time",
-            "rental_car_info",
+            "transport_airport_to_camp",
+            "transport_camp_to_airport",
             "accommodation",
             "camp_comments",
         ):
@@ -10907,7 +10909,8 @@ def detailed_camp_detail_view(request):
             arrival_flight_time=arrival_flight_time,
             departure_flight_number=(request.POST.get("departure_flight_number") or "").strip()[:40],
             departure_flight_time=departure_flight_time,
-            rental_car_info=(request.POST.get("rental_car_info") or "").strip()[:160],
+            transport_airport_to_camp=(request.POST.get("transport_airport_to_camp") or "").strip()[:160],
+            transport_camp_to_airport=(request.POST.get("transport_camp_to_airport") or "").strip()[:160],
             accommodation=(request.POST.get("accommodation") or "").strip()[:160],
             camp_comments=(request.POST.get("camp_comments") or "").strip()[:2000],
         )

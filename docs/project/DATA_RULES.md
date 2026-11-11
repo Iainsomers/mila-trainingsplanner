@@ -311,6 +311,8 @@ C/D bepaalt in de AI-opdracht eerst werk/herstel en daarna intensiteitszones. Ee
 
 Basis - All gebruikt een apart intern TrainingPlan met plan_kind=year_basis per actieve coach. Daardoor blijven null-basis-coachwhereabouts en bestaande basisperplan-data gescheiden en gelden bestaande per-basis datumconstraints. Intern plan wordt buiten reguliere planningskeuzes gehouden. View-only maakt geen record aan wanneer nog geen All-basis bestaat; atleten krijgen geen Basis-selectie.
 
+Campvervoer wordt per YearPlannerWhereabout afzonderlijk opgeslagen als `transport_airport_to_camp` en `transport_camp_to_airport`, beide maximaal 160 tekens. Migratie 0148 hernoemt het voormalige `rental_car_info` naar de heenrichting zodat bestaande inhoud behouden blijft; de retourrichting begint leeg.
+
 
 Garmin-structuursuggesties (6 november 2026): invoer wordt lokaal begrensd tot numerieke groepen (maximaal 8), 3-30 totale reps per groep, afstandstarget 100-10000m in stappen van 50m of 2-30 hele minuten. De AI krijgt uitsluitend de geparste getallen en originele compacte lapfeiten. AI bepaalt laptoewijzing; dezelfde meet-/confidencecontrole en maximaal een herstelpoging blijven van kracht. Targets, repaantallen en setaantallen moeten exact overeenkomen met de suggestie. Een niet-bevestigd voorstel wordt niet toegepast; meters, seconden, bronlaps en Garmin D-HR-correctie blijven behouden. Suggesties delen de bestaande cache op exacte opdracht, inclusief numerieke suggestie.
 

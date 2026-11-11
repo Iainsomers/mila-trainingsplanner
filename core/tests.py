@@ -3035,7 +3035,8 @@ class PlanningOverviewTests(TestCase):
             "arrival_flight_time": "10:25",
             "departure_flight_number": "KL4321",
             "departure_flight_time": "18:45",
-            "rental_car_info": "Hertz 123",
+            "transport_airport_to_camp": "Hertz 123",
+            "transport_camp_to_airport": "Shuttle 456",
             "accommodation": "Hotel Font",
             "camp_comments": "Late arrival\nPlease keep dinner",
         }, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
@@ -3048,11 +3049,18 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(first_range.arrival_flight_time.isoformat(), "10:25:00")
         self.assertEqual(first_range.departure_flight_number, "KL4321")
         self.assertEqual(first_range.departure_flight_time.isoformat(), "18:45:00")
-        self.assertEqual(first_range.rental_car_info, "Hertz 123")
+        self.assertEqual(first_range.transport_airport_to_camp, "Hertz 123")
+        self.assertEqual(first_range.transport_camp_to_airport, "Shuttle 456")
         self.assertEqual(first_range.accommodation, "Hotel Font")
         self.assertEqual(first_range.camp_comments, "Late arrival\nPlease keep dinner")
         detail = self.client.get("/planning/detailed-camps/camp/?camp=font+r")
         self.assertContains(detail, 'name="camp_comments"')
+        self.assertContains(detail, 'name="transport_airport_to_camp"')
+        self.assertContains(detail, 'name="transport_camp_to_airport"')
+        self.assertContains(detail, 'title="Transport from Airport to Camp"')
+        self.assertContains(detail, 'title="Transport from Camp to Airport"')
+        self.assertContains(detail, '&#9992; &rarr; &#128663; &rarr; &#9978;', html=False)
+        self.assertContains(detail, '&#9978; &rarr; &#128663; &rarr; &#9992;', html=False)
         self.assertContains(detail, 'aria-label="Row number"')
         for number in range(1, len(detail.context["camp"]["participants"]) + 1):
             self.assertContains(detail, f'<td data-camp-row-number>{number}</td>', count=1)
@@ -3151,7 +3159,8 @@ class PlanningOverviewTests(TestCase):
             "arrival_date": "2026-10-08", "departure_date": "2026-10-11",
             "arrival_flight_number": "KL123", "arrival_flight_time": "10:25",
             "departure_flight_number": "KL321", "departure_flight_time": "18:45",
-            "rental_car_info": "Rental", "accommodation": "Hotel", "camp_comments": "Own camp note",
+            "transport_airport_to_camp": "Rental in", "transport_camp_to_airport": "Rental out",
+            "accommodation": "Hotel", "camp_comments": "Own camp note",
         }, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
         self.assertEqual(saved.status_code, 200)
         self.assertEqual(saved.json(), {"ok": True})
@@ -3159,6 +3168,8 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(own_range.start_date, date(2026, 10, 8))
         self.assertEqual(own_range.end_date, date(2026, 10, 11))
         self.assertEqual(own_range.arrival_flight_number, "KL123")
+        self.assertEqual(own_range.transport_airport_to_camp, "Rental in")
+        self.assertEqual(own_range.transport_camp_to_airport, "Rental out")
         self.assertEqual(own_range.camp_comments, "Own camp note")
 
         deleted = self.client.post("/planning/detailed-camps/camp/?camp=athlete+camp", {
