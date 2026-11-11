@@ -372,6 +372,10 @@ Athlete Settings > General bevat Automatically import Oura vitals, standaard uit
 
 MiLa bewaart de IANA-tijdzone van het eigen apparaat van de atleet. Coaches veranderen die niet met hun apparaat. Zolang de tijdzone onbekend is, wacht de automatische import. Het schema is lokaal 06:30 t/m 08:00 iedere tien minuten, daarbuiten ieder heel uur, inclusief zomer-/wintertijd. Na reizen volgt de nieuwe tijdzone zodra de atleet MiLa daar opent. De achtergrondcontrole draait op Render zonder geopende browser; de uitvoercontrole gebeurt iedere 30 seconden en gemiste controles worden bij hervatten ingehaald. Athlete Settings toont de bekende tijdzone en tijd sinds de laatste controle.
 
+## Garmin Health-vitals
+
+De aparte Garmin Health Push-ontvanger verwerkt Dailies, HRV Summary en Sleeps voor verbonden atleten. Daarmee worden de vier bestaande Daily vitals — Sleep length, Sleep quality, Morning HR en HRV — automatisch aangevuld. Alleen lege velden worden gevuld; handmatige invoer en eerder geïmporteerde waarden blijven leidend. De privé-ontvangst-URL is uitsluitend zichtbaar voor productbeheer op de Garmin-coachpagina.
+
 ## Garmin C — activiteiten samenvoegen
 
 Selecteer twee of drie activiteiten van dezelfde atleet/dag in Garmin C en kies per activiteit WU, Main of CD. Combine maakt bovenaan een nieuwe preview met Use AM/PM; er is precies één Main en iedere rol komt maximaal eenmaal voor, in chronologische volgorde. Alleen activiteiten met bruikbare analyse en laps zijn selecteerbaar. Een bestaande WU/CD in Main mag niet dubbel worden toegevoegd. Losse activiteiten blijven behouden; opslaan gebeurt pas bij Use AM/PM en behoudt de bestaande Watch/Plan-wissel.

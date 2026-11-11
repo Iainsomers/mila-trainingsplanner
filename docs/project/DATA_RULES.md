@@ -118,6 +118,12 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 - Oura-slaapduur in seconden wordt naar uren omgerekend en op twee decimalen afgerond; de slaapscore wordt door 10 gedeeld en op één decimaal afgerond; gemiddelde slaap-HRV wordt naar hele ms afgerond.
 - De laagste hartslag tijdens slaap vult Morning HR en wordt naar de dichtstbijzijnde hele bpm afgerond. Readiness wordt niet als vital opgeslagen. Het opslaan haalt Oura-data opnieuw op en controleert de bestaande waarden opnieuw om overschrijven te voorkomen.
 
+### Garmin Health naar Daily Vitals
+
+- Garmin Push gebruikt afzonderlijke feeds `sleeps`, `hrv` en `dailies`. Alleen een actieve Garmin-verbinding met dezelfde door Garmin geleverde user-ID kan gegevens aan een atleet koppelen.
+- `durationInSeconds` wordt naar slaapuren omgerekend en op twee decimalen afgerond. `overallSleepScore.value` wordt door 10 gedeeld en op één decimaal afgerond. `lastNightAvg` vult HRV en `restingHeartRateInBeatsPerMinute` vult Morning HR; beide worden naar hele getallen afgerond.
+- De receiver vult uitsluitend lege velden. Handmatige waarden en eerdere Oura- of Garmin-waarden worden nooit overschreven. Herhaalde Push-berichten zijn daardoor veilig en leveren geen dubbele dagrecords op.
+
 ## Polar: ruwe samples en tempoverwerking
 
 - A berekent min/km uit afstand en duur van iedere afzonderlijke ronde; duur blijft tot milliseconden zichtbaar. Naast de oorspronkelijke afstand wordt de rondeafstand rekenkundig afgerond naar het dichtstbijzijnde veelvoud van 50 meter; een exact half veelvoud wordt naar boven afgerond. De afzonderlijke Zx- en Tx-kolommen gebruiken het exacte rondetempo: Zx is de dichtstbijzijnde ingestelde zonesnelheid en Tx is het snelste PR-tempo dat met de rondesnelheid wordt bereikt. Ontbrekende instellingen of PR's worden niet geschat en verschijnen als NA.

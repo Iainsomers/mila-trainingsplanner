@@ -134,3 +134,5 @@ Planning blijft de hoofdactie. Admin, Stats, Polar en een niet-functionele Setti
 4 november 2026: het tweede hoofdonderdeel Main 2 wordt Strength: vrij krachttrainingsveld zonder zoneplicht, zichtbaar na Main. CORE2 blijft de interne sleutel voor compatibiliteit; Strength levert geen hardloopkilometers of zonetotalen.
 
 4 november 2026: segmentvolgorde wordt per training instelbaar. Nieuwe standaard is WU, Mob/Tech, Strength, Sprint, Main, Alternative, CD; dit vervangt de eerdere vaste plaats van Strength na Main. Verplaatsen verandert de inhoud en loopberekeningen niet.
+
+11 november 2026: Garmin Health en Oura mogen dezelfde vier Daily-vitalvelden aanvullen, maar nooit een bestaande waarde overschrijven. Handmatige invoer of de eerste geldige import blijft leidend; Garmin gebruikt een eigen ontvangstcode los van activiteiten.

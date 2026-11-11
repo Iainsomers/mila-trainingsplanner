@@ -22,7 +22,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 
 from core.models import Athlete, GarminConnection, GarminActivitySummary
-from core.views.oura import _athlete_user
+from core.views.oura import _athlete_user, apply_oura_vitals_suggestions
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,115 @@ def receiver_key():
         return ""
     return hmac.new(settings.GARMIN_CLIENT_SECRET.encode(),
                     ("mila-garmin-push-v1:" + settings.SECRET_KEY).encode(), hashlib.sha256).hexdigest()
+
+
+def health_receiver_key():
+    """Use a credential separate from the activity receiver."""
+    if not configured():
+        return ""
+    return hmac.new(settings.GARMIN_CLIENT_SECRET.encode(),
+                    ("mila-garmin-health-push-v1:" + settings.SECRET_KEY).encode(), hashlib.sha256).hexdigest()
+
+
+def _health_number(value, *, minimum, maximum):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    value = float(value)
+    if not math.isfinite(value) or value < minimum or value > maximum:
+        return None
+    return value
+
+
+def _health_suggestion(kind, item):
+    """Validate one Garmin Health summary and retain only the four MiLa vitals."""
+    if not isinstance(item, dict):
+        raise ValueError()
+    user_id = item.get("userId")
+    day = item.get("calendarDate")
+    if not isinstance(user_id, str) or not user_id or len(user_id) > 128:
+        raise ValueError()
+    try:
+        datetime.strptime(day, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        raise ValueError() from None
+
+    suggestion = {"day": day}
+    if kind == "sleeps":
+        duration = _health_number(item.get("durationInSeconds"), minimum=0, maximum=86_400)
+        if duration is not None:
+            suggestion["sleep_hours"] = round(duration / 3600, 2)
+        score = item.get("overallSleepScore")
+        score_value = score.get("value") if isinstance(score, dict) else None
+        score_value = _health_number(score_value, minimum=1, maximum=100)
+        if score_value is not None:
+            suggestion["sleep_quality"] = round(score_value / 10, 1)
+    elif kind == "hrv":
+        value = _health_number(item.get("lastNightAvg"), minimum=0, maximum=1000)
+        if value is not None:
+            suggestion["hrv"] = round(value)
+    elif kind == "dailies":
+        value = _health_number(item.get("restingHeartRateInBeatsPerMinute"), minimum=1, maximum=300)
+        if value is not None:
+            suggestion["morning_hr"] = round(value)
+    else:
+        raise ValueError()
+    return user_id, suggestion
+
+
+@csrf_exempt
+@require_POST
+def garmin_health_push_view(request, key):
+    """Receive Garmin Push health summaries and fill only empty daily-vital fields."""
+    from django.core.exceptions import RequestDataTooBig
+    expected = health_receiver_key()
+    if not expected or not secrets.compare_digest(key.encode(), expected.encode()):
+        return HttpResponseForbidden()
+    try:
+        body = request.read(1_000_001)
+        if len(body) > 1_000_000:
+            return JsonResponse({"error": "Payload too large"}, status=413)
+        payload = json.loads(body)
+        if not isinstance(payload, dict) or not payload or not set(payload).issubset({"dailies", "hrv", "sleeps"}):
+            raise ValueError()
+        items = []
+        for kind, records in payload.items():
+            if not isinstance(records, list) or len(records) > 500:
+                raise ValueError()
+            items.extend(_health_suggestion(kind, item) for item in records)
+    except RequestDataTooBig:
+        return JsonResponse({"error": "Payload too large"}, status=413)
+    except (json.JSONDecodeError, ValueError, TypeError, OverflowError):
+        logger.warning("Garmin health push rejected status=400")
+        return JsonResponse({"error": "Invalid health push"}, status=400)
+
+    known_ids = set(GarminConnection.objects.filter(athlete__garmin_connection_enabled=True)
+                    .exclude(garmin_user_id=None).values_list("garmin_user_id", flat=True))
+    if any(user_id not in known_ids for user_id, _ in items):
+        pending = GarminConnection.objects.filter(
+            garmin_user_id=None, athlete__garmin_connection_enabled=True,
+        ).order_by("pk").first()
+        if pending:
+            try:
+                ensure_user_id(pending)
+            except (requests.RequestException, ValueError, TypeError, KeyError, OverflowError, IntegrityError):
+                return JsonResponse({"error": "Identity temporarily unavailable"}, status=503)
+
+    grouped = {}
+    for user_id, suggestion in items:
+        grouped.setdefault(user_id, {}).setdefault(suggestion["day"], {"day": suggestion["day"]}).update(suggestion)
+    saved_count = 0
+    ignored_count = 0
+    for user_id, suggestions_by_day in grouped.items():
+        athlete = Athlete.objects.filter(
+            garmin_connection_enabled=True, garmin_connection__garmin_user_id=user_id,
+        ).first()
+        if athlete is None:
+            ignored_count += len(suggestions_by_day)
+            continue
+        saved_count += len(apply_oura_vitals_suggestions(athlete, suggestions_by_day.values()))
+    logger.info("Garmin health receipt summaries=%s saved_days=%s ignored_days=%s",
+                len(items), saved_count, ignored_count)
+    return JsonResponse({"ok": True})
 
 
 def ensure_user_id(connection):
@@ -373,9 +482,14 @@ def garmin_connections_view(request):
     ), request).only("id", "name").order_by("name", "id")
     from core.views.coach import _is_product_admin
     receiver_url = None
+    health_receiver_url = None
     if (request.user.is_superuser or _is_product_admin(request.user)) and configured():
         receiver_url = request.build_absolute_uri(reverse("garmin_activity_push", args=[receiver_key()]))
-    response = render(request, "core/garmin_connections.html", {"connected_athletes": athletes, "receiver_url": receiver_url})
+        health_receiver_url = request.build_absolute_uri(reverse("garmin_health_push", args=[health_receiver_key()]))
+    response = render(request, "core/garmin_connections.html", {
+        "connected_athletes": athletes, "receiver_url": receiver_url,
+        "health_receiver_url": health_receiver_url,
+    })
     response["Cache-Control"] = "private, no-store"
     return response
 

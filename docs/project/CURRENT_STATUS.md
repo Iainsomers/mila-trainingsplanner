@@ -1,5 +1,11 @@
 # Actuele status
 
+## 11 november 2026 — Garmin Health-ontvanger
+
+- Een aparte beveiligde Push-route ontvangt Garmin Dailies, HRV Summary en Sleeps en koppelt deze uitsluitend via de bestaande Garmin user-ID aan een actief verbonden atleetaccount.
+- Sleep length, Sleep quality, Morning HR en HRV vullen alleen lege Daily-vitalvelden; bestaande handmatige, Oura- en Garmin-waarden blijven behouden. Payloads zijn begrensd en ruwe gezondheidsdata worden niet opgeslagen of gelogd.
+- Productbeheer ziet op `/coach/garmin/` de afzonderlijke Health-ontvangst-URL en de drie te configureren feeds. Na Render-uitrol moeten deze feeds nog in Garmin Endpoint Configuration worden ingesteld en bestaande gebruikers mogelijk opnieuw toestemming geven.
+
 ## 10 november 2026 — Gemeten-repsklokje in Individual Planner
 
 - Polar/Garmin-trainingen tonen in Individual Planner nu hetzelfde klokje als in Athlete Diary.
