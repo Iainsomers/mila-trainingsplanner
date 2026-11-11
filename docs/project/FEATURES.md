@@ -609,3 +609,6 @@ Garmin C/D herkent ook een reeks van minstens drie vrijwel gelijke tijdreps met 
 
 
 10 november — Garmin C/D kan korte versnellingen gevolgd door dalende afstandssets in opnamevolgorde tonen. Expliciete chatnotatie zoals 4800m//3*50m//3*(200m-190m-150m)//1950m wordt lokaal tegen alle vier fasen getoetst.
+
+
+Garmin C/D-chat kan een volledige afstandsvolgorde zoals 1650m//1600m//8*500m aan opeenvolgende bronlaps koppelen. De expliciete suggestie levert de herhalingscontext wanneer herstel niet is geregistreerd. De chat vermeldt dat de herstelduur onbekend is.

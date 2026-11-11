@@ -5776,10 +5776,12 @@ def garmin_type_c_ayc_view(request, model="C"):
     guided = bool(suggestion or chat_messages)
     from core.watch_alternatives import requested_time_reps
     from core.watch_processing import match_mixed_distance_chat, mixed_distance_chat_request
+    from core.watch_distance_sequence import apply_distance_sequence, requested_distance_sequence
     local_time_request = requested_time_reps(chat_messages)
     chat_text = chat_messages[-1]['content'] if chat_messages else ''
     local_mixed_request = mixed_distance_chat_request(chat_text)
-    local_request = local_time_request or local_mixed_request
+    local_distance_sequence = requested_distance_sequence(chat_text)
+    local_request = local_time_request or local_mixed_request or local_distance_sequence
     requested_structure = None
     if suggestion:
         from core.watch_ai_structure import parse_structure_suggestion
@@ -5987,7 +5989,7 @@ def garmin_type_c_ayc_view(request, model="C"):
             "model": model,
         })
 
-    if chat_messages and not local_mixed_request:
+    if chat_messages and not local_mixed_request and not local_distance_sequence:
         selected_session = next((s for s in sessions if s.get('startTime','') == request.GET.get('suggestion_session')),None)
         if selected_session:
             from core.views.garmin import ai_allowed, fit_ai_allowed
@@ -6157,6 +6159,15 @@ def garmin_type_c_ayc_view(request, model="C"):
                 }
     from core.watch_alternatives import add_training_alternatives, prefer_explicit_time_request
     add_training_alternatives(results)
+    if local_distance_sequence:
+        parts = [part for result in results for part in result.get('parts', [])]
+        selected = apply_distance_sequence(parts[0], local_distance_sequence,
+            lambda m,s: lap_zone_paces(m, s * 1000, athlete)[0]) if len(parts) == 1 else None
+        if not selected:
+            return JsonResponse({'ok':False, 'results':[],
+                'message':'The complete distance sequence could not be matched uniquely to the measured laps.'})
+        parts[0].clear()
+        parts[0].update(selected)
     if local_mixed_request:
         from core.watch_ai_structure import description
 

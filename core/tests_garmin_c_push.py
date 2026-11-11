@@ -23,6 +23,45 @@ class GarminCPushTests(TestCase):
             "startTimeInSeconds": self.start, "distanceInMeters": 1000, "durationInSeconds": 300}
         self.push_url = reverse("garmin_activity_push", args=[receiver_key()])
 
+    def test_chat_groups_autolaps_with_user_supplied_repetition_context(self):
+        from types import SimpleNamespace
+        from urllib.parse import urlencode
+        from core.views.calendar import _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+
+        values = [(1003.64,280),(631.66,181),(1003.71,284),(608.46,174),
+                  (497.25,124),(1.58008,1),(498,118),(507.25,120),(505.59,125),
+                  (510.38,121),(510.21,122),(506.2,118),(507.53,122)]
+        GarminActivitySummary.objects.create(athlete=self.athlete,activity_id='unrecorded-recovery',
+            activity_start=datetime.fromtimestamp(self.start,dt_timezone.utc),activity_date='2026-10-31',
+            distance_m=sum(m for m,s in values),duration_s=sum(s for m,s in values),
+            analysis_data={'laps':[dict(distance=m,elapsed_time=s) for m,s in values]})
+        self.client.force_login(self.coach)
+        with patch('core.views.polar_raw.lap_zone_paces',
+                   side_effect=lambda m,ms,a: ('Z2' if m/(ms/1000)<3.8 else 'Z4','NA')), patch(
+                   'core.views.polar_raw.urlopen',side_effect=AssertionError('Explicit measured request')):
+            for model in ('c','d'):
+                url = reverse(f'garmin_type_{model}_ayc')
+                query = {'athlete':self.athlete.pk,'date':'2026-10-31','preview':'measured'}
+                activity = self.client.get(url,query).json()['results'][0]
+                chat_url = url+'?'+urlencode({**query,'suggestion_session':activity['start']})
+                for message in ('1650m//1600m//8*500m','2*1625m//8*500m'):
+                    reply = self.client.post(chat_url,{'chat':json.dumps([{'role':'user','content':message}])}).json()
+                    self.assertTrue(reply['ok'],reply)
+                    part = reply['results'][0]['parts'][0]
+                    self.assertNotIn(' p',part['training_fields']['main'])
+                    self.assertIn('onbekend',part['chat_reply'])
+                    self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],values)
+                    slot = SimpleNamespace(source=f'watch_{model}',watch_loads=part['watch_loads'],
+                        segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',part['training_fields']['main'])]))
+                    reps = processed_main_reps(slot)
+                    self.assertEqual(len(reps),10)
+                    self.assertEqual([r['measured_seconds'] for r in reps],[461,458,124,118,120,125,121,122,118,122])
+                    self.assertEqual([r['measured_distance_m'] for r in reps[:2]],[1635.3,1612.17])
+                rejected = self.client.post(chat_url,{'chat':json.dumps([
+                    {'role':'user','content':'1650m//1600m//9*500m'}])}).json()
+                self.assertFalse(rejected['ok'])
+
     def test_descending_short_sets_preserve_strides_and_allow_full_chat_request(self):
         from types import SimpleNamespace
         from urllib.parse import urlencode

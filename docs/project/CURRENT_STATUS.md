@@ -687,3 +687,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 11 november — Tempovermelding bij 3x10 minuten gecorrigeerd. Test met vijf aangeleverde laps geeft 4:39-->4:31 min/km en kloktijden600/601/607s voor C en D, ook voor eerder opgeslagen loads zonder repmarkeringen.
+
+
+11 november — Chatsuggestie voor 1650m//1600m//8*500m geaccepteerd op basis van dertien lapmetingen, met herstelcontext uit de expliciete suggestie. Ook2*1625m//8*500m past. Kloktest dekt tien volledige werkblokken en behoud van alle bronmetingen in C en D. Voorstel met negen500m-reps wordt afgewezen.

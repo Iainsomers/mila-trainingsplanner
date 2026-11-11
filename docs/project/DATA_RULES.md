@@ -364,3 +364,6 @@ Korte Garmin-sets na strides (10 november 2026). Automatische herkenning vereist
 
 
 11 november — Een herkende tijdsvariant bewaart de bijbehorende expliciete werk-/herstelkoppeling bij de standaardselectie. Bij bestaande tijdtrainingen zonder die koppeling toetst de Diary de complete reeks opnieuw met dezelfde herkenningsregels. Het getoonde tempobereik gebruikt uitsluitend de bevestigde werkreps.
+
+
+Expliciete afstandsvolgorde (11 november 2026). Alleen een volledige, eenduidig passende chatsuggestie met meerdere blokken en een afsluitende herhalingsreeks vanaf 400 m kan bronlaps samenvoegen tot afstandsblokken zonder geregistreerd herstel. Elke doelrep moet passen binnen max(30 m, 8%). Iedere CORE-lap krijgt een rol. Kleine overgangslaps van maximaal 5 m en 2 s en gemeten wandelherstel worden apart behouden. De gemeten meters en seconden blijven beschikbaar. De afgeleide beschrijving bevat geen geschatte pauzeduur. Automatische intervalherkenning behoudt haar herstelvoorwaarden.
