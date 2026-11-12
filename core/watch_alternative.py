@@ -28,11 +28,34 @@ def _time_only_intervals(laps):
                 continue
             if any(not 15 <= value <= min(600, target*.75) for value in recovery):
                 continue
-            matches.append((count, target, int(math.floor(median(recovery) + .5))))
+            matches.append({
+                'count': count,
+                'target': target,
+                'pause': int(math.floor(median(recovery) + .5)),
+                'work_indices': list(range(start, start + count * 2 - 1, 2)),
+            })
     if not matches:
         return None
-    count, target, pause = max(matches)
-    return f"{count}×{target//60}' p{pause}"
+    match = max(matches, key=lambda item: (item['count'], item['target'], item['pause']))
+    match['label'] = f"{match['count']}×{match['target']//60}' p{match['pause']}"
+    return match
+
+
+def _work_average_hr(laps, interval):
+    """Return duration-weighted HR for recognized work laps, if available."""
+    if not interval:
+        return None
+    weighted = []
+    for index in interval['work_indices']:
+        lap = laps[index]
+        heart_rate = number(lap.get('avg_heart_rate'))
+        duration = number(lap.get('elapsed_time'))
+        if heart_rate is not None and 0 < heart_rate < 300 and duration is not None and duration > 0:
+            weighted.append((heart_rate, duration))
+    if not weighted:
+        return None
+    return round(sum(heart_rate * duration for heart_rate, duration in weighted)
+                 / sum(duration for _, duration in weighted), 1)
 
 
 def _duration_label(seconds):
@@ -58,9 +81,6 @@ def alternative_part(athlete, metrics, duration_s, laps=None):
     average = number(metrics.get('average_hr'))
     if average is None:
         average = number(metrics.get('sample_average_hr'))
-    correction = max(0, int(getattr(athlete, 'alternative_hr_correction', 10) or 0))
-    corrected_hr = average + correction if average is not None else None
-    zone = hr_zone(athlete, corrected_hr) if average is not None and 0 < average < 300 else None
     part = {'description_label': 'Generated description', 'manual': [], 'auto': []}
     if seconds is None or seconds <= 0:
         part['description'] = label
@@ -68,19 +88,26 @@ def alternative_part(athlete, metrics, duration_s, laps=None):
         return part
     # Whole minutes, nearest minute, with at least one minute for short sessions.
     intervals = _time_only_intervals(laps)
-    text = f"{label} {intervals or str(max(1, math.floor(seconds / 60 + .5))) + chr(39)}"
+    work_average = _work_average_hr(laps, intervals)
+    zone_average = work_average if work_average is not None else average
+    correction = max(0, int(getattr(athlete, 'alternative_hr_correction', 10) or 0))
+    corrected_hr = zone_average + correction if zone_average is not None else None
+    zone = hr_zone(athlete, corrected_hr) if zone_average is not None and 0 < zone_average < 300 else None
+    interval_label = intervals['label'] if intervals else None
+    text = f"{label} {interval_label or str(max(1, math.floor(seconds / 60 + .5))) + chr(39)}"
     part['description'] = text + (f' Z{zone}' if zone else '')
     # Sport and duration are sufficient for a usable Alternative. Heart rate
     # only enriches it with a zone; missing/mismatching zones must not hide the
     # Use/Add actions for an otherwise valid non-running activity.
     part['training_fields'] = {'alt': part['description']}
     if zone:
+        source = 'average work-lap HR' if work_average is not None else 'average HR'
         part['analysis_note'] = (
-            f'Alternative · Zone from average HR {average:g} + {correction} = {corrected_hr:g} bpm.'
+            f'Alternative · Zone from {source} {zone_average:g} + {correction} = {corrected_hr:g} bpm.'
         )
     else:
         part['analysis_note'] = ('Average HR is missing. Alternative cannot be assigned a zone.'
-            if average is None or not 0 < average < 300 else
+            if zone_average is None or not 0 < zone_average < 300 else
             f'Average HR + {correction} does not match a single configured HR zone. Check the athlete’s HR zones.')
     if laps:
         part['manual'] = [{

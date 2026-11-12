@@ -722,6 +722,27 @@ class GarminCPushTests(TestCase):
             for result,(_,_,hr,_) in zip(results,examples):
                 self.assertIn(f'+ 0 = {hr} bpm',result['parts'][0]['analysis_note'])
 
+    def test_recognized_alternative_intervals_use_work_lap_hr_for_zone(self):
+        from core.watch_alternative import alternative_part
+
+        self.athlete.zone_hr_bpm = {'1':'145','2':'146-163','3':'164-172','4':'173-180','5':'181'}
+        self.athlete.alternative_hr_correction = 0
+        laps = [{'elapsed_time': 1020, 'avg_heart_rate': 111}]
+        for _ in range(16):
+            laps.append({'elapsed_time': 180, 'avg_heart_rate': 151})
+            laps.append({'elapsed_time': 45, 'avg_heart_rate': 130})
+        laps.append({'elapsed_time': 600, 'avg_heart_rate': 115})
+
+        part = alternative_part(
+            self.athlete,
+            {'sport':'ELLIPTICAL', 'average_hr':138},
+            sum(lap['elapsed_time'] for lap in laps),
+            laps,
+        )
+
+        self.assertEqual(part['description'], "Elliptical 16×3' p45 Z2")
+        self.assertIn('average work-lap HR 151 + 0 = 151 bpm', part['analysis_note'])
+
     def test_non_running_missing_hr_or_limits_never_invents_a_zone(self):
         from core.watch_alternative import alternative_part
         self.athlete.zone_hr_bpm={'1':'151','2':'152-168'}
