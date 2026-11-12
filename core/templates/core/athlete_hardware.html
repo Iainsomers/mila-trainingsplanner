@@ -6,6 +6,7 @@
     <h1 class="h3 mb-0">Hardware</h1>
     <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
   </div>
+  {% include 'core/partials/planning_athlete_oura.html' %}
   {% include 'core/partials/planning_athlete_garmin.html' %}
 </div>
 {% endblock %}

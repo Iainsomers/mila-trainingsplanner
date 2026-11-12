@@ -1,5 +1,10 @@
 # Actuele status
 
+## 12 november 2026 — Oura-tegel op Hardware hersteld
+
+- De persoonlijke pagina `More > Hardware` toont de Oura-tegel weer wanneer de coach voor die atleet `Allow Oura connection` heeft ingeschakeld.
+- Koppelen, annuleren en loskoppelen keren terug naar Hardware; de bestaande toestemming, eigen-atleetcontrole, testpreview en importregels blijven ongewijzigd.
+
 ## 11 november 2026 — Garmin Health-ontvanger
 
 - Een aparte beveiligde Push-route ontvangt Garmin Dailies, HRV Summary en Sleeps en koppelt deze uitsluitend via de bestaande Garmin user-ID aan een actief verbonden atleetaccount.

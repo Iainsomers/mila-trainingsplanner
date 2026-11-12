@@ -6682,8 +6682,9 @@ def planning_overview_view(request):
     evaluations_enabled = (not is_coach_tools_only_user(request.user)
                            and getattr(evaluation_settings, 'evaluations_enabled', True))
     from core.views.garmin import configured as garmin_configured, ai_allowed as garmin_ai_allowed
-    from core.models import GarminConnection
+    from core.models import GarminConnection, OuraConnection
     garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
+    oura_connection = OuraConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
     template = "core/athlete_hardware.html" if is_athlete_user and request.GET.get("section") == "hardware" else "core/planning.html"
     if is_trainer_user and not coach_tools_only and request.GET.get('section') == 'standards':
         template = 'core/standard_trainings.html'
@@ -6700,6 +6701,10 @@ def planning_overview_view(request):
         "garmin_connection": garmin_connection,
         "garmin_configured": garmin_configured(),
         "garmin_status": request.GET.get('garmin', ''),
+        "oura_connection_enabled": bool(is_athlete_user and athlete.oura_connection_enabled),
+        "oura_connection": oura_connection,
+        "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
+        "oura_status": request.GET.get("oura", ""),
         "recent_feature_count": NewFeature.objects.filter(created_at__gte=timezone.now() - timedelta(days=14)).count(),
         "is_product_admin": _is_product_admin(request.user),
         "groups": groups,

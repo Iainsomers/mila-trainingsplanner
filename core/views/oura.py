@@ -29,6 +29,10 @@ OURA_API_BASE = "https://api.ouraring.com/v2/usercollection"
 OAUTH_SESSION_KEY = "oura_oauth_pending"
 
 
+def _hardware_redirect(status):
+    return redirect(f"{reverse('planning_overview')}?section=hardware&oura={status}")
+
+
 def _oura_configured():
     return bool(
         settings.OURA_CLIENT_ID
@@ -353,13 +357,13 @@ def oura_connect_view(request):
     if athlete is None:
         return HttpResponseForbidden("Oura can only be connected from the athlete's own account.")
     if not athlete.oura_connection_enabled:
-        return redirect(f"{reverse('dashboard')}?oura=not_enabled")
+        return _hardware_redirect("not_enabled")
     if not _oura_configured():
-        return redirect(f"{reverse('dashboard')}?oura=not_configured")
+        return _hardware_redirect("not_configured")
     if request.POST.get("consent_oura_data") != "on":
-        return redirect(f"{reverse('dashboard')}?oura=consent_required")
+        return _hardware_redirect("consent_required")
     if request.POST.get("confirm_adult_or_guardian") != "on":
-        return redirect(f"{reverse('dashboard')}?oura=guardian_required")
+        return _hardware_redirect("guardian_required")
 
     state = secrets.token_urlsafe(32)
     code_verifier = secrets.token_urlsafe(64)
@@ -391,7 +395,7 @@ def oura_callback_view(request):
     pending = request.session.pop(OAUTH_SESSION_KEY, None)
     athlete = _athlete_user(request)
     if not pending or athlete is None or not athlete.oura_connection_enabled:
-        return redirect(f"{reverse('dashboard')}?oura=authorization_expired")
+        return _hardware_redirect("authorization_expired")
 
     returned_state = request.GET.get("state", "")
     if (
@@ -399,9 +403,9 @@ def oura_callback_view(request):
         or pending.get("user_id") != request.user.id
         or pending.get("athlete_id") != athlete.id
     ):
-        return redirect(f"{reverse('dashboard')}?oura=authorization_failed")
+        return _hardware_redirect("authorization_failed")
     if request.GET.get("error") or not request.GET.get("code") or not _oura_configured():
-        return redirect(f"{reverse('dashboard')}?oura=authorization_cancelled")
+        return _hardware_redirect("authorization_cancelled")
 
     try:
         response = requests.post(
@@ -419,11 +423,11 @@ def oura_callback_view(request):
         response.raise_for_status()
         token_payload = response.json()
     except (requests.RequestException, ValueError, KeyError):
-        return redirect(f"{reverse('dashboard')}?oura=authorization_failed")
+        return _hardware_redirect("authorization_failed")
 
     access_token = token_payload.get("access_token")
     if not access_token:
-        return redirect(f"{reverse('dashboard')}?oura=authorization_failed")
+        return _hardware_redirect("authorization_failed")
 
     expires_in = token_payload.get("expires_in")
     try:
@@ -443,7 +447,7 @@ def oura_callback_view(request):
             "adult_or_guardian_permission_confirmed": True,
         },
     )
-    return redirect(f"{reverse('dashboard')}?oura=connected")
+    return _hardware_redirect("connected")
 
 
 @login_required
@@ -453,7 +457,7 @@ def oura_disconnect_view(request):
     if athlete is None:
         return HttpResponseForbidden("Oura can only be disconnected from the athlete's own account.")
     revoke_oura_connection(athlete)
-    return redirect(f"{reverse('dashboard')}?oura=disconnected")
+    return _hardware_redirect("disconnected")
 
 
 @login_required

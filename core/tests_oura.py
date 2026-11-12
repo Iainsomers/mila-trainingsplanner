@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from urllib.parse import parse_qs, urlsplit
 from unittest.mock import Mock, patch
 
@@ -34,12 +34,12 @@ class OuraDashboardAndOAuthTests(TestCase):
         )
         self.client.force_login(self.athlete_user)
 
-    def test_athlete_dashboard_has_a_separate_hardware_settings_oura_block(self):
-        response = self.client.get(reverse("dashboard"))
+    def test_athlete_hardware_has_a_separate_oura_block(self):
+        response = self.client.get(reverse("planning_overview"), {"section": "hardware"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Hardware settings")
-        self.assertContains(response, "Oura connection")
+        self.assertTemplateUsed(response, "core/athlete_hardware.html")
+        self.assertContains(response, "Oura Connection")
         self.assertContains(response, reverse("oura_connect"))
 
     def test_oura_import_button_is_shown_on_the_athletes_ayc_when_vitals_are_available(self):
@@ -60,21 +60,20 @@ class OuraDashboardAndOAuthTests(TestCase):
         self.athlete.oura_connection_enabled = False
         self.athlete.save(update_fields=["oura_connection_enabled"])
 
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("planning_overview"), {"section": "hardware"})
         connect_response = self.client.post(
             reverse("oura_connect"),
             {"consent_oura_data": "on", "confirm_adult_or_guardian": "on"},
         )
 
-        self.assertNotContains(response, "Hardware settings")
-        self.assertNotContains(response, "Oura connection")
-        self.assertRedirects(connect_response, f"{reverse('dashboard')}?oura=not_enabled", fetch_redirect_response=False)
+        self.assertNotContains(response, "Oura Connection")
+        self.assertRedirects(connect_response, f"{reverse('planning_overview')}?section=hardware&oura=not_enabled", fetch_redirect_response=False)
         self.assertFalse(OuraConnection.objects.exists())
 
     def test_connect_requires_both_health_and_guardian_confirmations(self):
         response = self.client.post(reverse("oura_connect"), {"consent_oura_data": "on"})
 
-        self.assertRedirects(response, f"{reverse('dashboard')}?oura=guardian_required", fetch_redirect_response=False)
+        self.assertRedirects(response, f"{reverse('planning_overview')}?section=hardware&oura=guardian_required", fetch_redirect_response=False)
         self.assertFalse(OuraConnection.objects.exists())
 
     def test_connect_starts_minimum_scope_pkce_oauth_flow(self):
@@ -111,7 +110,7 @@ class OuraDashboardAndOAuthTests(TestCase):
 
         response = self.client.get(reverse("oura_callback"), {"code": "auth-code", "state": state})
 
-        self.assertRedirects(response, f"{reverse('dashboard')}?oura=connected", fetch_redirect_response=False)
+        self.assertRedirects(response, f"{reverse('planning_overview')}?section=hardware&oura=connected", fetch_redirect_response=False)
         connection = OuraConnection.objects.get(athlete=self.athlete)
         self.assertEqual(connection.access_token, "access-token")
         self.assertEqual(connection.refresh_token, "refresh-token")
@@ -131,7 +130,7 @@ class OuraDashboardAndOAuthTests(TestCase):
             {"code": "auth-code", "state": "wrong-state"},
         )
 
-        self.assertRedirects(response, f"{reverse('dashboard')}?oura=authorization_failed", fetch_redirect_response=False)
+        self.assertRedirects(response, f"{reverse('planning_overview')}?section=hardware&oura=authorization_failed", fetch_redirect_response=False)
         self.assertFalse(OuraConnection.objects.exists())
         mocked_post.assert_not_called()
 
@@ -145,12 +144,13 @@ class OuraDashboardAndOAuthTests(TestCase):
         with patch("core.views.oura.requests.get") as mocked_get:
             response = self.client.post(reverse("oura_disconnect"))
 
-        self.assertRedirects(response, f"{reverse('dashboard')}?oura=disconnected", fetch_redirect_response=False)
+        self.assertRedirects(response, f"{reverse('planning_overview')}?section=hardware&oura=disconnected", fetch_redirect_response=False)
         self.assertFalse(OuraConnection.objects.exists())
         mocked_get.assert_called_once()
 
     @patch("core.views.oura.requests.get")
     def test_coach_oura_test_window_previews_recent_data_without_saving_it(self, mocked_get):
+        preview_day = (date.today() - timedelta(days=1)).isoformat()
         OuraConnection.objects.create(
             athlete=self.athlete,
             access_token="access-token",
@@ -161,7 +161,7 @@ class OuraDashboardAndOAuthTests(TestCase):
         sleep_response.status_code = 200
         sleep_response.raise_for_status.return_value = None
         sleep_response.json.return_value = {"data": [{
-            "day": "2026-10-28",
+            "day": preview_day,
             "type": "long_sleep",
             "total_sleep_duration": 27000,
             "lowest_heart_rate": 47.8,
@@ -169,10 +169,10 @@ class OuraDashboardAndOAuthTests(TestCase):
         }], "next_token": None}
         daily_sleep_response = Mock()
         daily_sleep_response.raise_for_status.return_value = None
-        daily_sleep_response.json.return_value = {"data": [{"day": "2026-10-28", "score": 82}], "next_token": None}
+        daily_sleep_response.json.return_value = {"data": [{"day": preview_day, "score": 82}], "next_token": None}
         readiness_response = Mock()
         readiness_response.raise_for_status.return_value = None
-        readiness_response.json.return_value = {"data": [{"day": "2026-10-28", "score": 79}], "next_token": None}
+        readiness_response.json.return_value = {"data": [{"day": preview_day, "score": 79}], "next_token": None}
         mocked_get.side_effect = [sleep_response, daily_sleep_response, readiness_response]
 
         self.client.force_login(self.coach)

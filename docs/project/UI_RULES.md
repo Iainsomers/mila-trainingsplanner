@@ -8,6 +8,8 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Stijl
 
+- De persoonlijke pagina `More > Hardware` groepeert de optionele Oura- en Garmin-koppelingen als afzonderlijke tegels. Een Oura-tegel verschijnt uitsluitend wanneer `Allow Oura connection` voor de ingelogde atleet aanstaat; OAuth-statusmeldingen en acties blijven op deze Hardware-pagina.
+
 - Een samengestelde Main-herhaling met zones per onderdeel, bijvoorbeeld `16*(400m z1-100m z3)`, krijgt één meerkleurige pill. De kleurvlakken volgen de volgorde en afstand van de onderdelen: in dit voorbeeld 80% Z1 en 20% Z3. Gewone progressieve zone- en T-ranges behouden hun stapsgewijze kleurverloop.
 
 - Athlete Settings > General heeft `Automatically import Oura vitals` met uitleg over het lokale controleschema, de bekende apparaattijdzone en de laatste controle. Het vinkje is standaard uit en beschikbaar voor de atleet zelf en bevoegde trainers.
