@@ -498,6 +498,20 @@
     cursor: grabbing;
   }
 
+  .year-range-drag-mode {
+    position: fixed;
+    z-index: 2000;
+    pointer-events: none;
+    padding: 4px 8px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    background: #fff;
+    color: #222;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
   .year-where-label:focus {
     outline: 2px solid #0d6efd;
     background: #fff;
@@ -1765,6 +1779,8 @@
       const end = new Date(segment.dataset.yearRangeEnd + "T00:00:00");
       const sourceCell = segment.closest("[data-year-cell]");
       rangeDrag = {
+        id: segment.dataset.yearRangeId || "",
+        sourceScope: segment.dataset.yearRangeScope || sourceCell?.dataset.scope || "",
         type: segment.dataset.yearRangeType || "",
         note: segment.dataset.yearRangeNote || "",
         days: Math.max(1, Math.round((end - start) / 86400000) + 1),
@@ -1774,6 +1790,7 @@
         startX: event.clientX,
         startY: event.clientY,
         moved: false,
+        copy: event.ctrlKey,
       };
       rangeDropCell = rangeDrag.startCell;
     });
@@ -2022,10 +2039,21 @@
     const dy = Math.abs(event.clientY - rangeDrag.startY);
     if (dx < 4 && dy < 4) return;
     rangeDrag.moved = true;
+    rangeDrag.copy = event.ctrlKey;
     rangeDrag.segments.forEach((segment) => {
       segment.style.pointerEvents = "none";
     });
     document.body.classList.add("year-range-dragging");
+    let dragMode = document.querySelector("[data-year-range-drag-mode]");
+    if (!dragMode) {
+      dragMode = document.createElement("div");
+      dragMode.className = "year-range-drag-mode";
+      dragMode.dataset.yearRangeDragMode = "1";
+      document.body.appendChild(dragMode);
+    }
+    dragMode.textContent = rangeDrag.copy ? "+ Copy" : "Move";
+    dragMode.style.left = `${event.clientX + 12}px`;
+    dragMode.style.top = `${event.clientY + 12}px`;
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-year-cell]");
     if (target) rangeDropCell = target;
   });
@@ -2046,7 +2074,7 @@
     });
   });
 
-  document.addEventListener("mouseup", () => {
+  document.addEventListener("mouseup", (event) => {
     if (rangeResize) {
       const target = rangeDropCell;
       const resize = rangeResize;
@@ -2077,6 +2105,8 @@
       rangeDrag = null;
       rangeDropCell = null;
       document.body.classList.remove("year-range-dragging");
+      document.querySelector("[data-year-range-drag-mode]")?.remove();
+      drag.copy = event.ctrlKey;
       drag.segments.forEach((segment) => {
         segment.style.pointerEvents = "";
         segment.dataset.suppressClick = drag.moved ? "1" : "";
@@ -2087,13 +2117,18 @@
         start.setDate(start.getDate() - (drag.offsetDays || 0));
         const end = new Date(start);
         end.setDate(start.getDate() + drag.days - 1);
-        saveWhereRange({
+        const payload = {
           scope: target.dataset.scope,
           start_date: isoDate(start),
           end_date: isoDate(end),
           whereabouts: drag.type,
           note: drag.note,
-        }).then((data) => {
+        };
+        if (!drag.copy) {
+          payload.move_id = drag.id;
+          payload.source_scope = drag.sourceScope;
+        }
+        saveWhereRange(payload).then((data) => {
           if (data?.range) renderRange(data.range);
         });
       }
@@ -2205,6 +2240,11 @@
       rangeDrag = null;
       rangeResize = null;
       rangeDropCell = null;
+      document.body.classList.remove("year-range-dragging");
+      document.querySelector("[data-year-range-drag-mode]")?.remove();
+      document.querySelectorAll("[data-year-range-id]").forEach((segment) => {
+        segment.style.pointerEvents = "";
+      });
       changedCells = new Set();
       clearRowPasteModes();
     }

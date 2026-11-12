@@ -7995,6 +7995,41 @@ def year_planner_whereabout_save_view(request):
     if whereabouts_type not in allowed_whereabouts:
         return JsonResponse({"ok": False, "error": "Invalid whereabouts type"}, status=400)
 
+    move_id = payload.get("move_id")
+    source_scope = (payload.get("source_scope") or "").strip()
+    if move_id:
+        try:
+            source_athlete, source_basis_plan, source_coach = _year_planner_whereabout_scope_target(
+                request, source_scope
+            )
+        except ValueError:
+            return JsonResponse({"ok": False, "error": "Invalid source scope"}, status=400)
+        except LookupError:
+            return JsonResponse({"ok": False, "error": "Source not found"}, status=404)
+        if source_coach and not _can_manage_year_planner_coach_whereabouts(request, source_coach):
+            return JsonResponse({"ok": False, "error": "Source not found"}, status=403)
+        source_owner = source_coach or _active_coach_user(request)
+        range_obj = YearPlannerWhereabout.objects.filter(
+            id=move_id,
+            owner=source_owner,
+            athlete=source_athlete,
+            basis_plan=source_basis_plan,
+        ).first()
+        if not range_obj:
+            return JsonResponse({"ok": False, "error": "Source not found"}, status=404)
+        range_obj.owner = target_owner
+        range_obj.athlete = athlete_obj
+        range_obj.basis_plan = basis_plan
+        range_obj.start_date = start_date
+        range_obj.end_date = end_date
+        range_obj.whereabouts_type = whereabouts_type
+        range_obj.note = note
+        range_obj.save(update_fields=[
+            "owner", "athlete", "basis_plan", "start_date", "end_date",
+            "whereabouts_type", "note",
+        ])
+        return JsonResponse({"ok": True, "range": range_payload(range_obj)})
+
     range_id = payload.get("id")
     if range_id:
         existing = YearPlannerWhereabout.objects.filter(owner=target_owner, id=range_id).first()

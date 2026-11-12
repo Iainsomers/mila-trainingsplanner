@@ -4657,6 +4657,8 @@ class YearPlannerTests(TestCase):
         self.assertContains(response,'data-active-where-context>Editing whereabouts</div>')
         self.assertContains(response,'Apply to all selected')
         self.assertContains(response,'data-active-where-close>Save</button>')
+        self.assertContains(response,'dragMode.textContent = rangeDrag.copy ? "+ Copy" : "Move";')
+        self.assertContains(response,'payload.move_id = drag.id;')
         self.assertNotContains(response,'type="submit" class="btn btn-sm btn-primary">OK</button>')
         self.assertContains(response,'<details class="year-legend-disclosure">')
         for chunk in response.context['chunks']:
@@ -4880,6 +4882,82 @@ class YearPlannerTests(TestCase):
         page = self.client.get(f"/planning/year/?year=2026&period=full&athletes={athlete.id}")
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "Altitude camp")
+
+    def test_year_planner_moves_whereabout_between_athletes_without_copying(self):
+        coach, source_athlete = self._coach_and_athlete()
+        target_athlete = Athlete.objects.create(
+            owner=coach,
+            name="Target Year Athlete",
+            birth_year=2002,
+            gender="X",
+        )
+        whereabouts = YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=source_athlete,
+            start_date=date(2026, 9, 7),
+            end_date=date(2026, 9, 9),
+            whereabouts_type="test",
+            note="Performance test",
+        )
+
+        response = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"athlete-{target_athlete.id}",
+                "source_scope": f"athlete-{source_athlete.id}",
+                "move_id": whereabouts.id,
+                "start_date": "2026-09-14",
+                "end_date": "2026-09-16",
+                "whereabouts": "test",
+                "note": "Performance test",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(YearPlannerWhereabout.objects.count(), 1)
+        whereabouts.refresh_from_db()
+        self.assertEqual(whereabouts.athlete, target_athlete)
+        self.assertEqual(whereabouts.start_date, date(2026, 9, 14))
+        self.assertEqual(whereabouts.end_date, date(2026, 9, 16))
+        self.assertEqual(response.json()["range"]["id"], whereabouts.id)
+        self.assertEqual(response.json()["range"]["scope"], f"athlete-{target_athlete.id}")
+
+    def test_year_planner_move_rejects_mismatched_source_scope(self):
+        coach, source_athlete = self._coach_and_athlete()
+        target_athlete = Athlete.objects.create(
+            owner=coach,
+            name="Target Year Athlete",
+            birth_year=2002,
+            gender="X",
+        )
+        whereabouts = YearPlannerWhereabout.objects.create(
+            owner=coach,
+            athlete=source_athlete,
+            start_date=date(2026, 9, 7),
+            end_date=date(2026, 9, 9),
+            whereabouts_type="test",
+            note="Performance test",
+        )
+
+        response = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"athlete-{target_athlete.id}",
+                "source_scope": f"athlete-{target_athlete.id}",
+                "move_id": whereabouts.id,
+                "start_date": "2026-09-14",
+                "end_date": "2026-09-16",
+                "whereabouts": "test",
+                "note": "Performance test",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        whereabouts.refresh_from_db()
+        self.assertEqual(whereabouts.athlete, source_athlete)
+        self.assertEqual(whereabouts.start_date, date(2026, 9, 7))
 
     def test_year_planner_allows_overlapping_whereabout_ranges(self):
         coach, athlete = self._coach_and_athlete()

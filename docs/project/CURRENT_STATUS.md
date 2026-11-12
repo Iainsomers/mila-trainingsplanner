@@ -6,7 +6,13 @@
 - De geopende selectie gebruikt compacte tabs met tellers voor Athletes, Basis en Coaches; per keer is alleen het gekozen selectievak zichtbaar.
 - View, Layout en de zichtbaarheidsschakelaars passen direct toe; de losse `OK`-knop is verwijderd.
 - De whereabouts-editor verschijnt alleen bij een gekozen cel/range, blijft tijdens bewerken boven de kalender zichtbaar en noemt de actieve atleet/coach/Basis-rij. De actieve rij en gekozen datums krijgen een subtiele markering.
-- De editor gebruikt `Apply to all selected` en `Save`; het onderliggende opslaggedrag is ongewijzigd. Minder kaders, witruimte en een compacte selectie brengen de kalender eerder in beeld.
+- De editor gebruikt `Apply to all selected` en `Save`. Minder kaders, witruimte en een compacte selectie brengen de kalender eerder in beeld.
+
+## 12 november 2026 — Whereabouts verplaatsen of kopiëren
+
+- Gewoon slepen verplaatst een whereabouts-range, ook tussen atleten, coachrijen en Basis-rijen; het bestaande databaseobject verhuist zonder achterblijvende kopie.
+- `Ctrl`+slepen behoudt het kopieergedrag. Een aanwijzerlabel toont tijdens het slepen `Move` of `+ Copy`.
+- De server controleert de bron- en doelrij afzonderlijk voordat een verplaatsing wordt opgeslagen.
 
 ## 12 november 2026 — Other als whereabouts-categorie
 

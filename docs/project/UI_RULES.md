@@ -401,6 +401,8 @@ Year Planner: compacte bedieningsbalk en kleinere navigatieknoppen; View, Layout
 
 12 november — de actieve whereabouts-editor verschijnt contextueel na selectie van een cel of range en blijft sticky boven de kalender. De kop benoemt de actieve atleet/coach/Basis-rij; rij en datumbereik worden subtiel gemarkeerd. De compacte acties heten `Apply to all selected` en `Save`. `Save` bewaart de actieve range en sluit daarna de editor.
 
+12 november — een whereabouts-range wordt met gewoon slepen verplaatst. `Ctrl`+slepen kopieert de range. Toon tijdens het slepen vlak bij de aanwijzer `Move` of `+ Copy`, zodat vóór loslaten duidelijk is welke actie volgt. De bestaande begin- en eindgrepen blijven uitsluitend het datumbereik aanpassen.
+
 
 6 november — Year Planner Race Calendar lichtblauw #EFF6FF met tekst/rand #245A91; Camps lichtgroen #EFF8F1 met tekst/rand #28663D. Donkerdere hover en passende focusrand. Beide knoppen auto-breedte, compact38px hoog met6px afronding, passend bij Back. Tekstkleur blijft leesbaar bij teambranding. Gerichte YearPlanner-tests en manage.py check geslaagd.
 
