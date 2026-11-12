@@ -7597,6 +7597,7 @@ def year_planner_view(request):
         )
     else:
         selection_summary = "None selected"
+    selection_initial_tab = "athletes" if selected_ids else ("basis" if basis_rows else ("coaches" if selected_coach_ids else "athletes"))
     return render(request, "core/year_planner.html", {
         "show_detailed_camps": show_detailed_camps,
         "athletes": visible_athletes,
@@ -7608,6 +7609,7 @@ def year_planner_view(request):
         "selected_basis_count": len(basis_rows),
         "selection_open": selection_open,
         "selection_summary": selection_summary,
+        "selection_initial_tab": selection_initial_tab,
         "selected_ids": selected_ids,
         "all_visible_athletes_selected": all_visible_athletes_selected,
         "coaches": coach_options,

@@ -539,11 +539,16 @@
   .year-active-editor {
     display: none;
     align-items: end;
+    flex-wrap: wrap;
     gap: 0.5rem;
-    padding: 0.5rem;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid #b9c8d8;
+    border-radius: 7px;
+    background: #f5f9fd;
+    box-shadow: 0 3px 10px rgba(35, 55, 75, .12);
   }
 
   .year-active-editor.is-open {
@@ -563,6 +568,10 @@
     min-width: 170px;
     padding-bottom: 0.25rem;
   }
+  .year-active-context { flex: 0 0 auto; align-self: center; margin-right: .25rem; color: #31485f; font-size: .8rem; font-weight: 700; }
+  .year-row-editing > .year-name-cell { box-shadow: inset 4px 0 #0d6efd, 2px 0 3px rgba(35, 55, 75, .08); }
+  .year-day-cell.year-date-editing { background: #eaf3ff; box-shadow: inset 0 0 0 2px rgba(13, 110, 253, .35); }
+  .year-day-cell.year-date-editing > .year-cell { background: #eaf3ff; }
 
   .year-fill.year-training-recovery,
   .year-legend .year-training-recovery { background: #e4d4f4; color: #111; }
@@ -712,6 +721,7 @@
 
   @media (max-width: 768px) {
     .year-table-wrap { max-height: none; }
+    .year-active-context { flex-basis: 100%; }
   }
 
   /* Compact Year Planner: controls first, collapsible selection, clearer time grid. */
@@ -726,12 +736,15 @@
   .year-control-bar .btn-group { flex-wrap: wrap; }
   .year-control-bar .btn, .year-control-bar .form-select { min-height: 32px; }
   .year-control-bar .form-label { font-size: 0.72rem; }
-  .year-selection { border: 1px solid #d9e2ec; border-radius: 7px; margin-top: 8px; background: #fff; }
+  .year-selection { border: 0; border-radius: 7px; margin-top: 6px; background: #f8fafc; }
   .year-selection > summary { padding: 8px 10px; cursor: pointer; font-size: 0.85rem; font-weight: 700; }
   .year-selection > summary span { margin-left: 10px; color: #65758b; font-size: 0.78rem; font-weight: 400; }
-  .year-selection-grid { margin: 0; padding: 0 8px 8px; }
-  .year-selection-grid .year-selector-panel { border: 0; border-radius: 0; padding: 8px; }
-  .year-selection-grid .year-selector-panel + .year-selector-panel { border-left: 1px solid #e5eaf0; }
+  .year-selection-tabs { display: flex; flex-wrap: wrap; gap: 5px; padding: 2px 16px 0; }
+  .year-selection-tab { border: 1px solid #cfd8e3; border-radius: 999px; background: #fff; color: #31485f; padding: 4px 10px; font-size: .78rem; }
+  .year-selection-tab.is-active { border-color: #0d6efd; background: #eaf3ff; color: #0a58ca; font-weight: 700; }
+  .year-selection-grid { margin: 0; padding: 2px 8px 8px; }
+  .year-selection-grid .year-selector-panel { display: none; border: 0; border-radius: 0; padding: 8px; }
+  .year-selection-grid .year-selector-panel.is-active { display: flex; }
   .year-selection-grid .year-athlete-list { max-height: 180px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .year-legend-disclosure { margin-top: 4px; font-size: 0.75rem; }
   .year-legend-disclosure > summary { cursor: pointer; color: #52606d; }
@@ -763,14 +776,16 @@
   @media (max-width: 768px) {
     .year-heading-actions { width: 100%; }
     .year-selection > summary span { display: block; margin: 3px 0 0 14px; }
-    .year-selection-grid .year-selector-panel + .year-selector-panel { border-left: 0; border-top: 1px solid #e5eaf0; }
     .year-table-wrap { max-height: none; }
     .year-control-bar .btn-group { width: 100%; }
+  }
+  @media (min-width: 769px) {
+    .year-control-bar { flex-wrap: nowrap !important; }
   }
   .year-selection-filter { padding: 0 16px 6px; max-width: 380px; }
   .year-selection-filter .form-label { font-size: 0.78rem; }
   .year-selector-title { margin: 0 0 8px; font-size: 0.85rem; line-height: 20px; font-weight: 700; }
-  .year-selection-grid .year-selector-panel { display: flex; flex-direction: column; }
+  .year-selection-grid .year-selector-panel { flex-direction: column; }
   .year-selection-grid .year-athlete-list {
     height: 180px; align-content: start; align-items: start;
     grid-auto-rows: minmax(24px, auto);
@@ -846,7 +861,7 @@
             style="width:100%;height:75vh;min-height:480px;border:0;"></iframe>
   </section>
   <div id="yearPlanningPanel">
-  <form method="get" class="mb-3" id="yearPlannerFilterForm">
+  <form method="get" class="mb-2" id="yearPlannerFilterForm">
     <div class="d-flex flex-wrap align-items-end year-toolbar year-control-bar">
       <div class="btn-group" role="group" aria-label="Period">
         {% for option in period_options %}
@@ -898,7 +913,6 @@
       </div>
       {% endif %}
 
-      <button type="submit" class="btn btn-sm btn-primary">OK</button>
       <span class="year-save-status text-muted" data-year-save-status></span>
     </div>
 
@@ -917,9 +931,14 @@
             </select>
           </div>
         </div>
+        <div class="year-selection-tabs" role="tablist" aria-label="Selection type">
+          <button type="button" class="year-selection-tab{% if selection_initial_tab == 'athletes' %} is-active{% endif %}" data-year-selection-tab="athletes" aria-selected="{% if selection_initial_tab == 'athletes' %}true{% else %}false{% endif %}">Athletes {{ selected_ids|length }}</button>
+          <button type="button" class="year-selection-tab{% if selection_initial_tab == 'basis' %} is-active{% endif %}" data-year-selection-tab="basis" aria-selected="{% if selection_initial_tab == 'basis' %}true{% else %}false{% endif %}">Basis {{ selected_basis_count }}</button>
+          <button type="button" class="year-selection-tab{% if selection_initial_tab == 'coaches' %} is-active{% endif %}" data-year-selection-tab="coaches" aria-selected="{% if selection_initial_tab == 'coaches' %}true{% else %}false{% endif %}">Coaches {{ selected_coach_ids|length }}</button>
+        </div>
     <div class="row g-2 align-items-stretch year-selection-grid">
-      <div class="col-md-4 year-selector-panel" data-year-basis-panel>
-        <h2 class="year-selector-title">Basis</h2>
+      <div class="col-12 year-selector-panel{% if selection_initial_tab == 'basis' %} is-active{% endif %}" data-year-basis-panel data-year-selection-panel="basis">
+        <h2 class="year-selector-title visually-hidden">Basis</h2>
         <div class="year-athlete-list">
           {% if not is_athlete_user %}
             <label class="form-check mb-0">
@@ -941,8 +960,8 @@
           {% endfor %}
         </div>
       </div>
-      <div class="col-md-4 year-selector-panel" data-year-athlete-panel>
-        <h2 class="year-selector-title">Athletes</h2>
+      <div class="col-12 year-selector-panel{% if selection_initial_tab == 'athletes' %} is-active{% endif %}" data-year-athlete-panel data-year-selection-panel="athletes">
+        <h2 class="year-selector-title visually-hidden">Athletes</h2>
         <div class="year-athlete-list">
           <label class="form-check mb-0">
             <input
@@ -970,8 +989,8 @@
           {% endfor %}
         </div>
       </div>
-      <div class="col-md-4 year-selector-panel" data-year-coach-panel>
-        <h2 class="year-selector-title">Coaches</h2>
+      <div class="col-12 year-selector-panel{% if selection_initial_tab == 'coaches' %} is-active{% endif %}" data-year-coach-panel data-year-selection-panel="coaches">
+        <h2 class="year-selector-title visually-hidden">Coaches</h2>
         <div class="year-athlete-list">
           <label class="form-check mb-0">
             <input
@@ -1008,6 +1027,7 @@
 
   {% if not year_planner_read_only %}
   <div class="year-active-editor mb-2" data-year-active-editor>
+    <div class="year-active-context" data-active-where-context>Editing whereabouts</div>
     <div>
       <label for="activeWhereType" class="form-label mb-1 small">Whereabouts</label>
       <select id="activeWhereType" class="form-select form-select-sm" data-active-where-type>
@@ -1058,7 +1078,7 @@
           </thead>
           <tbody>
             {% for row in chunk.rows %}
-              <tr data-year-row data-year-row-scope="{{ row.scope }}" data-year-row-chunk="{{ forloop.parentloop.counter0 }}" class="{% if not row.athlete and not row.is_coach %}year-basis-row{% endif %}{% if row.is_coach %} year-coach-row{% endif %}{% if row.read_only %} year-row-read-only{% endif %}">
+              <tr data-year-row data-year-row-scope="{{ row.scope }}" data-year-row-label="{{ row.label }}" data-year-row-chunk="{{ forloop.parentloop.counter0 }}" class="{% if not row.athlete and not row.is_coach %}year-basis-row{% endif %}{% if row.is_coach %} year-coach-row{% endif %}{% if row.read_only %} year-row-read-only{% endif %}">
                 <td class="year-name-cell">
                   <div class="year-name-main">{{ row.label }}</div>
                   {% if not year_planner_read_only and not row.read_only %}
@@ -1191,6 +1211,7 @@
   const activeWhereEnd = document.querySelector("[data-active-where-end]");
   const activeWhereDelete = document.querySelector("[data-active-where-delete]");
   const activeWhereAll = document.querySelector("[data-active-where-all]");
+  const activeWhereContext = document.querySelector("[data-active-where-context]");
   const athletePanel = document.querySelector("[data-year-athlete-panel]");
   const athleteToggle = document.querySelector("[data-year-athlete-toggle]");
   const coachPanel = document.querySelector("[data-year-coach-panel]");
@@ -1242,6 +1263,19 @@
     form.addEventListener('change', syncSelectionState, true);
     syncSelectionState();
   }
+  const selectionTabs = Array.from(document.querySelectorAll("[data-year-selection-tab]"));
+  const selectionPanels = Array.from(document.querySelectorAll("[data-year-selection-panel]"));
+  function activateSelectionPanel(name) {
+    selectionTabs.forEach((tab) => {
+      const active = tab.dataset.yearSelectionTab === name;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    selectionPanels.forEach((panel) => panel.classList.toggle("is-active", panel.dataset.yearSelectionPanel === name));
+    requestAnimationFrame(resizeYearCalendar);
+  }
+  selectionTabs.forEach((tab) => tab.addEventListener("click", () => activateSelectionPanel(tab.dataset.yearSelectionTab)));
+  activateSelectionPanel("{{ selection_initial_tab|escapejs }}");
   document.querySelector('.year-legend-disclosure')?.addEventListener('toggle', () => requestAnimationFrame(resizeYearCalendar));
   window.addEventListener('resize', resizeYearCalendar);
   requestAnimationFrame(resizeYearCalendar);
@@ -1562,6 +1596,7 @@
     if (activeWhereDelete) activeWhereDelete.disabled = true;
     if (activeWhereAll) activeWhereAll.checked = false;
     activeEditor?.classList.add("is-open");
+    refreshWhereEditorHighlight();
     window.setTimeout(() => activeWhereName?.focus(), 0);
   }
 
@@ -1582,12 +1617,28 @@
     if (activeWhereDelete) activeWhereDelete.disabled = !activeWhereRange.id;
     if (activeWhereAll) activeWhereAll.checked = false;
     activeEditor?.classList.add("is-open");
+    refreshWhereEditorHighlight();
     window.setTimeout(() => activeWhereName?.focus(), 0);
   }
 
   function closeWhereEditor() {
     activeWhereRange = null;
     activeEditor?.classList.remove("is-open");
+    refreshWhereEditorHighlight();
+  }
+
+  function refreshWhereEditorHighlight() {
+    allYearRows.forEach((row) => row.classList.remove("year-row-editing"));
+    allYearCells.forEach((cell) => cell.classList.remove("year-date-editing"));
+    if (!activeWhereRange) return;
+    const row = allYearRows.find((item) => item.dataset.yearRowScope === activeWhereRange.scope);
+    row?.classList.add("year-row-editing");
+    const start = activeWhereStart?.value || activeWhereRange.start;
+    const end = activeWhereEnd?.value || activeWhereRange.end;
+    scopeCells(activeWhereRange.scope).forEach((cell) => {
+      if (cell.dataset.date >= start && cell.dataset.date <= end) cell.classList.add("year-date-editing");
+    });
+    if (activeWhereContext) activeWhereContext.textContent = `Editing whereabouts for ${row?.dataset.yearRowLabel || "selection"}`;
   }
 
   async function saveWhereRange(payload, options = {}) {
@@ -1857,8 +1908,8 @@
     }
   }
 
-  document.getElementById("showTraining")?.addEventListener("change", updateVisibility);
-  document.getElementById("showWhereabouts")?.addEventListener("change", updateVisibility);
+  document.getElementById("showTraining")?.addEventListener("change", () => { updateVisibility(); form.submit(); });
+  document.getElementById("showWhereabouts")?.addEventListener("change", () => { updateVisibility(); form.submit(); });
   athleteToggle?.addEventListener("click", () => {
     const collapsed = athletePanel?.classList.toggle("is-collapsed");
     athleteToggle.textContent = collapsed ? "Show" : "Hide";
@@ -1869,6 +1920,8 @@
   });
   document.getElementById("zoomMode")?.addEventListener("change", () => form.submit());
   document.getElementById("layoutMode")?.addEventListener("change", () => form.submit());
+  activeWhereStart?.addEventListener("change", refreshWhereEditorHighlight);
+  activeWhereEnd?.addEventListener("change", refreshWhereEditorHighlight);
   document.querySelectorAll("input[type='checkbox'][name='basis'], input[name='basis_plans']").forEach((input) => {
     input.addEventListener("change", () => form.submit());
   });

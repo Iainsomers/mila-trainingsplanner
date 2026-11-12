@@ -4569,6 +4569,7 @@ class YearPlannerTests(TestCase):
 
 
         self.assertTrue(response.context["show_basis"])
+        self.assertEqual(response.context["selection_initial_tab"], "basis")
         self.assertTrue(any(row["scope"] == f"basis-plan-{plan.id}" for row in response.context["rows"]))
         self.assertContains(response, "Basis - Basis group")
         html = response.content.decode()
@@ -4586,6 +4587,7 @@ class YearPlannerTests(TestCase):
         coach, athlete = self._coach_and_athlete()
         response=self.client.get('/planning/year/',{'basis':'1','period':'current_next'})
         self.assertEqual(response.context['selected_ids'],[])
+        self.assertEqual(response.context['selection_initial_tab'],'basis')
         row=response.context['rows'][0]
         self.assertEqual(row['label'],'Basis - All')
         self.assertEqual(len(response.context['rows']),1)
@@ -4643,11 +4645,19 @@ class YearPlannerTests(TestCase):
         html=response.content.decode()
         self.assertLess(html.index('id="yearAthleteGroup"'),html.index('data-year-basis-panel'))
         for title in ('Basis','Athletes','Coaches'):
-            self.assertContains(response,'<h2 class="year-selector-title">'+title+'</h2>',html=True)
+            self.assertContains(response,'<h2 class="year-selector-title visually-hidden">'+title+'</h2>',html=True)
         self.assertContains(response,'Selection <span>Year Athlete</span>')
         self.assertNotContains(response,'id="yearSelection" open')
+        self.assertContains(response,'data-year-selection-tab="athletes"')
+        self.assertContains(response,'>Athletes 1</button>')
+        self.assertContains(response,'data-year-selection-tab="basis"')
+        self.assertContains(response,'>Basis 0</button>')
+        self.assertContains(response,'data-year-selection-tab="coaches"')
+        self.assertContains(response,'>Coaches 0</button>')
+        self.assertContains(response,'data-active-where-context>Editing whereabouts</div>')
         self.assertContains(response,'Apply to all selected')
         self.assertContains(response,'data-active-where-close>Save</button>')
+        self.assertNotContains(response,'type="submit" class="btn btn-sm btn-primary">OK</button>')
         self.assertContains(response,'<details class="year-legend-disclosure">')
         for chunk in response.context['chunks']:
             self.assertEqual(sum(month['count'] for month in chunk['months']),len(chunk['days']))

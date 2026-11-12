@@ -1,9 +1,12 @@
 # Actuele status
 
-## 12 november 2026 — Compactere Year Planner-selectie en editor
+## 12 november 2026 — Compactere Year Planner-layout en editor
 
 - `Selection` staat standaard ingeklapt. Bij precies één keuze toont de samenvatting direct de naam; bij meerdere keuzes blijven de aantallen zichtbaar.
-- De whereabouts-editor gebruikt `Apply to all selected` en `Save`; het onderliggende opslaggedrag is ongewijzigd.
+- De geopende selectie gebruikt compacte tabs met tellers voor Athletes, Basis en Coaches; per keer is alleen het gekozen selectievak zichtbaar.
+- View, Layout en de zichtbaarheidsschakelaars passen direct toe; de losse `OK`-knop is verwijderd.
+- De whereabouts-editor verschijnt alleen bij een gekozen cel/range, blijft tijdens bewerken boven de kalender zichtbaar en noemt de actieve atleet/coach/Basis-rij. De actieve rij en gekozen datums krijgen een subtiele markering.
+- De editor gebruikt `Apply to all selected` en `Save`; het onderliggende opslaggedrag is ongewijzigd. Minder kaders, witruimte en een compacte selectie brengen de kalender eerder in beeld.
 
 ## 12 november 2026 — Other als whereabouts-categorie
 

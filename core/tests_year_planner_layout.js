@@ -12,7 +12,7 @@ function check(width,initiallyOpen) {
   const input={value:initiallyOpen?'1':'0'};
   const link={href:'https://mila.test/planning/year/?year=2026&athletes=7'};
   const wrap={style:{},getBoundingClientRect(){return {top:150};}};
-  const context={URL,document:{getElementById(id){return id==='yearSelection'?disclosure:input;},querySelector(selector){return selector==='.year-table-wrap'?wrap:null;},querySelectorAll(){return [link];}},
+  const context={URL,document:{getElementById(id){return id==='yearSelection'?disclosure:input;},querySelector(selector){return selector==='.year-table-wrap'?wrap:null;},querySelectorAll(selector){return selector==='.year-control-bar a[href]'?[link]:[];}},
     form:{addEventListener(name,fn){formEvents[name]=fn;}},requestAnimationFrame(fn){fn();},
     window:{innerWidth:width,innerHeight:800,addEventListener(name,fn){windowEvents[name]=fn;}}};
   vm.createContext(context);vm.runInContext(source,context);
