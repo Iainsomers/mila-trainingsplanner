@@ -3391,6 +3391,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 @login_required
 def athlete_year_calendar_view(request):
     is_ayc_coach = _is_ayc_coach_user(request.user)
+    simple_diary_view = bool(is_ayc_coach and request.GET.get("simple") == "1")
     if request.method == "POST":
         date_str = request.POST.get("date")
         text = request.POST.get("comment", "")
@@ -4493,6 +4494,7 @@ def athlete_year_calendar_view(request):
             "show_oura_vitals_import": show_oura_vitals_import,
             "ayc_rowspan": ayc_rowspan,
             "is_coach_user": is_coach_user,
+            "simple_diary_view": simple_diary_view,
             "coach_can_edit_training": coach_can_edit_training,
             "athlete_extended_edit_rights": bool(
                 selected_athlete and getattr(selected_athlete, "extended_edit_rights", False)

@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- De stafschakelaar `Simple` staat compact tussen de Athlete Diary-bediening, op desktop en mobiel. In deze stand zijn sessies niet te openen en tonen ze alleen T-/A-totalen; de evaluatie blijft op haar gewone plek. Atleten zien de schakelaar nooit.
+
 - Het klokje bij een gemeten training heeft in Athlete Diary en Individual Planner dezelfde betekenis en popup-inhoud. In Individual Planner staat het compact in de sessiekop naast de totalen; aanklikken mag niet tegelijk het trainingsformulier openen.
 
 - De mobiele Athlete Diary gebruikt standaard de compacte dagselector met één zichtbare dag. Alleen wanneer de atleetinstelling `Week view in mob diary` aanstaat, verdwijnt de dagselector en worden maandag tot en met zondag als volledige kaarten onder elkaar getoond.

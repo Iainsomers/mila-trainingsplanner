@@ -195,6 +195,20 @@
     position: relative;
     min-height: 14px;
   }
+  .ayc-simple-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .82rem;
+    white-space: nowrap;
+  }
+  .ayc-simple-view .slotbox {
+    min-height: 30px;
+    cursor: default;
+    pointer-events: none;
+  }
+  .ayc-simple-view .whereabout-empty-marker,
+  .ayc-simple-view .ayc-mobile-open-training { display: none !important; }
 
   .session-km-label {
     color: #000;
@@ -1098,7 +1112,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 athlete-year-calendar-page">
+<div class="container-fluid py-4 athlete-year-calendar-page{% if simple_diary_view %} ayc-simple-view{% endif %}">
 
   <div class="d-flex align-items-center justify-content-between mb-2">
     <h2 class="mb-0 ayc-page-title">Athlete Diary</h2>
@@ -1144,6 +1158,12 @@
       <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#zonesTimesModal">Zones &amp; times</button>
       <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#todayTrainingModal">Today's training</button>
     </div>
+    {% if is_coach_user %}
+    <label class="form-check form-switch ayc-simple-switch mb-0">
+      <input class="form-check-input" type="checkbox" name="simple" value="1" {% if simple_diary_view %}checked{% endif %} onchange="this.form.submit()">
+      <span class="form-check-label">Simple</span>
+    </label>
+    {% endif %}
     {% if show_oura_vitals_import %}
     <button type="button" class="btn btn-sm btn-outline-primary" data-oura-import-open>Use Oura data</button>
     {% endif %}
@@ -1155,11 +1175,21 @@
       <form method="get">
         <input type="hidden" name="year" value="{{ year }}">
         <input type="hidden" name="hide" value="{{ hide_mode }}">
+        {% if simple_diary_view %}<input type="hidden" name="simple" value="1">{% endif %}
         <select name="athlete" class="form-select form-select-sm ayc-mobile-athlete" onchange="this.form.submit()">
           {% for athlete in athletes %}
             <option value="{{ athlete.id }}" {% if selected_athlete_id == athlete.id|stringformat:"s" %}selected{% endif %}>{{ athlete.name }}</option>
           {% endfor %}
         </select>
+      </form>
+      <form method="get" class="ayc-mobile-simple-form">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="athlete" value="{{ selected_athlete_id }}">
+        <input type="hidden" name="hide" value="{{ hide_mode }}">
+        <label class="form-check form-switch ayc-simple-switch mb-0">
+          <input class="form-check-input" type="checkbox" name="simple" value="1" {% if simple_diary_view %}checked{% endif %} onchange="this.form.submit()">
+          <span class="form-check-label">Simple</span>
+        </label>
       </form>
       {% endif %}
       <div class="ayc-mobile-nav">
@@ -1248,7 +1278,7 @@
           {% if cell.slot or cell.whereabouts or athlete_extended_edit_rights %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">AM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% else %}{% include "core/partials/whereabout_dots.html" with cell=cell %}{% endif %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button></div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% elif not simple_diary_view %}{% include "core/partials/whereabout_dots.html" with cell=cell %}{% endif %}{% if not simple_diary_view %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button>{% endif %}</div>
           </div>
           {% endif %}
           {% endwith %}
@@ -1256,7 +1286,7 @@
           {% if cell.slot or athlete_extended_edit_rights %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">PM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% endif %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button></div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% endif %}{% if not simple_diary_view %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button>{% endif %}</div>
           </div>
           {% endif %}
           {% endwith %}
@@ -1849,7 +1879,7 @@
                   <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="" data-prefill-wu="" data-prefill-mob="" data-prefill-sprint="" data-prefill-core="" data-prefill-core2="" data-prefill-alt="" data-prefill-cd="">
                   </div>
                 {% endif %}
-                {% if not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
+                {% if not simple_diary_view and not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
               </div>
             </td>
           {% endfor %}
@@ -1885,7 +1915,7 @@
                   <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="" data-prefill-wu="" data-prefill-mob="" data-prefill-sprint="" data-prefill-core="" data-prefill-core2="" data-prefill-alt="" data-prefill-cd="">
                   </div>
                 {% endif %}
-                {% if not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
+                {% if not simple_diary_view and not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
               </div>
             </td>
           {% endfor %}

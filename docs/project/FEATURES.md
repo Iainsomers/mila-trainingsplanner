@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Athlete Diary heeft voor staf een optionele `Simple`-weergave. Per AM/PM-sessie blijven alleen het bestaande hardloop-kmtotaal, de Alternative-totalen en de trainingsevaluatie zichtbaar; de trainingsinhoud, zoneverdeling, whereabouts en meetknoppen worden niet weergegeven. De normale weergave blijft standaard.
+
 - Whereabouts biedt naast de bestaande categorieën ook `Other`. Deze categorie wordt als gewone datumrange opgeslagen en verschijnt in Year Planner en de whereabouts-markeringen van Athlete Diary.
 
 - Individual Planner toont bij een gemeten Polar/Garmin-training hetzelfde klokje als Athlete Diary. Het opent de opgeslagen gemeten Main-reps of splits met afstand, tijd, tempo en beschikbare hartslagwaarden; het klokje opent niet het trainingsformulier.

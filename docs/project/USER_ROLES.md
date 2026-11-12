@@ -1,8 +1,12 @@
 # Gebruikersrollen en toegang
 
+De Athlete Diary-weergave `Simple` is uitsluitend voor staf. Een atleet krijgt de schakelaar niet en kan de stand ook niet via een URL-parameter activeren.
+
 Bijgewerkt: 12 oktober 2026.
 
 ## Trainer
+
+- Trainers kunnen Athlete Diary tijdelijk op `Simple` zetten om per sessie uitsluitend kilometer-/Alternative-totalen en evaluaties te bekijken.
 
 - Voor Honoré Hoedts `Evaluatie seizoen 2025-2026` kunnen de eigenaar en gedelegeerde edit-coaches per antwoordregel `Coach comment` en `Plan` invullen. View-only coaches en de betreffende atleet kunnen de velden alleen lezen; een atleet ziet uitsluitend de coachvelden bij de eigen antwoorden en kan ze niet wijzigen.
 - Coaches wijzigen het gedeelde Race Type van eigen/toegankelijke wedstrijden met editrechten; atleten kunnen het racetype alleen lezen.

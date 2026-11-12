@@ -8264,6 +8264,50 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, ".ayc-mobile.is-week-view .ayc-mobile-day { display: block; }", html=False)
         self.assertContains(response, ".ayc-mobile.is-week-view .ayc-mobile-day-nav { display: none; }", html=False)
 
+    def test_simple_diary_view_is_staff_only_and_keeps_evaluations(self):
+        coach, plan, athlete = self._user_plan_and_athlete()
+        day = date.today()
+        slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=day, slot_index=1)
+        slot.segments.create(type="CORE", text="Hidden detailed training", order=0)
+        AthleteDayCheck.objects.create(
+            athlete=athlete,
+            date=day,
+            slot_index=1,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
+            checked=True,
+            rpe=4,
+            comment="Visible evaluation",
+            updated_by=coach,
+        )
+
+        simple_response = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}&simple=1"
+        )
+        self.assertEqual(simple_response.status_code, 200)
+        self.assertTrue(simple_response.context["simple_diary_view"])
+        self.assertContains(simple_response, "athlete-year-calendar-page ayc-simple-view", html=False)
+        self.assertContains(simple_response, 'name="simple" value="1" checked', html=False)
+        self.assertNotContains(simple_response, '<div class="training-content">', html=False)
+        self.assertContains(simple_response, "Visible evaluation")
+
+        normal_response = self.client.get(
+            f"/athlete/year/?year={day.year}&athlete={athlete.id}"
+        )
+        self.assertFalse(normal_response.context["simple_diary_view"])
+        self.assertContains(normal_response, '<div class="training-content">', html=False)
+        self.assertContains(normal_response, "Hidden detailed training")
+
+        athlete_user = get_user_model().objects.create_user(
+            username=athlete.name,
+            password="secret",
+        )
+        self.client.force_login(athlete_user)
+        athlete_response = self.client.get(f"/athlete/year/?year={day.year}&simple=1")
+        self.assertEqual(athlete_response.status_code, 200)
+        self.assertFalse(athlete_response.context["simple_diary_view"])
+        self.assertNotContains(athlete_response, 'name="simple"', html=False)
+        self.assertContains(athlete_response, "Hidden detailed training")
+
     def test_desktop_ayc_has_compact_navigation_and_collapsible_week_reports(self):
         _, _, athlete = self._user_plan_and_athlete()
         athlete.week_report_enabled = True
