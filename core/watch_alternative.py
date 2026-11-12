@@ -58,6 +58,27 @@ def _work_average_hr(laps, interval):
                  / sum(duration for _, duration in weighted), 1)
 
 
+def _work_zone_label(athlete, laps, interval, correction):
+    """Summarize the HR-zone span of recognized work laps."""
+    if not interval:
+        return None
+    zones = []
+    for index in interval['work_indices']:
+        lap = laps[index]
+        heart_rate = number(lap.get('hr_tail'))
+        if heart_rate is None:
+            heart_rate = number(lap.get('avg_heart_rate'))
+        if heart_rate is None or not 0 < heart_rate < 300:
+            continue
+        zone = hr_zone(athlete, heart_rate + correction)
+        if zone:
+            zones.append(int(zone))
+    if not zones:
+        return None
+    low, high = min(zones), max(zones)
+    return f'Z{low}' if low == high else f'Z{low}>Z{high}'
+
+
 def _duration_label(seconds):
     milliseconds = int(round(float(seconds) * 1000))
     hours, remainder = divmod(milliseconds, 3600000)
@@ -93,14 +114,20 @@ def alternative_part(athlete, metrics, duration_s, laps=None):
     correction = max(0, int(getattr(athlete, 'alternative_hr_correction', 10) or 0))
     corrected_hr = zone_average + correction if zone_average is not None else None
     zone = hr_zone(athlete, corrected_hr) if zone_average is not None and 0 < zone_average < 300 else None
+    interval_zone = _work_zone_label(athlete, laps, intervals, correction)
     interval_label = intervals['label'] if intervals else None
     text = f"{label} {interval_label or str(max(1, math.floor(seconds / 60 + .5))) + chr(39)}"
-    part['description'] = text + (f' Z{zone}' if zone else '')
+    zone_label = interval_zone or (f'Z{zone}' if zone else '')
+    part['description'] = text + (f' {zone_label}' if zone_label else '')
     # Sport and duration are sufficient for a usable Alternative. Heart rate
     # only enriches it with a zone; missing/mismatching zones must not hide the
     # Use/Add actions for an otherwise valid non-running activity.
     part['training_fields'] = {'alt': part['description']}
-    if zone:
+    if interval_zone:
+        part['analysis_note'] = (
+            f'Alternative · Work-lap end HR zones with +{correction} correction: {interval_zone}.'
+        )
+    elif zone:
         source = 'average work-lap HR' if work_average is not None else 'average HR'
         part['analysis_note'] = (
             f'Alternative · Zone from {source} {zone_average:g} + {correction} = {corrected_hr:g} bpm.'
