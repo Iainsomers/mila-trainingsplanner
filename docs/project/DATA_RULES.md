@@ -375,3 +375,6 @@ Korte Garmin-sets na strides (10 november 2026). Automatische herkenning vereist
 
 
 Expliciete afstandsvolgorde (11 november 2026). Alleen een volledige, eenduidig passende chatsuggestie met meerdere blokken en een afsluitende herhalingsreeks vanaf 400 m kan bronlaps samenvoegen tot afstandsblokken zonder geregistreerd herstel. Elke doelrep moet passen binnen max(30 m, 8%). Iedere CORE-lap krijgt een rol. Kleine overgangslaps van maximaal 5 m en 2 s en gemeten wandelherstel worden apart behouden. De gemeten meters en seconden blijven beschikbaar. De afgeleide beschrijving bevat geen geschatte pauzeduur. Automatische intervalherkenning behoudt haar herstelvoorwaarden.
+
+
+Chatgrenscorrectie (13 november 2026). Alleen bij chatvalidatie mogen afstandsgroepen vanaf 400 m voor de herhalingsgroepen uit een enkel werkblok bestaan. De originele lapdekking, afstandsmarges, herstelgrenzen en snelheidscontrast blijven vereist. De automatische herkenning houdt de bestaande groepsvoorwaarden. Een exact no wu of geen wu activeert ook de controle dat warmup_laps leeg is. Z2 in de warming-up levert een coachwaarschuwing.

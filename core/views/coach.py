@@ -6209,9 +6209,13 @@ def garmin_type_c_ayc_view(request, model="C"):
         return JsonResponse({'ok':False, 'message':'Activity not found. Reopen Garmin and try again.', 'results':[]})
     for result in results:
         for part in result.get('parts') or []:
+            warmup_text = str((part.get('training_fields') or {}).get('wu') or '')
+            if re.search(r"\bz2\b", warmup_text, re.I):
+                part['ai_structure_warning'] = 'Warmup contains Z2 running. Check whether these laps belong in Main.'
             if not show_diagnostics:
                 part.pop('ai_structure_reason', None)
                 part.pop('ai_structure_model', None)
+                part.pop('ai_structure_warning', None)
                 part.pop('analysis_note', None)
     results.extend(summary_results)
     results.sort(key=lambda result: str(result.get("start") or ""))

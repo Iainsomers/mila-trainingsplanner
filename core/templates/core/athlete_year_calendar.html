@@ -3122,6 +3122,11 @@
           var note = document.createElement("div"); note.className = "small text-muted mb-2";
           note.textContent = part.analysis_note; box.appendChild(note);
         }
+        if (watchCoachUser && part.ai_structure_warning) {
+          var warning = document.createElement("div"); warning.className = "small text-warning mb-2";
+          warning.textContent = part.ai_structure_warning; warning.setAttribute("role", "status");
+          box.appendChild(warning);
+        }
         renderTypeALaps(box, (model === "C" || model === "D") ? "Recorded laps" : "Manual laps", part.manual, model === "B" || model === "C" || model === "D", model === "D", model === "C" || model === "D");
         renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C" || model === "D", model === "D", model === "C" || model === "D");
       });

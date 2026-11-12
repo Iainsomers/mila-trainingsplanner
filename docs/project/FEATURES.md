@@ -622,3 +622,6 @@ Garmin C/D herkent ook een reeks van minstens drie vrijwel gelijke tijdreps met 
 
 
 Garmin C/D-chat kan een volledige afstandsvolgorde zoals 1650m//1600m//8*500m aan opeenvolgende bronlaps koppelen. De expliciete suggestie levert de herhalingscontext wanneer herstel niet is geregistreerd. De chat vermeldt dat de herstelduur onbekend is.
+
+
+Garmin C/D-chat kan op verzoek losse afstandsblokken voor de herhalingen in Main plaatsen. Een expliciet no wu vereist een voorstel zonder warming-up. Coaches krijgen een waarschuwing als een voorgestelde warming-up Z2 bevat.

@@ -691,6 +691,9 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
     so a model response cannot alter measured distance or time calculations.
     """
     diagnostics = diagnostics if diagnostics is not None else {}
+    no_warmup_requested = bool(chat_messages and re.fullmatch(
+        r"\s*(?:no\s+(?:wu|warm[ -]?up)|geen\s+(?:wu|warming[ -]?up))\s*[.!]?\s*",
+        chat_messages[-1].get('content', ''), re.I))
     diagnostics['status'] = 'measured_structure'
     # Strong measured structure wins over an AI proposal which can omit short
     # reps or repeat the following continuous block inside every set.
@@ -793,6 +796,10 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             'what the data supports or asking a focused question. Never claim a usable proposal unless supported. '
             'Explicit nominal distances such as 190m are allowed, without changing measured meters or seconds. '
             'Do not round an explicitly requested nominal distance to 50m. Return chat_reply with every response.')
+        if no_warmup_requested:
+            prompt['boundary_request'] = ('The user says no warmup. Keep warmup_laps empty. '
+                'Represent separated leading running blocks as individual distance groups, with recovery assigned separately. '
+                'Do not merge separated or Z2 blocks into continuous_main_laps.')
     if requested_structure:
         prompt['requested_structure'] = requested_structure
         prompt['suggestion_task'] = ('Test this numeric structure against the original measured laps. '
@@ -845,6 +852,10 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             'Missing, flat or ambiguous evidence must lower confidence; never invent recovery or increase confidence to pass validation.'
         )
     if chat_messages:
+        prompt['task'] += (' In chat, leading distance groups of at least 400m may have one rep before the repeated groups. '
+            'Use these for separate Main blocks before intervals, and keep measured recoveries separate. '
+            'A proposed Z2 warmup is a boundary warning: reconsider whether those laps belong in Main, '
+            'especially when the user asks for no warmup.')
         prompt['output_schema']['chat_reply'] = 'concise conversational reply'
         prompt['task'] = prompt['task'].replace('nominal target_meters (multiple of 50)', 'nominal target_meters (integer meters, including 190 when explicitly requested)')
     body = json.dumps({
@@ -919,10 +930,10 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
         rep_zone = lambda meters, seconds: lap_zone_paces(meters, seconds * 1000, athlete)[0]
         candidate_data = data
         issues = []
-        structure = validate_lap_structure(data, facts, issues=issues, rep_zone=rep_zone, requested_structure=requested_structure, allow_exact_distance=bool(chat_messages))
+        structure = validate_lap_structure(data, facts, issues=issues, rep_zone=rep_zone, requested_structure=requested_structure, allow_exact_distance=bool(chat_messages), require_no_warmup=no_warmup_requested, allow_leading_single_blocks=bool(chat_messages))
         if not structure:
             measurement_issues = []
-            validate_lap_structure(data, facts, issues=measurement_issues, minimum_confidence=.5, rep_zone=rep_zone, requested_structure=requested_structure, allow_exact_distance=bool(chat_messages))
+            validate_lap_structure(data, facts, issues=measurement_issues, minimum_confidence=.5, rep_zone=rep_zone, requested_structure=requested_structure, allow_exact_distance=bool(chat_messages), require_no_warmup=no_warmup_requested, allow_leading_single_blocks=bool(chat_messages))
             issues += [issue for issue in measurement_issues if issue not in issues]
         # A bounded repair is still an AI proposal, never a local pattern fix.
         # Only server-owned validation feedback and the existing anonymous lap
@@ -953,7 +964,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
                     repaired = json.loads(json.loads(response.read().decode('utf-8'))['choices'][0]['message']['content'])
                 candidate_data = repaired
                 issues = []
-                structure = validate_lap_structure(repaired, facts, issues=issues, rep_zone=rep_zone, requested_structure=requested_structure, allow_exact_distance=bool(chat_messages))
+                structure = validate_lap_structure(repaired, facts, issues=issues, rep_zone=rep_zone, requested_structure=requested_structure, allow_exact_distance=bool(chat_messages), require_no_warmup=no_warmup_requested, allow_leading_single_blocks=bool(chat_messages))
             except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError, IndexError, TypeError):
                 pass
         if structure and cache_key:
@@ -964,7 +975,7 @@ def _model_b_ai_description(laps, athlete=None, *, allow_lap_structure=True, dia
             # Automatic use retains the 0.75 threshold. A lower score may only
             # be offered for explicit review after identical measurement checks.
             measurement_issues = []
-            review = validate_lap_structure(candidate_data, facts, minimum_confidence=.5, issues=measurement_issues, rep_zone=rep_zone, requested_structure=requested_structure, allow_exact_distance=bool(chat_messages))
+            review = validate_lap_structure(candidate_data, facts, minimum_confidence=.5, issues=measurement_issues, rep_zone=rep_zone, requested_structure=requested_structure, allow_exact_distance=bool(chat_messages), require_no_warmup=no_warmup_requested, allow_leading_single_blocks=bool(chat_messages))
             if not review:
                 diagnostics['reason'] = ' '.join(dict.fromkeys(measurement_issues or issues))
             if review:

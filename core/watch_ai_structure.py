@@ -137,7 +137,7 @@ def parse_structure_suggestion(text):
     return groups
 
 
-def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, rep_zone=None, requested_structure=None, allow_exact_distance=False):
+def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, rep_zone=None, requested_structure=None, allow_exact_distance=False, require_no_warmup=False, allow_leading_single_blocks=False):
     """No omitted/duplicate laps, invented reps, or running discarded as stops."""
     reason = 'Invalid lap structure or confidence.'
     def reject():
@@ -171,6 +171,9 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             return values
 
         warmup = indices(proposal.get('warmup_laps', []))
+        if require_no_warmup and warmup:
+            reason = 'The user requested no warmup. Assign the measured running blocks to Main and keep recovery separate.'
+            return reject()
         cooldown = indices(proposal.get('cooldown_laps', []))
         recovery = indices(proposal.get('recovery_laps', []))
         stops = indices(proposal.get('stop_laps', []))
@@ -221,6 +224,7 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
                         or (len(starts) if starts else 1) != expected['sets']):
                     return reject()
         blocks, last = [], 0
+        repeated_group_seen = False
         for group_index, group in enumerate(groups):
             reps = group['reps']
             distance_target = group.get('target_meters')
@@ -232,9 +236,15 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
             if not distance_based and (type(target) is not int or target % 60 or not 120 <= target <= 1800):
                 reason = f"Group {group_index+1}: target_seconds must be whole minutes from 120 to 1800. For short fixed-distance reps (e.g. 300m in 55s), use target_meters, not measured seconds."
                 raise ValueError
-            if not isinstance(reps, list) or not 2 <= len(reps) <= 30:
-                reason = f"Group {group_index+1}: provide 2-30 observed reps. Combine equal sets in one group with set_start_laps; each reps entry is one effort."
+            singleton = isinstance(reps, list) and len(reps) == 1
+            if singleton and (not allow_leading_single_blocks or not distance_based or distance_target < 400 or repeated_group_seen
+                              or group_index == len(groups)-1 or group.get('set_start_laps')):
+                reason = 'A single Main block must be a distance block of at least 400m before a repeated group.'
+                return reject()
+            if not isinstance(reps, list) or not 1 <= len(reps) <= 30:
+                reason = f"Group {group_index+1}: provide 2-30 observed reps, or one leading continuous distance block before repetitions."
                 raise ValueError
+            repeated_group_seen = repeated_group_seen or not singleton
             for rep in reps:
                 reason = "Reps must be chronological consecutive source laps and agree with target distance within max(30m, 8%) or target time within tolerance."
                 ids = indices(rep)
@@ -369,7 +379,7 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
                 return reject()
             distance_keys.add((count, nominal))
             time_keys.add((count, group_blocks[0]['target']))
-            distance_text = f'{count}×{nominal} m{zone}{pause}'
+            distance_text = f'{count}×{nominal} m{zone}{pause}' if count > 1 else f'{nominal} m{zone}'
             time_text = f"{count}×{group_blocks[0]['target']//60}'{zone}{pause}"
             if set_sizes:
                 set_pause = f" sp{math.floor(median(set_pauses)+.5)}"
@@ -398,8 +408,10 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
                     ai_target_seconds=round(seconds), ai_nominal_m=nominal)
         fields = {'wu':boundary(warmup), 'main':' + '.join(distance_parts), 'cd':boundary(cooldown)}
         time_fields = None if continuous or any(g.get('target_meters') is not None for g in groups) else dict(fields, main=' + '.join(time_parts))
+        warning = ('Warmup contains Z2 running. Check whether these laps belong in Main.'
+                   if any(by_id[i]['zone'] == 'Z2' for i in warmup) else '')
         return {'training_fields':fields, 'time_fields':time_fields, 'assignments':assignments,
-                'description':description(fields)}
+                'description':description(fields), 'boundary_warning':warning}
     except (KeyError, TypeError, ValueError, ZeroDivisionError, OverflowError):
         return reject()
 
@@ -420,4 +432,6 @@ def apply_lap_structure(part, loads, structure):
         options.append({'label':label, 'training_fields':dict(fields), 'description':description(fields), 'watch_loads':loads})
     part.update(training_fields=dict(structure['training_fields']), description=structure['description'],
                 watch_loads=loads, training_alternatives=options)
+    if structure.get('boundary_warning'):
+        part['ai_structure_warning'] = structure['boundary_warning']
     return True

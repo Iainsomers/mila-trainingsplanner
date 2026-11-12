@@ -27,6 +27,48 @@ def split_distance_example():
 
 
 class WatchAIStructureTests(SimpleTestCase):
+    def test_chat_can_move_separate_z2_opening_blocks_to_main(self):
+        from core.views.polar_raw import _model_b_ai_description
+        values = [(677.67,194),(10.69,61),(847.46,241),(14.26,141),(1005.3,277),
+                  (165.64,46),(25.8201,103),(612.28,153),(35.8799,46),(595.39,150),
+                  (26.04,127),(132.6,27),(141.23,118),(127.76,25),(129.78,101),
+                  (134,26),(130,110),(135,26)]
+        recovery = [2,4,7,9,11,13,15,17]
+        facts = [dict(lap=i,distance_m=m,duration_s=s,
+                      zone='Z1' if i in recovery else 'Z2' if i <= 6 else 'Z3' if i <= 10 else 'Z5')
+                 for i,(m,s) in enumerate(values,1)]
+        groups = [dict(target_meters=700,reps=[[1]]),dict(target_meters=850,reps=[[3]]),
+                  dict(target_meters=1150,reps=[[5,6]]),dict(target_meters=600,reps=[[8],[10]]),
+                  dict(target_meters=150,reps=[[12],[14],[16],[18]])]
+        corrected = dict(confidence=.96,lap_structure=dict(warmup_laps=[],recovery_laps=recovery,groups=groups))
+        self.assertIsNone(validate_lap_structure(corrected,facts))
+        result = validate_lap_structure(corrected,facts,allow_leading_single_blocks=True,require_no_warmup=True)
+        self.assertIsNotNone(result)
+        self.assertEqual(result['training_fields']['wu'],'')
+        self.assertTrue(result['training_fields']['main'].startswith('700 m Z2 + 850 m Z2 + 1150 m Z2'))
+        original = deepcopy(corrected)
+        original['lap_structure']['warmup_laps'] = [1,3,5,6]
+        original['lap_structure']['groups'] = groups[3:]
+        valid_warmup = validate_lap_structure(original,facts)
+        self.assertIn('Z2',valid_warmup['boundary_warning'])
+        self.assertIsNone(validate_lap_structure(original,facts,require_no_warmup=True))
+        responses = []
+        for proposal in (original,corrected):
+            response = MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps(
+                {'choices':[{'message':{'content':json.dumps(proposal)}}]}).encode()
+            responses.append(response)
+        laps = [dict(distanceMeters=f['distance_m'],durationMillis=f['duration_s']*1000) for f in facts]
+        lookup = {(f['distance_m'],f['duration_s']*1000):f['zone'] for f in facts}
+        with patch.dict('os.environ',{'OPENAI_API_KEY':'test'}), patch(
+                'core.views.polar_raw.urlopen',side_effect=responses) as call, patch(
+                'core.views.polar_raw.lap_zone_paces',side_effect=lambda m,ms,a:(lookup.get((m,ms),'Z2'),'NA')):
+            chat = _model_b_ai_description(laps,strict_lap_structure=True,
+                chat_messages=[dict(role='user',content='no wu')])
+        self.assertEqual(call.call_count,2)
+        self.assertTrue(chat)
+        self.assertEqual(chat.structure['training_fields']['wu'],'')
+
     def test_chat_can_reply_without_a_usable_training(self):
         from core.views.polar_raw import _model_b_ai_description
         facts, _ = split_distance_example()
