@@ -519,6 +519,7 @@ class Athlete(models.Model):
     auto_wucd_enabled = models.BooleanField(default=False)
     auto_wu_m = models.PositiveIntegerField(default=0)
     auto_cd_m = models.PositiveIntegerField(default=0)
+    alternative_hr_correction = models.PositiveIntegerField(default=10)
 
     zone_speed_mps = models.JSONField(
         default=default_zone_speed_mps,

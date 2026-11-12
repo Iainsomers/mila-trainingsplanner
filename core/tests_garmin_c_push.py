@@ -712,6 +712,16 @@ class GarminCPushTests(TestCase):
         self.assertEqual(cycling.analysis_data['activity_metrics']['sport'],'CYCLING')
         self.assertTrue(cycling.analysis_data['laps'])
 
+        self.athlete.alternative_hr_correction = 0
+        self.athlete.save(update_fields=['alternative_hr_correction'])
+        expected_without_correction = ["Pilates 46' Z1", "Elliptical 90' Z1",
+                                       "Elliptical 99' Z1", "Cycling 5' Z2"]
+        for route in ('garmin_type_c_ayc','garmin_type_d_ayc'):
+            results=self.client.get(reverse(route),{'athlete':self.athlete.pk,'date':'2026-10-31'}).json()['results']
+            self.assertEqual([result['parts'][0]['description'] for result in results],expected_without_correction)
+            for result,(_,_,hr,_) in zip(results,examples):
+                self.assertIn(f'+ 0 = {hr} bpm',result['parts'][0]['analysis_note'])
+
     def test_non_running_missing_hr_or_limits_never_invents_a_zone(self):
         from core.watch_alternative import alternative_part
         self.athlete.zone_hr_bpm={'1':'151','2':'152-168'}

@@ -10602,6 +10602,41 @@ class AthleteTimeInputFormatTests(TestCase):
         athlete.refresh_from_db()
         self.assertTrue(athlete.see_session_km)
 
+    def test_trainer_and_athlete_can_set_non_negative_alternative_hr_correction(self):
+        User = get_user_model()
+        coach = User.objects.create_user(username="alt-hr-coach", password="secret", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach,name="althrrunner",birth_year=2000,gender="X")
+        athlete_user = User.objects.create_user(username="althrrunner", password="secret")
+        form_data = {
+            "name": athlete.name, "birth_year": "2000", "gender": "X", "zone_method": "manual",
+            "z1_pace": "6:00", "z2_pace": "5:30", "z3_pace": "5:00",
+            "z4_pace": "4:30", "z5_pace": "4:00",
+        }
+
+        self.assertEqual(athlete.alternative_hr_correction,10)
+        self.client.force_login(coach)
+        page=self.client.get(f"/coach/athletes/{athlete.id}/edit/")
+        self.assertContains(page,'Alternative HR correction (Alternative → Running)')
+        self.assertContains(page,'name="alternative_hr_correction"')
+        self.assertEqual(self.client.post(f"/coach/athletes/{athlete.id}/edit/",
+                         {**form_data,"alternative_hr_correction":"15"}).status_code,302)
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.alternative_hr_correction,15)
+
+        self.client.force_login(athlete_user)
+        self.assertContains(self.client.get("/athlete/settings/"),'Alternative HR correction (Alternative → Running)')
+        self.assertEqual(self.client.post("/athlete/settings/",
+                         {**form_data,"alternative_hr_correction":"4"}).status_code,302)
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.alternative_hr_correction,4)
+
+        rejected=self.client.post("/athlete/settings/",
+                                  {**form_data,"alternative_hr_correction":"-1"})
+        self.assertEqual(rejected.status_code,200)
+        self.assertContains(rejected,"Alternative HR correction must be 0 or higher.")
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.alternative_hr_correction,4)
+
     def test_athlete_can_change_start_on_ayc_setting(self):
         User = get_user_model()
         athlete = Athlete.objects.create(

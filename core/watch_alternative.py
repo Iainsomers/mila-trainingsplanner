@@ -58,7 +58,9 @@ def alternative_part(athlete, metrics, duration_s, laps=None):
     average = number(metrics.get('average_hr'))
     if average is None:
         average = number(metrics.get('sample_average_hr'))
-    zone = hr_zone(athlete, average + 10) if average is not None and 0 < average < 300 else None
+    correction = max(0, int(getattr(athlete, 'alternative_hr_correction', 10) or 0))
+    corrected_hr = average + correction if average is not None else None
+    zone = hr_zone(athlete, corrected_hr) if average is not None and 0 < average < 300 else None
     part = {'description_label': 'Generated description', 'manual': [], 'auto': []}
     if seconds is None or seconds <= 0:
         part['description'] = label
@@ -73,11 +75,13 @@ def alternative_part(athlete, metrics, duration_s, laps=None):
     # Use/Add actions for an otherwise valid non-running activity.
     part['training_fields'] = {'alt': part['description']}
     if zone:
-        part['analysis_note'] = f'Alternative · Zone from average HR {average:g} + 10 = {average + 10:g} bpm.'
+        part['analysis_note'] = (
+            f'Alternative · Zone from average HR {average:g} + {correction} = {corrected_hr:g} bpm.'
+        )
     else:
         part['analysis_note'] = ('Average HR is missing. Alternative cannot be assigned a zone.'
             if average is None or not 0 < average < 300 else
-            'Average HR + 10 does not match a single configured HR zone. Check the athlete’s HR zones.')
+            f'Average HR + {correction} does not match a single configured HR zone. Check the athlete’s HR zones.')
     if laps:
         part['manual'] = [{
             'index': index,

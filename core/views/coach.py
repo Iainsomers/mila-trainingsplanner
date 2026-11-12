@@ -11296,6 +11296,7 @@ def coach_athlete_create_view(request):
         "auto_wucd_enabled": False,
         "auto_wu_m": 0,
         "auto_cd_m": 0,
+        "alternative_hr_correction": 10,
         "z1_hr": "",
         "z2_hr": "",
         "z3_hr": "",
@@ -11344,6 +11345,7 @@ def coach_athlete_create_view(request):
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
+        form["alternative_hr_correction"] = (request.POST.get("alternative_hr_correction") or "10").strip()
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_hr"] = (request.POST.get(f"z{z}_hr") or "").strip()
 
@@ -11385,6 +11387,13 @@ def coach_athlete_create_view(request):
 
         auto_wu_m = _clean_non_negative_int(form["auto_wu_m"])
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
+        try:
+            alternative_hr_correction = int(form["alternative_hr_correction"])
+            if alternative_hr_correction < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            alternative_hr_correction = 10
+            errors.append("Alternative HR correction must be 0 or higher.")
 
         zone_hr_bpm = {}
         for z in ("1", "2", "3", "4", "5"):
@@ -11529,6 +11538,7 @@ def coach_athlete_create_view(request):
                 auto_wucd_enabled=form["auto_wucd_enabled"],
                 auto_wu_m=auto_wu_m,
                 auto_cd_m=auto_cd_m,
+                alternative_hr_correction=alternative_hr_correction,
                 pr_600_s=pr_600_s,
                 pr_800_s=pr_800_s,
                 pr_1000_s=pr_1000_s,
@@ -11653,6 +11663,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "auto_wucd_enabled": getattr(athlete, "auto_wucd_enabled", False),
         "auto_wu_m": getattr(athlete, "auto_wu_m", 0),
         "auto_cd_m": getattr(athlete, "auto_cd_m", 0),
+        "alternative_hr_correction": getattr(athlete, "alternative_hr_correction", 10),
         "z1_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("1", ""),
         "z2_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("2", ""),
         "z3_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("3", ""),
@@ -11738,6 +11749,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["auto_wucd_enabled"] = (request.POST.get("auto_wucd_enabled") == "on")
         form["auto_wu_m"] = (request.POST.get("auto_wu_m") or "0").strip()
         form["auto_cd_m"] = (request.POST.get("auto_cd_m") or "0").strip()
+        form["alternative_hr_correction"] = (request.POST.get("alternative_hr_correction") or "10").strip()
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_hr"] = (request.POST.get(f"z{z}_hr") or "").strip()
 
@@ -11779,6 +11791,13 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
 
         auto_wu_m = _clean_non_negative_int(form["auto_wu_m"])
         auto_cd_m = _clean_non_negative_int(form["auto_cd_m"])
+        try:
+            alternative_hr_correction = int(form["alternative_hr_correction"])
+            if alternative_hr_correction < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            alternative_hr_correction = getattr(athlete, "alternative_hr_correction", 10)
+            errors.append("Alternative HR correction must be 0 or higher.")
 
         zone_hr_bpm = {}
         for z in ("1", "2", "3", "4", "5"):
@@ -11948,6 +11967,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.auto_wucd_enabled = form["auto_wucd_enabled"]
             athlete.auto_wu_m = auto_wu_m
             athlete.auto_cd_m = auto_cd_m
+            athlete.alternative_hr_correction = alternative_hr_correction
             athlete.pr_600_s = pr_600_s
             athlete.pr_800_s = pr_800_s
             athlete.pr_1000_s = pr_1000_s

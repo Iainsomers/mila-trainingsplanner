@@ -718,6 +718,11 @@
                   <div class="settings-inline-number"><label class="form-label" for="auto_wu_m">WU m</label><input id="auto_wu_m" name="auto_wu_m" type="number" min="0" step="100" class="form-control form-control-sm" value="{{ form.auto_wu_m }}"></div>
                   <div class="settings-inline-number"><label class="form-label" for="auto_cd_m">CD m</label><input id="auto_cd_m" name="auto_cd_m" type="number" min="0" step="100" class="form-control form-control-sm" value="{{ form.auto_cd_m }}"></div>
                 </div>
+                <div class="mt-2">
+                  <label class="form-label" for="alternative_hr_correction">Alternative HR correction (Alternative → Running)</label>
+                  <input id="alternative_hr_correction" name="alternative_hr_correction" type="number" min="0" step="1" class="form-control form-control-sm" value="{{ form.alternative_hr_correction|default_if_none:10 }}" style="width:6rem;">
+                  <div class="form-text">Added to the measured average HR before applying the running HR zones.</div>
+                </div>
               </section>
 
               {% if mode == "edit" and athlete %}

@@ -36,6 +36,8 @@ In Athlete settings > Base Planning zijn zowel de atleetkeuze als `Copy van...` 
 
 De trainer en atleet kunnen in Athlete settings > General de persoonlijke opties `See session km` en `See session zones` aan- of uitzetten. `See session zones` start in dezelfde stand als `See session km`.
 
+De trainer en atleet kunnen in Athlete Info > Training defaults ook de persoonlijke `Alternative HR correction (Alternative → Running)` instellen. Deze staat standaard op +10 bpm, mag niet negatief zijn en wordt gebruikt om de gemeten gemiddelde HR van Garmin-alternatieve trainingen naar de persoonlijke hardloop-HR-zones te vertalen.
+
 De trainer kan daarnaast in Coach Settings > Planning de coachbrede optie `See session km` beheren voor Flex Planner en DCO Training. Deze instelling verandert de persoonlijke AYC-keuze van atleten niet.
 
 De trainer kan in Athlete settings per atleet de `P(ause)mode` instellen. Zonder afwijkende keuze volgt de atleet de coachinstelling; de atleet ziet en wijzigt deze coach-only instelling niet.

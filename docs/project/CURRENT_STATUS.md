@@ -1,5 +1,12 @@
 # Actuele status
 
+## 12 november 2026 — Instelbare HR-correctie voor Alternative
+
+- Athlete Info > Training defaults bevat voor coach en atleet `Alternative HR correction (Alternative → Running)`.
+- De persoonlijke waarde staat standaard op +10 bpm en accepteert alleen gehele waarden vanaf 0.
+- Garmin C en D gebruiken de opgeslagen waarde bij de zonebepaling en tonen dezelfde correctie in hun toelichting.
+- Migratie `0150_athlete_alternative_hr_correction` voegt de atleetinstelling toe.
+
 ## 12 november 2026 — Compactere Year Planner-layout en editor
 
 - `Selection` staat standaard ingeklapt. Bij precies één keuze toont de samenvatting direct de naam; bij meerdere keuzes blijven de aantallen zichtbaar.
