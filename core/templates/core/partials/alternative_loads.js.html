@@ -24,7 +24,12 @@ function flexAlternativeLoads(text, fallbackZone, storedSeconds, durationForText
       const match = part.match(/\bz\s*([1-6])\b/i);
       zones = [match ? match[1] : fallbackZone];
     }
-    const seconds = durationForText(part) || (parts.length <= 1 ? storedSeconds : 0);
+    const repeated = part.match(/\b(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?\s*(?:'|min\b|"|sec\b|s\b))/i);
+    const repeatedUnitSeconds = repeated ? durationForText(repeated[2]) : 0;
+    const parsedSeconds = repeated && repeatedUnitSeconds
+      ? Number(repeated[1]) * repeatedUnitSeconds
+      : durationForText(part);
+    const seconds = parsedSeconds || (parts.length <= 1 ? storedSeconds : 0);
     return seconds > 0 && zones.every(z => ['1','2','3','4','5','6'].includes(z))
       ? zones.map(zone => ({kind:'alt', zone:zone, seconds:seconds/zones.length})) : [];
   });

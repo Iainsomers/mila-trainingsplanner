@@ -50,3 +50,13 @@ class AlternativeProgressionTests(SimpleTestCase):
             duration_s=None,
         )
         self.assertEqual(_alt_zone_durations(seg), [('1',1800), ('4',1440), ('1',1800)])
+
+    def test_prefixed_repeat_symbols_override_stale_stored_duration(self):
+        for symbol in ['*', 'x', '×']:
+            seg = SimpleNamespace(
+                type='ALT',
+                text=f"Elliptical 16{symbol}3' p45 Z2>Z3",
+                zone='2',
+                duration_s=180,
+            )
+            self.assertEqual(_alt_zone_durations(seg), [('2',1440), ('3',1440)])

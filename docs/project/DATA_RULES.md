@@ -238,6 +238,8 @@ AI-lapstructuur: minimaal 0.75 confidence; elke bronlap exact één keer toegewe
 
 Alternative-progressies verdelen uitsluitend de actieve duur gelijk over alle zones in het bereik Z1–Z3, inclusief tussenliggende zones en dalende notatie. Voorbeeld 15×3′ Z2>Z3 is 1350s Z2 + 1350s Z3; herstelnotatie verandert de actieve duur niet. Eénzoneblokken en //-samengestelde blokken volgen dezelfde gedeelde Python-regel in AYC en stats en dezelfde browserregel in Flex. Alternative blijft buiten loopkilometers. Halve minuten blijven behouden tot de weergave (maximaal één decimaal).
 
+Herhalingen in Alternative accepteren `*`, `x` en `×` als gelijkwaardige vermenigvuldiging, ook wanneer er eerst een activiteitnaam staat. `Elliptical 16×3' p45 Z2>Z3` telt daarom direct als 48 actieve minuten: 24 minuten Z2 en 24 minuten Z3. De tekstberekening gaat voor op eventueel verouderde opgeslagen duurmetadata.
+
 
 Lokale kandidaat voor gemengde tijdsblokken: werk is een aaneengesloten reeks Z2–Z5-laps vanaf 2.5m/s, onderbroken door trager herstel. Repduur wordt op hele minuten gegroepeerd; minimaal vier reps en twee opeenvolgende verschillende tijdsgroepen. Prefix wordt alleen als stop behandeld bij minstens 600s onder 1m/s; overige prefix is WU. Een rustige eindlap vanaf 800m en 2m/s kan CD zijn. Daarna gelden onverkort alle controles van validate_lap_structure, inclusief volledige dekking, repduur/distance-consistentie en herstelcontrast. Geen AI-verzoek nodig voor deze lokale kandidaat.
 

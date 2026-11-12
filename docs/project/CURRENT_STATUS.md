@@ -1,5 +1,11 @@
 # Actuele status
 
+## 12 november 2026 — Alternative-herhalingen achter activiteitnaam
+
+- Alternative-totalen herkennen `*`, `x` en `×` nu ook wanneer een activiteitnaam vóór de herhaling staat.
+- `Elliptical 16×3' p45 Z2>Z3` telt direct als 48 actieve minuten en verdeelt die als 24 minuten Z2 en 24 minuten Z3.
+- De opnieuw berekende tekst is leidend boven verouderde opgeslagen duurmetadata; tijdelijk omzetten naar `*` is niet meer nodig.
+
 ## 12 november 2026 — Instelbare HR-correctie voor Alternative
 
 - Athlete Info > Training defaults bevat voor coach en atleet `Alternative HR correction (Alternative → Running)`.

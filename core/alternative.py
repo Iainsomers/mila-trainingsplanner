@@ -20,7 +20,7 @@ def zone_durations(text, fallback_zone, stored_seconds, duration_for_text):
         else:
             match = re.search(r'\bz\s*([1-6])\b', part, re.I)
             zones = [match.group(1)] if match else [str(fallback_zone or '')]
-        repeated = re.match(r"^\s*(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?\s*(?:'|min\b|\"|sec\b|s\b))", part, re.I)
+        repeated = re.search(r"\b(\d+)\s*(?:x|\*|×)\s*(\d+(?:[.,]\d+)?\s*(?:'|min\b|\"|sec\b|s\b))", part, re.I)
         seconds = (int(repeated.group(1))*duration_for_text(repeated.group(2))
                    if repeated else duration_for_text(part))
         seconds = seconds or (stored_seconds if len(parts) <= 1 else 0)
