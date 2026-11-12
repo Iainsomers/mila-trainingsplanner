@@ -66,7 +66,7 @@ Bijgewerkt: 20 oktober 2026.
 - Huidige dag binnen die week: donkerder geel.
 - Weektype is een gekleurde pil: Recovery, Aerobe, Specific, Intense of Taper.
 - Race is oranje; belangrijke `Race!` is rood met witte tekst waar die markering wordt gebruikt.
-- Year Planner whereabouts gebruiken vaste onderscheidende kleuren: Camp groen, Travel lichtgroen, Test paars, Championship rood, Diamond L roze, Race Gold goud, Race Silver zilver, Race Bronze brons, Race Other oranje, Expermeetings blauw, Medical geel en Brinec oranje.
+- Year Planner whereabouts gebruiken vaste onderscheidende kleuren: Camp groen, Travel lichtgroen, Test paars, Championship rood, Diamond L roze, Race Gold goud, Race Silver zilver, Race Bronze brons, Race Other oranje, Expermeetings blauw, Medical geel, Brinec lichtoranje en Other donker leigrijs/blauw (`#34495e`).
 - Evaluatie voltooid: groen vinkje.
 - Weektypekleur moet zichtbaar blijven naast huidige-weekmarkering.
 

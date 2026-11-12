@@ -1,5 +1,10 @@
 # Actuele status
 
+## 12 november 2026 — Other als whereabouts-categorie
+
+- Year Planner biedt `Other` als aanvullende whereabouts-categorie in invoer en legenda.
+- Other gebruikt de eigen, nog niet gebruikte donker leigrijs/blauwe kleur `#34495e`; dezelfde kleur wordt gebruikt voor de dagmarkering in Athlete Diary.
+
 ## 12 november 2026 — Oura-tegel op Hardware hersteld
 
 - De persoonlijke pagina `More > Hardware` toont de Oura-tegel weer wanneer de coach voor die atleet `Allow Oura connection` heeft ingeschakeld.

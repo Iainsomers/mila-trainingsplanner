@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Whereabouts biedt naast de bestaande categorieën ook `Other`. Deze categorie wordt als gewone datumrange opgeslagen en verschijnt in Year Planner en de whereabouts-markeringen van Athlete Diary.
+
 - Individual Planner toont bij een gemeten Polar/Garmin-training hetzelfde klokje als Athlete Diary. Het opent de opgeslagen gemeten Main-reps of splits met afstand, tijd, tempo en beschikbare hartslagwaarden; het klokje opent niet het trainingsformulier.
 
 - Alternative toont en totaliseert tijd per zone voor Z1 tot en met Z6. Z4–Z6 worden net als Z1–Z3 in sessiekoppen en weektotalen getoond, zonder als hardloopkilometers mee te tellen.

@@ -771,6 +771,7 @@ class YearPlannerEntry(models.Model):
         ("expermeetings", "Expermeetings"),
         ("medical", "Medical"),
         ("brinec", "Brinec"),
+        ("other", "Other"),
     ]
 
     owner = models.ForeignKey(

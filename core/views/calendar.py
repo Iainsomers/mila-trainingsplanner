@@ -80,6 +80,7 @@ WHEREABOUT_DOT_COLORS = {
     "expermeetings": "#1976d2",
     "medical": "#f2c200",
     "brinec": "#ef6c00",
+    "other": "#34495e",
 }
 
 
