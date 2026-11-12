@@ -3,7 +3,7 @@
 ## 12 november 2026 — Simple Athlete Diary voor staf
 
 - Staf kan bovenaan Athlete Diary `Simple` inschakelen; standaard staat deze weergave uit.
-- Per AM/PM-sessie blijven het hardloop-kmtotaal, Alternative-totalen en de evaluatie zichtbaar. Trainingsinhoud, zoneverdeling, whereabouts en meet-/bewerkacties verdwijnen.
+- Per AM/PM-sessie blijven het hardloop-kmtotaal, de grotere hardloop-kmtotalen per zone, Alternative-totalen en de evaluatie zichtbaar. Trainingsinhoud, whereabouts en meet-/bewerkacties verdwijnen.
 - De schakelaar werkt op desktop en mobiel en kan door atleten niet worden geactiveerd.
 
 ## 12 november 2026 — Alternative-herhalingen achter activiteitnaam

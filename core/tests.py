@@ -8268,7 +8268,7 @@ class SlotModalSaveTests(TestCase):
         coach, plan, athlete = self._user_plan_and_athlete()
         day = date.today()
         slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=day, slot_index=1)
-        slot.segments.create(type="CORE", text="Hidden detailed training", order=0)
+        slot.segments.create(type="CORE", text="5000m z2 Hidden detailed training", order=0)
         AthleteDayCheck.objects.create(
             athlete=athlete,
             date=day,
@@ -8288,6 +8288,9 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(simple_response, "athlete-year-calendar-page ayc-simple-view", html=False)
         self.assertContains(simple_response, 'name="simple" value="1" checked', html=False)
         self.assertNotContains(simple_response, '<div class="training-content">', html=False)
+        self.assertContains(simple_response, 'class="session-zone-pills"', html=False)
+        self.assertContains(simple_response, 'session-zone-z2', html=False)
+        self.assertContains(simple_response, ".ayc-simple-view .session-zone-pill", html=False)
         self.assertContains(simple_response, "Visible evaluation")
 
         normal_response = self.client.get(
