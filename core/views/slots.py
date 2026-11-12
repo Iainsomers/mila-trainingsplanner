@@ -1454,8 +1454,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         return HttpResponse('Alternative training required.', status=400)
     if running_add and not (request.POST.get('core_text') or '').strip():
         return HttpResponse('Main training required.', status=400)
-    watch_replaced_types = {'ALT'} if alternative_only else {'WU', 'CORE', 'CD'}
-    if not running_add:
+    # Add AM/PM appends a new Alternative segment. Use AM/PM keeps the
+    # replacement semantics for the complete running/Alternative part.
+    watch_replaced_types = set() if alternative_only else {'WU', 'CORE', 'CD'}
+    if not running_add and not alternative_only:
         watch_replaced_types.add('ALT')
     # Trainingsbuilder toggles (uit session)
     tb_show_wu = _tb_flag(request, "tb_show_wu", True)
@@ -2228,7 +2230,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         slot.segments.filter(type="CORE").delete()
 
     # Save ALT as separate blocks so // keeps Z1-Z3 minutes independent.
-    if not running_add:
+    if not running_add and not alternative_only:
         slot.segments.filter(type="ALT").delete()
     for index, (alt_part, parsed) in enumerate(zip(alt_parts, alt_parses)):
         alt_seg = slot.segments.create(

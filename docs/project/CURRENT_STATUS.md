@@ -720,3 +720,4 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 11 november — Chatsuggestie voor 1650m//1600m//8*500m geaccepteerd op basis van dertien lapmetingen, met herstelcontext uit de expliciete suggestie. Ook2*1625m//8*500m past. Kloktest dekt tien volledige werkblokken en behoud van alle bronmetingen in C en D. Voorstel met negen500m-reps wordt afgewezen.
+12 november — Add AM/PM voor Garmin C/D is cumulatief voor Alternative: iedere toegevoegde activiteit wordt een afzonderlijk ALT-segment in hetzelfde dagdeel. Use AM/PM blijft de gekozen dagdeeltraining vervangen. Regressie dekt Strength Training 61' Z1 plus Elliptical 30' Z1 als twee segmenten, inclusief duur en zone, en behoud van bestaande/gedeelde segmenten en Watch-snapshot.

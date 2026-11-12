@@ -180,7 +180,7 @@ class WatchOriginalPlanTests(TestCase):
             self.assertEqual(alt.duration_s,2760)
             self.assertEqual(slot.watch_loads,[])
 
-    def test_alternative_only_import_preserves_running_and_all_other_fields(self):
+    def test_alternative_add_import_preserves_everything_and_appends_segments(self):
         for index in (1,2):
             slot=self.original(index)
             self.add_protected_fields(slot)
@@ -188,6 +188,7 @@ class WatchOriginalPlanTests(TestCase):
             slot.refresh_from_db()
             before=list(slot.segments.exclude(type='ALT').values())
             metadata=(slot.source,slot.watch_loads,slot.watch_main_reps,slot.watch_plan_snapshot,slot.segment_order)
+            expected_alt_texts = list(slot.segments.filter(type='ALT').order_by('order','id').values_list('text',flat=True))
             for origin,text in [('watch_c',"Elliptical 90' Z2"),('watch_d',"Strength training 46' Z1")]:
                 response=self.client.post(self.url(index),{'watch_fields':'alternative','alt_text':text,
                     'watch_origin':origin,'core_text':'invalid ignored running value','wu_text':'invalid',
@@ -199,13 +200,17 @@ class WatchOriginalPlanTests(TestCase):
                     for row in rows: row.pop('order',None)
                 self.assertEqual(after,before)
                 self.assertEqual((slot.source,slot.watch_loads,slot.watch_main_reps,slot.watch_plan_snapshot,slot.segment_order),metadata)
-                alt=slot.segments.get(type='ALT')
+                expected_alt_texts.append(text)
+                alternatives=list(slot.segments.filter(type='ALT').order_by('order','id'))
+                self.assertEqual([alt.text for alt in alternatives],expected_alt_texts)
+                alt=alternatives[-1]
                 self.assertEqual(alt.text,text)
                 self.assertEqual(alt.duration_s,5400 if origin=='watch_c' else 2760)
                 self.assertEqual(alt.zone,'2' if origin=='watch_c' else '1')
                 self.assertIsNone(alt.distance_m)
                 self.assertIsNone(alt.norm_distance_m)
-                self.assertIn(text,[item['text'] for item in slot.watch_training_snapshot['segments']])
+                snapshot_alt_texts=[item['text'] for item in slot.watch_training_snapshot['segments'] if item['type']=='ALT']
+                self.assertEqual(snapshot_alt_texts,expected_alt_texts)
 
     def test_alternative_minutes_are_added_without_changing_measured_running_totals(self):
         from core.stats import athlete_week_stats
@@ -242,7 +247,20 @@ class WatchOriginalPlanTests(TestCase):
         self.assertEqual(list(own.segments.exclude(type='ALT').order_by('type').values_list('type','text','photo_ids')),
                          list(shared.segments.exclude(type='ALT').order_by('type').values_list('type','text','photo_ids')))
         self.assertEqual(list(shared.segments.values()),before)
-        self.assertEqual(own.segments.get(type='ALT').text,"Pilates 46' Z1")
+        self.assertEqual(list(own.segments.filter(type='ALT').order_by('order','id').values_list('text',flat=True)),
+                         ["30' z1 cross trainer","Pilates 46' Z1"])
+
+    def test_two_alternative_activities_combine_in_one_daypart(self):
+        for text, origin in [("Strength Training 61' Z1", 'watch_c'), ("Elliptical 30' Z1", 'watch_c')]:
+            response=self.client.post(self.url(),{
+                'watch_fields':'alternative','alt_text':text,'watch_origin':origin,
+            })
+            self.assertEqual(response.status_code,200)
+        own=TrainingSlot.objects.get(plan=self.plan,date=self.day,slot_index=2,athlete=self.athlete)
+        alternatives=list(own.segments.filter(type='ALT').order_by('order','id'))
+        self.assertEqual([alt.text for alt in alternatives],["Strength Training 61' Z1","Elliptical 30' Z1"])
+        self.assertEqual([alt.duration_s for alt in alternatives],[3660,1800])
+        self.assertEqual([alt.zone for alt in alternatives],['1','1'])
 
     def test_alternative_only_import_into_empty_daypart(self):
         response=self.client.post(self.url(),{'watch_fields':'alternative','alt_text':"Elliptical 99' Z1",'watch_origin':'watch_c'})
