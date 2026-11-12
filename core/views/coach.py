@@ -7580,12 +7580,23 @@ def year_planner_view(request):
         bool(getattr(athlete, "year_planner_whereabouts_enabled", False)) if is_athlete_user
         else CoachSettings.objects.filter(user=owner, detailed_camps_enabled=True).exists()
     )
-    selection_setting = request.GET.get('selection_open')
-    if selection_setting in {'0', '1'}:
-        selection_open = selection_setting == '1'
-        request.session['year_selection_open'] = selection_open
+    selection_open = request.GET.get('selection_open') == '1'
+    selected_labels = [athlete_obj.name for athlete_obj in selected_athletes]
+    selected_labels.extend(label for _plan, label in basis_rows)
+    selected_labels.extend(
+        option["user"].get_full_name() or option["user"].username
+        for option in selected_coaches
+    )
+    if len(selected_labels) == 1:
+        selection_summary = selected_labels[0]
+    elif selected_labels:
+        selection_summary = (
+            f"{len(selected_ids)} Athlete{'s' if len(selected_ids) != 1 else ''} · "
+            f"{len(basis_rows)} Basis · "
+            f"{len(selected_coach_ids)} Coach{'es' if len(selected_coach_ids) != 1 else ''}"
+        )
     else:
-        selection_open = request.session.get('year_selection_open', not bool(rows))
+        selection_summary = "None selected"
     return render(request, "core/year_planner.html", {
         "show_detailed_camps": show_detailed_camps,
         "athletes": visible_athletes,
@@ -7596,6 +7607,7 @@ def year_planner_view(request):
         "selected_basis_ids": selected_basis_ids,
         "selected_basis_count": len(basis_rows),
         "selection_open": selection_open,
+        "selection_summary": selection_summary,
         "selected_ids": selected_ids,
         "all_visible_athletes_selected": all_visible_athletes_selected,
         "coaches": coach_options,

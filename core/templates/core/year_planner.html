@@ -905,7 +905,7 @@
     {% if not is_athlete_user %}
     <input type="hidden" name="selection_open" id="yearSelectionOpen" value="{% if selection_open %}1{% else %}0{% endif %}">
     <details class="year-selection" id="yearSelection" {% if selection_open %}open{% endif %}>
-      <summary>Selection <span>{{ selected_ids|length }} Athlete{{ selected_ids|length|pluralize }} · {{ selected_basis_count }} Basis · {{ selected_coach_ids|length }} Coach{{ selected_coach_ids|length|pluralize:"es" }}</span></summary>
+      <summary>Selection <span>{{ selection_summary }}</span></summary>
         <div class="year-selection-filter year-athlete-group">
           <div class="flex-grow-1">
             <label for="yearAthleteGroup" class="form-label mb-1">Group</label>
@@ -1030,10 +1030,10 @@
     </div>
     <label class="form-check year-active-check">
       <input class="form-check-input" type="checkbox" data-active-where-all>
-      <span class="form-check-label small">Use for all selected rows</span>
+      <span class="form-check-label small">Apply to all selected</span>
     </label>
     <button type="button" class="btn btn-sm btn-outline-danger" data-active-where-delete>Delete</button>
-    <button type="button" class="btn btn-sm btn-primary" data-active-where-close>Done</button>
+    <button type="button" class="btn btn-sm btn-primary" data-active-where-close>Save</button>
   </div>
   {% endif %}
 

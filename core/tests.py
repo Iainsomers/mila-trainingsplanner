@@ -4644,7 +4644,10 @@ class YearPlannerTests(TestCase):
         self.assertLess(html.index('id="yearAthleteGroup"'),html.index('data-year-basis-panel'))
         for title in ('Basis','Athletes','Coaches'):
             self.assertContains(response,'<h2 class="year-selector-title">'+title+'</h2>',html=True)
-        self.assertContains(response,'1 Athlete · 0 Basis · 0 Coaches')
+        self.assertContains(response,'Selection <span>Year Athlete</span>')
+        self.assertNotContains(response,'id="yearSelection" open')
+        self.assertContains(response,'Apply to all selected')
+        self.assertContains(response,'data-active-where-close>Save</button>')
         self.assertContains(response,'<details class="year-legend-disclosure">')
         for chunk in response.context['chunks']:
             self.assertEqual(sum(month['count'] for month in chunk['months']),len(chunk['days']))
@@ -4652,14 +4655,15 @@ class YearPlannerTests(TestCase):
             self.assertEqual(chunk['months'][-1]['key'],(chunk['days'][-1].year,chunk['days'][-1].month))
         self.assertContains(response,'--year-day-count: 92')
 
-    def test_year_selection_open_state_rendered_without_client_restore(self):
+    def test_year_selection_is_closed_by_default_and_can_be_kept_open_in_url(self):
         coach,athlete=self._coach_and_athlete()
         response=self.client.get('/planning/year/',{'athletes':[athlete.pk],'selection_open':'1'})
         self.assertContains(response,'id="yearSelection" open')
         self.assertContains(response,'id="yearSelectionOpen" value="1"')
         self.assertNotContains(response,'selectionDisclosure.open =')
-        remembered=self.client.get('/planning/year/',{'athletes':[athlete.pk]})
-        self.assertContains(remembered,'id="yearSelection" open')
+        default_page=self.client.get('/planning/year/',{'athletes':[athlete.pk]})
+        self.assertNotContains(default_page,'id="yearSelection" open')
+        self.assertContains(default_page,'id="yearSelectionOpen" value="0"')
         closed=self.client.get('/planning/year/',{'athletes':[athlete.pk],'selection_open':'0'})
         self.assertNotContains(closed,'id="yearSelection" open')
         self.assertContains(closed,'id="yearSelectionOpen" value="0"')

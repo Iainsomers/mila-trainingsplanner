@@ -1,5 +1,10 @@
 # Actuele status
 
+## 12 november 2026 — Compactere Year Planner-selectie en editor
+
+- `Selection` staat standaard ingeklapt. Bij precies één keuze toont de samenvatting direct de naam; bij meerdere keuzes blijven de aantallen zichtbaar.
+- De whereabouts-editor gebruikt `Apply to all selected` en `Save`; het onderliggende opslaggedrag is ongewijzigd.
+
 ## 12 november 2026 — Other als whereabouts-categorie
 
 - Year Planner biedt `Other` als aanvullende whereabouts-categorie in invoer en legenda.
