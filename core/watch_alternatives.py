@@ -87,6 +87,70 @@ def _valid_time_recovery(lap, neighbors):
                     for work in neighbors))
 
 
+def time_request_with_outlier(part, chat_messages):
+    """Prepare one slightly longer rep for explicit user confirmation."""
+    requested = requested_time_reps(chat_messages)
+    if not requested or not re.fullmatch(
+            r"\s*\d+\s*[×x*]\s*\d+\s*(?:['′’]|min(?:uut|uten)?)(?:\s+z[1-5])?\s*",
+            str(chat_messages[-1].get("content") or ""), re.I):
+        return None
+    count, minutes = requested
+    target = minutes * 60
+    if not 3 <= count <= 30 or not 120 <= target <= 1800:
+        return None
+    loads = part.get("watch_loads") or []
+    core = [load for load in loads if load.get("segment") == "CORE"]
+    if len(core) not in (count * 2 - 1, count * 2):
+        return None
+    try:
+        work = core[::2]
+        seconds = [float(load["seconds"]) for load in work]
+        tolerance = max(15, target * .06)
+        outliers = [i for i, duration in enumerate(seconds) if abs(duration - target) > tolerance]
+        if len(outliers) != 1:
+            return None
+        outlier = outliers[0]
+        if not target < seconds[outlier] <= target + max(60, target * .2):
+            return None
+        if any(not math.isfinite(float(load["meters"]) + duration)
+               or duration <= 0 or float(load["meters"]) / duration < 2.5
+               for load, duration in zip(work, seconds)):
+            return None
+        recovery = core[1::2]
+        if any(not _valid_time_recovery(load, work[i:i+2]) for i, load in enumerate(recovery)):
+            return None
+        candidate = deepcopy(part)
+        main_loads = [load for load in candidate["watch_loads"] if load.get("segment") == "CORE"]
+        nominal = round(median(float(load["meters"]) for load in work) / 50) * 50
+        for i, load in enumerate(main_loads):
+            for key in ("ai_rep", "ai_group", "ai_nominal_m", "ai_target_seconds", "nominal_rep_m"):
+                load.pop(key, None)
+            load["work_rep"] = i % 2 == 0
+            if load["work_rep"]:
+                load.update(ai_rep=i+1, ai_group=0, ai_nominal_m=nominal, ai_target_seconds=target)
+        from core.watch_ai_structure import description, representative_zones
+        zones = representative_zones("Z" + str(load.get("zone")) for load in work)
+        zone = (" " + (zones[0] if len(zones) == 1 else zones[0] + ">" + zones[-1])) if zones else ""
+        pause = round(median(float(load["seconds"]) for load in recovery[:count-1]))
+        candidate["training_fields"] = dict(part.get("training_fields") or {},
+            main=f"{count}×{minutes}'{zone} p{pause}")
+        candidate["description"] = description(candidate["training_fields"])
+        candidate["ai_structure_status"] = "user_confirmed"
+        candidate.pop("ai_structure_reason", None)
+        candidate.pop("ai_structure_model", None)
+        duration = seconds[outlier]
+        duration_text = f"{int(duration)//60}:{int(duration)%60:02d}"
+        message = (f"Rep {outlier+1} lasted {duration_text}, rather than {minutes}:00. "
+                   f"Use {count}×{minutes}' as the training notation? "
+                   f"The clock will keep the measured {duration_text}.")
+        candidate["chat_reply"] = (f"Confirmed {count}×{minutes}' as the training notation. "
+                                   f"Rep {outlier+1} retains its measured {duration_text}.")
+        candidate.pop("training_alternatives", None)
+        return candidate, message
+    except (KeyError, TypeError, ValueError, ZeroDivisionError, OverflowError):
+        return None
+
+
 def single_time_option(core):
     """Recognize repeated whole-minute work bouts, independent of distance."""
     if len(core) < 5:

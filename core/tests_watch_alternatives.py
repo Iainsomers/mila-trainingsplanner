@@ -7,6 +7,27 @@ from core.watch_processing import processed_main_reps
 
 
 class WatchAlternativesTests(SimpleTestCase):
+    def test_time_outlier_confirmation_requires_complete_series_and_one_modest_overrun(self):
+        from core.watch_alternatives import time_request_with_outlier
+        loads = []
+        for i, seconds in enumerate([362, 360, 361, 405, 360, 361]):
+            if i:
+                loads.append(dict(segment='CORE', zone='1', meters=60, seconds=45))
+            loads.append(dict(segment='CORE', zone='1', meters=1300, seconds=seconds))
+        part = dict(watch_loads=loads, training_fields={'main':'original'})
+        before = deepcopy(part)
+        chat = [{'role':'user','content':"6*6'"}]
+        self.assertIsNotNone(time_request_with_outlier(part, chat))
+        self.assertEqual(part, before)
+        for index, seconds in [(0, 405), (6, 480), (6, 300), (1, 5)]:
+            invalid = deepcopy(part)
+            invalid['watch_loads'][index]['seconds'] = seconds
+            self.assertIsNone(time_request_with_outlier(invalid, chat))
+        self.assertIsNone(time_request_with_outlier(
+            dict(part, watch_loads=loads[:-2]), chat))
+        self.assertIsNone(time_request_with_outlier(part,
+            [{'role':'user','content':"5*6'"}]))
+
     def test_explicit_time_request_selects_time_without_ambiguity_choice(self):
         options = [
             dict(label='Distance',training_fields={'main':'4×1800 m Z1 p61'},

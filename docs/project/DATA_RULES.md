@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- De expliciete Garmin C/D-chatbevestiging voor één langere tijdrep geldt alleen voor een volledige afwisselende werk/herstelreeks (3–30 reps, 2–30 minuten), met één overschrijding buiten de normale tolerantie van max(15s, 6%). Die rep mag maximaal max(60s, 20%) langer zijn. Alle overige reps en alle geregistreerde herstelblokken moeten de bestaande tijdreekscontroles doorstaan. Een kortere rep, ontbrekende rep of meerdere afwijkingen wordt niet geforceerd. De nominale trainingsduur wijzigt alleen na bevestiging; de klok en belasting behouden de werkelijke meetwaarden. De ondertekende bevestiging is 10 minuten geldig en gebonden aan gebruiker, atleet, dag, model, activiteit, aanvraag en meetgegevens. De gewone automatische herkenning verandert niet.
+
 - De bestaande seizoensperiode in Year Planner (`2026/27`, intern `season`) loopt van 1 oktober van het gekozen jaar t/m 30 september van het volgende jaar.
 
 - RaceEvent heeft een optionele inclusieve `end_date`; leeg betekent één dag op `date`. Een ingevulde einddatum mag niet vóór de start liggen. Periodefilters in Race Calendar en Year Planner gebruiken overlap met het wedstrijdbereik. Iedere geselecteerde wedstrijddag blokkeert periodisatie. De evenementduur creëert geen extra AYC/Flex-trainingsafstanden.

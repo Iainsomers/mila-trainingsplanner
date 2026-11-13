@@ -1,5 +1,11 @@
 # Actuele status
 
+## 13 november 2026 — Chatbevestiging bij één langer gelopen tijdrep
+
+- Garmin C en D vragen expliciete bevestiging wanneer een opgegeven tijdreeks volledig zichtbaar is maar één werkrep beperkt langer duurde. Voorbeeld: 6×6′ met één gemeten 6:45.
+- Bevestigen via knop of `ja` verandert alleen de trainingsnotatie/preview; Use/Add slaat later op. Alle bronmetingen blijven behouden, inclusief de 6:45 in het klokje. Geen ruimere automatische herkenning of algemene afzwakking van de meetcontroles.
+- Gerichte endpointtests voor beide modellen controleren vraag, bevestiging, ongeldige/verlopen token en behoud van alle zes klokreps. Afwijsgevallen en de twee bevestigingsroutes in de chat hebben afzonderlijke regressietests.
+
 ## 12 november 2026 — Simple Athlete Diary voor staf
 
 - Staf kan bovenaan Athlete Diary `Simple` inschakelen; standaard staat deze weergave uit.

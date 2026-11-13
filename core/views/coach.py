@@ -6185,9 +6185,39 @@ def garmin_type_c_ayc_view(request, model="C"):
         part.pop('training_alternatives', None)
     local_time_selected = prefer_explicit_time_request(results, chat_messages)
     if local_time_request and not local_time_selected:
-        return JsonResponse({'ok':False, 'message':'No matching structure could be confirmed.',
-            'chat_reply':'The measured laps do not confirm that exact number and duration of repetitions.',
-            'results':[]})
+        from django.core import signing
+        import hashlib
+        from core.watch_alternatives import time_request_with_outlier
+
+        parts = [part for result in results for part in result.get('parts', [])]
+        outlier = time_request_with_outlier(parts[0], chat_messages) if len(parts) == 1 else None
+        if outlier:
+            candidate, question = outlier
+            fingerprint = hashlib.sha256(json.dumps(
+                {"loads":parts[0].get("watch_loads"), "fields":parts[0].get("training_fields")},
+                sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            confirmation_data = [request.user.pk, athlete.pk, day, model,
+                                 request.GET.get('suggestion_session'), list(local_time_request), fingerprint]
+            token = request.POST.get('time_confirmation', '')
+            if token:
+                try:
+                    confirmed = signing.loads(token, salt='watch-time-outlier', max_age=600)
+                except signing.BadSignature:
+                    confirmed = None
+                if confirmed != confirmation_data:
+                    return JsonResponse({'ok':False, 'results':[],
+                        'message':'This confirmation has expired or the measured activity has changed. Send the suggestion again.'}, status=400)
+                parts[0].clear()
+                parts[0].update(candidate)
+            else:
+                return JsonResponse({'ok':False, 'message':'', 'chat_reply':question, 'results':[],
+                    'confirmation_required':{
+                        'token':signing.dumps(confirmation_data, salt='watch-time-outlier'),
+                        'request':chat_text, 'label':f"Yes, use {local_time_request[0]}×{local_time_request[1]}'"}})
+        else:
+            return JsonResponse({'ok':False, 'message':'No matching structure could be confirmed.',
+                'chat_reply':'The measured laps do not confirm that exact number and duration of repetitions.',
+                'results':[]})
     for result in results:
         for part in result.get('parts') or []:
             review = part.pop('review_lap_structure',None)

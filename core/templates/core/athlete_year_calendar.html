@@ -2982,6 +2982,7 @@
           invalid_response: "AI returned no usable lap structure. Showing measured fallback.",
           rejected_structure: "AI proposal did not pass confidence or measurement checks. Showing measured fallback.",
           insufficient_laps: "Too few usable laps for AI structure recognition.",
+          user_confirmed: "Training notation confirmed by you; measured rep times are preserved.",
           measured_structure: "Using measured structure recognition; AI was not called."
         };
         if (watchCoachUser && aiMessages[part.ai_structure_status]) {
@@ -3051,26 +3052,55 @@
               suggest.className = "btn btn-sm btn-primary"; suggest.textContent = "Send";
               var feedback = document.createElement("div"); feedback.className = "small mt-2";
               feedback.setAttribute("role", "status");
+              var confirmationControls = document.createElement("div");
+              confirmationControls.className = "d-flex flex-wrap gap-2 mt-2";
+              function renderConfirmation() {
+                confirmationControls.textContent = "";
+                if (!chat.confirmation) return;
+                var yes = document.createElement("button"); yes.type = "button";
+                yes.className = "btn btn-sm btn-primary"; yes.textContent = chat.confirmation.label;
+                yes.addEventListener("click", function() { checkSuggestion(true); });
+                var no = document.createElement("button"); no.type = "button";
+                no.className = "btn btn-sm btn-outline-secondary"; no.textContent = "Cancel";
+                no.addEventListener("click", function() {
+                  chat.confirmation = null; renderConfirmation(); suggestion.focus();
+                });
+                confirmationControls.appendChild(yes); confirmationControls.appendChild(no);
+              }
+              renderConfirmation();
               var openChat = document.createElement("button"); openChat.type = "button";
               openChat.className = "btn btn-sm btn-outline-primary"; openChat.textContent = "Chat";
               openChat.addEventListener("click", function() {
                 chat.open = !chat.open; panel.style.display = chat.open ? "block" : "none";
                 if (chat.open) suggestion.focus();
               });
-              function checkSuggestion() {
-                if (!suggestion.value.trim() || suggest.disabled) return;
-                chat.messages.push({role:"user", content:suggestion.value.trim()});
+              function checkSuggestion(confirm) {
+                var typed = suggestion.value.trim();
+                var confirming = chat.confirmation && (confirm === true || /^(?:ja|yes|zeker|ok)[.!]?$/i.test(typed));
+                if ((!typed && !confirming) || suggest.disabled) return;
+                var pending = confirming ? chat.confirmation : null;
+                chat.messages.push({role:"user", content:typed || "Yes, use this training notation."});
                 suggestion.value = ""; renderChat();
+                chat.confirmation = null; renderConfirmation();
                 suggest.disabled = true; feedback.textContent = "Checking measured laps...";
                 var sequence = watchPreviewSequence;
                 var endpoint = "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/";
                 var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate)
                   + "&suggestion_session=" + encodeURIComponent(session.start || "");
+                var messages = chat.messages.slice(-5);
+                if (pending) messages[messages.length-1] = {role:"user", content:pending.request};
+                var payload = {chat:JSON.stringify(messages)};
+                if (pending) payload.time_confirmation = pending.token;
                 fetch(endpoint + query, {method:"POST", headers: {"Accept":"application/json",
                   "Content-Type":"application/x-www-form-urlencoded", "X-CSRFToken":getCookie("csrftoken")},
-                  body:new URLSearchParams({chat:JSON.stringify(chat.messages.slice(-5))}).toString()})
+                  body:new URLSearchParams(payload).toString()})
                   .then(function(response) { return response.json(); }).then(function(data) {
                     if (sequence !== watchPreviewSequence || !suggest.isConnected) return;
+                    if (data.confirmation_required) {
+                      chat.confirmation = data.confirmation_required;
+                      chat.messages.push({role:"assistant", content:data.chat_reply});
+                      renderChat(); renderConfirmation(); feedback.textContent = ""; return;
+                    }
                     var replacement = (data.results || []).find(function(item) { return item.start === session.start; });
                     var reply = data.chat_reply || (replacement && replacement.parts[0].chat_reply);
                     if (!data.ok || !replacement) {
@@ -3089,7 +3119,8 @@
               suggestion.addEventListener("keydown", function(event) {
                 if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); checkSuggestion(); }
               });
-              panel.appendChild(log); panel.appendChild(suggestion); panel.appendChild(suggest); panel.appendChild(feedback);
+              panel.appendChild(log); panel.appendChild(suggestion); panel.appendChild(suggest);
+              panel.appendChild(confirmationControls); panel.appendChild(feedback);
               box.appendChild(panel); actions.appendChild(openChat);
             }
             [1, 2].forEach(function(slotIndex) {

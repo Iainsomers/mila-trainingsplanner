@@ -38,5 +38,39 @@ async function check(model, coach, success) {
   }
   else assert.ok(flatten(parent).some(n=>(n.textContent||'').includes('No matching structure could be confirmed.')));
 }
-(async()=>{for(const model of ['C','D']) for(const coach of [true,false]) for(const success of [true,false]) await check(model,coach,success);
+async function checkConfirmation(model, typedYes) {
+  const parent=element('div'), requests=[];
+  const current={start:'session',parts:[{description:'Original',training_fields:{main:'original'}}]};
+  const replacement={start:'session',parts:[{description:"6×6' Z1 p45",training_fields:{main:"6×6' Z1 p45"}}]};
+  const context={document:{createElement:element,createTextNode:t=>({...element('text'),textContent:t})},
+    watchChats:{},URLSearchParams,getCookie(){return 'csrf';},renderTypeALaps(){},
+    activeAthlete:89,activeDate:'2026-11-13',watchPreviewSequence:1,
+    fetch:async(url,options)=>{
+      requests.push(new URLSearchParams(options.body));
+      return {json:async()=>requests.length===1
+        ? {ok:false,results:[],chat_reply:'Rep 4 lasted 6:45. Are you sure?',
+           confirmation_required:{token:'signed-token',request:"6*6'",label:"Yes, use 6×6'"}}
+        : {ok:true,results:[replacement]}};
+    }};
+  vm.createContext(context); vm.runInContext(source.replace('{{ is_coach_user|yesno:"true,false" }}','false'),context);
+  context.renderTypeAResults(parent,[current],'',model);
+  let nodes=flatten(parent), input=nodes.find(n=>n.tag==='textarea');
+  input.value="6*6'"; nodes.find(n=>n.textContent==='Send').listeners.click();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requests.length,1);
+  assert.equal(current.parts[0].training_fields.main,'original');
+  nodes=flatten(parent);
+  assert.ok(nodes.some(n=>n.textContent==='Cancel'));
+  if(typedYes) {
+    input.value='ja'; nodes.find(n=>n.textContent==='Send').listeners.click();
+  } else nodes.find(n=>n.textContent==="Yes, use 6×6'").listeners.click();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requests[1].get('time_confirmation'),'signed-token');
+  assert.equal(JSON.parse(requests[1].get('chat')).at(-1).content,"6*6'");
+  assert.ok(flatten(parent).some(n=>(n.textContent||'').includes("6×6' Z1 p45")));
+}
+(async()=>{for(const model of ['C','D']) {
+  for(const coach of [true,false]) for(const success of [true,false]) await check(model,coach,success);
+  for(const typedYes of [true,false]) await checkConfirmation(model,typedYes);
+}
 console.log('Garmin suggestions: C/D request, preview, rejection and coach diagnostics passed.');})().catch(e=>{console.error(e);process.exitCode=1;});

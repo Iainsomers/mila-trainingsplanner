@@ -23,6 +23,52 @@ class GarminCPushTests(TestCase):
             "startTimeInSeconds": self.start, "distanceInMeters": 1000, "durationInSeconds": 300}
         self.push_url = reverse("garmin_activity_push", args=[receiver_key()])
 
+    def test_chat_requests_confirmation_for_one_longer_timed_rep(self):
+        from types import SimpleNamespace
+        from urllib.parse import urlencode
+        from core.views.calendar import _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+
+        values = [(1315.1,362),(63.87,46),(1301.07,360),(61.72,45),(1275.4,361),
+                  (59.6702,45),(1427.69,405),(54.75,45),(1292.75,360),(64.0601,46),(1296.08,361)]
+        GarminActivitySummary.objects.create(athlete=self.athlete,activity_id='timed-outlier',
+            activity_start=datetime.fromtimestamp(self.start,dt_timezone.utc),activity_date='2026-10-31',
+            distance_m=sum(m for m,s in values),duration_s=sum(s for m,s in values),
+            analysis_data={'laps':[dict(distance=m,elapsed_time=s) for m,s in values]})
+        self.client.force_login(self.coach)
+        with patch('core.views.polar_raw.lap_zone_paces',return_value=('Z1','NA')), patch(
+                'core.views.polar_raw.urlopen',side_effect=AssertionError('Local time request')):
+            for model in ('c','d'):
+                url = reverse(f'garmin_type_{model}_ayc')
+                query = {'athlete':self.athlete.pk,'date':'2026-10-31','preview':'measured'}
+                activity = self.client.get(url,query).json()['results'][0]
+                chat_url = url+'?'+urlencode({**query,'suggestion_session':activity['start']})
+                payload = {'chat':json.dumps([{'role':'user','content':"6*6'"}])}
+                proposed = self.client.post(chat_url,payload).json()
+                self.assertFalse(proposed['ok'])
+                self.assertEqual(proposed['results'],[])
+                self.assertIn('Rep 4 lasted 6:45',proposed['chat_reply'])
+                token = proposed['confirmation_required']['token']
+                invalid = self.client.post(chat_url,{**payload,'time_confirmation':token+'invalid'})
+                self.assertEqual(invalid.status_code,400)
+                confirmed = self.client.post(chat_url,{**payload,'time_confirmation':token}).json()
+                self.assertTrue(confirmed['ok'],confirmed)
+                part = confirmed['results'][0]['parts'][0]
+                self.assertEqual(part['training_fields']['main'],"6×6' Z1 p45")
+                self.assertEqual([(l['meters'],l['seconds']) for l in part['watch_loads']],values)
+                slot = SimpleNamespace(source=f'watch_{model}',watch_loads=part['watch_loads'],
+                    segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',part['training_fields']['main'])]))
+                self.assertEqual([r['measured_seconds'] for r in processed_main_reps(slot)],[362,360,361,405,360,361])
+                from django.core import signing
+                import time
+                with patch('django.core.signing.time.time',return_value=time.time()+601):
+                    with self.assertRaises(signing.SignatureExpired):
+                        signing.loads(token,salt='watch-time-outlier',max_age=600)
+                changed = self.client.post(chat_url,{
+                    'chat':json.dumps([{'role':'user','content':"5*6'"}]),'time_confirmation':token}).json()
+                self.assertFalse(changed['ok'])
+                self.assertNotIn('confirmation_required',changed)
+
     def test_chat_groups_autolaps_with_user_supplied_repetition_context(self):
         from types import SimpleNamespace
         from urllib.parse import urlencode
