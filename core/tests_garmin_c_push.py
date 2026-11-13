@@ -59,6 +59,25 @@ class GarminCPushTests(TestCase):
                 slot = SimpleNamespace(source=f'watch_{model}',watch_loads=part['watch_loads'],
                     segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',part['training_fields']['main'])]))
                 self.assertEqual([r['measured_seconds'] for r in processed_main_reps(slot)],[362,360,361,405,360,361])
+                # An already-open page may post a plain yes without the new UI token.
+                for answer in ('yes', 'ja'):
+                    self.client.post(chat_url,payload)
+                    legacy = self.client.post(chat_url,{'chat':json.dumps([
+                        {'role':'user','content':"6*6'"},
+                        {'role':'assistant','content':proposed['chat_reply']},
+                        {'role':'user','content':answer}])}).json()
+                    self.assertTrue(legacy['ok'],legacy)
+                    legacy_part = legacy['results'][0]['parts'][0]
+                    self.assertEqual(legacy_part['training_fields']['main'],"6×6' Z1 p45")
+                    self.assertEqual([(l['meters'],l['seconds']) for l in legacy_part['watch_loads']],values)
+                self.client.post(chat_url,payload)
+                session = self.client.session
+                pending = session['watch_time_confirmation']
+                session['watch_time_confirmation'] = dict(pending,token=pending['token']+'invalid')
+                session.save()
+                rejected = self.client.post(chat_url,{'chat':json.dumps([
+                    {'role':'user','content':'yes'}])})
+                self.assertEqual(rejected.status_code,400)
                 from django.core import signing
                 import time
                 with patch('django.core.signing.time.time',return_value=time.time()+601):

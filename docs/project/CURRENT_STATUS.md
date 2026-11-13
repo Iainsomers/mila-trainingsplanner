@@ -1,5 +1,11 @@
 # Actuele status
 
+## 14 november 2026 — Getypte bevestiging ook vanuit eerder geopende Diary
+
+- Een oudere, nog geopende Diary kon de bevestigingsvraag tonen maar de nieuwe bevestigingsgegevens niet meesturen. Een getypte `yes` ging daardoor opnieuw naar de gewone AI-beoordeling en kon alsnog stranden op de afstand van de langere rep.
+- De server bewaart nu de laatste openstaande bevestigingsvraag in de browsersessie. `ja`/`yes` gebruikt voor dezelfde gebruiker, atleet, dag, model en activiteit de bijbehorende ondertekende bevestiging. De actuele meetgegevens en geldigheid worden opnieuw gecontroleerd; een nieuwe suggestie vervangt de oude vraag. Na bevestiging wordt deze gewist.
+- Endpointregressies controleren zowel de nieuwe knoproute als losse Nederlandse/Engelse bevestigingen zonder token vanuit de pagina, inclusief een ongeldige opgeslagen bevestiging.
+
 ## 13 november 2026 — Chatbevestiging bij één langer gelopen tijdrep
 
 - Garmin C en D vragen expliciete bevestiging wanneer een opgegeven tijdreeks volledig zichtbaar is maar één werkrep beperkt langer duurde. Voorbeeld: 6×6′ met één gemeten 6:45.

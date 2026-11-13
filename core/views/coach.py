@@ -5777,6 +5777,18 @@ def garmin_type_c_ayc_view(request, model="C"):
     from core.watch_alternatives import requested_time_reps
     from core.watch_processing import match_mixed_distance_chat, mixed_distance_chat_request
     from core.watch_distance_sequence import apply_distance_sequence, requested_distance_sequence
+    confirmation_scope = [request.user.pk, athlete.pk, day, model,
+                          request.GET.get('suggestion_session')]
+    stored_confirmation = request.session.get('watch_time_confirmation') or {}
+    confirmation_token = request.POST.get('time_confirmation', '')
+    if (chat_messages and re.fullmatch(r"(?:ja|yes|zeker|ok)[.!]?",
+            chat_messages[-1]['content'].strip(), re.I)
+            and stored_confirmation.get('scope') == confirmation_scope):
+        # Also support pages opened before the confirmation buttons were deployed.
+        chat_messages[-1] = {'role':'user', 'content':stored_confirmation['request']}
+        confirmation_token = confirmation_token or stored_confirmation['token']
+    elif chat_messages and not confirmation_token:
+        request.session.pop('watch_time_confirmation', None)
     local_time_request = requested_time_reps(chat_messages)
     chat_text = chat_messages[-1]['content'] if chat_messages else ''
     local_mixed_request = mixed_distance_chat_request(chat_text)
@@ -6198,7 +6210,7 @@ def garmin_type_c_ayc_view(request, model="C"):
                 sort_keys=True, separators=(",", ":")).encode()).hexdigest()
             confirmation_data = [request.user.pk, athlete.pk, day, model,
                                  request.GET.get('suggestion_session'), list(local_time_request), fingerprint]
-            token = request.POST.get('time_confirmation', '')
+            token = confirmation_token
             if token:
                 try:
                     confirmed = signing.loads(token, salt='watch-time-outlier', max_age=600)
@@ -6209,10 +6221,14 @@ def garmin_type_c_ayc_view(request, model="C"):
                         'message':'This confirmation has expired or the measured activity has changed. Send the suggestion again.'}, status=400)
                 parts[0].clear()
                 parts[0].update(candidate)
+                request.session.pop('watch_time_confirmation', None)
             else:
+                token = signing.dumps(confirmation_data, salt='watch-time-outlier')
+                request.session['watch_time_confirmation'] = {
+                    'scope':confirmation_scope, 'request':chat_text, 'token':token}
                 return JsonResponse({'ok':False, 'message':'', 'chat_reply':question, 'results':[],
                     'confirmation_required':{
-                        'token':signing.dumps(confirmation_data, salt='watch-time-outlier'),
+                        'token':token,
                         'request':chat_text, 'label':f"Yes, use {local_time_request[0]}×{local_time_request[1]}'"}})
         else:
             return JsonResponse({'ok':False, 'message':'No matching structure could be confirmed.',

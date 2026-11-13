@@ -1,6 +1,7 @@
 # Functionele onderdelen
 
 - Garmin C/D-chat kan bij een complete tijdreeks met precies één beperkt te lange werkrep om bevestiging vragen. Bijvoorbeeld zes werkblokken van circa 6 minuten met één 6:45: na `6*6'` verschijnt een vraag met bevestigingsknop; ook `ja` in de chat bevestigt. Pas daarna verandert de preview naar 6×6′. Use/Add blijft de afzonderlijke opslagactie. De gemeten tijden, afstanden en hartslag blijven intact.
+- De openstaande Garmin-bevestiging blijft ook op de server aan dezelfde browsersessie en activiteit gekoppeld. Een getypte `ja` of `yes` werkt hierdoor ook vanuit een Diary die al vóór een update geopend was; dezelfde geldigheids- en meetcontroles blijven gelden.
 
 - Athlete Diary heeft voor staf een optionele `Simple`-weergave. Per AM/PM-sessie blijven het bestaande hardloop-kmtotaal, de hardloop-kmtotalen per zone, de Alternative-totalen en de trainingsevaluatie zichtbaar; de trainingsinhoud, whereabouts en meetknoppen worden niet weergegeven. De normale weergave blijft standaard.
 
