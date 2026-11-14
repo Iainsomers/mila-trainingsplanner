@@ -4724,8 +4724,91 @@ class YearPlannerTests(TestCase):
         self.assertNotContains(response, "Other Year Athlete")
         self.assertNotContains(response, '<label class="form-label mb-0">Athletes</label>', html=True)
         self.assertNotContains(response, 'title="Copy training row"')
-        self.assertContains(response, "year-read-only")
+        self.assertContains(response, "year-training-read-only")
         self.assertContains(response, "year-training-aerobe")
+
+    def test_athlete_with_whereabouts_access_can_edit_own_non_camp_ranges_only(self):
+        coach, athlete = self._coach_and_athlete()
+        athlete.year_planner_whereabouts_enabled = True
+        athlete.save(update_fields=["year_planner_whereabouts_enabled"])
+        camp = YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=athlete,
+            start_date=date(2026, 9, 7), end_date=date(2026, 9, 9),
+            whereabouts_type="camp", note="Altitude camp",
+        )
+        other = Athlete.objects.create(owner=coach, name="Other Year Athlete", birth_year=2002, gender="X")
+        other_trip = YearPlannerWhereabout.objects.create(
+            owner=coach, athlete=other,
+            start_date=date(2026, 9, 10), end_date=date(2026, 9, 11),
+            whereabouts_type="travel", note="Other trip",
+        )
+        athlete_user = get_user_model().objects.create_user(username="Year_Athlete", password="secret")
+        self.client.force_login(athlete_user)
+
+        page = self.client.get("/planning/year/?year=2026&period=full")
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'data-year-active-editor')
+        self.assertContains(page, 'data-year-range-read-only="1"')
+        self.assertContains(page, 'title="Change camps via Camps"')
+        self.assertNotContains(page, '<option value="camp">Camp</option>')
+
+        created = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"athlete-{athlete.id}",
+                "start_date": "2026-09-14", "end_date": "2026-09-16",
+                "whereabouts": "travel", "note": "Own trip",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(created.status_code, 200)
+        own_trip = YearPlannerWhereabout.objects.get(owner=coach, athlete=athlete, note="Own trip")
+
+        updated = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "id": own_trip.id, "scope": f"athlete-{athlete.id}",
+                "start_date": "2026-09-15", "end_date": "2026-09-17",
+                "whereabouts": "medical", "note": "Own appointment",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(updated.status_code, 200)
+        own_trip.refresh_from_db()
+        self.assertEqual(own_trip.whereabouts_type, "medical")
+        self.assertEqual(own_trip.start_date, date(2026, 9, 15))
+
+        for payload in (
+            {"scope": f"athlete-{athlete.id}", "start_date": "2026-09-20", "end_date": "2026-09-21", "whereabouts": "camp", "note": "New camp"},
+            {"id": camp.id, "scope": f"athlete-{athlete.id}", "start_date": "2026-09-08", "end_date": "2026-09-10", "whereabouts": "travel", "note": "Changed camp"},
+            {"id": camp.id, "scope": f"athlete-{athlete.id}", "start_date": "2026-09-07", "end_date": "2026-09-09", "whereabouts": "", "note": ""},
+            {"id": other_trip.id, "scope": f"athlete-{athlete.id}", "start_date": "2026-09-10", "end_date": "2026-09-11", "whereabouts": "medical", "note": "Wrong athlete"},
+        ):
+            denied = self.client.post(
+                "/planning/year/whereabout/", data=json.dumps(payload), content_type="application/json",
+            )
+            self.assertIn(denied.status_code, {400, 403, 404})
+        camp.refresh_from_db()
+        self.assertEqual(camp.whereabouts_type, "camp")
+        self.assertEqual(camp.note, "Altitude camp")
+
+    def test_athlete_without_whereabouts_access_cannot_save_ranges(self):
+        _, athlete = self._coach_and_athlete()
+        athlete_user = get_user_model().objects.create_user(username="Year_Athlete", password="secret")
+        self.client.force_login(athlete_user)
+
+        response = self.client.post(
+            "/planning/year/whereabout/",
+            data=json.dumps({
+                "scope": f"athlete-{athlete.id}",
+                "start_date": "2026-09-14", "end_date": "2026-09-16",
+                "whereabouts": "travel", "note": "Blocked trip",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(YearPlannerWhereabout.objects.filter(athlete=athlete).exists())
 
     def test_athlete_year_planner_never_shows_other_athletes_or_coaches(self):
         coach, athlete = self._coach_and_athlete()

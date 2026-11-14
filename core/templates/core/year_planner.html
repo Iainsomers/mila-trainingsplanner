@@ -223,8 +223,8 @@
     min-height: calc(var(--year-day-height) * 0.62);
   }
 
-  .year-planner-page.year-read-only .year-layer-training,
-  .year-planner-page.year-read-only .year-layer-whereabouts {
+  .year-planner-page.year-training-read-only .year-layer-training,
+  .year-planner-page.year-whereabouts-read-only .year-layer-whereabouts {
     pointer-events: none;
   }
 
@@ -819,7 +819,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 year-planner-page year-zoom-{{ zoom_mode }} {% if not show_training %}year-hide-training{% endif %} {% if not show_whereabouts %}year-hide-whereabouts{% endif %} {% if year_planner_read_only %}year-read-only{% endif %}">
+<div class="container-fluid py-4 year-planner-page year-zoom-{{ zoom_mode }} {% if not show_training %}year-hide-training{% endif %} {% if not show_whereabouts %}year-hide-whereabouts{% endif %} {% if year_planner_read_only %}year-training-read-only{% endif %} {% if not year_planner_whereabouts_editable %}year-whereabouts-read-only{% endif %}">
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2 year-heading">
     <div>
       <h1 class="mb-1">Year Planner</h1>
@@ -1039,14 +1039,16 @@
     {% endif %}
   </form>
 
-  {% if not year_planner_read_only %}
+  {% if year_planner_whereabouts_editable %}
   <div class="year-active-editor mb-2" data-year-active-editor>
     <div class="year-active-context" data-active-where-context>Editing whereabouts</div>
     <div>
       <label for="activeWhereType" class="form-label mb-1 small">Whereabouts</label>
       <select id="activeWhereType" class="form-select form-select-sm" data-active-where-type>
         {% for value, label in whereabouts_choices %}
+          {% if not is_athlete_user or value != "camp" %}
           <option value="{{ value }}">{{ label }}</option>
+          {% endif %}
         {% endfor %}
       </select>
     </div>
@@ -1153,21 +1155,22 @@
                              data-year-date="{{ cell.date|date:'Y-m-d' }}">
                           {% if cell.where_ranges %}
                             {% for range in cell.where_ranges %}
-                            <button type="button" {% if row.read_only %}disabled{% endif %}
+                            <button type="button" {% if row.read_only or range.read_only %}disabled{% endif %}
                                     class="year-range-pill year-where-{{ range.whereabouts }} {% if range.is_start %}year-range-start{% endif %} {% if range.is_end %}year-range-end{% endif %} {% if range.overlap_count > 1 %}{% if range.overlap_index == 0 %}year-range-overlap-0{% elif range.overlap_index == 1 %}year-range-overlap-1{% else %}year-range-overlap-extra{% endif %}{% endif %}"
                                     data-year-range-id="{{ range.id }}"
                                     data-year-range-type="{{ range.whereabouts }}"
                                     data-year-range-note="{{ range.note }}"
                                     data-year-range-start="{{ range.start_date }}"
                                     data-year-range-end="{{ range.end_date }}"
-                                    data-year-range-scope="{{ row.scope }}">
-                              {% if range.is_start %}
+                                    data-year-range-scope="{{ row.scope }}"
+                                    {% if range.read_only %}data-year-range-read-only="1" title="Change camps via Camps"{% endif %}>
+                              {% if range.is_start and not range.read_only %}
                                 <span class="year-range-handle year-range-handle-start" data-year-range-resize="start"></span>
                               {% endif %}
                               {% if range.note and range.show_label and range.overlap_count == 1 or range.note and range.show_overlap_label %}
                                 <span class="year-range-label">{{ range.note }}</span>
                               {% endif %}
-                              {% if range.is_end %}
+                              {% if range.is_end and not range.read_only %}
                                 <span class="year-range-handle year-range-handle-end" data-year-range-resize="end"></span>
                               {% endif %}
                             </button>
@@ -1399,7 +1402,7 @@
   function refreshTrainingHandles() {
     if (trainingResize) return;
     page.querySelectorAll('.year-training-handle').forEach((handle) => handle.remove());
-    if (page.classList.contains('year-read-only')) return;
+    if (page.classList.contains('year-training-read-only')) return;
     cellsByScope.forEach((scopeItems) => {
       const cells = [...scopeItems].sort((a, b) => a.dataset.date.localeCompare(b.dataset.date));
       cells.forEach((cell, index) => {
@@ -1764,6 +1767,7 @@
   }
 
   function bindRangeSegment(segment) {
+    if (segment.dataset.yearRangeReadOnly === "1") return;
     segment.addEventListener("click", (event) => {
       event.stopPropagation();
       if (segment.dataset.suppressClick === "1") {

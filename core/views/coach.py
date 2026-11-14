@@ -7478,6 +7478,7 @@ def year_planner_view(request):
                 "start_index": start_index,
                 "span": span,
                 "span_width": f"calc(var(--year-day-width) * {span})",
+                "read_only": bool(is_athlete_user and range_obj.whereabouts_type == "camp"),
             })
         return rendered
 
@@ -7690,6 +7691,7 @@ def year_planner_view(request):
         "whereabouts_choices": YearPlannerEntry.WHEREABOUTS_CHOICES,
         "is_athlete_user": is_athlete_user,
         "year_planner_read_only": is_athlete_user,
+        "year_planner_whereabouts_editable": bool(is_athlete_user and athlete_can_view_whereabouts) or not is_athlete_user,
         "athlete_can_view_year_planner_training": athlete_can_view_training,
         "athlete_can_view_year_planner_whereabouts": athlete_can_view_whereabouts,
     })
@@ -7869,7 +7871,8 @@ def year_planner_entry_save_view(request):
 @require_http_methods(["POST"])
 def year_planner_whereabout_save_view(request):
     athlete = _athlete_for_user(request.user)
-    if athlete and not request.user.is_staff and not request.user.is_superuser:
+    is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
+    if is_athlete_user and not getattr(athlete, "year_planner_whereabouts_enabled", False):
         return JsonResponse({"ok": False, "error": "Not allowed"}, status=403)
 
     try:
@@ -7878,16 +7881,25 @@ def year_planner_whereabout_save_view(request):
         return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
 
     scope = (payload.get("scope") or "").strip()
-    try:
-        athlete_obj, basis_plan, coach = _year_planner_whereabout_scope_target(request, scope)
-    except ValueError:
-        return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
-    except LookupError:
-        return JsonResponse({"ok": False, "error": "Target not found"}, status=404)
+    if is_athlete_user:
+        if scope != _year_planner_scope_key(athlete.id):
+            return JsonResponse({"ok": False, "error": "Target not found"}, status=404)
+        if isinstance(payload.get("ranges"), list) or isinstance(payload.get("scopes"), list) or payload.get("move_id"):
+            return JsonResponse({"ok": False, "error": "Not allowed"}, status=403)
+        athlete_obj, basis_plan, coach = athlete, None, None
+    else:
+        try:
+            athlete_obj, basis_plan, coach = _year_planner_whereabout_scope_target(request, scope)
+        except ValueError:
+            return JsonResponse({"ok": False, "error": "Invalid scope"}, status=400)
+        except LookupError:
+            return JsonResponse({"ok": False, "error": "Target not found"}, status=404)
 
     if coach and not _can_manage_year_planner_coach_whereabouts(request, coach):
         return JsonResponse({"ok": False, "error": "Coach not found"}, status=403)
-    target_owner = coach or _active_coach_user(request)
+    target_owner = athlete.owner if is_athlete_user else (coach or _active_coach_user(request))
+    if is_athlete_user and target_owner is None:
+        return JsonResponse({"ok": False, "error": "Not allowed"}, status=403)
 
     def range_payload(range_obj):
         if range_obj.athlete_id is None and range_obj.basis_plan_id is None:
@@ -7904,6 +7916,8 @@ def year_planner_whereabout_save_view(request):
         }
 
     allowed_whereabouts = {choice[0] for choice in YearPlannerWhereabout.WHEREABOUTS_CHOICES}
+    if is_athlete_user:
+        allowed_whereabouts.discard("camp")
     ranges_payload = payload.get("ranges")
     if isinstance(ranges_payload, list):
         validated_ranges = []
@@ -8088,6 +8102,17 @@ def year_planner_whereabout_save_view(request):
         return JsonResponse({"ok": True, "range": range_payload(range_obj)})
 
     range_id = payload.get("id")
+    if is_athlete_user and range_id:
+        athlete_existing = YearPlannerWhereabout.objects.filter(
+            owner=target_owner,
+            athlete=athlete,
+            basis_plan__isnull=True,
+            id=range_id,
+        ).first()
+        if not athlete_existing:
+            return JsonResponse({"ok": False, "error": "Target not found"}, status=404)
+        if athlete_existing.whereabouts_type == "camp":
+            return JsonResponse({"ok": False, "error": "Camps can only be changed via Camps"}, status=403)
     if range_id:
         existing = YearPlannerWhereabout.objects.filter(owner=target_owner, id=range_id).first()
         if existing and (

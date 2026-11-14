@@ -1,5 +1,9 @@
 # UI- en taalafspraken
 
+## Year Planner voor atleten
+
+Bij ingeschakelde Whereabouts-toegang toont de eigen Year Planner de whereabouts-editor. `Camp` staat niet in de keuzelijst voor atleten en bestaande Camp-ranges hebben geen sleep- of resizehandvatten; hun tooltip verwijst naar Camps. Periodisering blijft visueel alleen-lezen. De bestaande Camps-knop boven de planner is de enige ingang voor het wijzigen van kampgegevens.
+
 - Diary en planners gebruiken dezelfde kleurfunctie voor samengestelde herhalingen. Afstandsonderdelen worden naar afstand gewogen, tijdsonderdelen naar seconden, steeds in de opgegeven zonevolgorde. `4×(10' Z2 - 5' Z1)` is 2/3 Z2 en 1/3 Z1; handmatig `4*(5' z2-3' z1)` is 5/8 Z2 en 3/8 Z1, geen Z2→Z3-progressie. Het percentageverloop schaalt mee met de pillbreedte. Na een Diary-celvervanging worden de kleuren opnieuw toegepast.
 
 - Bij Garmin E staat direct boven de preview een status na een wijzigingsverzoek: voorstel bijgewerkt of voorstel ongewijzigd. Een bevestigende chatzin zonder gecontroleerde nieuwe indeling mag niet stilzwijgend suggereren dat Use/Add al die wijziging zal gebruiken.

@@ -69,7 +69,7 @@ Een atleetaccount is aan één `Athlete` gekoppeld. Een atleet kan uitsluitend z
 - de Race Calendar, waarin de atleet wedstrijden en nieuwe afstanden voor de kalender van de eigen trainer kan toevoegen en uitsluitend de eigen wedstrijdvinkjes en het gedeelde doelwedstrijdvinkje kan aanpassen; bestaande afstanden verwijderen blijft trainer-only;
 - het eigen dashboard en Planning-overzicht als toegangspunten;
 - actieve evaluatievragenlijsten invullen wanneer de atleet expliciet tot de doelgroep behoort, en uitsluitend de eigen antwoorden terugzien. Bestaande vragenlijsten die eerder aan groepen gekoppeld waren blijven voor die atleten beschikbaar totdat de doelgroep wordt aangepast. Als de doelgroep later wordt aangepast, blijven reeds ingediende antwoorden voor de trainer bewaard, maar kan een uitgesloten atleet de vragenlijst niet meer openen;
-- de eigen Year Planner alleen lezen wanneer de trainer Training en/of Whereabouts daarvoor heeft ingeschakeld;
+- de eigen Year Planner bekijken wanneer de trainer Training en/of Whereabouts daarvoor heeft ingeschakeld. Met Whereabouts-toegang kan de atleet de eigen gewone whereabouts toevoegen, wijzigen en verwijderen; Camps blijven in de Year Planner alleen-lezen en zijn uitsluitend via de Camps-tegel te wijzigen;
 - de eigen `Details Camps` bekijken en eigen aankomst-/vertrek- en reisgegevens aanpassen wanneer Whereabouts-toegang is ingeschakeld; deelnemers toevoegen of verwijderen en de kampnaam aanpassen blijft trainer-only (voor de kampnaam is edittoegang tot alle deelnemers nodig);
 - een logoutknop die naar de loginpagina terugkeert.
 
@@ -98,7 +98,7 @@ Een atleet kan de eigen algemene gegevens, zones/PR's, ideale week en WU/CD-inst
 - De trainer bepaalt hoeveel toekomstige trainingsweken voor de atleet zichtbaar zijn.
 - Wedstrijden mogen verder vooruit zichtbaar blijven dan trainingen.
 - Rapporten en Daily vitals zijn alleen zichtbaar wanneer ze voor die atleet zijn ingeschakeld.
-- Year Planner Training en Whereabouts hebben afzonderlijke trainerinstellingen per atleet. Een atleet kan nooit de selectie van andere atleten zien.
+- Year Planner Training en Whereabouts hebben afzonderlijke trainerinstellingen per atleet. Training/periodisering blijft voor de atleet alleen-lezen. Met Whereabouts-toegang kan de atleet uitsluitend de eigen niet-Camp-ranges beheren; Camp-ranges worden alleen via Camps aangepast. Een atleet kan nooit de selectie van andere atleten zien.
 - Atleten zien in de Year Planner uitsluitend hun eigen atletenrij en eigen whereabouts; coachrijen zijn alleen beschikbaar in de coachweergave.
 
 ## Beveiligingsregel

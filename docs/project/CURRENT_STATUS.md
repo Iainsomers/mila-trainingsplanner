@@ -1,5 +1,10 @@
 # Actuele status
 
+## 15 november 2026 - Atleet beheert eigen whereabouts
+
+- Atleten met ingeschakelde Year Planner Whereabouts-toegang kunnen hun eigen gewone whereabouts in de Year Planner toevoegen, wijzigen en verwijderen. Periodisering blijft alleen-lezen en server-side mutaties blijven strikt beperkt tot de eigen atleet.
+- Camp is voor atleten uitgesloten van de Year Planner-editor. Bestaande Camp-ranges blijven zichtbaar maar kunnen daar niet worden geopend, versleept, vergroot/verkleind of verwijderd; kampgegevens worden uitsluitend via de Camps-tegel gewijzigd.
+
 ## 14 november 2026 - Eén Alternative-lap direct bruikbaar in E
 
 - Een beschrijvend modelantwoord zonder laptoewijzing kon zelfs één volledige Alternative-lap blokkeren. E valideert die ene bronlap nu bij openen rechtstreeks, na de bestaande toegangs- en toestemmingscontroles. Ook een eerder vastgelopen gesprek krijgt zo een bruikbare preview; bestaande gecontroleerde resultaten worden niet vervangen.
