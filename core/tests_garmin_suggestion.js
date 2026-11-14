@@ -154,6 +154,55 @@ async function checkECombine() {
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(requests[1].get('combine_token'),'source-token');
 }
+async function checkEAutomaticAnalysis() {
+  const parent=element('div'), requests=[], replies=[];
+  const sessions=[1,2].map(i=>({start:'auto-'+i,parts:[{
+    description:'Measured preview',training_fields:{main:'500 m Z1'},
+    watch_loads:[{meters:500,seconds:180}],e_usable:false,e_auto_analyze:true}]}));
+  const context={document:{createElement:element,createTextNode:t=>({...element('text'),textContent:t})},
+    watchChats:{},URLSearchParams,getCookie(){return 'csrf';},renderTypeALaps(){},
+    activeAthlete:89,activeDate:'2026-11-14',watchPreviewSequence:1,
+    fetch:(url,options)=>new Promise(resolve=>{
+      requests.push(new URLSearchParams(options.body));
+      replies.push(data=>resolve({json:async()=>data}));
+    })};
+  vm.createContext(context); vm.runInContext(source.replace('{{ is_coach_user|yesno:"true,false" }}','false'),context);
+  context.renderTypeAResults(parent,sessions,'','E');
+  assert.equal(requests.length,1,'Automatic analyses start one recording at a time');
+  let firstNodes=flatten(parent);
+  const checks=firstNodes.filter(n=>n.tag==='input' && n.type==='checkbox');
+  checks.forEach(n=>{n.checked=true;n.listeners.change();});
+  assert.equal(firstNodes.find(n=>n.tag==='button' && n.textContent==='Combine').disabled,true);
+  const secondInput=firstNodes.filter(n=>n.tag==='textarea')[1];
+  secondInput.value='Mijn vraag blijft staan'; secondInput.listeners.input();
+  assert.equal(requests[0].get('analyze'),'auto');
+  assert.equal(requests[0].get('chat'),null);
+  function answer(i) {
+    return {ok:true,results:[{start:'auto-'+i,parts:[{description:'Ready '+i,
+      training_fields:{main:'500 m Z1'},watch_loads:[{meters:500,seconds:180}],
+      e_usable:true,e_validation:'signed',e_history:[{role:'assistant',content:'Dit patroon staat klaar.'}]}]}]};
+  }
+  replies[0](answer(1));
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requests.length,2);
+  assert.equal(parent.eResults[0].parts[0].description,'Ready 1');
+  assert.equal(flatten(parent).filter(n=>n.tag==='textarea')[1].value,'Mijn vraag blijft staan');
+  replies[1](answer(2));
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requests.length,2,'Usable results do not trigger another automatic analysis');
+  assert.equal(parent.eResults[0].parts[0].description,'Ready 1','Second response preserves the first result');
+  assert.equal(parent.eResults[1].parts[0].description,'Ready 2');
+  let nodes=flatten(parent);
+  assert.ok(nodes.filter(n=>n.textContent==='Use AM').every(n=>!n.disabled));
+  assert.ok(nodes.filter(n=>n.tag==='input' && n.type==='checkbox').every(n=>n.checked),'Combine selection survives automatic updates');
+  assert.equal(context.watchChats['E:auto-1'].open,false,'A good automatic proposal needs no open conversation');
+  assert.equal(context.watchChats['E:auto-2'].open,true,'An unsent draft stays accessible');
+  assert.ok(!nodes.some(n=>(n.textContent||'').startsWith('You:')));
+  nodes.find(n=>n.textContent==='Analyze training').listeners.click();
+  assert.equal(requests[2].get('analyze'),'1','Manual retry does not require entering chat text');
+  replies[2](answer(1));
+  await new Promise(resolve=>setImmediate(resolve));
+}
 (async()=>{for(const model of ['C','D']) {
   for(const coach of [true,false]) for(const success of [true,false]) await check(model,coach,success);
   for(const typedYes of [true,false]) await checkConfirmation(model,typedYes);
@@ -161,4 +210,5 @@ async function checkECombine() {
 await checkEConversation();
 await checkEConversation(true);
 await checkECombine();
+await checkEAutomaticAnalysis();
 console.log('Garmin suggestions: C/D request, preview, rejection and coach diagnostics passed.');})().catch(e=>{console.error(e);process.exitCode=1;});

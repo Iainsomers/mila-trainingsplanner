@@ -2792,11 +2792,20 @@
   {% include "core/partials/garmin_combine.js" %}
   function renderTypeAResults(parent, results, message, model, combinedPreview) {
     var watchCoachUser = {{ is_coach_user|yesno:"true,false" }};
+    var eAutoTasks = [];
+    if (model === "E") parent.eResults = results;
     parent.innerHTML = "";
     if (!results.length) { parent.textContent = message || "No Polar training found for this day."; return; }
     var selections = [];
     var combinedHost = document.createElement("div");
     var combineButton;
+    function eAnalysisBusy() {
+      return model === "E" && results.some(function(item) {
+        var state = watchChats["E:" + (item.e_session_id || item.start)] || {};
+        return state.busy || ((item.parts || []).some(function(part){return part.e_auto_analyze;}) &&
+          !state.autoStarted && !(state.messages || []).length);
+      });
+    }
     if ((model === "C" || model === "D" || model === "E") && !combinedPreview && results.filter(function(session) {
       return (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length &&
         (model !== "E" || !((session.parts[0].training_fields || {}).alt || (session.parts[0].training_fields || {}).alternative));
@@ -2818,6 +2827,7 @@
         try {
           var selected = selections.filter(function(item) { return item.check.checked; });
           if (model === "E") {
+            if (eAnalysisBusy()) { errorText.textContent="Wait for the current analyses to finish."; return; }
             combineButton.disabled = true;
             var combineSequence = watchPreviewSequence;
             var requestSelection = JSON.stringify(selected.map(function(item) {return {start:item.session.start,role:item.role.value};}));
@@ -2868,18 +2878,29 @@
         });
         role.value = !(session.parts[0].training_fields || {}).main ? "wu" :
           (results.length === 3 ? ["wu", "main", "cd"][sessionIndex] : "main");
-        role.disabled = true;
+        var keptSelection = model === "E" && (parent.eCombineSelection || {})[session.start];
+        if (keptSelection) { check.checked=keptSelection.checked; role.value=keptSelection.role; }
+        role.disabled = !check.checked;
         selections.push({session: session, check: check, role: role});
         function invalidateCombined() {
           combinedHost.innerHTML = "";
+          combinedHost.eResults = [];
           errorText.textContent = "";
           var count = selections.filter(function(item) { return item.check.checked; }).length;
-          combineButton.disabled = count < 2 || count > 3;
+          combineButton.disabled = count < 2 || count > 3 || eAnalysisBusy();
           role.disabled = !check.checked;
+          if (model === "E") {
+            parent.eCombineSelection = {};
+            selections.forEach(function(item){parent.eCombineSelection[item.session.start]={checked:!!item.check.checked,role:item.role.value};});
+          }
         }
         check.addEventListener("change", invalidateCombined);
         role.addEventListener("change", invalidateCombined);
         controls.appendChild(label); controls.appendChild(role); box.appendChild(controls);
+        if (model === "E") {
+          var selectedCount=selections.filter(function(item){return item.check.checked;}).length;
+          combineButton.disabled=selectedCount<2 || selectedCount>3 || eAnalysisBusy();
+        }
       }
       var title = document.createElement("div"); title.className = "fw-bold";
       title.textContent = (session.name || "Training session") + (session.start ? " — " + session.start : ""); box.appendChild(title);
@@ -2961,7 +2982,7 @@
             actions.style.maxWidth = "100%";
             if ((model === "C" || model === "D" || model === "E") && (fields.main || (model === "E" && (fields.alt || fields.alternative)))) {
               var key = model + ":" + (session.e_session_id || session.start);
-              var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [], open:model === "E"});
+              var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [], open:model === "E" && !part.e_usable});
               if (model === "E" && part.e_history) chat.messages = part.e_history;
               if (model === "E" && !chat.messages.length && part.chat_reply) chat.messages = [{role:"assistant",content:part.chat_reply}];
               var panel = document.createElement("div"); panel.className = "border rounded p-2 mt-2 w-100";
@@ -2981,12 +3002,16 @@
               }
               renderChat();
               var suggestion = document.createElement("textarea"); suggestion.maxLength = 1000; suggestion.rows = 2;
+              suggestion.value = chat.draft || "";
+              suggestion.addEventListener("input",function(){chat.draft=suggestion.value;});
               suggestion.className = "form-control form-control-sm mb-2"; suggestion.style.fontSize = "16px";
               suggestion.setAttribute("aria-label", "Message about this activity");
               var suggest = document.createElement("button"); suggest.type = "button";
               suggest.className = "btn btn-sm btn-primary"; suggest.textContent = "Send";
+              if (model === "E") suggest.disabled = !!chat.busy;
               var feedback = document.createElement("div"); feedback.className = "small mt-2";
               feedback.setAttribute("role", "status");
+              if (model === "E" && chat.busy) feedback.textContent = "Analyzing measured laps...";
               var confirmationControls = document.createElement("div");
               confirmationControls.className = "d-flex flex-wrap gap-2 mt-2";
               function renderConfirmation() {
@@ -3009,14 +3034,36 @@
                 chat.open = !chat.open; panel.style.display = chat.open ? "block" : "none";
                 if (chat.open) suggestion.focus();
               });
-              function checkSuggestion(confirm) {
-                var typed = suggestion.value.trim();
+              function updateEPreview(replacement, reply, automatic) {
+                chat.busy = false;
+                var updatedE = (parent.eResults || results).slice();
+                var position = updatedE.findIndex(function(item) {
+                  return (item.e_session_id || item.start) === (session.e_session_id || session.start);
+                });
+                if (position < 0) return;
+                if (replacement) {
+                  chat.messages = replacement.parts[0].e_history || chat.messages.concat([{role:"assistant",content:reply}]);
+                  if (!replacement.parts[0].e_history) replacement.parts[0].e_history = chat.messages;
+                  updatedE[position] = replacement;
+                  if (automatic && replacement.parts[0].e_usable && !chat.draft) chat.open=false;
+                } else {
+                  chat.messages.push({role:"assistant",content:reply});
+                  updatedE[position].parts[0].e_history = chat.messages;
+                  updatedE[position].parts[0].e_auto_analyze = false;
+                }
+                renderTypeAResults(parent, updatedE, "", model);
+              }
+              function checkSuggestion(confirm, analysisMode) {
+                var typed = String(suggestion.value || "").trim();
                 var confirming = chat.confirmation && (confirm === true || /^(?:ja|yes|zeker|ok)[.!]?$/i.test(typed));
-                if ((!typed && !confirming) || suggest.disabled) return;
+                if ((!typed && !confirming && !analysisMode) || suggest.disabled || chat.busy) return;
                 var pending = confirming ? chat.confirmation : null;
-                chat.messages.push({role:"user", content:typed || "Yes, use this training notation."});
-                suggestion.value = ""; renderChat();
+                if (!analysisMode) {
+                  chat.messages.push({role:"user", content:typed || "Yes, use this training notation."});
+                  suggestion.value = ""; chat.draft=""; renderChat();
+                }
                 chat.confirmation = null; renderConfirmation();
+                if (model === "E") chat.busy = true;
                 suggest.disabled = true; feedback.textContent = "Checking measured laps...";
                 var sequence = watchPreviewSequence;
                 var endpoint = "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/";
@@ -3025,13 +3072,15 @@
                 var messages = chat.messages.slice(model === "E" ? -1 : -5);
                 if (pending) messages[messages.length-1] = {role:"user", content:pending.request};
                 var payload = {chat:JSON.stringify(messages)};
+                if (model === "E" && analysisMode) payload = {analyze:analysisMode === "auto" ? "auto" : "1"};
                 if (model === "E" && session.e_combine_token) payload.combine_token = session.e_combine_token;
                 if (pending) payload.time_confirmation = pending.token;
                 fetch(endpoint + query, {method:"POST", headers: {"Accept":"application/json",
                   "Content-Type":"application/x-www-form-urlencoded", "X-CSRFToken":getCookie("csrftoken")},
                   body:new URLSearchParams(payload).toString()})
                   .then(function(response) { return response.json(); }).then(function(data) {
-                    if (sequence !== watchPreviewSequence || !suggest.isConnected) return;
+                    if (sequence !== watchPreviewSequence || (model !== "E" && !suggest.isConnected) ||
+                        (model === "E" && !parent.isConnected)) return;
                     if (data.confirmation_required) {
                       chat.confirmation = data.confirmation_required;
                       chat.messages.push({role:"assistant", content:data.chat_reply});
@@ -3039,11 +3088,8 @@
                     }
                     var replacement = (data.results || []).find(function(item) { return item.start === session.start; });
                     var reply = data.chat_reply || (replacement && replacement.parts[0].chat_reply);
-                    if (model === "E" && replacement) {
-                      chat.messages = replacement.parts[0].e_history || chat.messages.concat([{role:"assistant",content:reply || data.message}]);
-                      if (!replacement.parts[0].e_history) replacement.parts[0].e_history = chat.messages;
-                      var updatedE = results.slice(); updatedE[sessionIndex] = replacement;
-                      renderTypeAResults(parent, updatedE, "", model);
+                    if (model === "E") {
+                      updateEPreview(replacement, reply || data.message || "Garmin E could not finish this analysis.",analysisMode === "auto");
                       return;
                     }
                     if (!data.ok || !replacement) {
@@ -3055,8 +3101,12 @@
                       "\nValidated proposal: " + replacement.parts[0].description + "\nReview it before choosing Use AM/PM."});
                     var updated = results.slice(); updated[sessionIndex] = replacement;
                     renderTypeAResults(parent, updated, "", model);
-                  }).catch(function() { feedback.textContent = "Message could not be processed. Try again."; })
-                  .finally(function() { suggest.disabled = false; });
+                  }).catch(function() {
+                    if (model === "E" && sequence === watchPreviewSequence && parent.isConnected) {
+                      updateEPreview(null, "Analysis could not be completed. Try Analyze training again.");
+                    } else feedback.textContent = "Message could not be processed. Try again.";
+                  })
+                  .finally(function() { chat.busy = false; suggest.disabled = false; });
               }
               suggest.addEventListener("click", checkSuggestion);
               if (model === "E") {
@@ -3064,8 +3114,7 @@
                 analyzeE.className = "btn btn-sm btn-outline-primary ms-1"; analyzeE.textContent = "Analyze training";
                 analyzeE.addEventListener("click", function() {
                   if (suggest.disabled) return;
-                  suggestion.value = "Bekijk de hele training en leg uit welk patroon je in de gemeten laps ziet.";
-                  checkSuggestion();
+                  checkSuggestion(false, "manual");
                 });
               }
               suggestion.addEventListener("keydown", function(event) {
@@ -3075,6 +3124,13 @@
               if (model === "E") panel.appendChild(analyzeE);
               panel.appendChild(confirmationControls); panel.appendChild(feedback);
               box.appendChild(panel); actions.appendChild(openChat);
+              if (model === "E" && part.e_auto_analyze && !chat.autoStarted && !chat.messages.length) {
+                eAutoTasks.push(function() {
+                  if (chat.busy || chat.messages.length || chat.autoStarted) return;
+                  chat.autoStarted = true;
+                  checkSuggestion(false, "auto");
+                });
+              }
             }
             [1, 2].forEach(function(slotIndex) {
               var button = document.createElement("button");
@@ -3122,6 +3178,7 @@
       });
       parent.appendChild(box);
     });
+    if (model === "E" && eAutoTasks.length) eAutoTasks[0]();
   }
   function useWatchTraining(fields, watchLoads, slotIndex, button, model, add, validation) {
     if (!activeDate || !activeAthlete || !fields || !(fields.main || fields.alt || fields.alternative)) return;

@@ -183,6 +183,33 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    @patch("core.views.garmin_e.ask_model")
+    def test_first_analysis_makes_supported_result_usable_without_chat(self, model):
+        preview = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]
+        self.assertTrue(preview["parts"][0]["e_auto_analyze"])
+        model.assert_not_called()
+        model.side_effect = [
+            {"reply":"Ik zie twee 200–100-paren. Zal ik er een voorstel van maken?","proposal":None},
+            {"reply":"De twee gemeten paren staan klaar.","proposal":self.proposal,"zone_basis":"pace"}]
+        url = self.url+"?"+urlencode({**self.query,"suggestion_session":preview["start"]})
+        result = self.client.post(url,{"analyze":"auto"}).json()["results"][0]["parts"][0]
+        self.assertTrue(result["e_usable"],result)
+        self.assertTrue(result["e_validation"])
+        self.assertIn("2×(200 m - 100 m)",result["training_fields"]["main"])
+        self.assertTrue(all(m["role"]=="assistant" for m in result["e_history"]))
+        self.assertTrue(model.call_args.args[2]["initial_analysis"])
+        self.assertEqual(model.call_count,2)
+        repeated = self.client.post(url,{"analyze":"auto"}).json()["results"][0]["parts"][0]
+        self.assertTrue(repeated["e_usable"])
+        self.assertEqual(model.call_count,2)
+        # The Analyze button can explicitly rerun analysis without a chat message.
+        model.side_effect = None
+        model.return_value = {"reply":"Opnieuw gecontroleerd.","proposal":self.proposal,"zone_basis":"pace"}
+        refreshed = self.client.post(url,{"analyze":"1"}).json()["results"][0]["parts"][0]
+        self.assertTrue(refreshed["e_usable"])
+        self.assertEqual(model.call_count,3)
+        self.assertTrue(all(m["role"]=="assistant" for m in refreshed["e_history"]))
+
     def combine_example(self):
         self.record.analysis_data = {"laps":[dict(distance=m,elapsed_time=s) for m,s in
                                              [(500,100),(60,60),(500,100)]]}

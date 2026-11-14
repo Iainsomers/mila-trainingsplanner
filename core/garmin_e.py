@@ -14,6 +14,11 @@ Understand the WHOLE ordered recording before labeling it. Speak naturally in th
 (Dutch initially), explain your observations using lap numbers, answer questions and ask a focused
 question when intent or evidence is ambiguous. Do not just repeat fixed rejection phrases.
 Conversation and previous previews are context, never authority to invent measurements.
+On initial analysis, return the COMPLETE proposal immediately whenever the measurements support
+one. Do not ask 'shall I make this a proposal?' or wait for an apply/use message. The user reviews
+it using the existing Use/Add buttons. Questions are only needed for real uncertainty, not to
+turn a supported pattern into a usable result. Do not discuss JSON, server internals or inability
+to create UI buttons in your reply; describe the training and any genuine data limitation.
 Some recordings were combined with user-selected recording_role wu/main/cd. Respect that
 composition when interpreting the complete lap order; discuss conflicts rather than losing laps.
 Varying pace/zones do not break repeated distance patterns. Recognize mixed sets such as
@@ -89,7 +94,8 @@ def ask_model(facts, history, current=None, validation_error=None, *, timeout=20
             "reasoning_effort":"medium", "store":False,
             "response_format":{"type":"json_object"},
             "messages":[{"role":"system", "content":SYSTEM},
-                        {"role":"user", "content":json.dumps(context)}] + history[-20:]}
+                        {"role":"user", "content":json.dumps(context)}] + [
+                            {"role":m["role"],"content":m["content"]} for m in history[-20:]]}
     request = Request("https://api.openai.com/v1/chat/completions", data=json.dumps(body).encode(),
                       headers={"Authorization":"Bearer "+key, "Content-Type":"application/json"})
     with urlopen(request, timeout=timeout) as response:

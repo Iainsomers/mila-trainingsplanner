@@ -38,6 +38,10 @@ def conversation_identity(user_id, athlete_id, start, facts):
     return hashlib.sha256(str((user_id,athlete_id,start,fingerprint)).encode()).hexdigest()
 
 
+def visible_history(history):
+    return [{"role":m["role"],"content":m["content"]} for m in history if not m.get("automatic")]
+
+
 @login_required
 @require_http_methods(["GET","POST"])
 def garmin_type_e_ayc_view(request):
@@ -111,16 +115,19 @@ def garmin_type_e_ayc_view(request):
         except (signing.BadSignature,ValueError,KeyError,TypeError) as exc:
             return JsonResponse({"ok":False,"message":str(exc) or "Invalid combination.","results":[]},status=400)
     message = None
+    analyzing = request.POST.get("analyze") in {"auto","1"}
+    auto_analysis = request.POST.get("analyze") == "auto"
     if request.method == "POST" and not combining:
-        try:
-            incoming = json.loads(request.POST.get("chat",""))
-            message = incoming[-1]["content"]
-            if (len(request.POST.get("chat","")) > 30000 or incoming[-1]["role"] != "user"
-                    or not isinstance(message,str) or not 1 <= len(message.strip()) <= 3000):
-                raise ValueError
-            message = message.strip()
-        except (ValueError,TypeError,KeyError,IndexError):
-            return JsonResponse({"ok":False,"message":"Please send a shorter message.","results":[]},status=400)
+        if not analyzing:
+            try:
+                incoming = json.loads(request.POST.get("chat",""))
+                message = incoming[-1]["content"]
+                if (len(request.POST.get("chat","")) > 30000 or incoming[-1]["role"] != "user"
+                        or not isinstance(message,str) or not 1 <= len(message.strip()) <= 3000):
+                    raise ValueError
+                message = message.strip()
+            except (ValueError,TypeError,KeyError,IndexError):
+                return JsonResponse({"ok":False,"message":"Please send a shorter message.","results":[]},status=400)
         results = [s for s in results if s.get("start") == request.GET.get("suggestion_session")]
         if len(results)!=1:
             return JsonResponse({"ok":False,"message":"Activity not found. Reopen Garmin E.","results":[]},status=404)
@@ -159,16 +166,17 @@ def garmin_type_e_ayc_view(request):
             conversation,_ = GarminEConversation.objects.get_or_create(user=request.user,athlete=athlete,
                 activity_key=identity,defaults={"state":combined_seed or {}})
             state = conversation.state or {"history":[],"part":deepcopy(part),"proposal":None,"basis":"auto"}
-            if (request.GET.get("preview") == "measured" or combining) and message is None:
+            if (request.GET.get("preview") == "measured" or combining) and message is None and not analyzing:
                 if state["history"]:
                     session["parts"] = [state["part"]]
-                    session["parts"][0]["e_history"] = state["history"]
+                    session["parts"][0]["e_history"] = visible_history(state["history"])
                 else:
                     part["ai_structure_status"] = "e_ready"
+                    part["e_auto_analyze"] = True
                 continue
-            if message is None and state["history"]:
+            if message is None and state["history"] and (not analyzing or auto_analysis):
                 session["parts"] = [state["part"]]
-                session["parts"][0]["e_history"] = state["history"]
+                session["parts"][0]["e_history"] = visible_history(state["history"])
                 continue
             acquired = GarminEConversation.objects.filter(pk=conversation.pk).filter(
                 Q(busy_until__isnull=True)|Q(busy_until__lt=timezone.now())).update(
@@ -180,8 +188,12 @@ def garmin_type_e_ayc_view(request):
             try:
                 if message and re.fullmatch(r"(?:nee|no|cancel|annuleer)[.!]?",message,re.I):
                     state.pop("pending",None)
-                history = state["history"] + [{"role":"user","content":message or
-                    "Bekijk deze hele training. Welk patroon zie je? Leg je waarneming uit en geef alleen een voorstel als de laps dit ondersteunen."}]
+                initial_analysis = message is None
+                turn = {"role":"user","content":message or
+                    "Analyseer de hele opname en geef direct een volledig bruikbaar voorstel als de laps dat ondersteunen. Leg het patroon uit. Vraag alleen iets als de meetgegevens echt onduidelijk zijn."}
+                if initial_analysis:
+                    turn["automatic"] = True
+                history = state["history"] + [turn]
                 compact_requested = bool(is_alternative and any(
                     m["role"]=="user" and re.search(r"compact|notatie|\d+\s*['′].*(?://|[×x*]\s*\()",m["content"],re.I)
                     for m in history))
@@ -190,6 +202,7 @@ def garmin_type_e_ayc_view(request):
                            "activity_type":part.get("alternative_label") if is_alternative else "Running",
                            "alternative_hr_correction":athlete.alternative_hr_correction if is_alternative else None,
                            "requested_presentation":"compact" if compact_requested else None,
+                           "initial_analysis":initial_analysis,
                            "checked_assignment":state["proposal"],"pending_confirmation":state.get("pending")}
                 deadline = monotonic()+25
                 answer = ask_model(facts,history,current)
@@ -199,7 +212,7 @@ def garmin_type_e_ayc_view(request):
                     re.search(r"\b(?:voorstel|proposal|gebruik|gebruiken|use|usen|apply|toepassen|overnemen|aanpassen|corrigeer|update)\b",message,re.I)
                     or (re.fullmatch(r"(?:ja|yes|ok|doe maar)[.!]?",message,re.I) and state["history"]
                         and re.search(r"voorstel|gebruik|use|apply|toepassen",state["history"][-1]["content"],re.I))))
-                wants_update = (action_requested or answer.get("intent") == "update" or
+                wants_update = (initial_analysis or action_requested or answer.get("intent") == "update" or
                     (compact_requested and (state.get("proposal") or {}).get("format")!="compact"))
                 repair_used = False
                 confirmed = bool(state.get("pending") and message and re.fullmatch(
@@ -217,7 +230,9 @@ def garmin_type_e_ayc_view(request):
                     remaining = deadline-monotonic()
                     if remaining >= 3:
                         answer = ask_model(facts,history,current,
-                            "The user wants the agreed correction in the usable preview, but no proposal was returned. "
+                            ("Initial analysis must immediately provide a usable complete proposal when the measured pattern is clear. Do not ask the user whether to create it. "
+                             if initial_analysis else
+                             "The user wants the agreed correction in the usable preview, but no proposal was returned. ") +
                             "Return intent:update and the FULL updated lap assignment, preserving untouched laps. "
                             "For requested compact Alternative notation include proposal.format=compact and presentation targets/zones matching the request and measured evidence. "
                             "If unsupported, explain the concrete measurement mismatch without claiming an update.",
@@ -258,7 +273,9 @@ def garmin_type_e_ayc_view(request):
                 updated = candidate or deepcopy(state["part"])
                 updated.pop("e_history",None)
                 if not candidate and wants_update and not state.get("pending"):
-                    reply += "\n\nHet bruikbare voorstel hieronder is nog niet bijgewerkt; de vorige gecontroleerde versie staat er nog."
+                    reply += ("\n\nHet bruikbare voorstel hieronder is nog niet bijgewerkt; de vorige gecontroleerde versie staat er nog."
+                              if state["part"].get("e_usable") else
+                              "\n\nEr is nog geen gecontroleerd bruikbaar voorstel; zie de toelichting hierboven.")
                 updated["e_update_note"] = ("Voorstel bijgewerkt vanuit de gemeten laps." if candidate else
                     "Voorstel ongewijzigd; zie het antwoord hierboven." if wants_update else "")
                 updated["chat_reply"] = reply
@@ -271,7 +288,7 @@ def garmin_type_e_ayc_view(request):
                 history.append({"role":"assistant","content":reply})
                 state.update(part=updated,history=history[-20:])
                 GarminEConversation.objects.filter(pk=conversation.pk).update(state=state,updated_at=timezone.now())
-                session["parts"] = [{**updated,"e_history":state["history"]}]
+                session["parts"] = [{**updated,"e_history":visible_history(state["history"])}]
             except (OSError,ValueError,KeyError,TypeError,IndexError):
                 updated = deepcopy(state["part"])
                 updated["chat_reply"] = "Garmin E kon dit bericht niet afronden. Je laatste gecontroleerde voorstel blijft behouden. Probeer het opnieuw."

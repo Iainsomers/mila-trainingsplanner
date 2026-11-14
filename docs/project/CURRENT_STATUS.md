@@ -1,5 +1,12 @@
 # Actuele status
 
+## 14 november 2026 — Eerste E-analyse direct bruikbaar, gesprek optioneel
+
+- Bij nieuwe opnames start de browser automatisch achtereenvolgens de E-analyse. De eerste reactie moet bij voldoende meetbewijs een volledige laptoewijzing bevatten. Een uitsluitend beschrijvend antwoord wordt binnen het bestaande budget één keer aangevuld, zonder dat de gebruiker eerst om een voorstel moet vragen.
+- Na meetcontrole worden Use/Add actief en klapt de chat in als er geen ongestuurd conceptbericht staat. De analyseknop kan zonder chattekst opnieuw proberen. Interne analyseopdrachten blijven uit de zichtbare gebruikersgeschiedenis; de gewone gesprekscontext blijft beschikbaar voor het model.
+- De browser voegt asynchrone antwoorden samen met de actuele lijst, bewaart concepten en Combine-selecties en voorkomt dat een volgend antwoord een eerder resultaat overschrijft. Combine wacht op lopende analyses.
+- Tests controleren direct bruikbare eerste resultaten, herstel van een eerste antwoord zonder voorstel, hergebruik van resultaat zonder extra AI-call, automatische analyse van twee opnames, behoud van beide previews, conceptteksten en selecties. Modelantwoorden zijn gemockt; de meetcontroles blijven ongewijzigd.
+
 ## 14 november 2026 — Combine beschikbaar in Garmin E
 
 - De E-versie miste de C/D-combinebediening. E heeft nu dezelfde selectie van twee of drie loopopnames met WU/Main/CD-rollen. Samenstellen gebeurt op de server, op basis van de originele toegankelijke opnames; de browser levert geen trainingsmetingen aan.
