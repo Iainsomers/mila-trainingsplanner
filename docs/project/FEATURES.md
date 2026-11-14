@@ -639,3 +639,6 @@ Garmin C/D-chat kan een volledige afstandsvolgorde zoals 1650m//1600m//8*500m aa
 
 
 Garmin C/D-chat kan op verzoek losse afstandsblokken voor de herhalingen in Main plaatsen. Een expliciet no wu vereist een voorstel zonder warming-up. Coaches krijgen een waarschuwing als een voorgestelde warming-up Z2 bevat.
+
+
+14 november — Staff Team Overview heeft een staff-only tab `Log`. Deze toont de nieuwste gebeurtenissen eerst voor alle nieuw geregistreerde gebeurtenissen van de actieve coachweergave binnen exact de laatste 24 uur: trainingsevaluaties, dagelijkse vitals, weekrapporten, dagcomments, Garmin-ontvangsten, wedstrijdselecties en whereabouts. De registratie is append-only en start bij ingebruikname; eerdere historie wordt niet teruggebouwd. Bestaande toegangs- en evaluatiedeelrechten worden opnieuw toegepast voordat een logregel zichtbaar wordt. Desktop gebruikt een compacte tabel en mobiel gelabelde kaartregels. Deze onbewerkte log is de bron voor een latere AI-coachupdate.

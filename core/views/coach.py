@@ -36,7 +36,7 @@ from core.focus_point_import import (
 )
 from core.fit_reader import fit_bytes_from_upload, json_safe_fit_data, parse_fit
 from core.models import GarminActivity
-from core.models import TrainingPlan, Athlete, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, AthleteFocusPoint, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, RaceAttendance, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
+from core.models import TrainingPlan, Athlete, AthleteActivityEvent, AthleteDailyVital, Group, PlanMembership, CoachAccess, CoachSettings, CoachEvaluationSharing, MatchOverview, MatchAthleteRecord, EvaluationQuestionnaire, EvaluationQuestion, EvaluationResponse, FocusPointComment, AthleteFocusPoint, NewFeature, PlannedChange, PlanLike, TrainingSlot, PlanWeekPhase, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout, SavedTrainingTemplate, StandardStrengthProgram, StandardStrengthExercise, RaceEvent, RaceEventDistance, RaceEntry, RaceAttendance, AthleteBasePlanningBlock, AthleteBasePlanningSlot, PolarConnection
 from core.parser import parse_segment_text
 from core.stats import STATS_VERSION_KEY
 from core.wucd import auto_wucd_texts_for_target, create_parsed_wucd_segment
@@ -13181,7 +13181,7 @@ def daily_overview_other_view(request):
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     requested_view = request.GET.get("view", "").strip().lower()
     # Keep links/bookmarks using the old ?vital=... URL working.
-    if requested_view not in {"vitals", "information_quality", "injury_issues"}:
+    if requested_view not in {"vitals", "information_quality", "injury_issues", "log"}:
         requested_view = "vitals" if request.GET.get("vital") else ""
     if not requested_view:
         return render(request, "core/daily_overview_other.html", {
@@ -13200,6 +13200,51 @@ def daily_overview_other_view(request):
         for athlete in athletes
         if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
     }
+    if requested_view == "log":
+        if not _is_coach_user(request.user):
+            return HttpResponseForbidden("The activity log is available to staff only.")
+
+        log_until = timezone.now()
+        log_since = log_until - timedelta(hours=24)
+        visible_week_athlete_ids = {
+            athlete.id
+            for athlete in athletes
+            if evaluation_visibility_for_request(request, athlete.owner)["week"]
+            and athlete.week_report_enabled
+        }
+        visible_training_report_ids = {
+            athlete.id
+            for athlete in athletes
+            if athlete.id in training_visible_athlete_ids and athlete.training_reports_enabled
+        }
+        activity_events = []
+        for event in (
+            AthleteActivityEvent.objects
+            .filter(athlete_id__in=athlete_ids, occurred_at__gte=log_since, occurred_at__lte=log_until)
+            .select_related("athlete", "actor")
+        ):
+            if event.category == AthleteActivityEvent.CATEGORY_VITALS and event.athlete_id not in visible_vital_athlete_ids:
+                continue
+            if event.category == AthleteActivityEvent.CATEGORY_EVALUATION and event.athlete_id not in visible_training_report_ids:
+                continue
+            if event.category == AthleteActivityEvent.CATEGORY_WEEK_REPORT and event.athlete_id not in visible_week_athlete_ids:
+                continue
+            event.context_label = " · ".join(
+                str(event.metadata.get(key))
+                for key in ("date", "slot", "week_start", "activity_date")
+                if event.metadata.get(key)
+            )
+            if event.actor_id:
+                event.actor_label = event.actor.get_full_name().strip() or event.actor.get_username()
+            else:
+                event.actor_label = ""
+            activity_events.append(event)
+        return render(request, "core/daily_overview_other.html", {
+            "overview_mode": "log",
+            "activity_events": activity_events,
+            "log_since": log_since,
+            "log_until": log_until,
+        })
     if requested_view == "injury_issues":
         from core.models import InjuryIssueComment
         from core.coach_identity import decorate_coach_comment

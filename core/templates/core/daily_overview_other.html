@@ -92,12 +92,22 @@
   .issue-coach-cell { position: relative; padding-right: 2.4rem !important; }
   .issue-coach-comment { display: block; white-space: pre-wrap; }
   .issue-comment-add { position: absolute; right: .25rem; top: .25rem; }
+  .activity-log-table th, .activity-log-table td { vertical-align: top; }
+  .activity-log-table th:first-child { width: 9.5rem; }
+  .activity-log-table th:nth-child(2) { width: 11rem; }
+  .activity-log-detail { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .activity-log-source { white-space: nowrap; }
   @media(max-width:575.98px) {
     .issue-table, .issue-table tbody, .issue-table tr, .issue-table td { display:block; width:100%; }
     .issue-table thead { display:none; }
     .issue-table td { border:0; }
     .issue-table tr { border-bottom:1px solid #d9e0e7; padding:.4rem 0; }
     .issue-coach-cell { min-height:2.3rem; }
+    .activity-log-table, .activity-log-table tbody, .activity-log-table tr, .activity-log-table td { display:block; width:100%; }
+    .activity-log-table thead { display:none; }
+    .activity-log-table tr { border-bottom:1px solid #d9e0e7; padding:.6rem 0; }
+    .activity-log-table td { border:0; padding:.15rem 0; }
+    .activity-log-table td::before { content:attr(data-label); display:block; color:#6c757d; font-size:.75rem; font-weight:700; text-transform:uppercase; }
   }
 </style>
 {% endblock %}
@@ -107,7 +117,7 @@
   <div class="d-flex justify-content-between align-items-center gap-3">
     <div>
       <h1 class="h3 mb-1">Staff Team Overview</h1>
-      <p class="text-muted mb-0">Team vitals, information quality and injury/issue overview.</p>
+      <p class="text-muted mb-0">Team vitals, information quality, injury/issue overview and recent activity.</p>
     </div>
     <div class="d-flex gap-2">
       {% if overview_mode %}<a href="{% url 'daily_overview_other' %}" class="btn btn-outline-secondary">All athletes</a>{% endif %}
@@ -119,6 +129,7 @@
     <a class="btn {% if overview_mode == 'vitals' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=vitals">Vitals</a>
     <a class="btn {% if overview_mode == 'information_quality' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=information_quality">Information Quality</a>
     <a class="btn {% if overview_mode == 'injury_issues' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=injury_issues">Injury/Issue Overview</a>
+    <a class="btn {% if overview_mode == 'log' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=log">Log</a>
   </nav>
 
   {% if not overview_mode %}
@@ -129,6 +140,34 @@
         {% for athlete in athletes %}<li>{{ athlete.name }}</li>
         {% empty %}<li class="text-muted">No athletes found.</li>{% endfor %}
       </ul>
+    </div>
+  </section>
+  {% elif overview_mode == 'log' %}
+  <section class="overview-block" aria-labelledby="activity-log-heading">
+    <div class="overview-content">
+      <h2 id="activity-log-heading" class="h5 mb-1">Last 24 hours</h2>
+      <p class="text-muted small mb-3">
+        Unfiltered activity recorded from {{ log_since|date:"d-m-Y H:i" }} through {{ log_until|date:"d-m-Y H:i" }}.
+        New events are retained from the moment this log was enabled.
+      </p>
+      <div class="table-responsive">
+        <table class="table table-sm activity-log-table mb-0">
+          <thead><tr><th scope="col">Time</th><th scope="col">Athlete</th><th scope="col">Event</th><th scope="col">Details</th><th scope="col">Source</th></tr></thead>
+          <tbody>
+            {% for event in activity_events %}
+            <tr>
+              <td data-label="Time">{{ event.occurred_at|date:"d-m-Y H:i" }}</td>
+              <td data-label="Athlete"><strong>{{ event.athlete.name }}</strong></td>
+              <td data-label="Event">{{ event.title }}{% if event.context_label %}<div class="text-muted small">{{ event.context_label }}</div>{% endif %}</td>
+              <td data-label="Details" class="activity-log-detail">{{ event.detail|default:"—" }}</td>
+              <td data-label="Source" class="activity-log-source">{{ event.source }}{% if event.actor_label %}<div class="text-muted small">{{ event.actor_label }}</div>{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-muted">No activity was recorded in the last 24 hours.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
   {% elif overview_mode == 'injury_issues' %}

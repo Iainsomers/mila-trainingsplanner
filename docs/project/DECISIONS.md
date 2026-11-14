@@ -2,6 +2,10 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+## 2026-11-14 — Coach-update begint als onbewerkte 24-uurslog
+
+De toekomstige AI-update voor coaches wordt eerst gevoed door een duurzame, chronologische gebeurtenissenlog. De eerste gebruikersweergave is de staff-only tab `Log` in Staff Team Overview en toont exact de laatste 24 uur zonder inhoudelijke selectie of AI-samenvatting. Er wordt geen geschiedenis gereconstrueerd van vóór de ingebruikname. Toegang tot atleten en afzonderlijke evaluatie-, weekrapport- en vitalsgegevens blijft onder de bestaande deel- en zichtbaarheidsrechten vallen.
+
 ## 2026-11-09 — Mobiele Diary blijft standaard compact
 
 De mobiele Diary blijft voor bestaande en nieuwe atleten standaard een één-dagweergave. Een volledige week onder elkaar is een expliciete instelling per atleet (`Week view in mob diary`) en verandert de desktopweergave niet.

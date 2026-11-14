@@ -820,3 +820,6 @@ Validatie: 13 gerichte tests geslaagd; na leesbare tooltiplabels de drie extremu
 
 
 13 november — Chat kan een no wu-verzoek verwerken met losse Main-blokken voor de herhalingen. Testvoorstel verdeelt de beginlaps als 700m,850m en1150m met afzonderlijk herstel, gevolgd door2x600m en4x150m. De laatste twee150m-reps van de fixture zijn synthetisch. Mockcontrole dekt afwijzen van resterende WU en een geldige AI-herstelpoging. Automatische groepsvoorwaarden zijn behouden. Coach krijgt een Z2-WU-waarschuwing. Live AI-uitkomst nog niet bevestigd.
+
+
+14 november — Eerste fundament voor `Update x hours`: Staff Team Overview bevat nu een staff-only Log-tab met een exacte, ongefilterde 24-uursweergave. Nieuwe evaluaties, vitals, weekrapporten, dagcomments, Garmin-ontvangsten, wedstrijdselecties en whereabouts worden append-only als atleetgebeurtenis geregistreerd. Alleen de actieve eigen/gedeelde coachweergave is zichtbaar; bestaande privacyfilters voor trainingsevaluaties, weekrapporten en vitals blijven gelden. Geen retroactieve historie. Vijf gerichte registratie-, tijdsgrens-, deeltoegang-, privacy- en staff-only-tests plus `manage.py check` slagen. Migratie 0155 voegt de gebeurtenissenregistratie toe. Visuele productiecontrole volgt na deploy.

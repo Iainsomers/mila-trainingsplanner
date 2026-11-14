@@ -58,6 +58,7 @@ Bijgewerkt: 20 oktober 2026.
 - De coachbrede variant van `See session km` gebruikt dezelfde compacte `T`-notatie zonder `km`-label in Flex Planner en DCO Training. In Flex reserveert de volledige sessiesamenvatting rechtsboven ruimte voor evaluatie-iconen, zodat de zonekilometers er niet onder vallen.
 - In Details Camps kan een trainer met voldoende editrechten de kampnaam direct via de titel bewerken; de titel blijft visueel compact en wordt pas na een klik een invoerveld.
 - Staff Team Overview opent met een compacte lijst van de toegankelijke atleten en twee duidelijke keuzes: Vitals en Information Quality. De gekozen weergave blijft team-breed.
+- De Staff Team Overview-tab `Log` toont de onbewerkte gebeurtenissen van exact de laatste 24 uur, nieuwste eerst. Desktop gebruikt een compacte tabel met tijd, atleet, gebeurtenis, details en bron. Op mobiel worden dezelfde kolommen als gelabelde blokken onder elkaar gezet; er wordt inhoudelijk niets weggelaten.
 
 ## Terminologie
 

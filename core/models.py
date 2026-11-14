@@ -1556,6 +1556,57 @@ class AthleteDailyVital(models.Model):
         return f"{self.athlete} - vitals {self.date}"
 
 
+class AthleteActivityEvent(models.Model):
+    """Append-only event used by the staff update log."""
+
+    CATEGORY_TRAINING = "training"
+    CATEGORY_EVALUATION = "evaluation"
+    CATEGORY_VITALS = "vitals"
+    CATEGORY_WEEK_REPORT = "week_report"
+    CATEGORY_WATCH = "watch"
+    CATEGORY_RACE = "race"
+    CATEGORY_WHEREABOUTS = "whereabouts"
+    CATEGORY_COMMENT = "comment"
+    CATEGORY_CHOICES = [
+        (CATEGORY_TRAINING, "Training"),
+        (CATEGORY_EVALUATION, "Evaluation"),
+        (CATEGORY_VITALS, "Vitals"),
+        (CATEGORY_WEEK_REPORT, "Week report"),
+        (CATEGORY_WATCH, "Watch"),
+        (CATEGORY_RACE, "Race"),
+        (CATEGORY_WHEREABOUTS, "Whereabouts"),
+        (CATEGORY_COMMENT, "Comment"),
+    ]
+
+    athlete = models.ForeignKey(
+        Athlete,
+        on_delete=models.CASCADE,
+        related_name="activity_events",
+    )
+    category = models.CharField(max_length=24, choices=CATEGORY_CHOICES)
+    title = models.CharField(max_length=160)
+    detail = models.TextField(blank=True, default="")
+    source = models.CharField(max_length=40, blank=True, default="MiLa")
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="athlete_activity_events",
+    )
+    occurred_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-id"]
+        indexes = [
+            models.Index(fields=["athlete", "occurred_at"], name="core_actevt_ath_occ_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.athlete} · {self.title}"
+
+
 class GarminConnection(models.Model):
     athlete = models.OneToOneField(Athlete, on_delete=models.CASCADE, related_name="garmin_connection")
     garmin_user_id = models.CharField(max_length=128, null=True, blank=True, unique=True)

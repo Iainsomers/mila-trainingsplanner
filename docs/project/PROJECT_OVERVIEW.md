@@ -47,6 +47,10 @@ PAC (Pro Athletic Coach) is een zelfstandig Django-project voor coachhulpmiddele
 
 ## Terminologie
 
+### Gebeurtenissenlog voor coach-updates
+
+`AthleteActivityEvent` is een append-only registratie van relevante atleetgebeurtenissen, zoals trainingsevaluaties, vitals, weekrapporten, Garmin-ontvangsten, wedstrijden en whereabouts. Django-signalen leggen een nieuwe gebeurtenis vast wanneer een ondersteund bronrecord wordt opgeslagen. Staff Team Overview leest deze registratie voor de actieve coach en past daarna de bestaande privacyfilters toe. De log vormt de feitelijke bron voor een latere AI-samenvatting; de AI mag de bronregistratie niet vervangen.
+
 - AYC: Athlete Year Calendar, de persoonlijke jaar-/weekplanner van een atleet.
 - DCO: Daily Coach Overview.
 - WU/CD: warming-up en cooling-down.
