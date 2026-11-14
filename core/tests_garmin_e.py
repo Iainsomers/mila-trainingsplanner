@@ -198,6 +198,22 @@ class GarminEEndpointTests(TestCase):
         part = result["results"][0]["parts"][0]
         self.assertTrue(part["e_usable"],part)
         self.assertIsNone(model.call_args.args[0][0]["distance_m"])
+        old_fields = deepcopy(part["training_fields"])
+        corrected = deepcopy(model.return_value["proposal"])
+        corrected["cooldown_laps"] = []
+        corrected["reps"].append(dict(laps=[10],target_seconds=388))
+        model.side_effect = [
+            {"reply":"Ja, dit is nu je AM-voorstel met de laatste korte werkrep.","proposal":None},
+            {"reply":"De laatste 6:28 staat nu ook als werkblok in de preview.",
+             "intent":"update","proposal":corrected,"zone_basis":"hr"}]
+        amended = self.chat("Ik zie het nog niet als voorstel. Gebruik lap 10 als laatste werkblok.").json()
+        part = amended["results"][0]["parts"][0]
+        self.assertNotEqual(part["training_fields"],old_fields)
+        self.assertIn("Work 388s",part["training_fields"]["alt"])
+        self.assertNotIn("Cooldown",part["training_fields"]["alt"])
+        self.assertIn("bijgewerkt",part["e_update_note"])
+        self.assertEqual(model.call_args.args[2]["checked_assignment"]["cooldown_laps"],[10])
+        model.side_effect = None
         payload = {"watch_origin":"watch_e","watch_loads":"[]","watch_validation":part["e_validation"],
                    "alt_text":part["training_fields"]["alt"],"watch_fields":"alternative_replace"}
         url = reverse("slot_modal",args=[2026,11,14,1])+"?"+urlencode({"athlete":self.athlete.pk,"source":"athlete_year"})
@@ -241,6 +257,16 @@ class GarminEEndpointTests(TestCase):
         result = self.chat("Dit was geen warming-up").json()["results"][0]["parts"][0]
         self.assertFalse(result["e_usable"])
         self.assertIn("werkblok",result["chat_reply"])
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_unfulfilled_update_request_cannot_silently_look_applied(self, model):
+        model.return_value = {"reply":"Dit past.","proposal":self.proposal}
+        initial = self.chat("Bekijk deze training").json()["results"][0]["parts"][0]
+        model.return_value = {"reply":"Ja, zo houden we het als voorstel.","proposal":None,"intent":"update"}
+        result = self.chat("Ik wil het gecorrigeerde voorstel gebruiken").json()["results"][0]["parts"][0]
+        self.assertEqual(result["training_fields"],initial["training_fields"])
+        self.assertIn("nog niet bijgewerkt",result["chat_reply"])
+        self.assertIn("ongewijzigd",result["e_update_note"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_chat_zone_basis_switch_preserves_reps(self, model):

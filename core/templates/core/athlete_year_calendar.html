@@ -2994,6 +2994,11 @@
           box.appendChild(aiStatus);
         }
         if (part.description) {
+          if (model === "E" && part.e_update_note) {
+            var updateNote = document.createElement("div"); updateNote.className = "small mb-1";
+            updateNote.textContent = part.e_update_note; updateNote.setAttribute("role","status");
+            box.appendChild(updateNote);
+          }
           var description = document.createElement("div");
           description.className = "alert alert-light border py-2 mb-2 d-flex flex-wrap align-items-start justify-content-between gap-2";
           var descriptionText = document.createElement("div");

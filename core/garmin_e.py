@@ -22,7 +22,8 @@ Ordinary kilometre autolaps in a continuous easy run are one continuous rep, not
 Preserve unrelated parts when a user corrects only one block. Recount from original laps.
 If the user accidentally ran one rep longer, discuss it; actual times always remain measured.
 For an explanation/question return proposal:null. Do not say a training was saved or accepted.
-Return JSON: {"reply":"natural helpful answer", "zone_basis":"auto" or "pace" or "hr", "proposal":null or
+Return JSON: {"reply":"natural helpful answer", "intent":"discuss" or "update",
+"zone_basis":"auto" or "pace" or "hr", "proposal":null or
 {"warmup_laps":[1], "cooldown_laps":[], "recovery_laps":[3],
 "reps":[{"laps":[2],"target_meters":200},{"laps":[4],"target_meters":100}]}}.
 For equal-distance sets (2x8x500m), add proposal.set_start_laps with the first work-lap
@@ -53,6 +54,16 @@ including warmup, cooldown and recovery. A whole continuous activity may be one 
 auto means HR for Alternative. If no speed was measured, explain that a speed-based zone
 cannot be determined; offer HR/time instead. Preserve HR correction from current context.
 Alternative time targets can be 1..86400 seconds, including one continuous long activity.
+CRITICAL: agreeing in prose does NOT change the usable preview. If the user corrects an
+assignment, agrees to a proposed correction, says they cannot see the proposal, or asks to
+use/apply it for AM/PM, return intent:update AND the complete updated proposal, preserving
+all untouched laps. Never answer 'this is your AM proposal' with proposal:null.
+For explanation-only answers use intent:discuss and proposal:null.
+If the requested change cannot be supported, explain the specific mismatch; do not pretend
+that the preview changed. Current checked fields remain authoritative until validation.
+Do not ask for another confirmation when the user has already agreed, except for the bounded
+longer-time exception. Alternative previews use measured chronological blocks; a compact
+spoken summary does not itself replace those blocks or change measured HR-derived zones.
 """
 
 

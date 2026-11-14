@@ -1,5 +1,11 @@
 # Actuele status
 
+## 14 november 2026 — E-correcties daadwerkelijk naar de preview
+
+- Het model kon na een correctie in vrije tekst instemmen met een AM-voorstel maar `proposal:null` teruggeven. De onderliggende preview bleef daardoor op de eerdere geldige versie staan.
+- De E-opdracht onderscheidt nu bespreken en wijzigen. Bij een expliciet gebruik-/voorstelverzoek zonder laptoewijzing wordt binnen het bestaande aanvraagbudget één herstelvraag gedaan. De aangepaste, volledige indeling wordt opnieuw tegen de originele metingen gecontroleerd; een tweede reparatie in dezelfde aanvraag wordt niet gestart.
+- Previewstatus en antwoord melden nu expliciet wanneer de bruikbare versie niet veranderde. Het Alternative-regressievoorbeeld corrigeert de laatste 6:28 van CD naar werk, simuleert eerst een uitsluitend tekstuele bevestiging en controleert daarna de nieuwe preview, ondertekend Use/Add, totale duur en behoud van looptraining bij Add.
+
 ## 14 november 2026 — Garmin E praat ook over Alternative
 
 - De E-chat was aanvankelijk uitsluitend beschikbaar bij Main/looptraining. Alternative had geen chat en uitgeschakelde opslagknoppen. E ondersteunt nu ook tijd-/HR-opnames zonder loopafstand.

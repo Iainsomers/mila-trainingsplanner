@@ -87,6 +87,7 @@ async function checkEConversation(alternative = false) {
       return {json:async()=>({ok:true,results:[{start:'e-session',parts:[{
         description:calls===1?'Measured preview':'Checked E result',
         training_fields:alternative ? {alt:"Elliptical Work 10' Z2"} : {main:'2×200 m Z4'},
+        e_update_note:calls===2?'Voorstel bijgewerkt vanuit de gemeten laps.':'Voorstel ongewijzigd; zie het antwoord hierboven.',
         e_usable:calls===2,e_validation:'signed',e_history:history,e_zone_note:'Zones use measured speed.'}]}]})};
     }};
   vm.createContext(context); vm.runInContext(source.replace('{{ is_coach_user|yesno:"true,false" }}','false'),context);
@@ -107,6 +108,7 @@ async function checkEConversation(alternative = false) {
   assert.equal(requests[1].length,1,'Server owns conversation history');
   assert.ok(!nodes.find(n=>n.textContent==='Use AM').disabled);
   assert.ok(nodes.some(n=>n.textContent==='Zones use measured speed.'));
+  assert.ok(nodes.some(n=>n.textContent==='Voorstel bijgewerkt vanuit de gemeten laps.'));
   const actions=nodes.find(n=>n.children.some(child=>child.textContent==='Use AM'));
   assert.ok(actions.className.includes('flex-wrap'),'Actions wrap on narrow screens');
 }

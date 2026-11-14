@@ -142,6 +142,12 @@ def garmin_type_e_ayc_view(request):
                 answer = ask_model(facts,history,current)
                 proposal = answer.get("proposal")
                 basis = answer.get("zone_basis",state["basis"])
+                action_requested = bool(message and (
+                    re.search(r"\b(?:voorstel|proposal|gebruik|gebruiken|use|usen|apply|toepassen|overnemen|aanpassen|corrigeer|update)\b",message,re.I)
+                    or (re.fullmatch(r"(?:ja|yes|ok|doe maar)[.!]?",message,re.I) and state["history"]
+                        and re.search(r"voorstel|gebruik|use|apply|toepassen",state["history"][-1]["content"],re.I))))
+                wants_update = action_requested or answer.get("intent") == "update"
+                repair_used = False
                 confirmed = bool(state.get("pending") and message and re.fullmatch(
                     r"(?:ja|yes|zeker|ok|doe maar)(?:[.!]|,? (?:klopt|graag|doen|dat klopt))?",
                     message.strip(),re.I))
@@ -153,6 +159,17 @@ def garmin_type_e_ayc_view(request):
                     raise ValueError("Garmin E returned an invalid zone basis.")
                 if proposal is None and basis != state["basis"]:
                     proposal = state["proposal"]
+                if proposal is None and wants_update:
+                    remaining = deadline-monotonic()
+                    if remaining >= 3:
+                        answer = ask_model(facts,history,current,
+                            "The user wants the agreed correction in the usable preview, but no proposal was returned. "
+                            "Return intent:update and the FULL updated lap assignment, preserving untouched laps. "
+                            "If unsupported, explain the concrete measurement mismatch without claiming an update.",
+                            timeout=min(20,remaining))
+                        proposal = answer.get("proposal")
+                        basis = answer.get("zone_basis",state["basis"])
+                        repair_used = True
                 if proposal is not None:
                     try:
                         candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
@@ -161,18 +178,17 @@ def garmin_type_e_ayc_view(request):
                         error = str(exc)
                         # One repair, with the original facts and concrete measurement feedback.
                         remaining = deadline-monotonic()
-                        if remaining < 3:
-                            raise ValueError("There is not enough time to safely check another model response.")
-                        answer = ask_model(facts,history,current,error,timeout=min(20,remaining))
-                        proposal = answer.get("proposal")
-                        basis = answer.get("zone_basis",state["basis"])
-                        if proposal is not None:
-                            try:
-                                candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
-                                    confirmed_overrun=answer.get("confirmation_required") is True)
-                                error = None
-                            except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
-                                error = str(exc)
+                        if remaining >= 3 and not repair_used:
+                            answer = ask_model(facts,history,current,error,timeout=min(20,remaining))
+                            proposal = answer.get("proposal")
+                            basis = answer.get("zone_basis",state["basis"])
+                            if proposal is not None:
+                                try:
+                                    candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
+                                        confirmed_overrun=answer.get("confirmation_required") is True)
+                                    error = None
+                                except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
+                                    error = str(exc)
                 reply = answer["reply"]
                 if error:
                     reply += "\n\nDit voorstel kan ik nog niet toepassen op de metingen: "+error
@@ -182,6 +198,10 @@ def garmin_type_e_ayc_view(request):
                     reply += "\n\nAntwoord ‘ja’ als je dit voorstel wilt gebruiken; de gemeten tijden blijven behouden."
                 updated = candidate or deepcopy(state["part"])
                 updated.pop("e_history",None)
+                if not candidate and wants_update and not state.get("pending"):
+                    reply += "\n\nHet bruikbare voorstel hieronder is nog niet bijgewerkt; de vorige gecontroleerde versie staat er nog."
+                updated["e_update_note"] = ("Voorstel bijgewerkt vanuit de gemeten laps." if candidate else
+                    "Voorstel ongewijzigd; zie het antwoord hierboven." if wants_update else "")
                 updated["chat_reply"] = reply
                 if candidate:
                     state.pop("pending",None)
