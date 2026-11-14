@@ -29,6 +29,32 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_alternative_uses_all_time_only_laps_and_corrected_hr(self):
+        from core.watch_alternative import alternative_part
+        athlete = SimpleNamespace(zone_hr_bpm={"1":"145","2":"146-160","3":"161-175"},alternative_hr_correction=10)
+        seconds = [930,604,300,601,300,601,323,601,307,388]
+        laps = [dict(elapsed_time=s,avg_heart_rate=hr,hr_tail=end) for s,hr,end in
+                zip(seconds,[111,133,119,138,109,140,114,138,118,141],
+                    [None,146,113,148,104,152,108,156,109,155])]
+        part = alternative_part(athlete,{"sport":"ELLIPTICAL","average_hr":132},sum(seconds),laps)
+        proposal = dict(warmup_laps=[1],cooldown_laps=[10],recovery_laps=[3,5,7,9],
+            reps=[dict(laps=[i],target_seconds=600) for i in (2,4,6,8)])
+        checked = checked_proposal(part,proposal,athlete=athlete)
+        self.assertTrue(checked["e_usable"])
+        self.assertNotIn("main",checked["training_fields"])
+        self.assertEqual(checked["watch_loads"],[])
+        self.assertIn("Elliptical Work 604s Z2",checked["training_fields"]["alt"])
+        self.assertIn("Elliptical Work 601s Z3",checked["training_fields"]["alt"])
+        self.assertEqual(sum(l["seconds"] for l in checked["alternative_laps"]),sum(seconds))
+        from core.parser import parse_segment_text
+        from core.alternative import split_alternative_segments
+        texts = split_alternative_segments(checked["training_fields"]["alt"])
+        self.assertEqual(sum(parse_segment_text(text,zone_required=False).duration_s for text in texts),sum(seconds))
+        with self.assertRaises(ValueError):
+            checked_proposal(part,proposal,athlete=athlete,zone_basis="pace")
+        with self.assertRaises(ValueError):
+            checked_proposal(part,dict(proposal,recovery_laps=[3,5,7]),athlete=athlete)
+
     def test_save_digest_accepts_browser_number_spelling_but_no_measurement_change(self):
         from core.views.garmin_e import preview_digest
         fields = {"wu":"","main":"2×200 m Z4","cd":""}
@@ -154,6 +180,40 @@ class GarminEEndpointTests(TestCase):
         session = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]
         return self.client.post(self.url+"?"+urlencode({**self.query,"suggestion_session":session["start"]}),
             {"chat":json.dumps([{"role":"user","content":text}])})
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_alternative_conversation_use_and_add_preserve_running(self, model):
+        seconds = [930,604,300,601,300,601,323,601,307,388]
+        self.record.distance_m = None
+        self.record.duration_s = sum(seconds)
+        self.record.analysis_data = {"activity_metrics":{"sport":"ELLIPTICAL","average_hr":132},
+            "laps":[dict(elapsed_time=s,avg_heart_rate=140,hr_tail=150) for s in seconds]}
+        self.record.save()
+        self.athlete.zone_hr_bpm = {"1":"145","2":"146-160","3":"161-175"}
+        self.athlete.save()
+        model.return_value = {"reply":"Ik zie vier werkblokken van tien minuten. De rust is ongeveer vijf minuten.",
+            "proposal":dict(warmup_laps=[1],cooldown_laps=[10],recovery_laps=[3,5,7,9],
+                reps=[dict(laps=[i],target_seconds=600) for i in (2,4,6,8)]),"zone_basis":"hr"}
+        result = self.chat("Kun je de vier tienminutenblokken met in- en uitlopen meenemen?").json()
+        part = result["results"][0]["parts"][0]
+        self.assertTrue(part["e_usable"],part)
+        self.assertIsNone(model.call_args.args[0][0]["distance_m"])
+        payload = {"watch_origin":"watch_e","watch_loads":"[]","watch_validation":part["e_validation"],
+                   "alt_text":part["training_fields"]["alt"],"watch_fields":"alternative_replace"}
+        url = reverse("slot_modal",args=[2026,11,14,1])+"?"+urlencode({"athlete":self.athlete.pk,"source":"athlete_year"})
+        self.assertEqual(self.client.post(url,payload).status_code,200)
+        from core.models import TrainingSlot
+        slot = TrainingSlot.objects.get(athlete=self.athlete,date="2026-11-14",slot_index=1)
+        self.assertEqual(slot.source,"watch_e")
+        self.assertFalse(slot.segments.filter(type="CORE").exists())
+        self.assertEqual(sum(slot.segments.filter(type="ALT").values_list("duration_s",flat=True)),sum(seconds))
+        self.assertEqual(self.client.post(url,dict(payload,alt_text="Elliptical 999' Z5")).status_code,400)
+        pm_url = reverse("slot_modal",args=[2026,11,14,2])+"?"+urlencode({"athlete":self.athlete.pk,"source":"athlete_year"})
+        self.assertEqual(self.client.post(pm_url,{"core_text":"5000 m Z1"}).status_code,200)
+        self.assertEqual(self.client.post(pm_url,dict(payload,watch_fields="alternative")).status_code,200)
+        pm = TrainingSlot.objects.get(athlete=self.athlete,date="2026-11-14",slot_index=2)
+        self.assertTrue(pm.segments.filter(type="CORE",text="5000 m Z1").exists())
+        self.assertTrue(pm.segments.filter(type="ALT").exists())
 
     @patch("core.views.garmin_e.ask_model")
     def test_preview_conversation_valid_proposal_and_server_memory(self, model):

@@ -70,9 +70,10 @@ async function checkConfirmation(model, typedYes) {
   assert.equal(JSON.parse(requests[1].get('chat')).at(-1).content,"6*6'");
   assert.ok(flatten(parent).some(n=>(n.textContent||'').includes("6×6' Z1 p45")));
 }
-async function checkEConversation() {
+async function checkEConversation(alternative = false) {
   const parent=element('div'), requests=[];
-  const current={start:'e-session',parts:[{description:'Measured preview',e_usable:false,training_fields:{main:'preview'}}]};
+  const current={start:'e-session',parts:[{description:'Measured preview',e_usable:false,
+    training_fields:alternative ? {alt:"Elliptical 82' Z1"} : {main:'preview'}}]};
   let calls=0;
   const context={document:{createElement:element,createTextNode:t=>({...element('text'),textContent:t})},
     watchChats:{},URLSearchParams,getCookie(){return 'csrf';},renderTypeALaps(){},
@@ -84,7 +85,8 @@ async function checkEConversation() {
       if(calls===2) history.push({role:'user',content:'Ja, en kijk naar snelheid in plaats van HR.'},
         {role:'assistant',content:'Ik gebruik nu snelheid en behoud de gemeten indeling.'});
       return {json:async()=>({ok:true,results:[{start:'e-session',parts:[{
-        description:calls===1?'Measured preview':'Checked E result',training_fields:{main:'2×200 m Z4'},
+        description:calls===1?'Measured preview':'Checked E result',
+        training_fields:alternative ? {alt:"Elliptical Work 10' Z2"} : {main:'2×200 m Z4'},
         e_usable:calls===2,e_validation:'signed',e_history:history,e_zone_note:'Zones use measured speed.'}]}]})};
     }};
   vm.createContext(context); vm.runInContext(source.replace('{{ is_coach_user|yesno:"true,false" }}','false'),context);
@@ -113,4 +115,5 @@ async function checkEConversation() {
   for(const typedYes of [true,false]) await checkConfirmation(model,typedYes);
 }
 await checkEConversation();
+await checkEConversation(true);
 console.log('Garmin suggestions: C/D request, preview, rejection and coach diagnostics passed.');})().catch(e=>{console.error(e);process.exitCode=1;});

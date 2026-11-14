@@ -123,6 +123,15 @@ def alternative_part(athlete, metrics, duration_s, laps=None):
     # only enriches it with a zone; missing/mismatching zones must not hide the
     # Use/Add actions for an otherwise valid non-running activity.
     part['training_fields'] = {'alt': part['description']}
+    # Numeric facts for the opt-in E conversation; no distance or pace is invented.
+    part['alternative_label'] = label
+    part['alternative_duration_s'] = seconds
+    part['alternative_laps'] = [
+        {'seconds':number(lap.get('elapsed_time')), 'average_hr':number(lap.get('avg_heart_rate')),
+         'end_hr':number(lap.get('hr_tail'))}
+        for lap in (laps or []) if number(lap.get('elapsed_time'))]
+    if not part['alternative_laps']:
+        part['alternative_laps'] = [{'seconds':seconds,'average_hr':average,'end_hr':None}]
     if interval_zone:
         part['analysis_note'] = (
             f'Alternative · Work-lap end HR zones with +{correction} correction: {interval_zone}.'

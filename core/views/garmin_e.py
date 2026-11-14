@@ -85,7 +85,10 @@ def garmin_type_e_ayc_view(request):
             if len(session.get("parts",[])) != 1:
                 part["ai_structure_status"] = "e_unavailable"
                 continue
-            if not part.get("watch_loads") or not (part.get("training_fields") or {}).get("main"):
+            fields = part.get("training_fields") or {}
+            is_alternative = bool(fields.get("alt"))
+            if not ((part.get("watch_loads") and fields.get("main"))
+                    or (is_alternative and part.get("alternative_laps"))):
                 part["ai_structure_status"] = "e_unavailable"
                 continue
             try:
@@ -132,6 +135,8 @@ def garmin_type_e_ayc_view(request):
                     "Bekijk deze hele training. Welk patroon zie je? Leg je waarneming uit en geef alleen een voorstel als de laps dit ondersteunen."}]
                 current = {"training":state["part"].get("training_fields") if state["part"].get("e_usable") else None,
                            "zone_basis":state["basis"],"hr_limits":athlete.zone_hr_bpm,
+                           "activity_type":part.get("alternative_label") if is_alternative else "Running",
+                           "alternative_hr_correction":athlete.alternative_hr_correction if is_alternative else None,
                            "checked_assignment":state["proposal"],"pending_confirmation":state.get("pending")}
                 deadline = monotonic()+25
                 answer = ask_model(facts,history,current)

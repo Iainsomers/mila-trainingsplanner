@@ -1,5 +1,11 @@
 # Actuele status
 
+## 14 november 2026 — Garmin E praat ook over Alternative
+
+- De E-chat was aanvankelijk uitsluitend beschikbaar bij Main/looptraining. Alternative had geen chat en uitgeschakelde opslagknoppen. E ondersteunt nu ook tijd-/HR-opnames zonder loopafstand.
+- De numerieke Alternative-laps en sportnaam worden aan dezelfde vrije gespreksroute aangeboden, met een aparte tijdvalidator. Iedere bronlap moet worden toegewezen. De uiteindelijke Alternative bevat alle gemeten WU-, werk-, herstel- en CD-tijden, met HR-zones plus de persoonlijke correctie. Geen verzonnen snelheid of loopkilometers.
+- Use/Add gebruikt dezelfde ondertekende opslagcontrole; Add Alternative laat bestaande looponderdelen intact. Tests met de tien ellipticallaps (15:30, vier circa tienminutenblokken met circa vijf minuten herstel en 6:28 slotblok) controleren volledige tijdsduur, zones, chat, opslaan, manipulatieafwijzing en behoud van de looptraining. De gerenderde chat wordt voor zowel loop- als Alternative-kaarten getest.
+
 ## 14 november 2026 — Opslag E na browser-JSON
 
 - Een live E-preview kon correct zijn maar bij Use/Add worden afgewezen: JavaScript stuurt gehele getallen zonder `.0` terug, terwijl de ondertekende controle de oorspronkelijke Python-JSON-spelling vergeleek. De regressietest reproduceerde HTTP 400 met een ongewijzigde, door de browser herschreven payload.

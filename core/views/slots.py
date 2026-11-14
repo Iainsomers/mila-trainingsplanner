@@ -1408,11 +1408,16 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         try:
             fields = {"wu":request.POST.get("wu_text",""),"main":request.POST.get("core_text",""),
                       "cd":request.POST.get("cd_text","")}
+            alternative = request.POST.get("alt_text","")
+            if alternative and not any(fields.values()):
+                fields = {"alt":alternative}
+            elif alternative:
+                raise ValueError
             loads = json.loads(request.POST.get("watch_loads","[]"))
             expected = [request.user.pk,athlete.pk,date_cls(int(yyyy),int(mm),int(dd)).isoformat(),
                         preview_digest(fields,loads)]
             verified = signing.loads(request.POST.get("watch_validation",""),salt="garmin-e-save",max_age=3600)
-            if verified != expected or request.POST.get("alt_text"):
+            if verified != expected:
                 raise ValueError
         except (signing.BadSignature,ValueError,TypeError):
             return HttpResponse("Reopen Garmin E and review the measured proposal before saving.",status=400)

@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- De Garmin-E-chat en `Analyze training` staan ook bij Alternative-kaarten, met dezelfde wrappende actierij en gewone conversatie. Een voorstel activeert Use/Add pas na de Alternative-meetcontrole.
+
 - Garmin E opent de chat direct per opname. `Analyze training` start de analyse; een vrije vraag mag ook de eerste stap zijn. E-antwoorden worden als vrije tekst weergegeven, zonder de vaste C/D-zinnen over een gevalideerd voorstel achter elk bericht. Use/Add blijft uitgeschakeld zolang geen gecontroleerde E-preview beschikbaar is. De zonebasis staat bij het voorstel. Acties blijven compact en wrappen op smalle schermen; de laptabel blijft horizontaal scrollbaar. Meerdere opnames combineren blijft voorlopig een C/D-functie.
 
 - De stafschakelaar `Simple` staat compact tussen de Athlete Diary-bediening, op desktop en mobiel. In deze stand zijn sessies niet te openen en tonen ze duidelijk vergrote T-, zone- en A-totalen; de evaluatie blijft op haar gewone plek. Atleten zien de schakelaar nooit.

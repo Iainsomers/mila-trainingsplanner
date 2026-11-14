@@ -3027,7 +3027,7 @@
             var actions = document.createElement("div");
             actions.className = "d-flex flex-wrap gap-1";
             actions.style.maxWidth = "100%";
-            if ((model === "C" || model === "D" || model === "E") && fields.main) {
+            if ((model === "C" || model === "D" || model === "E") && (fields.main || (model === "E" && (fields.alt || fields.alternative)))) {
               var key = model + ":" + session.start;
               var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [], open:model === "E"});
               if (model === "E" && part.e_history) chat.messages = part.e_history;

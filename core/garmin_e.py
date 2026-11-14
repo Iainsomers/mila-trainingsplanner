@@ -46,6 +46,13 @@ Users can say 'kijk naar snelheid ipv hr' or vice versa: set zone_basis accordin
 the choice. Preserve the current basis unless asked to change it. auto uses end HR for reps
 at least 400m OR 50s and pace for shorter reps. pace always uses speed, hr requests measured
 end HR even on short reps. If HR is absent the server retains pace and reports that limitation.
+For Alternative (elliptical, cycling, swimming, etc.) distance_m may be null. Discuss these just
+as naturally. Use measured time and HR, never invent pace or distance. Propose the SAME schema,
+but time targets only. Keep the recorded sport. All laps must still appear exactly once,
+including warmup, cooldown and recovery. A whole continuous activity may be one time rep.
+auto means HR for Alternative. If no speed was measured, explain that a speed-based zone
+cannot be determined; offer HR/time instead. Preserve HR correction from current context.
+Alternative time targets can be 1..86400 seconds, including one continuous long activity.
 """
 
 
@@ -71,6 +78,15 @@ def ask_model(facts, history, current=None, validation_error=None, *, timeout=20
 
 
 def lap_facts(part):
+    if (part.get("training_fields") or {}).get("alt"):
+        facts = []
+        for i,load in enumerate(part.get("alternative_laps") or [],1):
+            seconds = float(load["seconds"])
+            if not math.isfinite(seconds) or seconds <= 0:
+                raise ValueError("Alternative contains incomplete lap durations.")
+            facts.append(dict(lap=i,distance_m=None,duration_s=seconds,zone=None,
+                              avg_hr=load.get("average_hr"),end_hr=load.get("end_hr")))
+        return facts
     facts = []
     for i, load in enumerate(part.get("watch_loads") or [], 1):
         meters, seconds = float(load["meters"]), float(load["seconds"])
@@ -84,6 +100,9 @@ def lap_facts(part):
 
 def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirmed_overrun=False):
     """Only measured, complete, chronologically bound proposals become usable."""
+    if (part.get("training_fields") or {}).get("alt"):
+        return checked_alternative(part,proposal,athlete=athlete,zone_basis=zone_basis,
+                                   confirmed_overrun=confirmed_overrun)
     if not isinstance(proposal,dict):
         raise ValueError("No complete lap assignment was supplied.")
     facts = lap_facts(part)
@@ -249,4 +268,84 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         value = row.get("hr_tail")
         hr = hr_zone(athlete,value) if athlete is not None else None
         row["hr_zone"] = "Z"+hr if hr else "NA"
+    return result
+
+
+def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", confirmed_overrun=False):
+    """Bind duration-only Alternative proposals, preserving every recorded second."""
+    if not isinstance(proposal,dict):
+        raise ValueError("No complete Alternative lap assignment was supplied.")
+    if zone_basis not in {"auto","hr"}:
+        raise ValueError("Deze Alternative bevat geen gemeten snelheid. Gebruik tijd en hartslag.")
+    facts = lap_facts(part)
+    if not 1 <= len(facts) <= 200:
+        raise ValueError("Use 1–200 measured Alternative laps.")
+    used = set()
+    def ids(values):
+        if (not isinstance(values,list) or any(type(i) is not int or not 1 <= i <= len(facts) for i in values)
+                or values != sorted(set(values)) or used.intersection(values)):
+            raise ValueError("Alternative lap numbers must be chronological and assigned exactly once.")
+        used.update(values)
+        return values
+    wu,cd,recovery = (ids(proposal.get(key,[])) for key in ("warmup_laps","cooldown_laps","recovery_laps"))
+    reps = proposal.get("reps")
+    if not isinstance(reps,list) or not 1 <= len(reps) <= 60:
+        raise ValueError("Supply the measured Alternative work blocks.")
+    blocks, last, overruns = [],0,0
+    for rep in reps:
+        indices = ids(rep["laps"])
+        if not indices or indices != list(range(indices[0],indices[-1]+1)) or indices[0] <= last:
+            raise ValueError("Alternative work blocks must use consecutive source laps in order.")
+        last = indices[-1]
+        seconds = sum(facts[i-1]["duration_s"] for i in indices)
+        target = rep.get("target_seconds")
+        if rep.get("target_meters") is not None or type(target) is not int or not 1 <= target <= 86400:
+            raise ValueError("Alternative work targets must be measured durations, not distances.")
+        if abs(seconds-target)>max(15,target*.06):
+            if confirmed_overrun and target < seconds <= target+max(60,target*.2):
+                overruns += 1
+                if overruns>1:
+                    raise ValueError("Only one modest longer work block can be confirmed.")
+            else:
+                raise ValueError(f"Laps {indices}: measured {seconds:g}s does not match {target}s.")
+        # Do not swallow an intervening low-HR recovery into a larger rep.
+        hrs = [facts[i-1].get("avg_hr") for i in indices]
+        if len(hrs)>1 and all(isinstance(hr,(int,float)) for hr in hrs) and max(hrs)-min(hrs)>20:
+            raise ValueError("A merged Alternative rep contains substantially different HR; keep recovery separate.")
+        blocks.append((indices,target))
+    if used != set(range(1,len(facts)+1)):
+        raise ValueError("The Alternative proposal omits recorded laps.")
+    if (wu and max(wu)>=blocks[0][0][0]) or (cd and min(cd)<=last):
+        raise ValueError("Alternative warmup must precede work and cooldown must follow it.")
+    roles = {i:"Warmup" for i in wu}
+    roles.update({i:"Cooldown" for i in cd})
+    roles.update({i:"Recovery" for i in recovery})
+    block_at = {indices[0]:indices for indices,_ in blocks}
+    correction = max(0,int(getattr(athlete,"alternative_hr_correction",10) or 0))
+    from core.garmin_d import hr_zone
+    texts, missing = [],False
+    i = 1
+    while i <= len(facts):
+        indices = block_at.get(i,[i])
+        rows = [facts[n-1] for n in indices]
+        seconds = sum(row["duration_s"] for row in rows)
+        hr_values = [(row.get("end_hr") or row.get("avg_hr"),row["duration_s"]) for row in rows]
+        if all(isinstance(hr,(int,float)) and math.isfinite(hr) and 0<hr<300 for hr,_ in hr_values):
+            value = sum(hr*duration for hr,duration in hr_values)/seconds
+            label = hr_zone(athlete,value+correction) if athlete is not None else None
+        else:
+            label = None
+        missing = missing or label is None
+        duration = f"{int(seconds)//60}'" if seconds%60==0 else f"{seconds:g}s"
+        role = roles.get(i,"Work")
+        texts.append(f"{part.get('alternative_label','Alternative')} {role} {duration}"+(f" Z{label}" if label else ""))
+        i = indices[-1]+1
+    result = deepcopy(part)
+    text = " // ".join(texts)
+    result.update(training_fields={"alt":text},description=text,watch_loads=[],
+                  e_usable=True,e_zone_basis="hr",ai_structure_status="e_validated")
+    result["e_zone_note"] = f"Alternative zones use measured end HR (average HR when unavailable) +{correction} bpm."
+    if missing:
+        result["e_zone_note"] += " Some blocks have no usable HR/limits; their zone is left empty."
+    result.pop("training_alternatives",None)
     return result
