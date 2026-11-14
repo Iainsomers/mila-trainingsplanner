@@ -4,7 +4,11 @@ const vm = require('node:vm');
 const pills = [
   "7*(400m-300m) z2>z3 p=100m wandel sp1 (1:38/1:14-->1:28/1:06)",
   "3*800m z3>z2", "3*(400m z2 + 300m z4)", "800m z1", "3*800m TM>THM",
-  "16*(400m z1-100m z3)", "2*(300m z2-200m z3>z4)"
+  "16*(400m z1-100m z3)", "2*(300m z2-200m z3>z4)",
+  "Elliptical 4×(10' Z2 - 5' Z1)",
+  "4*(5' z2-3' z1) (HR161-170/HR<160)",
+  '3*(30s Z4-1 min Z1)', "2*(6'28 Z2-1' Z1)",
+  '2*(1,5 min Z3-30s Z1)'
 ].map(textContent => ({textContent, style:{}}));
 const context = {document:{querySelectorAll:()=>pills}};
 vm.createContext(context);
@@ -19,4 +23,13 @@ assert.equal(pills[3].style.background, undefined);
 assert.equal(pills[4].style.background, pills[0].style.background);
 assert.equal(pills[5].style.background, 'linear-gradient(30deg, #f8f8f0 0.000%, #f8f8f0 80.000%, #f06f5f 80.000%, #f06f5f 100.000%)');
 assert.equal(pills[6].style.background, 'linear-gradient(30deg, #f7c6d0 0.000%, #f7c6d0 60.000%, #f06f5f 60.000%, #f06f5f 80.000%, #bfe7bf 80.000%, #bfe7bf 100.000%)');
-console.log('Progressive pill colours: 7 scenarios passed');
+assert.equal(pills[7].style.background,'linear-gradient(30deg, #f7c6d0 0.000%, #f7c6d0 66.667%, #f8f8f0 66.667%, #f8f8f0 100.000%)');
+assert.equal(pills[8].style.background,'linear-gradient(30deg, #f7c6d0 0.000%, #f7c6d0 62.500%, #f8f8f0 62.500%, #f8f8f0 100.000%)');
+assert.equal(pills[9].style.background,'linear-gradient(30deg, #bfe7bf 0.000%, #bfe7bf 33.333%, #f8f8f0 33.333%, #f8f8f0 100.000%)');
+assert.ok(pills[10].style.background.includes('86.607%'));
+assert.ok(pills[11].style.background.includes('75.000%'));
+assert.equal(vm.runInContext("flexProgressiveZones(\"4*(5' z2-3' z1)\")",context),null);
+assert.ok(fs.readFileSync('core/templates/core/athlete_year_calendar.html','utf8')
+  .includes('{% include "core/partials/progressive_pill_colors.js.html" %}'),
+  'Diary and planners use the same colour rules');
+console.log('Progressive pill colours: distance/time proportions, order and compact manual notation passed');

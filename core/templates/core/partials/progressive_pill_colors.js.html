@@ -78,7 +78,7 @@
 
     function flexProgressiveZones(text) {
       const s = text || "";
-      const m = s.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b/i);
+      const m = s.match(/\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b(?!\s*['′’"″]|\s*(?:min|sec|s)\b)/i);
       if (!m || m[1] === m[2]) return null;
       const start = Number(m[1]);
       const end = Number(m[2]);
@@ -109,18 +109,29 @@
       const parsed = parts.flatMap((part) => {
         const zoneMatch = part.match(/\bz\s*([1-6])\b/i);
         const distanceMatch = part.match(/\b(\d+(?:[.,]\d+)?)\s*(km|k|m)\b/i);
-        if (!zoneMatch || !distanceMatch) return [null];
-        const value = Number(distanceMatch[1].replace(",", "."));
-        const unit = distanceMatch[2].toLowerCase();
-        const weight = (unit === "km" || unit === "k") ? value * 1000 : value;
+        const minuteMatch = part.match(/\b(\d+(?:[.,]\d+)?)\s*(?:['′’](?:\s*(\d{1,2})(?:["″])?)?|min\b)/i);
+        const secondMatch = part.match(/\b(\d+(?:[.,]\d+)?)\s*(?:["″]|sec\b|s\b)/i);
+        if (!zoneMatch || (!distanceMatch && !minuteMatch && !secondMatch)) return [null];
+        const kind = distanceMatch ? "distance" : "time";
+        let weight;
+        if (distanceMatch) {
+          const value = Number(distanceMatch[1].replace(",", "."));
+          const unit = distanceMatch[2].toLowerCase();
+          weight = (unit === "km" || unit === "k") ? value * 1000 : value;
+        } else if (minuteMatch) {
+          weight = Number(minuteMatch[1].replace(",", ".")) * 60 + Number(minuteMatch[2] || 0);
+        } else {
+          weight = Number(secondMatch[1].replace(",", "."));
+        }
         if (!Number.isFinite(weight) || weight <= 0) return [null];
         const progressiveZones = flexProgressiveZones(part);
         if (progressiveZones && progressiveZones.length > 1) {
-          return progressiveZones.map((zone) => ({zone, weight: weight / progressiveZones.length}));
+          return progressiveZones.map((zone) => ({zone, weight: weight / progressiveZones.length, kind}));
         }
-        return [{zone: zoneMatch[1], weight}];
+        return [{zone: zoneMatch[1], weight, kind}];
       });
       if (parsed.some((part) => !part)) return [];
+      if (new Set(parsed.map((part) => part.kind)).size !== 1) return [];
       return parsed;
     }
 

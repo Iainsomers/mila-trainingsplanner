@@ -1,5 +1,11 @@
 # Actuele status
 
+## 14 november 2026 — Kleuren van herhaalde tijd-/zoneparen
+
+- De tijdnotatie werd correct opgeslagen, maar de kleurlogica herkende alleen afstandsonderdelen. In de Diary zat bovendien een oudere, losse kleurfunctie. Een direct geschreven `z2-3'` kon onterecht als progressie naar Z3 worden gelezen.
+- De gedeelde kleurfunctie leest nu minuten, seconden, decimalen en minuten-met-seconden in samengestelde reps. De Diary gebruikt dezelfde functie als de planners en past deze opnieuw toe na een HTMX-celupdate. `10' Z2 - 5' Z1` krijgt 66,667% roze gevolgd door 33,333% licht; `5' z2-3' z1` krijgt 62,5% en 37,5%.
+- Gerichte JavaScript-regressies behouden de bestaande afstands-/T-/zoneprogressies en controleren beide getoonde tijdvoorbeelden, minuten/secondencombinaties en zonevolgorde. Dit wijzigt alleen de weergave; trainingstekst, bronmetingen en totalen blijven gelijk.
+
 ## 14 november 2026 — Compact Alternative-voorstel daadwerkelijk opslaan
 
 - De eerdere reparatie vroeg wel een volledige laptoewijzing op, maar de Alternative-formatter maakte daar altijd opnieuw losse meetblokken van. Een afgesproken compacte notatie kon daardoor nog steeds niet verschijnen.
