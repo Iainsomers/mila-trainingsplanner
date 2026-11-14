@@ -1,5 +1,11 @@
 # Actuele status
 
+## 14 november 2026 — Coachinstelling voor beperkte model-E-proef
+
+- Nieuwe atleetvlag `garmin_model_e_enabled`, standaard uit; migratie `0151_athlete_garmin_model_e_enabled`.
+- Coach kan via Athlete Info > General > Connections `Allow Garmin model E (experimental)` bewaren. Zelfbediening van de atleet kan de vlag niet veranderen; ongerelateerde coaches krijgen geen toegang.
+- Dit is de toegangsinrichting, nog geen E-analyse/chatroute of Garmin-E-knop. Bij de implementatie daarvan moeten zowel de zichtbaarheid als iedere E-aanvraag deze vlag controleren, naast de bestaande atleettoegang en AI-toestemming. C en D blijven ongewijzigd.
+
 ## 14 november 2026 — Laatste korte rep en expliciete chathertelling
 
 - Regressie op de numerieke 1200m + negen 200m/100m-paren met een laatste 101,52m/19s en slotrestje 19,46m/9s: C en D behouden nu alle achttien werkreps.

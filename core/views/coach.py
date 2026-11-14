@@ -11700,6 +11700,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "see_desired_improvement_points": getattr(athlete, "see_desired_improvement_points", False),
         "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
         "garmin_connection_enabled": getattr(athlete, "garmin_connection_enabled", False),
+        "garmin_model_e_enabled": getattr(athlete, "garmin_model_e_enabled", False),
         "oura_connection_enabled": getattr(athlete, "oura_connection_enabled", False),
         "oura_auto_import_enabled": getattr(athlete, "oura_auto_import_enabled", False),
         "polar_enabled": getattr(athlete, "polar_enabled", False),
@@ -11765,6 +11766,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         else:
             form["garmin_fit_upload_enabled"] = (request.POST.get("garmin_fit_upload_enabled") == "on")
         form["garmin_connection_enabled"] = athlete.garmin_connection_enabled if self_view else request.POST.get("garmin_connection_enabled") == "on"
+        form["garmin_model_e_enabled"] = athlete.garmin_model_e_enabled if self_view else request.POST.get("garmin_model_e_enabled") == "on"
         if self_view:
             form["oura_connection_enabled"] = getattr(athlete, "oura_connection_enabled", False)
         else:
@@ -11990,6 +11992,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
                 athlete.see_desired_improvement_points = form["see_desired_improvement_points"]
             if not self_view:
                 athlete.garmin_fit_upload_enabled = form["garmin_fit_upload_enabled"]
+                athlete.garmin_model_e_enabled = form["garmin_model_e_enabled"]
                 if athlete.garmin_connection_enabled and not form["garmin_connection_enabled"]:
                     from core.views.garmin import revoke_connection
                     revoke_connection(athlete)

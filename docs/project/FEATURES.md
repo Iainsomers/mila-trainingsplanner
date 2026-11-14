@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Athlete Info > General > Connections heeft voor coaches `Allow Garmin model E (experimental)`. De keuze staat per atleet standaard uit en wordt los van Garmin Connection/FIT-uploadrechten opgeslagen. Dit bereidt de toegang tot model E voor; de E-analyse en chat zijn nog niet beschikbaar.
+
 - Garmin C/D behoudt een volledige laatste korte werkrep wanneer de opname direct stopt of alleen een klein, langzaam slotrestje volgt. Een expliciete chatvraag zoals `9*100m` telt de toegewezen bronreps opnieuw, behoudt andere onderdelen en kan een volledig bevestigd afwisselend patroon als `9×(200 m - 100 m)` tonen. Een ontbrekende negende werkrep wordt niet toegevoegd.
 
 - Garmin C/D-chat kan bij een complete tijdreeks met precies één beperkt te lange werkrep om bevestiging vragen. Bijvoorbeeld zes werkblokken van circa 6 minuten met één 6:45: na `6*6'` verschijnt een vraag met bevestigingsknop; ook `ja` in de chat bevestigt. Pas daarna verandert de preview naar 6×6′. Use/Add blijft de afzonderlijke opslagactie. De gemeten tijden, afstanden en hartslag blijven intact.

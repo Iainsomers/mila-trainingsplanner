@@ -1,5 +1,7 @@
 # Gebruikersrollen en toegang
 
+- Alleen coaches met bewerktoegang kunnen onder Athlete Info de experimentele Garmin-model-E-toestemming per atleet aan-/uitzetten. Atleten zien de instelling niet en kunnen deze ook niet via een aangepast formulier wijzigen; hun eigen instellingen opslaan behoudt de coachkeuze.
+
 De Athlete Diary-weergave `Simple` is uitsluitend voor staf. Een atleet krijgt de schakelaar niet en kan de stand ook niet via een URL-parameter activeren.
 
 Bijgewerkt: 12 oktober 2026.
