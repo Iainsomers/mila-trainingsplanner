@@ -13,6 +13,63 @@ from core.views.garmin import receiver_key
 
 @override_settings(GARMIN_CLIENT_ID="test-id", GARMIN_CLIENT_SECRET="test-secret", GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminCPushTests(TestCase):
+    def test_last_short_rep_with_tiny_stop_and_chat_recount(self):
+        from core.views.garmin import CONSENT_VERSION
+        from urllib.parse import urlencode
+        from types import SimpleNamespace
+        from core.views.calendar import _virtual_segment_from_text
+        from core.watch_processing import processed_main_reps
+        pairs = [(208.99,39,93.99,47,103.02,19,63.1899,44),
+                 (206.88,39,99.89,43,98.52,19,48.3501,42),
+                 (204.46,38,99.1499,42,102.91,19,55.8601,44),
+                 (204.27,37,96.27,43,99.98,19,63.97,40),
+                 (200.72,37,102.48,43,99.8401,19,61.53,45),
+                 (203.48,38,98.77,44,101.03,19,57.0898,43),
+                 (204.6,38,96.8604,49,101.69,18,63.5498,43),
+                 (208.59,37,99.71,41,97.6597,18,54.1504,44),
+                 (204.33,38,96.7002,37,101.52,19,19.46,9)]
+        values = [(1218.54,361)] + [(p[i],p[i+1]) for p in pairs for i in range(0,8,2)]
+        from core.watch_structure import mixed_short_repetitions
+        laps = [dict(distanceMeters=m,durationMillis=s*1000) for m,s in values]
+        recognized = mixed_short_repetitions(laps,lambda l:'Z4' if l['distanceMeters']/(l['durationMillis']/1000)>4 else 'Z1')
+        self.assertIsNotNone(recognized)
+        self.assertIn('9×100 m',recognized['main'])
+        record = GarminActivitySummary.objects.create(athlete=self.athlete,activity_id='short-final',
+            activity_start=datetime.fromtimestamp(self.start,dt_timezone.utc),activity_date='2026-10-31',
+            distance_m=sum(m for m,s in values),duration_s=sum(s for m,s in values),
+            analysis_data={'laps':[dict(distance=m,elapsed_time=s) for m,s in values]})
+        self.athlete.garmin_ai_consent_at = timezone.now()
+        self.athlete.garmin_ai_consent_version = CONSENT_VERSION
+        self.athlete.save()
+        self.client.force_login(self.coach)
+        with patch('core.views.polar_raw.lap_zone_paces',
+                side_effect=lambda m,ms,a: ('Z4' if m/(ms/1000)>4 else 'Z1','NA')):
+            for model in ('c','d'):
+                url = reverse(f'garmin_type_{model}_ayc')
+                query = {'athlete':self.athlete.pk,'date':'2026-10-31','preview':'measured'}
+                activity = self.client.get(url,query).json()['results'][0]
+                part = activity['parts'][0]
+                self.assertIn('9×100 m',part['training_fields']['main'])
+                self.assertIn('9×200 m',part['training_fields']['main'])
+                chat_url = url+'?'+urlencode({**query,'suggestion_session':activity['start']})
+                answer = self.client.post(chat_url,{'chat':json.dumps([{'role':'user','content':'9*100m'}])}).json()
+                self.assertTrue(answer['ok'],answer)
+                edited = answer['results'][0]['parts'][0]
+                self.assertIn('9×(200 m - 100 m)',edited['training_fields']['main'])
+                self.assertEqual(edited['watch_loads'],part['watch_loads'])
+                slot = SimpleNamespace(source=f'watch_{model}',watch_loads=edited['watch_loads'],
+                    segments=SimpleNamespace(all=lambda:[_virtual_segment_from_text('CORE',edited['training_fields']['main'])]))
+                self.assertEqual(len(processed_main_reps(slot)),18)
+            # Eight actual pairs cannot validate a requested ninth 100m.
+            record.analysis_data = {'laps':[dict(distance=m,elapsed_time=s) for m,s in values[:-4]]}
+            record.save(update_fields=['analysis_data'])
+            for model in ('c','d'):
+                url = reverse(f'garmin_type_{model}_ayc')
+                activity = self.client.get(url,query).json()['results'][0]
+                chat_url = url+'?'+urlencode({**query,'suggestion_session':activity['start']})
+                answer = self.client.post(chat_url,{'chat':json.dumps([{'role':'user','content':'9*100m'}])}).json()
+                self.assertFalse(answer['ok'],answer)
+
     def setUp(self):
         self.coach = get_user_model().objects.create_user(username="garmin-c-coach", is_staff=True)
         self.athlete = Athlete.objects.create(owner=self.coach, name="Garmin C runner", birth_year=2000,

@@ -1,5 +1,12 @@
 # Actuele status
 
+## 14 november 2026 — Laatste korte rep en expliciete chathertelling
+
+- Regressie op de numerieke 1200m + negen 200m/100m-paren met een laatste 101,52m/19s en slotrestje 19,46m/9s: C en D behouden nu alle achttien werkreps.
+- De korte-repsherkenning verliest de laatste volledige werkrep niet door kort/afwezig slotherstel. Relatief traag herstel blijft geldig, ook wanneer het iets sneller dan de oude absolute 2,5m/s-grens is. De afstandsclustering telt 100m-reps onder 100m mee.
+- De expliciete chatvraag `9*100m` controleert de bestaande bronreps lokaal vóór een AI-afstandscorrectie en kan de bevestigde reeks groeperen als negen 200m/100m-paren. Meters, seconden, zones, WU en alle herstelmetingen blijven intact. Alleen acht werkelijke 100m-reps blijft een afwijzing.
+- C/D-endpointtests controleren de hertelling, behoud van bronloads en achttien klokreps. Aanvullende tests controleren direct stoppen, klein slotrestje, echte ontbrekende rep en te snel herstel. Geen UI-wijziging.
+
 ## 14 november 2026 — Getypte bevestiging ook vanuit eerder geopende Diary
 
 - Een oudere, nog geopende Diary kon de bevestigingsvraag tonen maar de nieuwe bevestigingsgegevens niet meesturen. Een getypte `yes` ging daardoor opnieuw naar de gewone AI-beoordeling en kon alsnog stranden op de afstand van de langere rep.

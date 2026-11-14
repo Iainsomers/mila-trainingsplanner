@@ -163,6 +163,22 @@ def mixed_short_repetitions(laps, zone_for_lap):
             work.append(i)
     if len(work) < 4:
         return None
+    # A complete final effort can end the recording or have a tiny stop lap.
+    # Require the established alternating series and a matching earlier effort.
+    final = work[-1] + 2
+    if final in (len(rows) - 1, len(rows) - 2):
+        m, s = rows[final]
+        previous = rows[work[-2]]
+        recovery_m, recovery_s = rows[final - 1]
+        trailing = rows[final + 1:]
+        if (work == list(range(work[0], final, 2))
+                and 25 <= m <= 250 and 3 <= s <= 60 and m/s >= 2.5
+                and abs(m-previous[0]) <= max(15, previous[0]*.08)
+                and abs(s-previous[1]) <= max(3, previous[1]*.15)
+                and recovery_s >= 30 and recovery_m <= 300
+                and m/s >= 1.5*recovery_m/recovery_s
+                and all(tm <= 50 and ts <= 30 and tm/ts < 2.5 for tm, ts in trailing)):
+            work.append(final)
     # The final stride can have only a short transition before longer work.
     last = work[-1] + 2
     if last + 2 < len(rows):
@@ -173,7 +189,8 @@ def mixed_short_repetitions(laps, zone_for_lap):
                 and m/s >= max(2.5, 1.5*rm/rs)):
             work.append(last)
     # Every intervening lap must be recovery: no hidden unanalysed work block.
-    if any(m > 300 or (m / s >= 2.5 and s < 60)
+    slowest_work = min(rows[i][0] / rows[i][1] for i in work)
+    if any(m > 300 or (m / s > slowest_work / 1.5)
            for i, (m, s) in enumerate(rows[work[0]:work[-1] + 1], work[0]) if i not in work):
         return None
     prefix = rows[:work[0]]
@@ -181,7 +198,7 @@ def mixed_short_repetitions(laps, zone_for_lap):
     # A separately recorded Main has no warmup prefix. Only accept a fully
     # alternating work/recovery recording here; retain ordinary 50m rounding
     # instead of the lead-in branch's GPS cluster correction.
-    main_only = not prefix and work == list(range(0, len(rows), 2)) and len(rows) == len(work) * 2
+    main_only = not prefix and work == list(range(0, len(rows), 2)) and len(rows) in (len(work) * 2, len(work) * 2 - 1)
     if not main_only and (not long_prefix or long_prefix[0] != 0):
         return None
     if any(zone_for_lap(laps[i]) not in {'Z1', '', 'NA'} for i in range(work[0])):
@@ -201,7 +218,8 @@ def mixed_short_repetitions(laps, zone_for_lap):
     # GPS can put alternating 200m reps just below the 175m rounding boundary.
     # Only two clearly separated repeated distance clusters justify correcting
     # nominal labels; isolated outliers do not establish a new rep distance.
-    longer = sorted((rows[i][0], i) for i in work if rows[i][0] >= 100)
+    # Include 100m efforts measured just below 100m; retain the 50m-stride split.
+    longer = sorted((rows[i][0], i) for i in work if rows[i][0] >= 75)
     gaps = [(longer[j + 1][0] - longer[j][0], j + 1) for j in range(1, len(longer) - 2)]
     gap, split = max(gaps, default=(0, 0))
     if gap >= 15 and not main_only:
@@ -223,7 +241,7 @@ def mixed_short_repetitions(laps, zone_for_lap):
         label = (f'{len(group)}×' if len(group) > 1 else '') + f'{nominal} m' + zone_label(group)
         # Use the recovery immediately following each work lap; a separate
         # near-stationary lap must not inflate its typical rep recovery.
-        recovery = [rows[i + 1][1] for i in group if rows[i + 1][1] < 180]
+        recovery = [rows[i + 1][1] for i in group if i + 1 < len(rows) and 30 <= rows[i + 1][1] < 180]
         if recovery:
             label += f' p{int(math.floor(median(recovery) + .5))}'
         main.append(label)

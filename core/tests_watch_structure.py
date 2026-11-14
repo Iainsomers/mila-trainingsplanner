@@ -26,6 +26,30 @@ def workout(with_cooldown=False):
 
 
 class ShortSetsStructureTests(SimpleTestCase):
+    def test_complete_final_short_rep_needs_no_full_recovery(self):
+        from core.watch_structure import mixed_short_repetitions
+        values = [(1200,360)]
+        for i in range(9):
+            values.extend([(205,38),(97,42),(101,19),(55,43)])
+        zone = lambda lap: 'Z4' if lap['distanceMeters']/(lap['durationMillis']/1000)>4 else 'Z1'
+        for tail in ([], [(19,9)]):
+            rows = values[:-1] + tail
+            laps = [dict(distanceMeters=m,durationMillis=s*1000) for m,s in rows]
+            result = mixed_short_repetitions(laps,zone)
+            self.assertIsNotNone(result)
+            self.assertIn('9×100 m', result['main'])
+            self.assertEqual(len(result['work_indices']),18)
+            self.assertIn('p43',result['main'])
+        # A short recording fragment must not become the missing full 100m.
+        rows = values[:-2] + [(19,9)]
+        laps = [dict(distanceMeters=m,durationMillis=s*1000) for m,s in rows]
+        result = mixed_short_repetitions(laps,zone)
+        self.assertIsNotNone(result)
+        self.assertIn('8×100 m',result['main'])
+        # A fast unassigned lap cannot be explained as recovery.
+        laps[2] = dict(distanceMeters=150,durationMillis=30000)
+        self.assertIsNone(mixed_short_repetitions(laps,zone))
+
     def test_strides_followed_by_two_distance_series_are_complete(self):
         from types import SimpleNamespace
         from core.watch_structure import mixed_short_repetitions

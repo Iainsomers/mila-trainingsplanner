@@ -41,6 +41,30 @@ def apply_distance_edit(part, edit):
 def propose_distance_edit(part, messages):
     if not any(l.get('work_rep') is True and l.get('nominal_rep_m') for l in part.get('watch_loads',[])):
         return None
+    # An exact count/distance request is a recount, not a nominal-distance edit.
+    asked = re.fullmatch(r"\s*(\d+)\s*[×x*]\s*(\d+)\s*m\s*",
+                         messages[-1].get('content', ''), re.I) if messages else None
+    if asked:
+        count, target = map(int, asked.groups())
+        work = [l for l in part['watch_loads'] if l.get('segment') == 'CORE' and l.get('work_rep') is True]
+        selected = [l for l in work if l.get('nominal_rep_m') == target]
+        if (not 2 <= count <= 30 or len(selected) != count
+                or any(abs(float(l['meters'])-target) > max(30,target*.08) for l in selected)):
+            return {'distance_edit_rejected':True}
+        result = deepcopy(part)
+        distances = [l.get('nominal_rep_m') for l in work]
+        if (len(distances) == count*2 and len(set(distances)) == 2
+                and distances == distances[:2]*count):
+            from core.watch_processing import match_repeating_distance_sets
+            matched = match_repeating_distance_sets(
+                f"{count}×({distances[0]}m-{distances[1]}m)", result['watch_loads'])
+            if matched:
+                result['training_fields']['main'] = matched[0]
+                from core.watch_ai_structure import description
+                result['description'] = description(result['training_fields'])
+        result.pop('training_alternatives', None)
+        result['chat_reply'] = f"De bronlaps bevestigen {count}×{target} m. Alle overige werkblokken en meetwaarden zijn behouden."
+        return result
     api_key = os.environ.get('OPENAI_API_KEY','').strip()
     if not api_key:
         return None
