@@ -1,5 +1,11 @@
 # Actuele status
 
+## 14 november 2026 — Combine beschikbaar in Garmin E
+
+- De E-versie miste de C/D-combinebediening. E heeft nu dezelfde selectie van twee of drie loopopnames met WU/Main/CD-rollen. Samenstellen gebeurt op de server, op basis van de originele toegankelijke opnames; de browser levert geen trainingsmetingen aan.
+- Een al gecontroleerde E-Main wordt waar mogelijk hergebruikt en met de buitenopnames opnieuw gevalideerd. Zonder gecontroleerde Main kun je eerst combineren en daarna de hele combinatie analyseren/bespreken. De combinatie heeft een eigen gesprek en blijft gekoppeld aan de bronopnames via een ondertekende verwijzing.
+- Tests controleren combineren vóór/na analyse, bronbehoud, beide klokreps, Use-opslag, ongeldige rollen/bronnen, gewijzigde tokens en het doorgeven van de combinatie aan vervolggesprekken. C/D's bestaande clientcombinatie blijft intact; Alternative valt buiten WU/Main/CD-combineren.
+
 ## 14 november 2026 — Kleuren van herhaalde tijd-/zoneparen
 
 - De tijdnotatie werd correct opgeslagen, maar de kleurlogica herkende alleen afstandsonderdelen. In de Diary zat bovendien een oudere, losse kleurfunctie. Een direct geschreven `z2-3'` kon onterecht als progressie naar Z3 worden gelezen.

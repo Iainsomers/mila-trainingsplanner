@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Garmin E biedt Combine voor twee of drie loopopnames met unieke, chronologische rollen WU/Main/CD. Een gecontroleerde E-Main wordt met de gemeten buitenopnames opnieuw gevalideerd; anders ontstaat een gecombineerde meetpreview die je met E kunt analyseren en bespreken. Alle bronlaps, tijden en HR-gegevens blijven behouden. Alleen gecontroleerde combinaties activeren Use/Add.
+
 - Athlete Info > General > Connections heeft voor coaches `Allow Garmin model E (experimental)`. De keuze staat per atleet standaard uit en wordt los van Garmin Connection/FIT-uploadrechten opgeslagen.
 - Garmin E is een afzonderlijke optie in de Diary voor ingeschakelde atleten. Open de opname en kies `Analyze training` of stel meteen een vrije vraag. E krijgt alle numerieke bronlaps en de eerdere gesprekscontext en kan uitleggen, doorvragen, herindelen en eerdere correcties meenemen. Een gesprek zonder bruikbaar voorstel blijft mogelijk. Alleen een volledig aan bronlaps gekoppeld voorstel activeert Use/Add; mislukte vervolgvoorstellen behouden de vorige gecontroleerde preview.
 - Bij correcties en verzoeken om het afgesproken voorstel te gebruiken moet E de complete nieuwe laptoewijzing teruggeven. Als alleen bevestigende tekst binnenkomt, volgt maximaal één herstelvraag om die toewijzing alsnog op te halen. De kaart meldt expliciet of de bruikbare preview is bijgewerkt of ongewijzigd bleef; Use/Add gebruikt uitsluitend die preview.

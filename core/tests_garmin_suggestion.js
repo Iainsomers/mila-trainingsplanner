@@ -118,10 +118,47 @@ async function checkEConversation(alternative = false) {
   assert.deepEqual(saved[1],measured,'E Add sends the measured facts for running and Alternative');
   assert.equal(saved[6],'signed');
 }
+async function checkECombine() {
+  const parent=element('div'), requests=[];
+  const sessions=[1,2,3].map(i=>({start:'source-'+i,parts:[{description:'Source '+i,
+    training_fields:{main:'500 m Z1'},watch_loads:[{segment:'CORE',meters:500,seconds:180}]}]}));
+  const combined={start:'source-1',e_session_id:'combined-distinct-id',e_combine_token:'source-token',
+    parts:[{description:'Combined training',training_fields:{wu:'500 m Z1',main:'500 m Z1',cd:'500 m Z1'},
+      watch_loads:[{segment:'CORE',meters:500,seconds:180}],e_usable:true,e_validation:'save-token'}]};
+  const context={document:{createElement:element,createTextNode:t=>({...element('text'),textContent:t})},
+    watchChats:{},URLSearchParams,getCookie(){return 'csrf';},renderTypeALaps(){},
+    activeAthlete:89,activeDate:'2026-11-14',watchPreviewSequence:1,
+    combineGarminActivities(){throw Error('E must combine on the server');},
+    fetch:async(url,options)=>{
+      requests.push(new URLSearchParams(options.body));
+      return {json:async()=>({ok:true,results:[combined]})};
+    }};
+  vm.createContext(context); vm.runInContext(source.replace('{{ is_coach_user|yesno:"true,false" }}','false'),context);
+  context.renderTypeAResults(parent,sessions,'','E');
+  let nodes=flatten(parent);
+  const checks=nodes.filter(n=>n.tag==='input' && n.type==='checkbox');
+  assert.equal(checks.length,3);
+  checks.forEach(n=>{n.checked=true;n.listeners.change();});
+  const button=nodes.find(n=>n.tag==='button' && n.textContent==='Combine');
+  assert.equal(button.disabled,false);
+  button.listeners.click();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(JSON.parse(requests[0].get('combine')),[
+    {start:'source-1',role:'wu'},{start:'source-2',role:'main'},{start:'source-3',role:'cd'}]);
+  nodes=flatten(parent);
+  assert.ok(nodes.some(n=>n.textContent==='Description: Combined training'));
+  assert.ok(context.watchChats['E:combined-distinct-id']);
+  const combinedPanel=nodes.find(n=>n.children.some(child=>child.tag==='textarea'));
+  combinedPanel.children.find(n=>n.tag==='textarea').value='Leg deze combinatie uit';
+  combinedPanel.children.find(n=>n.textContent==='Send').listeners.click();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requests[1].get('combine_token'),'source-token');
+}
 (async()=>{for(const model of ['C','D']) {
   for(const coach of [true,false]) for(const success of [true,false]) await check(model,coach,success);
   for(const typedYes of [true,false]) await checkConfirmation(model,typedYes);
 }
 await checkEConversation();
 await checkEConversation(true);
+await checkECombine();
 console.log('Garmin suggestions: C/D request, preview, rejection and coach diagnostics passed.');})().catch(e=>{console.error(e);process.exitCode=1;});

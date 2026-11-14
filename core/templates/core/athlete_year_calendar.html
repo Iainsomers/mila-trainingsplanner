@@ -2797,8 +2797,9 @@
     var selections = [];
     var combinedHost = document.createElement("div");
     var combineButton;
-    if ((model === "C" || model === "D") && !combinedPreview && results.filter(function(session) {
-      return (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length;
+    if ((model === "C" || model === "D" || model === "E") && !combinedPreview && results.filter(function(session) {
+      return (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length &&
+        (model !== "E" || !((session.parts[0].training_fields || {}).alt || (session.parts[0].training_fields || {}).alternative));
     }).length > 1) {
       var toolbar = document.createElement("div");
       toolbar.className = "d-flex flex-wrap align-items-center gap-2 mb-2";
@@ -2816,6 +2817,26 @@
         errorText.textContent = "";
         try {
           var selected = selections.filter(function(item) { return item.check.checked; });
+          if (model === "E") {
+            combineButton.disabled = true;
+            var combineSequence = watchPreviewSequence;
+            var requestSelection = JSON.stringify(selected.map(function(item) {return {start:item.session.start,role:item.role.value};}));
+            fetch("/integrations/garmin/type-e-ayc/?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate), {
+              method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded","X-CSRFToken":getCookie("csrftoken")},
+              body:new URLSearchParams({combine:requestSelection}).toString()
+            }).then(function(response){return response.json();}).then(function(data) {
+              if (combineSequence !== watchPreviewSequence || !combineButton.isConnected) return;
+              if (requestSelection !== JSON.stringify(selections.filter(function(item){return item.check.checked;})
+                  .map(function(item){return {start:item.session.start,role:item.role.value};}))) return;
+              if (!data.ok) throw new Error(data.message || "These recordings could not be combined.");
+              renderTypeAResults(combinedHost,data.results || [],"",model,true);
+            }).catch(function(error){errorText.textContent=error.message;})
+              .finally(function(){
+                var count=selections.filter(function(item){return item.check.checked;}).length;
+                combineButton.disabled=count<2 || count>3;
+              });
+            return;
+          }
           var combined = combineGarminActivities(selected.map(function(item) { return {session: item.session, role: item.role.value}; }));
           renderTypeAResults(combinedHost, [combined], "", model, true);
         } catch (error) { errorText.textContent = error.message; }
@@ -2827,7 +2848,8 @@
     }
     results.forEach(function(session, sessionIndex) {
       var box = document.createElement("div"); box.className = "border rounded p-2 mb-2";
-      if (combineButton && (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length) {
+      if (combineButton && (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length &&
+          (model !== "E" || !((session.parts[0].training_fields || {}).alt || (session.parts[0].training_fields || {}).alternative))) {
         var controls = document.createElement("div");
         controls.className = "d-flex flex-wrap align-items-center gap-2 mb-1";
         var label = document.createElement("label");
@@ -2938,7 +2960,7 @@
             actions.className = "d-flex flex-wrap gap-1";
             actions.style.maxWidth = "100%";
             if ((model === "C" || model === "D" || model === "E") && (fields.main || (model === "E" && (fields.alt || fields.alternative)))) {
-              var key = model + ":" + session.start;
+              var key = model + ":" + (session.e_session_id || session.start);
               var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [], open:model === "E"});
               if (model === "E" && part.e_history) chat.messages = part.e_history;
               if (model === "E" && !chat.messages.length && part.chat_reply) chat.messages = [{role:"assistant",content:part.chat_reply}];
@@ -3003,6 +3025,7 @@
                 var messages = chat.messages.slice(model === "E" ? -1 : -5);
                 if (pending) messages[messages.length-1] = {role:"user", content:pending.request};
                 var payload = {chat:JSON.stringify(messages)};
+                if (model === "E" && session.e_combine_token) payload.combine_token = session.e_combine_token;
                 if (pending) payload.time_confirmation = pending.token;
                 fetch(endpoint + query, {method:"POST", headers: {"Accept":"application/json",
                   "Content-Type":"application/x-www-form-urlencoded", "X-CSRFToken":getCookie("csrftoken")},

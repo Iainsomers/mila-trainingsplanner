@@ -32,6 +32,12 @@ def preview_digest(fields, loads):
         sort_keys=True,separators=(",",":")).encode()).hexdigest()
 
 
+def conversation_identity(user_id, athlete_id, start, facts):
+    fingerprint = hashlib.sha256(json.dumps([facts,[]],
+        sort_keys=True,separators=(",",":")).encode()).hexdigest()
+    return hashlib.sha256(str((user_id,athlete_id,start,fingerprint)).encode()).hexdigest()
+
+
 @login_required
 @require_http_methods(["GET","POST"])
 def garmin_type_e_ayc_view(request):
@@ -61,8 +67,51 @@ def garmin_type_e_ayc_view(request):
         return response
     data = json.loads(response.content)
     results = data.get("results",[])
+    selection_text = request.POST.get("combine")
+    combine_token = request.POST.get("combine_token") or request.GET.get("combine_token")
+    combining = bool(selection_text)
+    combined_seed = None
+    if selection_text or combine_token:
+        try:
+            if selection_text:
+                if len(selection_text)>4000:
+                    raise ValueError("Choose at most three activities.")
+                selection = json.loads(selection_text)
+            else:
+                signed = signing.loads(combine_token,salt="garmin-e-combine",max_age=86400)
+                if signed[:3]!=[request.user.pk,athlete.pk,request.GET.get("date")]:
+                    raise ValueError("Reopen Garmin E and combine these activities again.")
+                selection = signed[3]
+            from core.garmin_e_combine import combine_recordings, shifted_main_proposal
+            main_start = next((item.get("start") for item in selection
+                               if isinstance(item,dict) and item.get("role")=="main"),None) if isinstance(selection,list) else None
+            main_source = next((s for s in results if s.get("start")==main_start),None)
+            main_state = None
+            if main_source and len(main_source.get("parts") or [])==1:
+                raw_part = main_source["parts"][0]
+                if raw_part.get("watch_loads") and (raw_part.get("training_fields") or {}).get("main"):
+                    identity = conversation_identity(request.user.pk,athlete.pk,main_start,lap_facts(raw_part))
+                    stored = GarminEConversation.objects.filter(user=request.user,athlete=athlete,activity_key=identity).first()
+                    if stored and (stored.state.get("part") or {}).get("e_usable"):
+                        main_state = stored.state
+                        raw_part["training_fields"] = deepcopy(main_state["part"]["training_fields"])
+            combined,ordered,ranges = combine_recordings(results,selection)
+            combined["e_combine_token"] = signing.dumps(
+                [request.user.pk,athlete.pk,request.GET.get("date"),ordered],salt="garmin-e-combine")
+            if main_state and main_state.get("proposal"):
+                try:
+                    proposal = shifted_main_proposal(main_state["proposal"],ranges)
+                    candidate = checked_proposal(combined["parts"][0],proposal,
+                        athlete=athlete,zone_basis=main_state["basis"])
+                    combined_seed = dict(proposal=proposal,part=candidate,basis=main_state["basis"],
+                        history=[{"role":"assistant","content":"Je gecontroleerde Main is gecombineerd met de gekozen WU/CD. Alle gemeten laps blijven behouden en zijn opnieuw genummerd."}])
+                except (ValueError,KeyError,TypeError):
+                    pass
+            results = [combined]
+        except (signing.BadSignature,ValueError,KeyError,TypeError) as exc:
+            return JsonResponse({"ok":False,"message":str(exc) or "Invalid combination.","results":[]},status=400)
     message = None
-    if request.method == "POST":
+    if request.method == "POST" and not combining:
         try:
             incoming = json.loads(request.POST.get("chat",""))
             message = incoming[-1]["content"]
@@ -78,6 +127,9 @@ def garmin_type_e_ayc_view(request):
     push_permission, fit_permission = ai_allowed(athlete), fit_ai_allowed(athlete)
     for session in results:
         permitted = fit_permission if session.get("is_fit_upload") else push_permission
+        if session.get("e_combine_token"):
+            permitted = ((not session["e_requires_fit"] or fit_permission) and
+                         (not session["e_requires_push"] or push_permission))
         for part in session.get("parts",[]):
             part["e_usable"] = False
             part["e_zone_basis"] = "auto"
@@ -103,14 +155,11 @@ def garmin_type_e_ayc_view(request):
                 part["chat_reply"] = "AI consent is required before Garmin E can analyze or discuss this recording."
                 continue
             # Keep existing conversation identities stable across save-format fixes.
-            fingerprint = hashlib.sha256(json.dumps([facts,[]],
-                sort_keys=True,separators=(",",":")).encode()).hexdigest()
-            key = "garmin-e:"+hashlib.sha256(str((request.user.pk,athlete.pk,
-                session.get("start"),fingerprint)).encode()).hexdigest()
+            identity = conversation_identity(request.user.pk,athlete.pk,session.get("start"),facts)
             conversation,_ = GarminEConversation.objects.get_or_create(user=request.user,athlete=athlete,
-                activity_key=key.split(":")[1],defaults={"state":{}})
+                activity_key=identity,defaults={"state":combined_seed or {}})
             state = conversation.state or {"history":[],"part":deepcopy(part),"proposal":None,"basis":"auto"}
-            if request.GET.get("preview") == "measured" and message is None:
+            if (request.GET.get("preview") == "measured" or combining) and message is None:
                 if state["history"]:
                     session["parts"] = [state["part"]]
                     session["parts"][0]["e_history"] = state["history"]

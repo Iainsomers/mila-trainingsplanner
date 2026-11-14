@@ -183,6 +183,78 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    def combine_example(self):
+        self.record.analysis_data = {"laps":[dict(distance=m,elapsed_time=s) for m,s in
+                                             [(500,100),(60,60),(500,100)]]}
+        self.record.distance_m = 1060
+        self.record.duration_s = 260
+        self.record.save()
+        for activity,hour,minute,meters,seconds in (("outer-wu",9,50,800,260),("outer-cd",10,20,1000,340)):
+            GarminActivitySummary.objects.create(athlete=self.athlete,activity_id=activity,
+                activity_start=datetime(2026,11,14,hour,minute,tzinfo=timezone.utc),activity_date="2026-11-14",
+                distance_m=meters,duration_s=seconds,analysis_data={"laps":[dict(distance=meters,elapsed_time=seconds)]})
+        sessions = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"]
+        return [{"start":s["start"],"role":role} for s,role in zip(sessions,("wu","main","cd"))]
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_combine_checked_main_and_outer_recordings_saves_all_laps(self, model):
+        selection = self.combine_example()
+        main_url = self.url+"?"+urlencode({**self.query,"suggestion_session":selection[1]["start"]})
+        main_proposal = dict(recovery_laps=[2],reps=[dict(laps=[i],target_meters=500) for i in (1,3)])
+        model.return_value = {"reply":"Twee gemeten 500m-reps.","proposal":main_proposal,"zone_basis":"pace"}
+        self.assertTrue(self.client.post(main_url,{"chat":json.dumps([{"role":"user","content":"Analyseer Main"}])}).json()["ok"])
+        calls = model.call_count
+        response = self.client.post(self.url+"?"+urlencode(self.query),{"combine":json.dumps(selection)})
+        self.assertEqual(response.status_code,200,response.json())
+        combined = response.json()["results"][0]
+        part = combined["parts"][0]
+        self.assertEqual(model.call_count,calls)
+        self.assertTrue(part["e_usable"],part)
+        self.assertEqual(part["training_fields"]["wu"],"800 m Z1")
+        self.assertEqual(part["training_fields"]["cd"],"1000 m Z1")
+        self.assertEqual([(l["meters"],l["seconds"]) for l in part["watch_loads"]],
+                         [(800,260),(500,100),(60,60),(500,100),(1000,340)])
+        token = combined["e_combine_token"]
+        model.return_value = {"reply":"De gekozen eerste opname is je WU.","proposal":None,"zone_basis":"pace"}
+        chat_url = self.url+"?"+urlencode({**self.query,"suggestion_session":combined["start"]})
+        answered = self.client.post(chat_url,{"combine_token":token,
+            "chat":json.dumps([{"role":"user","content":"Waarom is die eerste opname WU?"}])}).json()
+        part = answered["results"][0]["parts"][0]
+        self.assertTrue(part["e_usable"])
+        self.assertEqual([row.get("recording_role") for row in model.call_args.args[0]],["wu","main","main","main","cd"])
+        fields = part["training_fields"]
+        payload = dict(watch_origin="watch_e",watch_loads=json.dumps(part["watch_loads"]),
+            watch_validation=part["e_validation"],wu_text=fields["wu"],core_text=fields["main"],cd_text=fields["cd"])
+        save = reverse("slot_modal",args=[2026,11,14,1])+"?"+urlencode({"athlete":self.athlete.pk,"source":"athlete_year"})
+        self.assertEqual(self.client.post(save,payload).status_code,200)
+        from core.models import TrainingSlot
+        slot = TrainingSlot.objects.get(athlete=self.athlete,date="2026-11-14",slot_index=1)
+        self.assertEqual(len(slot.watch_loads),5)
+        self.assertEqual([rep["measured_seconds"] for rep in slot.watch_main_reps],[100,100])
+        bad = self.client.post(chat_url,{"combine_token":token+"invalid",
+            "chat":json.dumps([{"role":"user","content":"Analyseer"}])})
+        self.assertEqual(bad.status_code,400)
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_combine_before_analysis_has_one_conversation_and_requires_checked_proposal(self, model):
+        selection = self.combine_example()
+        response = self.client.post(self.url+"?"+urlencode(self.query),{"combine":json.dumps(selection)})
+        self.assertEqual(response.status_code,200,response.json())
+        combined = response.json()["results"][0]
+        self.assertFalse(combined["parts"][0]["e_usable"])
+        model.assert_not_called()
+        proposal = dict(warmup_laps=[1],cooldown_laps=[5],recovery_laps=[3],
+                        reps=[dict(laps=[i],target_meters=500) for i in (2,4)])
+        model.return_value = {"reply":"WU, twee werkreps en CD zijn zichtbaar.","proposal":proposal,"zone_basis":"pace"}
+        answer = self.client.post(self.url+"?"+urlencode({**self.query,"suggestion_session":combined["start"]}),{
+            "combine_token":combined["e_combine_token"],
+            "chat":json.dumps([{"role":"user","content":"Analyseer deze hele combinatie"}])}).json()
+        self.assertTrue(answer["results"][0]["parts"][0]["e_usable"],answer)
+        for invalid in ([selection[0],selection[0]], [dict(selection[0],role="cd"),selection[1]],
+                        [selection[0],dict(selection[1],start="missing")]):
+            response = self.client.post(self.url+"?"+urlencode(self.query),{"combine":json.dumps(invalid)})
+            self.assertEqual(response.status_code,400)
+
     @patch("core.views.garmin_e.ask_model")
     def test_compact_alternative_is_the_saved_proposal_and_keeps_actual_totals(self, model):
         seconds = [930,604,300,601,300,601,323,601,307,388]

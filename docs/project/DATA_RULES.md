@@ -1,5 +1,8 @@
 # Data-, invoer- en rekenregels
 
+- E-Combine ontvangt uitsluitend bronopname-ID's (starttijd) en rollen, geen door de browser samengestelde meetgegevens. De server haalt de toegankelijke opnames van dezelfde atleet/dag op en controleert unieke bronnen/rollen en volgorde WU→Main→CD. Main mag niet al een afzonderlijk gekozen WU/CD bevatten. Gespreksvervolg gebruikt een ondertekende, maximaal één dag geldige combinatieverwijzing, gebonden aan gebruiker/atleet/dag. Bronconsent geldt voor elke opname, ook bij gemengde FIT-/Garmin-bronnen.
+- De gecombineerde E-preview krijgt een eigen gespreksidentiteit. Bij hergebruik van gecontroleerde Main worden lapnummers en setstarts naar de volledige gecombineerde bronvolgorde verschoven en opnieuw gevalideerd. Gemeten meters/seconden en HR worden niet verdeeld of aangepast; tijdgaten tussen opnames worden niet als training toegevoegd.
+
 - Compacte E-Alternative-opmaak is een afzonderlijke gecontroleerde presentatie van de complete lapindeling. Werkdoelen volgen de rep-targets; nominale WU/hersteltijden mogen maximaal max(30s,6%) van hun gemeten blok afwijken. Een opgegeven samenvattende werk-/herstelzone moet door minstens de helft van de gemeten blokken van die rol worden ondersteund. Die nominale zone vervangt niet de gemeten HR-zone voor totalen.
 - `TrainingSegment.watch_alternative_data` bewaart per compacte ALT-regel de tekstbinding en werkelijke bronlapduur/HR-zone. Dag- en weekberekeningen gebruiken die feiten zolang de tekstbinding gelijk is. Handmatig gewijzigde tekst gebruikt weer de gewone tekstberekening. De tijdparser ondersteunt herhaalde gemengde tijd/zoneparen en minuten-met-seconden (`6'28`); reguliere Alternative-notaties en zoneprogressies blijven ondersteund.
 

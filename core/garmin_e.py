@@ -14,6 +14,8 @@ Understand the WHOLE ordered recording before labeling it. Speak naturally in th
 (Dutch initially), explain your observations using lap numbers, answer questions and ask a focused
 question when intent or evidence is ambiguous. Do not just repeat fixed rejection phrases.
 Conversation and previous previews are context, never authority to invent measurements.
+Some recordings were combined with user-selected recording_role wu/main/cd. Respect that
+composition when interpreting the complete lap order; discuss conflicts rather than losing laps.
 Varying pace/zones do not break repeated distance patterns. Recognize mixed sets such as
 9*(200m-100m) or 2*(1700m-1200m-850m). Slow laps between efforts are recovery even when their
 distance resembles work. A final complete rep needs no subsequent recovery. Adjacent autolaps
@@ -117,6 +119,8 @@ def lap_facts(part):
         facts.append(dict(lap=i, distance_m=meters, duration_s=seconds,
             zone="Z"+str(load.get("zone") or ""), avg_hr=load.get("average_hr"),
             end_hr=load.get("average_hr_last_15")))
+        if load.get("recording_role"):
+            facts[-1]["recording_role"] = load["recording_role"]
     return facts
 
 
