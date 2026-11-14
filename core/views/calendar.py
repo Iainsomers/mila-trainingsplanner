@@ -2205,7 +2205,7 @@ def _format_min_km_range(seconds_per_km_values):
 
 def _watch_segment_loads(seg):
     slot = getattr(seg, "slot", None)
-    if not slot or str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    if not slot or str(getattr(slot, "source", "") or "") not in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
         return []
     watch_loads = getattr(slot, "watch_loads", None)
     if not isinstance(watch_loads, list):
@@ -2447,7 +2447,7 @@ def _watch_actual_time_label(actual_loads, seg=None):
     if not actual_loads:
         return ""
     if (str(getattr(seg, "type", "")).upper() in {"WU", "CD"}
-            and str(getattr(getattr(seg, "slot", None), "source", "")) in {"watch_c", "watch_d"}):
+            and str(getattr(getattr(seg, "slot", None), "source", "")) in {"watch_c", "watch_d", "watch_e"}):
         meters = seconds = 0.0
         for load in actual_loads:
             try:
@@ -2510,7 +2510,7 @@ def _watch_actual_time_label(actual_loads, seg=None):
             pace_values.append(seconds / (meters / 1000.0))
     duration_label = _format_rep_time_range(duration_values)
     pace_label = _format_min_km_range(pace_values)
-    if (str(getattr(getattr(seg, "slot", None), "source", "")) in {"watch_c", "watch_d"}
+    if (str(getattr(getattr(seg, "slot", None), "source", "")) in {"watch_c", "watch_d", "watch_e"}
             and not expected_distances and getattr(seg, "duration_s", None)):
         return pace_label
     if duration_label and pace_label:
@@ -2548,7 +2548,7 @@ def _annotate_slot_segment_display_times(slot, athlete):
 
     source = str(getattr(slot, "source", ""))
     ordered_rep_loads = {}
-    if source in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    if source in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
         from core.watch_processing import processed_main_reps
         slot.watch_main_reps = processed_main_reps(slot)
 
@@ -2556,7 +2556,7 @@ def _annotate_slot_segment_display_times(slot, athlete):
         # a repeated distance block followed by single efforts.
         core_segments = [seg for seg in segments if str(getattr(seg, "type", "")).upper() == "CORE"]
         rows = slot.watch_main_reps if isinstance(slot.watch_main_reps, list) else []
-        if source in {"watch_c", "watch_d"} and len(core_segments) >= 2:
+        if source in {"watch_c", "watch_d", "watch_e"} and len(core_segments) >= 2:
             pairs = []
             offset = 0
             for seg in core_segments:
@@ -2818,7 +2818,7 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
     if not slot:
         return []
 
-    watch_source = str(getattr(slot, "source", "") or "") in {"watch_a", "watch_b", "watch_c", "watch_d"}
+    watch_source = str(getattr(slot, "source", "") or "") in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}
     actual_segment_types = set()
     if watch_source:
         watch_loads = getattr(slot, "watch_loads", None)
@@ -3059,7 +3059,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             athlete=athlete,
             date=d,
             slot_index=slot_index,
-            source__in={"watch_a", "watch_b", "watch_c", "watch_d"},
+            source__in={"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"},
         )
         .select_related("plan")
         .order_by("-updated_at", "-id")
@@ -3080,7 +3080,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
                 athlete__isnull=True,
                 date=d,
                 slot_index=slot_index,
-                source__in={"watch_a", "watch_b", "watch_c", "watch_d"},
+                source__in={"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"},
             )
             .select_related("plan")
             .order_by("-updated_at", "-id")
@@ -3164,7 +3164,7 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     prepared_strength_photos = [prepare_photo(upload) for upload in strength_uploads]
 
 
-    watch_sources = {"watch_a", "watch_b", "watch_c", "watch_d"}
+    watch_sources = {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}
     original_source = str(getattr(source_slot, "source", "") or "")
     original_watch_loads = list(getattr(source_slot, "watch_loads", []) or [])
     original_core_text = " // ".join(
@@ -4484,6 +4484,7 @@ def athlete_year_calendar_view(request):
             "selected_athlete_id": str(selected_athlete_id or ""),
             "selected_athlete": selected_athlete,
             "show_polar_tools": bool(is_ayc_coach or (selected_athlete and getattr(selected_athlete, "polar_enabled", False))),
+            "show_garmin_e": bool(selected_athlete and selected_athlete.garmin_model_e_enabled),
             "show_session_km": bool(selected_athlete and getattr(selected_athlete, "see_session_km", True)),
             "show_session_zones": bool(selected_athlete and getattr(selected_athlete, "see_session_zones", True)),
             "mobile_diary_week_view": bool(selected_athlete and getattr(selected_athlete, "mobile_diary_week_view", False)),

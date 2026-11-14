@@ -4,6 +4,7 @@ const vm = require('node:vm');
 const template = fs.readFileSync('core/templates/core/athlete_year_calendar.html','utf8');
 const source = template.slice(template.indexOf('  function renderTypeAResults('),template.indexOf('  function useWatchTraining('));
 function element(tag) { return {tag, style:{}, children:[], listeners:{}, isConnected:true,
+  set innerHTML(value){this.children=[];},
   setAttribute(){}, focus(){}, appendChild(n){this.children.push(n);},
   addEventListener(k,fn){this.listeners[k]=fn;}}; }
 const flatten = n => [n,...n.children.flatMap(flatten)];
@@ -69,8 +70,47 @@ async function checkConfirmation(model, typedYes) {
   assert.equal(JSON.parse(requests[1].get('chat')).at(-1).content,"6*6'");
   assert.ok(flatten(parent).some(n=>(n.textContent||'').includes("6×6' Z1 p45")));
 }
+async function checkEConversation() {
+  const parent=element('div'), requests=[];
+  const current={start:'e-session',parts:[{description:'Measured preview',e_usable:false,training_fields:{main:'preview'}}]};
+  let calls=0;
+  const context={document:{createElement:element,createTextNode:t=>({...element('text'),textContent:t})},
+    watchChats:{},URLSearchParams,getCookie(){return 'csrf';},renderTypeALaps(){},
+    activeAthlete:89,activeDate:'2026-11-14',watchPreviewSequence:1,
+    fetch:async(url,options)=>{
+      requests.push(JSON.parse(new URLSearchParams(options.body).get('chat')));
+      calls++;
+      const history=[{role:'user',content:'Was dit een warming-up?'},{role:'assistant',content:'Ik zie een rustig blok. Bedoelde je dat als Main?'}];
+      if(calls===2) history.push({role:'user',content:'Ja, en kijk naar snelheid in plaats van HR.'},
+        {role:'assistant',content:'Ik gebruik nu snelheid en behoud de gemeten indeling.'});
+      return {json:async()=>({ok:true,results:[{start:'e-session',parts:[{
+        description:calls===1?'Measured preview':'Checked E result',training_fields:{main:'2×200 m Z4'},
+        e_usable:calls===2,e_validation:'signed',e_history:history,e_zone_note:'Zones use measured speed.'}]}]})};
+    }};
+  vm.createContext(context); vm.runInContext(source.replace('{{ is_coach_user|yesno:"true,false" }}','false'),context);
+  context.renderTypeAResults(parent,[current],'','E');
+  let nodes=flatten(parent);
+  assert.equal(nodes.find(n=>n.textContent==='Use AM').disabled,true);
+  nodes.find(n=>n.tag==='textarea').value='Was dit een warming-up?';
+  nodes.find(n=>n.textContent==='Send').listeners.click();
+  await new Promise(resolve=>setImmediate(resolve));
+  nodes=flatten(parent);
+  assert.ok(nodes.some(n=>(n.textContent||'').includes('Bedoelde je dat als Main?')));
+  assert.ok(!nodes.some(n=>(n.textContent||'').includes('Validated proposal:')));
+  assert.equal(nodes.find(n=>n.textContent==='Use AM').disabled,true);
+  nodes.find(n=>n.tag==='textarea').value='Ja, en kijk naar snelheid in plaats van HR.';
+  nodes.find(n=>n.textContent==='Send').listeners.click();
+  await new Promise(resolve=>setImmediate(resolve));
+  nodes=flatten(parent);
+  assert.equal(requests[1].length,1,'Server owns conversation history');
+  assert.ok(!nodes.find(n=>n.textContent==='Use AM').disabled);
+  assert.ok(nodes.some(n=>n.textContent==='Zones use measured speed.'));
+  const actions=nodes.find(n=>n.children.some(child=>child.textContent==='Use AM'));
+  assert.ok(actions.className.includes('flex-wrap'),'Actions wrap on narrow screens');
+}
 (async()=>{for(const model of ['C','D']) {
   for(const coach of [true,false]) for(const success of [true,false]) await check(model,coach,success);
   for(const typedYes of [true,false]) await checkConfirmation(model,typedYes);
 }
+await checkEConversation();
 console.log('Garmin suggestions: C/D request, preview, rejection and coach diagnostics passed.');})().catch(e=>{console.error(e);process.exitCode=1;});

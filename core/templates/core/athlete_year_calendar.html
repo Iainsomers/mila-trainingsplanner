@@ -2528,6 +2528,7 @@
       {% endif %}
       <button type="button" id="suggestInputBtnC" class="btn btn-sm btn-outline-primary">Garmin C</button>
       <button type="button" id="suggestInputBtnD" class="btn btn-sm btn-outline-primary">Garmin D</button>
+      {% if show_garmin_e %}<button type="button" id="suggestInputBtnE" class="btn btn-sm btn-outline-primary">Garmin E</button>{% endif %}
       <button type="button" id="deleteWatchInputBtn" class="btn btn-sm btn-outline-danger" style="display:none;">Delete input</button>
       <button type="button" id="commentOkBtn" class="btn btn-sm btn-primary evaluation-ok-btn" disabled>OK</button>
     </div>
@@ -2777,20 +2778,20 @@
     var popup = document.getElementById("suggestInputPlaceholder");
     var body = document.getElementById("suggestInputPlaceholderBody");
     popup.style.display = "flex";
-    var sourceName = (model === "C" || model === "D") ? "Garmin" : "Polar";
-    document.getElementById("suggestInputPlaceholderText").textContent = (model === "C" || model === "D") ? "Garmin " + model : "Polar " + model;
+    var sourceName = (model === "C" || model === "D" || model === "E") ? "Garmin" : "Polar";
+    document.getElementById("suggestInputPlaceholderText").textContent = (model === "C" || model === "D" || model === "E") ? "Garmin " + model : "Polar " + model;
     document.getElementById("suggestInputPlaceholderClose").focus();
-    body.textContent = "Loading " + ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + "...";
-    var endpoint = (model === "C" || model === "D") ? "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/" : "/integrations/polar/type-a-ayc/";
+    body.textContent = "Loading " + ((model === "C" || model === "D" || model === "E") ? "Garmin " + model : "Polar " + model) + "...";
+    var endpoint = (model === "C" || model === "D" || model === "E") ? "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/" : "/integrations/polar/type-a-ayc/";
     var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate);
-    if (model !== "C" && model !== "D") query += "&model=" + encodeURIComponent(model);
-    var isGarmin = model === "C" || model === "D";
+    if (model !== "C" && model !== "D" && model !== "E") query += "&model=" + encodeURIComponent(model);
+    var isGarmin = model === "C" || model === "D" || model === "E";
     fetch(endpoint + query + (isGarmin ? "&preview=measured" : ""), {
       headers: {"Accept": "application/json"}
     }).then(function(response) { return response.json(); }).then(function(data) {
       if (sequence !== watchPreviewSequence) return;
       if (!data.ok) {
-        body.textContent = data.message || ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
+        body.textContent = data.message || ((model === "C" || model === "D" || model === "E") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
         return;
       }
       renderTypeAResults(body, data.results || [], data.message || "", model);
@@ -2845,7 +2846,7 @@
       }
     }).catch(function() {
       if (sequence !== watchPreviewSequence) return;
-      body.textContent = ((model === "C" || model === "D") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
+      body.textContent = ((model === "C" || model === "D" || model === "E") ? "Garmin " + model : "Polar " + model) + " could not be loaded.";
     });
   }
   function renderTypeALaps(parent, title, rows, showLast15Hr, showPaceZone, useEndHr) {
@@ -3026,9 +3027,11 @@
             var actions = document.createElement("div");
             actions.className = "d-flex flex-wrap gap-1";
             actions.style.maxWidth = "100%";
-            if ((model === "C" || model === "D") && fields.main) {
+            if ((model === "C" || model === "D" || model === "E") && fields.main) {
               var key = model + ":" + session.start;
-              var chat = watchChats[key] || (watchChats[key] = {messages:[], open:false});
+              var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [], open:model === "E"});
+              if (model === "E" && part.e_history) chat.messages = part.e_history;
+              if (model === "E" && !chat.messages.length && part.chat_reply) chat.messages = [{role:"assistant",content:part.chat_reply}];
               var panel = document.createElement("div"); panel.className = "border rounded p-2 mt-2 w-100";
               panel.style.display = chat.open ? "block" : "none";
               var log = document.createElement("div"); log.className = "small mb-2";
@@ -3087,7 +3090,7 @@
                 var endpoint = "/integrations/garmin/type-" + model.toLowerCase() + "-ayc/";
                 var query = "?athlete=" + encodeURIComponent(activeAthlete) + "&date=" + encodeURIComponent(activeDate)
                   + "&suggestion_session=" + encodeURIComponent(session.start || "");
-                var messages = chat.messages.slice(-5);
+                var messages = chat.messages.slice(model === "E" ? -1 : -5);
                 if (pending) messages[messages.length-1] = {role:"user", content:pending.request};
                 var payload = {chat:JSON.stringify(messages)};
                 if (pending) payload.time_confirmation = pending.token;
@@ -3103,6 +3106,13 @@
                     }
                     var replacement = (data.results || []).find(function(item) { return item.start === session.start; });
                     var reply = data.chat_reply || (replacement && replacement.parts[0].chat_reply);
+                    if (model === "E" && replacement) {
+                      chat.messages = replacement.parts[0].e_history || chat.messages.concat([{role:"assistant",content:reply || data.message}]);
+                      if (!replacement.parts[0].e_history) replacement.parts[0].e_history = chat.messages;
+                      var updatedE = results.slice(); updatedE[sessionIndex] = replacement;
+                      renderTypeAResults(parent, updatedE, "", model);
+                      return;
+                    }
                     if (!data.ok || !replacement) {
                       chat.messages.push({role:"assistant", content:(reply ? reply + "\n" : "") +
                         (data.message || "No usable proposal confirmed by the measured laps.")});
@@ -3116,10 +3126,20 @@
                   .finally(function() { suggest.disabled = false; });
               }
               suggest.addEventListener("click", checkSuggestion);
+              if (model === "E") {
+                var analyzeE = document.createElement("button"); analyzeE.type = "button";
+                analyzeE.className = "btn btn-sm btn-outline-primary ms-1"; analyzeE.textContent = "Analyze training";
+                analyzeE.addEventListener("click", function() {
+                  if (suggest.disabled) return;
+                  suggestion.value = "Bekijk de hele training en leg uit welk patroon je in de gemeten laps ziet.";
+                  checkSuggestion();
+                });
+              }
               suggestion.addEventListener("keydown", function(event) {
                 if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); checkSuggestion(); }
               });
               panel.appendChild(log); panel.appendChild(suggestion); panel.appendChild(suggest);
+              if (model === "E") panel.appendChild(analyzeE);
               panel.appendChild(confirmationControls); panel.appendChild(feedback);
               box.appendChild(panel); actions.appendChild(openChat);
             }
@@ -3128,9 +3148,10 @@
               button.type = "button";
               button.className = "btn btn-sm btn-outline-primary";
               button.textContent = slotIndex === 1 ? "Use AM" : "Use PM";
+              if (model === "E" && !part.e_usable) button.disabled = true;
               button.addEventListener("click", function(event) {
                 event.preventDefault();
-                useWatchTraining(fields, part.watch_loads || [], slotIndex, button, model);
+                useWatchTraining(fields, part.watch_loads || [], slotIndex, button, model, false, part.e_validation);
               });
               actions.appendChild(button);
             });
@@ -3139,15 +3160,20 @@
               button.type = "button";
               button.className = "btn btn-sm btn-outline-primary";
               button.textContent = slotIndex === 1 ? "Add AM" : "Add PM";
+              if (model === "E" && !part.e_usable) button.disabled = true;
               button.addEventListener("click", function(event) {
                 event.preventDefault();
-                useWatchTraining(fields, fields.main ? (part.watch_loads || []) : [], slotIndex, button, model, true);
+                useWatchTraining(fields, fields.main ? (part.watch_loads || []) : [], slotIndex, button, model, true, part.e_validation);
               });
               actions.appendChild(button);
             });
             description.appendChild(actions);
           }
           box.appendChild(description);
+        }
+        if (model === "E" && part.e_zone_note) {
+          var basisNote = document.createElement("div"); basisNote.className = "small text-muted mb-2";
+          basisNote.textContent = part.e_zone_note; box.appendChild(basisNote);
         }
         if (watchCoachUser && part.analysis_note) {
           var note = document.createElement("div"); note.className = "small text-muted mb-2";
@@ -3158,13 +3184,13 @@
           warning.textContent = part.ai_structure_warning; warning.setAttribute("role", "status");
           box.appendChild(warning);
         }
-        renderTypeALaps(box, (model === "C" || model === "D") ? "Recorded laps" : "Manual laps", part.manual, model === "B" || model === "C" || model === "D", model === "D", model === "C" || model === "D");
-        renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C" || model === "D", model === "D", model === "C" || model === "D");
+        renderTypeALaps(box, (model === "C" || model === "D" || model === "E") ? "Recorded laps" : "Manual laps", part.manual, model === "B" || model === "C" || model === "D" || model === "E", model === "D" || model === "E", model === "C" || model === "D" || model === "E");
+        renderTypeALaps(box, "Automatic laps", part.auto, model === "B" || model === "C" || model === "D" || model === "E", model === "D" || model === "E", model === "C" || model === "D" || model === "E");
       });
       parent.appendChild(box);
     });
   }
-  function useWatchTraining(fields, watchLoads, slotIndex, button, model, add) {
+  function useWatchTraining(fields, watchLoads, slotIndex, button, model, add, validation) {
     if (!activeDate || !activeAthlete || !fields || !(fields.main || fields.alt || fields.alternative)) return;
     var originalLabel = button.textContent;
     button.disabled = true;
@@ -3184,6 +3210,7 @@
     formData.append("cd_text", fields.cd || "");
     formData.append("watch_origin", "watch_" + String(model || "A").toLowerCase());
     formData.append("watch_loads", JSON.stringify(watchLoads || []));
+    if (model === "E") formData.append("watch_validation", validation || "");
     var dateParts = activeDate.split("-");
     var saveUrl = "/slot-modal/" + dateParts[0] + "/" + dateParts[1] + "/" + dateParts[2] + "/" + slotIndex + "/?athlete=" + encodeURIComponent(activeAthlete) + "&source=athlete_year";
     fetch(saveUrl, {
@@ -3365,6 +3392,7 @@
   if (polarButtonB) polarButtonB.addEventListener("click", function() { showWatchModel("B"); });
   document.getElementById("suggestInputBtnC").addEventListener("click", function() { showWatchModel("C"); });
   document.getElementById("suggestInputBtnD").addEventListener("click", function() { showWatchModel("D"); });
+  if (document.getElementById("suggestInputBtnE")) document.getElementById("suggestInputBtnE").addEventListener("click", function() { showWatchModel("E"); });
   document.getElementById("suggestInputPlaceholderClose").addEventListener("click", hideSuggestInputPlaceholder);
   document.getElementById("suggestInputPlaceholder").addEventListener("click", function(event) {
     if (event.target === this) hideSuggestInputPlaceholder();

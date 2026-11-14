@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- Garmin E opent de chat direct per opname. `Analyze training` start de analyse; een vrije vraag mag ook de eerste stap zijn. E-antwoorden worden als vrije tekst weergegeven, zonder de vaste C/D-zinnen over een gevalideerd voorstel achter elk bericht. Use/Add blijft uitgeschakeld zolang geen gecontroleerde E-preview beschikbaar is. De zonebasis staat bij het voorstel. Acties blijven compact en wrappen op smalle schermen; de laptabel blijft horizontaal scrollbaar. Meerdere opnames combineren blijft voorlopig een C/D-functie.
+
 - De stafschakelaar `Simple` staat compact tussen de Athlete Diary-bediening, op desktop en mobiel. In deze stand zijn sessies niet te openen en tonen ze duidelijk vergrote T-, zone- en A-totalen; de evaluatie blijft op haar gewone plek. Atleten zien de schakelaar nooit.
 
 - Het klokje bij een gemeten training heeft in Athlete Diary en Individual Planner dezelfde betekenis en popup-inhoud. In Individual Planner staat het compact in de sessiekop naast de totalen; aanklikken mag niet tegelijk het trainingsformulier openen.

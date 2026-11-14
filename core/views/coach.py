@@ -6084,6 +6084,7 @@ def garmin_type_c_ayc_view(request, model="C"):
         results.extend(translated)
     matched_sessions = [s for s in session_exercises if not guided or s.get('startTime', '') == request.GET.get('suggestion_session')]
     for session, result in zip(matched_sessions, results):
+        result["is_fit_upload"] = bool(session.get("is_fit_upload"))
         for part in result.get("parts") or []:
             watch_loads = type_a_watch_loads(session, athlete)
             facts = [{'lap':index, 'distance_m':load['meters'], 'duration_s':load['seconds'],

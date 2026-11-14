@@ -31,7 +31,7 @@ function checkButtons() {
       for (const button of buttons.filter(b=>['Use AM','Use PM','Add AM','Add PM'].includes(b.textContent))) button.listeners.click({preventDefault(){}});
       assert.equal(invoked.at(-1)[5],true);
       assert.equal(invoked.at(-2)[5],true);
-      assert.equal(invoked.at(-3)[5],undefined);
+      assert.equal(invoked.at(-3)[5],false);
       assert.deepEqual(invoked.at(-1)[1],fields.main ? loads : []);
     }
   }

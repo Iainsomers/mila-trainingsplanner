@@ -8,6 +8,8 @@ MiLa Training Planner ondersteunt trainers bij het maken, personaliseren en volg
 
 ## Techniek
 
+- De experimentele Garmin E heeft een eigen endpoint (`core/views/garmin_e.py`), prompt en meetvalidator (`core/garmin_e.py`). Alleen het bestaande gemeten Garmin-readerpad wordt hergebruikt; E doorloopt de C/D-chatcorrectieregels niet. `GarminEConversation` bewaart server-eigen context per gebruiker/atleet/opname en een korte verwerkingslock in de database, zodat meerdere Render-workers dezelfde context gebruiken. Gesprekken ouder dan zeven dagen worden bij een volgend E-bezoek van die gebruiker opgeruimd; gewijzigde bronfeiten beginnen een nieuw gesprek.
+
 - Django 5.2 met server-rendered templates en JavaScript voor interactieve planners en popups.
 - Lokale ontwikkeling met SQLite; productie gebruikt de via `DATABASE_URL` ingestelde database.
 - Bootstrap 5 voor de basisopmaak.

@@ -6,7 +6,7 @@ from statistics import median
 from core.watch_hr import tail_hr
 
 
-WATCH_SOURCES = {"watch_a", "watch_b", "watch_c", "watch_d"}
+WATCH_SOURCES = {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}
 
 
 def requested_mixed_distance_sets(text):
@@ -409,7 +409,7 @@ def processed_main_reps(slot):
             if len(parts) > 1 else [segment]
         )
 
-    if len(expanded_segments) >= 4 and slot.source in {"watch_c", "watch_d"}:
+    if len(expanded_segments) >= 4 and slot.source in {"watch_c", "watch_d", "watch_e"}:
         mixed = match_repeating_distance_sets(" + ".join(seg.text for seg in expanded_segments), raw_loads)
         if mixed:
             expanded_segments = [_virtual_segment_from_text("CORE", mixed[0])]

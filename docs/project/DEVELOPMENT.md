@@ -81,6 +81,8 @@ Bij modelwijzigingen:
 
 ## Git en Render
 
+- Garmin E vereist migraties `0152_trainingslot_garmin_e_source` en `0153_garmin_e_conversation`. Het gebruikt de bestaande `OPENAI_API_KEY`; optioneel kiest `GARMIN_E_MODEL` het E-model (standaard `gpt-5.4-mini`, reasoning medium). E is per atleet opt-in. API-uitvoer is JSON met vrije antwoordtekst en een afzonderlijke meetbare laptoewijzing; maximaal één herstelpoging met meetfeedback binnen een totale aanvraagbegroting van circa 25s. Bij timeout of fout blijft de laatst gecontroleerde preview beschikbaar.
+
 - Branch `main` is de productiebranch.
 - Render kan na een push automatisch deployen.
 - Stage alleen taakrelevante bestanden; de werkmap kan ongerelateerde gebruikersbestanden bevatten.

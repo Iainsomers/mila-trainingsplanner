@@ -1011,6 +1011,7 @@ class TrainingSlot(models.Model):
         ("watch_b", "Polar B"),
         ("watch_c", "Garmin C"),
         ("watch_d", "Garmin D"),
+        ("watch_e", "Garmin E"),
     ]
 
     date = models.DateField()
@@ -1578,6 +1579,18 @@ class GarminActivitySummary(models.Model):
     class Meta:
         ordering = ["-activity_start", "-id"]
         constraints = [models.UniqueConstraint(fields=["athlete", "activity_id"], name="unique_garmin_summary_per_athlete")]
+
+
+class GarminEConversation(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
+    athlete = models.ForeignKey(Athlete,on_delete=models.CASCADE)
+    activity_key = models.CharField(max_length=64)
+    state = models.JSONField(default=dict)
+    busy_until = models.DateTimeField(null=True,blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user","athlete","activity_key"],name="unique_garmin_e_conversation")]
 
 
 class OuraConnection(models.Model):

@@ -1,5 +1,6 @@
 from core.views.training_photos import training_photo, training_slot_photo
 from core.views.polar_raw import polar_raw_view
+from core.views.garmin_e import garmin_type_e_ayc_view
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from django.views.generic import TemplateView
@@ -203,6 +204,7 @@ urlpatterns = [
     path("integrations/polar/type-a-ayc/", polar_type_a_ayc_view, name="polar_type_a_ayc"),
     path("integrations/garmin/type-c-ayc/", garmin_type_c_ayc_view, name="garmin_type_c_ayc"),
     path("integrations/garmin/type-d-ayc/", garmin_type_d_ayc_view, name="garmin_type_d_ayc"),
+    path("integrations/garmin/type-e-ayc/", garmin_type_e_ayc_view, name="garmin_type_e_ayc"),
     path("integrations/coros/status/", coros_status_view, name="coros_status"),
     path("integrations/coros/workouts/", coros_workout_push_view, name="coros_workout_push"),
 

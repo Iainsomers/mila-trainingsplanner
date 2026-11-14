@@ -1,5 +1,13 @@
 # Actuele status
 
+## 14 november 2026 — Garmin E: vrij gesprek met gecontroleerde training
+
+- Opt-in E heeft nu een eigen knop, endpoint, gespreksprompt en validator. De chat kan observeren, uitleggen en vragen stellen zonder steeds trainingsvelden te veranderen. Aanvragen gebruiken de volledige numerieke lapvolgorde en server-eigen gesprekscontext, zonder naam/GPS/tokens. E kan per gesprek wisselen tussen snelheid, HR en auto.
+- Alleen complete, gemeten laptoewijzingen worden bruikbare previews. Use/Add heeft een extra ondertekende opslagcontrole; bron `watch_e` ondersteunt dag-/weektotalen, klokreps en Watch/Plan. Alternatieve trainingen blijven intact bij Add running.
+- Gesprekken staan in `GarminEConversation`, per gebruiker/atleet/opname/bronfingerprint, met een database-lock tegen gelijktijdige antwoorden. Opnames met onvolledige lapdata worden niet door E gereconstrueerd. Niet-hardloopanalyse en combineren van losse opnames blijven buiten deze eerste E-versie.
+- Migraties: `0152` voor de bronkeuze en `0153` voor gesprekken. Modelinstelling: `GARMIN_E_MODEL`, standaard bestaande `gpt-5.4-mini` met medium reasoning.
+- Tests gebruiken gemockte modelantwoorden: gemengde en progressieve sets, 2×8×500m, bronbehoud/klok, HR/snelheid wisselen, vragen zonder voorstel, meetafwijzingen, servicefout, bevestiging, opt-in/toestemming en ondertekend Use/Add worden gecontroleerd. Live modelkwaliteit en Render-uitrol moeten met de proefatleten worden beoordeeld.
+
 ## 14 november 2026 — Coachinstelling voor beperkte model-E-proef
 
 - Nieuwe atleetvlag `garmin_model_e_enabled`, standaard uit; migratie `0151_athlete_garmin_model_e_enabled`.

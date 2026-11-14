@@ -1110,14 +1110,14 @@ def slot_paste(request, yyyy, mm, dd, slot_index):
     slot.segments.all().delete()
     watch_origin = (request.POST.get("watch_origin") or "").strip().lower()
     watch_loads = []
-    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
         try:
             decoded_loads = json.loads(request.POST.get("watch_loads") or "[]")
             if isinstance(decoded_loads, list):
                 watch_loads = [item for item in decoded_loads if isinstance(item, dict)]
         except (TypeError, ValueError):
             watch_loads = []
-    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"} else "planned"
+    slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"} else "planned"
     slot.watch_loads = watch_loads
     slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
@@ -1400,6 +1400,23 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if not athlete:
         athlete = _get_flex_athlete_from_request(request, selected_plan)
 
+    if request.method == "POST" and request.POST.get("watch_origin","").strip().lower() == "watch_e":
+        from django.core import signing
+        from core.views.garmin_e import preview_digest
+        if not athlete or not athlete.garmin_model_e_enabled:
+            return HttpResponse("Garmin E is not enabled for this athlete.",status=403)
+        try:
+            fields = {"wu":request.POST.get("wu_text",""),"main":request.POST.get("core_text",""),
+                      "cd":request.POST.get("cd_text","")}
+            loads = json.loads(request.POST.get("watch_loads","[]"))
+            expected = [request.user.pk,athlete.pk,date_cls(int(yyyy),int(mm),int(dd)).isoformat(),
+                        preview_digest(fields,loads)]
+            verified = signing.loads(request.POST.get("watch_validation",""),salt="garmin-e-save",max_age=3600)
+            if verified != expected or request.POST.get("alt_text"):
+                raise ValueError
+        except (signing.BadSignature,ValueError,TypeError):
+            return HttpResponse("Reopen Garmin E and review the measured proposal before saving.",status=400)
+
     if athlete and requested_plan_id.isdigit() and not selected_plan:
         requested_plan = _filter_owned(TrainingPlan.objects.all(), request).filter(id=int(requested_plan_id)).first()
         if requested_plan and (athlete.id in requested_plan.targeted_athlete_ids() or _is_flex_planner_plan(requested_plan)):
@@ -1446,7 +1463,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if is_athlete_year_calendar and not athlete_year_can_edit_training and request.method == "POST":
         return HttpResponse("Future training can only be edited by a coach.", status=403)
 
-    preserve_watch_fields = (request.POST.get('watch_origin') or '').strip().lower() in {'watch_a','watch_b','watch_c','watch_d'}
+    preserve_watch_fields = (request.POST.get('watch_origin') or '').strip().lower() in {'watch_a','watch_b','watch_c','watch_d','watch_e'}
     alternative_only = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative'
     alternative_replace = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative_replace'
     running_add = preserve_watch_fields and request.POST.get('watch_fields') == 'running_add'
@@ -1538,7 +1555,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         sprint_seg = visible_slot.segments.filter(type="SPR").order_by("order", "id").first() if visible_slot else None
         core_segs = list(visible_slot.segments.filter(type="CORE").order_by("order", "id")) if visible_slot else []
         core_text = " // ".join(seg.text for seg in core_segs if seg.text)
-        if getattr(visible_slot, "source", "") in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+        if getattr(visible_slot, "source", "") in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
             core_text = normalize_watch_main_text(core_text)
         core2_seg = visible_slot.segments.filter(type="CORE2").order_by("order", "id").first() if visible_slot else None
         alt_segs = list(visible_slot.segments.filter(type="ALT").order_by("order", "id")) if visible_slot else []
@@ -1582,7 +1599,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 "is_watch_slot": bool(
                     visible_slot
                     and str(getattr(visible_slot, "source", "") or "")
-                    in {"watch_a", "watch_b", "watch_c", "watch_d"}
+                    in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}
                 ),
                 "has_athlete_override": has_athlete_override,
                 "is_flex_source": _is_flex_source(request),
@@ -1611,7 +1628,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             plan=selected_plan, athlete=athlete, date=d, slot_index=slot_index).first()
         if not restore_slot or not isinstance(restore_slot.watch_plan_snapshot, dict):
             return HttpResponse("No saved original plan", status=409)
-        is_watch = restore_slot.source in {"watch_a", "watch_b", "watch_c", "watch_d"}
+        is_watch = restore_slot.source in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}
         if (version == "watch") == is_watch:
             return HttpResponse(status=204)
         if is_watch:
@@ -1742,7 +1759,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     original_watch_plan = None
     protected_watch_segments = []
     watch_preserve_source = visible_slot
-    if (request.POST.get("watch_origin") or "").strip().lower() in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    if (request.POST.get("watch_origin") or "").strip().lower() in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
         original_slot = visible_slot
         if not has_athlete_override and athlete and _is_flex_planner_plan(selected_plan):
             base_slot = _base_planning_slot_for_slot_reset(athlete, d, slot_index)
@@ -1759,7 +1776,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 for segment in original_slot.segments.all()
                 if segment.type not in watch_replaced_types
             ]
-        if not alternative_only and str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+        if not alternative_only and str(getattr(original_slot, "source", "planned")) not in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
             original_watch_plan = {"segments": _week_segment_payload(original_slot), "segment_order":getattr(original_slot, "segment_order", [])}
     if athlete:
         slot, _ = TrainingSlot.objects.get_or_create(date=d, slot_index=slot_index, plan=selected_plan, athlete=athlete)
@@ -2103,7 +2120,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         slot.save(update_fields=["watch_plan_snapshot"])
 
     watch_loads = []
-    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
         try:
             decoded_loads = json.loads(request.POST.get("watch_loads") or "[]")
             if isinstance(decoded_loads, list):
@@ -2111,7 +2128,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         except (TypeError, ValueError):
             watch_loads = []
     if not alternative_only:
-        slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d"} else "planned"
+        slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"} else "planned"
         slot.watch_loads = watch_loads
         slot.save(update_fields=["source", "watch_loads", "updated_at"])
 
@@ -2291,7 +2308,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if not alternative_only:
         save_processed_main_reps(slot)
         sync_athlete_auto_wucd_overrides(slot, selected_plan, core_text)
-    if slot.source in {"watch_a", "watch_b", "watch_c", "watch_d"}:
+    if slot.source in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
         slot.watch_training_snapshot = _watch_version_payload(slot)
         slot.save(update_fields=["watch_training_snapshot"])
     _bump_stats_version()

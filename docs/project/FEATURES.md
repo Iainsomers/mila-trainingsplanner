@@ -1,6 +1,8 @@
 # Functionele onderdelen
 
-- Athlete Info > General > Connections heeft voor coaches `Allow Garmin model E (experimental)`. De keuze staat per atleet standaard uit en wordt los van Garmin Connection/FIT-uploadrechten opgeslagen. Dit bereidt de toegang tot model E voor; de E-analyse en chat zijn nog niet beschikbaar.
+- Athlete Info > General > Connections heeft voor coaches `Allow Garmin model E (experimental)`. De keuze staat per atleet standaard uit en wordt los van Garmin Connection/FIT-uploadrechten opgeslagen.
+- Garmin E is een afzonderlijke optie in de Diary voor ingeschakelde atleten. Open de opname en kies `Analyze training` of stel meteen een vrije vraag. E krijgt alle numerieke bronlaps en de eerdere gesprekscontext en kan uitleggen, doorvragen, herindelen en eerdere correcties meenemen. Een gesprek zonder bruikbaar voorstel blijft mogelijk. Alleen een volledig aan bronlaps gekoppeld voorstel activeert Use/Add; mislukte vervolgvoorstellen behouden de vorige gecontroleerde preview.
+- Binnen E kan dezelfde opname op snelheid (`pace`), hartslag (`hr`) of automatisch worden beoordeeld. Bijvoorbeeld “kijk naar snelheid in plaats van HR” of “gebruik toch hartslag”. De keuze blijft per gesprek onthouden; de bronmeters en tijden veranderen niet. Ontbrekende HR/grenzen worden gemeld, met behoud van de tempozone voor die rep. C/D blijven beschikbaar en veranderen hierdoor niet.
 
 - Garmin C/D behoudt een volledige laatste korte werkrep wanneer de opname direct stopt of alleen een klein, langzaam slotrestje volgt. Een expliciete chatvraag zoals `9*100m` telt de toegewezen bronreps opnieuw, behoudt andere onderdelen en kan een volledig bevestigd afwisselend patroon als `9×(200 m - 100 m)` tonen. Een ontbrekende negende werkrep wordt niet toegevoegd.
 
