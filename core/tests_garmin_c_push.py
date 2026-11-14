@@ -743,6 +743,65 @@ class GarminCPushTests(TestCase):
                     self.assertEqual([r['measured_seconds'] for r in reps],[593,586,592,589])
                     self.assertEqual(sum(l['meters'] for l in selected['watch_loads']),sum(f['distance_m'] for f in facts))
 
+    def test_distance_free_pause_keeps_all_laps_and_rejects_unverified_timing(self):
+        from core.garmin_details import lap_data
+        details = self.details()
+        details['summary'] = dict(self.summary, activityType='ELLIPTICAL', durationInSeconds=1320)
+        details['summary'].pop('distanceInMeters')
+        # Three active laps: 600, 600 and 120 seconds, with a 330s stop in lap 1.
+        offsets = [(0, 0), (600, 600), (930, 600), (1530, 1200), (1650, 1320)]
+        details['samples'] = [dict(startTimeInSeconds=self.start+wall,
+            timerDurationInSeconds=timer, clockDurationInSeconds=wall, heartRate=140)
+            for wall, timer in offsets]
+        details['laps'] = [dict(startTimeInSeconds=self.start+wall) for wall in (0, 930, 1530)]
+        self.send({'activityDetails': [details]})
+        saved = GarminActivitySummary.objects.get().analysis_data
+        self.assertEqual(saved['received_lap_count'], 3)
+        self.assertEqual([lap['elapsed_time'] for lap in saved['laps']], [600, 600, 120])
+        self.assertEqual([lap['clock_time'] for lap in saved['laps']], [930, 600, 120])
+        self.assertEqual(saved['total_elapsed_s'], 1650)
+        self.assertEqual(saved['total_timer_s'], 1320)
+        self.assertEqual(saved['laps'][0]['paused_time'], 330)
+        self.assertEqual(saved['time_source']['lap_starts'][-1], self.start+1530)
+        self.athlete.garmin_model_e_enabled = True
+        self.athlete.save(update_fields=['garmin_model_e_enabled'])
+        self.client.force_login(self.coach)
+        for route in ('garmin_type_c_ayc', 'garmin_type_d_ayc', 'garmin_type_e_ayc'):
+            part = self.client.get(reverse(route), {'athlete': self.athlete.pk,
+                'date': '2026-10-31'}).json()['results'][0]['parts'][0]
+            self.assertEqual([row['duration'] for row in part['manual']],
+                             ['00:10:00.000', '00:10:00.000', '00:02:00.000'])
+        # Reprocessing the saved minimal timing source reproduces every duration.
+        source = saved['time_source']
+        replay = dict(details, samples=source['counters'],
+                      laps=[{'startTimeInSeconds': t} for t in source['lap_starts']])
+        self.assertEqual([lap['elapsed_time'] for lap in lap_data(replay)['laps']], [600, 600, 120])
+        for sample in details['samples']:
+            sample.pop('timerDurationInSeconds')
+        self.send({'activityDetails': [details]})
+        saved = GarminActivitySummary.objects.get().analysis_data
+        self.assertEqual(saved['laps'], [])
+        self.assertEqual(saved['lap_data_status'], 'timer_data_unavailable')
+        self.assertEqual(saved['received_lap_count'], 3)
+        for route in ('garmin_type_c_ayc', 'garmin_type_d_ayc', 'garmin_type_e_ayc'):
+            part = self.client.get(reverse(route), {'athlete': self.athlete.pk,
+                'date': '2026-10-31'}).json()['results'][0]['parts'][0]
+            self.assertEqual(part['manual'], [])
+            self.assertEqual(part['alternative_laps'], [])
+            self.assertIn('Only the activity total', part['analysis_note'])
+        # Duplicate/invalid boundaries and reset or sparse pause counters fail closed.
+        details['laps'].append(dict(details['laps'][0]))
+        self.assertEqual(lap_data(details)['lap_data_status'], 'incomplete_lap_coverage')
+        details['laps'].pop()
+        for sample, (_, timer) in zip(details['samples'], offsets):
+            sample['timerDurationInSeconds'] = timer
+        details['samples'][2]['timerDurationInSeconds'] = 0
+        self.assertEqual(lap_data(details)['laps'], [])
+        details['samples'] = [dict(startTimeInSeconds=self.start,
+            timerDurationInSeconds=0), dict(startTimeInSeconds=self.start+1650,
+            timerDurationInSeconds=1320)]
+        self.assertEqual(lap_data(details)['laps'], [])
+
     def test_distance_free_activity_preserves_sport_and_heart_rate_in_c_and_d(self):
         details=self.details()
         details['summary']=dict(self.summary,activityType='ELLIPTICAL_FITNESS',

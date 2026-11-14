@@ -184,6 +184,61 @@ class GarminEValidationTests(SimpleTestCase):
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
     @patch("core.views.garmin_e.ask_model")
+    def test_single_alternative_lap_is_immediately_usable_and_saves_actual_seconds(self, model):
+        from core.models import GarminEConversation, TrainingSlot
+        from core.stats import _alt_zone_durations
+        self.record.distance_m = None
+        self.record.duration_s = 3603
+        self.record.analysis_data = {"activity_metrics":{"sport":"ELLIPTICAL","average_hr":148},
+            "laps":[dict(elapsed_time=3603,avg_heart_rate=146,hr_tail=160)]}
+        self.record.save()
+        self.athlete.zone_hr_bpm = {"1":"175","2":"176-185"}
+        self.athlete.save()
+        part = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]["parts"][0]
+        self.assertTrue(part["e_usable"],part)
+        self.assertEqual(part["training_fields"]["alt"],"Elliptical 60' Z1")
+        self.assertTrue(part["e_validation"])
+        self.assertEqual(part["watch_loads"][0]["seconds"],3603)
+        self.assertEqual(part["watch_loads"][0]["alt_laps"][0]["average_hr"],146)
+        self.assertEqual(part["watch_loads"][0]["alt_laps"][0]["end_hr"],160)
+        model.assert_not_called()
+        payload = dict(watch_origin="watch_e",watch_loads=json.dumps(part["watch_loads"]),
+            watch_validation=part["e_validation"],alt_text=part["training_fields"]["alt"],watch_fields="alternative_replace")
+        save = reverse("slot_modal",args=[2026,11,14,1])+"?"+urlencode({"athlete":self.athlete.pk,"source":"athlete_year"})
+        self.assertEqual(self.client.post(save,payload).status_code,200)
+        alt = TrainingSlot.objects.get(athlete=self.athlete,date="2026-11-14",slot_index=1).segments.get(type="ALT")
+        self.assertEqual(alt.duration_s,3603)
+        self.assertEqual(sum(s for _,s in _alt_zone_durations(alt)),3603)
+        self.assertEqual(self.client.post(save,dict(payload,alt_text="Elliptical 80' Z1")).status_code,400)
+        # A prior discussion-only conversation must also recover on reopening.
+        conversation = GarminEConversation.objects.get(athlete=self.athlete)
+        state = deepcopy(conversation.state)
+        state["part"]["e_usable"] = False
+        state["proposal"] = None
+        state["history"] = [{"role":"user","content":"why i cannot use it?"},
+                            {"role":"assistant","content":"Only one lap, no proposal."}]
+        conversation.state = state
+        conversation.save()
+        recovered = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]["parts"][0]
+        self.assertTrue(recovered["e_usable"])
+        self.assertEqual(recovered["e_history"][0]["content"],"why i cannot use it?")
+        model.assert_not_called()
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_single_alternative_missing_hr_has_no_invented_zone(self, model):
+        self.record.distance_m = None
+        self.record.duration_s = 3603
+        self.record.analysis_data = {"activity_metrics":{"sport":"ELLIPTICAL"},
+                                   "laps":[dict(elapsed_time=3603)]}
+        self.record.save()
+        part = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]["parts"][0]
+        self.assertTrue(part["e_usable"],part)
+        self.assertNotIn(" Z",part["training_fields"]["alt"])
+        self.assertIn("3603s",part["training_fields"]["alt"])
+        self.assertIn("no usable HR",part["e_zone_note"])
+        model.assert_not_called()
+
+    @patch("core.views.garmin_e.ask_model")
     def test_first_analysis_makes_supported_result_usable_without_chat(self, model):
         preview = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]
         self.assertTrue(preview["parts"][0]["e_auto_analyze"])

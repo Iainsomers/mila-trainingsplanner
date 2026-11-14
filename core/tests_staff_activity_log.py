@@ -15,6 +15,19 @@ from core.models import (
 
 
 class StaffActivityLogTests(TestCase):
+    def test_garmin_log_accepts_date_string_and_date_object(self):
+        from core.models import GarminActivitySummary
+
+        for index, activity_date in enumerate(("2026-11-14", date(2026, 11, 14))):
+            with self.subTest(activity_date=activity_date):
+                GarminActivitySummary.objects.create(
+                    athlete=self.athlete, activity_id=f"log-date-{index}",
+                    activity_date=activity_date, activity_start=timezone.now(),
+                    distance_m=1000, duration_s=300,
+                )
+                event = self.athlete.activity_events.get(metadata__activity_id=f"log-date-{index}")
+                self.assertEqual(event.metadata["activity_date"], "2026-11-14")
+
     def setUp(self):
         User = get_user_model()
         self.coach = User.objects.create_user(

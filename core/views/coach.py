@@ -5826,6 +5826,12 @@ def garmin_type_c_ayc_view(request, model="C"):
         alt_part = alternative_part(athlete, parsed.get('activity_metrics') or {}, received.duration_s,
                                     parsed.get('laps') if isinstance(parsed.get('laps'), list) else None)
         if alt_part is not None:
+            if parsed.get('lap_data_status') in {
+                    'timer_data_unavailable', 'inconsistent_timer_total', 'incomplete_lap_coverage'}:
+                alt_part['analysis_note'] += (
+                    ' Recorded laps could not be verified: timer data or lap coverage is incomplete.'
+                    ' Only the activity total is offered; no interval structure is inferred.')
+                alt_part['alternative_laps'] = []
             summary_results.append({
                 'name': f'Garmin activity {received.activity_id}',
                 'activity_metrics': parsed.get('activity_metrics', {}),

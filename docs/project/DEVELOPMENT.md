@@ -201,3 +201,5 @@ Migratie 0145_coachsettings_under_dev_enabled voegt de standaard uitgeschakelde 
 Migratie0146_trainingplan_year_basis_kind voegt de interne jaarbasis-plansoort toe (choices). Lokaal gemigreerd; meegaan met bestaande Render-migratiestap. Interne plannen uitsluiten uit algemene gebruikersplanningslijsten.
 
 Migratie 0148_yearplannerwhereabout_transport_fields hernoemt `rental_car_info` databehoudend naar `transport_airport_to_camp` en voegt `transport_camp_to_airport` toe. Render moet deze via de bestaande migratiestap uitvoeren.
+
+14 november 2026 - Garmin-logregistratie normaliseert activity_date via het Django DateField voordat de ISO-datum wordt opgeslagen. Zowel datumtekst bij create() als een date-object zijn toegestaan; de post_save-log mag de Garmin-import niet blokkeren. Gerichte regressie: core.tests_staff_activity_log en core.tests_garmin_e. Geen migratie of interfacewijziging.

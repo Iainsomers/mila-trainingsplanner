@@ -166,6 +166,39 @@ def garmin_type_e_ayc_view(request):
             conversation,_ = GarminEConversation.objects.get_or_create(user=request.user,athlete=athlete,
                 activity_key=identity,defaults={"state":combined_seed or {}})
             state = conversation.state or {"history":[],"part":deepcopy(part),"proposal":None,"basis":"auto"}
+            # One complete Alternative lap needs no model interpretation or interval
+            # split. Validate it through the same compiler, including old conversations
+            # that only discussed it and never returned a usable assignment.
+            if (request.method == "GET" and is_alternative and len(facts)==1
+                    and not state["part"].get("e_usable") and not state.get("pending")
+                    and state["basis"] in {"auto","hr"}
+                    and abs(facts[0]["duration_s"]-float(part.get("alternative_duration_s") or 0))<.001):
+                seconds = facts[0]["duration_s"]
+                target = max(1,round(seconds/60)*60)
+                if abs(target-seconds)>max(15,target*.06):
+                    target = max(1,round(seconds))
+                proposal = {"reps":[{"laps":[1],"target_seconds":target}]}
+                try:
+                    candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis="hr")
+                    compact = {**proposal,"format":"compact"}
+                    try:
+                        candidate = checked_proposal(part,compact,athlete=athlete,zone_basis="hr")
+                        proposal = compact
+                    except ValueError:
+                        pass  # Missing HR/limits: keep exact measured duration without a zone.
+                    updated_state = deepcopy(state)
+                    updated_state.update(part=candidate,proposal=proposal,basis="hr")
+                    updated_state["history"].append({"role":"assistant","content":
+                        f"Lap 1 bevat één opgenomen tijdsblok van {seconds:g} seconden. "
+                        "Dit blok staat klaar om te gebruiken; binnen deze lap zijn geen afzonderlijke intervallen vastgelegd. "
+                        "De gemeten duur en hartslag blijven behouden."})
+                    GarminEConversation.objects.filter(pk=conversation.pk,state=conversation.state).filter(
+                        Q(busy_until__isnull=True)|Q(busy_until__lt=timezone.now())).update(
+                            state=updated_state,updated_at=timezone.now())
+                    conversation.refresh_from_db()
+                    state = conversation.state or state
+                except (ValueError,KeyError,TypeError,OverflowError):
+                    pass  # Unsupported measurements still require the ordinary E analysis.
             if (request.GET.get("preview") == "measured" or combining) and message is None and not analyzing:
                 if state["history"]:
                     session["parts"] = [state["part"]]

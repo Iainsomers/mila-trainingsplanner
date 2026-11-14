@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Garmin E geeft één volledige Alternative-tijdslap bij openen direct vrij via de bestaande meetvalidator, zonder afhankelijkheid van een modelantwoord. Dit herstelt ook oude gesprekken zonder bruikbaar voorstel. De HR-correctie en E-zoneregels blijven gelden; ontbrekende HR/grenzen leveren geen verzonnen zone. Bestaande gecontroleerde voorstellen, snelheidskeuzes en wachtende bevestigingen blijven behouden.
+
 - Garmin E biedt Combine voor twee of drie loopopnames met unieke, chronologische rollen WU/Main/CD. Een gecontroleerde E-Main wordt met de gemeten buitenopnames opnieuw gevalideerd; anders ontstaat een gecombineerde meetpreview die je met E kunt analyseren en bespreken. Alle bronlaps, tijden en HR-gegevens blijven behouden. Alleen gecontroleerde combinaties activeren Use/Add.
 
 - Athlete Info > General > Connections heeft voor coaches `Allow Garmin model E (experimental)`. De keuze staat per atleet standaard uit en wordt los van Garmin Connection/FIT-uploadrechten opgeslagen.

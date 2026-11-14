@@ -154,7 +154,8 @@ def record_garmin_summary(sender, instance, created, **kwargs):
         title=f"Garmin activity {'received' if created else 'updated'}",
         detail=" · ".join(details),
         source="Garmin",
-        metadata={"activity_date": instance.activity_date.isoformat(), "activity_id": instance.activity_id},
+        metadata={"activity_date": sender._meta.get_field("activity_date").to_python(instance.activity_date).isoformat(),
+                  "activity_id": instance.activity_id},
     )
 
 

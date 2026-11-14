@@ -1,5 +1,11 @@
 # Actuele status
 
+## 14 november 2026 - Eén Alternative-lap direct bruikbaar in E
+
+- Een beschrijvend modelantwoord zonder laptoewijzing kon zelfs één volledige Alternative-lap blokkeren. E valideert die ene bronlap nu bij openen rechtstreeks, na de bestaande toegangs- en toestemmingscontroles. Ook een eerder vastgelopen gesprek krijgt zo een bruikbare preview; bestaande gecontroleerde resultaten worden niet vervangen.
+- Voorbeeldregressie: 3603s, gemiddelde lap-HR 146 en eind-HR 160 levert bij passende persoonlijke grenzen `Elliptical 60' Z1`. Use slaat 3603s op, inclusief originele HR en gemeten zonetotalen; gewijzigde tekst met hetzelfde token wordt geweigerd. Zonder bruikbare HR blijft de exacte duur zonder zone beschikbaar. E behoudt eind-HR + persoonlijke correctie; C/D zijn niet gewijzigd.
+- Validatie: 87 gerichte E/C/D/Alternative-tests, drie JavaScript-controles en `manage.py check` geslaagd, inclusief directe vrijgave zonder AI-call, opslag, handtekeningcontrole, herstel van een oud gesprek en ontbrekende HR. Geen UI-wijziging; live Render-uitkomst nog niet bevestigd.
+
 ## 14 november 2026 — Eerste E-analyse direct bruikbaar, gesprek optioneel
 
 - Bij nieuwe opnames start de browser automatisch achtereenvolgens de E-analyse. De eerste reactie moet bij voldoende meetbewijs een volledige laptoewijzing bevatten. Een uitsluitend beschrijvend antwoord wordt binnen het bestaande budget één keer aangevuld, zonder dat de gebruiker eerst om een voorstel moet vragen.

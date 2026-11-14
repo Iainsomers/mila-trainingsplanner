@@ -855,11 +855,7 @@
     function updateFlexTotalsFromVisibleRows() {
       document.querySelectorAll("[data-flex-total-cell]").forEach((totalCell) => {
         const firstRow = totalCell.closest("tr");
-        const secondRow = firstRow ? firstRow.nextElementSibling : null;
-        const segmentEls = [
-          ...firstRow.querySelectorAll("[data-flex-segment]"),
-          ...(secondRow ? secondRow.querySelectorAll("[data-flex-segment]") : [])
-        ];
+        const weekLoads = JSON.parse(firstRow.getAttribute("data-flex-week-loads") || "[]");
         const rowZoneSpeeds = flexZoneSpeedsForRow(firstRow);
 
         const zMeters = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
@@ -869,32 +865,30 @@
         let raceMeters = 0;
         let raceSeconds = 0;
 
-        segmentEls.forEach((el) => {
-          flexLoadsForSegment(el, rowZoneSpeeds).forEach((load) => {
-            if (load.kind === "alt") {
-              if (altSeconds[load.zone] !== undefined) {
-                altSeconds[load.zone] += Number(load.seconds || 0);
-              }
-              return;
+        weekLoads.forEach((load) => {
+          if (load.kind === "alt") {
+            if (altSeconds[load.zone] !== undefined) {
+              altSeconds[load.zone] += Number(load.seconds || 0);
             }
+            return;
+          }
 
-            const z = load.zone || "1";
-            const speed = Number(rowZoneSpeeds[z] || 0);
-            const meters = Number(load.meters || 0);
-            const seconds = speed > 0 ? meters / speed : 0;
+          const z = load.zone || "1";
+          const speed = Number(rowZoneSpeeds[z] || 0);
+          const meters = Number(load.meters || 0);
+          const seconds = Number(load.seconds || 0) || (speed > 0 ? meters / speed : 0);
 
-            if (load.race) {
-              raceMeters += meters;
-              raceSeconds += seconds;
-            } else if (zMeters[z] !== undefined) {
-              zMeters[z] += meters;
-              zSeconds[z] += seconds;
-            }
+          if (load.race) {
+            raceMeters += meters;
+            raceSeconds += seconds;
+          } else if (zMeters[z] !== undefined) {
+            zMeters[z] += meters;
+            zSeconds[z] += seconds;
+          }
 
-            if (load.tKey && tMeters[load.tKey] !== undefined) {
-              tMeters[load.tKey] += meters;
-            }
-          });
+          if (load.t_key && tMeters[load.t_key] !== undefined) {
+            tMeters[load.t_key] += meters;
+          }
         });
 
         const totalMeters = Object.values(zMeters).reduce((a, b) => a + b, 0) + raceMeters;
@@ -1398,7 +1392,7 @@
 
           <tbody>
             {% for row in week.athlete_rows %}
-              <tr class="flex-athlete-row-start" data-flex-zone-speeds="{{ row.zone_speeds_json|escape }}" data-flex-pause-mode="{{ row.pause_mode }}">
+              <tr class="flex-athlete-row-start" data-flex-week-loads="{{ row.week_loads_json|escape }}" data-flex-zone-speeds="{{ row.zone_speeds_json|escape }}" data-flex-pause-mode="{{ row.pause_mode }}">
                 <td class="flex-athlete-col {% if row.week_phase %}phase-{{ row.week_phase }}{% endif %}" rowspan="2" {% if row.week_phase_style %}style="{{ row.week_phase_style }}"{% endif %}>
                   <div class="flex-athlete-name-row">
                     <span>{{ row.athlete.name }}</span>

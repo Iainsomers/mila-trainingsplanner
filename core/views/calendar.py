@@ -1608,6 +1608,17 @@ def flex_planner_view(request):
                     }
                 flex_week_days.append(day_payload)
 
+            # Use the Diary calculation once per effective session, including
+            # measured recovery laps that have no visible segment of their own.
+            week_loads = []
+            for cell in am_cells + pm_cells:
+                check = check_lookup.get((athlete.id, cell["day"], cell["slot_index"]))
+                if check and check.status == AthleteDayCheck.STATUS_NOT_DONE:
+                    continue
+                week_loads.extend(_ayc_slot_loads_for_totals(
+                    cell.get("slot"), athlete, athlete.pause_mode or coach_settings.pause_mode,
+                ))
+
             week_phase_style, week_phase = week_training_style(athlete.id, days)
 
             athlete_rows.append({
@@ -1617,6 +1628,7 @@ def flex_planner_view(request):
                 "am_cells": am_cells,
                 "pm_cells": pm_cells,
                 "flex_week_payload": json.dumps({"days": flex_week_days}),
+                "week_loads_json": json.dumps(week_loads),
                 "week_phase": week_phase,
                 "week_phase_style": week_phase_style,
             })
