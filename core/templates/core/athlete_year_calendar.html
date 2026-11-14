@@ -3219,12 +3219,18 @@
       headers: {"X-CSRFToken": getCookie("csrftoken")},
       credentials: "same-origin"
     }).then(function(response) {
-      if (!response.ok) throw new Error("Training could not be saved.");
+      if (!response.ok) {
+        if (model === "E") return response.text().then(function(message) {
+          throw new Error(message && message.length < 400 && message.indexOf("<") < 0 ?
+            message : "Training could not be saved. Check that this day has an editable training slot.");
+        });
+        throw new Error("Training could not be saved. Check that this day has an editable training slot.");
+      }
       window.location.reload();
-    }).catch(function() {
+    }).catch(function(error) {
       button.disabled = false;
       button.textContent = originalLabel;
-      window.alert("Training could not be saved. Check that this day has an editable training slot.");
+      window.alert(error.message || "Training could not be saved. Check that this day has an editable training slot.");
     });
   }
   function hideSuggestInputPlaceholder() {

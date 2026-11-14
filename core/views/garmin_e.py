@@ -18,7 +18,18 @@ from core.views.garmin import ai_allowed, fit_ai_allowed
 
 
 def preview_digest(fields, loads):
-    return hashlib.sha256(json.dumps([fields,loads],sort_keys=True,separators=(",",":")).encode()).hexdigest()
+    def canonical(value):
+        if isinstance(value,dict):
+            return {key:canonical(item) for key,item in value.items()}
+        if isinstance(value,list):
+            return [canonical(item) for item in value]
+        # Browsers do not preserve Python's 38 versus 38.0 spelling.
+        # Normalize only equal integral numbers; never round measured fractions.
+        if isinstance(value,float) and value.is_integer():
+            return int(value)
+        return value
+    return hashlib.sha256(json.dumps(canonical([fields,loads]),
+        sort_keys=True,separators=(",",":")).encode()).hexdigest()
 
 
 @login_required
@@ -88,7 +99,9 @@ def garmin_type_e_ayc_view(request):
                 part["ai_structure_status"] = "e_unavailable"
                 part["chat_reply"] = "AI consent is required before Garmin E can analyze or discuss this recording."
                 continue
-            fingerprint = preview_digest(facts,[])
+            # Keep existing conversation identities stable across save-format fixes.
+            fingerprint = hashlib.sha256(json.dumps([facts,[]],
+                sort_keys=True,separators=(",",":")).encode()).hexdigest()
             key = "garmin-e:"+hashlib.sha256(str((request.user.pk,athlete.pk,
                 session.get("start"),fingerprint)).encode()).hexdigest()
             conversation,_ = GarminEConversation.objects.get_or_create(user=request.user,athlete=athlete,

@@ -1,5 +1,10 @@
 # Actuele status
 
+## 14 november 2026 — Opslag E na browser-JSON
+
+- Een live E-preview kon correct zijn maar bij Use/Add worden afgewezen: JavaScript stuurt gehele getallen zonder `.0` terug, terwijl de ondertekende controle de oorspronkelijke Python-JSON-spelling vergeleek. De regressietest reproduceerde HTTP 400 met een ongewijzigde, door de browser herschreven payload.
+- De controle normaliseert nu alleen werkelijk gelijke gehele getallen, ook in geneste HR-meetpunten. Fractionele metingen worden niet afgerond; gewijzigde waarden blijven ongeldig. E toont bij opslagfouten de korte, leesbare servermelding in plaats van altijd de algemene dagdeelmelding. Bestaande E-gesprekken kunnen opnieuw worden geopend voor een verse opslagbevestiging.
+
 ## 14 november 2026 — Garmin E: vrij gesprek met gecontroleerde training
 
 - Opt-in E heeft nu een eigen knop, endpoint, gespreksprompt en validator. De chat kan observeren, uitleggen en vragen stellen zonder steeds trainingsvelden te veranderen. Aanvragen gebruiken de volledige numerieke lapvolgorde en server-eigen gesprekscontext, zonder naam/GPS/tokens. E kan per gesprek wisselen tussen snelheid, HR en auto.

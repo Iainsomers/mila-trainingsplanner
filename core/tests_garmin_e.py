@@ -29,6 +29,16 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_save_digest_accepts_browser_number_spelling_but_no_measurement_change(self):
+        from core.views.garmin_e import preview_digest
+        fields = {"wu":"","main":"2×200 m Z4","cd":""}
+        integer = [dict(meters=200,seconds=38,hr_samples=[[0,140]])]
+        floats = [dict(meters=200.0,seconds=38.0,hr_samples=[[0.0,140.0]])]
+        self.assertEqual(preview_digest(fields,integer),preview_digest(fields,floats))
+        changed = deepcopy(floats)
+        changed[0]["seconds"] += .000000001
+        self.assertNotEqual(preview_digest(fields,floats),preview_digest(fields,changed))
+
     def test_longer_time_rep_requires_explicit_bounded_confirmation(self):
         part = dict(watch_loads=[dict(segment='CORE',zone='1',meters=m,seconds=s)
             for m,s in [(1315,362),(60,45),(1301,360),(60,45),(1275,361),(60,45),
@@ -242,6 +252,16 @@ class GarminEEndpointTests(TestCase):
         payload = {"watch_origin":"watch_e","watch_loads":json.dumps(part["watch_loads"]),
                    "watch_validation":part["e_validation"],"wu_text":fields["wu"],
                    "core_text":fields["main"],"cd_text":fields["cd"]}
+        # JSON.stringify in the browser serializes 38.0 as 38, recursively.
+        def browser_numbers(value):
+            if isinstance(value,list):
+                return [browser_numbers(v) for v in value]
+            if isinstance(value,dict):
+                return {k:browser_numbers(v) for k,v in value.items()}
+            if isinstance(value,float) and value.is_integer():
+                return int(value)
+            return value
+        payload["watch_loads"] = json.dumps(browser_numbers(part["watch_loads"]))
         url = reverse("slot_modal",args=[2026,11,14,1])+"?"+urlencode({"athlete":self.athlete.pk,"source":"athlete_year"})
         self.assertEqual(self.client.post(url,dict(payload,core_text="99×1000 m Z5")).status_code,400)
         self.assertEqual(self.client.post(url,payload).status_code,200)
