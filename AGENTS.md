@@ -24,6 +24,7 @@ Lees vóór een wijziging de relevante documenten in `docs/project/`:
 - Voer bij codewijzigingen minstens gerichte tests en `manage.py check` uit.
 - Commit geen lokale database, tijdelijke Office-bestanden of geheime gegevens.
 - Voltooide wijzigingen worden standaard met de relevante bestanden gecommit en naar `main` gepusht, zodat Render ze kan uitrollen. Niet pushen wanneer de gebruiker expliciet zegt dat iets lokaal moet blijven.
+- Geef bij een blokkade op `.git/index.lock`, andere schrijfacties in `.git` of netwerktoegang voor Git niet op: voer de noodzakelijke `git add`, `git commit` en `git push` opnieuw uit via de beschikbare goedkeuringsroute met verhoogde rechten. Meld pas een blokkade nadat die route daadwerkelijk is geprobeerd en geweigerd.
 - Werk na een functionele wijziging de relevante projectdocumentatie bij volgens `docs/project/DEVELOPMENT.md`.
 
 `CODEX_CONTEXT.md` is een historische overdracht en niet meer de primaire bron.
