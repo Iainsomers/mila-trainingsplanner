@@ -2885,9 +2885,8 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
         fallback_zone = (str(getattr(seg, "zone", "") or "").strip() or ("4" if is_race else "1"))
 
         if seg_type == "ALT":
-            from core.alternative import zone_durations
-            for zone, seconds in zone_durations(text, fallback_zone,
-                    float(getattr(seg, "duration_s", None) or 0), _ayc_text_duration_s):
+            from core.alternative import segment_zone_durations
+            for zone, seconds in segment_zone_durations(seg,_ayc_text_duration_s):
                 loads.append({"kind":"alt", "zone":zone, "seconds":seconds})
             continue
 

@@ -520,9 +520,8 @@ def _text_duration_s(text: str) -> int:
 
 
 def _alt_zone_durations(seg):
-    from core.alternative import zone_durations
-    return zone_durations(getattr(seg, "text", ""), getattr(seg, "zone", ""),
-                          float(getattr(seg, "duration_s", None) or 0), _text_duration_s)
+    from core.alternative import segment_zone_durations
+    return segment_zone_durations(seg,_text_duration_s)
 
 
 def _text_fallback_loads(seg, default_zone: str, speeds: dict, t_speed_func=None):

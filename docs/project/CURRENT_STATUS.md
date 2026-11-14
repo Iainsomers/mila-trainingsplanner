@@ -1,5 +1,12 @@
 # Actuele status
 
+## 14 november 2026 — Compact Alternative-voorstel daadwerkelijk opslaan
+
+- De eerdere reparatie vroeg wel een volledige laptoewijzing op, maar de Alternative-formatter maakte daar altijd opnieuw losse meetblokken van. Een afgesproken compacte notatie kon daardoor nog steeds niet verschijnen.
+- E heeft nu een gecontroleerde compacte presentatie (`format:compact` plus nominale tijd-/zonekeuzes). Herhaalde tijd-/zoneparen worden samengevoegd; in de numerieke ellipticallaptest wordt het voorstel `15' Z1 // 4×(10' Z2 - 5' Z1) // 6'28 Z2` en komt diezelfde vorm via Use/Add in de Diary.
+- Brondata staat apart per ALT-segment (migratie `0154`). De test controleert zowel 4.888 nominale tekstseconden als de oorspronkelijke 4.955 gemeten seconden, met ongewijzigde werkelijke HR-verdeling van 2.764s Z1 en 2.191s Z2. Add behoudt een bestaande looptraining. Niet-onderbouwde zones of onpassende nominale tijden worden afgewezen.
+- De parser ondersteunt gemengde tijd/zoneparen en `6'28`. Gewone Alternative-progressies en herhalingen zijn opnieuw getest. Handmatige tekstwijziging verbreekt de binding met eerdere meetgegevens.
+
 ## 14 november 2026 — E-correcties daadwerkelijk naar de preview
 
 - Het model kon na een correctie in vrije tekst instemmen met een AM-voorstel maar `proposal:null` teruggeven. De onderliggende preview bleef daardoor op de eerdere geldige versie staan.

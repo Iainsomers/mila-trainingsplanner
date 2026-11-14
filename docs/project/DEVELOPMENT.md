@@ -81,6 +81,8 @@ Bij modelwijzigingen:
 
 ## Git en Render
 
+- Migratie `0154_trainingsegment_watch_alternative_data` voegt de tekstgebonden meetgegevens voor compacte E-Alternative toe. Bij het testen van de compacte opmaak zowel de opgeslagen ALT-tekst als gemeten seconden en HR-zonetotalen controleren; ze kunnen bewust verschillen van afgeronde nominale tijden.
+
 - Garmin E vereist migraties `0152_trainingslot_garmin_e_source` en `0153_garmin_e_conversation`. Het gebruikt de bestaande `OPENAI_API_KEY`; optioneel kiest `GARMIN_E_MODEL` het E-model (standaard `gpt-5.4-mini`, reasoning medium). E is per atleet opt-in. API-uitvoer is JSON met vrije antwoordtekst en een afzonderlijke meetbare laptoewijzing; maximaal één herstelpoging met meetfeedback binnen een totale aanvraagbegroting van circa 25s. Bij timeout of fout blijft de laatst gecontroleerde preview beschikbaar.
 
 - Branch `main` is de productiebranch.

@@ -72,12 +72,14 @@ async function checkConfirmation(model, typedYes) {
 }
 async function checkEConversation(alternative = false) {
   const parent=element('div'), requests=[];
+  let saved;
+  const measured=[{segment:alternative?'ALT':'CORE',seconds:604,meters:alternative?0:200}];
   const current={start:'e-session',parts:[{description:'Measured preview',e_usable:false,
     training_fields:alternative ? {alt:"Elliptical 82' Z1"} : {main:'preview'}}]};
   let calls=0;
   const context={document:{createElement:element,createTextNode:t=>({...element('text'),textContent:t})},
     watchChats:{},URLSearchParams,getCookie(){return 'csrf';},renderTypeALaps(){},
-    activeAthlete:89,activeDate:'2026-11-14',watchPreviewSequence:1,
+    activeAthlete:89,activeDate:'2026-11-14',watchPreviewSequence:1,useWatchTraining(...args){saved=args;},
     fetch:async(url,options)=>{
       requests.push(JSON.parse(new URLSearchParams(options.body).get('chat')));
       calls++;
@@ -87,6 +89,7 @@ async function checkEConversation(alternative = false) {
       return {json:async()=>({ok:true,results:[{start:'e-session',parts:[{
         description:calls===1?'Measured preview':'Checked E result',
         training_fields:alternative ? {alt:"Elliptical Work 10' Z2"} : {main:'2×200 m Z4'},
+        watch_loads:measured,
         e_update_note:calls===2?'Voorstel bijgewerkt vanuit de gemeten laps.':'Voorstel ongewijzigd; zie het antwoord hierboven.',
         e_usable:calls===2,e_validation:'signed',e_history:history,e_zone_note:'Zones use measured speed.'}]}]})};
     }};
@@ -111,6 +114,9 @@ async function checkEConversation(alternative = false) {
   assert.ok(nodes.some(n=>n.textContent==='Voorstel bijgewerkt vanuit de gemeten laps.'));
   const actions=nodes.find(n=>n.children.some(child=>child.textContent==='Use AM'));
   assert.ok(actions.className.includes('flex-wrap'),'Actions wrap on narrow screens');
+  nodes.find(n=>n.textContent==='Add AM').listeners.click({preventDefault(){}});
+  assert.deepEqual(saved[1],measured,'E Add sends the measured facts for running and Alternative');
+  assert.equal(saved[6],'signed');
 }
 (async()=>{for(const model of ['C','D']) {
   for(const coach of [true,false]) for(const success of [true,false]) await check(model,coach,success);

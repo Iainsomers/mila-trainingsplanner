@@ -915,6 +915,7 @@ def week_paste(request, yyyy, mm, dd):
                     order=int(item.get("order") or 0),
                 )
                 seg.photo_ids = copy_photo_ids(request, item.get("photo_ids"))
+                seg.watch_alternative_data = item.get("watch_alternative_data") or {}
                 seg.zone = (item.get("zone") or "")
                 seg.reps = int(item.get("reps") or 1)
                 seg.distance_m = item.get("distance_m", None)
@@ -1173,6 +1174,7 @@ def _week_segment_payload(slot):
         "order": int(getattr(seg, "order", 0) or 0),
         "text": seg.text or "",
         "photo_ids": list(getattr(seg, "photo_ids", []) or []),
+        "watch_alternative_data": getattr(seg,"watch_alternative_data",{}) or {},
         "zone": seg.zone or "",
         "reps": int(seg.reps or 1),
         "distance_m": int(seg.distance_m) if seg.distance_m is not None else None,
@@ -1265,6 +1267,7 @@ def flex_week_paste(request):
                     order=int(segment.get("order") or 0),
                 )
                 seg.photo_ids = copy_photo_ids(request, segment.get("photo_ids"))
+                seg.watch_alternative_data = segment.get("watch_alternative_data") or {}
                 seg.zone = segment.get("zone") or ""
                 seg.reps = int(segment.get("reps") or 1)
                 seg.distance_m = segment.get("distance_m")
@@ -2054,9 +2057,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     alt_parts = split_alternative_segments(alt_text)
     # Activity names such as "Strength training" must not invoke the running
     # parser's special Strength shortcut and discard Alternative minutes/zone.
-    alt_parses = [parse_segment_text(
-        re.sub(r"^.*?(?=\d+' Z[1-5]$)", '', part) if alternative_only or alternative_replace else part,
-        zone_required=False) for part in alt_parts]
+    from core.alternative import parse_alternative_text
+    alt_parses = [parse_alternative_text(
+        re.sub(r"^.*?(?=\d+' Z[1-5]$)", '', part) if alternative_only or alternative_replace else part
+        ) for part in alt_parts]
     alt_parse = next((parsed for parsed in alt_parses if not parsed.ok), alt_parses[-1] if alt_parses else None)
     cd_parse = parse_segment_text(cd_text, zone_required=False) if cd_text else None
 
@@ -2266,6 +2270,12 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         alt_seg.special = ""
         alt_seg.zone = str(parsed.zone or "")
         alt_seg.duration_s = int(parsed.duration_s) if parsed.duration_s else None
+        if watch_origin == "watch_e":
+            measured = next((load.get("alt_laps") for load in watch_loads
+                if load.get("segment")=="ALT" and load.get("alt_text")==alt_part),None)
+            if measured:
+                alt_seg.watch_alternative_data = {"text":alt_part,"laps":measured}
+                alt_seg.duration_s = round(sum(float(lap["seconds"]) for lap in measured))
         alt_seg.parse_ok = bool(parsed.ok)
         alt_seg.parse_message = parsed.message or ""
         alt_seg.parsed_at = now

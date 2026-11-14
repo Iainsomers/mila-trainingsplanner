@@ -3168,7 +3168,7 @@
               if (model === "E" && !part.e_usable) button.disabled = true;
               button.addEventListener("click", function(event) {
                 event.preventDefault();
-                useWatchTraining(fields, fields.main ? (part.watch_loads || []) : [], slotIndex, button, model, true, part.e_validation);
+                useWatchTraining(fields, (fields.main || model === "E") ? (part.watch_loads || []) : [], slotIndex, button, model, true, part.e_validation);
               });
               actions.appendChild(button);
             });

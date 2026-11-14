@@ -42,7 +42,8 @@ already applied. The server preserves all actual times and only permits this aft
 For continuous running put the consecutive running laps in ONE distance rep. Slow transfers
 are recovery. Never infer unrecorded recovery duration. Your prose is not the usable training:
 only a complete, checked lap assignment can update the preview. Do not output model-generated
-pace, HR, zones, totals, training text or URLs; the server calculates those from measurements.
+pace, HR, totals, training text or URLs; the server calculates those from measurements.
+Only the validated Alternative presentation schema below can request a supported summary zone.
 Users can say 'kijk naar snelheid ipv hr' or vice versa: set zone_basis accordingly and explain
 the choice. Preserve the current basis unless asked to change it. auto uses end HR for reps
 at least 400m OR 50s and pace for shorter reps. pace always uses speed, hr requests measured
@@ -54,6 +55,15 @@ including warmup, cooldown and recovery. A whole continuous activity may be one 
 auto means HR for Alternative. If no speed was measured, explain that a speed-based zone
 cannot be determined; offer HR/time instead. Preserve HR correction from current context.
 Alternative time targets can be 1..86400 seconds, including one continuous long activity.
+When the user wants a compact Alternative notation, include proposal.format:"compact" and
+optional proposal.presentation:{"warmup_seconds":900,"recovery_seconds":300,"work_zone":"2",
+"recovery_zone":"1"}. Keep the complete source assignment. Work times come from each rep's
+target_seconds. Boundary/recovery nominal times must fit max(30s,6%) of measured time.
+Summary zones must be supported by at least half of the measured blocks of that role;
+actual HR-derived zones and exact seconds remain separately preserved for totals.
+Example 930s warmup, 604/601/601/601s work with 300/300/323/307s recoveries, and final
+388s work can display 15' Z1 // 4×(10' Z2 - 5' Z1) // 6'28 Z2 when those zones are supported.
+This is only an illustration, never a default workout.
 CRITICAL: agreeing in prose does NOT change the usable preview. If the user corrects an
 assignment, agrees to a proposed correction, says they cannot see the proposal, or asks to
 use/apply it for AM/PM, return intent:update AND the complete updated proposal, preserving
@@ -62,8 +72,9 @@ For explanation-only answers use intent:discuss and proposal:null.
 If the requested change cannot be supported, explain the specific mismatch; do not pretend
 that the preview changed. Current checked fields remain authoritative until validation.
 Do not ask for another confirmation when the user has already agreed, except for the bounded
-longer-time exception. Alternative previews use measured chronological blocks; a compact
-spoken summary does not itself replace those blocks or change measured HR-derived zones.
+longer-time exception. Alternative defaults to chronological measured blocks. To change the
+actual usable notation, supply format:compact with presentation and a complete assignment.
+A compact spoken summary alone changes neither the preview nor measured HR-derived totals.
 """
 
 
@@ -334,7 +345,7 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
     block_at = {indices[0]:indices for indices,_ in blocks}
     correction = max(0,int(getattr(athlete,"alternative_hr_correction",10) or 0))
     from core.garmin_d import hr_zone
-    texts, missing = [],False
+    texts, entries, missing = [],[],False
     i = 1
     while i <= len(facts):
         indices = block_at.get(i,[i])
@@ -350,6 +361,8 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
         duration = f"{int(seconds)//60}'" if seconds%60==0 else f"{seconds:g}s"
         role = roles.get(i,"Work")
         texts.append(f"{part.get('alternative_label','Alternative')} {role} {duration}"+(f" Z{label}" if label else ""))
+        entries.append(dict(ids=indices,seconds=seconds,zone=label,role=role,
+                            target=next((target for block,target in blocks if block==indices),seconds)))
         i = indices[-1]+1
     result = deepcopy(part)
     text = " // ".join(texts)
@@ -359,4 +372,79 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
     if missing:
         result["e_zone_note"] += " Some blocks have no usable HR/limits; their zone is left empty."
     result.pop("training_alternatives",None)
+    if proposal.get("format") == "compact":
+        result = compact_alternative(part,result,entries,proposal.get("presentation") or {})
+    return result
+
+
+def compact_alternative(part, result, entries, presentation):
+    """Compile compact, bounded notation without losing measured per-lap facts."""
+    if not isinstance(presentation,dict) or any(not e["zone"] for e in entries):
+        raise ValueError("Compact Alternative needs supported zones for all blocks.")
+    from core.alternative import expand_time_notation
+    selected_zones = {}
+    for role,key in (("Work","work_zone"),("Recovery","recovery_zone")):
+        if key not in presentation:
+            continue
+        selected = str(presentation[key]).upper().removeprefix("Z")
+        observed = [e["zone"] for e in entries if e["role"]==role]
+        if selected not in set("123456") or not observed or observed.count(selected)*2<len(observed):
+            raise ValueError(f"The {role} summary zone is not supported by the measured blocks.")
+        selected_zones[role] = selected
+    display = []
+    for entry in entries:
+        role,seconds = entry["role"],entry["seconds"]
+        key = {"Warmup":"warmup_seconds","Cooldown":"cooldown_seconds","Recovery":"recovery_seconds"}.get(role)
+        target = presentation.get(key,seconds) if key else entry["target"]
+        if not isinstance(target,(int,float)) or isinstance(target,bool) or not math.isfinite(target) or target<=0:
+            raise ValueError("Compact Alternative durations must be positive measured targets.")
+        tolerance = max(15,target*.06) if role=="Work" else max(30,target*.06)
+        if abs(target-seconds)>tolerance:
+            raise ValueError(f"{role}: nominal {target:g}s does not fit measured {seconds:g}s.")
+        zone = selected_zones.get(role,entry["zone"])
+        display.append((target,zone,role))
+    def atom(item):
+        seconds,zone,_ = item
+        seconds = round(seconds,3)
+        if seconds%60==0:
+            label = f"{int(seconds)//60}'"
+        elif seconds>=60 and seconds==int(seconds):
+            label = f"{int(seconds)//60}'{int(seconds)%60:02d}"
+        else:
+            label = f"{seconds:g}s"
+        return label+" Z"+zone
+    texts,loads = [],[]
+    position = 0
+    while position<len(display):
+        count,width = 1,1
+        best = 1
+        for candidate_width in range(2,min(6,(len(display)-position)//2)+1):
+            pattern = display[position:position+candidate_width]
+            if any(item[2] not in {"Work","Recovery"} for item in pattern):
+                continue
+            repeats = 1
+            while display[position+repeats*candidate_width:position+(repeats+1)*candidate_width]==pattern:
+                repeats += 1
+            if repeats>=2 and repeats*candidate_width>best:
+                count,width,best = repeats,candidate_width,repeats*candidate_width
+        end = position+count*width
+        body = atom(display[position]) if count==1 else f"{count}×("+" - ".join(
+            atom(item) for item in display[position:position+width])+")"
+        text = part.get("alternative_label","Alternative")+" "+body
+        expanded = expand_time_notation(text)
+        if not expanded or len(expanded)!=end-position:
+            raise ValueError("Compact Alternative notation could not be checked.")
+        measured = []
+        for entry in entries[position:end]:
+            for lap_id in entry["ids"]:
+                raw = part["alternative_laps"][lap_id-1]
+                measured.append(dict(lap=lap_id,seconds=raw["seconds"],zone=entry["zone"],
+                    average_hr=raw.get("average_hr"),end_hr=raw.get("end_hr")))
+        texts.append(text)
+        loads.append(dict(segment="ALT",meters=0,seconds=sum(l["seconds"] for l in measured),
+                          alt_text=text,alt_laps=measured))
+        position = end
+    text = " // ".join(texts)
+    result.update(training_fields={"alt":text},description=text,watch_loads=loads)
+    result["e_zone_note"] += " Compact notation uses nominal targets; totals retain measured time and HR zones."
     return result

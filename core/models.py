@@ -1147,6 +1147,7 @@ class TrainingSegment(models.Model):
 
     text = models.TextField(blank=True)
     photo_ids = models.JSONField(default=list, blank=True)
+    watch_alternative_data = models.JSONField(default=dict, blank=True)
 
     @property
     def photo_items(self):

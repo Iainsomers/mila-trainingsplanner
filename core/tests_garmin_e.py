@@ -29,6 +29,32 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_compact_alternative_notation_preserves_measured_zone_times(self):
+        from core.watch_alternative import alternative_part
+        from core.alternative import expand_time_notation
+        athlete = SimpleNamespace(zone_hr_bpm={"1":"157","2":"158-175"},alternative_hr_correction=10)
+        seconds = [930,604,300,601,300,601,323,601,307,388]
+        hrs = [111,146,113,148,104,152,108,156,109,155]
+        part = alternative_part(athlete,{"sport":"ELLIPTICAL","average_hr":132},sum(seconds),
+            [dict(elapsed_time=s,avg_heart_rate=hr,hr_tail=hr) for s,hr in zip(seconds,hrs)])
+        proposal = dict(warmup_laps=[1],recovery_laps=[3,5,7,9],reps=[
+            dict(laps=[i],target_seconds=target) for i,target in ((2,600),(4,600),(6,600),(8,600),(10,388))],
+            format="compact",presentation=dict(warmup_seconds=900,recovery_seconds=300,work_zone="2",recovery_zone="1"))
+        checked = checked_proposal(part,proposal,athlete=athlete,zone_basis="hr")
+        text = checked["training_fields"]["alt"]
+        self.assertEqual(text,"Elliptical 15' Z1 // Elliptical 4×(10' Z2 - 5' Z1) // Elliptical 6'28 Z2")
+        self.assertEqual(sum(s for _,s in expand_time_notation(text)),4888)
+        self.assertEqual(sum(lap["seconds"] for load in checked["watch_loads"] for lap in load["alt_laps"]),4955)
+        self.assertEqual(checked["watch_loads"][1]["alt_laps"][0]["zone"],"1")
+        bad = deepcopy(proposal)
+        bad["presentation"]["work_zone"] = "5"
+        with self.assertRaises(ValueError):
+            checked_proposal(part,bad,athlete=athlete)
+        bad = deepcopy(proposal)
+        bad["presentation"]["recovery_seconds"] = 60
+        with self.assertRaises(ValueError):
+            checked_proposal(part,bad,athlete=athlete)
+
     def test_alternative_uses_all_time_only_laps_and_corrected_hr(self):
         from core.watch_alternative import alternative_part
         athlete = SimpleNamespace(zone_hr_bpm={"1":"145","2":"146-160","3":"161-175"},alternative_hr_correction=10)
@@ -157,6 +183,61 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    @patch("core.views.garmin_e.ask_model")
+    def test_compact_alternative_is_the_saved_proposal_and_keeps_actual_totals(self, model):
+        seconds = [930,604,300,601,300,601,323,601,307,388]
+        hrs = [111,146,113,148,104,152,108,156,109,155]
+        self.record.distance_m = None
+        self.record.duration_s = sum(seconds)
+        self.record.analysis_data = {"activity_metrics":{"sport":"ELLIPTICAL","average_hr":132},
+            "laps":[dict(elapsed_time=s,avg_heart_rate=hr,hr_tail=hr) for s,hr in zip(seconds,hrs)]}
+        self.record.save()
+        self.athlete.zone_hr_bpm = {"1":"157","2":"158-175"}
+        self.athlete.save()
+        proposal = dict(warmup_laps=[1],recovery_laps=[3,5,7,9],reps=[
+            dict(laps=[i],target_seconds=target) for i,target in ((2,600),(4,600),(6,600),(8,600),(10,388))])
+        model.return_value = {"reply":"Dit zijn de gemeten blokken.","proposal":proposal}
+        old = self.chat("Bekijk de activiteit").json()["results"][0]["parts"][0]
+        compact = deepcopy(proposal)
+        compact.update(format="compact",presentation=dict(warmup_seconds=900,recovery_seconds=300,
+                                                         work_zone="2",recovery_zone="1"))
+        model.side_effect = [
+            {"reply":"Zeker, ik zet de compacte versie als voorstel neer.","proposal":None,"intent":"update"},
+            {"reply":"De compacte notatie staat nu in het voorstel.","proposal":compact,"zone_basis":"hr"}]
+        part = self.chat("Zet het zo neer: 15' Z1 // 4*(10' Z2-5' Z1) + 6'28 Z2").json()["results"][0]["parts"][0]
+        self.assertNotEqual(part["training_fields"],old["training_fields"])
+        self.assertIn("4×(10' Z2 - 5' Z1)",part["training_fields"]["alt"])
+        self.assertIn("15' Z1",part["training_fields"]["alt"])
+        self.assertIn("6'28 Z2",part["training_fields"]["alt"])
+        payload = dict(watch_origin="watch_e",watch_loads=json.dumps(part["watch_loads"]),
+            watch_validation=part["e_validation"],alt_text=part["training_fields"]["alt"],watch_fields="alternative_replace")
+        url = reverse("slot_modal",args=[2026,11,14,1])+"?"+urlencode({"athlete":self.athlete.pk,"source":"athlete_year"})
+        response = self.client.post(url,payload)
+        self.assertEqual(response.status_code,200)
+        from core.models import TrainingSlot
+        from core.stats import _alt_zone_durations
+        from core.views.calendar import _ayc_slot_loads_for_totals
+        slot = TrainingSlot.objects.get(athlete=self.athlete,date="2026-11-14",slot_index=1)
+        alt = list(slot.segments.filter(type="ALT").order_by("order"))
+        self.assertEqual(len(alt),3)
+        self.assertIn("4×(10' Z2 - 5' Z1)",alt[1].text)
+        self.assertEqual(sum(seg.duration_s for seg in alt),4955)
+        zone_times = [item for seg in alt for item in _alt_zone_durations(seg)]
+        self.assertEqual(sum(s for _,s in zone_times),4955)
+        self.assertEqual(sum(s for z,s in zone_times if z=="1"),2764)
+        self.assertEqual(sum(s for z,s in zone_times if z=="2"),2191)
+        self.assertEqual(sum(load["seconds"] for load in _ayc_slot_loads_for_totals(slot,self.athlete)
+                             if load.get("kind")=="alt"),4955)
+        pm_url = reverse("slot_modal",args=[2026,11,14,2])+"?"+urlencode({"athlete":self.athlete.pk,"source":"athlete_year"})
+        self.assertEqual(self.client.post(pm_url,{"core_text":"5000 m Z1"}).status_code,200)
+        self.assertEqual(self.client.post(pm_url,dict(payload,watch_fields="alternative")).status_code,200)
+        pm = TrainingSlot.objects.get(athlete=self.athlete,date="2026-11-14",slot_index=2)
+        self.assertTrue(pm.segments.filter(type="CORE",text="5000 m Z1").exists())
+        self.assertEqual(sum(s for seg in pm.segments.filter(type="ALT") for _,s in _alt_zone_durations(seg)),4955)
+        # Editing the text invalidates the attachment to measured source facts.
+        alt[1].text = "Elliptical 1' Z1"
+        self.assertEqual(_alt_zone_durations(alt[1]),[("1",60)])
+
     def setUp(self):
         cache.clear()
         self.coach = get_user_model().objects.create_user(username="e-coach",is_staff=True)

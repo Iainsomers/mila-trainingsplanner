@@ -133,10 +133,14 @@ def garmin_type_e_ayc_view(request):
                     state.pop("pending",None)
                 history = state["history"] + [{"role":"user","content":message or
                     "Bekijk deze hele training. Welk patroon zie je? Leg je waarneming uit en geef alleen een voorstel als de laps dit ondersteunen."}]
+                compact_requested = bool(is_alternative and any(
+                    m["role"]=="user" and re.search(r"compact|notatie|\d+\s*['′].*(?://|[×x*]\s*\()",m["content"],re.I)
+                    for m in history))
                 current = {"training":state["part"].get("training_fields") if state["part"].get("e_usable") else None,
                            "zone_basis":state["basis"],"hr_limits":athlete.zone_hr_bpm,
                            "activity_type":part.get("alternative_label") if is_alternative else "Running",
                            "alternative_hr_correction":athlete.alternative_hr_correction if is_alternative else None,
+                           "requested_presentation":"compact" if compact_requested else None,
                            "checked_assignment":state["proposal"],"pending_confirmation":state.get("pending")}
                 deadline = monotonic()+25
                 answer = ask_model(facts,history,current)
@@ -146,7 +150,8 @@ def garmin_type_e_ayc_view(request):
                     re.search(r"\b(?:voorstel|proposal|gebruik|gebruiken|use|usen|apply|toepassen|overnemen|aanpassen|corrigeer|update)\b",message,re.I)
                     or (re.fullmatch(r"(?:ja|yes|ok|doe maar)[.!]?",message,re.I) and state["history"]
                         and re.search(r"voorstel|gebruik|use|apply|toepassen",state["history"][-1]["content"],re.I))))
-                wants_update = action_requested or answer.get("intent") == "update"
+                wants_update = (action_requested or answer.get("intent") == "update" or
+                    (compact_requested and (state.get("proposal") or {}).get("format")!="compact"))
                 repair_used = False
                 confirmed = bool(state.get("pending") and message and re.fullmatch(
                     r"(?:ja|yes|zeker|ok|doe maar)(?:[.!]|,? (?:klopt|graag|doen|dat klopt))?",
@@ -159,12 +164,13 @@ def garmin_type_e_ayc_view(request):
                     raise ValueError("Garmin E returned an invalid zone basis.")
                 if proposal is None and basis != state["basis"]:
                     proposal = state["proposal"]
-                if proposal is None and wants_update:
+                if (proposal is None and wants_update) or (compact_requested and isinstance(proposal,dict) and proposal.get("format")!="compact"):
                     remaining = deadline-monotonic()
                     if remaining >= 3:
                         answer = ask_model(facts,history,current,
                             "The user wants the agreed correction in the usable preview, but no proposal was returned. "
                             "Return intent:update and the FULL updated lap assignment, preserving untouched laps. "
+                            "For requested compact Alternative notation include proposal.format=compact and presentation targets/zones matching the request and measured evidence. "
                             "If unsupported, explain the concrete measurement mismatch without claiming an update.",
                             timeout=min(20,remaining))
                         proposal = answer.get("proposal")
@@ -172,6 +178,8 @@ def garmin_type_e_ayc_view(request):
                         repair_used = True
                 if proposal is not None:
                     try:
+                        if compact_requested and proposal.get("format")!="compact":
+                            raise ValueError("De gevraagde compacte notatie ontbreekt nog in de laptoewijzing.")
                         candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
                             confirmed_overrun=confirmed or answer.get("confirmation_required") is True)
                     except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
@@ -184,6 +192,8 @@ def garmin_type_e_ayc_view(request):
                             basis = answer.get("zone_basis",state["basis"])
                             if proposal is not None:
                                 try:
+                                    if compact_requested and proposal.get("format")!="compact":
+                                        raise ValueError("De gevraagde compacte notatie ontbreekt nog in de laptoewijzing.")
                                     candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
                                         confirmed_overrun=answer.get("confirmation_required") is True)
                                     error = None
