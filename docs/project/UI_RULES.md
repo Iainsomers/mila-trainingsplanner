@@ -113,7 +113,7 @@ Bijgewerkt: 20 oktober 2026.
 
 ## Desktop AYC
 
-- De knoppen `Previous week`, `Today` en `Next week` verplaatsen op desktop het interne kalenderpaneel naar de bedoelde week. De pagina zelf en de horizontale positie van de kalender mogen daarbij niet verspringen; de bedieningsbalk blijft zichtbaar.
+- De knoppen `Previous week`, `Today` en `Next week` verplaatsen op desktop de gewone pagina naar de bedoelde week en behouden de horizontale positie. De kalender heeft geen vaste verticale hoogte of eigen verticale scrollbar: iedere weekrij moet volledig kunnen doorgroeien en de pagina verzorgt het verticale scrollen.
 
 - Behoud de brede tabel en volledige trainingsinformatie.
 - Trainerselectie blijft beschikbaar voor trainers.
