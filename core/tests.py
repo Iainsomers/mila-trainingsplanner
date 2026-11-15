@@ -7449,6 +7449,67 @@ class SlotModalSaveTests(TestCase):
         self.assertEqual(segments[-1].zone, "1")
         self.assertEqual(segments[-1].distance_m, 800)
 
+    def test_athlete_year_keeps_race_calendar_main_with_manual_wucd(self):
+        user, plan, athlete = self._user_plan_and_athlete()
+        race_day = date(2026, 11, 14)
+        race = RaceEvent.objects.create(owner=user, name="Calendar 7K", date=race_day)
+        distance = RaceEventDistance.objects.create(race=race, distance="custom", custom_distance_m=7000)
+        RaceEntry.objects.create(athlete=athlete, race_distance=distance, coach_selected=True)
+
+        response = self.client.post(
+            f"/athlete/year/?year=2026&athlete={athlete.id}",
+            {
+                "date": race_day.isoformat(),
+                "slot_index": "2",
+                "plan": str(plan.id),
+                "slot_text": "3000m z1\n1×7050m z5\n2500m z1",
+                "wu_text": "3000m z1",
+                "core_text": "1×7050m z5",
+                "cd_text": "2500m z1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(athlete=athlete, date=race_day, slot_index=2)
+        segments = list(slot.segments.order_by("order", "id"))
+        self.assertEqual([segment.type for segment in segments], ["WU", "CORE", "CD"])
+        self.assertEqual(segments[0].text, "3000m z1")
+        self.assertEqual(segments[1].text, '"Calendar 7K" 7000m Race')
+        self.assertEqual(segments[1].special, "RACE_PENDING")
+        self.assertEqual(segments[1].norm_distance_m, 7000)
+        self.assertEqual(segments[2].text, "2500m z1")
+
+    def test_athlete_year_watch_import_marks_main_as_calendar_race(self):
+        user, plan, athlete = self._user_plan_and_athlete()
+        race_day = date(2026, 11, 14)
+        race = RaceEvent.objects.create(owner=user, name="Watch race", date=race_day)
+        distance = RaceEventDistance.objects.create(race=race, distance="custom", custom_distance_m=7000)
+        RaceEntry.objects.create(athlete=athlete, race_distance=distance, coach_selected=True)
+
+        response = self.client.post(
+            f"/slot-modal/2026/11/14/2/?plan={plan.id}&athlete={athlete.id}&source=athlete_year",
+            {
+                "plan": str(plan.id),
+                "athlete": str(athlete.id),
+                "source": "athlete_year",
+                "wu_text": "3000m z1",
+                "core_text": "7000m z5",
+                "cd_text": "2500m z1",
+                "watch_origin": "watch_d",
+                "watch_loads": '[{"segment":"CORE","zone":"5","meters":7000,"seconds":1500}]',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slot = TrainingSlot.objects.get(athlete=athlete, date=race_day, slot_index=2)
+        segments = list(slot.segments.order_by("order", "id"))
+        self.assertEqual([segment.type for segment in segments], ["WU", "CORE", "CD"])
+        self.assertEqual(segments[1].text, "7000m z5")
+        self.assertEqual(segments[1].special, "RACE_PENDING")
+        self.assertTrue(slot.plan.name.startswith("Flex Planner"))
+        self.assertEqual(slot.source, "watch_d")
+        self.assertEqual(slot.watch_loads[0]["meters"], 7000)
+
     def test_slot_modal_wucd_distance_without_zone_defaults_to_z1(self):
         _, plan, athlete = self._user_plan_and_athlete()
 

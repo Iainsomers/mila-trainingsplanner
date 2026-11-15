@@ -2319,6 +2319,17 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if cd_seg and not alternative_only:
             cd_seg.delete()
 
+    # Race Calendar entries are virtual and would otherwise replace the
+    # complete saved AYC slot on the next page load. Mark the measured Main as
+    # the linked race so its WU/CD and watch data remain the visible override.
+    if is_athlete_year_calendar and slot_index == 2:
+        race_slot = _virtual_race_slot_for_slot_reset(athlete, d) if athlete else None
+        race_marker = race_slot.segments.filter(type="CORE").first() if race_slot else None
+        saved_race_main = slot.segments.filter(type="CORE").order_by("order", "id").first()
+        if race_marker and saved_race_main:
+            saved_race_main.special = race_marker.special
+            saved_race_main.save(update_fields=["special"])
+
     apply_segment_order(slot, form_segment_order)
     if not alternative_only:
         save_processed_main_reps(slot)

@@ -378,6 +378,8 @@ Information Quality bevat `Last active in MiLa`: het laatste succesvolle interac
 Race Calendar ondersteunt periode `season`: 1 oktober van het gekozen jaar t/m 30 september van het volgende jaar. Lijstweergave verdeelt de gefilterde wedstrijden chronologisch over drie evenwichtige kolommen; filter- en opslagacties behouden de seizoenkeuze.
 
 Race Calendar heeft per atleet een onafhankelijke Attend-keuze zonder afstand. Attend telt mee als deelname en verhindert verwijderen van een gekoppelde wedstrijd. De Year Planner toont naam en racetypekleur; AYC en Flex tonen de wedstrijd zonder afstand/kilometers. Afstandselecties blijven onafhankelijk en vervangen de afstandloze weergave zonder dubbele wedstrijd. Beide kalenders lezen de racekoppelingen rechtstreeks, zodat AYC deze ook toont zonder trainerplanlidmaatschap.
+
+In de Athlete Diary kunnen WU en CD rond een gekoppelde Race Calendar-wedstrijd handmatig worden toegevoegd. De Race Calendar blijft daarbij leidend voor Main, inclusief wedstrijdnaam, afstand en status. Een horloge-import op die wedstrijddag behoudt juist de gemeten WU/Main/CD en horlogeloads, maar koppelt het opgeslagen Main-blok aan de kalenderwedstrijd. In beide gevallen blijft het persoonlijke slot na verversen zichtbaar en wordt het niet opnieuw door de virtuele wedstrijd overschreven.
 # Garmin-ontvangst per training — 1 november 2026
 
 De klokjespopup toont naast Last 15s HR ook Avg HR over de rep/split. Nieuwe overnames bewaren beide waarden en behouden ze bij Watch/Plan-wisselen. Samengevoegde blokken gebruiken een tijdgewogen lapgemiddelde bij volledige HR-dekking.

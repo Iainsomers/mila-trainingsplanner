@@ -6,6 +6,11 @@
 - De rechteras toont optioneel ACWR total, aerobic Z1–Z3 en anaerobic Z4–Z6 en loopt vast van 0,2 tot 2,2 in stappen van 0,2. Iedere ratio deelt de huidige week door het gemiddelde van exact de vier voorgaande kalenderweken; vier verborgen aanloopweken ondersteunen het begin van de gekozen periode. Een nulnoemer levert geen punt. Regressie met 10/20/30/40 km gevolgd door 50 km geeft 2,00 voor total, aerobic en anaerobic.
 - De grafiek heeft geen gewone horizontale rasterlijnen. Zodra ACWR zichtbaar is, markeren lijnen 0,8 en 1,3. Wanneer uitsluitend ACWR-reeksen zichtbaar zijn, kleuren de bereiken onder 0,8 lichtblauw, 0,8–1,3 lichtgroen en boven 1,3 lichtrood; met km-staven blijven alleen de twee grenslijnen staan.
 
+## 15 november 2026 - WU/CD rond Race Calendar-wedstrijd
+
+- Handmatig opslaan in Athlete Diary bewaart WU/CD rond de vaste wedstrijd en kopieert voor Main de actuele Race Calendar-naam, afstand en status naar de persoonlijke override.
+- Garmin/Watch-import bewaart de gemeten WU/Main/CD en loads en markeert het opgeslagen Main als de gekoppelde kalenderwedstrijd. Daardoor overschrijft de virtuele wedstrijd na verversen niet langer het hele dagdeel. Beide opslagroutes hebben een gerichte regressietest; gewone WU/CD-opslag blijft eveneens getest.
+
 ## 15 november 2026 - Stats volgt persoonlijke trainerplan-override
 
 - Stats gebruikte bij een via Base Planning toegewezen trainerplan altijd de gedeelde slot, terwijl Individual Plans een aanwezige atleetspecifieke override toonde. Daardoor kon dezelfde week bijvoorbeeld 60,5 km in Stats en 34,3 km in Individual Plans tonen, met ook afwijkende zoneverdeling.

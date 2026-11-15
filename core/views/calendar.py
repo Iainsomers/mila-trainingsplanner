@@ -3158,6 +3158,12 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     if not source_slot and not selected_plan:
         return
 
+    calendar_race_segments = []
+    if slot_index == 2:
+        calendar_race_slot = _calendar_race_slots([athlete.id], d, d + timedelta(days=1)).get((athlete.id, d))
+        if calendar_race_slot:
+            calendar_race_segments = list(calendar_race_slot.segments.all())
+
     from core.views.training_photos import prepare_photo
     from core.models import TrainingPhoto
     source_mob = source_slot.segments.filter(type="MOB").first() if source_slot else None
@@ -3283,6 +3289,25 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
             continue
 
         if segment_type == "CORE":
+            if calendar_race_segments:
+                for race_segment in calendar_race_segments:
+                    TrainingSegment.objects.create(
+                        slot=override_slot,
+                        order=order,
+                        type="CORE",
+                        text=race_segment.text,
+                        zone=race_segment.zone,
+                        special=race_segment.special,
+                        reps=race_segment.reps,
+                        distance_m=race_segment.distance_m,
+                        duration_s=race_segment.duration_s,
+                        norm_distance_m=race_segment.norm_distance_m,
+                        parse_ok=True,
+                        parsed_at=now,
+                    )
+                    order += 1
+                continue
+
             parts = []
             for core_part in split_main_segments(raw_text):
                 parts.extend(_expand_repeated_core_set_parts(core_part))

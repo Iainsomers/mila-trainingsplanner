@@ -119,6 +119,7 @@ Een atleet kan een eigen pauzemodus hebben. Zonder eigen keuze volgt de atleet d
 - Trainer kan alleen het trainervinkje wijzigen; atleet alleen het atleetvinkje; beiden mogen Target wijzigen.
 - Een selectie is bevestigd wanneer trainer en atleet beiden hebben aangevinkt. Target bepaalt rood versus oranje, bevestiging bepaalt omlijnd versus gevuld.
 - Doelwedstrijd verschijnt als `Race!`; overige geselecteerde wedstrijd als `Race`.
+- Bij handmatige AYC-bewerking van een Race Calendar-wedstrijd blijven de virtuele wedstrijdsegmenten de bron voor Main; handmatige WU/CD en overige toegestane velden worden in de persoonlijke override opgeslagen. Bij Watch-import blijft het gemeten Main leidend en krijgt het eerste Main-segment de gekoppelde wedstrijdstatus. Zo herkent AYC beide overrides als dezelfde kalenderwedstrijd en mag de virtuele race het volledige slot niet vervangen.
 
 ## Evaluaties
 
