@@ -11515,6 +11515,59 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_personal_trainer_plan_slot_overrides_base_assigned_trainer_plan(self):
+        trainer = get_user_model().objects.create_user(username="statstrainerpersonal", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Trainer personal", birth_year=2000, gender="X")
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        base_plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="MID",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        base_shared = TrainingSlot.objects.create(plan=base_plan, date=week_start, slot_index=1)
+        base_shared.segments.create(type="CORE", text="60500m z3", zone="3", norm_distance_m=60500)
+        edited_plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Edited trainer week",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        personal = TrainingSlot.objects.create(
+            plan=edited_plan, athlete=athlete, date=week_start, slot_index=1,
+        )
+        personal.segments.create(type="CORE", text="34300m z2", zone="2", norm_distance_m=34300)
+        personal.segments.create(type="ALT", text="2x30 min bike z1", zone="1", duration_s=3600)
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Year",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=week_start.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=base_plan,
+        )
+
+        zones = {}
+        totals = _effective_week_distance_m(
+            athlete,
+            [base_plan, edited_plan],
+            week_start,
+            zone_totals=zones,
+        )
+
+        self.assertEqual(totals[week_start], 34300)
+        self.assertEqual(zones[week_start], {"2": 34300})
+
     def test_stats_base_training_replaces_shared_plan_slot_per_daypart(self):
         trainer = get_user_model().objects.create_user(username="statsbasepriority", is_staff=True)
         athlete = Athlete.objects.create(owner=trainer, name="Base priority", birth_year=2000, gender="X")
@@ -11673,7 +11726,7 @@ class TrainerStatsTests(TestCase):
         self.assertEqual(week["zone_km"], {"2": 34.3})
         self.assertNotIn("3", week["zone_km"])
         self.assertContains(response, "Stats source diagnostics")
-        self.assertContains(response, "Base Planning · Assigned trainer plan")
+        self.assertContains(response, "Personal · Assigned trainer plan")
         self.assertContains(response, "Alternative</strong>: 2x30 min bike z1")
 
     def test_chart_stacks_measured_zones_bottom_up_and_excludes_walking(self):

@@ -12388,9 +12388,9 @@ def _effective_week_distance_m(
         diagnostics=None):
     end = week_start + timedelta(days=14)
     days = [week_start + timedelta(days=offset) for offset in range(14)]
-    non_trainer_plans = [
+    non_flex_plans = [
         plan for plan in plans
-        if plan.plan_kind != TrainingPlan.PLAN_KIND_TRAINER and not _is_flex_planner_plan(plan)
+        if not _is_flex_planner_plan(plan)
     ]
     flex_plan = next((
         plan for plan in plans
@@ -12399,7 +12399,7 @@ def _effective_week_distance_m(
     ), None)
 
     athlete_plans = []
-    for plan in non_trainer_plans:
+    for plan in non_flex_plans:
         try:
             targeted = athlete.id in plan.targeted_athlete_ids()
         except Exception:

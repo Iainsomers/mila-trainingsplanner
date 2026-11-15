@@ -1,6 +1,7 @@
 # Data-, invoer- en rekenregels
 
 - Stats volgt per dagdeel dezelfde bronvoorrang als Individual Plans: een daggebonden persoonlijke planslot gaat vóór een overlappend gedeeld plan; individuele Base Planning vervangt een gedeelde planslot maar niet die persoonlijke slot; het Flex-plan van de actief gekozen coach kan dit vervolgens overschrijven of expliciet leegmaken. Bij een Base Planning-Trainerbron gaat de atleetspecifieke trainerslot vóór de gedeelde trainerslot. Loads met `kind=alt` blijven buiten het hardloopkilometertotaal; hun minuten worden niet met een loopsnelheid omgerekend.
+- Een trainerplan is in Stats ook een directe bronkandidaat wanneer het de atleet target of voor die atleet een persoonlijke dagslot bevat. Alleen gedeelde trainerplanslots worden door de individuele Base Planning-keuze vervangen; een expliciete persoonlijke dagslot blijft leidend, gelijk aan Individual Plans.
 
 - Garmin E zet een voorgestelde reeks afstandsreps om naar tijdtargets als minstens drie opeenvolgende werkreps ieder binnen `max(2s, 2%)` van dezelfde hele minuut liggen en hun gemeten afstandsspreiding minstens `max(30m, 4% van de mediaan)` is. Alleen de nominale presentatie-targets veranderen; laptoewijzing, gemeten meters/seconden, herstel, zones en totalen blijven gelijk. Zo wordt achtmaal 3:00 met 750-800 m per rep `8×3'`.
 
