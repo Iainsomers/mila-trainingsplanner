@@ -149,7 +149,11 @@
 
     function applyFlexProgressivePillColors() {
       document.querySelectorAll("[data-flex-segment]").forEach((el) => {
-        const text = el.textContent || "";
+        // Watch-backed segments may replace the visible source notation with
+        // measured time/pace. Keep using the saved source text for its explicit
+        // progressive zone range, while leaving the measured label visible.
+        const sourceText = el.dataset ? (el.dataset.flexSourceText || "") : "";
+        const text = sourceText || el.textContent || "";
         const tRange = flexProgressiveTKeys(text);
         const compoundParts = tRange ? [] : flexCompoundZoneParts(text);
         const compoundZones = flexCompoundZones(text);

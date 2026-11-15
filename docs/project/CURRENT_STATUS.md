@@ -1,5 +1,9 @@
 # Actuele status
 
+## 15 november 2026 - Progressieve Watch-kleur blijft zichtbaar bij meettekst
+
+- Een Watch-segment waarvan de kalendertekst door gemeten tijd/tempo wordt vervangen, gebruikt voor de pill-kleur nu nog steeds het opgeslagen bronbereik. Daardoor krijgt bijvoorbeeld `1300 m Z2>Z4` de Z2/Z3/Z4-verloopkleur, ook wanneer het label zelf `1300m - 5:33 - 4:20/km` toont.
+
 ## 15 november 2026 - Garmin E bewaart expliciete zonebereiken in het voorstel
 
 - Een gebruikerscorrectie zoals `6×250m Z3>Z5` of `800m Z1>Z3` wordt nu server-side uit het bericht gelezen en aan exact één overeenkomende gemeten werkgroep gekoppeld. De Checked E preview toont daardoor werkelijk het gevraagde bereik; alleen een bevestigende modelzin is niet meer voldoende. De bronlaps, gemeten lapzones en zonetotalen blijven ongewijzigd.

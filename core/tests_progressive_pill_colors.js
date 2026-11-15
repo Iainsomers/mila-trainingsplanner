@@ -10,6 +10,11 @@ const pills = [
   '3*(30s Z4-1 min Z1)', "2*(6'28 Z2-1' Z1)",
   '2*(1,5 min Z3-30s Z1)'
 ].map(textContent => ({textContent, style:{}}));
+pills.push({
+  textContent: "1300m - 5:33 - 4:20/km",
+  dataset: {flexSourceText: "1300 m Z2>Z4"},
+  style: {}
+});
 const context = {document:{querySelectorAll:()=>pills}};
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('core/templates/core/partials/progressive_pill_colors.js.html', 'utf8'), context);
@@ -28,6 +33,7 @@ assert.equal(pills[8].style.background,'linear-gradient(30deg, #f7c6d0 0.000%, #
 assert.equal(pills[9].style.background,'linear-gradient(30deg, #bfe7bf 0.000%, #bfe7bf 33.333%, #f8f8f0 33.333%, #f8f8f0 100.000%)');
 assert.ok(pills[10].style.background.includes('86.607%'));
 assert.ok(pills[11].style.background.includes('75.000%'));
+assert.equal(pills[12].style.background, 'linear-gradient(30deg, #f7c6d0 0.000%, #f7c6d0 33.333%, #f06f5f 33.333%, #f06f5f 66.667%, #bfe7bf 66.667%, #bfe7bf 100.000%)');
 assert.equal(vm.runInContext("flexProgressiveZones(\"4*(5' z2-3' z1)\")",context),null);
 assert.ok(fs.readFileSync('core/templates/core/athlete_year_calendar.html','utf8')
   .includes('{% include "core/partials/progressive_pill_colors.js.html" %}'),

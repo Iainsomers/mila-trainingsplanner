@@ -13,6 +13,7 @@ Bij ingeschakelde Whereabouts-toegang toont de eigen Year Planner de whereabouts
 
 - Bij Garmin E staat direct boven de preview een status na een wijzigingsverzoek: voorstel bijgewerkt of voorstel ongewijzigd. Een bevestigende chatzin zonder gecontroleerde nieuwe indeling mag niet stilzwijgend suggereren dat Use/Add al die wijziging zal gebruiken.
 - Een expliciete Garmin E-zonecorrectie met afstand en bereik moet zichtbaar terugkomen in de Checked E preview voordat `Voorstel bijgewerkt` wordt getoond. Een voorbeeld is `6×250m Z3>Z5`; alleen herhalen in het chatantwoord geldt niet als bijgewerkt voorstel.
+- Wanneer een Watch-segment in de kalender gemeten tijd/tempo toont in plaats van de oorspronkelijke segmenttekst, blijft een expliciet progressief zonebereik uit de bron (zoals `1300 m Z2>Z4`) bepalend voor de meerkleurige pill-achtergrond.
 
 - De Garmin-E-chat en `Analyze training` staan ook bij Alternative-kaarten, met dezelfde wrappende actierij en gewone conversatie. Een voorstel activeert Use/Add pas na de Alternative-meetcontrole.
 
