@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- De Garmin E-presentatie behoudt een gevalideerd herhaald gemengd voorblok vóór een homogeen slotblok. Een chronologische doelreeks `1750,850,1750,850,850,850,850` wordt daarom `2×(1750-850) // 3×850` en niet `1750 // 850 // 1750 // 4×850`. Alleen de presentatie wordt gegroepeerd; bronlaps, gemeten tijden, zones en herstel blijven onveranderd.
+
 - Garmin E `ignored_laps` zijn een afzonderlijke, volledig gecontroleerde lapcategorie naast WU, werkreps, herstel en CD. Iedere genegeerde lap moet een unieke bestaande bronlap zijn. De lap blijft in `watch_loads` bewaard met segment `IGNORE`, maar wordt uitgesloten van WU/Main/CD, afgeleide werkreps en alle Watch-afstands-/tijd-/zonetotalen. Dit is geen uitweg voor een onpassende werkrep: alleen een expliciete gebruikersopdracht mag laps laten negeren.
 
 - Bij Garmin E mag een modelantwoord dat alleen `warmup_laps` en/of `cooldown_laps` corrigeert de ontbrekende werkreps aanvullen vanuit de actuele gemeten preview. Dit groepeert geen nieuw patroon: bestaande werkmarkeringen worden overgenomen en iedere overige niet-grenslap van minimaal 2,5 m/s blijft een afzonderlijke gemeten rep. Alle andere laps worden pas daarna als herstel aangeboden en de gewone volledige meetvalidator blijft beslissend.

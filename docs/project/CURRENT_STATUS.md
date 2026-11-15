@@ -1,5 +1,10 @@
 # Actuele status
 
+## 15 november 2026 - Garmin E behoudt gemengde paren voor slotreps
+
+- Na de correcte laptoewijzing formatteerde E de zeven werkreps als `1750 // 850 // 1750 // 4×850`. Daarmee werd de 850 van het tweede 1750/850-paar visueel bij het slotblok getrokken.
+- De formatter herkent nu op de al gevalideerde doelreeks een herhaald gemengd voorblok met een homogeen restant. Dezelfde reps verschijnen als `2×(1750-850) // 3×850`; metingen, volgorde, zones, herstel en totalen veranderen niet.
+
 ## 15 november 2026 - Garmin E kan expliciete overgangslaps negeren
 
 - In de 31-lapscasus bleef E laps 4-16 als recovery aanbieden, ook nadat de gebruiker vroeg ze te negeren. Lap 5 is vrijwel even snel als een naburige werkrep en werd daarom terecht steeds afgewezen met `Lap 5 is not clearly slower than its neighboring work reps`.

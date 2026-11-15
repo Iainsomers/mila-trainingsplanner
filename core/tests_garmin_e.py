@@ -66,6 +66,9 @@ class GarminEValidationTests(SimpleTestCase):
 
         self.assertTrue(checked["e_usable"])
         self.assertEqual(checked["training_fields"]["wu"], "3000 m Z1")
+        self.assertIn("2×(1750 m Z2 - 850 m Z3)", checked["training_fields"]["main"])
+        self.assertIn("3×850 m Z3>Z4", checked["training_fields"]["main"])
+        self.assertNotIn("4×850", checked["training_fields"]["main"])
         self.assertEqual(checked["watch_loads"][4]["segment"], "IGNORE")
         self.assertFalse(checked["watch_loads"][4]["work_rep"])
         from core.stats import _watch_loads_for_slot

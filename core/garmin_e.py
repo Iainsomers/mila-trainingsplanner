@@ -374,6 +374,40 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
             if matched:
                 main = matched[0]
             break
+        else:
+            # A repeated mixed prefix followed by a homogeneous tail should
+            # retain the mixed pairs. Example:
+            # 1750,850,1750,850,850,850,850 -> 2×(1750-850) // 3×850.
+            for width in range(2, len(distances) // 2 + 1):
+                pattern = distances[:width]
+                if len(set(pattern)) < 2:
+                    continue
+                repeats = 1
+                while distances[repeats * width:(repeats + 1) * width] == pattern:
+                    repeats += 1
+                prefix_count = repeats * width
+                tail = distances[prefix_count:]
+                if repeats < 2 or len(tail) < 2 or len(set(tail)) != 1:
+                    continue
+                pattern_parts = []
+                for position, target in enumerate(pattern):
+                    position_blocks = [blocks[repeat * width + position] for repeat in range(repeats)]
+                    pattern_parts.append(
+                        f"{target} m" + zone([lap_id for block in position_blocks for lap_id in block["ids"]])
+                    )
+                tail_blocks = blocks[prefix_count:]
+                tail_text = f"{len(tail_blocks)}×{tail[0]} m" + zone(
+                    [lap_id for block in tail_blocks for lap_id in block["ids"]]
+                )
+                tail_pauses = [
+                    sum(facts[lap_id - 1]["duration_s"] for lap_id in recovery
+                        if left["ids"][-1] < lap_id < right["ids"][0])
+                    for left, right in zip(tail_blocks, tail_blocks[1:])
+                ]
+                if tail_pauses and all(tail_pauses):
+                    tail_text += f" p{round(median(tail_pauses))}"
+                main = f"{repeats}×(" + " - ".join(pattern_parts) + f") // {tail_text}"
+                break
     result["training_fields"] = {"wu":boundary(wu),"main":main,"cd":boundary(cd)}
     result["description"] = description(result["training_fields"])
     result["e_usable"] = True
