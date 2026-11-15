@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
-from core.garmin_e import checked_proposal, ask_model, lap_facts
+from core.garmin_e import checked_proposal, ask_model, complete_partial_running_proposal, lap_facts
 from core.models import Athlete, GarminActivitySummary
 from core.views.garmin import CONSENT_VERSION
 from core.watch_processing import processed_main_reps
@@ -29,6 +29,41 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+
+    def test_partial_warmup_correction_preserves_measured_preview_work_reps(self):
+        measurements = [
+            (1004.47, 285), (1000.42, 291), (1001.09, 285), (5.24658, 3),
+            (52.21, 12), (76.1702, 16), (343.36, 279), (105.47, 85),
+            (69.3401, 13), (111.98, 85), (67.1499, 13), (130.28, 151),
+            (131.62, 27), (143.51, 128), (120.26, 21), (153.12, 326),
+            (1717.95, 391), (35.2598, 134), (856.49, 184), (381.05, 182),
+            (1729.08, 379), (56.0508, 125), (832.21, 177), (45.1494, 208),
+            (821.971, 174), (51.9395, 150), (845.88, 166), (33.2002, 195),
+            (824.78, 156), (74.8594, 228), (3020.12, 977),
+        ]
+        work_laps = {1:1000, 2:1000, 3:1000, 17:1700, 19:850, 21:1750,
+                     23:850, 25:800, 27:850, 29:800, 31:3000}
+        loads = []
+        for index, (meters, seconds) in enumerate(measurements, 1):
+            load = {"meters":meters, "seconds":seconds, "zone":"1", "segment":"CORE",
+                    "work_rep":index in work_laps}
+            if index in work_laps:
+                load["nominal_rep_m"] = work_laps[index]
+            loads.append(load)
+        part = {"training_fields":{"wu":"", "main":"Measured", "cd":""}, "watch_loads":loads}
+
+        completed = complete_partial_running_proposal(
+            part, {"warmup_laps":[1, 2, 3], "cooldown_laps":[], "recovery_laps":[]},
+        )
+
+        self.assertEqual(completed["warmup_laps"], [1, 2, 3])
+        self.assertEqual([rep["laps"] for rep in completed["reps"]],
+                         [[5], [6], [9], [11], [13], [15], [17], [19], [21], [23], [25], [27], [29], [31]])
+        self.assertIn(4, completed["recovery_laps"])
+        checked = checked_proposal(part, completed, zone_basis="pace")
+        self.assertEqual(checked["training_fields"]["wu"], "3000 m Z1")
+        self.assertNotIn("3×1000", checked["training_fields"]["main"])
+        self.assertTrue(checked["e_usable"])
     def test_compact_alternative_notation_preserves_measured_zone_times(self):
         from core.watch_alternative import alternative_part
         from core.alternative import expand_time_notation
@@ -485,6 +520,22 @@ class GarminEEndpointTests(TestCase):
         self.assertTrue(second["e_usable"])
         self.assertEqual(len(second["e_history"]),4)
         self.assertIn("Zie jij",model.call_args.args[1][0]["content"])
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_boundary_only_model_update_reuses_measured_preview_reps(self, model):
+        model.return_value = {
+            "reply":"Lap 1 is de warming-up; de gemeten werkreps blijven behouden.",
+            "intent":"update", "zone_basis":"pace",
+            "proposal":{"warmup_laps":[1], "cooldown_laps":[], "recovery_laps":[]},
+        }
+
+        part = self.chat("Gebruik alleen lap 1 als WU en behoud de rest.").json()["results"][0]["parts"][0]
+
+        self.assertTrue(part["e_usable"], part)
+        self.assertEqual(part["training_fields"]["wu"], "1200 m Z1")
+        self.assertIn("2×(200 m - 100 m)", part["training_fields"]["main"])
+        self.assertIn("bijgewerkt", part["e_update_note"])
+        self.assertEqual(model.call_count, 1)
 
     @patch("core.views.garmin_e.ask_model")
     def test_question_does_not_produce_usable_training(self, model):

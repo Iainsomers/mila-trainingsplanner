@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- Bij Garmin E mag een modelantwoord dat alleen `warmup_laps` en/of `cooldown_laps` corrigeert de ontbrekende werkreps aanvullen vanuit de actuele gemeten preview. Dit groepeert geen nieuw patroon: bestaande werkmarkeringen worden overgenomen en iedere overige niet-grenslap van minimaal 2,5 m/s blijft een afzonderlijke gemeten rep. Alle andere laps worden pas daarna als herstel aangeboden en de gewone volledige meetvalidator blijft beslissend.
+
 - E-Combine ontvangt uitsluitend bronopname-ID's (starttijd) en rollen, geen door de browser samengestelde meetgegevens. De server haalt de toegankelijke opnames van dezelfde atleet/dag op en controleert unieke bronnen/rollen en volgorde WU→Main→CD. Main mag niet al een afzonderlijk gekozen WU/CD bevatten. Gespreksvervolg gebruikt een ondertekende, maximaal één dag geldige combinatieverwijzing, gebonden aan gebruiker/atleet/dag. Bronconsent geldt voor elke opname, ook bij gemengde FIT-/Garmin-bronnen.
 - De gecombineerde E-preview krijgt een eigen gespreksidentiteit. Bij hergebruik van gecontroleerde Main worden lapnummers en setstarts naar de volledige gecombineerde bronvolgorde verschoven en opnieuw gevalideerd. Gemeten meters/seconden en HR worden niet verdeeld of aangepast; tijdgaten tussen opnames worden niet als training toegevoegd.
 

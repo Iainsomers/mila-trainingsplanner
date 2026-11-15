@@ -1,5 +1,10 @@
 # Actuele status
 
+## 15 november 2026 - Garmin E behoudt werkreps bij WU-correctie
+
+- Een modelantwoord dat alleen laps 1-3 als 3000 m WU terugstuurde werd afgewezen met `Supply the measured work repetitions`, hoewel de gemeten preview de resterende werkblokken al bevatte. E completeert zo'n grenscorrectie nu vanuit de server-eigen metingen en valideert vervolgens opnieuw alle bronlaps.
+- Regressie met de 31 getoonde laps bewaart laps 1-3 samen als 3000 m WU, houdt lap 4 buiten de WU, neemt de korte snelle laps afzonderlijk als gemeten Main-reps op en behoudt de latere 1700/850/1750/850/800/850/800/3000 m-blokken. Er wordt geen nieuw setpatroon gegokt.
+
 ## 15 november 2026 - Atleet beheert eigen whereabouts
 
 - Atleten met ingeschakelde Year Planner Whereabouts-toegang kunnen hun eigen gewone whereabouts in de Year Planner toevoegen, wijzigen en verwijderen. Periodisering blijft alleen-lezen en server-side mutaties blijven strikt beperkt tot de eigen atleet.

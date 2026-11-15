@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from core.models import Athlete, GarminEConversation
-from core.garmin_e import ask_model, checked_proposal, lap_facts
+from core.garmin_e import ask_model, checked_proposal, complete_partial_running_proposal, lap_facts
 from core.views.garmin import ai_allowed, fit_ai_allowed
 
 
@@ -275,6 +275,8 @@ def garmin_type_e_ayc_view(request):
                         repair_used = True
                 if proposal is not None:
                     try:
+                        if wants_update:
+                            proposal = complete_partial_running_proposal(part, proposal)
                         if compact_requested and proposal.get("format")!="compact":
                             raise ValueError("De gevraagde compacte notatie ontbreekt nog in de laptoewijzing.")
                         candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
@@ -289,6 +291,8 @@ def garmin_type_e_ayc_view(request):
                             basis = answer.get("zone_basis",state["basis"])
                             if proposal is not None:
                                 try:
+                                    if wants_update:
+                                        proposal = complete_partial_running_proposal(part, proposal)
                                     if compact_requested and proposal.get("format")!="compact":
                                         raise ValueError("De gevraagde compacte notatie ontbreekt nog in de laptoewijzing.")
                                     candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,

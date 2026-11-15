@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Garmin E kan een gedeeltelijke WU/CD-correctie completeren vanuit de server-eigen gemeten preview wanneer het model de bestaande werkreps niet opnieuw meestuurt. Bestaande gemeten werkmarkeringen blijven behouden; overige snelle bronlaps worden als afzonderlijke gemeten reps opgenomen en niet als herstel weggegooid. De volledige laptoewijzing doorloopt daarna dezelfde validator.
+
 ## Eigen whereabouts in Year Planner
 
 Atleten voor wie `Year Planner Whereabouts` is ingeschakeld kunnen in hun eigen Year Planner gewone whereabouts toevoegen, wijzigen, verplaatsen, vergroten/verkleinen en verwijderen. De server beperkt iedere mutatie tot de eigen atleet en weigert Camp als type. Bestaande Camps blijven zichtbaar maar zijn daar niet interactief; de atleet wijzigt kampdata uitsluitend via de aparte Camps-tegel. Periodisering blijft voor atleten alleen-lezen.

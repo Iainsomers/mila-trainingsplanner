@@ -130,6 +130,91 @@ def lap_facts(part):
     return facts
 
 
+def complete_partial_running_proposal(part, proposal):
+    """Preserve measured-preview work reps when a model only changes boundaries.
+
+    This does not recognize a new set pattern. It translates existing work-rep
+    markers and keeps otherwise unassigned running-speed laps as individual reps,
+    producing the complete assignment required by ``checked_proposal``.
+    """
+    if not isinstance(proposal, dict) or proposal.get("reps"):
+        return proposal
+    if not any(key in proposal for key in ("warmup_laps", "cooldown_laps")):
+        return proposal
+    if (part.get("training_fields") or {}).get("alt"):
+        return proposal
+    loads = part.get("watch_loads") or []
+    if not loads:
+        return proposal
+
+    def clean_ids(key):
+        values = proposal.get(key, [])
+        if not isinstance(values, list) or any(type(value) is not int for value in values):
+            return None
+        return values
+
+    warmup_supplied = "warmup_laps" in proposal
+    cooldown_supplied = "cooldown_laps" in proposal
+    warmup = clean_ids("warmup_laps")
+    cooldown = clean_ids("cooldown_laps")
+    supplied_recovery = clean_ids("recovery_laps")
+    if warmup is None or cooldown is None or supplied_recovery is None:
+        return proposal
+    if not warmup_supplied:
+        warmup = [index for index, load in enumerate(loads, 1) if load.get("segment") == "WU"]
+    if not cooldown_supplied:
+        cooldown = [index for index, load in enumerate(loads, 1) if load.get("segment") == "CD"]
+    boundaries = set(warmup + cooldown)
+
+    groups = []
+    for index, load in enumerate(loads, 1):
+        if index in boundaries:
+            continue
+        is_measured_work = load.get("work_rep") is True
+        meters, seconds = float(load.get("meters") or 0), float(load.get("seconds") or 0)
+        # A fast, otherwise unassigned lap cannot honestly be called recovery.
+        # Keep it as its own measured rep; do not infer a set or merge pattern.
+        is_fast_unassigned = not is_measured_work and seconds > 0 and meters / seconds >= 2.5
+        if not is_measured_work and not is_fast_unassigned:
+            continue
+        rep_key = load.get("ai_rep") if is_measured_work and type(load.get("ai_rep")) is int else index
+        if (is_measured_work and groups and groups[-1][0] == rep_key
+                and groups[-1][1][-1] == index - 1):
+            groups[-1][1].append(index)
+        else:
+            groups.append((rep_key, [index]))
+    if not groups:
+        return proposal
+
+    reps = []
+    for _, lap_ids in groups:
+        rows = [loads[index - 1] for index in lap_ids]
+        target_seconds = next((row.get("ai_target_seconds") for row in rows
+                               if type(row.get("ai_target_seconds")) is int), None)
+        target_meters = next((row.get("ai_nominal_m") for row in rows
+                              if type(row.get("ai_nominal_m")) is int), None)
+        if target_meters is None:
+            target_meters = next((row.get("nominal_rep_m") for row in rows
+                                  if type(row.get("nominal_rep_m")) is int), None)
+        if target_seconds is not None:
+            reps.append({"laps": lap_ids, "target_seconds": target_seconds})
+        else:
+            measured = sum(float(row.get("meters") or 0) for row in rows)
+            target_meters = target_meters or max(25, round(measured / 50) * 50)
+            reps.append({"laps": lap_ids, "target_meters": target_meters})
+
+    used = boundaries | {lap_id for rep in reps for lap_id in rep["laps"]}
+    recovery = sorted(set(supplied_recovery) | (set(range(1, len(loads) + 1)) - used))
+    completed = deepcopy(proposal)
+    completed.update(
+        warmup_laps=sorted(warmup),
+        cooldown_laps=sorted(cooldown),
+        recovery_laps=recovery,
+        reps=reps,
+    )
+    return completed
+
+
 def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirmed_overrun=False):
     """Only measured, complete, chronologically bound proposals become usable."""
     if (part.get("training_fields") or {}).get("alt"):
