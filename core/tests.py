@@ -19,6 +19,7 @@ from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSl
 from core.focus_point_import import FOCUS_POINT_HEADERS
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training, _watch_actual_time_label, _watch_segment_loads, _whereabout_dots
 from core.views.coach import (
+    _effective_week_distance_m,
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
     _polar_v4_normalize_exercise_samples,
@@ -11514,6 +11515,43 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_stats_uses_flex_plan_of_active_coach_for_shared_athlete(self):
+        athlete_owner = get_user_model().objects.create_user(username="statsathleteowner", is_staff=True)
+        active_coach = get_user_model().objects.create_user(username="statsactivecoach", is_staff=True)
+        athlete = Athlete.objects.create(
+            owner=athlete_owner, name="Shared athlete", birth_year=2000, gender="X",
+        )
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        underlying = TrainingPlan.objects.create(
+            owner=athlete_owner,
+            name="Underlying plan",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=underlying, athlete=athlete)
+        shared_slot = TrainingSlot.objects.create(plan=underlying, date=week_start, slot_index=1)
+        shared_slot.segments.create(type="CORE", text="60500m z3", zone="3", norm_distance_m=60500)
+        flex = TrainingPlan.objects.create(
+            owner=active_coach,
+            name=f"Flex Planner {active_coach.id}",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        flex_slot = TrainingSlot.objects.create(
+            plan=flex, athlete=athlete, date=week_start, slot_index=1,
+        )
+        flex_slot.segments.create(type="CORE", text="34300m z2", zone="2", norm_distance_m=34300)
+        flex_slot.segments.create(type="ALT", text="2x30 min bike z1", zone="1", duration_s=3600)
+
+        totals = _effective_week_distance_m(
+            athlete,
+            [underlying, flex],
+            week_start,
+            flex_owner_id=active_coach.id,
+        )
+
+        self.assertEqual(totals[week_start], 34300)
+
     def test_chart_uses_personal_override_for_base_assigned_trainer_plan(self):
         trainer = get_user_model().objects.create_user(username="statspersonalbase", is_staff=True)
         athlete = Athlete.objects.create(owner=trainer, name="Personal Base", birth_year=2000, gender="X")

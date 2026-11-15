@@ -1,6 +1,6 @@
 # Functionele onderdelen
 
-- De individuele Stats-weekgrafiek gebruikt bij een via Base Planning toegewezen trainerplan dezelfde atleetspecifieke slot-override als Individual Plans. De gedeelde trainerslot is alleen de terugval. Alternative-minuten blijven afzonderlijk en tellen niet mee als hardloopkilometers.
+- De individuele Stats-weekgrafiek gebruikt dezelfde effectieve bron als Individual Plans: het Flex-plan van de actief gekozen coach, daarna een atleetspecifieke slot-override en pas daarna de gedeelde trainerslot. Dit geldt ook bij gedeelde coachtoegang, wanneer de eigenaar van de atleet een andere gebruiker is. Alternative-minuten blijven afzonderlijk en tellen niet mee als hardloopkilometers.
 
 - Garmin E corrigeert een afstandsvoorstel automatisch naar tijdnotatie wanneer minstens drie opeenvolgende werkreps vrijwel exact dezelfde hele-minuutduur hebben, maar hun gemeten afstanden duidelijk variëren. Acht rondes van exact 3:00 met afstanden rond 750-800 m worden daardoor direct `8×3'` in plaats van afstandsreps; de bronmetingen blijven ongewijzigd.
 

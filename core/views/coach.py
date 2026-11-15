@@ -12383,7 +12383,8 @@ from core.views.calendar import (
 )
 
 
-def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None, zone_totals=None):
+def _effective_week_distance_m(
+        athlete, plans, week_start, pause_mode=None, zone_totals=None, flex_owner_id=None):
     end = week_start + timedelta(days=14)
     days = [week_start + timedelta(days=offset) for offset in range(14)]
     non_trainer_plans = [
@@ -12392,7 +12393,8 @@ def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None, zone
     ]
     flex_plan = next((
         plan for plan in plans
-        if _is_flex_planner_plan(plan) and plan.owner_id == athlete.owner_id
+        if _is_flex_planner_plan(plan)
+        and plan.owner_id == (flex_owner_id or athlete.owner_id)
     ), None)
 
     athlete_plans = []
@@ -12499,13 +12501,21 @@ def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None, zone
     return totals
 
 
-def _athlete_week_distance_history(athlete, plans, last_week_start, week_count=26, pause_mode=None):
+def _athlete_week_distance_history(
+        athlete, plans, last_week_start, week_count=26, pause_mode=None, flex_owner_id=None):
     first_week_start = last_week_start - timedelta(days=7 * (week_count - 1))
     totals_by_week = {}
     zones_by_week = {}
     for offset in range(0, week_count, 2):
         pair_start = first_week_start + timedelta(days=7 * offset)
-        pair_totals = _effective_week_distance_m(athlete, plans, pair_start, pause_mode, zone_totals=zones_by_week)
+        pair_totals = _effective_week_distance_m(
+            athlete,
+            plans,
+            pair_start,
+            pause_mode,
+            zone_totals=zones_by_week,
+            flex_owner_id=flex_owner_id,
+        )
         totals_by_week.update(pair_totals)
 
     return [
@@ -12622,6 +12632,7 @@ def trainer_stats_view(request):
         selected_athlete_ids = set(all_athlete_ids)
 
     plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
+    flex_owner_id = _active_coach_user(request).id
     this_week_start = date.today() - timedelta(days=date.today().weekday())
     previous_week_start = this_week_start - timedelta(days=7)
     rows = []
@@ -12631,6 +12642,7 @@ def trainer_stats_view(request):
             plans,
             previous_week_start,
             getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
+            flex_owner_id=flex_owner_id,
         )
         rows.append({
             "athlete": athlete,
@@ -12716,6 +12728,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         period_last_week_start,
         week_count=week_count,
         pause_mode=getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
+        flex_owner_id=_active_coach_user(request).id,
     )
 
     chart_width = 900
