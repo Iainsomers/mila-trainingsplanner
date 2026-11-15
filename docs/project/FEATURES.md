@@ -2,6 +2,7 @@
 
 - De individuele Stats-weekgrafiek gebruikt dezelfde effectieve bronvolgorde als Individual Plans: een persoonlijke dagslot heeft voorrang, individuele Base Planning vervangt een gedeelde planslot per dagdeel, en een Flex-override van de actief gekozen coach staat daar weer boven. Dit geldt ook bij overlappende plannen en gedeelde coachtoegang. Alternative-minuten blijven afzonderlijk en tellen niet mee als hardloopkilometers.
 - Bevoegde trainers kunnen op een individuele Stats-URL tijdelijk `?debug=1` toevoegen. Onder de grafiek verschijnt dan per niet-lege dagdeeltraining de werkelijk gekozen bron, segmenttekst, berekende hardloopmeters en afzonderlijke Alternative-loads. Dit is alleen een diagnoseweergave en verandert geen planning of totalen.
+- Dezelfde diagnose toont voor de laatste twee weken ook een inventaris van alle persoonlijke slots van die atleet, inclusief plan-ID/-naam en eigenaar-ID. Er worden geen andere atleten, accountsleutels of geheime gegevens getoond.
 
 - Garmin E corrigeert een afstandsvoorstel automatisch naar tijdnotatie wanneer minstens drie opeenvolgende werkreps vrijwel exact dezelfde hele-minuutduur hebben, maar hun gemeten afstanden duidelijk variëren. Acht rondes van exact 3:00 met afstanden rond 750-800 m worden daardoor direct `8×3'` in plaats van afstandsreps; de bronmetingen blijven ongewijzigd.
 

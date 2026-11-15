@@ -12796,6 +12796,45 @@ def trainer_athlete_stats_view(request, athlete_id):
         flex_owner_id=_active_coach_user(request).id,
         diagnostics=stats_diagnostics,
     )
+    stats_personal_slot_inventory = None
+    if stats_diagnostics is not None:
+        inventory_start = current_week_start - timedelta(days=7)
+        inventory_end = current_week_start + timedelta(days=7)
+        inventory_slots = (
+            TrainingSlot.objects
+            .filter(athlete=athlete, date__gte=inventory_start, date__lt=inventory_end)
+            .select_related("plan", "plan__owner")
+            .prefetch_related("segments")
+            .order_by("date", "slot_index", "plan_id")
+        )
+        stats_personal_slot_inventory = []
+        for slot in inventory_slots:
+            segments = list(slot.segments.all())
+            if not segments:
+                continue
+            loads = _ayc_slot_loads_for_totals(
+                slot, athlete, getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
+            )
+            stats_personal_slot_inventory.append({
+                "date": slot.date,
+                "slot": "AM" if slot.slot_index == 1 else "PM",
+                "plan_id": slot.plan_id,
+                "plan_name": slot.plan.name,
+                "plan_owner_id": slot.plan.owner_id,
+                "segments": [
+                    {
+                        "type": {"CORE":"Main", "CORE2":"Strength", "ALT":"Alternative"}.get(
+                            str(seg.type or "").upper(), str(seg.type or "")
+                        ),
+                        "text": str(seg.text or ""),
+                    }
+                    for seg in segments
+                ],
+                "running_m": sum(
+                    float(load.get("meters") or 0)
+                    for load in loads if load.get("kind") != "alt"
+                ),
+            })
 
     chart_width = 900
     chart_height = 360
@@ -12878,6 +12917,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         "maximum_km": f'{maximum_week["km"]:.1f}',
         "maximum_week_start": maximum_week["week_start"],
           "stats_diagnostics": stats_diagnostics,
+          "stats_personal_slot_inventory": stats_personal_slot_inventory,
     })
 
 

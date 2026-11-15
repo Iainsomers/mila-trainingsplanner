@@ -11728,6 +11728,8 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, "Stats source diagnostics")
         self.assertContains(response, "Personal · Assigned trainer plan")
         self.assertContains(response, "Alternative</strong>: 2x30 min bike z1")
+        self.assertContains(response, "All personal slots in the last two weeks")
+        self.assertContains(response, "Assigned trainer plan (#")
 
     def test_chart_stacks_measured_zones_bottom_up_and_excludes_walking(self):
         trainer = get_user_model().objects.create_user(username="zonestats", is_staff=True)

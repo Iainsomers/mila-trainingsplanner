@@ -111,6 +111,26 @@
           </div>
         </details>
       {% endif %}
+      {% if stats_personal_slot_inventory %}
+        <details class="mt-3" open>
+          <summary class="fw-semibold">All personal slots in the last two weeks</summary>
+          <div class="table-responsive mt-2">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>Date</th><th>Slot</th><th>Plan</th><th>Owner ID</th><th>Segments</th><th>Running</th></tr></thead>
+              <tbody>
+                {% for row in stats_personal_slot_inventory %}
+                  <tr>
+                    <td>{{ row.date|date:"d M Y" }}</td><td>{{ row.slot }}</td>
+                    <td>{{ row.plan_name }} (#{{ row.plan_id }})</td><td>{{ row.plan_owner_id }}</td>
+                    <td>{% for seg in row.segments %}<div><strong>{{ seg.type }}</strong>: {{ seg.text }}</div>{% endfor %}</td>
+                    <td>{{ row.running_m|floatformat:0 }} m</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      {% endif %}
     </div>
   </div>
 </div>
