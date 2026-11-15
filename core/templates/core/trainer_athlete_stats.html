@@ -6,6 +6,7 @@
 <style>
   .weekly-distance-chart { min-width: 680px; }
   .weekly-distance-chart .stats-km-grid-line { stroke: #e1e5e9; stroke-width: 1; }
+  .weekly-distance-chart .stats-axis-spine { stroke: #adb5bd; stroke-width: 1; }
   .weekly-distance-chart .axis-label { fill: #6c757d; font-size: 12px; }
   .weekly-distance-chart .stats-series-line { fill: none; stroke-width: 2.2; vector-effect: non-scaling-stroke; }
   .weekly-distance-chart .stats-series-point { stroke: #fff; stroke-width: 1; vector-effect: non-scaling-stroke; }
@@ -66,15 +67,27 @@
             <rect class="stats-acwr-band-normal" x="{{ plot_left }}" y="{{ acwr_high_y }}" width="{{ plot_width }}" height="{{ acwr_normal_band_height }}"></rect>
             <rect class="stats-acwr-band-low" x="{{ plot_left }}" y="{{ acwr_low_y }}" width="{{ plot_width }}" height="{{ acwr_low_band_height }}"></rect>
           </g>
-          {% for tick in y_ticks %}
-            <line class="stats-km-grid-line" x1="{{ plot_left }}" y1="{{ tick.y }}" x2="{{ plot_right_x }}" y2="{{ tick.y }}"></line>
-            <text class="axis-label" x="{{ plot_left|add:'-10' }}" y="{{ tick.y|add:'4' }}" text-anchor="end">{{ tick.value }}</text>
-          {% endfor %}
-          <text class="axis-label" x="12" y="18">km</text>
-          {% for tick in acwr_ticks %}
-            <text class="axis-label" x="{{ plot_right_x|add:'10' }}" y="{{ tick.y|add:'4' }}" text-anchor="start">{{ tick.value }}</text>
-          {% endfor %}
-          <text class="axis-label" x="{{ plot_right_x|add:'10' }}" y="18">ACWR</text>
+          <g data-grid-topic="km">
+            {% for tick in y_ticks %}<line class="stats-km-grid-line" x1="{{ plot_left }}" y1="{{ tick.y }}" x2="{{ plot_right_x }}" y2="{{ tick.y }}"></line>{% endfor %}
+          </g>
+          <g data-grid-topic="alt" style="display:none">
+            {% for tick in alt_ticks %}<line class="stats-km-grid-line" x1="{{ plot_left }}" y1="{{ tick.y }}" x2="{{ plot_right_x }}" y2="{{ tick.y }}"></line>{% endfor %}
+          </g>
+          <g data-axis-topic="km">
+            <line class="stats-axis-spine" data-axis-spine x1="{{ plot_left }}" y1="{{ plot_top }}" x2="{{ plot_left }}" y2="{{ plot_bottom_y }}"></line>
+            {% for tick in y_ticks %}<text class="axis-label" data-axis-tick x="{{ plot_left|add:'-10' }}" y="{{ tick.y|add:'4' }}" text-anchor="end">{{ tick.value }}</text>{% endfor %}
+            <text class="axis-label" data-axis-title x="{{ plot_left|add:'-48' }}" y="18">km</text>
+          </g>
+          <g data-axis-topic="alt" style="display:none">
+            <line class="stats-axis-spine" data-axis-spine x1="{{ plot_left }}" y1="{{ plot_top }}" x2="{{ plot_left }}" y2="{{ plot_bottom_y }}"></line>
+            {% for tick in alt_ticks %}<text class="axis-label" data-axis-tick x="{{ plot_left|add:'-10' }}" y="{{ tick.y|add:'4' }}" text-anchor="end">{{ tick.value }}</text>{% endfor %}
+            <text class="axis-label" data-axis-title x="{{ plot_left|add:'-48' }}" y="18">ALT min</text>
+          </g>
+          <g data-axis-topic="acwr">
+            <line class="stats-axis-spine" data-axis-spine x1="{{ plot_right_x }}" y1="{{ plot_top }}" x2="{{ plot_right_x }}" y2="{{ plot_bottom_y }}"></line>
+            {% for tick in acwr_ticks %}<text class="axis-label" data-axis-tick x="{{ plot_right_x|add:'10' }}" y="{{ tick.y|add:'4' }}" text-anchor="start">{{ tick.value }}</text>{% endfor %}
+            <text class="axis-label" data-axis-title x="{{ plot_right_x|add:'10' }}" y="18">ACWR</text>
+          </g>
           <g data-acwr-thresholds>
             <line class="stats-acwr-threshold" x1="{{ plot_left }}" y1="{{ acwr_high_y }}" x2="{{ plot_right_x }}" y2="{{ acwr_high_y }}"><title>ACWR 1.3</title></line>
             <line class="stats-acwr-threshold" x1="{{ plot_left }}" y1="{{ acwr_low_y }}" x2="{{ plot_right_x }}" y2="{{ acwr_low_y }}"><title>ACWR 0.8</title></line>
@@ -87,6 +100,11 @@
           {% for series in km_series %}
             <g data-stats-series="{{ series.id }}" data-km-kind="{{ series.kind }}"{% if not series.checked %} style="display:none"{% endif %}>
               {% for bar in series.bars %}<rect class="stats-km-bar" data-km-bar data-week="{{ forloop.counter0 }}" data-week-label="{{ bar.week_start|date:'d M Y' }}" data-km-label="{{ series.label }}" data-km-value="{{ bar.value }}" data-center="{{ bar.x }}" data-max-width="{{ bar.max_width }}" data-height="{{ bar.height }}" data-base-y="{{ plot_bottom_y }}" x="{{ bar.x }}" y="{{ bar.y }}" width="0" height="{{ bar.height }}" fill="{{ series.color }}"><title>{{ bar.week_start|date:"d M Y" }} · {{ series.label }}: {{ bar.value }} km</title></rect>{% endfor %}
+            </g>
+          {% endfor %}
+          {% for series in alt_series %}
+            <g data-stats-series="alt-min" data-alt-series data-alt-zone="{{ series.zone }}" style="display:none">
+              {% for bar in series.bars %}<rect class="stats-km-bar" data-alt-bar data-week="{{ forloop.counter0 }}" data-week-label="{{ bar.week_start|date:'d M Y' }}" data-alt-label="{{ series.label }}" data-alt-value="{{ bar.value }}" data-center="{{ bar.x }}" data-max-width="{{ bar.max_width }}" data-height="{{ bar.height }}" data-base-y="{{ plot_bottom_y }}" x="{{ bar.x }}" y="{{ bar.y }}" width="0" height="{{ bar.height }}" fill="{{ series.color }}"><title>{{ bar.week_start|date:"d M Y" }} · {{ series.label }}: {{ bar.value }} min</title></rect>{% endfor %}
             </g>
           {% endfor %}
           {% for series in acwr_series %}
@@ -102,12 +120,15 @@
           <label><input type="checkbox" data-stats-toggle="{{ series.id }}"{% if series.checked %} checked{% endif %}><span class="zone-key" style="background-color:{{ series.color }}"></span>{{ series.label }}</label>
         {% endfor %}
       </div>
+      <div class="stats-series-controls small mt-2" aria-label="Alternative series">
+        <label><input type="checkbox" data-stats-toggle="alt-min"><span class="zone-key" style="background:linear-gradient(90deg,#77776f 0 16%,#e49aaa 16% 32%,#df4938 32% 48%,#63ad63 48% 64%,#5796d2 64% 80%,#d7aa00 80%)"></span>ALT min Z1–Z6</label>
+      </div>
       <div class="stats-series-controls small mt-2" aria-label="ACWR series">
         {% for series in acwr_series %}
           <label><input type="checkbox" data-stats-toggle="{{ series.id }}"{% if series.checked %} checked{% endif %}><span class="zone-key" style="background-color:{{ series.color }}"></span>{{ series.label }}</label>
         {% endfor %}
       </div>
-      <div class="small text-muted mt-2">Each bar represents a Monday–Sunday training week. ACWR is the current week divided by the average of the four preceding weeks; the current week is excluded from that average. The ACWR axis runs from 0.2 to 2.2.</div>
+      <div class="small text-muted mt-2">Each bar represents a Monday–Sunday training week. Running load is shown in km and Alternative load in minutes. ACWR is the current week divided by the average of the four preceding weeks; the current week is excluded from that average. The ACWR axis runs from 0.2 to 2.2.</div>
       <div class="stats-summary mt-4">
         <div class="border rounded p-3">
           <div class="small text-muted">Weekly average</div>
@@ -170,18 +191,23 @@
   </div>
 </div>
 <script>
-  function layoutStatsKmBars() {
-    var visibleGroups = Array.from(document.querySelectorAll('[data-km-kind]')).filter(function(group) {
+  function layoutStatsBars() {
+    var visibleKmGroups = Array.from(document.querySelectorAll('[data-km-kind]')).filter(function(group) {
       return group.style.display !== "none";
     });
-    var totalGroup = visibleGroups.find(function(group) { return group.dataset.kmKind === "total"; });
-    var zoneGroups = visibleGroups.filter(function(group) { return group.dataset.kmKind === "zone"; });
-    var slotCount = (totalGroup ? 1 : 0) + (zoneGroups.length ? 1 : 0);
+    var visibleAltGroups = Array.from(document.querySelectorAll('[data-alt-series]')).filter(function(group) {
+      return group.style.display !== "none";
+    });
+    var totalGroup = visibleKmGroups.find(function(group) { return group.dataset.kmKind === "total"; });
+    var zoneGroups = visibleKmGroups.filter(function(group) { return group.dataset.kmKind === "zone"; });
+    var slotCount = (totalGroup ? 1 : 0) + (zoneGroups.length ? 1 : 0) + (visibleAltGroups.length ? 1 : 0);
     if (!slotCount) return;
-    var exampleBar = visibleGroups[0].querySelector('[data-km-bar]');
+    var exampleGroup = visibleKmGroups[0] || visibleAltGroups[0];
+    var exampleBar = exampleGroup.querySelector('[data-km-bar], [data-alt-bar]');
     var maxWidth = Number(exampleBar.dataset.maxWidth);
     var slotWidth = maxWidth / slotCount;
     var zoneOffset = totalGroup ? slotWidth : 0;
+    var altOffset = ((totalGroup ? 1 : 0) + (zoneGroups.length ? 1 : 0)) * slotWidth;
 
     if (totalGroup) {
       totalGroup.querySelectorAll('[data-km-bar]').forEach(function(bar) {
@@ -193,7 +219,7 @@
       });
     }
 
-    var weekCount = visibleGroups[0].querySelectorAll('[data-km-bar]').length;
+    var weekCount = exampleGroup.querySelectorAll('[data-km-bar], [data-alt-bar]').length;
     for (var week = 0; week < weekCount; week += 1) {
       var stackedHeight = 0;
       zoneGroups.forEach(function(group) {
@@ -205,7 +231,54 @@
         bar.setAttribute("width", slotWidth);
         stackedHeight += height;
       });
+      var altStackedHeight = 0;
+      visibleAltGroups.forEach(function(group) {
+        var bar = group.querySelector('[data-alt-bar][data-week="' + week + '"]');
+        var center = Number(bar.dataset.center);
+        var height = Number(bar.dataset.height);
+        bar.setAttribute("x", center - maxWidth / 2 + altOffset);
+        bar.setAttribute("y", Number(bar.dataset.baseY) - altStackedHeight - height);
+        bar.setAttribute("width", slotWidth);
+        altStackedHeight += height;
+      });
     }
+  }
+  function updateStatsAxes() {
+    var active = [];
+    if (Array.from(document.querySelectorAll('[data-km-kind]')).some(function(group) { return group.style.display !== "none"; })) active.push("km");
+    if (Array.from(document.querySelectorAll('[data-alt-series]')).some(function(group) { return group.style.display !== "none"; })) active.push("alt");
+    if (Array.from(document.querySelectorAll('[data-acwr-series]')).some(function(group) { return group.style.display !== "none"; })) active.push("acwr");
+    var plotLeft = {{ plot_left }};
+    var outerLeft = {{ axis_left_outer_x }};
+    var plotRight = {{ plot_right_x }};
+
+    function placeAxis(topic, side, x) {
+      var group = document.querySelector('[data-axis-topic="' + topic + '"]');
+      group.style.display = "";
+      group.querySelectorAll('[data-axis-tick]').forEach(function(tick) {
+        tick.setAttribute("x", side === "left" ? x - 10 : x + 10);
+        tick.setAttribute("text-anchor", side === "left" ? "end" : "start");
+      });
+      var title = group.querySelector('[data-axis-title]');
+      title.setAttribute("x", side === "left" ? x - 48 : x + 10);
+      title.setAttribute("text-anchor", "start");
+      var spine = group.querySelector('[data-axis-spine]');
+      spine.setAttribute("x1", x); spine.setAttribute("x2", x);
+    }
+
+    document.querySelectorAll('[data-axis-topic]').forEach(function(group) { group.style.display = "none"; });
+    if (active.length === 1) {
+      placeAxis(active[0], "left", plotLeft);
+    } else if (active.length === 2) {
+      placeAxis(active[0], "left", plotLeft);
+      placeAxis(active[1], "right", plotRight);
+    } else if (active.length === 3) {
+      placeAxis("km", "left", outerLeft);
+      placeAxis("alt", "left", plotLeft);
+      placeAxis("acwr", "right", plotRight);
+    }
+    document.querySelector('[data-grid-topic="km"]').style.display = active.indexOf("km") !== -1 ? "" : "none";
+    document.querySelector('[data-grid-topic="alt"]').style.display = active.indexOf("km") === -1 && active.indexOf("alt") !== -1 ? "" : "none";
   }
   function updateStatsAcwrGuides() {
     var hasKm = Array.from(document.querySelectorAll('[data-km-kind]')).some(function(group) {
@@ -215,7 +288,10 @@
       return group.style.display !== "none";
     });
     document.querySelector('[data-acwr-thresholds]').style.display = hasAcwr ? "" : "none";
-    document.querySelector('[data-acwr-bands]').style.display = hasAcwr && !hasKm ? "" : "none";
+    var hasAlt = Array.from(document.querySelectorAll('[data-alt-series]')).some(function(group) {
+      return group.style.display !== "none";
+    });
+    document.querySelector('[data-acwr-bands]').style.display = hasAcwr && !hasKm && !hasAlt ? "" : "none";
   }
   function updateStatsKmTooltips() {
     var visibleKmGroups = Array.from(document.querySelectorAll('[data-km-kind]')).filter(function(group) {
@@ -254,18 +330,44 @@
       });
     }
   }
+  function updateStatsAltTooltips() {
+    var groups = Array.from(document.querySelectorAll('[data-alt-series]')).filter(function(group) {
+      return group.style.display !== "none";
+    });
+    if (!groups.length) return;
+    var weekCount = groups[0].querySelectorAll('[data-alt-bar]').length;
+    for (var week = 0; week < weekCount; week += 1) {
+      var rows = groups.map(function(group) {
+        var bar = group.querySelector('[data-alt-bar][data-week="' + week + '"]');
+        return {bar: bar, label: bar.dataset.altLabel, value: Number(bar.dataset.altValue)};
+      });
+      var lines = [rows[0].bar.dataset.weekLabel];
+      lines.push("ALT total: " + rows.reduce(function(total, row) { return total + row.value; }, 0).toFixed(1) + " min");
+      rows.filter(function(row) { return row.value > 0; }).forEach(function(row) {
+        lines.push(row.label + ": " + row.value.toFixed(1) + " min");
+      });
+      rows.forEach(function(row) {
+        var title = row.bar.querySelector("title");
+        if (title) title.textContent = lines.join("\n");
+      });
+    }
+  }
   document.querySelectorAll("[data-stats-toggle]").forEach(function(toggle) {
     toggle.addEventListener("change", function() {
       document.querySelectorAll('[data-stats-series="' + toggle.dataset.statsToggle + '"]').forEach(function(series) {
         series.style.display = toggle.checked ? "" : "none";
       });
-      layoutStatsKmBars();
+      layoutStatsBars();
+      updateStatsAxes();
       updateStatsAcwrGuides();
       updateStatsKmTooltips();
+      updateStatsAltTooltips();
     });
   });
-  layoutStatsKmBars();
+  layoutStatsBars();
+  updateStatsAxes();
   updateStatsAcwrGuides();
   updateStatsKmTooltips();
+  updateStatsAltTooltips();
 </script>
 {% endblock %}

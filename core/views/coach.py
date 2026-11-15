@@ -12384,7 +12384,7 @@ from core.views.calendar import (
 
 
 def _effective_week_distance_m(
-        athlete, plans, week_start, pause_mode=None, zone_totals=None, flex_owner_id=None,
+        athlete, plans, week_start, pause_mode=None, zone_totals=None, alt_zone_totals=None, flex_owner_id=None,
         diagnostics=None):
     end = week_start + timedelta(days=14)
     days = [week_start + timedelta(days=offset) for offset in range(14)]
@@ -12574,7 +12574,13 @@ def _effective_week_distance_m(
                     ),
                 })
             for load in loads:
-                if load.get("kind") != "alt":
+                if load.get("kind") == "alt":
+                    if alt_zone_totals is not None:
+                        zone = str(load.get("zone") or "")
+                        if zone in {"1", "2", "3", "4", "5", "6"}:
+                            bucket = alt_zone_totals.setdefault(target_week, {})
+                            bucket[zone] = bucket.get(zone, 0.0) + float(load.get("seconds") or 0)
+                else:
                     meters = float(load.get("meters") or 0)
                     totals[target_week] += meters
                     if zone_totals is not None:
@@ -12591,6 +12597,7 @@ def _athlete_week_distance_history(
     first_week_start = last_week_start - timedelta(days=7 * (week_count - 1))
     totals_by_week = {}
     zones_by_week = {}
+    alt_zones_by_week = {}
     for offset in range(0, week_count, 2):
         pair_start = first_week_start + timedelta(days=7 * offset)
         pair_totals = _effective_week_distance_m(
@@ -12599,6 +12606,7 @@ def _athlete_week_distance_history(
             pair_start,
             pause_mode,
             zone_totals=zones_by_week,
+            alt_zone_totals=alt_zones_by_week,
             flex_owner_id=flex_owner_id,
             diagnostics=diagnostics,
         )
@@ -12609,6 +12617,8 @@ def _athlete_week_distance_history(
             "week_start": first_week_start + timedelta(days=7 * offset),
             "km": totals_by_week.get(first_week_start + timedelta(days=7 * offset), 0.0) / 1000.0,
             "zone_km": {zone: meters / 1000.0 for zone, meters in zones_by_week.get(
+                first_week_start + timedelta(days=7 * offset), {}).items()},
+            "alt_zone_minutes": {zone: seconds / 60.0 for zone, seconds in alt_zones_by_week.get(
                 first_week_start + timedelta(days=7 * offset), {}).items()},
         }
         for offset in range(week_count)
@@ -12875,7 +12885,7 @@ def trainer_athlete_stats_view(request, athlete_id):
 
     chart_width = 900
     chart_height = 360
-    plot_left = 60
+    plot_left = 105
     plot_right = 80
     plot_top = 24
     plot_bottom = 48
@@ -12885,14 +12895,20 @@ def trainer_athlete_stats_view(request, athlete_id):
     minimum_week = min(weeks, key=lambda week: week["km"])
     maximum_week = max(weeks, key=lambda week: week["km"])
     average_km = sum(week["km"] for week in weeks) / len(weeks)
-    km_tick_step = 5.0
-    for candidate_step in (5, 10, 20, 25, 50, 100, 200, 250, 500, 1000):
-        candidate_intervals = max(3, math.ceil(maximum_km / candidate_step))
-        if candidate_intervals <= 5:
-            km_tick_step = float(candidate_step)
-            break
-    km_tick_intervals = max(3, math.ceil(maximum_km / km_tick_step))
+    def nice_axis(maximum):
+        step = 5.0
+        for candidate in (5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000):
+            intervals = max(3, math.ceil(maximum / candidate))
+            if intervals <= 5:
+                step = float(candidate)
+                break
+        return step, max(3, math.ceil(maximum / step))
+
+    km_tick_step, km_tick_intervals = nice_axis(maximum_km)
     axis_max_km = km_tick_step * km_tick_intervals
+    maximum_alt_minutes = max((sum(week["alt_zone_minutes"].values()) for week in weeks), default=0.0)
+    alt_tick_step, alt_tick_intervals = nice_axis(maximum_alt_minutes)
+    axis_max_alt = alt_tick_step * alt_tick_intervals
     column_width = plot_width / len(weeks)
     for index, week in enumerate(weeks):
         week.update({
@@ -12926,9 +12942,10 @@ def trainer_athlete_stats_view(request, athlete_id):
         return paths, points
 
     km_series = []
+    zone_colors = ("#77776f", "#e49aaa", "#df4938", "#63ad63", "#5796d2", "#d7aa00")
     km_definitions = [("total-km", "Total km", "#172b6b", "km", True)] + [
         (f"z{zone}", f"Z{zone}", color, f"zone_{zone}", False)
-        for zone, color in enumerate(("#77776f", "#e49aaa", "#df4938", "#63ad63", "#5796d2", "#d7aa00"), 1)
+        for zone, color in enumerate(zone_colors, 1)
     ]
     for series_id, label, color, value_key, checked in km_definitions:
         if value_key.startswith("zone_"):
@@ -12950,6 +12967,21 @@ def trainer_athlete_stats_view(request, athlete_id):
             "paths": paths, "points": points, "bars": bars,
         })
 
+    alt_series = []
+    for zone, color in enumerate(zone_colors, 1):
+        value_key = f"alt_zone_{zone}"
+        for week in weeks:
+            week[value_key] = week["alt_zone_minutes"].get(str(zone), 0.0)
+        paths, points = chart_paths(value_key, axis_max_alt)
+        alt_series.append({
+            "id": "alt-min", "label": f"ALT Z{zone}", "color": color, "zone": str(zone),
+            "checked": False,
+            "bars": [
+                {**point, "height": plot_top + plot_height - point["y"], "max_width": column_width * 0.68}
+                for point in points
+            ],
+        })
+
     acwr_series = []
     for series_id, label, color, value_key, checked in (
         ("acwr-total", "ACWR total", "#111111", "acwr_total", True),
@@ -12963,12 +12995,19 @@ def trainer_athlete_stats_view(request, athlete_id):
         })
 
     y_ticks = []
+    alt_ticks = []
     acwr_ticks = []
     for index in range(km_tick_intervals + 1):
         value = km_tick_step * index
         y_ticks.append({
             "value": f"{value:.0f}",
             "y": plot_top + plot_height - ((value / axis_max_km) * plot_height),
+        })
+    for index in range(alt_tick_intervals + 1):
+        value = alt_tick_step * index
+        alt_ticks.append({
+            "value": f"{value:.0f}",
+            "y": plot_top + plot_height - ((value / axis_max_alt) * plot_height),
         })
     for index in range(11):
         acwr_value = axis_min_acwr + index * 0.2
@@ -13001,12 +13040,15 @@ def trainer_athlete_stats_view(request, athlete_id):
             if period_index > 0 else ""
         ),
         "y_ticks": y_ticks,
+        "alt_ticks": alt_ticks,
         "acwr_ticks": acwr_ticks,
         "km_series": km_series,
+        "alt_series": alt_series,
         "acwr_series": acwr_series,
         "chart_width": chart_width,
         "chart_height": chart_height,
         "plot_left": plot_left,
+        "axis_left_outer_x": 55,
         "plot_right_x": chart_width - plot_right,
         "plot_top": plot_top,
         "plot_width": plot_width,

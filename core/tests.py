@@ -11843,11 +11843,13 @@ class TrainerStatsTests(TestCase):
             {"segment":"CORE", "zone":"1", "meters":200, "seconds":200},
         ])
         TrainingSegment.objects.create(slot=slot, type="CORE", text="5*8' z2", zone="2", norm_distance_m=15000)
+        TrainingSegment.objects.create(slot=slot, type="ALT", text="Bike 30' Z2", zone="2", duration_s=1800)
         self.client.force_login(trainer)
         response = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=1")
         week = response.context["weeks"][-1]
         self.assertEqual(week["zone_km"], {"1":2, "2":3, "5":.5})
         self.assertEqual(week["km"], 5.5)
+        self.assertEqual(week["alt_zone_minutes"], {"2":30})
         series = {item["id"]:item for item in response.context["km_series"]}
         self.assertEqual(series["total-km"]["points"][-1]["value"], "5.50")
         self.assertEqual(series["z1"]["points"][-1]["value"], "2.00")
@@ -11862,13 +11864,21 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, 'data-km-kind="zone"', count=6)
         self.assertContains(response, 'data-km-value="5.50"')
         self.assertContains(response, "stackedHeight")
-        self.assertContains(response, "layoutStatsKmBars")
+        self.assertContains(response, "layoutStatsBars")
         self.assertContains(response, "updateStatsKmTooltips")
         self.assertContains(response, "Selected zones total")
+        self.assertEqual([tick["value"] for tick in response.context["alt_ticks"]], ["0", "10", "20", "30"])
+        self.assertEqual(response.context["alt_series"][1]["bars"][-1]["value"], "30.00")
+        self.assertContains(response, 'data-stats-toggle="alt-min"')
+        self.assertContains(response, 'data-axis-topic="alt"')
+        self.assertContains(response, "updateStatsAxes")
+        self.assertContains(response, "ALT total")
         self.assertContains(response, 'data-stats-toggle="total-km" checked')
         self.assertContains(response, 'data-stats-toggle="z1"')
         self.assertEqual([tick["value"] for tick in response.context["y_ticks"]], ["0", "5", "10", "15"])
-        self.assertContains(response, 'class="stats-km-grid-line"', count=4)
+        self.assertContains(response, 'data-grid-topic="km"')
+        self.assertContains(response, 'data-grid-topic="alt"')
+        self.assertContains(response, 'class="stats-km-grid-line"', count=8)
 
     def test_athlete_name_links_to_six_month_weekly_distance_chart(self):
         trainer = get_user_model().objects.create_user(username="chartcoach", password="secret", is_staff=True)

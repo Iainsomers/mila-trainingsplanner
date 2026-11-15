@@ -1,5 +1,7 @@
 # Actuele status
 
+- Stats kan naast loopkilometers en ACWR nu een afzonderlijke, per ALT-zone gestapelde minutenstaaf tonen. De km-, ALT-minuten- en ACWR-assen verschijnen alleen wanneer hun onderwerp actief is en worden dynamisch links/rechts geplaatst (bij alle drie: km links-buiten, ALT links-binnen, ACWR rechts).
+
 ## 15 november 2026 - Selecteerbare weektotalen en ACWR in Stats
 
 - De individuele Stats-grafiek toont selecteerbare staven voor Total km en iedere afzonderlijke loopzone. Total km staat standaard aan; Z1–Z6 kunnen onafhankelijk worden toegevoegd of verborgen. Actieve zones worden per week gestapeld; de afzonderlijke Total-kolom staat indien actief daarnaast.
