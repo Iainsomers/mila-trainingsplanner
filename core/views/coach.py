@@ -12885,7 +12885,14 @@ def trainer_athlete_stats_view(request, athlete_id):
     minimum_week = min(weeks, key=lambda week: week["km"])
     maximum_week = max(weeks, key=lambda week: week["km"])
     average_km = sum(week["km"] for week in weeks) / len(weeks)
-    axis_max_km = max(10.0, math.ceil(maximum_km / 10.0) * 10.0)
+    km_tick_step = 5.0
+    for candidate_step in (5, 10, 20, 25, 50, 100, 200, 250, 500, 1000):
+        candidate_intervals = max(3, math.ceil(maximum_km / candidate_step))
+        if candidate_intervals <= 5:
+            km_tick_step = float(candidate_step)
+            break
+    km_tick_intervals = max(3, math.ceil(maximum_km / km_tick_step))
+    axis_max_km = km_tick_step * km_tick_intervals
     column_width = plot_width / len(weeks)
     for index, week in enumerate(weeks):
         week.update({
@@ -12957,8 +12964,8 @@ def trainer_athlete_stats_view(request, athlete_id):
 
     y_ticks = []
     acwr_ticks = []
-    for index in range(5):
-        value = axis_max_km * index / 4
+    for index in range(km_tick_intervals + 1):
+        value = km_tick_step * index
         y_ticks.append({
             "value": f"{value:.0f}",
             "y": plot_top + plot_height - ((value / axis_max_km) * plot_height),

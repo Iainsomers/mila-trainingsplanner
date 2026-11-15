@@ -11867,6 +11867,8 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, "Selected zones total")
         self.assertContains(response, 'data-stats-toggle="total-km" checked')
         self.assertContains(response, 'data-stats-toggle="z1"')
+        self.assertEqual([tick["value"] for tick in response.context["y_ticks"]], ["0", "5", "10", "15"])
+        self.assertContains(response, 'class="stats-km-grid-line"', count=4)
 
     def test_athlete_name_links_to_six_month_weekly_distance_chart(self):
         trainer = get_user_model().objects.create_user(username="chartcoach", password="secret", is_staff=True)
