@@ -2,8 +2,8 @@
 
 ## 15 november 2026 - Selecteerbare weektotalen en ACWR in Stats
 
-- De individuele Stats-grafiek toont nu selecteerbare lijnen voor Total km en iedere afzonderlijke loopzone. Total km staat standaard aan; Z1–Z6 kunnen onafhankelijk worden toegevoegd of verborgen.
-- De rechteras toont optioneel ACWR total, aerobic Z1–Z3 en anaerobic Z4–Z6. Iedere ratio deelt de huidige week door het gemiddelde van exact de vier voorgaande kalenderweken; vier verborgen aanloopweken ondersteunen het begin van de gekozen periode. Een nulnoemer levert geen punt. Regressie met 10/20/30/40 km gevolgd door 50 km geeft 2,00 voor total, aerobic en anaerobic.
+- De individuele Stats-grafiek toont selecteerbare staven voor Total km en iedere afzonderlijke loopzone. Total km staat standaard aan; Z1–Z6 kunnen onafhankelijk worden toegevoegd of verborgen. Meerdere actieve km-reeksen worden per week naast elkaar gezet.
+- De rechteras toont optioneel ACWR total, aerobic Z1–Z3 en anaerobic Z4–Z6 en loopt vast van 0,2 tot 2,2 in stappen van 0,2. Iedere ratio deelt de huidige week door het gemiddelde van exact de vier voorgaande kalenderweken; vier verborgen aanloopweken ondersteunen het begin van de gekozen periode. Een nulnoemer levert geen punt. Regressie met 10/20/30/40 km gevolgd door 50 km geeft 2,00 voor total, aerobic en anaerobic.
 
 ## 15 november 2026 - Stats volgt persoonlijke trainerplan-override
 

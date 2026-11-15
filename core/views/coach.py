@@ -12876,7 +12876,7 @@ def trainer_athlete_stats_view(request, athlete_id):
     chart_width = 900
     chart_height = 360
     plot_left = 60
-    plot_right = 20
+    plot_right = 80
     plot_top = 24
     plot_bottom = 48
     plot_width = chart_width - plot_left - plot_right
@@ -12894,15 +12894,10 @@ def trainer_athlete_stats_view(request, athlete_id):
             "label_x": plot_left + (index * column_width) + (column_width / 2),
         })
 
-    acwr_values = [
-        week[key]
-        for week in weeks
-        for key in ("acwr_total", "acwr_aerobic", "acwr_anaerobic")
-        if week[key] is not None
-    ]
-    axis_max_acwr = max(2.0, math.ceil(max(acwr_values, default=2.0) * 2.0) / 2.0)
+    axis_min_acwr = 0.2
+    axis_max_acwr = 2.2
 
-    def chart_paths(value_key, axis_maximum):
+    def chart_paths(value_key, axis_maximum, axis_minimum=0.0):
         paths, points, active = [], [], []
         for week in weeks:
             value = week.get(value_key)
@@ -12912,7 +12907,10 @@ def trainer_athlete_stats_view(request, athlete_id):
                     active = []
                 continue
             x = week["label_x"]
-            y = plot_top + plot_height - (float(value) / axis_maximum * plot_height)
+            plotted_value = min(axis_maximum, max(axis_minimum, float(value)))
+            y = plot_top + plot_height - (
+                (plotted_value - axis_minimum) / (axis_maximum - axis_minimum) * plot_height
+            )
             coordinate = f"{x:.2f},{y:.2f}"
             active.append(coordinate)
             points.append({"x": x, "y": y, "value": f"{float(value):.2f}", "week_start": week["week_start"]})
@@ -12931,9 +12929,17 @@ def trainer_athlete_stats_view(request, athlete_id):
             for week in weeks:
                 week[value_key] = week["zone_km"].get(zone, 0.0)
         paths, points = chart_paths(value_key, axis_max_km)
+        bars = [
+            {
+                **point,
+                "height": plot_top + plot_height - point["y"],
+                "max_width": column_width * 0.68,
+            }
+            for point in points
+        ]
         km_series.append({
             "id": series_id, "label": label, "color": color, "checked": checked,
-            "paths": paths, "points": points,
+            "paths": paths, "points": points, "bars": bars,
         })
 
     acwr_series = []
@@ -12942,7 +12948,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         ("acwr-aerobic", "ACWR aerobic Z1–Z3", "#198754", "acwr_aerobic", False),
         ("acwr-anaerobic", "ACWR anaerobic Z4–Z6", "#dc3545", "acwr_anaerobic", False),
     ):
-        paths, points = chart_paths(value_key, axis_max_acwr)
+        paths, points = chart_paths(value_key, axis_max_acwr, axis_min_acwr)
         acwr_series.append({
             "id": series_id, "label": label, "color": color, "checked": checked,
             "paths": paths, "points": points,
@@ -12956,10 +12962,13 @@ def trainer_athlete_stats_view(request, athlete_id):
             "value": f"{value:.0f}",
             "y": plot_top + plot_height - ((value / axis_max_km) * plot_height),
         })
-        acwr_value = axis_max_acwr * index / 4
+    for index in range(11):
+        acwr_value = axis_min_acwr + index * 0.2
         acwr_ticks.append({
-            "value": f"{acwr_value:.2f}".rstrip("0").rstrip("."),
-            "y": plot_top + plot_height - ((acwr_value / axis_max_acwr) * plot_height),
+            "value": f"{acwr_value:.1f}",
+            "y": plot_top + plot_height - (
+                (acwr_value - axis_min_acwr) / (axis_max_acwr - axis_min_acwr) * plot_height
+            ),
         })
 
     return render(request, "core/trainer_athlete_stats.html", {
@@ -12986,7 +12995,9 @@ def trainer_athlete_stats_view(request, athlete_id):
         "plot_right_x": chart_width - plot_right,
         "plot_top": plot_top,
         "plot_bottom_y": plot_top + plot_height,
-        "acwr_one_y": plot_top + plot_height - (1.0 / axis_max_acwr * plot_height),
+        "acwr_one_y": plot_top + plot_height - (
+            (1.0 - axis_min_acwr) / (axis_max_acwr - axis_min_acwr) * plot_height
+        ),
         "period_start": weeks[0]["week_start"],
         "period_end": weeks[-1]["week_start"] + timedelta(days=6),
         "average_km": f"{average_km:.1f}",

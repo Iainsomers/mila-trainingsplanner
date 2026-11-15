@@ -11792,7 +11792,10 @@ class TrainerStatsTests(TestCase):
         self.assertEqual(series["z1"]["points"][-1]["value"], "2.00")
         self.assertEqual(series["z2"]["points"][-1]["value"], "3.00")
         self.assertEqual(series["z5"]["points"][-1]["value"], "0.50")
+        self.assertEqual(series["total-km"]["bars"][-1]["value"], "5.50")
         self.assertContains(response, 'aria-label="Chart series"')
+        self.assertContains(response, "stats-km-bar")
+        self.assertContains(response, "layoutStatsKmBars")
         self.assertContains(response, 'data-stats-toggle="total-km" checked')
         self.assertContains(response, 'data-stats-toggle="z1"')
 
@@ -11862,6 +11865,13 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, 'data-stats-toggle="acwr-aerobic"')
         self.assertContains(response, 'data-stats-toggle="acwr-anaerobic"')
         self.assertContains(response, "current week is excluded from that average")
+        self.assertEqual(
+            [tick["value"] for tick in response.context["acwr_ticks"]],
+            [f"{value / 10:.1f}" for value in range(2, 23, 2)],
+        )
+        acwr_total = next(item for item in response.context["acwr_series"] if item["id"] == "acwr-total")
+        self.assertEqual(acwr_total["points"][-1]["value"], "2.00")
+        self.assertContains(response, "The ACWR axis runs from 0.2 to 2.2")
 
     def test_athlete_chart_period_selector_updates_weeks_and_summary(self):
         trainer = get_user_model().objects.create_user(username="periodcoach", password="secret", is_staff=True)

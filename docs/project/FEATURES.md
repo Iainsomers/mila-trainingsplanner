@@ -1,6 +1,6 @@
 # Functionele onderdelen
 
-- De individuele Stats-grafiek heeft selecteerbare lijnen voor Total km en Z1 t/m Z6 op de linker km-as. Op de rechteras kunnen afzonderlijk ACWR total, ACWR aerobic (Z1–Z3) en ACWR anaerobic (Z4–Z6) worden aan- en uitgezet. Total km en ACWR total staan standaard aan; alle andere reeksen starten uit. Punten tonen week, reeks en waarde.
+- De individuele Stats-grafiek heeft selecteerbare staven voor Total km en Z1 t/m Z6 op de linker km-as. Meerdere gekozen km-reeksen staan per week naast elkaar. Op de rechteras kunnen afzonderlijk ACWR total, ACWR aerobic (Z1–Z3) en ACWR anaerobic (Z4–Z6) worden aan- en uitgezet. Total km en ACWR total staan standaard aan; alle andere reeksen starten uit. Tooltips tonen week, reeks en waarde.
 
 - De individuele Stats-weekgrafiek gebruikt dezelfde effectieve bronvolgorde als Individual Plans: een persoonlijke dagslot heeft voorrang, individuele Base Planning vervangt een gedeelde planslot per dagdeel, en een Flex-override van de actief gekozen coach staat daar weer boven. Dit geldt ook bij overlappende plannen en gedeelde coachtoegang. Alternative-minuten blijven afzonderlijk en tellen niet mee als hardloopkilometers.
 - Bevoegde trainers kunnen op een individuele Stats-URL tijdelijk `?debug=1` toevoegen. Onder de grafiek verschijnt dan per niet-lege dagdeeltraining de werkelijk gekozen bron, segmenttekst, berekende hardloopmeters en afzonderlijke Alternative-loads. Dit is alleen een diagnoseweergave en verandert geen planning of totalen.

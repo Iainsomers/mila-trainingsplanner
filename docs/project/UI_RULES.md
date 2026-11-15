@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-- De individuele Stats-grafiek gebruikt compacte vinkjes onder de grafiek voor Total km, Z1–Z6 en de drie ACWR-reeksen. Km-reeksen zijn doorgetrokken lijnen op de linkeras; ACWR-reeksen zijn gestreepte lijnen op de rechteras. Total km en ACWR total zijn de standaardselectie. De bediening mag op mobiel omlopen en de grafiek behoudt horizontaal scrollen.
+- De individuele Stats-grafiek gebruikt compacte vinkjes onder de grafiek voor Total km, Z1–Z6 en de drie ACWR-reeksen. Km-reeksen zijn staven op de linkeras en worden bij meervoudige selectie per week naast elkaar gezet; ACWR-reeksen zijn gestreepte lijnen op de rechteras. De ACWR-as loopt vast van 0,2 tot 2,2 in stappen van 0,2. Total km en ACWR total zijn de standaardselectie. De bediening mag op mobiel omlopen en de grafiek behoudt horizontaal scrollen.
 
 ## Year Planner voor atleten
 
