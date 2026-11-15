@@ -11515,6 +11515,44 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_stats_discovers_personal_flex_plan_outside_filtered_plan_list(self):
+        athlete_owner = get_user_model().objects.create_user(username="statsflexowner", is_staff=True)
+        viewing_coach = get_user_model().objects.create_user(username="statsflexviewer", is_staff=True)
+        athlete = Athlete.objects.create(owner=athlete_owner, name="Flex discovery", birth_year=2000, gender="X")
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        base_plan = TrainingPlan.objects.create(
+            owner=viewing_coach,
+            name="Visible base plan",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=base_plan, athlete=athlete)
+        shared = TrainingSlot.objects.create(plan=base_plan, date=week_start, slot_index=1)
+        shared.segments.create(type="CORE", text="60500m z3", zone="3", norm_distance_m=60500)
+        hidden_from_plan_list = TrainingPlan.objects.create(
+            owner=athlete_owner,
+            name=f"Flex Planner {athlete_owner.id}",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        personal = TrainingSlot.objects.create(
+            plan=hidden_from_plan_list, athlete=athlete, date=week_start, slot_index=1,
+        )
+        personal.segments.create(type="CORE", text="34300m z2", zone="2", norm_distance_m=34300)
+        personal.segments.create(type="ALT", text="2x30 min bike z1", zone="1", duration_s=3600)
+
+        zones = {}
+        totals = _effective_week_distance_m(
+            athlete,
+            [base_plan],
+            week_start,
+            zone_totals=zones,
+            flex_owner_id=viewing_coach.id,
+        )
+
+        self.assertEqual(totals[week_start], 34300)
+        self.assertEqual(zones[week_start], {"2": 34300})
+
     def test_personal_trainer_plan_slot_overrides_base_assigned_trainer_plan(self):
         trainer = get_user_model().objects.create_user(username="statstrainerpersonal", is_staff=True)
         athlete = Athlete.objects.create(owner=trainer, name="Trainer personal", birth_year=2000, gender="X")

@@ -12392,11 +12392,27 @@ def _effective_week_distance_m(
         plan for plan in plans
         if not _is_flex_planner_plan(plan)
     ]
-    flex_plan = next((
-        plan for plan in plans
-        if _is_flex_planner_plan(plan)
-        and plan.owner_id == (flex_owner_id or athlete.owner_id)
-    ), None)
+    listed_flex_plans = [plan for plan in plans if _is_flex_planner_plan(plan)]
+    personal_flex_plans = list(
+        TrainingPlan.objects
+        .filter(
+            name__startswith="Flex Planner",
+            slots__athlete=athlete,
+            slots__date__gte=week_start,
+            slots__date__lt=end,
+        )
+        .distinct()
+    )
+    flex_plans_by_id = {plan.id: plan for plan in [*listed_flex_plans, *personal_flex_plans]}
+    flex_plans = sorted(
+        flex_plans_by_id.values(),
+        key=lambda plan: (
+            0 if flex_owner_id and plan.owner_id == flex_owner_id
+            else 1 if plan.owner_id == athlete.owner_id
+            else 2,
+            plan.id,
+        ),
+    )
 
     athlete_plans = []
     for plan in non_flex_plans:
@@ -12414,8 +12430,7 @@ def _effective_week_distance_m(
             athlete_plans.append(plan)
 
     direct_plan_ids = [plan.id for plan in athlete_plans]
-    if flex_plan:
-        direct_plan_ids.append(flex_plan.id)
+    direct_plan_ids.extend(plan.id for plan in flex_plans)
     direct_slots = (
         TrainingSlot.objects
         .filter(plan_id__in=direct_plan_ids, date__gte=week_start, date__lt=end)
@@ -12504,12 +12519,19 @@ def _effective_week_distance_m(
                     base_blocks_fallback = True
                     source_label = "Base Planning · Rest"
 
-            if flex_plan:
-                flex_override = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
-                if flex_override is not None:
-                    base_blocks_fallback = _slot_is_visually_empty(flex_override)
-                    slot = None if base_blocks_fallback else flex_override
-                    source_label = "Flex · empty" if base_blocks_fallback else "Flex · personal"
+            flex_override = next((
+                candidate
+                for plan in flex_plans
+                if (candidate := slot_lookup.get((plan.id, athlete.id, day, slot_index))) is not None
+            ), None)
+            if flex_override is not None:
+                base_blocks_fallback = _slot_is_visually_empty(flex_override)
+                slot = None if base_blocks_fallback else flex_override
+                source_label = (
+                    f"Flex · empty · #{flex_override.plan_id}"
+                    if base_blocks_fallback
+                    else f"Flex · personal · #{flex_override.plan_id}"
+                )
 
             if not slot and not base_blocks_fallback and base_planning_slot:
                 if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
