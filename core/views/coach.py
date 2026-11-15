@@ -12384,7 +12384,8 @@ from core.views.calendar import (
 
 
 def _effective_week_distance_m(
-        athlete, plans, week_start, pause_mode=None, zone_totals=None, flex_owner_id=None):
+        athlete, plans, week_start, pause_mode=None, zone_totals=None, flex_owner_id=None,
+        diagnostics=None):
     end = week_start + timedelta(days=14)
     days = [week_start + timedelta(days=offset) for offset in range(14)]
     non_trainer_plans = [
@@ -12475,6 +12476,11 @@ def _effective_week_distance_m(
                 shared_slot = slot_lookup.get((matching_plan.id, None, day, slot_index))
             slot = personal_slot or shared_slot
             is_personal_override = personal_slot is not None
+            source_label = (
+                f"Personal · {matching_plan.name}" if personal_slot
+                else f"Shared · {matching_plan.name}" if shared_slot
+                else "None"
+            )
 
             base_planning_slot = _base_planning_slot_for_day(
                 base_blocks_by_athlete, athlete.id, day, slot_index
@@ -12483,6 +12489,7 @@ def _effective_week_distance_m(
             if base_planning_slot and not is_personal_override:
                 if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
                     slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                    source_label = "Base Planning · Training"
                 elif (
                     base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
                     and base_planning_slot.trainer_plan_id
@@ -12491,19 +12498,23 @@ def _effective_week_distance_m(
                         trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, athlete.id, day, slot_index))
                         or trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, None, day, slot_index))
                     )
+                    source_label = f"Base Planning · {base_planning_slot.trainer_plan.name}"
                 elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_REST:
                     slot = None
                     base_blocks_fallback = True
+                    source_label = "Base Planning · Rest"
 
             if flex_plan:
                 flex_override = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
                 if flex_override is not None:
                     base_blocks_fallback = _slot_is_visually_empty(flex_override)
                     slot = None if base_blocks_fallback else flex_override
+                    source_label = "Flex · empty" if base_blocks_fallback else "Flex · personal"
 
             if not slot and not base_blocks_fallback and base_planning_slot:
                 if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
                     slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                    source_label = "Base Planning · Training fallback"
                 elif (
                     base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
                     and base_planning_slot.trainer_plan_id
@@ -12512,9 +12523,35 @@ def _effective_week_distance_m(
                         trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, athlete.id, day, slot_index))
                         or trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, None, day, slot_index))
                     )
+                    source_label = f"Base Planning · {base_planning_slot.trainer_plan.name} fallback"
 
             target_week = week_start if day < week_start + timedelta(days=7) else week_start + timedelta(days=7)
-            for load in _ayc_slot_loads_for_totals(slot, athlete, pause_mode):
+            loads = _ayc_slot_loads_for_totals(slot, athlete, pause_mode)
+            if diagnostics is not None and (slot or loads):
+                segments = []
+                if slot:
+                    segments = [
+                        {
+                            "type": {"CORE":"Main", "CORE2":"Strength", "ALT":"Alternative"}.get(
+                                str(getattr(seg, "type", "") or "").upper(),
+                                str(getattr(seg, "type", "") or ""),
+                            ),
+                            "text": str(getattr(seg, "text", "") or ""),
+                        }
+                        for seg in slot.segments.all()
+                    ]
+                diagnostics.append({
+                    "date": day,
+                    "slot": "AM" if slot_index == 1 else "PM",
+                    "source": source_label,
+                    "segments": segments,
+                    "loads": loads,
+                    "running_m": sum(
+                        float(load.get("meters") or 0)
+                        for load in loads if load.get("kind") != "alt"
+                    ),
+                })
+            for load in loads:
                 if load.get("kind") != "alt":
                     meters = float(load.get("meters") or 0)
                     totals[target_week] += meters
@@ -12527,7 +12564,8 @@ def _effective_week_distance_m(
 
 
 def _athlete_week_distance_history(
-        athlete, plans, last_week_start, week_count=26, pause_mode=None, flex_owner_id=None):
+        athlete, plans, last_week_start, week_count=26, pause_mode=None, flex_owner_id=None,
+        diagnostics=None):
     first_week_start = last_week_start - timedelta(days=7 * (week_count - 1))
     totals_by_week = {}
     zones_by_week = {}
@@ -12540,6 +12578,7 @@ def _athlete_week_distance_history(
             pause_mode,
             zone_totals=zones_by_week,
             flex_owner_id=flex_owner_id,
+            diagnostics=diagnostics,
         )
         totals_by_week.update(pair_totals)
 
@@ -12747,6 +12786,7 @@ def trainer_athlete_stats_view(request, athlete_id):
     plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
     current_week_start = date.today() - timedelta(days=date.today().weekday())
     period_last_week_start = current_week_start - timedelta(weeks=week_count * period_index)
+    stats_diagnostics = [] if request.GET.get("debug") == "1" else None
     weeks = _athlete_week_distance_history(
         athlete,
         plans,
@@ -12754,6 +12794,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         week_count=week_count,
         pause_mode=getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
         flex_owner_id=_active_coach_user(request).id,
+        diagnostics=stats_diagnostics,
     )
 
     chart_width = 900
@@ -12836,6 +12877,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         "minimum_week_start": minimum_week["week_start"],
         "maximum_km": f'{maximum_week["km"]:.1f}',
         "maximum_week_start": maximum_week["week_start"],
+          "stats_diagnostics": stats_diagnostics,
     })
 
 

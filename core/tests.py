@@ -11666,12 +11666,15 @@ class TrainerStatsTests(TestCase):
         )
         self.client.force_login(trainer)
 
-        response = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=1")
+        response = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=1&debug=1")
         week = response.context["weeks"][-1]
 
         self.assertEqual(week["km"], 34.3)
         self.assertEqual(week["zone_km"], {"2": 34.3})
         self.assertNotIn("3", week["zone_km"])
+        self.assertContains(response, "Stats source diagnostics")
+        self.assertContains(response, "Base Planning · Assigned trainer plan")
+        self.assertContains(response, "Alternative</strong>: 2x30 min bike z1")
 
     def test_chart_stacks_measured_zones_bottom_up_and_excludes_walking(self):
         trainer = get_user_model().objects.create_user(username="zonestats", is_staff=True)

@@ -89,6 +89,28 @@
           <div class="small text-muted">from {{ minimum_week_start|date:"d M Y" }}</div>
         </div>
       </div>
+      {% if stats_diagnostics %}
+        <details class="mt-4" open>
+          <summary class="fw-semibold">Stats source diagnostics</summary>
+          <div class="table-responsive mt-2">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>Date</th><th>Slot</th><th>Source</th><th>Segments</th><th>Running km</th><th>Loads</th></tr></thead>
+              <tbody>
+                {% for row in stats_diagnostics %}
+                  <tr>
+                    <td>{{ row.date|date:"d M Y" }}</td>
+                    <td>{{ row.slot }}</td>
+                    <td>{{ row.source }}</td>
+                    <td>{% for seg in row.segments %}<div><strong>{{ seg.type }}</strong>: {{ seg.text }}</div>{% endfor %}</td>
+                    <td>{{ row.running_m|floatformat:0 }} m</td>
+                    <td>{% for load in row.loads %}<div>{% if load.kind == "alt" %}ALT {{ load.zone }}: {{ load.seconds|floatformat:0 }} s{% else %}Z{{ load.zone }}: {{ load.meters|floatformat:0 }} m{% endif %}</div>{% endfor %}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      {% endif %}
     </div>
   </div>
 </div>
