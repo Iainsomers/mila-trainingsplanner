@@ -12425,6 +12425,11 @@ def _effective_week_distance_m(
         (slot.plan_id, slot.athlete_id, slot.date, slot.slot_index): slot
         for slot in direct_slots
     }
+    personal_override_plan_ids_by_day = {}
+    for slot in direct_slots:
+        if slot.athlete_id != athlete.id or not list(slot.segments.all()):
+            continue
+        personal_override_plan_ids_by_day.setdefault(slot.date, set()).add(slot.plan_id)
 
     base_slot_qs = AthleteBasePlanningSlot.objects.select_related("trainer_plan").order_by("weekday", "slot_index")
     blocks = list(
@@ -12457,36 +12462,56 @@ def _effective_week_distance_m(
 
     totals = {week_start: 0.0, week_start + timedelta(days=7): 0.0}
     for day in days:
-        matching_plan = _athlete_plan_for_day(athlete_plans, day)
+        override_plan_ids = personal_override_plan_ids_by_day.get(day, set())
+        matching_plan = next(
+            (plan for plan in athlete_plans if plan.id in override_plan_ids),
+            None,
+        ) or _athlete_plan_for_day(athlete_plans, day)
         for slot_index in (1, 2):
-            slot = None
+            personal_slot = None
+            shared_slot = None
             if matching_plan:
-                slot = (
-                    slot_lookup.get((matching_plan.id, athlete.id, day, slot_index))
-                    or slot_lookup.get((matching_plan.id, None, day, slot_index))
-                )
+                personal_slot = slot_lookup.get((matching_plan.id, athlete.id, day, slot_index))
+                shared_slot = slot_lookup.get((matching_plan.id, None, day, slot_index))
+            slot = personal_slot or shared_slot
+            is_personal_override = personal_slot is not None
+
+            base_planning_slot = _base_planning_slot_for_day(
+                base_blocks_by_athlete, athlete.id, day, slot_index
+            )
+            base_blocks_fallback = False
+            if base_planning_slot and not is_personal_override:
+                if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                    slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                elif (
+                    base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
+                    and base_planning_slot.trainer_plan_id
+                ):
+                    slot = (
+                        trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, athlete.id, day, slot_index))
+                        or trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, None, day, slot_index))
+                    )
+                elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_REST:
+                    slot = None
+                    base_blocks_fallback = True
 
             if flex_plan:
                 flex_override = slot_lookup.get((flex_plan.id, athlete.id, day, slot_index))
-                flex_blocks_fallback = False
                 if flex_override is not None:
-                    flex_blocks_fallback = _slot_is_visually_empty(flex_override)
-                    slot = None if flex_blocks_fallback else flex_override
-            else:
-                flex_blocks_fallback = False
+                    base_blocks_fallback = _slot_is_visually_empty(flex_override)
+                    slot = None if base_blocks_fallback else flex_override
 
-            if not slot and not flex_blocks_fallback:
-                base_planning_slot = _base_planning_slot_for_day(
-                    base_blocks_by_athlete, athlete.id, day, slot_index
-                )
-                if base_planning_slot:
-                    if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
-                        slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
-                    elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
-                        slot = (
-                            trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, athlete.id, day, slot_index))
-                            or trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, None, day, slot_index))
-                        )
+            if not slot and not base_blocks_fallback and base_planning_slot:
+                if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                    slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
+                elif (
+                    base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
+                    and base_planning_slot.trainer_plan_id
+                ):
+                    slot = (
+                        trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, athlete.id, day, slot_index))
+                        or trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, None, day, slot_index))
+                    )
 
             target_week = week_start if day < week_start + timedelta(days=7) else week_start + timedelta(days=7)
             for load in _ayc_slot_loads_for_totals(slot, athlete, pause_mode):

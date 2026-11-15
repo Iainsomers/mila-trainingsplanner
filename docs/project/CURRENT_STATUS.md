@@ -5,6 +5,7 @@
 - Stats gebruikte bij een via Base Planning toegewezen trainerplan altijd de gedeelde slot, terwijl Individual Plans een aanwezige atleetspecifieke override toonde. Daardoor kon dezelfde week bijvoorbeeld 60,5 km in Stats en 34,3 km in Individual Plans tonen, met ook afwijkende zoneverdeling.
 - Stats kiest nu eerst de persoonlijke slot en valt alleen zonder die override terug op de gedeelde slot. Een regressie met 34,3 km lopen plus `2×30 min bike Z1` houdt de grafiek op 34,3 km en neemt de Alternative niet als hardloopkilometers mee.
 - Aanvullende productiecontrole liet zien dat gedeelde coachtoegang nog een tweede bronverschil gaf: Stats zocht het Flex-plan bij de eigenaar van de atleet, terwijl Individual Plans het Flex-plan van de actief gekozen coach gebruikt. Stats ontvangt nu expliciet die actieve coach; een regressie met verschillende atleet-/coach-eigenaren kiest 34,3 km uit het actieve Flex-plan in plaats van 60,5 km uit het onderliggende plan.
+- De productiepagina bleef daarna afwijkend doordat Stats individuele Base Planning alleen als terugval gebruikte wanneer een gewone planslot ontbrak. Individual Plans laat Base Planning juist een gedeelde planslot per dagdeel vervangen. De volledige bronvolgorde is nu gelijkgetrokken en daarnaast is daggebonden persoonlijke voorrang bij overlappende plannen getest. Een gedeelde 60,5-km-slot met Base Planning van 34,3 km plus fiets-ALT levert daardoor 34,3 km.
 
 ## 15 november 2026 - Garmin E kiest tijd bij gelijke hele-minuutreps
 

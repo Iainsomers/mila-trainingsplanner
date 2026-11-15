@@ -11515,6 +11515,84 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_stats_base_training_replaces_shared_plan_slot_per_daypart(self):
+        trainer = get_user_model().objects.create_user(username="statsbasepriority", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Base priority", birth_year=2000, gender="X")
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Shared high volume",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        shared = TrainingSlot.objects.create(plan=plan, date=week_start, slot_index=1)
+        shared.segments.create(type="CORE", text="60500m z3", zone="3", norm_distance_m=60500)
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Year",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=week_start.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINING,
+            training_text="CORE=34300m z2\nALT=2x30 min bike z1",
+        )
+
+        zones = {}
+        totals = _effective_week_distance_m(
+            athlete,
+            [plan],
+            week_start,
+            zone_totals=zones,
+        )
+
+        self.assertEqual(totals[week_start], 34300)
+        self.assertEqual(zones[week_start], {"2": 34300})
+
+    def test_stats_prioritizes_day_specific_override_across_overlapping_plans(self):
+        trainer = get_user_model().objects.create_user(username="statsoverlap", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Overlap athlete", birth_year=2000, gender="X")
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        first_plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="A shared plan",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        second_plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="B personal plan",
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=first_plan, athlete=athlete)
+        PlanMembership.objects.create(plan=second_plan, athlete=athlete)
+        shared = TrainingSlot.objects.create(plan=first_plan, date=week_start, slot_index=1)
+        shared.segments.create(type="CORE", text="60500m z3", zone="3", norm_distance_m=60500)
+        personal = TrainingSlot.objects.create(
+            plan=second_plan, athlete=athlete, date=week_start, slot_index=1,
+        )
+        personal.segments.create(type="CORE", text="34300m z2", zone="2", norm_distance_m=34300)
+        personal.segments.create(type="ALT", text="2x30 min bike z1", zone="1", duration_s=3600)
+
+        zones = {}
+        totals = _effective_week_distance_m(
+            athlete,
+            [first_plan, second_plan],
+            week_start,
+            zone_totals=zones,
+        )
+
+        self.assertEqual(totals[week_start], 34300)
+        self.assertEqual(zones[week_start], {"2": 34300})
+
     def test_stats_uses_flex_plan_of_active_coach_for_shared_athlete(self):
         athlete_owner = get_user_model().objects.create_user(username="statsathleteowner", is_staff=True)
         active_coach = get_user_model().objects.create_user(username="statsactivecoach", is_staff=True)
