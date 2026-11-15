@@ -11769,7 +11769,7 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, "All personal slots in the last two weeks")
         self.assertContains(response, "Assigned trainer plan (#")
 
-    def test_chart_stacks_measured_zones_bottom_up_and_excludes_walking(self):
+    def test_chart_exposes_selectable_measured_zone_series_and_excludes_walking(self):
         trainer = get_user_model().objects.create_user(username="zonestats", is_staff=True)
         athlete = Athlete.objects.create(owner=trainer, name="Zones", birth_year=2000, gender="X")
         day = date.today() - timedelta(days=date.today().weekday())
@@ -11787,12 +11787,14 @@ class TrainerStatsTests(TestCase):
         week = response.context["weeks"][-1]
         self.assertEqual(week["zone_km"], {"1":2, "2":3, "5":.5})
         self.assertEqual(week["km"], 5.5)
-        self.assertEqual([stack["label"] for stack in week["stacks"]], ["Z1", "Z2", "Z5"])
-        self.assertGreater(week["stacks"][0]["y"], week["stacks"][1]["y"])
-        self.assertAlmostEqual(sum(stack["height"] for stack in week["stacks"]), week["height"])
-        self.assertEqual([stack["color"] for stack in week["stacks"]], ["#f8f8f0", "#f7c6d0", "#b7d7ff"])
-        self.assertContains(response, 'aria-label="Zone colours"')
-        self.assertContains(response, 'Total: 5.5 km')
+        series = {item["id"]:item for item in response.context["km_series"]}
+        self.assertEqual(series["total-km"]["points"][-1]["value"], "5.50")
+        self.assertEqual(series["z1"]["points"][-1]["value"], "2.00")
+        self.assertEqual(series["z2"]["points"][-1]["value"], "3.00")
+        self.assertEqual(series["z5"]["points"][-1]["value"], "0.50")
+        self.assertContains(response, 'aria-label="Chart series"')
+        self.assertContains(response, 'data-stats-toggle="total-km" checked')
+        self.assertContains(response, 'data-stats-toggle="z1"')
 
     def test_athlete_name_links_to_six_month_weekly_distance_chart(self):
         trainer = get_user_model().objects.create_user(username="chartcoach", password="secret", is_staff=True)
@@ -11819,11 +11821,47 @@ class TrainerStatsTests(TestCase):
 
         self.assertContains(overview, f'/planning/stats/athlete/{athlete.id}/')
         self.assertEqual(detail.status_code, 200)
-        self.assertContains(detail, "Total km per week")
-        self.assertContains(detail, "The current week may still be incomplete.")
+        self.assertContains(detail, "Weekly totals and ACWR")
+        self.assertContains(detail, "ACWR is the current week divided by the average of the four preceding weeks")
         self.assertEqual(len(detail.context["weeks"]), 26)
         self.assertEqual(detail.context["weeks"][0]["km_label"], "5.0")
         self.assertEqual(detail.context["weeks"][-1]["km_label"], "12.0")
+
+    def test_acwr_uses_current_week_over_previous_four_week_average(self):
+        trainer = get_user_model().objects.create_user(username="acwrcoach", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="ACWR Athlete", birth_year=2000, gender="X")
+        current_week = date.today() - timedelta(days=date.today().weekday())
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="ACWR plan",
+            start_date=current_week - timedelta(weeks=4),
+            end_date=current_week + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        aerobic_values = [8000, 16000, 24000, 32000, 40000]
+        anaerobic_values = [2000, 4000, 6000, 8000, 10000]
+        for offset, (aerobic_m, anaerobic_m) in enumerate(zip(aerobic_values, anaerobic_values), start=-4):
+            slot = TrainingSlot.objects.create(
+                plan=plan,
+                date=current_week + timedelta(weeks=offset),
+                slot_index=1,
+            )
+            slot.segments.create(type="CORE", text=f"{aerobic_m}m z2", zone="2", norm_distance_m=aerobic_m)
+            slot.segments.create(type="CORE", text=f"{anaerobic_m}m z5", zone="5", norm_distance_m=anaerobic_m)
+        self.client.force_login(trainer)
+
+        response = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=2")
+        current = response.context["weeks"][-1]
+
+        self.assertEqual(current["aerobic_km"], 40)
+        self.assertEqual(current["anaerobic_km"], 10)
+        self.assertEqual(current["acwr_total"], 2)
+        self.assertEqual(current["acwr_aerobic"], 2)
+        self.assertEqual(current["acwr_anaerobic"], 2)
+        self.assertContains(response, 'data-stats-toggle="acwr-total" checked')
+        self.assertContains(response, 'data-stats-toggle="acwr-aerobic"')
+        self.assertContains(response, 'data-stats-toggle="acwr-anaerobic"')
+        self.assertContains(response, "current week is excluded from that average")
 
     def test_athlete_chart_period_selector_updates_weeks_and_summary(self):
         trainer = get_user_model().objects.create_user(username="periodcoach", password="secret", is_staff=True)

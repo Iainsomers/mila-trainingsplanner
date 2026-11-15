@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- De individuele Stats-grafiek gebruikt compacte vinkjes onder de grafiek voor Total km, Z1–Z6 en de drie ACWR-reeksen. Km-reeksen zijn doorgetrokken lijnen op de linkeras; ACWR-reeksen zijn gestreepte lijnen op de rechteras. Total km en ACWR total zijn de standaardselectie. De bediening mag op mobiel omlopen en de grafiek behoudt horizontaal scrollen.
+
 ## Year Planner voor atleten
 
 Bij ingeschakelde Whereabouts-toegang toont de eigen Year Planner de whereabouts-editor. `Camp` staat niet in de keuzelijst voor atleten en bestaande Camp-ranges hebben geen sleep- of resizehandvatten; hun tooltip verwijst naar Camps. Periodisering blijft visueel alleen-lezen. De bestaande Camps-knop boven de planner is de enige ingang voor het wijzigen van kampgegevens.

@@ -7,9 +7,13 @@
   .weekly-distance-chart { min-width: 680px; }
   .weekly-distance-chart .grid-line { stroke: #dee2e6; stroke-width: 1; }
   .weekly-distance-chart .axis-label { fill: #6c757d; font-size: 12px; }
-  .weekly-distance-chart .week-bar { stroke: #adb5bd; stroke-width: .5; }
-  .weekly-distance-chart .week-bar:hover { filter: brightness(.92); }
+  .weekly-distance-chart .stats-series-line { fill: none; stroke-width: 2.2; vector-effect: non-scaling-stroke; }
+  .weekly-distance-chart .stats-series-point { stroke: #fff; stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .weekly-distance-chart .stats-acwr-line { stroke-dasharray: 6 4; }
+  .weekly-distance-chart .stats-acwr-reference { stroke: #adb5bd; stroke-width: 1; stroke-dasharray: 3 4; }
   .zone-key { display: inline-block; width: 12px; height: 12px; border: 1px solid #adb5bd; border-radius: 2px; }
+  .stats-series-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  .stats-series-controls label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .stats-period-select { width: 125px; }
   .stats-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .stats-summary-value { font-size: 1.35rem; font-weight: 600; }
@@ -32,7 +36,7 @@
   <div class="card">
     <div class="card-body">
       <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
-        <h2 class="h5 mb-0">Total km per week</h2>
+        <h2 class="h5 mb-0">Weekly totals and ACWR</h2>
         <div class="d-flex align-items-center gap-2">
           <label for="statsPeriod" class="form-label mb-0">Period</label>
           <a href="{{ previous_period_url }}" class="btn btn-sm btn-outline-secondary" aria-label="Previous period" title="Previous period">←</a>
@@ -57,22 +61,41 @@
             <text class="axis-label" x="{{ plot_left|add:'-10' }}" y="{{ tick.y|add:'4' }}" text-anchor="end">{{ tick.value }}</text>
           {% endfor %}
           <text class="axis-label" x="12" y="18">km</text>
+          {% for tick in acwr_ticks %}
+            <text class="axis-label" x="{{ plot_right_x|add:'10' }}" y="{{ tick.y|add:'4' }}" text-anchor="start">{{ tick.value }}</text>
+          {% endfor %}
+          <text class="axis-label" x="{{ plot_right_x|add:'10' }}" y="18">ACWR</text>
+          <line class="stats-acwr-reference" x1="{{ plot_left }}" y1="{{ acwr_one_y }}" x2="{{ plot_right_x }}" y2="{{ acwr_one_y }}"><title>ACWR 1.0</title></line>
           {% for week in weeks %}
-            {% for stack in week.stacks %}
-              <rect class="week-bar" x="{{ week.x }}" y="{{ stack.y }}" width="{{ week.width }}" height="{{ stack.height }}" fill="{{ stack.color }}">
-                <title>Week from {{ week.week_start|date:"d M Y" }} · {{ stack.label }}: {{ stack.km_label }} km · Total: {{ week.km_label }} km</title>
-              </rect>
-            {% endfor %}
             {% if week.show_label %}
               <text class="axis-label" x="{{ week.label_x }}" y="{{ plot_bottom_y|add:'22' }}" text-anchor="middle">{{ week.week_start|date:"d M" }}</text>
             {% endif %}
           {% endfor %}
+          {% for series in km_series %}
+            <g data-stats-series="{{ series.id }}"{% if not series.checked %} style="display:none"{% endif %}>
+              {% for path in series.paths %}<polyline class="stats-series-line" points="{{ path }}" stroke="{{ series.color }}"></polyline>{% endfor %}
+              {% for point in series.points %}<circle class="stats-series-point" cx="{{ point.x }}" cy="{{ point.y }}" r="3" fill="{{ series.color }}"><title>{{ point.week_start|date:"d M Y" }} · {{ series.label }}: {{ point.value }} km</title></circle>{% endfor %}
+            </g>
+          {% endfor %}
+          {% for series in acwr_series %}
+            <g data-stats-series="{{ series.id }}"{% if not series.checked %} style="display:none"{% endif %}>
+              {% for path in series.paths %}<polyline class="stats-series-line stats-acwr-line" points="{{ path }}" stroke="{{ series.color }}"></polyline>{% endfor %}
+              {% for point in series.points %}<circle class="stats-series-point" cx="{{ point.x }}" cy="{{ point.y }}" r="3" fill="{{ series.color }}"><title>{{ point.week_start|date:"d M Y" }} · {{ series.label }}: {{ point.value }}</title></circle>{% endfor %}
+            </g>
+          {% endfor %}
         </svg>
       </div>
-      <div class="d-flex flex-wrap gap-3 small mt-2" aria-label="Zone colours">
-        {% for zone in zone_legend %}<span class="d-inline-flex align-items-center gap-1"><span class="zone-key" style="background-color: {{ zone.color }};"></span>{{ zone.label }}</span>{% endfor %}
+      <div class="stats-series-controls small mt-2" aria-label="Chart series">
+        {% for series in km_series %}
+          <label><input type="checkbox" data-stats-toggle="{{ series.id }}"{% if series.checked %} checked{% endif %}><span class="zone-key" style="background-color:{{ series.color }}"></span>{{ series.label }}</label>
+        {% endfor %}
       </div>
-      <div class="small text-muted mt-2">Each bar represents a Monday–Sunday training week. The current week may still be incomplete.</div>
+      <div class="stats-series-controls small mt-2" aria-label="ACWR series">
+        {% for series in acwr_series %}
+          <label><input type="checkbox" data-stats-toggle="{{ series.id }}"{% if series.checked %} checked{% endif %}><span class="zone-key" style="background-color:{{ series.color }}"></span>{{ series.label }}</label>
+        {% endfor %}
+      </div>
+      <div class="small text-muted mt-2">Each point represents a Monday–Sunday training week. ACWR is the current week divided by the average of the four preceding weeks; the current week is excluded from that average.</div>
       <div class="stats-summary mt-4">
         <div class="border rounded p-3">
           <div class="small text-muted">Weekly average</div>
@@ -134,4 +157,13 @@
     </div>
   </div>
 </div>
+<script>
+  document.querySelectorAll("[data-stats-toggle]").forEach(function(toggle) {
+    toggle.addEventListener("change", function() {
+      document.querySelectorAll('[data-stats-series="' + toggle.dataset.statsToggle + '"]').forEach(function(series) {
+        series.style.display = toggle.checked ? "" : "none";
+      });
+    });
+  });
+</script>
 {% endblock %}

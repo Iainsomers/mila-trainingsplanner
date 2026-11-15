@@ -1,5 +1,10 @@
 # Actuele status
 
+## 15 november 2026 - Selecteerbare weektotalen en ACWR in Stats
+
+- De individuele Stats-grafiek toont nu selecteerbare lijnen voor Total km en iedere afzonderlijke loopzone. Total km staat standaard aan; Z1–Z6 kunnen onafhankelijk worden toegevoegd of verborgen.
+- De rechteras toont optioneel ACWR total, aerobic Z1–Z3 en anaerobic Z4–Z6. Iedere ratio deelt de huidige week door het gemiddelde van exact de vier voorgaande kalenderweken; vier verborgen aanloopweken ondersteunen het begin van de gekozen periode. Een nulnoemer levert geen punt. Regressie met 10/20/30/40 km gevolgd door 50 km geeft 2,00 voor total, aerobic en anaerobic.
+
 ## 15 november 2026 - Stats volgt persoonlijke trainerplan-override
 
 - Stats gebruikte bij een via Base Planning toegewezen trainerplan altijd de gedeelde slot, terwijl Individual Plans een aanwezige atleetspecifieke override toonde. Daardoor kon dezelfde week bijvoorbeeld 60,5 km in Stats en 34,3 km in Individual Plans tonen, met ook afwijkende zoneverdeling.

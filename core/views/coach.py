@@ -12809,15 +12809,30 @@ def trainer_athlete_stats_view(request, athlete_id):
     current_week_start = date.today() - timedelta(days=date.today().weekday())
     period_last_week_start = current_week_start - timedelta(weeks=week_count * period_index)
     stats_diagnostics = [] if request.GET.get("debug") == "1" else None
-    weeks = _athlete_week_distance_history(
+    history_weeks = _athlete_week_distance_history(
         athlete,
         plans,
         period_last_week_start,
-        week_count=week_count,
+        week_count=week_count + 4,
         pause_mode=getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
         flex_owner_id=_active_coach_user(request).id,
         diagnostics=stats_diagnostics,
     )
+    weeks = history_weeks[4:]
+    for index, week in enumerate(history_weeks):
+        week["aerobic_km"] = sum(week["zone_km"].get(str(zone), 0.0) for zone in range(1, 4))
+        week["anaerobic_km"] = sum(week["zone_km"].get(str(zone), 0.0) for zone in range(4, 7))
+        for key, source_key in (
+            ("acwr_total", "km"),
+            ("acwr_aerobic", "aerobic_km"),
+            ("acwr_anaerobic", "anaerobic_km"),
+        ):
+            previous = history_weeks[max(0, index - 4):index]
+            if len(previous) < 4:
+                week[key] = None
+                continue
+            chronic_average = sum(item[source_key] for item in previous) / 4.0
+            week[key] = week[source_key] / chronic_average if chronic_average > 0 else None
     stats_personal_slot_inventory = None
     if stats_diagnostics is not None:
         inventory_start = current_week_start - timedelta(days=7)
@@ -12872,41 +12887,79 @@ def trainer_athlete_stats_view(request, athlete_id):
     average_km = sum(week["km"] for week in weeks) / len(weeks)
     axis_max_km = max(10.0, math.ceil(maximum_km / 10.0) * 10.0)
     column_width = plot_width / len(weeks)
-    bar_width = column_width * 0.68
-
-    zone_legend = [
-        {"key": str(zone), "label": f"Z{zone}", "color": color}
-        for zone, color in enumerate(("#f8f8f0", "#f7c6d0", "#f06f5f", "#bfe7bf", "#b7d7ff", "#f2c200"), 1)
-    ]
-    if any(week["zone_km"].get("other", 0) for week in weeks):
-        zone_legend.append({"key": "other", "label": "Other", "color": "#adb5bd"})
     for index, week in enumerate(weeks):
-        cumulative_km = 0.0
-        week["stacks"] = []
-        for zone in zone_legend:
-            km = week["zone_km"].get(zone["key"], 0.0)
-            cumulative_km += km
-            if km > 0:
-                week["stacks"].append({**zone, "km_label": f"{km:.1f}",
-                    "y": plot_top + plot_height - cumulative_km / axis_max_km * plot_height,
-                    "height": km / axis_max_km * plot_height})
-        bar_height = (week["km"] / axis_max_km) * plot_height
         week.update({
             "km_label": f'{week["km"]:.1f}',
-            "x": plot_left + (index * column_width) + ((column_width - bar_width) / 2),
-            "y": plot_top + plot_height - bar_height,
-            "width": bar_width,
-            "height": bar_height,
             "show_label": index % 4 == 0 or index == len(weeks) - 1,
             "label_x": plot_left + (index * column_width) + (column_width / 2),
         })
 
+    acwr_values = [
+        week[key]
+        for week in weeks
+        for key in ("acwr_total", "acwr_aerobic", "acwr_anaerobic")
+        if week[key] is not None
+    ]
+    axis_max_acwr = max(2.0, math.ceil(max(acwr_values, default=2.0) * 2.0) / 2.0)
+
+    def chart_paths(value_key, axis_maximum):
+        paths, points, active = [], [], []
+        for week in weeks:
+            value = week.get(value_key)
+            if value is None:
+                if active:
+                    paths.append(" ".join(active))
+                    active = []
+                continue
+            x = week["label_x"]
+            y = plot_top + plot_height - (float(value) / axis_maximum * plot_height)
+            coordinate = f"{x:.2f},{y:.2f}"
+            active.append(coordinate)
+            points.append({"x": x, "y": y, "value": f"{float(value):.2f}", "week_start": week["week_start"]})
+        if active:
+            paths.append(" ".join(active))
+        return paths, points
+
+    km_series = []
+    km_definitions = [("total-km", "Total km", "#172b6b", "km", True)] + [
+        (f"z{zone}", f"Z{zone}", color, f"zone_{zone}", False)
+        for zone, color in enumerate(("#77776f", "#e49aaa", "#df4938", "#63ad63", "#5796d2", "#d7aa00"), 1)
+    ]
+    for series_id, label, color, value_key, checked in km_definitions:
+        if value_key.startswith("zone_"):
+            zone = value_key.split("_", 1)[1]
+            for week in weeks:
+                week[value_key] = week["zone_km"].get(zone, 0.0)
+        paths, points = chart_paths(value_key, axis_max_km)
+        km_series.append({
+            "id": series_id, "label": label, "color": color, "checked": checked,
+            "paths": paths, "points": points,
+        })
+
+    acwr_series = []
+    for series_id, label, color, value_key, checked in (
+        ("acwr-total", "ACWR total", "#111111", "acwr_total", True),
+        ("acwr-aerobic", "ACWR aerobic Z1–Z3", "#198754", "acwr_aerobic", False),
+        ("acwr-anaerobic", "ACWR anaerobic Z4–Z6", "#dc3545", "acwr_anaerobic", False),
+    ):
+        paths, points = chart_paths(value_key, axis_max_acwr)
+        acwr_series.append({
+            "id": series_id, "label": label, "color": color, "checked": checked,
+            "paths": paths, "points": points,
+        })
+
     y_ticks = []
+    acwr_ticks = []
     for index in range(5):
         value = axis_max_km * index / 4
         y_ticks.append({
             "value": f"{value:.0f}",
             "y": plot_top + plot_height - ((value / axis_max_km) * plot_height),
+        })
+        acwr_value = axis_max_acwr * index / 4
+        acwr_ticks.append({
+            "value": f"{acwr_value:.2f}".rstrip("0").rstrip("."),
+            "y": plot_top + plot_height - ((acwr_value / axis_max_acwr) * plot_height),
         })
 
     return render(request, "core/trainer_athlete_stats.html", {
@@ -12924,13 +12977,16 @@ def trainer_athlete_stats_view(request, athlete_id):
             if period_index > 0 else ""
         ),
         "y_ticks": y_ticks,
-        "zone_legend": zone_legend,
+        "acwr_ticks": acwr_ticks,
+        "km_series": km_series,
+        "acwr_series": acwr_series,
         "chart_width": chart_width,
         "chart_height": chart_height,
         "plot_left": plot_left,
         "plot_right_x": chart_width - plot_right,
         "plot_top": plot_top,
         "plot_bottom_y": plot_top + plot_height,
+        "acwr_one_y": plot_top + plot_height - (1.0 / axis_max_acwr * plot_height),
         "period_start": weeks[0]["week_start"],
         "period_end": weeks[-1]["week_start"] + timedelta(days=6),
         "average_km": f"{average_km:.1f}",
