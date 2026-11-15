@@ -11936,7 +11936,11 @@ class TrainerStatsTests(TestCase):
             [f"{value / 10:.1f}" for value in range(2, 23, 2)],
         )
         acwr_total = next(item for item in response.context["acwr_series"] if item["id"] == "acwr-total")
+        acwr_aerobic = next(item for item in response.context["acwr_series"] if item["id"] == "acwr-aerobic")
+        acwr_anaerobic = next(item for item in response.context["acwr_series"] if item["id"] == "acwr-anaerobic")
         self.assertEqual(acwr_total["points"][-1]["value"], "2.00")
+        self.assertEqual(acwr_aerobic["color"], "#dc3545")
+        self.assertEqual(acwr_anaerobic["color"], "#198754")
         self.assertContains(response, "The ACWR axis runs from 0.2 to 2.2")
         self.assertNotContains(response, 'class="grid-line"')
         self.assertContains(response, "ACWR 0.8")

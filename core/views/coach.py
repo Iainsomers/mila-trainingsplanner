@@ -12946,8 +12946,8 @@ def trainer_athlete_stats_view(request, athlete_id):
     acwr_series = []
     for series_id, label, color, value_key, checked in (
         ("acwr-total", "ACWR total", "#111111", "acwr_total", True),
-        ("acwr-aerobic", "ACWR aerobic Z1–Z3", "#198754", "acwr_aerobic", False),
-        ("acwr-anaerobic", "ACWR anaerobic Z4–Z6", "#dc3545", "acwr_anaerobic", False),
+        ("acwr-aerobic", "ACWR aerobic Z1–Z3", "#dc3545", "acwr_aerobic", False),
+        ("acwr-anaerobic", "ACWR anaerobic Z4–Z6", "#198754", "acwr_anaerobic", False),
     ):
         paths, points = chart_paths(value_key, axis_max_acwr, axis_min_acwr)
         acwr_series.append({
