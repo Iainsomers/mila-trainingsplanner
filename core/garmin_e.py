@@ -25,6 +25,9 @@ Varying pace/zones do not break repeated distance patterns. Recognize mixed sets
 9*(200m-100m) or 2*(1700m-1200m-850m). Slow laps between efforts are recovery even when their
 distance resembles work. A final complete rep needs no subsequent recovery. Adjacent autolaps
 without recovery can form a larger rep. Z2 warmup is suspicious: discuss whether it is Main.
+Prefer time targets when at least three consecutive work laps are all tightly clustered around
+the same whole-minute duration while their measured distances vary. For example, eight laps of
+exactly 3:00 measuring roughly 750-800m are 8x3 minutes, not alternating 750m/800m reps.
 Ordinary kilometre autolaps in a continuous easy run are one continuous rep, not intervals.
 Preserve unrelated parts when a user corrects only one block. Recount from original laps.
 If the user accidentally ran one rep longer, discuss it; actual times always remain measured.
@@ -222,6 +225,57 @@ def complete_partial_running_proposal(part, proposal):
         reps=reps,
     )
     return completed
+
+
+def prefer_measured_time_groups(part, proposal):
+    """Canonicalize clear whole-minute work groups to time targets."""
+    if not isinstance(proposal, dict) or not isinstance(proposal.get("reps"), list):
+        return proposal, False
+    if (part.get("training_fields") or {}).get("alt"):
+        return proposal, False
+    facts = lap_facts(part)
+    reps = deepcopy(proposal["reps"])
+    changed = False
+    index = 0
+    while index < len(reps):
+        if not isinstance(reps[index], dict) or reps[index].get("target_meters") is None:
+            index += 1
+            continue
+        run = []
+        cursor = index
+        while cursor < len(reps):
+            rep = reps[cursor]
+            if not isinstance(rep, dict):
+                break
+            lap_ids = rep.get("laps")
+            if rep.get("target_meters") is None or not isinstance(lap_ids, list) or not lap_ids:
+                break
+            try:
+                seconds = sum(float(facts[lap_id - 1]["duration_s"]) for lap_id in lap_ids)
+                meters = sum(float(facts[lap_id - 1]["distance_m"]) for lap_id in lap_ids)
+            except (IndexError, TypeError, ValueError):
+                break
+            minute_target = round(seconds / 60) * 60
+            if minute_target < 60 or abs(seconds - minute_target) > max(2, minute_target * .02):
+                break
+            if run and minute_target != run[0][2]:
+                break
+            run.append((cursor, meters, minute_target))
+            cursor += 1
+        if len(run) >= 3:
+            measured = [item[1] for item in run]
+            median_meters = median(measured)
+            if max(measured) - min(measured) >= max(30, median_meters * .04):
+                for rep_index, _meters, target_seconds in run:
+                    reps[rep_index].pop("target_meters", None)
+                    reps[rep_index]["target_seconds"] = target_seconds
+                changed = True
+        index = max(cursor, index + 1)
+    if not changed:
+        return proposal, False
+    result = deepcopy(proposal)
+    result["reps"] = reps
+    return result, True
 
 
 def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirmed_overrun=False):

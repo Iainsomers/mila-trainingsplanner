@@ -1,5 +1,10 @@
 # Actuele status
 
+## 15 november 2026 - Garmin E kiest tijd bij gelijke hele-minuutreps
+
+- In een opname met acht werkreps van exact 3:00 en wisselende afstanden van circa 750-800 m koos E aanvankelijk afstandsreps; pas na de aanwijzing `8×3'` werd de bedoelde tijdstructuur herkend.
+- E corrigeert zo'n modelvoorstel nu lokaal vóór de gewone meetvalidatie naar tijdreps. De exacte regressie levert `8×3' Z2 p75`; laptoewijzing en alle gemeten waarden blijven intact.
+
 ## 15 november 2026 - Athlete Diary-weekrand niet meer afgesneden
 
 - De op 10 november toegevoegde vaste desktophoogte van het kalenderpaneel kapte een volgende weekrij aan de onderrand af en liet daaronder ongebruikte paginaruimte staan. De eigen verticale tabelscroll is verwijderd; de kalender groeit weer natuurlijk mee met volledige weekrijen.

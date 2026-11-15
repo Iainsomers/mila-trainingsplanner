@@ -13,7 +13,13 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from core.models import Athlete, GarminEConversation
-from core.garmin_e import ask_model, checked_proposal, complete_partial_running_proposal, lap_facts
+from core.garmin_e import (
+    ask_model,
+    checked_proposal,
+    complete_partial_running_proposal,
+    lap_facts,
+    prefer_measured_time_groups,
+)
 from core.views.garmin import ai_allowed, fit_ai_allowed
 
 
@@ -268,6 +274,7 @@ def garmin_type_e_ayc_view(request):
                     proposal = state["pending"]["proposal"]
                     basis = state["pending"]["basis"]
                 error, candidate = None, None
+                time_group_adjusted = False
                 if basis not in {"auto","pace","hr"}:
                     raise ValueError("Garmin E returned an invalid zone basis.")
                 if proposal is None and basis != state["basis"]:
@@ -290,6 +297,7 @@ def garmin_type_e_ayc_view(request):
                     try:
                         if wants_update:
                             proposal = complete_partial_running_proposal(part, proposal)
+                        proposal, time_group_adjusted = prefer_measured_time_groups(part, proposal)
                         if compact_requested and proposal.get("format")!="compact":
                             raise ValueError("De gevraagde compacte notatie ontbreekt nog in de laptoewijzing.")
                         candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
@@ -306,6 +314,7 @@ def garmin_type_e_ayc_view(request):
                                 try:
                                     if wants_update:
                                         proposal = complete_partial_running_proposal(part, proposal)
+                                    proposal, time_group_adjusted = prefer_measured_time_groups(part, proposal)
                                     if compact_requested and proposal.get("format")!="compact":
                                         raise ValueError("De gevraagde compacte notatie ontbreekt nog in de laptoewijzing.")
                                     candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
@@ -314,6 +323,8 @@ def garmin_type_e_ayc_view(request):
                                 except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
                                     error = str(exc)
                 reply = answer["reply"]
+                if candidate and time_group_adjusted:
+                    reply += "\n\nDe werkblokken hebben vrijwel exact dezelfde hele-minuutduur; daarom toont het gecontroleerde voorstel deze groep als tijdreps."
                 if error:
                     reply += "\n\nDit voorstel kan ik nog niet toepassen op de metingen: "+error
                 if candidate and answer.get("confirmation_required") is True and not confirmed:

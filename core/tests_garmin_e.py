@@ -10,7 +10,13 @@ from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
-from core.garmin_e import checked_proposal, ask_model, complete_partial_running_proposal, lap_facts
+from core.garmin_e import (
+    ask_model,
+    checked_proposal,
+    complete_partial_running_proposal,
+    lap_facts,
+    prefer_measured_time_groups,
+)
 from core.models import Athlete, GarminActivitySummary
 from core.views.garmin import CONSENT_VERSION
 from core.watch_processing import processed_main_reps
@@ -29,6 +35,28 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+
+    def test_equal_three_minute_reps_override_variable_distance_targets(self):
+        work_distances = [746.9, 767.8, 775.67, 783.19, 763.08, 753.62, 765.641, 786.32]
+        loads = [{"meters":1783.44, "seconds":572, "zone":"1", "segment":"WU"}]
+        reps = []
+        for position, meters in enumerate(work_distances):
+            lap_id = len(loads) + 1
+            loads.append({"meters":meters, "seconds":180, "zone":"2", "segment":"CORE"})
+            reps.append({"laps":[lap_id], "target_meters":750 if position % 2 == 0 else 800})
+            if position < len(work_distances) - 1:
+                loads.append({"meters":195, "seconds":75, "zone":"1", "segment":"CORE"})
+        part = {"training_fields":{"wu":"1800 m Z1", "main":"Measured", "cd":""}, "watch_loads":loads}
+        proposal = {"warmup_laps":[1], "recovery_laps":list(range(3, 17, 2)), "reps":reps}
+
+        adjusted, changed = prefer_measured_time_groups(part, proposal)
+        checked = checked_proposal(part, adjusted, zone_basis="pace")
+
+        self.assertTrue(changed)
+        self.assertTrue(all(rep.get("target_seconds") == 180 for rep in adjusted["reps"]))
+        self.assertTrue(all("target_meters" not in rep for rep in adjusted["reps"]))
+        self.assertIn("8×3' Z2 p75", checked["training_fields"]["main"])
+        self.assertTrue(all("target_meters" in rep for rep in proposal["reps"]))
 
     def test_explicitly_ignored_transition_laps_do_not_need_recovery_speed(self):
         measurements = [
@@ -598,6 +626,34 @@ class GarminEEndpointTests(TestCase):
         self.assertTrue(part["e_usable"], part)
         self.assertEqual(part["watch_loads"][4]["segment"], "IGNORE")
         self.assertIn("bijgewerkt", part["e_update_note"])
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_endpoint_prefers_eight_three_minute_reps_over_distance_guess(self, model):
+        distances = [746.9, 767.8, 775.67, 783.19, 763.08, 753.62, 765.641, 786.32]
+        laps = [{"distance":1783.44, "elapsed_time":572}]
+        reps, recovery = [], []
+        for position, meters in enumerate(distances):
+            lap_id = len(laps) + 1
+            laps.append({"distance":meters, "elapsed_time":180})
+            reps.append({"laps":[lap_id], "target_meters":750 if position % 2 == 0 else 800})
+            if position < len(distances) - 1:
+                laps.append({"distance":195, "elapsed_time":75})
+                recovery.append(len(laps))
+        self.record.distance_m = sum(lap["distance"] for lap in laps)
+        self.record.duration_s = sum(lap["elapsed_time"] for lap in laps)
+        self.record.analysis_data = {"laps":laps}
+        self.record.save()
+        model.return_value = {
+            "reply":"Ik zie afwisselend 750 en 800 meter.", "intent":"update", "zone_basis":"pace",
+            "proposal":{"warmup_laps":[1], "recovery_laps":recovery, "reps":reps},
+        }
+
+        part = self.chat("Analyseer de training.").json()["results"][0]["parts"][0]
+
+        self.assertTrue(part["e_usable"], part)
+        self.assertIn("8×3'", part["training_fields"]["main"])
+        self.assertNotIn("750 m", part["training_fields"]["main"])
+        self.assertIn("daarom toont", part["chat_reply"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_question_does_not_produce_usable_training(self, model):
