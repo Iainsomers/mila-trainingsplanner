@@ -31,7 +31,7 @@ If the user accidentally ran one rep longer, discuss it; actual times always rem
 For an explanation/question return proposal:null. Do not say a training was saved or accepted.
 Return JSON: {"reply":"natural helpful answer", "intent":"discuss" or "update",
 "zone_basis":"auto" or "pace" or "hr", "proposal":null or
-{"warmup_laps":[1], "cooldown_laps":[], "recovery_laps":[3],
+{"warmup_laps":[1], "cooldown_laps":[], "recovery_laps":[3], "ignored_laps":[],
 "reps":[{"laps":[2],"target_meters":200},{"laps":[4],"target_meters":100}]}}.
 For equal-distance sets (2x8x500m), add proposal.set_start_laps with the first work-lap
 number of each set, including the first set. Sets must have equal sizes and measurably longer
@@ -78,6 +78,10 @@ all untouched laps. Never answer 'this is your AM proposal' with proposal:null.
 For explanation-only answers use intent:discuss and proposal:null.
 If the requested change cannot be supported, explain the specific mismatch; do not pretend
 that the preview changed. Current checked fields remain authoritative until validation.
+When the user explicitly asks to ignore measured transition/noise laps, put them in ignored_laps.
+Ignored laps remain visible as source measurements but do not belong to WU, Main, recovery or CD
+and do not count toward saved training totals. Never use ignored_laps merely to bypass a mismatch
+in a requested work rep; only use it for laps the user explicitly excludes from the training.
 Do not ask for another confirmation when the user has already agreed, except for the bounded
 longer-time exception. Alternative defaults to chronological measured blocks. To change the
 actual usable notation, supply format:compact with presentation and a complete assignment.
@@ -158,17 +162,21 @@ def complete_partial_running_proposal(part, proposal):
     warmup = clean_ids("warmup_laps")
     cooldown = clean_ids("cooldown_laps")
     supplied_recovery = clean_ids("recovery_laps")
-    if warmup is None or cooldown is None or supplied_recovery is None:
+    ignored = clean_ids("ignored_laps")
+    if warmup is None or cooldown is None or supplied_recovery is None or ignored is None:
         return proposal
     if not warmup_supplied:
         warmup = [index for index, load in enumerate(loads, 1) if load.get("segment") == "WU"]
     if not cooldown_supplied:
         cooldown = [index for index, load in enumerate(loads, 1) if load.get("segment") == "CD"]
     boundaries = set(warmup + cooldown)
+    ignored_set = set(ignored)
+    if boundaries.intersection(ignored_set):
+        return proposal
 
     groups = []
     for index, load in enumerate(loads, 1):
-        if index in boundaries:
+        if index in boundaries or index in ignored_set:
             continue
         is_measured_work = load.get("work_rep") is True
         meters, seconds = float(load.get("meters") or 0), float(load.get("seconds") or 0)
@@ -203,13 +211,14 @@ def complete_partial_running_proposal(part, proposal):
             target_meters = target_meters or max(25, round(measured / 50) * 50)
             reps.append({"laps": lap_ids, "target_meters": target_meters})
 
-    used = boundaries | {lap_id for rep in reps for lap_id in rep["laps"]}
+    used = boundaries | ignored_set | {lap_id for rep in reps for lap_id in rep["laps"]}
     recovery = sorted(set(supplied_recovery) | (set(range(1, len(loads) + 1)) - used))
     completed = deepcopy(proposal)
     completed.update(
         warmup_laps=sorted(warmup),
         cooldown_laps=sorted(cooldown),
         recovery_laps=recovery,
+        ignored_laps=sorted(ignored),
         reps=reps,
     )
     return completed
@@ -235,6 +244,7 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
     wu = ids(proposal.get("warmup_laps",[]))
     cd = ids(proposal.get("cooldown_laps",[]))
     recovery = ids(proposal.get("recovery_laps",[]))
+    ignored = ids(proposal.get("ignored_laps",[]))
     reps = proposal.get("reps")
     if not isinstance(reps,list) or not 1 <= len(reps) <= 60:
         raise ValueError("Supply the measured work repetitions.")
@@ -294,7 +304,7 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
     for i, load in enumerate(loads,1):
         for key in ("ai_rep","ai_group","ai_nominal_m","ai_target_seconds","nominal_rep_m"):
             load.pop(key,None)
-        load.update(segment="WU" if i in wu else "CD" if i in cd else "CORE",work_rep=False)
+        load.update(segment="WU" if i in wu else "CD" if i in cd else "IGNORE" if i in ignored else "CORE",work_rep=False)
     missing_hr = False
     if zone_basis not in {"auto","pace","hr"}:
         raise ValueError("Choose pace, hr or auto as zone basis.")

@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- Garmin E `ignored_laps` zijn een afzonderlijke, volledig gecontroleerde lapcategorie naast WU, werkreps, herstel en CD. Iedere genegeerde lap moet een unieke bestaande bronlap zijn. De lap blijft in `watch_loads` bewaard met segment `IGNORE`, maar wordt uitgesloten van WU/Main/CD, afgeleide werkreps en alle Watch-afstands-/tijd-/zonetotalen. Dit is geen uitweg voor een onpassende werkrep: alleen een expliciete gebruikersopdracht mag laps laten negeren.
+
 - Bij Garmin E mag een modelantwoord dat alleen `warmup_laps` en/of `cooldown_laps` corrigeert de ontbrekende werkreps aanvullen vanuit de actuele gemeten preview. Dit groepeert geen nieuw patroon: bestaande werkmarkeringen worden overgenomen en iedere overige niet-grenslap van minimaal 2,5 m/s blijft een afzonderlijke gemeten rep. Alle andere laps worden pas daarna als herstel aangeboden en de gewone volledige meetvalidator blijft beslissend.
 
 - E-Combine ontvangt uitsluitend bronopname-ID's (starttijd) en rollen, geen door de browser samengestelde meetgegevens. De server haalt de toegankelijke opnames van dezelfde atleet/dag op en controleert unieke bronnen/rollen en volgorde WU→Main→CD. Main mag niet al een afzonderlijk gekozen WU/CD bevatten. Gespreksvervolg gebruikt een ondertekende, maximaal één dag geldige combinatieverwijzing, gebonden aan gebruiker/atleet/dag. Bronconsent geldt voor elke opname, ook bij gemengde FIT-/Garmin-bronnen.

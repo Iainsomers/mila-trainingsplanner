@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Garmin E ondersteunt expliciet door de gebruiker genegeerde overgangs-/ruislaps. Ze blijven zichtbaar in Recorded laps en in de opgeslagen bronmetingen, maar verschijnen niet in WU/Main/CD en tellen niet mee in afstands-, tijd- of zonetotalen. Het model mag deze categorie alleen gebruiken wanneer de gebruiker de laps uitdrukkelijk uitsluit.
+
 - Garmin E kan een gedeeltelijke WU/CD-correctie completeren vanuit de server-eigen gemeten preview wanneer het model de bestaande werkreps niet opnieuw meestuurt. Bestaande gemeten werkmarkeringen blijven behouden; overige snelle bronlaps worden als afzonderlijke gemeten reps opgenomen en niet als herstel weggegooid. De volledige laptoewijzing doorloopt daarna dezelfde validator.
 
 ## Eigen whereabouts in Year Planner

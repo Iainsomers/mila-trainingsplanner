@@ -1,5 +1,10 @@
 # Actuele status
 
+## 15 november 2026 - Garmin E kan expliciete overgangslaps negeren
+
+- In de 31-lapscasus bleef E laps 4-16 als recovery aanbieden, ook nadat de gebruiker vroeg ze te negeren. Lap 5 is vrijwel even snel als een naburige werkrep en werd daarom terecht steeds afgewezen met `Lap 5 is not clearly slower than its neighboring work reps`.
+- Het E-schema en de validator hebben nu `ignored_laps`. Expliciet genegeerde laps blijven zichtbaar en als bronmeting bewaard, maar tellen niet mee in WU/Main/CD, werkreps of trainingstotalen. De exacte regressie accepteert laps 1-3 als 3000 m WU, negeert 4-16, gebruikt 17/19/21/23/25/27/29 als werk en 31 als CD.
+
 ## 15 november 2026 - Garmin E herstelt van servicetime-out
 
 - Lange E-gesprekken met 31 laps konden herhaald na circa twintig seconden eindigen met de algemene melding dat het bericht niet kon worden afgerond. E gebruikt nu low reasoning, een eerste limiet van 16s en bij een service-/netwerktime-out één beknopte tweede poging van maximaal 8s binnen circa 26s totaal.

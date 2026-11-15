@@ -30,6 +30,48 @@ def fixture():
 
 class GarminEValidationTests(SimpleTestCase):
 
+    def test_explicitly_ignored_transition_laps_do_not_need_recovery_speed(self):
+        measurements = [
+            (1004.47, 285), (1000.42, 291), (1001.09, 285), (5.24658, 3),
+            (52.21, 12), (76.1702, 16), (343.36, 279), (105.47, 85),
+            (69.3401, 13), (111.98, 85), (67.1499, 13), (130.28, 151),
+            (131.62, 27), (143.51, 128), (120.26, 21), (153.12, 326),
+            (1717.95, 391), (35.2598, 134), (856.49, 184), (381.05, 182),
+            (1729.08, 379), (56.0508, 125), (832.21, 177), (45.1494, 208),
+            (821.971, 174), (51.9395, 150), (845.88, 166), (33.2002, 195),
+            (824.78, 156), (74.8594, 228), (3020.12, 977),
+        ]
+        zones = ["1", "1", "1", "1", "2", "3", "1", "1", "4", "1", "4", "1", "3", "1", "5", "1",
+                 "2", "1", "3", "1", "2", "1", "3", "1", "3", "1", "4", "1", "4", "1", "1"]
+        part = {
+            "training_fields":{"wu":"", "main":"Measured", "cd":""},
+            "watch_loads":[
+                {"meters":meters, "seconds":seconds, "zone":zone, "segment":"CORE"}
+                for (meters, seconds), zone in zip(measurements, zones)
+            ],
+        }
+        proposal = {
+            "warmup_laps":[1, 2, 3],
+            "ignored_laps":list(range(4, 17)),
+            "recovery_laps":[18, 20, 22, 24, 26, 28, 30],
+            "cooldown_laps":[31],
+            "reps":[
+                {"laps":[lap], "target_meters":target}
+                for lap, target in ((17, 1750), (19, 850), (21, 1750), (23, 850),
+                                    (25, 850), (27, 850), (29, 850))
+            ],
+        }
+
+        checked = checked_proposal(part, proposal, zone_basis="pace")
+
+        self.assertTrue(checked["e_usable"])
+        self.assertEqual(checked["training_fields"]["wu"], "3000 m Z1")
+        self.assertEqual(checked["watch_loads"][4]["segment"], "IGNORE")
+        self.assertFalse(checked["watch_loads"][4]["work_rep"])
+        from core.stats import _watch_loads_for_slot
+        counted = _watch_loads_for_slot(SimpleNamespace(source="watch_e", watch_loads=checked["watch_loads"]))
+        self.assertNotIn(52.21, [load["meters"] for load in counted])
+
     def test_partial_warmup_correction_preserves_measured_preview_work_reps(self):
         measurements = [
             (1004.47, 285), (1000.42, 291), (1001.09, 285), (5.24658, 3),
@@ -537,6 +579,22 @@ class GarminEEndpointTests(TestCase):
         self.assertIn("2×(200 m - 100 m)", part["training_fields"]["main"])
         self.assertIn("bijgewerkt", part["e_update_note"])
         self.assertEqual(model.call_count, 1)
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_chat_can_explicitly_ignore_a_measured_transition_lap(self, model):
+        proposal = deepcopy(self.proposal)
+        proposal["recovery_laps"] = [3, 7, 9]
+        proposal["ignored_laps"] = [5]
+        model.return_value = {
+            "reply":"Lap 5 blijft zichtbaar als bronmeting maar telt niet mee in de training.",
+            "intent":"update", "proposal":proposal, "zone_basis":"pace",
+        }
+
+        part = self.chat("Negeer lap 5 in de training.").json()["results"][0]["parts"][0]
+
+        self.assertTrue(part["e_usable"], part)
+        self.assertEqual(part["watch_loads"][4]["segment"], "IGNORE")
+        self.assertIn("bijgewerkt", part["e_update_note"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_question_does_not_produce_usable_training(self, model):

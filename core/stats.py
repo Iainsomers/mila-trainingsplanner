@@ -76,6 +76,8 @@ def _watch_loads_for_slot(slot):
     for raw in raw_loads:
         if not isinstance(raw, dict):
             continue
+        if str(raw.get("segment") or "CORE").upper() == "IGNORE":
+            continue
         try:
             meters = float(raw.get("meters") or 0)
             seconds = float(raw.get("seconds") or 0)

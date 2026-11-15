@@ -2841,7 +2841,8 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
             watch_loads = align_watch_loads(watch_loads, boundary_text.get("WU", ""), boundary_text.get("CD", ""))
             actual = []
             for load in watch_loads:
-                if not isinstance(load, dict) or str(load.get("segment", "")).upper() == "CORE2":
+                if (not isinstance(load, dict)
+                        or str(load.get("segment", "")).upper() in {"CORE2", "IGNORE"}):
                     continue
                 try:
                     meters = float(load.get("meters") or 0)
