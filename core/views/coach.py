@@ -12968,14 +12968,21 @@ def trainer_athlete_stats_view(request, athlete_id):
         })
 
     alt_series = []
-    for zone, color in enumerate(zone_colors, 1):
-        value_key = f"alt_zone_{zone}"
-        for week in weeks:
-            week[value_key] = week["alt_zone_minutes"].get(str(zone), 0.0)
+    for week in weeks:
+        week["alt_total_minutes"] = sum(week["alt_zone_minutes"].values())
+    alt_definitions = [("alt-total", "ALT total min", "#7b3f91", "alt_total_minutes", True)] + [
+        (f"alt-z{zone}", f"ALT Z{zone}", color, f"alt_zone_{zone}", False)
+        for zone, color in enumerate(zone_colors, 1)
+    ]
+    for series_id, label, color, value_key, is_total in alt_definitions:
+        if value_key.startswith("alt_zone_"):
+            zone = value_key.rsplit("_", 1)[1]
+            for week in weeks:
+                week[value_key] = week["alt_zone_minutes"].get(zone, 0.0)
         paths, points = chart_paths(value_key, axis_max_alt)
         alt_series.append({
-            "id": "alt-min", "label": f"ALT Z{zone}", "color": color, "zone": str(zone),
-            "checked": False,
+            "id": series_id, "label": label, "color": color,
+            "kind": "total" if is_total else "zone", "checked": False,
             "bars": [
                 {**point, "height": plot_top + plot_height - point["y"], "max_width": column_width * 0.68}
                 for point in points

@@ -103,7 +103,7 @@
             </g>
           {% endfor %}
           {% for series in alt_series %}
-            <g data-stats-series="alt-min" data-alt-series data-alt-zone="{{ series.zone }}" style="display:none">
+            <g data-stats-series="{{ series.id }}" data-alt-series data-alt-kind="{{ series.kind }}" style="display:none">
               {% for bar in series.bars %}<rect class="stats-km-bar" data-alt-bar data-week="{{ forloop.counter0 }}" data-week-label="{{ bar.week_start|date:'d M Y' }}" data-alt-label="{{ series.label }}" data-alt-value="{{ bar.value }}" data-center="{{ bar.x }}" data-max-width="{{ bar.max_width }}" data-height="{{ bar.height }}" data-base-y="{{ plot_bottom_y }}" x="{{ bar.x }}" y="{{ bar.y }}" width="0" height="{{ bar.height }}" fill="{{ series.color }}"><title>{{ bar.week_start|date:"d M Y" }} · {{ series.label }}: {{ bar.value }} min</title></rect>{% endfor %}
             </g>
           {% endfor %}
@@ -121,7 +121,9 @@
         {% endfor %}
       </div>
       <div class="stats-series-controls small mt-2" aria-label="Alternative series">
-        <label><input type="checkbox" data-stats-toggle="alt-min"><span class="zone-key" style="background:linear-gradient(90deg,#77776f 0 16%,#e49aaa 16% 32%,#df4938 32% 48%,#63ad63 48% 64%,#5796d2 64% 80%,#d7aa00 80%)"></span>ALT min Z1–Z6</label>
+        {% for series in alt_series %}
+          <label><input type="checkbox" data-stats-toggle="{{ series.id }}"><span class="zone-key" style="background-color:{{ series.color }}"></span>{{ series.label }}</label>
+        {% endfor %}
       </div>
       <div class="stats-series-controls small mt-2" aria-label="ACWR series">
         {% for series in acwr_series %}
@@ -200,20 +202,33 @@
     });
     var totalGroup = visibleKmGroups.find(function(group) { return group.dataset.kmKind === "total"; });
     var zoneGroups = visibleKmGroups.filter(function(group) { return group.dataset.kmKind === "zone"; });
-    var slotCount = (totalGroup ? 1 : 0) + (zoneGroups.length ? 1 : 0) + (visibleAltGroups.length ? 1 : 0);
+    var altTotalGroup = visibleAltGroups.find(function(group) { return group.dataset.altKind === "total"; });
+    var altZoneGroups = visibleAltGroups.filter(function(group) { return group.dataset.altKind === "zone"; });
+    var slotCount = (totalGroup ? 1 : 0) + (zoneGroups.length ? 1 : 0)
+      + (altTotalGroup ? 1 : 0) + (altZoneGroups.length ? 1 : 0);
     if (!slotCount) return;
     var exampleGroup = visibleKmGroups[0] || visibleAltGroups[0];
     var exampleBar = exampleGroup.querySelector('[data-km-bar], [data-alt-bar]');
     var maxWidth = Number(exampleBar.dataset.maxWidth);
     var slotWidth = maxWidth / slotCount;
     var zoneOffset = totalGroup ? slotWidth : 0;
-    var altOffset = ((totalGroup ? 1 : 0) + (zoneGroups.length ? 1 : 0)) * slotWidth;
+    var altTotalOffset = ((totalGroup ? 1 : 0) + (zoneGroups.length ? 1 : 0)) * slotWidth;
+    var altZoneOffset = altTotalOffset + (altTotalGroup ? slotWidth : 0);
 
     if (totalGroup) {
       totalGroup.querySelectorAll('[data-km-bar]').forEach(function(bar) {
         var center = Number(bar.dataset.center);
         var height = Number(bar.dataset.height);
         bar.setAttribute("x", center - maxWidth / 2);
+        bar.setAttribute("y", Number(bar.dataset.baseY) - height);
+        bar.setAttribute("width", slotWidth);
+      });
+    }
+    if (altTotalGroup) {
+      altTotalGroup.querySelectorAll('[data-alt-bar]').forEach(function(bar) {
+        var center = Number(bar.dataset.center);
+        var height = Number(bar.dataset.height);
+        bar.setAttribute("x", center - maxWidth / 2 + altTotalOffset);
         bar.setAttribute("y", Number(bar.dataset.baseY) - height);
         bar.setAttribute("width", slotWidth);
       });
@@ -232,11 +247,11 @@
         stackedHeight += height;
       });
       var altStackedHeight = 0;
-      visibleAltGroups.forEach(function(group) {
+      altZoneGroups.forEach(function(group) {
         var bar = group.querySelector('[data-alt-bar][data-week="' + week + '"]');
         var center = Number(bar.dataset.center);
         var height = Number(bar.dataset.height);
-        bar.setAttribute("x", center - maxWidth / 2 + altOffset);
+        bar.setAttribute("x", center - maxWidth / 2 + altZoneOffset);
         bar.setAttribute("y", Number(bar.dataset.baseY) - altStackedHeight - height);
         bar.setAttribute("width", slotWidth);
         altStackedHeight += height;
@@ -335,19 +350,31 @@
       return group.style.display !== "none";
     });
     if (!groups.length) return;
-    var weekCount = groups[0].querySelectorAll('[data-alt-bar]').length;
+    var zoneGroups = groups.filter(function(group) { return group.dataset.altKind === "zone"; });
+    var totalGroup = groups.find(function(group) { return group.dataset.altKind === "total"; });
+    var referenceGroup = zoneGroups[0] || totalGroup;
+    var weekCount = referenceGroup.querySelectorAll('[data-alt-bar]').length;
     for (var week = 0; week < weekCount; week += 1) {
-      var rows = groups.map(function(group) {
+      var referenceBar = referenceGroup.querySelector('[data-alt-bar][data-week="' + week + '"]');
+      var lines = [referenceBar.dataset.weekLabel];
+      if (zoneGroups.length) {
+        var rows = zoneGroups.map(function(group) {
+          var bar = group.querySelector('[data-alt-bar][data-week="' + week + '"]');
+          return {bar: bar, label: bar.dataset.altLabel, value: Number(bar.dataset.altValue)};
+        });
+        lines.push("Selected ALT zones total: " + rows.reduce(function(total, row) {
+          return total + row.value;
+        }, 0).toFixed(1) + " min");
+        rows.forEach(function(row) {
+          lines.push(row.label + ": " + row.value.toFixed(1) + " min");
+        });
+      } else if (totalGroup) {
+        var totalBar = totalGroup.querySelector('[data-alt-bar][data-week="' + week + '"]');
+        lines.push("ALT total: " + Number(totalBar.dataset.altValue).toFixed(1) + " min");
+      }
+      groups.forEach(function(group) {
         var bar = group.querySelector('[data-alt-bar][data-week="' + week + '"]');
-        return {bar: bar, label: bar.dataset.altLabel, value: Number(bar.dataset.altValue)};
-      });
-      var lines = [rows[0].bar.dataset.weekLabel];
-      lines.push("ALT total: " + rows.reduce(function(total, row) { return total + row.value; }, 0).toFixed(1) + " min");
-      rows.filter(function(row) { return row.value > 0; }).forEach(function(row) {
-        lines.push(row.label + ": " + row.value.toFixed(1) + " min");
-      });
-      rows.forEach(function(row) {
-        var title = row.bar.querySelector("title");
+        var title = bar ? bar.querySelector("title") : null;
         if (title) title.textContent = lines.join("\n");
       });
     }

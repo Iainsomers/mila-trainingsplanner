@@ -1,5 +1,9 @@
 # Actuele status
 
+## 15 november 2026 - ALT-minuten hebben dezelfde Stats-bediening als loopkilometers
+
+- `ALT total min` en ALT Z1–Z6 zijn afzonderlijk aan/uit te zetten. Gekozen ALT-zones stapelen in één minutenstaaf; ALT total staat desgewenst als aparte staaf ernaast. De hovertekst toont het gekozen ALT-zonetotaal plus iedere gekozen zone, gelijk aan de kilometerbediening.
+
 ## 15 november 2026 - Progressieve Watch-kleur blijft zichtbaar bij meettekst
 
 - Een Watch-segment waarvan de kalendertekst door gemeten tijd/tempo wordt vervangen, gebruikt voor de pill-kleur nu nog steeds het opgeslagen bronbereik. Daardoor krijgt bijvoorbeeld `1300 m Z2>Z4` de Z2/Z3/Z4-verloopkleur, ook wanneer het label zelf `1300m - 5:33 - 4:20/km` toont.
