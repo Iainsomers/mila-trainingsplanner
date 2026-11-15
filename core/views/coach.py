@@ -12438,14 +12438,19 @@ def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None, zone
         for base_slot in getattr(block, "_prefetched_base_slots", [])
         if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_slot.trainer_plan_id
     }
-    trainer_slot_lookup = {
-        (slot.plan_id, slot.date, slot.slot_index): slot
-        for slot in TrainingSlot.objects.filter(
+    trainer_slots = (
+        TrainingSlot.objects
+        .filter(
             plan_id__in=trainer_plan_ids,
-            athlete__isnull=True,
             date__gte=week_start,
             date__lt=end,
-        ).prefetch_related("segments")
+        )
+        .filter(Q(athlete__isnull=True) | Q(athlete=athlete))
+        .prefetch_related("segments")
+    )
+    trainer_slot_lookup = {
+        (slot.plan_id, slot.athlete_id, slot.date, slot.slot_index): slot
+        for slot in trainer_slots
     }
 
     totals = {week_start: 0.0, week_start + timedelta(days=7): 0.0}
@@ -12476,7 +12481,10 @@ def _effective_week_distance_m(athlete, plans, week_start, pause_mode=None, zone
                     if base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
                         slot = _virtual_slot_from_base_training(base_planning_slot.training_text)
                     elif base_planning_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER and base_planning_slot.trainer_plan_id:
-                        slot = trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, day, slot_index))
+                        slot = (
+                            trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, athlete.id, day, slot_index))
+                            or trainer_slot_lookup.get((base_planning_slot.trainer_plan_id, None, day, slot_index))
+                        )
 
             target_week = week_start if day < week_start + timedelta(days=7) else week_start + timedelta(days=7)
             for load in _ayc_slot_loads_for_totals(slot, athlete, pause_mode):

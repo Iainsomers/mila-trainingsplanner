@@ -11514,6 +11514,49 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_chart_uses_personal_override_for_base_assigned_trainer_plan(self):
+        trainer = get_user_model().objects.create_user(username="statspersonalbase", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Personal Base", birth_year=2000, gender="X")
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        trainer_plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Assigned trainer plan",
+            plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+        )
+        shared = TrainingSlot.objects.create(plan=trainer_plan, date=week_start, slot_index=1)
+        shared.segments.create(type="CORE", text="60500m z3", zone="3", norm_distance_m=60500)
+        personal = TrainingSlot.objects.create(
+            plan=trainer_plan, athlete=athlete, date=week_start, slot_index=1,
+        )
+        personal.segments.create(type="CORE", text="34300m z2", zone="2", norm_distance_m=34300)
+        personal.segments.create(type="ALT", text="2x30 min bike z1", zone="1", duration_s=3600)
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete,
+            planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+            label="Year",
+            start_month=1,
+            start_day=1,
+            end_month=12,
+            end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block,
+            weekday=week_start.weekday(),
+            slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER,
+            trainer_plan=trainer_plan,
+        )
+        self.client.force_login(trainer)
+
+        response = self.client.get(f"/planning/stats/athlete/{athlete.id}/?months=1")
+        week = response.context["weeks"][-1]
+
+        self.assertEqual(week["km"], 34.3)
+        self.assertEqual(week["zone_km"], {"2": 34.3})
+        self.assertNotIn("3", week["zone_km"])
+
     def test_chart_stacks_measured_zones_bottom_up_and_excludes_walking(self):
         trainer = get_user_model().objects.create_user(username="zonestats", is_staff=True)
         athlete = Athlete.objects.create(owner=trainer, name="Zones", birth_year=2000, gender="X")

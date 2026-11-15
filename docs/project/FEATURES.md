@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- De individuele Stats-weekgrafiek gebruikt bij een via Base Planning toegewezen trainerplan dezelfde atleetspecifieke slot-override als Individual Plans. De gedeelde trainerslot is alleen de terugval. Alternative-minuten blijven afzonderlijk en tellen niet mee als hardloopkilometers.
+
 - Garmin E corrigeert een afstandsvoorstel automatisch naar tijdnotatie wanneer minstens drie opeenvolgende werkreps vrijwel exact dezelfde hele-minuutduur hebben, maar hun gemeten afstanden duidelijk variëren. Acht rondes van exact 3:00 met afstanden rond 750-800 m worden daardoor direct `8×3'` in plaats van afstandsreps; de bronmetingen blijven ongewijzigd.
 
 - Garmin E ondersteunt expliciet door de gebruiker genegeerde overgangs-/ruislaps. Ze blijven zichtbaar in Recorded laps en in de opgeslagen bronmetingen, maar verschijnen niet in WU/Main/CD en tellen niet mee in afstands-, tijd- of zonetotalen. Het model mag deze categorie alleen gebruiken wanneer de gebruiker de laps uitdrukkelijk uitsluit.

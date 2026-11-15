@@ -1,5 +1,10 @@
 # Actuele status
 
+## 15 november 2026 - Stats volgt persoonlijke trainerplan-override
+
+- Stats gebruikte bij een via Base Planning toegewezen trainerplan altijd de gedeelde slot, terwijl Individual Plans een aanwezige atleetspecifieke override toonde. Daardoor kon dezelfde week bijvoorbeeld 60,5 km in Stats en 34,3 km in Individual Plans tonen, met ook afwijkende zoneverdeling.
+- Stats kiest nu eerst de persoonlijke slot en valt alleen zonder die override terug op de gedeelde slot. Een regressie met 34,3 km lopen plus `2×30 min bike Z1` houdt de grafiek op 34,3 km en neemt de Alternative niet als hardloopkilometers mee.
+
 ## 15 november 2026 - Garmin E kiest tijd bij gelijke hele-minuutreps
 
 - In een opname met acht werkreps van exact 3:00 en wisselende afstanden van circa 750-800 m koos E aanvankelijk afstandsreps; pas na de aanwijzing `8×3'` werd de bedoelde tijdstructuur herkend.

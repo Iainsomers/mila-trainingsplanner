@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- Voor een Base Planning-slot in stand Trainer gebruikt Stats eerst de atleetspecifieke `TrainingSlot` van dat trainerplan en pas daarna de gedeelde slot. Dit is dezelfde voorrang als in Individual Plans. Loads met `kind=alt` blijven buiten het hardloopkilometertotaal; hun minuten worden niet met een loopsnelheid omgerekend.
+
 - Garmin E zet een voorgestelde reeks afstandsreps om naar tijdtargets als minstens drie opeenvolgende werkreps ieder binnen `max(2s, 2%)` van dezelfde hele minuut liggen en hun gemeten afstandsspreiding minstens `max(30m, 4% van de mediaan)` is. Alleen de nominale presentatie-targets veranderen; laptoewijzing, gemeten meters/seconden, herstel, zones en totalen blijven gelijk. Zo wordt achtmaal 3:00 met 750-800 m per rep `8×3'`.
 
 - De Garmin E-presentatie behoudt een gevalideerd herhaald gemengd voorblok vóór een homogeen slotblok. Een chronologische doelreeks `1750,850,1750,850,850,850,850` wordt daarom `2×(1750-850) // 3×850` en niet `1750 // 850 // 1750 // 4×850`. Alleen de presentatie wordt gegroepeerd; bronlaps, gemeten tijden, zones en herstel blijven onveranderd.
