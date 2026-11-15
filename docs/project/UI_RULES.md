@@ -1,6 +1,7 @@
 # UI- en taalafspraken
 
 - De individuele Stats-grafiek gebruikt compacte vinkjes onder de grafiek voor Total km, Z1–Z6 en de drie ACWR-reeksen. Actieve zones worden per week in één kolom gestapeld. Total km blijft een afzonderlijke kolom daarnaast; zonder Total gebruikt de zonestapel de volledige kolombreedte. ACWR-reeksen zijn gestreepte lijnen op de rechteras: aerobic Z1–Z3 rood en anaerobic Z4–Z6 groen. De ACWR-as loopt vast van 0,2 tot 2,2 in stappen van 0,2. Gewone horizontale rasterlijnen ontbreken. Bij actieve ACWR staan alleen grenslijnen op 0,8 en 1,3; als geen km-reeks zichtbaar is, worden de drie ACWR-zones lichtblauw, lichtgroen en lichtrood ingevuld. Total km en ACWR total zijn de standaardselectie. De bediening mag op mobiel omlopen en de grafiek behoudt horizontaal scrollen.
+- Hover op ieder zichtbaar kilometerstaafdeel toont voor die week het gezamenlijke aantal kilometers van uitsluitend de aangevinkte zones en daaronder de kilometers per aangevinkte zone. De tooltip wordt direct bijgewerkt wanneer een zone wordt aan- of uitgezet. Zonder geselecteerde zones toont een zichtbare Total-kolom alleen Total km.
 
 ## Year Planner voor atleten
 

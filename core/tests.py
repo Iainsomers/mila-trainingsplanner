@@ -11860,8 +11860,11 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, "stats-km-bar")
         self.assertContains(response, 'data-km-kind="total"')
         self.assertContains(response, 'data-km-kind="zone"', count=6)
+        self.assertContains(response, 'data-km-value="5.50"')
         self.assertContains(response, "stackedHeight")
         self.assertContains(response, "layoutStatsKmBars")
+        self.assertContains(response, "updateStatsKmTooltips")
+        self.assertContains(response, "Selected zones total")
         self.assertContains(response, 'data-stats-toggle="total-km" checked')
         self.assertContains(response, 'data-stats-toggle="z1"')
 
