@@ -213,6 +213,7 @@ class GarminEValidationTests(SimpleTestCase):
         body = json.loads(urlopen.call_args.args[0].data)
         self.assertEqual(body["messages"][-1],history[-1])
         self.assertFalse(body["store"])
+        self.assertEqual(body["reasoning_effort"], "low")
         self.assertEqual(body["response_format"],{"type":"json_object"})
 
 
@@ -597,6 +598,31 @@ class GarminEEndpointTests(TestCase):
         unavailable = self.chat("En nu?").json()["results"][0]["parts"][0]
         self.assertEqual(unavailable["training_fields"],good["training_fields"])
         self.assertTrue(unavailable["e_usable"])
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_model_timeout_retries_once_with_shorter_low_budget_request(self, model):
+        model.side_effect = [
+            TimeoutError("first request timed out"),
+            {"reply":"De gemeten indeling is compleet.", "proposal":self.proposal, "zone_basis":"pace"},
+        ]
+
+        part = self.chat("Bekijk de hele moeilijke opname opnieuw.").json()["results"][0]["parts"][0]
+
+        self.assertTrue(part["e_usable"], part)
+        self.assertEqual(model.call_count, 2)
+        self.assertEqual(model.call_args_list[0].kwargs["timeout"], 16)
+        self.assertLessEqual(model.call_args_list[1].kwargs["timeout"], 8)
+        self.assertIn("previous service request timed out", model.call_args_list[1].args[3])
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_repeated_model_timeout_reports_time_limit_and_keeps_conversation(self, model):
+        model.side_effect = TimeoutError("still timed out")
+
+        part = self.chat("Analyseer deze opname.").json()["results"][0]["parts"][0]
+
+        self.assertFalse(part["e_usable"])
+        self.assertEqual(model.call_count, 2)
+        self.assertIn("niet op tijd antwoord", part["chat_reply"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_opt_in_access_and_consent(self, model):

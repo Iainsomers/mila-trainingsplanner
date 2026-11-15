@@ -91,7 +91,7 @@ def ask_model(facts, history, current=None, validation_error=None, *, timeout=20
         raise ValueError("Garmin E is not configured yet.")
     context = {"laps":facts, "current_checked_training":current, "validation_feedback":validation_error}
     body = {"model":os.environ.get("GARMIN_E_MODEL", "gpt-5.4-mini"),
-            "reasoning_effort":"medium", "store":False,
+            "reasoning_effort":"low", "store":False,
             "response_format":{"type":"json_object"},
             "messages":[{"role":"system", "content":SYSTEM},
                         {"role":"user", "content":json.dumps(context)}] + [

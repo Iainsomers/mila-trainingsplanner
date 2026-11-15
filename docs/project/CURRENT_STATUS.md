@@ -1,5 +1,10 @@
 # Actuele status
 
+## 15 november 2026 - Garmin E herstelt van servicetime-out
+
+- Lange E-gesprekken met 31 laps konden herhaald na circa twintig seconden eindigen met de algemene melding dat het bericht niet kon worden afgerond. E gebruikt nu low reasoning, een eerste limiet van 16s en bij een service-/netwerktime-out één beknopte tweede poging van maximaal 8s binnen circa 26s totaal.
+- Een time-out-herstart telt als de ene herstelpoging; er volgt daarna geen derde modelaanroep. Als ook de tweede poging afbreekt, benoemt de popup voortaan expliciet dat het antwoord niet op tijd kwam en blijven gesprek en gecontroleerd voorstel behouden.
+
 ## 15 november 2026 - Garmin E behoudt werkreps bij WU-correctie
 
 - Een modelantwoord dat alleen laps 1-3 als 3000 m WU terugstuurde werd afgewezen met `Supply the measured work repetitions`, hoewel de gemeten preview de resterende werkblokken al bevatte. E completeert zo'n grenscorrectie nu vanuit de server-eigen metingen en valideert vervolgens opnieuw alle bronlaps.
@@ -64,7 +69,7 @@
 - Opt-in E heeft nu een eigen knop, endpoint, gespreksprompt en validator. De chat kan observeren, uitleggen en vragen stellen zonder steeds trainingsvelden te veranderen. Aanvragen gebruiken de volledige numerieke lapvolgorde en server-eigen gesprekscontext, zonder naam/GPS/tokens. E kan per gesprek wisselen tussen snelheid, HR en auto.
 - Alleen complete, gemeten laptoewijzingen worden bruikbare previews. Use/Add heeft een extra ondertekende opslagcontrole; bron `watch_e` ondersteunt dag-/weektotalen, klokreps en Watch/Plan. Alternatieve trainingen blijven intact bij Add running.
 - Gesprekken staan in `GarminEConversation`, per gebruiker/atleet/opname/bronfingerprint, met een database-lock tegen gelijktijdige antwoorden. Opnames met onvolledige lapdata worden niet door E gereconstrueerd. Niet-hardloopanalyse en combineren van losse opnames blijven buiten deze eerste E-versie.
-- Migraties: `0152` voor de bronkeuze en `0153` voor gesprekken. Modelinstelling: `GARMIN_E_MODEL`, standaard bestaande `gpt-5.4-mini` met medium reasoning.
+- Migraties: `0152` voor de bronkeuze en `0153` voor gesprekken. Modelinstelling: `GARMIN_E_MODEL`, standaard bestaande `gpt-5.4-mini` met low reasoning.
 - Tests gebruiken gemockte modelantwoorden: gemengde en progressieve sets, 2×8×500m, bronbehoud/klok, HR/snelheid wisselen, vragen zonder voorstel, meetafwijzingen, servicefout, bevestiging, opt-in/toestemming en ondertekend Use/Add worden gecontroleerd. Live modelkwaliteit en Render-uitrol moeten met de proefatleten worden beoordeeld.
 
 ## 14 november 2026 — Coachinstelling voor beperkte model-E-proef

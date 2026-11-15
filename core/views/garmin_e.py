@@ -237,8 +237,21 @@ def garmin_type_e_ayc_view(request):
                            "requested_presentation":"compact" if compact_requested else None,
                            "initial_analysis":initial_analysis,
                            "checked_assignment":state["proposal"],"pending_confirmation":state.get("pending")}
-                deadline = monotonic()+25
-                answer = ask_model(facts,history,current)
+                deadline = monotonic()+26
+                initial_retry_used = False
+                try:
+                    answer = ask_model(facts,history,current,timeout=16)
+                except OSError:
+                    remaining = deadline-monotonic()
+                    if remaining < 3:
+                        raise
+                    answer = ask_model(
+                        facts, history, current,
+                        "The previous service request timed out. Answer concisely now; return a complete proposal "
+                        "when supported and do not repeat the conversation.",
+                        timeout=min(8, remaining),
+                    )
+                    initial_retry_used = True
                 proposal = answer.get("proposal")
                 basis = answer.get("zone_basis",state["basis"])
                 action_requested = bool(message and (
@@ -247,7 +260,7 @@ def garmin_type_e_ayc_view(request):
                         and re.search(r"voorstel|gebruik|use|apply|toepassen",state["history"][-1]["content"],re.I))))
                 wants_update = (initial_analysis or action_requested or answer.get("intent") == "update" or
                     (compact_requested and (state.get("proposal") or {}).get("format")!="compact"))
-                repair_used = False
+                repair_used = initial_retry_used
                 confirmed = bool(state.get("pending") and message and re.fullmatch(
                     r"(?:ja|yes|zeker|ok|doe maar)(?:[.!]|,? (?:klopt|graag|doen|dat klopt))?",
                     message.strip(),re.I))
@@ -326,6 +339,11 @@ def garmin_type_e_ayc_view(request):
                 state.update(part=updated,history=history[-20:])
                 GarminEConversation.objects.filter(pk=conversation.pk).update(state=state,updated_at=timezone.now())
                 session["parts"] = [{**updated,"e_history":visible_history(state["history"])}]
+            except TimeoutError:
+                updated = deepcopy(state["part"])
+                updated["chat_reply"] = "Garmin E kreeg niet op tijd antwoord. Het gesprek en je laatste gecontroleerde voorstel zijn behouden. Probeer het opnieuw."
+                updated["ai_structure_status"] = "e_error"
+                session["parts"] = [updated]
             except (OSError,ValueError,KeyError,TypeError,IndexError):
                 updated = deepcopy(state["part"])
                 updated["chat_reply"] = "Garmin E kon dit bericht niet afronden. Je laatste gecontroleerde voorstel blijft behouden. Probeer het opnieuw."
