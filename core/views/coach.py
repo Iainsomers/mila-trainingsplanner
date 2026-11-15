@@ -12939,6 +12939,7 @@ def trainer_athlete_stats_view(request, athlete_id):
         ]
         km_series.append({
             "id": series_id, "label": label, "color": color, "checked": checked,
+            "kind": "total" if series_id == "total-km" else "zone",
             "paths": paths, "points": points, "bars": bars,
         })
 

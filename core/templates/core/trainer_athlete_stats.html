@@ -74,8 +74,8 @@
             {% endif %}
           {% endfor %}
           {% for series in km_series %}
-            <g data-stats-series="{{ series.id }}"{% if not series.checked %} style="display:none"{% endif %}>
-              {% for bar in series.bars %}<rect class="stats-km-bar" data-km-bar data-center="{{ bar.x }}" data-max-width="{{ bar.max_width }}" x="{{ bar.x }}" y="{{ bar.y }}" width="0" height="{{ bar.height }}" fill="{{ series.color }}"><title>{{ bar.week_start|date:"d M Y" }} · {{ series.label }}: {{ bar.value }} km</title></rect>{% endfor %}
+            <g data-stats-series="{{ series.id }}" data-km-kind="{{ series.kind }}"{% if not series.checked %} style="display:none"{% endif %}>
+              {% for bar in series.bars %}<rect class="stats-km-bar" data-km-bar data-week="{{ forloop.counter0 }}" data-center="{{ bar.x }}" data-max-width="{{ bar.max_width }}" data-height="{{ bar.height }}" data-base-y="{{ plot_bottom_y }}" x="{{ bar.x }}" y="{{ bar.y }}" width="0" height="{{ bar.height }}" fill="{{ series.color }}"><title>{{ bar.week_start|date:"d M Y" }} · {{ series.label }}: {{ bar.value }} km</title></rect>{% endfor %}
             </g>
           {% endfor %}
           {% for series in acwr_series %}
@@ -160,18 +160,41 @@
 </div>
 <script>
   function layoutStatsKmBars() {
-    var visibleGroups = Array.from(document.querySelectorAll('[data-stats-series]')).filter(function(group) {
-      return group.querySelector('[data-km-bar]') && group.style.display !== "none";
+    var visibleGroups = Array.from(document.querySelectorAll('[data-km-kind]')).filter(function(group) {
+      return group.style.display !== "none";
     });
-    visibleGroups.forEach(function(group, groupIndex) {
-      group.querySelectorAll('[data-km-bar]').forEach(function(bar) {
-        var maxWidth = Number(bar.dataset.maxWidth);
-        var width = maxWidth / visibleGroups.length;
+    var totalGroup = visibleGroups.find(function(group) { return group.dataset.kmKind === "total"; });
+    var zoneGroups = visibleGroups.filter(function(group) { return group.dataset.kmKind === "zone"; });
+    var slotCount = (totalGroup ? 1 : 0) + (zoneGroups.length ? 1 : 0);
+    if (!slotCount) return;
+    var exampleBar = visibleGroups[0].querySelector('[data-km-bar]');
+    var maxWidth = Number(exampleBar.dataset.maxWidth);
+    var slotWidth = maxWidth / slotCount;
+    var zoneOffset = totalGroup ? slotWidth : 0;
+
+    if (totalGroup) {
+      totalGroup.querySelectorAll('[data-km-bar]').forEach(function(bar) {
         var center = Number(bar.dataset.center);
-        bar.setAttribute("x", center - maxWidth / 2 + groupIndex * width);
-        bar.setAttribute("width", width);
+        var height = Number(bar.dataset.height);
+        bar.setAttribute("x", center - maxWidth / 2);
+        bar.setAttribute("y", Number(bar.dataset.baseY) - height);
+        bar.setAttribute("width", slotWidth);
       });
-    });
+    }
+
+    var weekCount = visibleGroups[0].querySelectorAll('[data-km-bar]').length;
+    for (var week = 0; week < weekCount; week += 1) {
+      var stackedHeight = 0;
+      zoneGroups.forEach(function(group) {
+        var bar = group.querySelector('[data-km-bar][data-week="' + week + '"]');
+        var center = Number(bar.dataset.center);
+        var height = Number(bar.dataset.height);
+        bar.setAttribute("x", center - maxWidth / 2 + zoneOffset);
+        bar.setAttribute("y", Number(bar.dataset.baseY) - stackedHeight - height);
+        bar.setAttribute("width", slotWidth);
+        stackedHeight += height;
+      });
+    }
   }
   document.querySelectorAll("[data-stats-toggle]").forEach(function(toggle) {
     toggle.addEventListener("change", function() {
