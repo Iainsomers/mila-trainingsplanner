@@ -3,6 +3,7 @@ from copy import deepcopy
 import json
 import math
 import os
+import re
 from statistics import median
 from urllib.request import Request, urlopen
 
@@ -36,6 +37,10 @@ Return JSON: {"reply":"natural helpful answer", "intent":"discuss" or "update",
 "zone_basis":"auto" or "pace" or "hr", "proposal":null or
 {"warmup_laps":[1], "cooldown_laps":[], "recovery_laps":[3], "ignored_laps":[],
 "reps":[{"laps":[2],"target_meters":200},{"laps":[4],"target_meters":100}]}}.
+When the user explicitly assigns a zone range to a distance group, the server can preserve that
+literal correction in the checked preview. Do not invent this field from measurements. Return
+proposal.zone_labels only for a user-stated correction, for example
+[{"target_meters":250,"count":6,"label":"Z3>Z5"}].
 For equal-distance sets (2x8x500m), add proposal.set_start_laps with the first work-lap
 number of each set, including the first set. Sets must have equal sizes and measurably longer
 recovery between sets. For mixed sets use the full chronological reps sequence; never group
@@ -112,6 +117,35 @@ def ask_model(facts, history, current=None, validation_error=None, *, timeout=20
         raise ValueError("Garmin E returned an incomplete answer. Please try again.")
     answer["reply"] = answer["reply"].strip()[:6000]
     return answer
+
+
+def apply_explicit_zone_labels(proposal, message):
+    """Attach only literal user-stated distance-group zone ranges to a proposal."""
+    if not isinstance(proposal, dict) or not isinstance(message, str):
+        return proposal, False
+    pattern = re.compile(
+        r"(?:(\d+)\s*[×x*]\s*)?(\d+)\s*m\b.{0,24}?"
+        r"\bZ\s*([1-6])\s*(?:>|→|-|tot)\s*Z?\s*([1-6])\b",
+        re.IGNORECASE,
+    )
+    labels = []
+    for match in pattern.finditer(message):
+        count, target, first, last = match.groups()
+        labels.append({
+            "target_meters": int(target),
+            "count": int(count or 1),
+            "label": f"Z{first}>Z{last}",
+        })
+    if not labels:
+        return proposal, False
+    updated = deepcopy(proposal)
+    existing = updated.get("zone_labels") if isinstance(updated.get("zone_labels"), list) else []
+    replaced = {(item["target_meters"], item["count"]) for item in labels}
+    updated["zone_labels"] = [
+        item for item in existing
+        if isinstance(item, dict) and (item.get("target_meters"), item.get("count")) not in replaced
+    ] + labels
+    return updated, True
 
 
 def lap_facts(part):
@@ -386,9 +420,27 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         if not groups or groups[-1][0] != key:
             groups.append((key,[]))
         groups[-1][1].append(block)
+    manual_zone_labels = {}
+    zone_labels = proposal.get("zone_labels", [])
+    if not isinstance(zone_labels, list):
+        raise ValueError("Explicit zone labels must be a list.")
+    for item in zone_labels:
+        if not isinstance(item, dict):
+            raise ValueError("Explicit zone labels must identify a measured work group.")
+        target, count, label = item.get("target_meters"), item.get("count"), item.get("label")
+        if (type(target) is not int or type(count) is not int or count < 1
+                or not isinstance(label, str) or not re.fullmatch(r"Z[1-6]>Z[1-6]", label)):
+            raise ValueError("Explicit zone labels must contain distance, count and a Zx>Zy range.")
+        matches = [index for index, ((distance, duration), group) in enumerate(groups)
+                   if distance == target and duration is None and len(group) == count]
+        if len(matches) != 1 or matches[0] in manual_zone_labels:
+            raise ValueError("The explicit zone label does not identify exactly one measured work group.")
+        manual_zone_labels[matches[0]] = label
     for group_index, ((distance,duration), group) in enumerate(groups):
         label = f"{distance} m" if distance is not None else (f"{duration//60}'" if duration%60==0 else f"{duration}s")
-        text = (f"{len(group)}×" if len(group)>1 else "")+label+zone([i for b in group for i in b["ids"]])
+        zone_label = " "+manual_zone_labels[group_index] if group_index in manual_zone_labels else zone(
+            [i for b in group for i in b["ids"]])
+        text = (f"{len(group)}×" if len(group)>1 else "")+label+zone_label
         pauses = [sum(facts[i-1]["duration_s"] for i in recovery if left["ids"][-1] < i < right["ids"][0])
                   for left,right in zip(group,group[1:])]
         if pauses and all(pauses):
@@ -477,6 +529,8 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
     else:
         result["e_zone_note"] = {"pace":"Zones use measured speed.", "hr":"Zones use measured end-of-rep HR.",
                                  "auto":"Zones use end HR from 400m or 50s; shorter reps use speed."}[zone_basis]
+    if manual_zone_labels:
+        result["e_zone_note"] += " Explicit zone ranges stated by the user are shown as presentation labels; measured lap zones remain preserved."
     from core.garmin_d import hr_zone
     for row, original in zip(result.get("manual") or [],part["watch_loads"]):
         row["pace_z_pace"] = "Z"+str(original.get("zone") or "")

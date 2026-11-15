@@ -14,6 +14,7 @@ from django.views.decorators.http import require_http_methods
 
 from core.models import Athlete, GarminEConversation
 from core.garmin_e import (
+    apply_explicit_zone_labels,
     ask_model,
     checked_proposal,
     complete_partial_running_proposal,
@@ -260,8 +261,21 @@ def garmin_type_e_ayc_view(request):
                     initial_retry_used = True
                 proposal = answer.get("proposal")
                 basis = answer.get("zone_basis",state["basis"])
+                if isinstance(proposal, dict):
+                    proposal = deepcopy(proposal)
+                    prior_labels = (state.get("proposal") or {}).get("zone_labels")
+                    if isinstance(prior_labels, list):
+                        proposal["zone_labels"] = deepcopy(prior_labels)
+                    else:
+                        proposal.pop("zone_labels", None)
+                labeled_proposal, explicit_zone_update = apply_explicit_zone_labels(
+                    proposal if proposal is not None else state.get("proposal"), message
+                )
+                if explicit_zone_update:
+                    proposal = labeled_proposal
                 action_requested = bool(message and (
                     re.search(r"\b(?:voorstel|proposal|gebruik|gebruiken|use|usen|apply|toepassen|overnemen|aanpassen|corrigeer|update)\b",message,re.I)
+                    or explicit_zone_update
                     or (re.fullmatch(r"(?:ja|yes|ok|doe maar)[.!]?",message,re.I) and state["history"]
                         and re.search(r"voorstel|gebruik|use|apply|toepassen",state["history"][-1]["content"],re.I))))
                 wants_update = (initial_analysis or action_requested or answer.get("intent") == "update" or

@@ -8,6 +8,7 @@
 - Dezelfde diagnose toont voor de laatste twee weken ook een inventaris van alle persoonlijke slots van die atleet, inclusief plan-ID/-naam en eigenaar-ID. Er worden geen andere atleten, accountsleutels of geheime gegevens getoond.
 
 - Garmin E corrigeert een afstandsvoorstel automatisch naar tijdnotatie wanneer minstens drie opeenvolgende werkreps vrijwel exact dezelfde hele-minuutduur hebben, maar hun gemeten afstanden duidelijk variëren. Acht rondes van exact 3:00 met afstanden rond 750-800 m worden daardoor direct `8×3'` in plaats van afstandsreps; de bronmetingen blijven ongewijzigd.
+- Garmin E kan een letterlijk door de gebruiker gecorrigeerd zonebereik voor een eenduidige afstandsgroep in het gecontroleerde voorstel tonen, bijvoorbeeld `6×250 m Z3>Z5` en `800 m Z1>Z3`. De server koppelt afstand plus aantal aan precies één bestaande werkgroep; de chat kan zo niet langer zeggen dat dit is bijgewerkt terwijl de preview de oude zonetekst behoudt. Gemeten lapzones en zonetotalen blijven intact.
 
 - Garmin E ondersteunt expliciet door de gebruiker genegeerde overgangs-/ruislaps. Ze blijven zichtbaar in Recorded laps en in de opgeslagen bronmetingen, maar verschijnen niet in WU/Main/CD en tellen niet mee in afstands-, tijd- of zonetotalen. Het model mag deze categorie alleen gebruiken wanneer de gebruiker de laps uitdrukkelijk uitsluit.
 

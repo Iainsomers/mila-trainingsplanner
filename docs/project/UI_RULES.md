@@ -12,6 +12,7 @@ Bij ingeschakelde Whereabouts-toegang toont de eigen Year Planner de whereabouts
 - Diary en planners gebruiken dezelfde kleurfunctie voor samengestelde herhalingen. Afstandsonderdelen worden naar afstand gewogen, tijdsonderdelen naar seconden, steeds in de opgegeven zonevolgorde. `4×(10' Z2 - 5' Z1)` is 2/3 Z2 en 1/3 Z1; handmatig `4*(5' z2-3' z1)` is 5/8 Z2 en 3/8 Z1, geen Z2→Z3-progressie. Het percentageverloop schaalt mee met de pillbreedte. Na een Diary-celvervanging worden de kleuren opnieuw toegepast.
 
 - Bij Garmin E staat direct boven de preview een status na een wijzigingsverzoek: voorstel bijgewerkt of voorstel ongewijzigd. Een bevestigende chatzin zonder gecontroleerde nieuwe indeling mag niet stilzwijgend suggereren dat Use/Add al die wijziging zal gebruiken.
+- Een expliciete Garmin E-zonecorrectie met afstand en bereik moet zichtbaar terugkomen in de Checked E preview voordat `Voorstel bijgewerkt` wordt getoond. Een voorbeeld is `6×250m Z3>Z5`; alleen herhalen in het chatantwoord geldt niet als bijgewerkt voorstel.
 
 - De Garmin-E-chat en `Analyze training` staan ook bij Alternative-kaarten, met dezelfde wrappende actierij en gewone conversatie. Een voorstel activeert Use/Add pas na de Alternative-meetcontrole.
 

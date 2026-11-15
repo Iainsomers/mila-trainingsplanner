@@ -11,6 +11,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from core.garmin_e import (
+    apply_explicit_zone_labels,
     ask_model,
     checked_proposal,
     complete_partial_running_proposal,
@@ -35,6 +36,40 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+
+    def test_explicit_user_zone_ranges_update_checked_preview_labels(self):
+        loads = [
+            {"meters":1000, "seconds":320, "zone":"1", "segment":"CORE"},
+            {"meters":1000, "seconds":315, "zone":"1", "segment":"CORE"},
+            {"meters":900, "seconds":700, "zone":"1", "segment":"CORE"},
+        ]
+        reps, recovery = [], []
+        for index in range(6):
+            reps.append({"laps":[len(loads) + 1], "target_meters":250})
+            loads.append({"meters":250, "seconds":55 - index, "zone":"3", "segment":"CORE"})
+            recovery.append(len(loads) + 1)
+            loads.append({"meters":50, "seconds":60, "zone":"1", "segment":"CORE"})
+        reps.append({"laps":[len(loads) + 1], "target_meters":800})
+        loads.append({"meters":800, "seconds":250, "zone":"2", "segment":"CORE"})
+        reps.append({"laps":[len(loads) + 1], "target_meters":1300})
+        loads.append({"meters":1300, "seconds":360, "zone":"3", "segment":"CORE"})
+        loads.append({"meters":1200, "seconds":420, "zone":"1", "segment":"CORE"})
+        proposal = {
+            "warmup_laps":[1, 2], "ignored_laps":[3], "recovery_laps":recovery,
+            "cooldown_laps":[len(loads)], "reps":reps,
+        }
+
+        updated, changed = apply_explicit_zone_labels(
+            proposal, "Die 6*250m was Z3>Z5, die 800m was Z1-Z3",
+        )
+        checked = checked_proposal({"watch_loads":loads}, updated, zone_basis="pace")
+
+        self.assertTrue(changed)
+        self.assertIn("6×250 m Z3>Z5", checked["training_fields"]["main"])
+        self.assertIn("800 m Z1>Z3", checked["training_fields"]["main"])
+        self.assertIn("Explicit zone ranges stated by the user", checked["e_zone_note"])
+        self.assertEqual([load["zone"] for load in checked["watch_loads"]],
+                         [load["zone"] for load in loads])
 
     def test_equal_three_minute_reps_override_variable_distance_targets(self):
         work_distances = [746.9, 767.8, 775.67, 783.19, 763.08, 753.62, 765.641, 786.32]
@@ -688,6 +723,30 @@ class GarminEEndpointTests(TestCase):
         model.return_value = {"reply":"Terug naar snelheid.","proposal":None,"zone_basis":"pace"}
         restored = self.chat("Toch weer snelheid").json()["results"][0]["parts"][0]
         self.assertEqual(restored["training_fields"],initial["training_fields"])
+
+    @patch("core.views.garmin_e.ask_model")
+    def test_chat_applies_literal_user_zone_range_to_checked_preview(self, model):
+        laps = [(1000, 300), (250, 50), (50, 60), (250, 49), (50, 60), (250, 48)]
+        self.record.distance_m = sum(meters for meters, _seconds in laps)
+        self.record.duration_s = sum(seconds for _meters, seconds in laps)
+        self.record.analysis_data = {
+            "laps":[{"distance":meters, "elapsed_time":seconds} for meters, seconds in laps],
+        }
+        self.record.save()
+        proposal = {
+            "warmup_laps":[1], "recovery_laps":[3, 5],
+            "reps":[{"laps":[lap], "target_meters":250} for lap in (2, 4, 6)],
+        }
+        model.return_value = {
+            "reply":"Ik zet de drie 250's op de gevraagde zoneopbouw.",
+            "intent":"update", "proposal":proposal, "zone_basis":"pace",
+        }
+
+        result = self.chat("Die 3*250m was Z3-Z5").json()["results"][0]["parts"][0]
+
+        self.assertTrue(result["e_usable"], result)
+        self.assertIn("3×250 m Z3>Z5", result["training_fields"]["main"])
+        self.assertIn("Voorstel bijgewerkt", result["e_update_note"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_confirmation_keeps_unusable_preview_until_yes(self, model):

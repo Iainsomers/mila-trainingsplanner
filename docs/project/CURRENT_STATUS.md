@@ -1,5 +1,9 @@
 # Actuele status
 
+## 15 november 2026 - Garmin E bewaart expliciete zonebereiken in het voorstel
+
+- Een gebruikerscorrectie zoals `6×250m Z3>Z5` of `800m Z1>Z3` wordt nu server-side uit het bericht gelezen en aan exact één overeenkomende gemeten werkgroep gekoppeld. De Checked E preview toont daardoor werkelijk het gevraagde bereik; alleen een bevestigende modelzin is niet meer voldoende. De bronlaps, gemeten lapzones en zonetotalen blijven ongewijzigd.
+
 - Stats kan naast loopkilometers en ACWR nu een afzonderlijke, per ALT-zone gestapelde minutenstaaf tonen. De km-, ALT-minuten- en ACWR-assen verschijnen alleen wanneer hun onderwerp actief is en worden dynamisch links/rechts geplaatst (bij alle drie: km links-buiten, ALT links-binnen, ACWR rechts).
 
 ## 15 november 2026 - Selecteerbare weektotalen en ACWR in Stats
