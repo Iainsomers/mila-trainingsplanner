@@ -4,6 +4,7 @@
 
 - De individuele Stats-grafiek toont selecteerbare staven voor Total km en iedere afzonderlijke loopzone. Total km staat standaard aan; Z1–Z6 kunnen onafhankelijk worden toegevoegd of verborgen. Actieve zones worden per week gestapeld; de afzonderlijke Total-kolom staat indien actief daarnaast.
 - De rechteras toont optioneel ACWR total, aerobic Z1–Z3 en anaerobic Z4–Z6 en loopt vast van 0,2 tot 2,2 in stappen van 0,2. Iedere ratio deelt de huidige week door het gemiddelde van exact de vier voorgaande kalenderweken; vier verborgen aanloopweken ondersteunen het begin van de gekozen periode. Een nulnoemer levert geen punt. Regressie met 10/20/30/40 km gevolgd door 50 km geeft 2,00 voor total, aerobic en anaerobic.
+- De grafiek heeft geen gewone horizontale rasterlijnen. Zodra ACWR zichtbaar is, markeren lijnen 0,8 en 1,3. Wanneer uitsluitend ACWR-reeksen zichtbaar zijn, kleuren de bereiken onder 0,8 lichtblauw, 0,8–1,3 lichtgroen en boven 1,3 lichtrood; met km-staven blijven alleen de twee grenslijnen staan.
 
 ## 15 november 2026 - Stats volgt persoonlijke trainerplan-override
 

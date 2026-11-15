@@ -5,14 +5,16 @@
 {% block extra_head %}
 <style>
   .weekly-distance-chart { min-width: 680px; }
-  .weekly-distance-chart .grid-line { stroke: #dee2e6; stroke-width: 1; }
   .weekly-distance-chart .axis-label { fill: #6c757d; font-size: 12px; }
   .weekly-distance-chart .stats-series-line { fill: none; stroke-width: 2.2; vector-effect: non-scaling-stroke; }
   .weekly-distance-chart .stats-series-point { stroke: #fff; stroke-width: 1; vector-effect: non-scaling-stroke; }
   .weekly-distance-chart .stats-km-bar { stroke: #fff; stroke-width: .5; }
   .weekly-distance-chart .stats-km-bar:hover { filter: brightness(.92); }
   .weekly-distance-chart .stats-acwr-line { stroke-dasharray: 6 4; }
-  .weekly-distance-chart .stats-acwr-reference { stroke: #adb5bd; stroke-width: 1; stroke-dasharray: 3 4; }
+  .weekly-distance-chart .stats-acwr-threshold { stroke: #7d8790; stroke-width: 1; stroke-dasharray: 4 4; }
+  .weekly-distance-chart .stats-acwr-band-low { fill: #eaf4fb; }
+  .weekly-distance-chart .stats-acwr-band-normal { fill: #eaf6ed; }
+  .weekly-distance-chart .stats-acwr-band-high { fill: #fbeaea; }
   .zone-key { display: inline-block; width: 12px; height: 12px; border: 1px solid #adb5bd; border-radius: 2px; }
   .stats-series-controls { display: flex; flex-wrap: wrap; gap: 8px 16px; }
   .stats-series-controls label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -59,7 +61,6 @@
       <div class="overflow-x-auto">
         <svg class="weekly-distance-chart w-100" viewBox="0 0 {{ chart_width }} {{ chart_height }}" role="img" aria-label="Weekly distance in kilometres for {{ athlete.name }}">
           {% for tick in y_ticks %}
-            <line class="grid-line" x1="{{ plot_left }}" y1="{{ tick.y }}" x2="{{ plot_right_x }}" y2="{{ tick.y }}"></line>
             <text class="axis-label" x="{{ plot_left|add:'-10' }}" y="{{ tick.y|add:'4' }}" text-anchor="end">{{ tick.value }}</text>
           {% endfor %}
           <text class="axis-label" x="12" y="18">km</text>
@@ -67,7 +68,15 @@
             <text class="axis-label" x="{{ plot_right_x|add:'10' }}" y="{{ tick.y|add:'4' }}" text-anchor="start">{{ tick.value }}</text>
           {% endfor %}
           <text class="axis-label" x="{{ plot_right_x|add:'10' }}" y="18">ACWR</text>
-          <line class="stats-acwr-reference" x1="{{ plot_left }}" y1="{{ acwr_one_y }}" x2="{{ plot_right_x }}" y2="{{ acwr_one_y }}"><title>ACWR 1.0</title></line>
+          <g data-acwr-bands style="display:none">
+            <rect class="stats-acwr-band-high" x="{{ plot_left }}" y="{{ plot_top }}" width="{{ plot_width }}" height="{{ acwr_high_band_height }}"></rect>
+            <rect class="stats-acwr-band-normal" x="{{ plot_left }}" y="{{ acwr_high_y }}" width="{{ plot_width }}" height="{{ acwr_normal_band_height }}"></rect>
+            <rect class="stats-acwr-band-low" x="{{ plot_left }}" y="{{ acwr_low_y }}" width="{{ plot_width }}" height="{{ acwr_low_band_height }}"></rect>
+          </g>
+          <g data-acwr-thresholds>
+            <line class="stats-acwr-threshold" x1="{{ plot_left }}" y1="{{ acwr_high_y }}" x2="{{ plot_right_x }}" y2="{{ acwr_high_y }}"><title>ACWR 1.3</title></line>
+            <line class="stats-acwr-threshold" x1="{{ plot_left }}" y1="{{ acwr_low_y }}" x2="{{ plot_right_x }}" y2="{{ acwr_low_y }}"><title>ACWR 0.8</title></line>
+          </g>
           {% for week in weeks %}
             {% if week.show_label %}
               <text class="axis-label" x="{{ week.label_x }}" y="{{ plot_bottom_y|add:'22' }}" text-anchor="middle">{{ week.week_start|date:"d M" }}</text>
@@ -79,7 +88,7 @@
             </g>
           {% endfor %}
           {% for series in acwr_series %}
-            <g data-stats-series="{{ series.id }}"{% if not series.checked %} style="display:none"{% endif %}>
+            <g data-stats-series="{{ series.id }}" data-acwr-series{% if not series.checked %} style="display:none"{% endif %}>
               {% for path in series.paths %}<polyline class="stats-series-line stats-acwr-line" points="{{ path }}" stroke="{{ series.color }}"></polyline>{% endfor %}
               {% for point in series.points %}<circle class="stats-series-point" cx="{{ point.x }}" cy="{{ point.y }}" r="3" fill="{{ series.color }}"><title>{{ point.week_start|date:"d M Y" }} · {{ series.label }}: {{ point.value }}</title></circle>{% endfor %}
             </g>
@@ -196,14 +205,26 @@
       });
     }
   }
+  function updateStatsAcwrGuides() {
+    var hasKm = Array.from(document.querySelectorAll('[data-km-kind]')).some(function(group) {
+      return group.style.display !== "none";
+    });
+    var hasAcwr = Array.from(document.querySelectorAll('[data-acwr-series]')).some(function(group) {
+      return group.style.display !== "none";
+    });
+    document.querySelector('[data-acwr-thresholds]').style.display = hasAcwr ? "" : "none";
+    document.querySelector('[data-acwr-bands]').style.display = hasAcwr && !hasKm ? "" : "none";
+  }
   document.querySelectorAll("[data-stats-toggle]").forEach(function(toggle) {
     toggle.addEventListener("change", function() {
       document.querySelectorAll('[data-stats-series="' + toggle.dataset.statsToggle + '"]').forEach(function(series) {
         series.style.display = toggle.checked ? "" : "none";
       });
       layoutStatsKmBars();
+      updateStatsAcwrGuides();
     });
   });
   layoutStatsKmBars();
+  updateStatsAcwrGuides();
 </script>
 {% endblock %}

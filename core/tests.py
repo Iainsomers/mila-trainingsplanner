@@ -11877,6 +11877,11 @@ class TrainerStatsTests(TestCase):
         acwr_total = next(item for item in response.context["acwr_series"] if item["id"] == "acwr-total")
         self.assertEqual(acwr_total["points"][-1]["value"], "2.00")
         self.assertContains(response, "The ACWR axis runs from 0.2 to 2.2")
+        self.assertNotContains(response, 'class="grid-line"')
+        self.assertContains(response, "ACWR 0.8")
+        self.assertContains(response, "ACWR 1.3")
+        self.assertContains(response, "data-acwr-bands")
+        self.assertContains(response, "updateStatsAcwrGuides")
 
     def test_athlete_chart_period_selector_updates_weeks_and_summary(self):
         trainer = get_user_model().objects.create_user(username="periodcoach", password="secret", is_staff=True)

@@ -12972,6 +12972,13 @@ def trainer_athlete_stats_view(request, athlete_id):
             ),
         })
 
+    acwr_low_y = plot_top + plot_height - (
+        (0.8 - axis_min_acwr) / (axis_max_acwr - axis_min_acwr) * plot_height
+    )
+    acwr_high_y = plot_top + plot_height - (
+        (1.3 - axis_min_acwr) / (axis_max_acwr - axis_min_acwr) * plot_height
+    )
+
     return render(request, "core/trainer_athlete_stats.html", {
         "athlete": athlete,
         "weeks": weeks,
@@ -12995,10 +13002,13 @@ def trainer_athlete_stats_view(request, athlete_id):
         "plot_left": plot_left,
         "plot_right_x": chart_width - plot_right,
         "plot_top": plot_top,
+        "plot_width": plot_width,
         "plot_bottom_y": plot_top + plot_height,
-        "acwr_one_y": plot_top + plot_height - (
-            (1.0 - axis_min_acwr) / (axis_max_acwr - axis_min_acwr) * plot_height
-        ),
+        "acwr_low_y": acwr_low_y,
+        "acwr_high_y": acwr_high_y,
+        "acwr_high_band_height": acwr_high_y - plot_top,
+        "acwr_normal_band_height": acwr_low_y - acwr_high_y,
+        "acwr_low_band_height": plot_top + plot_height - acwr_low_y,
         "period_start": weeks[0]["week_start"],
         "period_end": weeks[-1]["week_start"] + timedelta(days=6),
         "average_km": f"{average_km:.1f}",
