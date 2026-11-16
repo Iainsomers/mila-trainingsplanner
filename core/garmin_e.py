@@ -125,7 +125,7 @@ def apply_explicit_zone_labels(proposal, message):
         return proposal, False
     pattern = re.compile(
         r"(?:(\d+)\s*[×x*]\s*)?(\d+)\s*m\b.{0,24}?"
-        r"\bZ\s*([1-6])\s*(?:>|→|-|tot)\s*Z?\s*([1-6])\b",
+        r"\bZ\s*([1-6])(?:\s*(?:>|→|-|tot)\s*Z?\s*([1-6]))?\b",
         re.IGNORECASE,
     )
     labels = []
@@ -134,7 +134,7 @@ def apply_explicit_zone_labels(proposal, message):
         labels.append({
             "target_meters": int(target),
             "count": int(count or 1),
-            "label": f"Z{first}>Z{last}",
+            "label": f"Z{first}>Z{last}" if last else f"Z{first}",
         })
     if not labels:
         return proposal, False
@@ -429,7 +429,7 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
             raise ValueError("Explicit zone labels must identify a measured work group.")
         target, count, label = item.get("target_meters"), item.get("count"), item.get("label")
         if (type(target) is not int or type(count) is not int or count < 1
-                or not isinstance(label, str) or not re.fullmatch(r"Z[1-6]>Z[1-6]", label)):
+                or not isinstance(label, str) or not re.fullmatch(r"Z[1-6](?:>Z[1-6])?", label)):
             raise ValueError("Explicit zone labels must contain distance, count and a Zx>Zy range.")
         matches = [index for index, ((distance, duration), group) in enumerate(groups)
                    if distance == target and duration is None and len(group) == count]

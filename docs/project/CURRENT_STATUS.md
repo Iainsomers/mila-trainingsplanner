@@ -1,5 +1,7 @@
 # Actuele status
 
+- Garmin E accepteert naast expliciete zonebereiken ook een enkele gebruikerszone voor een afstandsgroep, bijvoorbeeld `4×50m sprints Z6`, en verwerkt die in de gecontroleerde preview.
+
 - Compacte Alternative-intervallen blokkeren niet langer op een ontbrekende HR-zone van een afzonderlijk blok. Dat blok blijft zonder zonelabel, met de gemeten HR/duur behouden. Vragen in de chat behouden hun inhoudelijke antwoord in plaats van een generieke updatefout.
 
 - Garmin E herkent compacte Alternative-verzoeken met mm:ss-notatie (zoals 6*6:00). Expliciete set-starts ondersteunen gemengde patronen met voorafgaande werkblokken. Bij een mislukte update wordt de bevestigende modeltekst vervangen door een feitelijke melding dat het gecontroleerde voorstel niet is aangepast. Validatie: 34 Garmin E-tests en Django check.
