@@ -337,7 +337,7 @@ def garmin_type_e_ayc_view(request):
                                 except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
                                     error = str(exc)
                 reply = answer["reply"]
-                if wants_update and not candidate:
+                if wants_update and not candidate and (error or answer.get("intent") == "update"):
                     reply = "Het gecontroleerde voorstel is niet aangepast." + ("\n\n" + error if error else " De gevraagde wijziging leverde nog geen bruikbaar voorstel op.")
                 if candidate and time_group_adjusted:
                     reply += "\n\nDe werkblokken hebben vrijwel exact dezelfde hele-minuutduur; daarom toont het gecontroleerde voorstel deze groep als tijdreps."

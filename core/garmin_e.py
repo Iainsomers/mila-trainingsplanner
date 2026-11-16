@@ -645,8 +645,10 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
 
 def compact_alternative(part, result, entries, presentation):
     """Compile compact, bounded notation without losing measured per-lap facts."""
-    if not isinstance(presentation,dict) or any(not e["zone"] for e in entries):
-        raise ValueError("Compact Alternative needs supported zones for all blocks.")
+    if not isinstance(presentation,dict):
+        raise ValueError("Compact Alternative presentation must be an object.")
+    if len(entries) == 1 and not entries[0]["zone"]:
+        raise ValueError("Deze activiteit heeft geen bruikbare HR-zone; de gemeten tijd blijft behouden.")
     from core.alternative import expand_time_notation
     selected_zones = {}
     for role,key in (("Work","work_zone"),("Recovery","recovery_zone")):
@@ -678,7 +680,7 @@ def compact_alternative(part, result, entries, presentation):
             label = f"{int(seconds)//60}'{int(seconds)%60:02d}"
         else:
             label = f"{seconds:g}s"
-        return label+" Z"+zone
+        return label+(" Z"+zone if zone else "")
     texts,loads = [],[]
     position = 0
     while position<len(display):
@@ -698,7 +700,7 @@ def compact_alternative(part, result, entries, presentation):
             atom(item) for item in display[position:position+width])+")"
         text = part.get("alternative_label","Alternative")+" "+body
         expanded = expand_time_notation(text)
-        if not expanded or len(expanded)!=end-position:
+        if all(item[1] for item in display[position:end]) and (not expanded or len(expanded)!=end-position):
             raise ValueError("Compact Alternative notation could not be checked.")
         measured = []
         for entry in entries[position:end]:

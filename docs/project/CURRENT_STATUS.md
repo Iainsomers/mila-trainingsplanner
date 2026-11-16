@@ -1,5 +1,7 @@
 # Actuele status
 
+- Compacte Alternative-intervallen blokkeren niet langer op een ontbrekende HR-zone van een afzonderlijk blok. Dat blok blijft zonder zonelabel, met de gemeten HR/duur behouden. Vragen in de chat behouden hun inhoudelijke antwoord in plaats van een generieke updatefout.
+
 - Garmin E herkent compacte Alternative-verzoeken met mm:ss-notatie (zoals 6*6:00). Expliciete set-starts ondersteunen gemengde patronen met voorafgaande werkblokken. Bij een mislukte update wordt de bevestigende modeltekst vervangen door een feitelijke melding dat het gecontroleerde voorstel niet is aangepast. Validatie: 34 Garmin E-tests en Django check.
 
 - Garmin-chat scrollt na opbouwen van het antwoord nogmaals na browserlayout naar het laatste bericht. De eerdere scroll gebeurde terwijl het nieuwe chatvenster nog los van de pagina stond en had daardoor geen effect.
