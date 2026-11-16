@@ -446,7 +446,7 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         if pauses and all(pauses):
             text += f" p{round(median(pauses))}"
         starts = proposal.get("set_start_laps") or []
-        if starts:
+        if starts and len(groups) == 1:
             first_laps = [b["ids"][0] for b in group]
             if (len(groups)!=1 or not isinstance(starts,list) or any(type(i) is not int for i in starts)
                     or starts != sorted(set(starts)) or len(starts)<2 or starts[0] != first_laps[0]
@@ -468,6 +468,25 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
                     ai_nominal_m=distance or round(block["meters"]/50)*50,
                     ai_target_seconds=duration or round(block["seconds"]))
     main = " // ".join(texts)
+    starts = proposal.get("set_start_laps") or []
+    if starts and len(groups) > 1:
+        first_laps = [block["ids"][0] for block in blocks]
+        if (not isinstance(starts, list) or len(starts) < 2
+                or any(type(i) is not int or i not in first_laps for i in starts)
+                or starts != sorted(set(starts))):
+            raise ValueError("Set starts must identify chronological measured work laps.")
+        positions = [first_laps.index(i) for i in starts] + [len(blocks)]
+        sets = [blocks[left:right] for left, right in zip(positions, positions[1:])]
+        patterns = [[(b["distance"], b["duration"]) for b in group] for group in sets]
+        if len(patterns[0]) < 2 or any(pattern != patterns[0] for pattern in patterns[1:]):
+            raise ValueError("Sets must contain the same chronological measured pattern.")
+        prefix = blocks[:positions[0]]
+        prefix_text = texts[:len({b["distance"] for b in prefix})] if prefix else []
+        pattern_text = " - ".join(
+            (f"{distance} m" if distance is not None else f"{duration}s")
+            for distance, duration in patterns[0])
+        main = " // ".join(prefix_text + [f"{len(sets)}×({pattern_text})" + zone(
+            [i for group in sets for block in group for i in block["ids"]])])
     distances = [b["distance"] for b in blocks]
     if all(d is not None for d in distances):
         from core.watch_processing import match_repeating_distance_sets

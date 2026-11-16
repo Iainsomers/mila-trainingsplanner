@@ -235,7 +235,7 @@ def garmin_type_e_ayc_view(request):
                     turn["automatic"] = True
                 history = state["history"] + [turn]
                 compact_requested = bool(is_alternative and any(
-                    m["role"]=="user" and re.search(r"compact|notatie|\d+\s*['′].*(?://|[×x*]\s*\()",m["content"],re.I)
+                    m["role"]=="user" and re.search(r"compact|notatie|\d+\s*['′].*(?://|[×x*]\s*\()|\d+\s*[×x*]\s*\d+:\d{2}|\bwu\s+\d+:\d{2}",m["content"],re.I)
                     for m in history))
                 current = {"training":state["part"].get("training_fields") if state["part"].get("e_usable") else None,
                            "zone_basis":state["basis"],"hr_limits":athlete.zone_hr_bpm,
@@ -337,6 +337,8 @@ def garmin_type_e_ayc_view(request):
                                 except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
                                     error = str(exc)
                 reply = answer["reply"]
+                if wants_update and not candidate:
+                    reply = "Het gecontroleerde voorstel is niet aangepast." + ("\n\n" + error if error else " De gevraagde wijziging leverde nog geen bruikbaar voorstel op.")
                 if candidate and time_group_adjusted:
                     reply += "\n\nDe werkblokken hebben vrijwel exact dezelfde hele-minuutduur; daarom toont het gecontroleerde voorstel deze groep als tijdreps."
                 if error:
