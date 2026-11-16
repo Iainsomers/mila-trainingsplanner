@@ -2980,6 +2980,11 @@
                   log.appendChild(line);
                 });
                 log.scrollTop = log.scrollHeight;
+                // The chat is rebuilt before it is attached to the modal.
+                // Scroll again after layout, when its height is measurable.
+                if (typeof requestAnimationFrame === "function") requestAnimationFrame(function() {
+                  log.scrollTop = log.scrollHeight;
+                });
               }
               renderChat();
               var suggestion = document.createElement("textarea"); suggestion.maxLength = 1000; suggestion.rows = 2;
@@ -3013,7 +3018,10 @@
               openChat.className = "btn btn-sm btn-outline-primary"; openChat.textContent = "Chat";
               openChat.addEventListener("click", function() {
                 chat.open = !chat.open; panel.style.display = chat.open ? "block" : "none";
-                if (chat.open) suggestion.focus();
+                if (chat.open) {
+                  renderChat();
+                  suggestion.focus({preventScroll:true});
+                }
               });
               function updateEPreview(replacement, reply, automatic) {
                 chat.busy = false;

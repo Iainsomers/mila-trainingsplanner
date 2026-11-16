@@ -1,5 +1,7 @@
 # Actuele status
 
+- Garmin-chat scrollt na opbouwen van het antwoord nogmaals na browserlayout naar het laatste bericht. De eerdere scroll gebeurde terwijl het nieuwe chatvenster nog los van de pagina stond en had daardoor geen effect.
+
 - Aanvulling op Garmin-CD-fix: de aparte Diary-opslagroute behield alleen Main-laps. Deze bewaart nu ook ongewijzigde gemeten WU/CD/Sprint-laps, zodat een nieuwe CD niet de bestaande warming-upmeting verwijdert.
 
 ## 16 november 2026 - Handmatige CD blijft aanvulling op Garmin-meting
