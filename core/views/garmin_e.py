@@ -263,6 +263,10 @@ def garmin_type_e_ayc_view(request):
                 basis = answer.get("zone_basis",state["basis"])
                 if isinstance(proposal, dict):
                     proposal = deepcopy(proposal)
+                    prior_roles = (state.get("proposal") or {}).get("explicit_role_zones")
+                    proposal.pop("explicit_role_zones", None)
+                    if isinstance(prior_roles, dict):
+                        proposal["explicit_role_zones"] = deepcopy(prior_roles)
                     prior_labels = (state.get("proposal") or {}).get("zone_labels")
                     if isinstance(prior_labels, list):
                         proposal["zone_labels"] = deepcopy(prior_labels)

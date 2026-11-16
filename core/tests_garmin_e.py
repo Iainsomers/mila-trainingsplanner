@@ -37,6 +37,13 @@ def fixture():
 
 class GarminEValidationTests(SimpleTestCase):
 
+    def test_explicit_warmup_zone_is_taken_from_user_message(self):
+        proposal = {"warmup_laps":[1], "reps":[{"laps":[2], "target_seconds":360}]}
+        updated, changed = apply_explicit_zone_labels(proposal, "je moet die 1e 20' wel z1 noemen")
+        self.assertTrue(changed)
+        self.assertEqual(updated["explicit_role_zones"], {"Warmup":"1"})
+        self.assertNotIn("explicit_role_zones", proposal)
+
     def test_explicit_user_zone_ranges_update_checked_preview_labels(self):
         loads = [
             {"meters":1000, "seconds":320, "zone":"1", "segment":"CORE"},

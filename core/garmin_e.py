@@ -123,6 +123,18 @@ def apply_explicit_zone_labels(proposal, message):
     """Attach only literal user-stated distance-group zone ranges to a proposal."""
     if not isinstance(proposal, dict) or not isinstance(message, str):
         return proposal, False
+    # Explicit boundary corrections are user input, not inferred HR facts.
+    boundary = re.search(r"(?:eerste|1e|wu|warm[ -]?up).*?\bz\s*([1-6])\b", message, re.I)
+    cooldown = re.search(r"(?:cd|cool[ -]?down).*?\bz\s*([1-6])\b", message, re.I)
+    if (boundary or cooldown) and any(rep.get("target_seconds") for rep in proposal.get("reps", []) if isinstance(rep, dict)):
+        updated = deepcopy(proposal)
+        overrides = dict(updated.get("explicit_role_zones") or {})
+        if boundary:
+            overrides["Warmup"] = boundary[1]
+        if cooldown:
+            overrides["Cooldown"] = cooldown[1]
+        updated["explicit_role_zones"] = overrides
+        return updated, True
     pattern = re.compile(
         r"(?:(\d+)\s*[×x*]\s*)?(\d+)\s*m\b.{0,24}?"
         r"\bZ\s*([1-6])(?:\s*(?:>|→|-|tot)\s*Z?\s*([1-6]))?\b",
@@ -626,8 +638,14 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
         missing = missing or label is None
         duration = f"{int(seconds)//60}'" if seconds%60==0 else f"{seconds:g}s"
         role = roles.get(i,"Work")
+        explicit = (proposal.get("explicit_role_zones") or {}).get(role)
+        if explicit is not None:
+            if role not in {"Warmup", "Cooldown"} or str(explicit) not in set("123456"):
+                raise ValueError("Invalid explicit Alternative boundary zone.")
+            label = str(explicit)
         texts.append(f"{part.get('alternative_label','Alternative')} {role} {duration}"+(f" Z{label}" if label else ""))
         entries.append(dict(ids=indices,seconds=seconds,zone=label,role=role,
+                            explicit_zone=bool(explicit),
                             target=next((target for block,target in blocks if block==indices),seconds)))
         i = indices[-1]+1
     result = deepcopy(part)
@@ -707,6 +725,7 @@ def compact_alternative(part, result, entries, presentation):
             for lap_id in entry["ids"]:
                 raw = part["alternative_laps"][lap_id-1]
                 measured.append(dict(lap=lap_id,seconds=raw["seconds"],zone=entry["zone"],
+                    zone_source="user" if entry.get("explicit_zone") else "hr",
                     average_hr=raw.get("average_hr"),end_hr=raw.get("end_hr")))
         texts.append(text)
         loads.append(dict(segment="ALT",meters=0,seconds=sum(l["seconds"] for l in measured),

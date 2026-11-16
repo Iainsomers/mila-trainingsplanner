@@ -1,5 +1,7 @@
 # Actuele status
 
+- Expliciete gebruikerscorrecties voor Alternative-WU/CD (zoals `die 1e 20' Z1`) worden nu als gebruikerszone in het gecontroleerde voorstel en de gemeten ALT-tijdtoewijzing verwerkt. Ontbrekende HR verhindert deze expliciete correctie niet; de HR-metingen zelf blijven bewaard.
+
 - Garmin E accepteert naast expliciete zonebereiken ook een enkele gebruikerszone voor een afstandsgroep, bijvoorbeeld `4×50m sprints Z6`, en verwerkt die in de gecontroleerde preview.
 
 - Compacte Alternative-intervallen blokkeren niet langer op een ontbrekende HR-zone van een afzonderlijk blok. Dat blok blijft zonder zonelabel, met de gemeten HR/duur behouden. Vragen in de chat behouden hun inhoudelijke antwoord in plaats van een generieke updatefout.
