@@ -11423,6 +11423,8 @@ def coach_athlete_create_view(request):
         "z3_hr": "",
         "z4_hr": "",
         "z5_hr": "",
+        "lactate_lt1": "",
+        "lactate_lt2": "",
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -11469,6 +11471,8 @@ def coach_athlete_create_view(request):
         form["alternative_hr_correction"] = (request.POST.get("alternative_hr_correction") or "10").strip()
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_hr"] = (request.POST.get(f"z{z}_hr") or "").strip()
+        form["lactate_lt1"] = (request.POST.get("lactate_lt1") or "").strip()[:80]
+        form["lactate_lt2"] = (request.POST.get("lactate_lt2") or "").strip()[:80]
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -11646,6 +11650,8 @@ def coach_athlete_create_view(request):
                 zone_method=form["zone_method"],
                 zone_speed_mps=zone_speed_mps,
                 zone_hr_bpm=zone_hr_bpm,
+                lactate_lt1=form["lactate_lt1"],
+                lactate_lt2=form["lactate_lt2"],
                 view_weeks_ahead=view_weeks_ahead,
                 training_reports_enabled=form["training_reports_enabled"],
                 see_session_km=True,
@@ -11791,6 +11797,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "z3_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("3", ""),
         "z4_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("4", ""),
         "z5_hr": (getattr(athlete, "zone_hr_bpm", {}) or {}).get("5", ""),
+        "lactate_lt1": getattr(athlete, "lactate_lt1", ""),
+        "lactate_lt2": getattr(athlete, "lactate_lt2", ""),
         "zone_input_unit": unit,
         "zone_input_unit_label": unit_label,
         **zones_form,
@@ -11875,6 +11883,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["alternative_hr_correction"] = (request.POST.get("alternative_hr_correction") or "10").strip()
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_hr"] = (request.POST.get(f"z{z}_hr") or "").strip()
+        form["lactate_lt1"] = (request.POST.get("lactate_lt1") or "").strip()[:80]
+        form["lactate_lt2"] = (request.POST.get("lactate_lt2") or "").strip()[:80]
 
         for z in ("1", "2", "3", "4", "5"):
             form[f"z{z}_pace"] = (request.POST.get(f"z{z}_pace") or "").strip()
@@ -12050,6 +12060,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.zone_method = form["zone_method"]
             athlete.zone_speed_mps = zone_speed_mps
             athlete.zone_hr_bpm = zone_hr_bpm
+            athlete.lactate_lt1 = form["lactate_lt1"]
+            athlete.lactate_lt2 = form["lactate_lt2"]
             athlete.view_weeks_ahead = view_weeks_ahead
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.see_session_km = form["see_session_km"]

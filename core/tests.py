@@ -12432,6 +12432,8 @@ class AthleteZoneHeartRateTests(TestCase):
                 "z3_hr": "160",
                 "z4_hr": "160-170",
                 "z5_hr": "max 170",
+                "lactate_lt1": "2.0 mmol/L",
+                "lactate_lt2": "4.0 mmol/L",
             },
         )
 
@@ -12444,6 +12446,8 @@ class AthleteZoneHeartRateTests(TestCase):
             athlete.zone_hr_bpm,
             {"1": "130", "2": "145", "3": "160", "4": "160-170", "5": "max 170"},
         )
+        self.assertEqual(athlete.lactate_lt1, "2.0 mmol/L")
+        self.assertEqual(athlete.lactate_lt2, "4.0 mmol/L")
 
         page = self.client.get(f"/coach/athletes/{athlete.id}/edit/?tab=zones")
         self.assertContains(page, 'name="z1_hr"', html=False)
@@ -12452,6 +12456,12 @@ class AthleteZoneHeartRateTests(TestCase):
         self.assertContains(page, 'value="160"', html=False)
         self.assertContains(page, 'value="160-170"', html=False)
         self.assertContains(page, 'value="max 170"', html=False)
+        self.assertContains(page, 'name="lactate_lt1"', html=False)
+        self.assertContains(page, 'placeholder="LT1"', html=False)
+        self.assertContains(page, 'value="2.0 mmol/L"', html=False)
+        self.assertContains(page, 'name="lactate_lt2"', html=False)
+        self.assertContains(page, 'placeholder="LT2"', html=False)
+        self.assertContains(page, 'value="4.0 mmol/L"', html=False)
 
 
 class SecurityAccessRegressionTests(TestCase):

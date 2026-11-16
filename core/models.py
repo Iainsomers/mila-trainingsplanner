@@ -530,6 +530,8 @@ class Athlete(models.Model):
         default=dict,
         blank=True,
     )
+    lactate_lt1 = models.CharField(max_length=80, blank=True, default="")
+    lactate_lt2 = models.CharField(max_length=80, blank=True, default="")
 
     pr_800_s = models.FloatField(null=True, blank=True)
     pr_1000_s = models.FloatField(null=True, blank=True)

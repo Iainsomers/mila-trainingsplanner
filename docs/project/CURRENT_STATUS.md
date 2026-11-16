@@ -1,5 +1,9 @@
 # Actuele status
 
+## 16 november 2026 - Eerste lactaatvelden in Athlete Input
+
+- Onder HR bij Z2 en Z3 kan de trainer nu per atleet vrije tekst voor respectievelijk LT1 en LT2 bewaren. Dit is de eerste invoerstap; de waarden sturen nog geen zones of berekeningen aan.
+
 ## 16 november 2026 - Standard Strength veilig verwijderen en archiveren
 
 - Permanente verwijdering heeft nu een aparte waarschuwing en is uitsluitend mogelijk voor nooit gebruikte schema’s. Eerste gebruik wordt blijvend gemarkeerd. Gebruikte schema’s bieden alleen Archive; het archief bewaart koppelingen, verbergt nieuwe keuzes en ondersteunt Restore. Migratie `0156_archive_standard_strength_programs` vult de gebruiksstatus voor bestaande gekoppelde schema’s.

@@ -52,6 +52,7 @@ Bijgewerkt: 22 oktober 2026.
 - De applicatie bewaart zones als snelheid in meter per seconde.
 - Z6 wordt gebruikt voor snelle/sprintonderdelen en kan uit standaardlogica komen.
 - Per atleet kan voor Z1–Z5 HR-tekst worden opgeslagen, bijvoorbeeld `160-170` of `max 170`; lege waarden blijven leeg. Type D bewaart eigen numerieke analysegrenzen apart.
+- LT1 bij Z2 en LT2 bij Z3 zijn voorlopig vrije tekstwaarden van maximaal 80 tekens. Ze worden alleen opgeslagen en weergegeven; er volgt nog geen lactaat-, zone- of trainingsberekening uit.
 
 ## PR- en doel-PR-formaten
 
