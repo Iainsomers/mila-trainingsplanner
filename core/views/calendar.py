@@ -3204,7 +3204,17 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     preserved_watch_loads = [
         load for load in original_watch_loads
         if isinstance(load, dict)
-        and str(load.get("segment") or "CORE").upper() == "CORE"
+        and (
+            str(load.get("segment") or "CORE").upper() in {"CORE", "IGNORE"}
+            or any(
+                str(load.get("segment") or "CORE").upper() == segment_type
+                and _normalise_main_text(request.POST.get(field_name, ""))
+                == _normalise_main_text(" // ".join(
+                    str(segment.text or "") for segment in source_slot.segments.filter(type=segment_type).order_by("order", "id")
+                ))
+                for segment_type, field_name in (("WU", "wu_text"), ("CD", "cd_text"), ("SPR", "sprint_text"))
+            )
+        )
     ]
     override_source = original_source if keep_watch_main else "planned"
     override_watch_loads = preserved_watch_loads if keep_watch_main else []

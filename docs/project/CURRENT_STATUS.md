@@ -1,5 +1,7 @@
 # Actuele status
 
+- Aanvulling op Garmin-CD-fix: de aparte Diary-opslagroute behield alleen Main-laps. Deze bewaart nu ook ongewijzigde gemeten WU/CD/Sprint-laps, zodat een nieuwe CD niet de bestaande warming-upmeting verwijdert.
+
 ## 16 november 2026 - Handmatige CD blijft aanvulling op Garmin-meting
 
 - Een gewone Save na Garmin E zette het slot onbedoeld terug naar Planned en verwijderde de gemeten loads. Daardoor maakte `1000 m CD` van een gemeten sessie van 7,0 km een tekstberekening van 5,7 km. De Save behoudt nu bron en meting; Diary en Stats tellen alleen het nieuwe CD-type aanvullend mee. De regressie geeft 7,0 km gemeten plus 1,0 km Z1-CD = 8,0 km, zonder de gemeten Main opnieuw te berekenen.
