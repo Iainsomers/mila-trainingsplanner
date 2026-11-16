@@ -265,7 +265,7 @@ def garmin_type_e_ayc_view(request):
                         return value
                     value = deepcopy(value)
                     prior = state.get("proposal") or {}
-                    for key in ("explicit_role_zones", "zone_labels"):
+                    for key in ("explicit_role_zones", "explicit_lap_zones", "zone_labels"):
                         value.pop(key, None)
                         if key in prior:
                             value[key] = deepcopy(prior[key])

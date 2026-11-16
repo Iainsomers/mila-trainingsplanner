@@ -123,6 +123,13 @@ def apply_explicit_zone_labels(proposal, message):
     """Attach only literal user-stated distance-group zone ranges to a proposal."""
     if not isinstance(proposal, dict) or not isinstance(message, str):
         return proposal, False
+    lap_zone = re.search(r"\blap\s*(\d+)\b.{0,30}?\bz\s*([1-6])\b", message, re.I)
+    if lap_zone:
+        updated = deepcopy(proposal)
+        overrides = dict(updated.get("explicit_lap_zones") or {})
+        overrides[lap_zone[1]] = lap_zone[2]
+        updated["explicit_lap_zones"] = overrides
+        return updated, True
     # Explicit boundary corrections are user input, not inferred HR facts.
     boundary = re.search(r"(?:eerste|1e|wu|warm[ -]?up).*?\bz\s*([1-6])\b", message, re.I)
     cooldown = re.search(r"(?:cd|cool[ -]?down).*?\bz\s*([1-6])\b", message, re.I)
@@ -387,7 +394,9 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         raise ValueError("Warmup must precede work and cooldown must follow it.")
     for i in wu+cd:
         row = facts[i-1]
-        if row["zone"] not in {"Z1","Z2","Z","ZNA"} or row["distance_m"]/row["duration_s"] < 2:
+        explicit = (proposal.get("explicit_lap_zones") or {}).get(str(i))
+        boundary_zone = "Z" + explicit if explicit in {"1", "2"} else row["zone"]
+        if boundary_zone not in {"Z1","Z2","Z","ZNA"} or row["distance_m"]/row["duration_s"] < 2:
             raise ValueError(f"Lap {i} is not supported as warmup/cooldown.")
     for i in recovery:
         row = facts[i-1]
@@ -405,6 +414,12 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         for key in ("ai_rep","ai_group","ai_nominal_m","ai_target_seconds","nominal_rep_m"):
             load.pop(key,None)
         load.update(segment="WU" if i in wu else "CD" if i in cd else "IGNORE" if i in ignored else "CORE",work_rep=False)
+        explicit = (proposal.get("explicit_lap_zones") or {}).get(str(i))
+        if explicit is not None:
+            if str(explicit) not in set("123456"):
+                raise ValueError("Invalid explicit lap zone.")
+            load["zone"] = str(explicit)
+            load["zone_source"] = "user"
     missing_hr = False
     if zone_basis not in {"auto","pace","hr"}:
         raise ValueError("Choose pace, hr or auto as zone basis.")

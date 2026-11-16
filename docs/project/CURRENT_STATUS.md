@@ -1,5 +1,7 @@
 # Actuele status
 
+- Garmin E verwerkt expliciete lapzonecorrecties (`lap 24 Z1`) vóór WU/CD-validatie en bewaart ze bij herhaalde voorstellen. De gebruikerzone wijzigt de zonetoewijzing, met behoud van gemeten afstand en tijd; overige laps behouden hun eigen controles.
+
 - Garmin E speelt expliciete zonecorrecties uit de gebruikersgeschiedenis opnieuw af vóór iedere voorstelcontrole, inclusief herstelverzoeken. Daardoor blijven eerdere WU/CD-correcties behouden bij `try again` en wanneer een nieuw modelantwoord de servervelden niet bevat.
 
 - Expliciete gebruikerscorrecties voor Alternative-WU/CD (zoals `die 1e 20' Z1`) worden nu als gebruikerszone in het gecontroleerde voorstel en de gemeten ALT-tijdtoewijzing verwerkt. Ontbrekende HR verhindert deze expliciete correctie niet; de HR-metingen zelf blijven bewaard.

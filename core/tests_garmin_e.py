@@ -37,6 +37,19 @@ def fixture():
 
 class GarminEValidationTests(SimpleTestCase):
 
+    def test_explicit_lap_zone_allows_corrected_cooldown(self):
+        part, proposal = fixture()
+        part["watch_loads"].append(dict(segment="CORE", meters=1000, seconds=190, zone="5"))
+        proposal["cooldown_laps"] = [10]
+        with self.assertRaisesRegex(ValueError, "Lap 10 is not supported"):
+            checked_proposal(part, proposal, zone_basis="pace")
+        updated, changed = apply_explicit_zone_labels(proposal, "maak van lap 10 een z1 en dan valt hij in de cd")
+        self.assertTrue(changed)
+        checked = checked_proposal(part, updated, zone_basis="pace")
+        self.assertEqual(checked["watch_loads"][-1]["zone"], "1")
+        self.assertEqual(checked["watch_loads"][-1]["segment"], "CD")
+        self.assertEqual(checked["watch_loads"][-1]["seconds"], 190)
+
     def test_explicit_warmup_zone_is_taken_from_user_message(self):
         proposal = {"warmup_laps":[1], "reps":[{"laps":[2], "target_seconds":360}]}
         updated, changed = apply_explicit_zone_labels(proposal, "je moet die 1e 20' wel z1 noemen")
