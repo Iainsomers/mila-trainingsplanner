@@ -1,5 +1,9 @@
 # Actuele status
 
+## 16 november 2026 - Handmatige CD blijft aanvulling op Garmin-meting
+
+- Een gewone Save na Garmin E zette het slot onbedoeld terug naar Planned en verwijderde de gemeten loads. Daardoor maakte `1000 m CD` van een gemeten sessie van 7,0 km een tekstberekening van 5,7 km. De Save behoudt nu bron en meting; Diary en Stats tellen alleen het nieuwe CD-type aanvullend mee. De regressie geeft 7,0 km gemeten plus 1,0 km Z1-CD = 8,0 km, zonder de gemeten Main opnieuw te berekenen.
+
 ## 16 november 2026 - Eerste lactaatvelden in Athlete Input
 
 - Onder HR bij Z2 en Z3 kan de trainer nu per atleet vrije tekst voor respectievelijk LT1 en LT2 bewaren. Dit is de eerste invoerstap; de waarden sturen nog geen zones of berekeningen aan.

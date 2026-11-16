@@ -835,17 +835,27 @@ def athlete_week_stats(plan, athlete, week_start: date_cls, pause_mode=None):
     days = _week_days(week_start)
 
     def add_actual_watch_loads(slot):
-        loads = _watch_loads_for_slot(slot)
-        if not loads:
+        measured_loads = _watch_loads_for_slot(slot)
+        if not measured_loads:
             return False
+        # The Diary load helper keeps measured laps for covered segment types
+        # and supplements only manually added types, such as a CD added after
+        # a Garmin import. Stats must use that same combined source.
+        from core.views.calendar import _ayc_slot_loads_for_totals
+        loads = _ayc_slot_loads_for_totals(slot, athlete, pause_mode)
         for load in loads:
+            if load.get("kind") == "alt":
+                zone = str(load.get("zone") or "")
+                if zone in alt_zones:
+                    alt_zones[zone]["duration_s"] += float(load.get("seconds") or 0)
+                continue
             if load.get("walking"):
                 continue
-            zone = load["zone"]
-            meters = load["meters"]
-            seconds = load["seconds"]
-            t_key = load["t_key"]
-            if load["race"]:
+            zone = str(load.get("zone") or "")
+            meters = float(load.get("meters") or 0)
+            seconds = float(load.get("seconds") or 0)
+            t_key = str(load.get("t_key") or "")
+            if load.get("race"):
                 race["distance_m"] += meters
                 race["duration_s"] += seconds
             elif zone in zones:
@@ -872,11 +882,6 @@ def athlete_week_stats(plan, athlete, week_start: date_cls, pause_mode=None):
                 continue
 
             if add_actual_watch_loads(slot):
-                # Alternative minutes are independent of measured running laps.
-                for seg in slot.segments.all():
-                    if seg.type == 'ALT':
-                        for alt_zone, alt_duration_s in _alt_zone_durations(seg):
-                            alt_zones[alt_zone]['duration_s'] += alt_duration_s
                 continue
 
             for seg in slot.segments.all():

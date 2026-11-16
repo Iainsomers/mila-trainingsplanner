@@ -263,6 +263,8 @@ De atleetkeuze en `Copy van...` zijn beperkt tot atleten van de coach die op dat
 
 ## Tempoherkenning en totalen
 
+Een gewone handmatige wijziging aan een reeds geïmporteerde Garmin-training behoudt de gemeten horlogeloads. Een nieuw segmenttype dat niet in de opname zat, zoals een achteraf toegevoegde CD, wordt als geplande aanvulling bij de gemeten kilometers en zones opgeteld.
+
 Flex Planner en AYC herkennen tempo's zoals `TM`, `THM`, `T4` en `T1500` alleen als losse labels. De tekstzoeker verwijdert geen spaties meer voordat hij zoekt, zodat woorden als `ritme` niet langer onterecht als `TM` worden geteld. Afstanden blijven wel meetellen in hun normale zone.
 
 Flex Planner en AYC kiezen voor een atleet op een datum dezelfde actieve bronplanning. Persoonlijke slots uit oude of niet meer toegewezen plannen mogen de actuele training niet overschrijven of verbergen; een Flex-override behoudt wel altijd voorrang.

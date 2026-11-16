@@ -2136,6 +2136,14 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
                 watch_loads = [item for item in decoded_loads if isinstance(item, dict)]
         except (TypeError, ValueError):
             watch_loads = []
+    elif str(getattr(visible_slot, "source", "") or "") in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
+        # A normal edit of an imported workout does not post watch_origin or
+        # watch_loads. Keep the measured laps authoritative; newly added
+        # segment types (for example a manual CD) are added from their parsed
+        # text by the load calculators instead of replacing the recording.
+        watch_origin = visible_slot.source
+        existing_loads = getattr(visible_slot, "watch_loads", [])
+        watch_loads = list(existing_loads) if isinstance(existing_loads, list) else []
     if not alternative_only:
         slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"} else "planned"
         slot.watch_loads = watch_loads

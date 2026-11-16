@@ -231,6 +231,50 @@ class WatchOriginalPlanTests(TestCase):
         self.assertEqual([load for load in loads if load.get('kind')=='alt'],
                          [{'kind':'alt','zone':'2','seconds':5400}])
 
+    def test_manual_cooldown_keeps_garmin_e_measured_loads_and_adds_to_totals(self):
+        from core.stats import athlete_week_stats
+        from core.views.calendar import _ayc_slot_loads_for_totals
+        from django.core.cache import cache
+
+        slot = TrainingSlot.objects.create(
+            plan=self.plan, athlete=self.athlete, date=self.day, slot_index=2,
+            source="watch_e",
+            watch_loads=[
+                {"segment":"WU", "zone":"1", "meters":2250, "seconds":675},
+                {"segment":"CORE", "zone":"2", "meters":3600, "seconds":720},
+                {"segment":"CORE", "zone":"1", "meters":1150, "seconds":300, "work_rep":False},
+            ],
+        )
+        slot.segments.create(type="WU", text="2250 m Z1", zone="1", distance_m=2250, reps=1, order=0)
+        slot.segments.create(type="CORE", text="12×300 m Z2 p44", zone="2", distance_m=300, reps=12, order=3)
+
+        response = self.client.post(self.url(), {
+            "wu_text":"2250 m Z1",
+            "core_text":"12×300 m Z2 p44",
+            "cd_text":"1000 m Z1",
+        })
+        self.assertEqual(response.status_code, 200)
+
+        slot.refresh_from_db()
+        self.assertEqual(slot.source, "watch_e")
+        self.assertEqual(sum(float(load["meters"]) for load in slot.watch_loads), 7000)
+        diary_loads = _ayc_slot_loads_for_totals(slot, self.athlete)
+        self.assertEqual(sum(load.get("meters", 0) for load in diary_loads), 8000)
+        self.assertEqual(
+            sum(load.get("meters", 0) for load in diary_loads if load.get("zone") == "1"),
+            4400,
+        )
+        self.assertEqual(
+            sum(load.get("meters", 0) for load in diary_loads if load.get("zone") == "2"),
+            3600,
+        )
+
+        cache.clear()
+        week = self.day.fromordinal(self.day.toordinal() - self.day.weekday())
+        weekly = athlete_week_stats(self.plan, self.athlete, week)
+        self.assertEqual(weekly["zones"]["1"]["distance_m"], 4400)
+        self.assertEqual(weekly["zones"]["2"]["distance_m"], 3600)
+
     def test_alternative_only_inherits_entire_shared_training_and_keeps_planned_source(self):
         shared=TrainingSlot.objects.create(plan=self.plan,date=self.day,slot_index=2)
         shared.segments.create(type='WU',text='1500m z1',order=0)
