@@ -260,6 +260,19 @@ def garmin_type_e_ayc_view(request):
                     )
                     initial_retry_used = True
                 proposal = answer.get("proposal")
+                def apply_conversation_corrections(value):
+                    if not isinstance(value, dict):
+                        return value
+                    value = deepcopy(value)
+                    prior = state.get("proposal") or {}
+                    for key in ("explicit_role_zones", "zone_labels"):
+                        value.pop(key, None)
+                        if key in prior:
+                            value[key] = deepcopy(prior[key])
+                    for turn in history:
+                        if turn.get("role") == "user":
+                            value, _ = apply_explicit_zone_labels(value, turn.get("content", ""))
+                    return value
                 basis = answer.get("zone_basis",state["basis"])
                 if isinstance(proposal, dict):
                     proposal = deepcopy(proposal)
@@ -313,6 +326,7 @@ def garmin_type_e_ayc_view(request):
                         repair_used = True
                 if proposal is not None:
                     try:
+                        proposal = apply_conversation_corrections(proposal)
                         if wants_update:
                             proposal = complete_partial_running_proposal(part, proposal)
                         proposal, time_group_adjusted = prefer_measured_time_groups(part, proposal)
@@ -330,6 +344,7 @@ def garmin_type_e_ayc_view(request):
                             basis = answer.get("zone_basis",state["basis"])
                             if proposal is not None:
                                 try:
+                                    proposal = apply_conversation_corrections(proposal)
                                     if wants_update:
                                         proposal = complete_partial_running_proposal(part, proposal)
                                     proposal, time_group_adjusted = prefer_measured_time_groups(part, proposal)

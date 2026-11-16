@@ -1,5 +1,7 @@
 # Actuele status
 
+- Garmin E speelt expliciete zonecorrecties uit de gebruikersgeschiedenis opnieuw af vóór iedere voorstelcontrole, inclusief herstelverzoeken. Daardoor blijven eerdere WU/CD-correcties behouden bij `try again` en wanneer een nieuw modelantwoord de servervelden niet bevat.
+
 - Expliciete gebruikerscorrecties voor Alternative-WU/CD (zoals `die 1e 20' Z1`) worden nu als gebruikerszone in het gecontroleerde voorstel en de gemeten ALT-tijdtoewijzing verwerkt. Ontbrekende HR verhindert deze expliciete correctie niet; de HR-metingen zelf blijven bewaard.
 
 - Garmin E accepteert naast expliciete zonebereiken ook een enkele gebruikerszone voor een afstandsgroep, bijvoorbeeld `4×50m sprints Z6`, en verwerkt die in de gecontroleerde preview.
