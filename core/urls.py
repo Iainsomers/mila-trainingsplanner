@@ -80,6 +80,7 @@ from core.views.coach import (
     standard_strength_list_view,
     standard_strength_form_view,
     standard_strength_delete_view,
+    standard_strength_archive_view,
     standard_strength_detail_view,
     race_calendar_view,
     race_calendar_type_save_view,
@@ -263,6 +264,7 @@ urlpatterns = [
     path("planning/standard-strength/new/", standard_strength_form_view, name="standard_strength_create"),
     path("planning/standard-strength/<int:program_id>/edit/", standard_strength_form_view, name="standard_strength_edit"),
     path("planning/standard-strength/<int:program_id>/delete/", standard_strength_delete_view, name="standard_strength_delete"),
+    path("planning/standard-strength/<int:program_id>/archive/", standard_strength_archive_view, name="standard_strength_archive"),
     path("planning/standard-strength/<int:program_id>/", standard_strength_detail_view, name="standard_strength_detail"),
 
     # Race calendar

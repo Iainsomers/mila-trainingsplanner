@@ -14,6 +14,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
 from django.template.loader import get_template, render_to_string
 from django.utils import timezone
+from django.urls import reverse
 
 from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSlot, AthleteDailyVital, AthleteDayCheck, AthleteWeekReport, AthleteFocusPoint, CoachAccess, CoachEvaluationSharing, CoachSettings, EvaluationQuestion, EvaluationQuestionnaire, EvaluationResponse, FocusPointComment, Group, MatchAthleteRecord, MatchOverview, NewFeature, PlanLike, PlanMembership, PlannedChange, PolarConnection, RaceEntry, RaceEvent, RaceEventDistance, StandardStrengthProgram, Team, TrainingPlan, TrainingSegment, TrainingSlot, UserWish, WishLike, YearPlannerEntry, YearPlannerWhereabout
 from core.focus_point_import import FOCUS_POINT_HEADERS
@@ -10449,6 +10450,61 @@ class RaceSelectDisplayTests(TestCase):
 
 
 class StandardStrengthAccessTests(TestCase):
+    def test_unused_program_requires_confirmation_before_permanent_delete(self):
+        coach = get_user_model().objects.create_user(
+            username="strengthdeletecoach", password="secret", is_staff=True,
+        )
+        program = StandardStrengthProgram.objects.create(owner=coach, name="Unused circuit")
+        self.client.force_login(coach)
+
+        confirmation = self.client.get(reverse("standard_strength_delete", args=[program.id]))
+
+        self.assertContains(confirmation, "This cannot be undone")
+        self.assertContains(confirmation, "Permanently delete")
+        self.assertTrue(StandardStrengthProgram.objects.filter(pk=program.pk).exists())
+        response = self.client.post(reverse("standard_strength_delete", args=[program.id]))
+        self.assertRedirects(response, reverse("standard_strength_list"))
+        self.assertFalse(StandardStrengthProgram.objects.filter(pk=program.pk).exists())
+
+    def test_used_program_can_only_be_archived_and_restored(self):
+        coach = get_user_model().objects.create_user(
+            username="strengtharchivecoach", password="secret", is_staff=True,
+        )
+        plan = TrainingPlan.objects.create(owner=coach, name="Strength history")
+        slot = TrainingSlot.objects.create(plan=plan, date=date(2026, 11, 16), slot_index=1)
+        program = StandardStrengthProgram.objects.create(owner=coach, name="Used circuit")
+        segment = TrainingSegment.objects.create(
+            slot=slot, order=1, type="MOB", text=program.name,
+            standard_strength_program=program,
+        )
+        program.refresh_from_db()
+        self.assertTrue(program.has_been_used)
+        segment.delete()
+        self.client.force_login(coach)
+
+        listing = self.client.get(reverse("standard_strength_list"))
+        self.assertContains(listing, "Archive")
+        self.assertNotContains(listing, reverse("standard_strength_delete", args=[program.id]))
+        blocked = self.client.post(reverse("standard_strength_delete", args=[program.id]))
+        self.assertEqual(blocked.status_code, 409)
+        self.assertContains(blocked, "cannot be deleted", status_code=409)
+        self.assertTrue(StandardStrengthProgram.objects.filter(pk=program.pk).exists())
+
+        archived = self.client.post(reverse("standard_strength_archive", args=[program.id]))
+        self.assertRedirects(archived, reverse("standard_strength_list"))
+        program.refresh_from_db()
+        self.assertIsNotNone(program.archived_at)
+        listing = self.client.get(reverse("standard_strength_list"))
+        self.assertContains(listing, "Archived strength programs (1)")
+        self.assertContains(listing, "Restore")
+
+        restored = self.client.post(
+            reverse("standard_strength_archive", args=[program.id]), {"action":"restore"},
+        )
+        self.assertRedirects(restored, reverse("standard_strength_list"))
+        program.refresh_from_db()
+        self.assertIsNone(program.archived_at)
+
     def test_athlete_can_open_program_from_trainer_plan_selected_in_base_planning(self):
         User = get_user_model()
         coach = User.objects.create_user(username="basecoach", password="secret", is_staff=True)

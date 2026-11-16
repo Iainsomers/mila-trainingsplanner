@@ -46,10 +46,14 @@
                   <div class="d-flex gap-2">
                     <a href="{% url 'standard_strength_detail' program.id %}" class="btn btn-sm btn-outline-secondary">View</a>
                     <a href="{% url 'standard_strength_edit' program.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                    <form method="post" action="{% url 'standard_strength_delete' program.id %}" onsubmit="return confirm('Delete strength program?');">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                    </form>
+                    {% if program.is_used %}
+                      <form method="post" action="{% url 'standard_strength_archive' program.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-warning">Archive</button>
+                      </form>
+                    {% else %}
+                      <a href="{% url 'standard_strength_delete' program.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    {% endif %}
                   </div>
                 </td>
               </tr>
@@ -60,6 +64,37 @@
     </div>
   {% else %}
     <div class="alert alert-info">No standard strength programs yet.</div>
+  {% endif %}
+
+  {% if archived_programs %}
+    <details class="mt-4">
+      <summary class="fw-semibold">Archived strength programs ({{ archived_programs|length }})</summary>
+      <div class="card mt-2">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Name</th><th style="width:120px;">Exercises</th><th style="width:210px;">Actions</th></tr></thead>
+            <tbody>
+              {% for program in archived_programs %}
+                <tr>
+                  <td><strong>{{ program.name }}</strong></td>
+                  <td>{{ program.exercises.count }}</td>
+                  <td>
+                    <div class="d-flex gap-2">
+                      <a href="{% url 'standard_strength_detail' program.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+                      <form method="post" action="{% url 'standard_strength_archive' program.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="restore">
+                        <button type="submit" class="btn btn-sm btn-outline-primary">Restore</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
   {% endif %}
 </div>
 {% endblock %}

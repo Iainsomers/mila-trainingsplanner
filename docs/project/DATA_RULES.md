@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- Een Standard Strength-programma krijgt blijvend `has_been_used=True` zodra een TrainingSegment ernaar verwijst. Die status wordt niet teruggedraaid wanneer de planning later verandert. Een programma met deze status of een actuele segmentverwijzing mag niet worden verwijderd. Archiveren zet alleen `archived_at`, bewaart programma, oefeningen en segmentkoppelingen, en sluit het programma uit van nieuwe normale keuzes.
+
 - Stats berekent ACWR per kalenderweek als `actuele week / gemiddelde van de vier direct voorafgaande weken`. De actuele week telt nooit mee in de noemer. Total gebruikt alle loopkilometers, aerobic gebruikt Z1+Z2+Z3 en anaerobic gebruikt Z4+Z5+Z6. Nulweken tellen in het vierweeksgemiddelde mee; bij een noemer van 0 is de ratio niet gedefinieerd en wordt geen punt getoond. Voor het begin van een gekozen grafiekperiode worden vier extra, niet-getoonde aanloopweken opgehaald. De weergave-as is vast 0,2–2,2; waarden daarbuiten worden aan de betreffende grafiekrand getekend, terwijl de tooltip de berekende waarde behoudt.
 - De Stats-ALT-staaf gebruikt dezelfde effectieve slotbron als Diary-totalen en telt `kind=alt` per kalenderweek en zone Z1–Z6 in minuten. Deze minuten blijven volledig gescheiden van loopmeters, loopzones en de drie ACWR-berekeningen.
 

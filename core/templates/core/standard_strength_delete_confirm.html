@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+
+{% block title %}Delete Standard Strength{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:760px;">
+  <h1 class="h3 mb-3">Delete Standard Strength</h1>
+  {% if delete_blocked %}
+    <div class="alert alert-warning">
+      <strong>{{ program.name }}</strong> has already been used in training. It cannot be deleted because historical and planned training must keep their link to this strength program.
+    </div>
+    <p>Archive it instead. It will disappear from normal selection lists while existing training remains intact.</p>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'standard_strength_archive' program.id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-warning">Archive</button>
+      </form>
+      <a href="{% url 'standard_strength_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  {% else %}
+    <div class="alert alert-danger">
+      <strong>Warning:</strong> this permanently deletes <strong>{{ program.name }}</strong> and all its exercises. This cannot be undone.
+    </div>
+    <p>Only unused strength programs can be deleted.</p>
+    <form method="post" class="d-flex gap-2">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Permanently delete</button>
+      <a href="{% url 'standard_strength_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -9200,10 +9200,14 @@ def coach_saved_training_move_view(request, template_id: int, direction: str):
 def _standard_strength_programs_for_user(user):
     return list(
         StandardStrengthProgram.objects
-        .filter(owner=user)
+        .filter(owner=user, archived_at__isnull=True)
         .prefetch_related("exercises")
         .order_by("sort_order", "name", "id")
     )
+
+
+def _standard_strength_is_used(program):
+    return bool(program.has_been_used or program.segments.exists())
 
 
 def _standard_strength_form_rows(program=None, request_post=None):
@@ -9280,8 +9284,20 @@ def _standard_strength_visible_via_base_planning(program, athlete):
 @login_required
 @require_GET
 def standard_strength_list_view(request):
-    programs = _standard_strength_programs_for_user(_active_coach_user(request))
-    return render(request, "core/standard_strength_list.html", {"programs": programs})
+    active_coach = _active_coach_user(request)
+    programs = _standard_strength_programs_for_user(active_coach)
+    for program in programs:
+        program.is_used = _standard_strength_is_used(program)
+    archived_programs = list(
+        StandardStrengthProgram.objects
+        .filter(owner=active_coach, archived_at__isnull=False)
+        .prefetch_related("exercises")
+        .order_by("sort_order", "name", "id")
+    )
+    return render(request, "core/standard_strength_list.html", {
+        "programs": programs,
+        "archived_programs": archived_programs,
+    })
 
 
 @login_required
@@ -9355,10 +9371,33 @@ def standard_strength_form_view(request, program_id=None):
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def standard_strength_delete_view(request, program_id: int):
     program = get_object_or_404(StandardStrengthProgram.objects.filter(owner=_active_coach_user(request)), id=program_id)
+    if _standard_strength_is_used(program):
+        return render(request, "core/standard_strength_delete_confirm.html", {
+            "program": program,
+            "delete_blocked": True,
+        }, status=409 if request.method == "POST" else 200)
+    if request.method == "GET":
+        return render(request, "core/standard_strength_delete_confirm.html", {
+            "program": program,
+            "delete_blocked": False,
+        })
     program.delete()
+    return redirect("standard_strength_list")
+
+
+@login_required
+@require_http_methods(["POST"])
+def standard_strength_archive_view(request, program_id: int):
+    program = get_object_or_404(
+        StandardStrengthProgram.objects.filter(owner=_active_coach_user(request)),
+        id=program_id,
+    )
+    action = (request.POST.get("action") or "archive").strip().lower()
+    program.archived_at = None if action == "restore" else timezone.now()
+    program.save(update_fields=["archived_at", "updated_at"])
     return redirect("standard_strength_list")
 
 

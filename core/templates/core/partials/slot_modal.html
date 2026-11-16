@@ -136,8 +136,8 @@
                 <select name="standard_strength_id" class="form-select form-select-sm mb-1"{% if is_athlete_year_calendar and not athlete_year_can_edit_training %} disabled{% endif %}>
                   <option value="">Free text</option>
                   {% for program in standard_strength_programs %}
-                    <option value="{{ program.id }}" {% if selected_standard_strength_id|stringformat:"s" == program.id|stringformat:"s" %}selected{% endif %}>
-                      {{ program.name }}
+                    <option value="{{ program.id }}" {% if selected_standard_strength_id|stringformat:"s" == program.id|stringformat:"s" %}selected{% elif program.archived_at %}disabled hidden{% endif %}>
+                      {{ program.name }}{% if program.archived_at %} (Archived){% endif %}
                     </option>
                   {% endfor %}
                 </select>

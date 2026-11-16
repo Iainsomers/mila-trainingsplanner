@@ -1,5 +1,9 @@
 # Actuele status
 
+## 16 november 2026 - Standard Strength veilig verwijderen en archiveren
+
+- Permanente verwijdering heeft nu een aparte waarschuwing en is uitsluitend mogelijk voor nooit gebruikte schema’s. Eerste gebruik wordt blijvend gemarkeerd. Gebruikte schema’s bieden alleen Archive; het archief bewaart koppelingen, verbergt nieuwe keuzes en ondersteunt Restore. Migratie `0156_archive_standard_strength_programs` vult de gebruiksstatus voor bestaande gekoppelde schema’s.
+
 ## 15 november 2026 - ALT-minuten hebben dezelfde Stats-bediening als loopkilometers
 
 - `ALT total min` en ALT Z1–Z6 zijn afzonderlijk aan/uit te zetten. Gekozen ALT-zones stapelen in één minutenstaaf; ALT total staat desgewenst als aparte staaf ernaast. De hovertekst toont het gekozen ALT-zonetotaal plus iedere gekozen zone, gelijk aan de kilometerbediening.

@@ -1164,6 +1164,14 @@ class TrainingSegment(models.Model):
         related_name="segments",
     )
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.standard_strength_program_id:
+            StandardStrengthProgram.objects.filter(
+                pk=self.standard_strength_program_id,
+                has_been_used=False,
+            ).update(has_been_used=True)
+
     parse_ok = models.BooleanField(default=False)
     parse_message = models.CharField(max_length=300, blank=True, default="")
     parsed_at = models.DateTimeField(null=True, blank=True)
@@ -1259,6 +1267,8 @@ class StandardStrengthProgram(models.Model):
     )
     name = models.CharField(max_length=160)
     sort_order = models.PositiveIntegerField(default=0)
+    has_been_used = models.BooleanField(default=False)
+    archived_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1267,6 +1277,10 @@ class StandardStrengthProgram(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def is_archived(self):
+        return self.archived_at is not None
 
 
 class StandardStrengthExercise(models.Model):
