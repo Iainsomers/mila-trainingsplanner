@@ -1,5 +1,9 @@
 # Actuele status
 
+## 17 november 2026 - Oura-controles alleen overdag
+
+- Automatische Oura-controles volgen de apparaattijdzone: 07:30–09:00 iedere tien minuten, daarna op hele uren 10:00–20:00. Van 21:00 tot 07:30 worden ook achterstallige controles uitgesteld tot 07:30.
+
 - Garmin E verwerkt expliciete lapzonecorrecties (`lap 24 Z1`) vóór WU/CD-validatie en bewaart ze bij herhaalde voorstellen. De gebruikerzone wijzigt de zonetoewijzing, met behoud van gemeten afstand en tijd; overige laps behouden hun eigen controles.
 
 - Garmin E speelt expliciete zonecorrecties uit de gebruikersgeschiedenis opnieuw af vóór iedere voorstelcontrole, inclusief herstelverzoeken. Daardoor blijven eerdere WU/CD-correcties behouden bij `try again` en wanneer een nieuw modelantwoord de servervelden niet bevat.

@@ -21,8 +21,8 @@ def next_check(now, time_zone):
     for _ in range(1500):
         local = candidate.astimezone(zone)
         minute = local.hour * 60 + local.minute
-        morning = 390 <= minute <= 480
-        if (morning and local.minute % 10 == 0) or (not morning and local.minute == 0):
+        morning = 450 <= minute <= 540
+        if (morning and local.minute % 10 == 0) or (540 < minute < 1260 and local.minute == 0):
             return candidate
         candidate += timedelta(minutes=1)
     raise ValueError("No scheduling slot")
@@ -38,6 +38,11 @@ def sync_due(*, now=None):
     for athlete in athletes.iterator():
         try:
             zone = ZoneInfo(athlete.device_time_zone)
+            local = now.astimezone(zone)
+            if not 450 <= local.hour * 60 + local.minute < 1260:
+                Athlete.objects.filter(pk=athlete.pk).update(
+                    oura_next_check_at=next_check(now, athlete.device_time_zone))
+                continue
             due = athlete.oura_next_check_at or next_check(now - timedelta(minutes=1), athlete.device_time_zone)
             if due > now:
                 Athlete.objects.filter(pk=athlete.pk, oura_next_check_at__isnull=True).update(oura_next_check_at=due)

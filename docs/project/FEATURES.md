@@ -253,6 +253,8 @@ Weekgemiddelden verschijnen bij minimaal drie bruikbare dagwaarden en staan mobi
 
 ## Athlete settings
 
+Automatische Oura-import controleert in de apparaattijdzone om 07:30–09:00 iedere tien minuten en daarna ieder heel uur tot en met 20:00. Tussen 21:00 en 07:30 worden geen controles uitgevoerd.
+
 Tabs voor atleten: General, Zones. HR, Speed, Base Planning en Ideal week. WU/CD-instellingen staan op General; de oude WU settings-tab bestaat niet meer. `Fill missing PB's` kan ontbrekende prestaties afleiden uit beschikbare PR's. De atletenlijst is sorteerbaar op naam en leeftijd, in beide richtingen.
 General-settings kunnen worden opgeslagen zonder dat alle PR's al zijn ingevuld; alleen ingevulde PR-waarden worden gevalideerd en bewaard.
 Onder Z1 t/m Z5 kan de trainer handmatig een HR-waarde of tekstuele HR-zone invullen, bijvoorbeeld `160-170` of `max 170`. Die tekst wordt ongewijzigd bij de trainingen getoond. De zone/snelheidsweergave toont de km/h-omrekening naast min/km.

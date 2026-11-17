@@ -14,8 +14,9 @@ from core.views.oura import build_oura_vitals_suggestions
 class OuraScheduleTests(SimpleTestCase):
     def test_window_boundaries_and_hourly_checks(self):
         zone = ZoneInfo("Europe/Amsterdam")
-        for hour, minute, expected in ((6, 0, "06:30"), (6, 30, "06:40"),
-                (7, 50, "08:00"), (8, 0, "09:00"), (8, 17, "09:00"), (23, 0, "00:00")):
+        for hour, minute, expected in ((6, 0, "07:30"), (7, 30, "07:40"),
+                (7, 50, "08:00"), (8, 0, "08:10"), (8, 17, "08:20"),
+                (9, 0, "10:00"), (20, 0, "07:30"), (23, 0, "07:30")):
             now = datetime(2026, 11, 1, hour, minute, tzinfo=zone)
             self.assertEqual(next_check(now, zone.key).astimezone(zone).strftime("%H:%M"), expected)
 
@@ -27,7 +28,7 @@ class OuraScheduleTests(SimpleTestCase):
             due = next_check(now, zone_name)
             self.assertGreater(due, now)
             local = due.astimezone(ZoneInfo(zone_name))
-            self.assertTrue(local.minute == 0 or (local.hour == 6 and local.minute == 30))
+            self.assertTrue(450 <= local.hour * 60 + local.minute < 1260)
 
 
 class OuraAutoImportTests(TestCase):
@@ -39,7 +40,7 @@ class OuraAutoImportTests(TestCase):
             device_time_zone="Europe/Amsterdam", daily_vitals_enabled=True)
         self.connection = OuraConnection.objects.create(athlete=self.athlete, access_token="private-token",
             health_data_consent_at=datetime(2026, 10, 1, tzinfo=utc_timezone.utc), consented_by=self.user)
-        self.now = datetime(2026, 11, 1, 6, 30, tzinfo=ZoneInfo("Europe/Amsterdam"))
+        self.now = datetime(2026, 11, 1, 7, 30, tzinfo=ZoneInfo("Europe/Amsterdam"))
         self.suggestions = [{"day": "2026-11-01", "sleep_hours": 8, "sleep_quality": 8.2, "morning_hr": 47, "hrv": 70}]
 
     @patch("core.views.oura.build_oura_vitals_suggestions")
@@ -54,7 +55,7 @@ class OuraAutoImportTests(TestCase):
         self.assertEqual(sync_due(now=self.now + timedelta(seconds=30)), 0)
         fetch.assert_called_once()
         self.athlete.refresh_from_db()
-        self.assertEqual(self.athlete.oura_next_check_at.astimezone(ZoneInfo("Europe/Amsterdam")).strftime("%H:%M"), "06:40")
+        self.assertEqual(self.athlete.oura_next_check_at.astimezone(ZoneInfo("Europe/Amsterdam")).strftime("%H:%M"), "07:40")
 
     @patch("core.views.oura.build_oura_vitals_suggestions")
     def test_disallowed_disconnected_disabled_or_unknown_zone_never_fetch(self, fetch):
@@ -111,7 +112,7 @@ class OuraAutoImportTests(TestCase):
         self.assertEqual(sync_due(now=self.now.replace(hour=8, minute=17)), 0)
         fetch.assert_not_called()
         self.athlete.refresh_from_db()
-        self.assertEqual(self.athlete.oura_next_check_at.astimezone(ZoneInfo("Europe/Amsterdam")).hour, 9)
+        self.assertEqual(self.athlete.oura_next_check_at.astimezone(ZoneInfo("Europe/Amsterdam")).strftime("%H:%M"), "08:20")
 
     @patch("core.views.oura.build_oura_vitals_suggestions")
     def test_lease_prevents_overlapping_worker_fetch(self, fetch):
@@ -125,7 +126,7 @@ class OuraAutoImportTests(TestCase):
         self.athlete.device_time_zone = "Asia/Tokyo"
         self.athlete.save()
         fetch.return_value = []
-        now = datetime(2026, 11, 1, 21, 30, tzinfo=utc_timezone.utc)  # Nov 2, 06:30 on device.
+        now = datetime(2026, 11, 1, 22, 30, tzinfo=utc_timezone.utc)  # Nov 2, 07:30 on device.
         sync_due(now=now)
         self.assertEqual(str(fetch.call_args.kwargs["today"]), "2026-11-02")
 
