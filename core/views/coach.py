@@ -6760,6 +6760,7 @@ def planning_overview_view(request):
         "garmin_configured": garmin_configured(),
         "garmin_status": request.GET.get('garmin', ''),
         "oura_connection_enabled": bool(is_athlete_user and athlete.oura_connection_enabled),
+        "coros_connection_enabled": bool(is_athlete_user and athlete.coros_connection_enabled),
         "oura_connection": oura_connection,
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
         "oura_status": request.GET.get("oura", ""),

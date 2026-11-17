@@ -1,5 +1,7 @@
 # Actuele status
 
+- COROS-tegelcorrectie: de actieve `/planning/?section=hardware`-route geeft nu ook de coachtoestemming door aan de Hardware-template. Daardoor verschijnt de tegel voor ingeschakelde atleten; eerder was alleen de oudere dashboardroute aangevuld.
+
 - COROS MCP heeft nu een coach-only toestemmingsschakelaar per atleet in Connections, standaard uit, plus de verbindingsstatus. Uitschakelen verwijdert de lokale tokens en blokkeert direct de MCP-routes. Migratie 0159 vereist.
 
 ## 17 november 2026 - Eerste COROS MCP-koppeling

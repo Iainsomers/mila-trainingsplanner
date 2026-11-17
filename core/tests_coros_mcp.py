@@ -46,6 +46,14 @@ class CorosMCPTests(TestCase):
         for path in ("connect/", "preview/", "disconnect/"):
             self.assertEqual(self.client.post("/integrations/coros/mcp/" + path).status_code, 403)
 
+    def test_planning_hardware_shows_coros_only_when_enabled(self):
+        page = self.client.get("/planning/?section=hardware")
+        self.assertContains(page, "COROS account")
+        self.athlete.coros_connection_enabled = False
+        self.athlete.save()
+        page = self.client.get("/planning/?section=hardware")
+        self.assertNotContains(page, "COROS account")
+
     @patch("core.views.coros_mcp.requests.post")
     def test_valid_callback_saves_only_own_connection(self, post):
         session = self.client.session
