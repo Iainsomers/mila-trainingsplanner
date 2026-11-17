@@ -583,6 +583,7 @@ def dashboard_view(request):
         "oura_connection_enabled": oura_connection_enabled,
         "oura_preview_available": oura_preview_available,
         "polar_enabled": bool(is_athlete_user and getattr(athlete, "polar_enabled", False)),
+        "coros_connection_enabled": bool(is_athlete_user and athlete.coros_connection_enabled),
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
         "oura_status": request.GET.get("oura", ""),
     })
@@ -11781,6 +11782,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "oura_connection_enabled": getattr(athlete, "oura_connection_enabled", False),
         "oura_auto_import_enabled": getattr(athlete, "oura_auto_import_enabled", False),
         "polar_enabled": getattr(athlete, "polar_enabled", False),
+        "coros_connection_enabled": athlete.coros_connection_enabled,
+        "coros_connected": hasattr(athlete, "coros_mcp_connection"),
         "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),
@@ -11854,6 +11857,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             form["polar_enabled"] = getattr(athlete, "polar_enabled", False)
         else:
             form["polar_enabled"] = (request.POST.get("polar_enabled") == "on")
+        form["coros_connection_enabled"] = athlete.coros_connection_enabled if self_view else request.POST.get("coros_connection_enabled") == "on"
         if self_view:
             form["pause_mode"] = effective_pause_mode
         else:
@@ -12087,6 +12091,10 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
                     from core.views.oura import revoke_oura_connection
                     revoke_oura_connection(athlete)
                 athlete.polar_enabled = form["polar_enabled"]
+                athlete.coros_connection_enabled = form["coros_connection_enabled"]
+                if not athlete.coros_connection_enabled:
+                    from core.models import CorosMCPConnection
+                    CorosMCPConnection.objects.filter(athlete=athlete).delete()
             if not self_view:
                 # Keep a blank override following the coach. A different
                 # choice is stored per athlete and takes precedence.
@@ -12154,6 +12162,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "oura_connection_enabled",
         "oura_auto_import_enabled",
         "polar_enabled",
+        "coros_connection_enabled",
     )
     connection_enabled_count = sum(bool(form.get(key)) for key in connection_keys)
 

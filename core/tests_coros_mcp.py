@@ -8,7 +8,7 @@ from core.models import Athlete, CorosMCPConnection
 class CorosMCPTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="MCP_Runner")
-        self.athlete = Athlete.objects.create(name="MCP Runner", birth_year=2000, gender="X")
+        self.athlete = Athlete.objects.create(name="MCP Runner", birth_year=2000, gender="X", coros_connection_enabled=True)
         self.client.force_login(self.user)
 
     @patch("core.views.coros_mcp.requests.post")
@@ -38,6 +38,13 @@ class CorosMCPTests(TestCase):
         for path in ("", "connect/", "preview/", "disconnect/"):
             response = (self.client.get if not path else self.client.post)("/integrations/coros/mcp/" + path)
             self.assertEqual(response.status_code, 403)
+
+    def test_disabled_permission_blocks_all_connection_actions(self):
+        self.athlete.coros_connection_enabled = False
+        self.athlete.save()
+        self.assertEqual(self.client.get("/integrations/coros/mcp/").status_code, 403)
+        for path in ("connect/", "preview/", "disconnect/"):
+            self.assertEqual(self.client.post("/integrations/coros/mcp/" + path).status_code, 403)
 
     @patch("core.views.coros_mcp.requests.post")
     def test_valid_callback_saves_only_own_connection(self, post):

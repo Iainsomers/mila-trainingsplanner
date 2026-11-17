@@ -501,6 +501,7 @@ class Athlete(models.Model):
     fit_ai_consent_version = models.CharField(max_length=40, blank=True, default="")
     # Coach-only permission for the athlete to access Polar features.
     polar_enabled = models.BooleanField(default=False)
+    coros_connection_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.
     pause_mode = models.CharField(
         max_length=24,

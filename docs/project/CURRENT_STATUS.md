@@ -1,5 +1,7 @@
 # Actuele status
 
+- COROS MCP heeft nu een coach-only toestemmingsschakelaar per atleet in Connections, standaard uit, plus de verbindingsstatus. Uitschakelen verwijdert de lokale tokens en blokkeert direct de MCP-routes. Migratie 0159 vereist.
+
 ## 17 november 2026 - Eerste COROS MCP-koppeling
 
 - Hardware biedt eigen atleten COROS account: EU OAuth met dynamische clientregistratie, PKCE, veilige callback, tokenvernieuwing en ontkoppelen. Read-only testvenster haalt recente activiteiten op via MCP; geen automatische Diary-mutaties. Acht COROS-tests, Django check en migratiecontrole slagen. Live OAuth en MCP-respons nog te testen na deploy.

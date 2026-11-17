@@ -1,6 +1,7 @@
 # Gebruikersrollen en toegang
 
 - COROS MCP wordt uitsluitend vanuit het eigen atleetaccount gekoppeld en getest. Trainers kunnen geen account namens een atleet koppelen en hebben geen toegang tot de tijdelijke MCP-preview. Elke atleet geeft afzonderlijk toestemming.
+- De coach bepaalt per atleet `Allow COROS connection` in Athlete Settings > General > Connections (standaard uit). De atleet kan dit recht niet wijzigen. De coach ziet daar Connected/Not connected; uitschakelen verwijdert lokaal de verbinding en blokkeert alle MCP-acties.
 
 - Alleen coaches met bewerktoegang kunnen onder Athlete Info de experimentele Garmin-model-E-toestemming per atleet aan-/uitzetten. Atleten zien de instelling niet en kunnen deze ook niet via een aangepast formulier wijzigen; hun eigen instellingen opslaan behoudt de coachkeuze.
 - De Garmin-E-knop en E-aanvragen vereisen deze opt-in voor de geselecteerde toegankelijke atleet. AI-aanvragen vereisen daarnaast de bestaande afzonderlijke Garmin- of FIT-AI-toestemming, afhankelijk van de bron. Gesprekken zijn per ingelogde gebruiker en opname gescheiden. Een atleet kan alleen de eigen opname bespreken. Use/Add behoudt de bestaande bewerkrechten.

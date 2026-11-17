@@ -15,7 +15,12 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from core.models import CorosMCPConnection
-from core.views.oura import _athlete_user
+from core.views.oura import _athlete_user as _own_athlete
+
+
+def _athlete_user(request):
+    athlete = _own_athlete(request)
+    return athlete if athlete and athlete.coros_connection_enabled else None
 
 BASE = "https://mcpeu.coros.com"
 PENDING = "coros_mcp_pending"

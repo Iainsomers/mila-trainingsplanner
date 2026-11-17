@@ -743,6 +743,8 @@
                     </div>
                     {% if not self_view %}
                       <div class="form-check"><input class="form-check-input" type="checkbox" id="polar_enabled" name="polar_enabled" {% if form.polar_enabled %}checked{% endif %}><label class="form-check-label" for="polar_enabled">Allow Polar access</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" id="coros_connection_enabled" name="coros_connection_enabled" {% if form.coros_connection_enabled %}checked{% endif %}><label class="form-check-label" for="coros_connection_enabled">Allow COROS connection</label></div>
+                      <div class="small text-muted">COROS: {% if form.coros_connected %}Connected{% else %}Not connected{% endif %}</div>
                     {% endif %}
                   </div>
                 </details>
