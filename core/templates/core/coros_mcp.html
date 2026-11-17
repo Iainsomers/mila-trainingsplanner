@@ -2,19 +2,31 @@
 {% block title %}COROS connection{% endblock %}
 {% block content %}<div class="container py-3">
 <h1>COROS connection</h1>
-<p><a href="{% url 'planning_overview' %}?section=hardware">Back</a></p>
-{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<p><a class="btn btn-outline-secondary btn-sm" href="{% url 'planning_overview' %}?section=hardware">Back</a></p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if notice %}<div class="alert alert-success" role="status">{{ notice }}</div>{% endif %}
 {% if connected %}
 <p>Your COROS account is connected.</p>
-<form method="post" action="{% url 'coros_mcp_preview' %}">{% csrf_token %}<button>Preview recent activities</button></form>
-<form method="post" action="{% url 'coros_mcp_disconnect' %}">{% csrf_token %}<button>Disconnect COROS</button></form>
+<div class="d-flex flex-wrap gap-2 mb-3">
+<form method="post" action="{% url 'coros_mcp_preview' %}">{% csrf_token %}<button class="btn btn-primary">Preview recent activities</button></form>
+<form method="post" action="{% url 'coros_mcp_disconnect' %}">{% csrf_token %}<button class="btn btn-outline-danger">Disconnect COROS</button></form>
+</div>
 {% else %}
 <p>Connect your European COROS account to MiLa Planner.</p>
 <p class="small">MiLa stores your connection tokens to access the COROS data you authorize. The activity preview is shown temporarily to you. Disconnect removes the stored connection. See the <a href="{% url 'privacy_policy' %}">Privacy Policy</a>.</p>
 <form method="post" action="{% url 'coros_mcp_connect' %}">{% csrf_token %}
 <p><label><input type="checkbox" name="consent" required> I consent to MiLa Planner accessing my COROS activity and wellness data. I am 18 or older or have permission from my parent/legal guardian.</label></p>
-<button>Connect COROS</button></form>
+<button class="btn btn-primary">Connect COROS</button></form>
 {% endif %}
-{% if preview %}<h2>Recent activities</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ preview }}</pre>{% endif %}
-<p>Preview only: no training is added to your diary.</p>
+{% if activities %}<h2 class="h4">Recent activities</h2>
+<div class="row g-2 mb-3">{% for activity in activities %}<div class="col-12 col-md-6"><article class="card card-body h-100">
+<h3 class="h6 mb-1">{{ activity.date }} · {{ activity.sport }}</h3>
+<p class="small mb-2">{{ activity.duration }}{% if activity.distance %} · {{ activity.distance }}{% endif %}{% if activity.pace %} · {{ activity.pace }}{% endif %}{% if activity.hr %} · HR {{ activity.hr }}{% endif %}</p>
+{% if activity.imported %}<span class="text-success small">FIT already imported</span>{% else %}
+<form method="post" action="{% url 'coros_mcp_import' %}" class="mt-auto">{% csrf_token %}<input type="hidden" name="selection" value="{{ activity.ticket }}"><button class="btn btn-outline-primary btn-sm">Import FIT for analysis</button></form>{% endif %}
+</article></div>{% endfor %}</div>
+{% elif preview %}<h2 class="h4">Recent activities</h2><pre class="small" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ preview }}</pre>
+{% elif preview_loaded %}<p>No recent activities found.</p>{% endif %}
+{% if saved_activity %}<p>Saved: {{ saved_activity.original_filename }}{% if saved_activity.activity_start %} · {{ saved_activity.activity_start }}{% endif %}</p><a class="btn btn-outline-primary mb-3" href="{% url 'athlete_year_calendar' %}">Open Athlete Diary</a>{% endif %}
+<p class="small text-muted">Import saves the original FIT for analysis. Diary changes only after you choose Use AM/PM. AI analysis requires the existing separate FIT AI permission.</p>
 </div>{% endblock %}

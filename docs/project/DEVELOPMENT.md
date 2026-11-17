@@ -81,6 +81,8 @@ Bij modelwijzigingen:
 
 ## Git en Render
 
+- COROS FIT-import: een uur geldige ondertekende activiteitselectie gebonden aan gebruiker/atleet/verbinding. Downloadlinks komen uitsluitend uit MCP; HTTPS COROS-hosts, gecontroleerde redirects zonder OAuth-headers, maximaal 12 MB en één FIT per ZIP. Opslag in GarminActivity met COROS-bronmetadata. Geen payloads of getekende downloadlinks loggen. Live FIT-download nog te controleren. Tests: `core.tests_coros_mcp core.tests_coros core.tests_fit_reader core.tests_garmin_connection`.
+
 - COROS MCP vereist migratie `0158_coros_mcp_connection`. De eerste implementatie gebruikt de Europese server `https://mcpeu.coros.com` en publieke dynamische OAuth-clientregistratie; er zijn geen Partner API-sleutels nodig. Callback: `/integrations/coros/mcp/callback/`. Beveiliging: PKCE S256, state, eigen gebruiker/atleet, tien minuten geldigheid en eenmalige callback. Token- en registratieverzoeken loggen geen bodies. Tests: `core.tests_coros_mcp core.tests_coros`. Live registratie, toestemming en activiteitenpreview moeten nog met een COROS-account worden bevestigd; geen automatische import of workout-write toegevoegd.
 
 - Migratie `0154_trainingsegment_watch_alternative_data` voegt de tekstgebonden meetgegevens voor compacte E-Alternative toe. Bij het testen van de compacte opmaak zowel de opgeslagen ALT-tekst als gemeten seconden en HR-zonetotalen controleren; ze kunnen bewust verschillen van afgeronde nominale tijden.

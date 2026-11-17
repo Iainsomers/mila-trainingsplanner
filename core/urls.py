@@ -122,7 +122,7 @@ from core.views.slots import (
 
 from core.views.stats_debug import stats_debug_view
 from core.views.coros import coros_status_view, coros_workout_push_view
-from core.views.coros_mcp import coros_mcp_view, coros_mcp_connect, coros_mcp_callback, coros_mcp_disconnect, coros_mcp_preview
+from core.views.coros_mcp import coros_mcp_view, coros_mcp_connect, coros_mcp_callback, coros_mcp_disconnect, coros_mcp_preview, coros_mcp_import
 from core.views.garmin import garmin_connect_view, garmin_callback_view, garmin_withdraw_view, garmin_connections_view, garmin_athlete_activities_view, garmin_activity_push_view, garmin_health_push_view
 from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view, oura_vitals_import_view, oura_device_timezone_view
 
@@ -213,6 +213,7 @@ urlpatterns = [
     path("integrations/coros/mcp/callback/", coros_mcp_callback, name="coros_mcp_callback"),
     path("integrations/coros/mcp/disconnect/", coros_mcp_disconnect, name="coros_mcp_disconnect"),
     path("integrations/coros/mcp/preview/", coros_mcp_preview, name="coros_mcp_preview"),
+    path("integrations/coros/mcp/import/", coros_mcp_import, name="coros_mcp_import"),
     path("integrations/coros/workouts/", coros_workout_push_view, name="coros_workout_push"),
 
     # Coach console

@@ -1,5 +1,9 @@
 # Actuele status
 
+## 17 november 2026 - COROS-activiteiten en handmatige FIT-import
+
+- MCP-tekst wordt gedecodeerd en als compacte activiteitkaarten getoond. Per activiteit kan de eigen atleet het originele FIT-bestand ophalen voor de bestaande horlogeanalyse. Ondertekende activiteitselectie, begrensde HTTPS-download, FIT-validatie, deduplicatie en toestemming na netwerk-I/O worden gecontroleerd. Geen Diary-mutaties bij import. 42 gerichte tests plus Django/migratiecontrole slagen. OAuth en activiteitenpreview eerder live bevestigd; originele FIT-download nog live te testen.
+
 - COROS-tegelcorrectie: de actieve `/planning/?section=hardware`-route geeft nu ook de coachtoestemming door aan de Hardware-template. Daardoor verschijnt de tegel voor ingeschakelde atleten; eerder was alleen de oudere dashboardroute aangevuld.
 
 - COROS MCP heeft nu een coach-only toestemmingsschakelaar per atleet in Connections, standaard uit, plus de verbindingsstatus. Uitschakelen verwijdert de lokale tokens en blokkeert direct de MCP-routes. Migratie 0159 vereist.

@@ -47,6 +47,8 @@ Bijgewerkt: 22 oktober 2026.
 
 ## Zones
 
+- COROS MCP FIT-import bewaart originele FIT-bytes met SHA-256 per atleet in de bestaande FIT-opslag. COROS labelId/sportcode blijven als bronmetadata in parsed_data; gemeten FIT-afstand/tijd/HR worden door dezelfde parser als uploads verwerkt. Import maakt geen Diary-slot aan.
+
 - Z1 t/m Z5 worden door gebruikers ingevoerd als tempo in min/km.
 - Zones lopen op in snelheid: Z1 is het rustigst, Z5 het snelst.
 - De applicatie bewaart zones als snelheid in meter per seconde.
