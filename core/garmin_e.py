@@ -26,6 +26,19 @@ Varying pace/zones do not break repeated distance patterns. Recognize mixed sets
 9*(200m-100m) or 2*(1700m-1200m-850m). Slow laps between efforts are recovery even when their
 distance resembles work. A final complete rep needs no subsequent recovery. Adjacent autolaps
 without recovery can form a larger rep. Z2 warmup is suspicious: discuss whether it is Main.
+For interval recognition first inspect the chronological alternation WORK - RECOVERY -
+WORK - RECOVERY. Use repeated distances OR repeated durations and relative measured speed
+to identify the roles. Assign zones only AFTER choosing rep boundaries. The same work
+series may progress through Z1, Z2, Z3, Z4 or higher without becoming separate series.
+Likewise recovery may still carry a high HR/pace zone: HR can lag after an effort and
+absolute zones do not decide the role. For running recovery, verify that both neighboring
+complete work reps are at least 20 percent faster than the recovery; do not label a lap
+recovery merely because it alternates or has a low zone. A genuinely ambiguous alternating
+sequence must remain ambiguous. Do not split one set at each zone change. Keep distinct
+distance steps in a mixed set in their actual order. Never reorder laps by zone or distance.
+Do not confuse ordinary continuous kilometre autolaps with intervals: repeated work-like
+laps without measured recovery are one continuous effort. First/last work reps need only
+the recovery actually present; never invent a missing final pause.
 Prefer time targets when at least three consecutive work laps are all tightly clustered around
 the same whole-minute duration while their measured distances vary. For example, eight laps of
 exactly 3:00 measuring roughly 750-800m are 8x3 minutes, not alternating 750m/800m reps.
@@ -428,8 +441,8 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         if i in resting:
             continue
         speed = row["distance_m"]/row["duration_s"]
-        if row["zone"] not in {"Z1","Z2","Z","ZNA"}:
-            raise ValueError(f"Lap {i} is too fast to discard as recovery.")
+        # A role is supported by the measured work/recovery contrast, not
+        # an absolute zone label. Recovery HR may remain high after work.
         neighbors = [b for b in blocks if b["ids"][-1] < i]
         before = neighbors[-1:]
         after = [b for b in blocks if b["ids"][0] > i][:1]

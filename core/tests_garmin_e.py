@@ -37,6 +37,28 @@ def fixture():
 
 class GarminEValidationTests(SimpleTestCase):
 
+    def test_progressive_work_and_high_zone_recovery_remain_one_rep_series(self):
+        loads = [{"segment":"CORE", "meters":1200, "seconds":360, "zone":"1"}]
+        reps, recovery = [], []
+        for index, seconds in enumerate((240, 235, 230, 225)):
+            reps.append({"laps":[len(loads)+1], "target_meters":1000})
+            loads.append({"segment":"CORE", "meters":1000, "seconds":seconds, "zone":str(index+1)})
+            if index < 3:
+                recovery.append(len(loads)+1)
+                loads.append({"segment":"CORE", "meters":200, "seconds":75, "zone":"3"})
+        proposal = {"warmup_laps":[1], "reps":reps, "recovery_laps":recovery}
+        result = checked_proposal({"watch_loads":loads}, proposal, zone_basis="pace")
+        self.assertIn("4×1000 m", result["training_fields"]["main"])
+        self.assertEqual(sum(load["work_rep"] for load in result["watch_loads"]), 4)
+        self.assertEqual([(load["meters"], load["seconds"], load["zone"]) for load in result["watch_loads"]],
+                         [(load["meters"], load["seconds"], load["zone"]) for load in loads])
+        # Alternation alone is insufficient: recovery nearly as fast as work
+        # must still be rejected, even if its absolute zone says Z1.
+        invalid = deepcopy(loads)
+        invalid[2].update(seconds=50, zone="1")
+        with self.assertRaisesRegex(ValueError, "not clearly slower"):
+            checked_proposal({"watch_loads":invalid}, proposal, zone_basis="pace")
+
     def test_long_walking_boundary_is_rest_without_blocking_proposal(self):
         part, proposal = fixture()
         part["watch_loads"].append(dict(segment="CORE", meters=1361.94, seconds=1747.75, zone="1"))

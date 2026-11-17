@@ -47,6 +47,8 @@ Bijgewerkt: 22 oktober 2026.
 
 ## Zones
 
+- Garmin E kiest werk-/herstelrollen uit de chronologische herhaling van afstanden/tijden en gemeten snelheidsverschillen, vóór zonering. Een hoge absolute herstelzone blokkeert niet automatisch: aangrenzende volledige werkreps moeten nog steeds minimaal 20% sneller zijn. Wisselende werkzones mogen één reeks blijven; afwisseling zonder voldoende contrast bewijst geen herstel. De AI bepaalt de indeling, de validator bewaakt de meetgrenzen.
+
 - Garmin E behandelt volledige gemeten laps strikt trager dan 10:00/km en stilstand automatisch als rust. Rustlaps worden uit WU/CD of volledig rustende werkreps gehaald en blijven als recovery toegewezen; expliciet genegeerde laps blijven genegeerd. Meetwaarden blijven behouden, rustmeters tellen niet als loopafstand en rustduur blijft bruikbaar voor pauzes. Een gemengde werkrep met rust erin blijft afwijsbaar om werk/herstel niet te laten samenvallen.
 
 - COROS MCP FIT-import bewaart originele FIT-bytes met SHA-256 per atleet in de bestaande FIT-opslag. COROS labelId/sportcode blijven als bronmetadata in parsed_data; gemeten FIT-afstand/tijd/HR worden door dezelfde parser als uploads verwerkt. Import maakt geen Diary-slot aan.

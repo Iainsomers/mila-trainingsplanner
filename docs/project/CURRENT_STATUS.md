@@ -1,5 +1,7 @@
 # Actuele status
 
+- Garmin E: instructie voor rep–pauze-alternatie aangescherpt, met structuur vóór zones en continue autolaps als tegenvoorbeeld. Validator wijst hoge herstelzones niet meer uitsluitend op hun label af; gemeten >=20%-werksnelheidscontrast blijft vereist. Synthetische regressie met progressieve Z1–Z4-werkreps en Z3-herstel blijft één reeks; te snelle pauze wordt afgewezen. 39 Garmin E-tests en Django check slagen. Live herkenningsverbetering nog te beoordelen.
+
 ## 17 november 2026 - Automatische COROS FIT-import
 
 - Render controleert gekoppelde ingeschakelde accounts iedere vijftien minuten op ontbrekende bestanden in de afgelopen zeven dagen. Handmatige import blijft beschikbaar. Databaseclaims, gedeelde downloadquota, herpogingen en deduplicatie ondersteunen meerdere workers. Atleet en coach zien controle-/importtijden en veilige foutmeldingen. Migratie 0160 vereist; geen automatische Diary-mutaties.
