@@ -295,6 +295,8 @@ Garmin C kan herhaalde, direct aaneengesloten halve afstandslaps samenvoegen tot
 
 ## COROS
 
+Gekoppelde atleten met coachtoestemming krijgen automatisch iedere vijftien minuten ontbrekende FIT-bestanden uit de afgelopen zeven dagen. Dit start ook voor reeds gekoppelde accounts na de deploy. Handmatige import blijft beschikbaar. Achtergrond- en handmatige import delen deduplicatie en de limiet van 50 downloadverzoeken per 24 uur. Mislukte bestanden worden opnieuw geprobeerd. De eigen COROS-pagina en coachinstellingen tonen laatste controle, geslaagde controle, import en foutmelding. Diary-toepassing blijft via Use AM/PM.
+
 `Import FIT for analysis` haalt per activiteit het originele FIT-bestand op en slaat dat via de bestaande FIT-parser per atleet op. De activiteitenlijst toont compacte kaarten. Dubbele imports worden op bestandshash/COROS-activiteit herkend. Diary wordt pas aangepast via Use AM/PM; AI-toestemming blijft apart vereist. OAuth en activiteitenpreview zijn live bevestigd; FIT-download nog te controleren.
 
 Atleten kunnen via Hardware > COROS account hun eigen Europese COROS-account koppelen via MCP OAuth (dynamische clientregistratie, PKCE en state). Een tijdelijke activiteitenpreview haalt maximaal twintig recente activiteiten op, zonder Diary-trainingen aan te maken. Tokens worden zo nodig vernieuwd; Disconnect verwijdert de lokale koppeling en probeert de token bij COROS in te trekken. Eerste echte OAuth/MCP-test na deploy staat nog open.

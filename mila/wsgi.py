@@ -25,6 +25,12 @@ if os.environ.get("OURA_AUTO_IMPORT_WORKER", "1" if os.environ.get("RENDER") == 
     from core.oura_sync import start_worker
     start_worker()
 
+if os.environ.get("COROS_AUTO_IMPORT_WORKER", "1" if os.environ.get("RENDER") == "true" else "0") == "1":
+    from django.urls import get_resolver
+    get_resolver().url_patterns
+    from core.coros_sync import start_worker as start_coros_worker
+    start_coros_worker()
+
 # ---- Auto-create superuser if none exists (Render without shell) ----
 try:
     from django.contrib.auth import get_user_model

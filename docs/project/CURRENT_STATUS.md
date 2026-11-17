@@ -1,5 +1,9 @@
 # Actuele status
 
+## 17 november 2026 - Automatische COROS FIT-import
+
+- Render controleert gekoppelde ingeschakelde accounts iedere vijftien minuten op ontbrekende bestanden in de afgelopen zeven dagen. Handmatige import blijft beschikbaar. Databaseclaims, gedeelde downloadquota, herpogingen en deduplicatie ondersteunen meerdere workers. Atleet en coach zien controle-/importtijden en veilige foutmeldingen. Migratie 0160 vereist; geen automatische Diary-mutaties.
+
 - Watch Use AM/PM vanuit het atleetaccount zoekt bij POST nu ook de server-side Base Planning-training op, net als bij openen van het dagdeel. Daardoor wordt een bestaande training niet onterecht als leeg geweigerd. Werkelijk lege dagdelen blijven zonder Extended edit rights geblokkeerd. 25 Watch/Plan-tests en Django check slagen.
 
 - Garmin E normaliseert laps trager dan 10:00/km en stilstand naar rust vóór de voorstelcontrole. Ook lange transfers vóór/na de training blokkeren zo geen WU/CD-voorstel meer. 38 Garmin E-tests en Django check slagen.

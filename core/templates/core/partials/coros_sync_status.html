@@ -1,0 +1,9 @@
+{% if connection %}
+<div class="small text-muted my-2">
+<div>Automatic FIT import: every 15 minutes · last 7 days</div>
+<div>Last check: {{ connection.last_sync_at|date:"d M Y H:i"|default:"Not yet" }}</div>
+<div>Last successful check: {{ connection.last_success_at|date:"d M Y H:i"|default:"Not yet" }}</div>
+<div>Last import: {{ connection.last_import_at|date:"d M Y H:i"|default:"Not yet" }}</div>
+{% if connection.sync_error %}<div class="text-warning" role="status">{{ connection.sync_error }}</div>{% endif %}
+</div>
+{% endif %}

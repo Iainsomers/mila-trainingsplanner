@@ -14,19 +14,21 @@ import os, sys
 from unittest.mock import patch, MagicMock
 os.environ['DJANGO_SETTINGS_MODULE'] = 'mila.settings'
 os.environ['OURA_AUTO_IMPORT_WORKER'] = '1'
+os.environ['COROS_AUTO_IMPORT_WORKER'] = '1'
 import django
 django.setup()
 assert 'core.urls' not in sys.modules
 def start():
-    for name in ('core.urls', 'core.views.garmin', 'core.views.oura', 'requests'):
+    for name in ('core.urls', 'core.views.garmin', 'core.views.oura', 'core.views.coros_mcp', 'requests'):
         module = sys.modules.get(name)
         assert module is not None, name + ' missing before Oura thread starts'
         assert not getattr(module.__spec__, '_initializing', False), name + ' still importing'
 user = MagicMock()
 user.objects.filter.return_value.exists.return_value = True
-with patch('core.oura_sync.start_worker', side_effect=start) as worker, patch('django.contrib.auth.get_user_model', return_value=user):
+with patch('core.oura_sync.start_worker', side_effect=start) as worker, patch('core.coros_sync.start_worker', side_effect=start) as coros_worker, patch('django.contrib.auth.get_user_model', return_value=user):
     import mila.wsgi
     worker.assert_called_once_with()
+    coros_worker.assert_called_once_with()
 '''
         result = subprocess.run([sys.executable, "-c", script],
             cwd=Path(__file__).resolve().parent.parent,

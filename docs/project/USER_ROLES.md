@@ -1,5 +1,7 @@
 # Gebruikersrollen en toegang
 
+- COROS coachtoestemming plus de eigen accountkoppeling activeert ook de automatische FIT-import; uitschakelen of ontkoppelen stopt verdere import. De coach ziet bij Connections de importstatus van toegankelijke atleten, zonder tokens of downloadlinks.
+
 - COROS MCP wordt uitsluitend vanuit het eigen atleetaccount gekoppeld en getest. Trainers kunnen geen account namens een atleet koppelen en hebben geen toegang tot de tijdelijke MCP-preview. Elke atleet geeft afzonderlijk toestemming.
 - De coach bepaalt per atleet `Allow COROS connection` in Athlete Settings > General > Connections (standaard uit). De atleet kan dit recht niet wijzigen. De coach ziet daar Connected/Not connected; uitschakelen verwijdert lokaal de verbinding en blokkeert alle MCP-acties.
 

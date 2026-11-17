@@ -173,3 +173,14 @@ class CorosMCPTests(TestCase):
         page = self.client.post("/integrations/coros/mcp/import/", {"selection":self.ticket(connection)})
         self.assertEqual(page.status_code, 403)
         self.assertFalse(GarminActivity.objects.exists())
+
+    @patch("core.views.coros_mcp._tool")
+    def test_download_quota_is_shared_and_blocks_before_request(self, tool):
+        from core.views.coros_mcp import import_activity
+        connection = self.connection()
+        connection.download_window_at = timezone.now()
+        connection.download_requests = 50
+        connection.save()
+        with self.assertRaisesRegex(ValueError, "quota"):
+            import_activity(connection, "session", "12345", 100)
+        tool.assert_not_called()

@@ -11785,6 +11785,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "polar_enabled": getattr(athlete, "polar_enabled", False),
         "coros_connection_enabled": athlete.coros_connection_enabled,
         "coros_connected": hasattr(athlete, "coros_mcp_connection"),
+        "coros_sync": getattr(athlete, "coros_mcp_connection", None),
         "pause_mode": effective_pause_mode,
         "week_report_enabled": getattr(athlete, "week_report_enabled", False),
         "daily_vitals_enabled": getattr(athlete, "daily_vitals_enabled", False),

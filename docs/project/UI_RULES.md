@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- COROS-verbindingsstatus toont compacte datums voor laatste controle, geslaagde controle en import, plus een veilige foutstatus. Toon dit op de eigen COROS-pagina en bij de coach in Athlete Settings > Connections; handmatige importacties blijven beschikbaar.
+
 - COROS toont recente activiteiten als compacte kaarten, één kolom mobiel en twee op desktop, met datum/sport en beschikbare duur/afstand/tempo/HR. Per kaart staat `Import FIT for analysis` of een reeds-geïmporteerdmelding. Technische labels en getekende downloadlinks blijven verborgen.
 
 - Standard Strength toont `Delete` alleen voor nooit gebruikte programma’s en leidt daarvoor eerst naar een aparte permanente-verwijderwaarschuwing. Gebruikte programma’s tonen uitsluitend `Archive`. Gearchiveerde programma’s staan in een ingeklapte sectie met View en Restore en verschijnen niet als nieuwe keuze in trainingspopups; een bestaande historische selectie blijft herkenbaar als Archived.

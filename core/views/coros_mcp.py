@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.db import transaction
 from django.http import HttpResponseForbidden
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render as django_render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -30,6 +30,13 @@ def _athlete_user(request):
 BASE = "https://mcpeu.coros.com"
 PENDING = "coros_mcp_pending"
 MAX_FIT_BYTES = 12 * 1024 * 1024
+
+
+def render(request, template, context):
+    athlete = _athlete_user(request)
+    if athlete:
+        context["sync_connection"] = CorosMCPConnection.objects.filter(athlete=athlete).first()
+    return django_render(request, template, context)
 
 
 def _text(content):
@@ -55,12 +62,13 @@ def _activity_rows(text, request, connection):
         if not heading or not identity:
             continue
         label, sport = identity.groups()
-        row = {"sport":heading[1], "date":heading[2], "label":label}
+        row = {"sport":heading[1], "date":heading[2], "label":label, "sport_code":int(sport)}
         for key, caption in (("duration", "Duration"), ("distance", "Distance"), ("pace", "Average Pace"), ("hr", "Avg HR")):
             match = re.search(r"\b" + caption + r":\s*([^|\n]+)", block, re.I)
             row[key] = match[1].strip() if match else ""
-        row["ticket"] = signing.dumps({"user":request.user.pk, "athlete":connection.athlete_id,
-            "connection":connection.pk, "label":label, "sport":int(sport)}, salt="coros-fit-selection")
+        if request is not None:
+            row["ticket"] = signing.dumps({"user":request.user.pk, "athlete":connection.athlete_id,
+                "connection":connection.pk, "label":label, "sport":int(sport)}, salt="coros-fit-selection")
         row["imported"] = GarminActivity.objects.filter(athlete_id=connection.athlete_id,
             parsed_data__coros_mcp_label=label).exists()
         rows.append(row)
@@ -77,7 +85,7 @@ def _start_session(connection):
         connection.access_token = access
         connection.refresh_token = token.get("refresh_token", connection.refresh_token)
         connection.expires_at = timezone.now() + timedelta(seconds=int(token.get("expires_in", 2592000)))
-        connection.save()
+        connection.save(update_fields=["access_token", "refresh_token", "expires_at"])
     _, session = _rpc(connection, {"jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
         "protocolVersion":"2025-03-26", "capabilities":{}, "clientInfo":{"name":"MiLa Planner", "version":"1.0"}}})
     _rpc(connection, {"jsonrpc":"2.0", "method":"notifications/initialized"}, session)
@@ -272,32 +280,56 @@ def coros_mcp_import(request):
         if existing:
             return render(request, "core/coros_mcp.html", {"connected":True, "notice":"This activity was already imported.", "saved_activity":existing})
         session = _start_session(connection)
-        content = _tool(connection, session, "queryActivityFitFileDownloadUrls", {
-            "labelId":selection["label"], "sportType":selection["sport"], "limit":1})
-        text = _text(content)
-        # Support ordinary MCP text and structured JSON results without ever
-        # accepting a download URL from the browser.
-        candidates = re.findall(r'https://[^\s<>"\\]+', text + "\n" + json.dumps(content.get("structuredContent", {})))
-        urls = list(dict.fromkeys(value.rstrip(").,]'") for value in candidates))
-        if len(urls) != 1:
-            raise ValueError("COROS returned no single FIT download.")
-        raw = _download_fit(urls[0])
-        parsed = parse_fit(raw)
-        name = "coros-" + selection["label"] + ".fit"
-        parsed["file_name"] = name
-        parsed["human"]["file_name"] = name
-        parsed["coros_mcp_label"] = selection["label"]
-        parsed["coros_mcp_sport"] = selection["sport"]
-        # Recheck permission and connection under lock after network I/O.
-        with transaction.atomic():
-            current = Athlete.objects.select_for_update().get(pk=athlete.pk)
-            if not current.coros_connection_enabled or not CorosMCPConnection.objects.filter(pk=connection.pk, athlete=current).exists():
-                return HttpResponseForbidden("COROS connection is no longer enabled.")
-            activity, created = GarminActivity.objects.get_or_create(athlete=current,
-                file_hash=hashlib.sha256(raw).hexdigest(), defaults={"activity_start":parsed["human"].get("activity_start"),
-                    "original_filename":name, "raw_file":raw, "parsed_data":json_safe_fit_data(parsed)})
+        activity, created = import_activity(connection, session, selection["label"], selection["sport"])
         return render(request, "core/coros_mcp.html", {"connected":True, "saved_activity":activity,
             "notice":"FIT imported. Open the activity date in Athlete Diary to analyze it." if created else "This FIT file was already imported."})
+    except PermissionError:
+        return HttpResponseForbidden("COROS connection is no longer enabled.")
     except (requests.RequestException, ValueError, KeyError, TypeError, StopIteration, OverflowError, OSError, struct.error):
         return render(request, "core/coros_mcp.html", {"connected":True,
             "error":"The COROS FIT file could not be imported. Refresh the list and try again. The activity may still be processing, or the daily COROS download limit may have been reached."})
+
+
+def import_activity(connection, session, label, sport):
+    """Shared manual/background import, including quota and permission checks."""
+    now = timezone.now()
+    with transaction.atomic():
+        current = CorosMCPConnection.objects.select_for_update().filter(pk=connection.pk,
+            athlete__coros_connection_enabled=True).first()
+        if not current:
+            raise PermissionError()
+        existing = GarminActivity.objects.filter(athlete_id=current.athlete_id, parsed_data__coros_mcp_label=label).first()
+        if existing:
+            return existing, False
+        if not current.download_window_at or current.download_window_at <= now - timedelta(hours=24):
+            current.download_window_at, current.download_requests = now, 0
+        if current.download_requests >= 50:
+            raise ValueError("COROS download quota reached")
+        current.download_requests += 1
+        current.save(update_fields=["download_window_at", "download_requests"])
+    content = _tool(connection, session, "queryActivityFitFileDownloadUrls", {
+        "labelId":label, "sportType":sport, "limit":1})
+    text = _text(content)
+    candidates = re.findall(r'https://[^\s<>"\\]+', text + "\n" + json.dumps(content.get("structuredContent", {})))
+    urls = list(dict.fromkeys(value.rstrip(").,]'") for value in candidates))
+    if len(urls) != 1:
+        raise ValueError("COROS returned no single FIT download.")
+    raw = _download_fit(urls[0])
+    parsed = parse_fit(raw)
+    name = "coros-" + label + ".fit"
+    parsed["file_name"] = name
+    parsed["human"]["file_name"] = name
+    parsed.update(coros_mcp_label=label, coros_mcp_sport=sport)
+    with transaction.atomic():
+        athlete = Athlete.objects.select_for_update().get(pk=connection.athlete_id)
+        if not athlete.coros_connection_enabled or not CorosMCPConnection.objects.filter(pk=connection.pk, athlete=athlete).exists():
+            raise PermissionError()
+        activity, created = GarminActivity.objects.get_or_create(athlete=athlete,
+            file_hash=hashlib.sha256(raw).hexdigest(), defaults={"activity_start":parsed["human"].get("activity_start"),
+                "original_filename":name, "raw_file":raw, "parsed_data":json_safe_fit_data(parsed)})
+        if not created and not (activity.parsed_data or {}).get("coros_mcp_label"):
+            activity.parsed_data = dict(activity.parsed_data or {}, coros_mcp_label=label, coros_mcp_sport=sport)
+            activity.save(update_fields=["parsed_data"])
+        if created:
+            CorosMCPConnection.objects.filter(pk=connection.pk).update(last_import_at=timezone.now())
+    return activity, created

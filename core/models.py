@@ -1669,6 +1669,14 @@ class CorosMCPConnection(models.Model):
     refresh_token = models.TextField(blank=True, default="")
     expires_at = models.DateTimeField(null=True, blank=True)
     consented_at = models.DateTimeField()
+    next_sync_at = models.DateTimeField(null=True, blank=True)
+    sync_claim = models.CharField(max_length=64, blank=True, default="")
+    last_sync_at = models.DateTimeField(null=True, blank=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    last_import_at = models.DateTimeField(null=True, blank=True)
+    sync_error = models.CharField(max_length=200, blank=True, default="")
+    download_window_at = models.DateTimeField(null=True, blank=True)
+    download_requests = models.PositiveIntegerField(default=0)
 
 
 class OuraConnection(models.Model):
