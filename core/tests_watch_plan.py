@@ -10,6 +10,24 @@ from core.views.calendar import _clone_slot_for_display
 
 
 class WatchOriginalPlanTests(TestCase):
+
+    def test_athlete_watch_save_resolves_existing_base_training_without_prefill(self):
+        user = get_user_model().objects.create_user(username="Original_Runner")
+        block = AthleteBasePlanningBlock.objects.create(athlete=self.athlete,
+            start_month=1, start_day=1, end_month=12, end_day=31)
+        AthleteBasePlanningSlot.objects.create(block=block, weekday=self.day.weekday(), slot_index=2,
+            mode=AthleteBasePlanningSlot.MODE_TRAINING, training_text="4x400m Z3")
+        self.client.force_login(user)
+        response = self.import_watch(origin="watch_c")
+        self.assertEqual(response.status_code, 200)
+        saved = TrainingSlot.objects.get(athlete=self.athlete, date=self.day, slot_index=2)
+        self.assertEqual(saved.source, "watch_c")
+
+    def test_athlete_watch_save_still_rejects_truly_empty_daypart(self):
+        user = get_user_model().objects.create_user(username="Original_Runner")
+        self.client.force_login(user)
+        response = self.import_watch(origin="watch_c")
+        self.assertEqual(response.status_code, 403)
     def setUp(self):
         self.coach = get_user_model().objects.create_user(username="original-coach", is_staff=True)
         self.athlete = Athlete.objects.create(owner=self.coach, name="Original Runner", birth_year=2000, gender="X")

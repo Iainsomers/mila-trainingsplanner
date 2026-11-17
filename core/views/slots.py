@@ -1514,8 +1514,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             visible_slot = _fallback_slot_after_flex_reset(athlete, d, slot_index)
             has_fix = False
     elif (
-        request.method == "GET"
-        and is_athlete_year_calendar
+        is_athlete_year_calendar
         and _is_flex_planner_plan(selected_plan)
         and not has_athlete_override
     ):
@@ -1524,7 +1523,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         # replace that displayed workout in the modal. Keep a personal Flex
         # override authoritative; otherwise use the cell's exact prefill, then
         # resolve Base Planning for direct-loaded modal URLs without prefill.
-        prefill_slot = _virtual_slot_from_modal_prefill(request)
+        prefill_slot = _virtual_slot_from_modal_prefill(request) if request.method == "GET" else None
         if prefill_slot:
             visible_slot = prefill_slot
             has_fix = False

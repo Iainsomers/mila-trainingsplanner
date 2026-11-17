@@ -1,5 +1,7 @@
 # Actuele status
 
+- Watch Use AM/PM vanuit het atleetaccount zoekt bij POST nu ook de server-side Base Planning-training op, net als bij openen van het dagdeel. Daardoor wordt een bestaande training niet onterecht als leeg geweigerd. Werkelijk lege dagdelen blijven zonder Extended edit rights geblokkeerd. 25 Watch/Plan-tests en Django check slagen.
+
 - Garmin E normaliseert laps trager dan 10:00/km en stilstand naar rust vóór de voorstelcontrole. Ook lange transfers vóór/na de training blokkeren zo geen WU/CD-voorstel meer. 38 Garmin E-tests en Django check slagen.
 
 ## 17 november 2026 - COROS-activiteiten en handmatige FIT-import
