@@ -105,15 +105,22 @@ def garmin_type_e_ayc_view(request):
                     stored = GarminEConversation.objects.filter(user=request.user,athlete=athlete,activity_key=identity).first()
                     if stored and (stored.state.get("part") or {}).get("e_usable"):
                         main_state = stored.state
-                        raw_part["training_fields"] = deepcopy(main_state["part"]["training_fields"])
+                        main_source["parts"] = [deepcopy(main_state["part"])]
             combined,ordered,ranges = combine_recordings(results,selection)
             combined["e_combine_token"] = signing.dumps(
                 [request.user.pk,athlete.pk,request.GET.get("date"),ordered],salt="garmin-e-combine")
             if main_state and main_state.get("proposal"):
                 try:
                     proposal = shifted_main_proposal(main_state["proposal"],ranges)
-                    candidate = checked_proposal(combined["parts"][0],proposal,
-                        athlete=athlete,zone_basis=main_state["basis"])
+                    # Composition does not reinterpret an already checked Main.
+                    # All source recordings were loaded server-side; keep its
+                    # fields, zones, work/recovery flags and measured laps.
+                    candidate = deepcopy(combined["parts"][0])
+                    candidate.update(e_usable=True, e_zone_basis=main_state["basis"],
+                        ai_structure_status="e_validated")
+                    for key in ("e_zone_note", "e_update_note"):
+                        if key in main_state["part"]:
+                            candidate[key] = main_state["part"][key]
                     combined_seed = dict(proposal=proposal,part=candidate,basis=main_state["basis"],
                         history=[{"role":"assistant","content":"Je gecontroleerde Main is gecombineerd met de gekozen WU/CD. Alle gemeten laps blijven behouden en zijn opnieuw genummerd."}])
                 except (ValueError,KeyError,TypeError):
@@ -172,6 +179,9 @@ def garmin_type_e_ayc_view(request):
             identity = conversation_identity(request.user.pk,athlete.pk,session.get("start"),facts)
             conversation,_ = GarminEConversation.objects.get_or_create(user=request.user,athlete=athlete,
                 activity_key=identity,defaults={"state":combined_seed or {}})
+            if combining and combined_seed:
+                GarminEConversation.objects.filter(pk=conversation.pk).update(state=combined_seed, updated_at=timezone.now())
+                conversation.state = deepcopy(combined_seed)
             state = conversation.state or {"history":[],"part":deepcopy(part),"proposal":None,"basis":"auto"}
             # One complete Alternative lap needs no model interpretation or interval
             # split. Validate it through the same compiler, including old conversations

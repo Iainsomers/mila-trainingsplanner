@@ -43,6 +43,7 @@ def combine_recordings(results, selection):
     ranges = {}
     for item,source in chosen:
         part,role = source["parts"][0],item["role"]
+        offset = len(loads)
         indices = []
         for load in part["watch_loads"]:
             meters,seconds = float(load["meters"]),float(load["seconds"])
@@ -50,6 +51,8 @@ def combine_recordings(results, selection):
                 raise ValueError("A recording has incomplete lap measurements.")
             copy = deepcopy(load)
             copy.pop("combined_outer",None)
+            if role == "main" and type(copy.get("ai_rep")) is int:
+                copy["ai_rep"] += offset
             copy.update(recording_role=role,recording_start=item["start"])
             if role!="main":
                 copy["segment"] = role.upper()
@@ -93,11 +96,13 @@ def combine_recordings(results, selection):
 def shifted_main_proposal(proposal, ranges):
     result = deepcopy(proposal)
     offset = ranges["main"][0]-1
-    for field in ("warmup_laps","cooldown_laps","recovery_laps","set_start_laps"):
+    for field in ("warmup_laps","cooldown_laps","recovery_laps","ignored_laps","set_start_laps"):
         if field in result:
             result[field] = [i+offset for i in result[field]]
     for rep in result["reps"]:
         rep["laps"] = [i+offset for i in rep["laps"]]
+    if isinstance(result.get("explicit_lap_zones"), dict):
+        result["explicit_lap_zones"] = {str(int(i)+offset):zone for i,zone in result["explicit_lap_zones"].items()}
     result["warmup_laps"] = ranges.get("wu",[])+result.get("warmup_laps",[])
     result["cooldown_laps"] = result.get("cooldown_laps",[])+ranges.get("cd",[])
     return result

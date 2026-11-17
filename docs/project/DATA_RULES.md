@@ -47,6 +47,8 @@ Bijgewerkt: 22 oktober 2026.
 
 ## Zones
 
+- Garmin E Combine is compositie: gecontroleerde Main-tekst, zones en work/recovery/ignored-loads blijven intact. Externe WU/CD worden toegevoegd, lapreferenties worden verschoven. Bestaande Main wordt niet opnieuw geïnterpreteerd of afgewezen door een tweede structuurcontrole; toegang en ondertekende opslagvalidatie blijven gelden.
+
 - Garmin E kiest werk-/herstelrollen uit de chronologische herhaling van afstanden/tijden en gemeten snelheidsverschillen, vóór zonering. Een hoge absolute herstelzone blokkeert niet automatisch: aangrenzende volledige werkreps moeten nog steeds minimaal 20% sneller zijn. Wisselende werkzones mogen één reeks blijven; afwisseling zonder voldoende contrast bewijst geen herstel. De AI bepaalt de indeling, de validator bewaakt de meetgrenzen.
 
 - Garmin E behandelt volledige gemeten laps strikt trager dan 10:00/km en stilstand automatisch als rust. Rustlaps worden uit WU/CD of volledig rustende werkreps gehaald en blijven als recovery toegewezen; expliciet genegeerde laps blijven genegeerd. Meetwaarden blijven behouden, rustmeters tellen niet als loopafstand en rustduur blijft bruikbaar voor pauzes. Een gemengde werkrep met rust erin blijft afwijsbaar om werk/herstel niet te laten samenvallen.

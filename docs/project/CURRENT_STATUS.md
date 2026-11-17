@@ -1,5 +1,9 @@
 # Actuele status
 
+## 18 november 2026 - Combine bewaart gecontroleerde Main
+
+- Garmin E Combine neemt de reeds gecontroleerde Main-velden en meetloads volledig over en voert geen tweede indelingscontrole of AI-analyse uit. Alleen lapreferenties schuiven op; ook ignored_laps en expliciete lapzones verschuiven mee. Opnieuw combineren vervangt een eerdere mislukte combinatiecache met de actuele gecontroleerde onderdelen. Niet-gecontroleerde Main blijft expliciete analyse vereisen.
+
 - Garmin E: instructie voor rep–pauze-alternatie aangescherpt, met structuur vóór zones en continue autolaps als tegenvoorbeeld. Validator wijst hoge herstelzones niet meer uitsluitend op hun label af; gemeten >=20%-werksnelheidscontrast blijft vereist. Synthetische regressie met progressieve Z1–Z4-werkreps en Z3-herstel blijft één reeks; te snelle pauze wordt afgewezen. 39 Garmin E-tests en Django check slagen. Live herkenningsverbetering nog te beoordelen.
 
 ## 17 november 2026 - Automatische COROS FIT-import

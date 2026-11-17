@@ -488,12 +488,15 @@ class GarminEEndpointTests(TestCase):
         model.return_value = {"reply":"Twee gemeten 500m-reps.","proposal":main_proposal,"zone_basis":"pace"}
         self.assertTrue(self.client.post(main_url,{"chat":json.dumps([{"role":"user","content":"Analyseer Main"}])}).json()["ok"])
         calls = model.call_count
-        response = self.client.post(self.url+"?"+urlencode(self.query),{"combine":json.dumps(selection)})
+        with patch("core.views.garmin_e.checked_proposal", side_effect=AssertionError("Do not reinterpret checked Main")) as recheck:
+            response = self.client.post(self.url+"?"+urlencode(self.query),{"combine":json.dumps(selection)})
+            recheck.assert_not_called()
         self.assertEqual(response.status_code,200,response.json())
         combined = response.json()["results"][0]
         part = combined["parts"][0]
         self.assertEqual(model.call_count,calls)
         self.assertTrue(part["e_usable"],part)
+        self.assertEqual(part["training_fields"]["main"], "2×500 m Z4 p60")
         self.assertEqual(part["training_fields"]["wu"],"800 m Z1")
         self.assertEqual(part["training_fields"]["cd"],"1000 m Z1")
         self.assertEqual([(l["meters"],l["seconds"]) for l in part["watch_loads"]],
