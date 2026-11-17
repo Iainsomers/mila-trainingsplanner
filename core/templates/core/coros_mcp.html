@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}COROS connection{% endblock %}
+{% block content %}<div class="container py-3">
+<h1>COROS connection</h1>
+<p><a href="{% url 'planning_overview' %}?section=hardware">Back</a></p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if connected %}
+<p>Your COROS account is connected.</p>
+<form method="post" action="{% url 'coros_mcp_preview' %}">{% csrf_token %}<button>Preview recent activities</button></form>
+<form method="post" action="{% url 'coros_mcp_disconnect' %}">{% csrf_token %}<button>Disconnect COROS</button></form>
+{% else %}
+<p>Connect your European COROS account to MiLa Planner.</p>
+<p class="small">MiLa stores your connection tokens to access the COROS data you authorize. The activity preview is shown temporarily to you. Disconnect removes the stored connection. See the <a href="{% url 'privacy_policy' %}">Privacy Policy</a>.</p>
+<form method="post" action="{% url 'coros_mcp_connect' %}">{% csrf_token %}
+<p><label><input type="checkbox" name="consent" required> I consent to MiLa Planner accessing my COROS activity and wellness data. I am 18 or older or have permission from my parent/legal guardian.</label></p>
+<button>Connect COROS</button></form>
+{% endif %}
+{% if preview %}<h2>Recent activities</h2><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ preview }}</pre>{% endif %}
+<p>Preview only: no training is added to your diary.</p>
+</div>{% endblock %}

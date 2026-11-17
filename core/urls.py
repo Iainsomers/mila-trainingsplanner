@@ -122,6 +122,7 @@ from core.views.slots import (
 
 from core.views.stats_debug import stats_debug_view
 from core.views.coros import coros_status_view, coros_workout_push_view
+from core.views.coros_mcp import coros_mcp_view, coros_mcp_connect, coros_mcp_callback, coros_mcp_disconnect, coros_mcp_preview
 from core.views.garmin import garmin_connect_view, garmin_callback_view, garmin_withdraw_view, garmin_connections_view, garmin_athlete_activities_view, garmin_activity_push_view, garmin_health_push_view
 from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view, oura_vitals_import_view, oura_device_timezone_view
 
@@ -207,6 +208,11 @@ urlpatterns = [
     path("integrations/garmin/type-d-ayc/", garmin_type_d_ayc_view, name="garmin_type_d_ayc"),
     path("integrations/garmin/type-e-ayc/", garmin_type_e_ayc_view, name="garmin_type_e_ayc"),
     path("integrations/coros/status/", coros_status_view, name="coros_status"),
+    path("integrations/coros/mcp/", coros_mcp_view, name="coros_mcp"),
+    path("integrations/coros/mcp/connect/", coros_mcp_connect, name="coros_mcp_connect"),
+    path("integrations/coros/mcp/callback/", coros_mcp_callback, name="coros_mcp_callback"),
+    path("integrations/coros/mcp/disconnect/", coros_mcp_disconnect, name="coros_mcp_disconnect"),
+    path("integrations/coros/mcp/preview/", coros_mcp_preview, name="coros_mcp_preview"),
     path("integrations/coros/workouts/", coros_workout_push_view, name="coros_workout_push"),
 
     # Coach console

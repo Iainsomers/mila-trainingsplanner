@@ -1,5 +1,9 @@
 # Actuele status
 
+## 17 november 2026 - Eerste COROS MCP-koppeling
+
+- Hardware biedt eigen atleten COROS account: EU OAuth met dynamische clientregistratie, PKCE, veilige callback, tokenvernieuwing en ontkoppelen. Read-only testvenster haalt recente activiteiten op via MCP; geen automatische Diary-mutaties. Acht COROS-tests, Django check en migratiecontrole slagen. Live OAuth en MCP-respons nog te testen na deploy.
+
 ## 17 november 2026 - Oura-controles alleen overdag
 
 - Automatische Oura-controles volgen de apparaattijdzone: 07:30–09:00 iedere tien minuten, daarna op hele uren 10:00–20:00. Van 21:00 tot 07:30 worden ook achterstallige controles uitgesteld tot 07:30.

@@ -1661,6 +1661,15 @@ class GarminEConversation(models.Model):
         constraints = [models.UniqueConstraint(fields=["user","athlete","activity_key"],name="unique_garmin_e_conversation")]
 
 
+class CorosMCPConnection(models.Model):
+    athlete = models.OneToOneField(Athlete, on_delete=models.CASCADE, related_name="coros_mcp_connection")
+    client_id = models.TextField()
+    access_token = models.TextField()
+    refresh_token = models.TextField(blank=True, default="")
+    expires_at = models.DateTimeField(null=True, blank=True)
+    consented_at = models.DateTimeField()
+
+
 class OuraConnection(models.Model):
     """An athlete-authorized Oura OAuth connection."""
 

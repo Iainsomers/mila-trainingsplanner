@@ -81,6 +81,8 @@ Bij modelwijzigingen:
 
 ## Git en Render
 
+- COROS MCP vereist migratie `0158_coros_mcp_connection`. De eerste implementatie gebruikt de Europese server `https://mcpeu.coros.com` en publieke dynamische OAuth-clientregistratie; er zijn geen Partner API-sleutels nodig. Callback: `/integrations/coros/mcp/callback/`. Beveiliging: PKCE S256, state, eigen gebruiker/atleet, tien minuten geldigheid en eenmalige callback. Token- en registratieverzoeken loggen geen bodies. Tests: `core.tests_coros_mcp core.tests_coros`. Live registratie, toestemming en activiteitenpreview moeten nog met een COROS-account worden bevestigd; geen automatische import of workout-write toegevoegd.
+
 - Migratie `0154_trainingsegment_watch_alternative_data` voegt de tekstgebonden meetgegevens voor compacte E-Alternative toe. Bij het testen van de compacte opmaak zowel de opgeslagen ALT-tekst als gemeten seconden en HR-zonetotalen controleren; ze kunnen bewust verschillen van afgeronde nominale tijden.
 
 - Garmin E vereist migraties `0152_trainingslot_garmin_e_source` en `0153_garmin_e_conversation`. Het gebruikt de bestaande `OPENAI_API_KEY`; optioneel kiest `GARMIN_E_MODEL` het E-model (standaard `gpt-5.4-mini`, reasoning low). E is per atleet opt-in. API-uitvoer is JSON met vrije antwoordtekst en een afzonderlijke meetbare laptoewijzing. De eerste servicepoging krijgt maximaal 16s; na een netwerk-/servicetime-out volgt binnen dezelfde totale begroting van circa 26s één korte, beknopte poging van maximaal 8s. Die herstart vervangt de gewone validatieherstelpoging, zodat nooit drie modelverzoeken ontstaan. Bij timeout of fout blijven gesprek en laatste gecontroleerde preview beschikbaar.
