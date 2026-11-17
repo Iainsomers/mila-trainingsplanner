@@ -1,5 +1,7 @@
 # Actuele status
 
+- Garmin E normaliseert laps trager dan 10:00/km en stilstand naar rust vóór de voorstelcontrole. Ook lange transfers vóór/na de training blokkeren zo geen WU/CD-voorstel meer. 38 Garmin E-tests en Django check slagen.
+
 ## 17 november 2026 - COROS-activiteiten en handmatige FIT-import
 
 - MCP-tekst wordt gedecodeerd en als compacte activiteitkaarten getoond. Per activiteit kan de eigen atleet het originele FIT-bestand ophalen voor de bestaande horlogeanalyse. Ondertekende activiteitselectie, begrensde HTTPS-download, FIT-validatie, deduplicatie en toestemming na netwerk-I/O worden gecontroleerd. Geen Diary-mutaties bij import. 42 gerichte tests plus Django/migratiecontrole slagen. OAuth en activiteitenpreview eerder live bevestigd; originele FIT-download nog live te testen.

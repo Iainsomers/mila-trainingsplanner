@@ -37,6 +37,22 @@ def fixture():
 
 class GarminEValidationTests(SimpleTestCase):
 
+    def test_long_walking_boundary_is_rest_without_blocking_proposal(self):
+        part, proposal = fixture()
+        part["watch_loads"].append(dict(segment="CORE", meters=1361.94, seconds=1747.75, zone="1"))
+        proposal["cooldown_laps"] = [10]
+        result = checked_proposal(part, proposal, zone_basis="pace")
+        self.assertEqual(result["training_fields"]["cd"], "")
+        self.assertEqual(result["watch_loads"][-1]["segment"], "CORE")
+        self.assertFalse(result["watch_loads"][-1]["work_rep"])
+        self.assertEqual(result["watch_loads"][-1]["seconds"], 1747.75)
+
+    def test_unassigned_standing_lap_is_rest(self):
+        part, proposal = fixture()
+        part["watch_loads"].append(dict(segment="CORE", meters=0, seconds=90, zone="1"))
+        result = checked_proposal(part, proposal, zone_basis="pace")
+        self.assertFalse(result["watch_loads"][-1]["work_rep"])
+
     def test_explicit_lap_zone_allows_corrected_cooldown(self):
         part, proposal = fixture()
         part["watch_loads"].append(dict(segment="CORE", meters=1000, seconds=190, zone="5"))

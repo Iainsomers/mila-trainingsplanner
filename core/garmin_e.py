@@ -30,6 +30,9 @@ Prefer time targets when at least three consecutive work laps are all tightly cl
 the same whole-minute duration while their measured distances vary. For example, eight laps of
 exactly 3:00 measuring roughly 750-800m are 8x3 minutes, not alternating 750m/800m reps.
 Ordinary kilometre autolaps in a continuous easy run are one continuous rep, not intervals.
+Running laps slower than 10:00/km are rest, including long transfers before warmup or
+after cooldown. Assign them to recovery, never warmup/cooldown or work. Their measured
+duration may contribute to recovery pauses, but their distance is not running mileage.
 Preserve unrelated parts when a user corrects only one block. Recount from original laps.
 If the user accidentally ran one rep longer, discuss it; actual times always remain measured.
 For an explanation/question return proposal:null. Do not say a training was saved or accepted.
@@ -341,6 +344,28 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
     facts = lap_facts(part)
     if not 1 <= len(facts) <= 200:
         raise ValueError("Use a recording with 1–200 measured laps.")
+    from core.watch_processing import is_walking_load
+    resting = {row["lap"] if "lap" in row else index
+               for index, row in enumerate(facts, 1)
+               if row["distance_m"] == 0 or is_walking_load(row["distance_m"], row["duration_s"])}
+    proposal = deepcopy(proposal)
+    # Rest remains in the source assignment and pause durations, regardless
+    # of an AI boundary label or an omitted long transfer.
+    if resting:
+        for key in ("warmup_laps", "cooldown_laps"):
+            if isinstance(proposal.get(key), list):
+                proposal[key] = [i for i in proposal[key] if i not in resting]
+        reps = proposal.get("reps")
+        if isinstance(reps, list):
+            proposal["reps"] = [rep for rep in reps if not (
+                isinstance(rep, dict) and isinstance(rep.get("laps"), list)
+                and rep["laps"] and all(i in resting for i in rep["laps"]))]
+        work_ids = {i for rep in proposal.get("reps", []) if isinstance(rep, dict)
+                    for i in rep.get("laps", [])} if isinstance(proposal.get("reps"), list) else set()
+        ignored_ids = proposal.get("ignored_laps", [])
+        recoveries = proposal.get("recovery_laps", [])
+        if isinstance(recoveries, list) and isinstance(ignored_ids, list):
+            proposal["recovery_laps"] = sorted(set(recoveries) | (resting - work_ids - set(ignored_ids)))
     used = set()
     def ids(values):
         if (not isinstance(values,list) or any(type(i) is not int or not 1 <= i <= len(facts) for i in values)
@@ -400,6 +425,8 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
             raise ValueError(f"Lap {i} is not supported as warmup/cooldown.")
     for i in recovery:
         row = facts[i-1]
+        if i in resting:
+            continue
         speed = row["distance_m"]/row["duration_s"]
         if row["zone"] not in {"Z1","Z2","Z","ZNA"}:
             raise ValueError(f"Lap {i} is too fast to discard as recovery.")
