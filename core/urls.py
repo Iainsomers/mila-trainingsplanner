@@ -122,6 +122,7 @@ from core.views.slots import (
 
 from core.views.stats_debug import stats_debug_view
 from core.views.coros import coros_status_view, coros_workout_push_view
+from core.views.mysasy import mysasy_view, mysasy_connect, mysasy_callback, mysasy_confirm, mysasy_finish, mysasy_refresh, mysasy_disconnect, mysasy_coach_view
 from core.views.coros_mcp import coros_mcp_view, coros_mcp_connect, coros_mcp_callback, coros_mcp_disconnect, coros_mcp_preview, coros_mcp_import
 from core.views.garmin import garmin_connect_view, garmin_callback_view, garmin_withdraw_view, garmin_connections_view, garmin_athlete_activities_view, garmin_activity_push_view, garmin_health_push_view
 from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view, oura_vitals_import_view, oura_device_timezone_view
@@ -208,6 +209,14 @@ urlpatterns = [
     path("integrations/garmin/type-d-ayc/", garmin_type_d_ayc_view, name="garmin_type_d_ayc"),
     path("integrations/garmin/type-e-ayc/", garmin_type_e_ayc_view, name="garmin_type_e_ayc"),
     path("integrations/coros/status/", coros_status_view, name="coros_status"),
+    path("integrations/mysasy/", mysasy_view, name="mysasy"),
+    path("coach/athletes/<int:athlete_id>/mysasy/", mysasy_coach_view, name="mysasy_coach"),
+    path("integrations/mysasy/connect/", mysasy_connect, name="mysasy_connect"),
+    path("integrations/mysasy/callback/", mysasy_callback, name="mysasy_callback"),
+    path("integrations/mysasy/confirm/", mysasy_confirm, name="mysasy_confirm"),
+    path("integrations/mysasy/finish/", mysasy_finish, name="mysasy_finish"),
+    path("integrations/mysasy/refresh/", mysasy_refresh, name="mysasy_refresh"),
+    path("integrations/mysasy/disconnect/", mysasy_disconnect, name="mysasy_disconnect"),
     path("integrations/coros/mcp/", coros_mcp_view, name="coros_mcp"),
     path("integrations/coros/mcp/connect/", coros_mcp_connect, name="coros_mcp_connect"),
     path("integrations/coros/mcp/callback/", coros_mcp_callback, name="coros_mcp_callback"),

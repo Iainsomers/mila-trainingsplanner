@@ -1,5 +1,7 @@
 # Start Here
 
+Nieuwste overdracht 18 november: mySASY is toegevoegd met migratie0161, individuele koppelbevestiging, coachschakelaar/status, recent meetoverzicht en bestaande vitals-deelrechten voor coachinzage. Voor echt gebruik moet Render `MYSASY_CLIENT_SECRET` krijgen; application-ID standaard31. Nog geen echte atleet-/API-controle en geen automatische import. Zie DEVELOPMENT en CURRENT_STATUS voor configuratie, callbackgrenzen en teststatus.
+
 Bijgewerkt: 5 november 2026.
 
 ## Project in één minuut

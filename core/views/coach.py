@@ -584,6 +584,7 @@ def dashboard_view(request):
         "oura_preview_available": oura_preview_available,
         "polar_enabled": bool(is_athlete_user and getattr(athlete, "polar_enabled", False)),
         "coros_connection_enabled": bool(is_athlete_user and athlete.coros_connection_enabled),
+        "mysasy_connection_enabled": bool(is_athlete_user and athlete.mysasy_connection_enabled),
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
         "oura_status": request.GET.get("oura", ""),
     })
@@ -6761,6 +6762,7 @@ def planning_overview_view(request):
         "garmin_status": request.GET.get('garmin', ''),
         "oura_connection_enabled": bool(is_athlete_user and athlete.oura_connection_enabled),
         "coros_connection_enabled": bool(is_athlete_user and athlete.coros_connection_enabled),
+        "mysasy_connection_enabled": bool(is_athlete_user and athlete.mysasy_connection_enabled),
         "oura_connection": oura_connection,
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
         "oura_status": request.GET.get("oura", ""),
@@ -11784,6 +11786,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "oura_auto_import_enabled": getattr(athlete, "oura_auto_import_enabled", False),
         "polar_enabled": getattr(athlete, "polar_enabled", False),
         "coros_connection_enabled": athlete.coros_connection_enabled,
+        "mysasy_connection_enabled": athlete.mysasy_connection_enabled,
+        "mysasy_connected": hasattr(athlete, "mysasy_connection"),
         "coros_connected": hasattr(athlete, "coros_mcp_connection"),
         "coros_sync": getattr(athlete, "coros_mcp_connection", None),
         "pause_mode": effective_pause_mode,
@@ -11860,6 +11864,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         else:
             form["polar_enabled"] = (request.POST.get("polar_enabled") == "on")
         form["coros_connection_enabled"] = athlete.coros_connection_enabled if self_view else request.POST.get("coros_connection_enabled") == "on"
+        form["mysasy_connection_enabled"] = athlete.mysasy_connection_enabled if self_view else request.POST.get("mysasy_connection_enabled") == "on"
         if self_view:
             form["pause_mode"] = effective_pause_mode
         else:
@@ -12094,6 +12099,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
                     revoke_oura_connection(athlete)
                 athlete.polar_enabled = form["polar_enabled"]
                 athlete.coros_connection_enabled = form["coros_connection_enabled"]
+                athlete.mysasy_connection_enabled = form["mysasy_connection_enabled"]
                 if not athlete.coros_connection_enabled:
                     from core.models import CorosMCPConnection
                     CorosMCPConnection.objects.filter(athlete=athlete).delete()
@@ -12136,6 +12142,10 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.target_pr_400_s = target_t4_s
             athlete.is_private = form["is_private"]
             athlete.save()
+            if not self_view and not athlete.mysasy_connection_enabled:
+                from core.models import MySasyConnection, MySasyLinkAttempt
+                MySasyConnection.objects.filter(athlete=athlete).delete()
+                MySasyLinkAttempt.objects.filter(athlete=athlete).delete()
 
             target_url = reverse("athlete_settings") if self_view else reverse("coach_athlete_edit", args=[athlete.id])
             return redirect(f"{target_url}?tab={active_tab}&saved=1")
@@ -12165,6 +12175,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "oura_auto_import_enabled",
         "polar_enabled",
         "coros_connection_enabled",
+        "mysasy_connection_enabled",
     )
     connection_enabled_count = sum(bool(form.get(key)) for key in connection_keys)
 

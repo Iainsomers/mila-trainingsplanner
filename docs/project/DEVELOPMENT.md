@@ -1,5 +1,19 @@
 # Ontwikkelen, testen en documenteren
 
+## mySASY — 18 november 2026
+
+Migratie `0161_mysasy_connection` voegt de coachschakelaar, verbinding, tijdelijke koppelpogingen en gedeelde verzoekenteller toe. Lokaal gemigreerd; Render moet deze via de bestaande migratiestap uitvoeren. Stel op Render `MYSASY_CLIENT_SECRET` in met de ontvangen geheime waarde. `MYSASY_APPLICATION_ID` is optioneel en standaard `31`. De secret staat nooit in code of documentatie. Zonder configuratie blijft koppelen uitgeschakeld.
+
+Geregistreerde callback: `https://mila-trainingsplanner.onrender.com/integrations/mysasy/callback/`. mySASY stuurt een browser-GET met `success` en eventueel `token`, zonder `state`. Daarom vereist MiLa een eenmalige databasepoging gekoppeld aan dezelfde ingelogde gebruiker, eigen atleet en browsersessie (10 minuten), plus een afzonderlijke CSRF-beveiligde bevestiging van het eigen externe account na inspectie van de metingen. Het callbacktoken wordt direct naar een schone URL doorgestuurd en staat nooit in HTML, cookies of de login-`next`-URL. Proxy-/accesslogs mogen de callbackquery niet bewaren; gebruik bij Gunicorn-accesslogging een formaat met alleen het pad (`%(U)s`), zonder query (`%(q)s`) of volledige requestregel (`%(r)s`). Een proxy kan de inkomende URL zien; de applicatie kan dat niet met terugwerkende kracht voorkomen.
+
+De API-client gebruikt alleen `GET https://api.mysasy.com/myapi/v1/measurements`, de officiële secret-/tokenheaders, een 30-dagenvenster, 15s timeout, geen redirects en maximaal 1 MB JSON. Een lokale databasecounter reserveert maximaal 1000 verzoeken per UTC-kalendermaand voor deze hele applicatie, ook bij mislukking. Extern gebruik van dezelfde credentials kan het werkelijke quotum eerder uitputten. Per verbinding tien minuten cooldown; coaches lezen de cache zonder API-verzoek. Geen achtergrondworker of extra Render-cron nodig. Tijdelijke pogingen vervallen na tien minuten en worden bij een volgend mySASY-bezoek opgeruimd. Na lokaal ontkoppelen kan de atleet de autorisatie ook in mySASY intrekken; er is geen gedocumenteerd revoke-endpoint gebruikt.
+
+Gerichte tests: `manage.py test core.tests_mysasy core.tests_coros_mcp core.tests.AthleteZoneHeartRateTests` (32 tests), `manage.py check`, `makemigrations --check --dry-run`. Externe API-responses zijn gemockt; de eerste echte atleetkoppeling moet na configuratie worden gecontroleerd. De echte Django-template is met synthetische gegevens in Chrome headless op 390 en 1440 px gecontroleerd voor verbinden, bevestigen en verbonden: geen pagina-overflow, officiële afbeeldingen laden, de meettabel scrolt afzonderlijk op mobiel. Tijdelijke controlebestanden in `output/mysasy-validation/` niet committen.
+
+De bredere Oura-regressies bevatten drie bestaande fouten in `core/activity_events.py:record_daily_vital`: tests geven een stringdatum door, terwijl de ongewijzigde signalhandler `.isoformat()` verwacht. Dit is ook aanwezig op de oorspronkelijke HEAD en staat los van mySASY. De gerichte bovenstaande set slaagt.
+
+Bronnen: https://developers.mysasy.com/index.php, https://developers.mysasy.com/index.php?page=rules en https://api.swaggerhub.com/apis/mysasyofficial/myapi4developers/1.0.1. Callbackdetails volgen de bevestigde e-mail van mySASY. Officiële ongewijzigde knop en Powered by-logo staan onder `core/static/core/mysasy/`, met herkomst in de bijbehorende README.
+
 Bijgewerkt: 12 oktober 2026.
 
 ## Lokaal

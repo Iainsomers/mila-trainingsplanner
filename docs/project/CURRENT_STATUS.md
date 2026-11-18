@@ -1,5 +1,7 @@
 # Actuele status
 
+- 18 november — mySASY-koppeling gebouwd: per-atleet coachschakelaar/status, individuele toestemming, eenmalige sessiegebonden GET-callback en afzonderlijke accountbevestiging, meetoverzicht van 30 dagen, verzoekgestuurd verversen, gedeelde 1000-verzoekenlimiet en coachleesweergave met vitals-deelrechten. Migratie 0161 lokaal toegepast. 32 gerichte tests en systeem-/migratiecheck slagen; synthetische Chrome-controle op 390/1440 px uitgevoerd. Render vereist nog `MYSASY_CLIENT_SECRET`; app-ID is standaard31. Echte autorisatie/API nog niet getest. Geen automatische synchronisatie, Daily-vitalmapping of training-profile-endpoint in deze eerste versie. Drie bestaande Oura-testfouten door stringdatums in de ongewijzigde activity-eventhandler zijn apart vastgesteld; zie DEVELOPMENT.
+
 - Klokknop voor gemeten Main-reps verschijnt nu ook bij Garmin E in Athlete Diary en Individual Plans. De brondata werden al opgeslagen; alleen de templatevoorwaarden sloten E nog uit. De gedeelde Diary-partial dekt desktop en mobiel.
 
 ## 18 november 2026 - Combine bewaart gecontroleerde Main

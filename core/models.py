@@ -502,6 +502,7 @@ class Athlete(models.Model):
     # Coach-only permission for the athlete to access Polar features.
     polar_enabled = models.BooleanField(default=False)
     coros_connection_enabled = models.BooleanField(default=False)
+    mysasy_connection_enabled = models.BooleanField(default=False)
     # Blank means: follow the owning coach's pause mode.
     pause_mode = models.CharField(
         max_length=24,
@@ -1677,6 +1678,31 @@ class CorosMCPConnection(models.Model):
     sync_error = models.CharField(max_length=200, blank=True, default="")
     download_window_at = models.DateTimeField(null=True, blank=True)
     download_requests = models.PositiveIntegerField(default=0)
+
+
+class MySasyConnection(models.Model):
+    athlete = models.OneToOneField(Athlete, on_delete=models.CASCADE, related_name="mysasy_connection")
+    auth_token = models.TextField()
+    consented_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    consented_at = models.DateTimeField()
+    measurements = models.JSONField(default=list)
+    last_checked_at = models.DateTimeField()
+
+
+class MySasyLinkAttempt(models.Model):
+    # The unpredictable ID stays in the server-side session, never in the external URL.
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    callback_received = models.BooleanField(default=False)
+    auth_token = models.TextField(blank=True)
+    measurements = models.JSONField(default=dict)
+
+
+class MySasyMonthlyUsage(models.Model):
+    month = models.CharField(max_length=7, primary_key=True)
+    requests = models.PositiveIntegerField(default=0)
 
 
 class OuraConnection(models.Model):

@@ -1,5 +1,7 @@
 # Gebruikersrollen en toegang
 
+- mySASY: alleen een eigen ingelogd atleetaccount met expliciete coachtoestemming kan verbinden, bevestigen, verversen en ontkoppelen. Een meegestuurde atleet-ID wordt nooit gebruikt. Coaches zien uitsluitend de opgeslagen metingen van atleten in hun actieve toegankelijke coachweergave; de bestaande vitals-deelmatrix blijft gelden. Ook een coach met bewerkrecht kan geen extern account voor een atleet koppelen. Uitschakelen door de coach verwijdert verbinding, metingen en lopende koppelpogingen; de atleet kan de coachschakelaar niet zelf aanzetten.
+
 - COROS coachtoestemming plus de eigen accountkoppeling activeert ook de automatische FIT-import; uitschakelen of ontkoppelen stopt verdere import. De coach ziet bij Connections de importstatus van toegankelijke atleten, zonder tokens of downloadlinks.
 
 - COROS MCP wordt uitsluitend vanuit het eigen atleetaccount gekoppeld en getest. Trainers kunnen geen account namens een atleet koppelen en hebben geen toegang tot de tijdelijke MCP-preview. Elke atleet geeft afzonderlijk toestemming.

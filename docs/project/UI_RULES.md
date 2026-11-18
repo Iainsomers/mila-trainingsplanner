@@ -33,6 +33,8 @@ Bij ingeschakelde Whereabouts-toegang toont de eigen Year Planner de whereabouts
 
 Bijgewerkt: 20 oktober 2026.
 
+mySASY gebruikt de officiële ongewijzigde `mySASY account`-knop en het Powered by-logo. Toestemming, accountcontrole en verbonden meetoverzicht hebben compacte Bootstrap-kaarten. Knoppen wrappen op mobiel en de meettabel scrolt binnen de eigen container. Alleen de atleet krijgt verbind-/refresh-/ontkoppelacties; de coachweergave toont opgeslagen metingen.
+
 ## Stijl
 
 - De persoonlijke pagina `More > Hardware` groepeert de optionele Oura- en Garmin-koppelingen als afzonderlijke tegels. Een Oura-tegel verschijnt uitsluitend wanneer `Allow Oura connection` voor de ingelogde atleet aanstaat; OAuth-statusmeldingen en acties blijven op deze Hardware-pagina.

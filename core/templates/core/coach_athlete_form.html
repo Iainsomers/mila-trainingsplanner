@@ -746,6 +746,9 @@
                       <div class="form-check"><input class="form-check-input" type="checkbox" id="coros_connection_enabled" name="coros_connection_enabled" {% if form.coros_connection_enabled %}checked{% endif %}><label class="form-check-label" for="coros_connection_enabled">Allow COROS connection</label></div>
                       <div class="small text-muted">COROS: {% if form.coros_connected %}Connected{% else %}Not connected{% endif %}</div>
                       {% include 'core/partials/coros_sync_status.html' with connection=form.coros_sync %}
+                      <div class="form-check"><input class="form-check-input" type="checkbox" id="mysasy_connection_enabled" name="mysasy_connection_enabled" {% if form.mysasy_connection_enabled %}checked{% endif %}><label class="form-check-label" for="mysasy_connection_enabled">Allow mySASY connection</label></div>
+                      <div class="small text-muted">mySASY: {% if form.mysasy_connected %}Connected{% else %}Not connected{% endif %}</div>
+                      {% if form.mysasy_connection_enabled and form.mysasy_connected %}<a class="small" href="{% url 'mysasy_coach' athlete.id %}">View mySASY measurements</a>{% endif %}
                     {% endif %}
                   </div>
                 </details>
