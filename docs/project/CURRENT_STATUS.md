@@ -1,5 +1,7 @@
 # Actuele status
 
+- Klokknop voor gemeten Main-reps verschijnt nu ook bij Garmin E in Athlete Diary en Individual Plans. De brondata werden al opgeslagen; alleen de templatevoorwaarden sloten E nog uit. De gedeelde Diary-partial dekt desktop en mobiel.
+
 ## 18 november 2026 - Combine bewaart gecontroleerde Main
 
 - Garmin E Combine neemt de reeds gecontroleerde Main-velden en meetloads volledig over en voert geen tweede indelingscontrole of AI-analyse uit. Alleen lapreferenties schuiven op; ook ignored_laps en expliciete lapzones verschuiven mee. Opnieuw combineren vervangt een eerdere mislukte combinatiecache met de actuele gecontroleerde onderdelen. Niet-gecontroleerde Main blijft expliciete analyse vereisen.

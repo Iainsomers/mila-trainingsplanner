@@ -11,6 +11,17 @@ from core.views.calendar import _clone_slot_for_display
 
 class WatchOriginalPlanTests(TestCase):
 
+    def test_model_e_clock_is_rendered_with_measured_rows(self):
+        from types import SimpleNamespace
+        rows = '[{"measured_seconds":100}]'
+        for template, cell in (
+            ("core/partials/ayc_slot_segments.html", {"slot":SimpleNamespace(source="watch_e"), "watch_main_reps_json":rows}),
+            ("core/partials/flex_session_summary.html", {"watch_source":"watch_e", "watch_main_reps_json":rows}),
+        ):
+            html = render_to_string(template, {"cell":cell})
+            self.assertIn('data-watch-model="Garmin E"', html)
+            self.assertIn('measured_seconds', html)
+
     def test_athlete_watch_save_resolves_existing_base_training_without_prefill(self):
         user = get_user_model().objects.create_user(username="Original_Runner")
         block = AthleteBasePlanningBlock.objects.create(athlete=self.athlete,
