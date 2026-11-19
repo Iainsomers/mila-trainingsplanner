@@ -1,6 +1,8 @@
 # Ontwikkelen, testen en documenteren
 
-## mySASY — 18 november 2026
+## mySASY — bijgewerkt 19 november 2026
+
+Actuele testset: 35 gerichte tests voor mySASY, COROS MCP en AthleteZoneHeartRateTests slagen, plus `manage.py check` en migratieconsistentie. Na de laatste view-only-beperking zijn de20 mySASY-tests opnieuw geslaagd. Vereiste migraties:0161 en0162, beide lokaal toegepast. Functionele commits: `53f72db` en `977676f`, beide gepusht naar main; dat bevestigt niet zelfstandig de Render-uitrol. Gebruikersstappen, de gemelde gewenste vitals en open API-vragen staan in [INTEGRATIONS.md](INTEGRATIONS.md). Een echte respons is nog niet bevestigd.
 
 Uitbreiding19 november: migratie0162 voegt `diagnostic_payload` en `diagnostic_checked_at` toe. De coachpagina ondersteunt nu een expliciete CSRF-POST voor inspectie van `/measurements`, met afzonderlijke tien-minutencooldown en dezelfde globale quotateller. De HTTP-client is gedeeld met de bestaande meetnormalisatie, maar diagnostiek behoudt ook onbekende/nestelde velden. Bekende credential-keys, de huidige auth token en client secret worden recursief verwijderd vóór opslag. De laatste ontdane respons wordt alleen server-side bewaard en alleen via de bevoegde coachcontext in een escaped readonly-textarea getoond; niet in logs, Daily vitals of AI. Mislukkingen behouden de vorige test; opnieuw koppelen wist deze. Lokaal migreren en `manage.py test core.tests_mysasy core.tests_coros_mcp core.tests.AthleteZoneHeartRateTests` plus systeem-/migratiecheck uitvoeren. Mobiele en desktopcontrole gebruikt synthetische diagnostiek. Live responsinhoud nog onbekend.
 
@@ -8,9 +10,9 @@ Migratie `0161_mysasy_connection` voegt de coachschakelaar, verbinding, tijdelij
 
 Geregistreerde callback: `https://mila-trainingsplanner.onrender.com/integrations/mysasy/callback/`. mySASY stuurt een browser-GET met `success` en eventueel `token`, zonder `state`. Daarom vereist MiLa een eenmalige databasepoging gekoppeld aan dezelfde ingelogde gebruiker, eigen atleet en browsersessie (10 minuten), plus een afzonderlijke CSRF-beveiligde bevestiging van het eigen externe account na inspectie van de metingen. Het callbacktoken wordt direct naar een schone URL doorgestuurd en staat nooit in HTML, cookies of de login-`next`-URL. Proxy-/accesslogs mogen de callbackquery niet bewaren; gebruik bij Gunicorn-accesslogging een formaat met alleen het pad (`%(U)s`), zonder query (`%(q)s`) of volledige requestregel (`%(r)s`). Een proxy kan de inkomende URL zien; de applicatie kan dat niet met terugwerkende kracht voorkomen.
 
-De API-client gebruikt alleen `GET https://api.mysasy.com/myapi/v1/measurements`, de officiële secret-/tokenheaders, een 30-dagenvenster, 15s timeout, geen redirects en maximaal 1 MB JSON. Een lokale databasecounter reserveert maximaal 1000 verzoeken per UTC-kalendermaand voor deze hele applicatie, ook bij mislukking. Extern gebruik van dezelfde credentials kan het werkelijke quotum eerder uitputten. Per verbinding tien minuten cooldown; coaches lezen de cache zonder API-verzoek. Geen achtergrondworker of extra Render-cron nodig. Tijdelijke pogingen vervallen na tien minuten en worden bij een volgend mySASY-bezoek opgeruimd. Na lokaal ontkoppelen kan de atleet de autorisatie ook in mySASY intrekken; er is geen gedocumenteerd revoke-endpoint gebruikt.
+De API-client gebruikt alleen `GET https://api.mysasy.com/myapi/v1/measurements`, de officiële secret-/tokenheaders, een 30-dagenvenster, 15s timeout, geen redirects en maximaal1MB JSON. Een lokale databasecounter reserveert maximaal1000 verzoeken per UTC-kalendermaand voor deze hele applicatie, ook bij mislukking. Extern gebruik van dezelfde credentials kan het werkelijke quotum eerder uitputten. Atleet-refresh en coachtest hebben ieder hun eigen tien-minutencooldown; het maandquotum is gedeeld. Openen van het coachoverzicht leest uitsluitend de cache; alleen de expliciete test-POST vraagt de API op. Geen achtergrondworker of extra Render-cron nodig. Tijdelijke pogingen vervallen na tien minuten en worden bij een volgend mySASY-bezoek opgeruimd. Na lokaal ontkoppelen kan de atleet de autorisatie ook in mySASY intrekken; er is geen gedocumenteerd revoke-endpoint gebruikt.
 
-Gerichte tests: `manage.py test core.tests_mysasy core.tests_coros_mcp core.tests.AthleteZoneHeartRateTests` (32 tests), `manage.py check`, `makemigrations --check --dry-run`. Externe API-responses zijn gemockt; de eerste echte atleetkoppeling moet na configuratie worden gecontroleerd. De echte Django-template is met synthetische gegevens in Chrome headless op 390 en 1440 px gecontroleerd voor verbinden, bevestigen en verbonden: geen pagina-overflow, officiële afbeeldingen laden, de meettabel scrolt afzonderlijk op mobiel. Tijdelijke controlebestanden in `output/mysasy-validation/` niet committen.
+Gerichte tests: `manage.py test core.tests_mysasy core.tests_coros_mcp core.tests.AthleteZoneHeartRateTests` (35 tests), `manage.py check`, `makemigrations --check --dry-run`. Externe API-responses zijn gemockt; de eerste echte atleetkoppeling moet na configuratie worden gecontroleerd. De echte Django-template is met synthetische gegevens in Chrome headless op390 en1440px gecontroleerd voor verbinden, bevestigen, verbonden en coachdiagnostiek: geen pagina-overflow, officiële afbeeldingen laden, meettabel en testvak scrollen afzonderlijk op mobiel. Tijdelijke controlebestanden in `output/mysasy-validation/` niet committen.
 
 De bredere Oura-regressies bevatten drie bestaande fouten in `core/activity_events.py:record_daily_vital`: tests geven een stringdatum door, terwijl de ongewijzigde signalhandler `.isoformat()` verwacht. Dit is ook aanwezig op de oorspronkelijke HEAD en staat los van mySASY. De gerichte bovenstaande set slaagt.
 
@@ -23,15 +25,15 @@ Bijgewerkt: 12 oktober 2026.
 Projectmap op de huidige Windows-machine:
 
 ```powershell
-C:\Users\iains\mila_app\mila
+C:\Users\iains\mila-trainingsplanner
 ```
 
 Gebruik de lokale virtual environment:
 
 ```powershell
-& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py runserver
-& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py check
-& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py test core
+& 'C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe' manage.py runserver
+& 'C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe' manage.py check
+& 'C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe' manage.py test core
 ```
 
 De productie-instellingen zijn bewust strenger dan lokaal: op Render moet
@@ -99,9 +101,9 @@ Bij modelwijzigingen:
 
 - COROS automatische import vereist migratie `0160_coros_automatic_sync`. WSGI start op Render de worker automatisch (`COROS_AUTO_IMPORT_WORKER=1`, standaard op Render; lokaal uit). Voor een aparte scheduler: worker op 0 en `manage.py sync_coros` periodiek aanroepen. Bestaande Render-webservice wordt gebruikt; geen extra service. De webservice moet actief blijven. Databaseclaim met 20-minutenlease voorkomt overlappende checks; maximaal tien bestanden en circa tien minuten werk per beurt. Iedere 15 minuten opnieuw zeven dagen controleren, grotere resultaten zo nodig per dag opvragen. Downloadpogingen tellen ook bij fouten mee in de gedeelde 50/24h-limiet. API-responses, tokens en URLs worden niet gelogd. Tests: `core.tests_coros_sync core.tests_coros_mcp core.tests_wsgi_startup`.
 
-- COROS FIT-import: een uur geldige ondertekende activiteitselectie gebonden aan gebruiker/atleet/verbinding. Downloadlinks komen uitsluitend uit MCP; HTTPS COROS-hosts, gecontroleerde redirects zonder OAuth-headers, maximaal 12 MB en één FIT per ZIP. Opslag in GarminActivity met COROS-bronmetadata. Geen payloads of getekende downloadlinks loggen. Live FIT-download nog te controleren. Tests: `core.tests_coros_mcp core.tests_coros core.tests_fit_reader core.tests_garmin_connection`.
+- COROS FIT-import: een uur geldige ondertekende activiteitselectie gebonden aan gebruiker/atleet/verbinding. Downloadlinks komen uitsluitend uit MCP; HTTPS COROS-hosts, gecontroleerde redirects zonder OAuth-headers, maximaal12MB en één FIT per ZIP. Opslag in GarminActivity met COROS-bronmetadata. Geen payloads of getekende downloadlinks loggen. De eigenaar bevestigde inmiddels werkende FIT-import en automatische import; geen onafhankelijke productie-audit uitgevoerd. Tests: `core.tests_coros_mcp core.tests_coros core.tests_fit_reader core.tests_garmin_connection`.
 
-- COROS MCP vereist migratie `0158_coros_mcp_connection`. De eerste implementatie gebruikt de Europese server `https://mcpeu.coros.com` en publieke dynamische OAuth-clientregistratie; er zijn geen Partner API-sleutels nodig. Callback: `/integrations/coros/mcp/callback/`. Beveiliging: PKCE S256, state, eigen gebruiker/atleet, tien minuten geldigheid en eenmalige callback. Token- en registratieverzoeken loggen geen bodies. Tests: `core.tests_coros_mcp core.tests_coros`. Live registratie, toestemming en activiteitenpreview moeten nog met een COROS-account worden bevestigd; geen automatische import of workout-write toegevoegd.
+- COROS MCP vereist migratie `0158_coros_mcp_connection`, coachtoestemming migratie0159 en automatische FIT-import migratie0160. Het gebruikt de Europese server `https://mcpeu.coros.com` en publieke dynamische OAuth-clientregistratie; er zijn geen Partner API-sleutels nodig. Callback: `/integrations/coros/mcp/callback/`. Beveiliging: PKCE S256, state, eigen gebruiker/atleet, tien minuten geldigheid en eenmalige callback. Token- en registratieverzoeken loggen geen bodies. Tests: `core.tests_coros_mcp core.tests_coros`. Live koppeling en preview zijn door de eigenaar bevestigd; automatische import is inmiddels toegevoegd. Dit MCP-pad schrijft geen workouts naar COROS. De oudere Partner-API-infrastructuur is een afzonderlijk pad.
 
 - Migratie `0154_trainingsegment_watch_alternative_data` voegt de tekstgebonden meetgegevens voor compacte E-Alternative toe. Bij het testen van de compacte opmaak zowel de opgeslagen ALT-tekst als gemeten seconden en HR-zonetotalen controleren; ze kunnen bewust verschillen van afgeronde nominale tijden.
 
@@ -153,9 +155,9 @@ Doe ongeveer maandelijks of na een grotere feature een korte documentatiecontrol
 ## Polar en trainingspopups: gerichte validatie
 
 ```powershell
-& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py test core.tests_polar_raw core.tests_polar_processing core.tests_polar_analysis core.tests_polar_reconstruction --noinput
-& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py check
-& 'C:\Users\iains\mila_app\venv\Scripts\python.exe' manage.py makemigrations --check --dry-run
+& 'C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe' manage.py test core.tests_polar_raw core.tests_polar_processing core.tests_polar_analysis core.tests_polar_reconstruction --noinput
+& 'C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe' manage.py check
+& 'C:\Users\iains\mila-trainingsplanner\.venv\Scripts\python.exe' manage.py makemigrations --check --dry-run
 ```
 
 - Neem `0096_polar_analysis_settings` mee in de bestaande Render-migratiestap. Type D gebruikt deze tabel; alleen templates deployen is onvoldoende.

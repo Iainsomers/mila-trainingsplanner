@@ -1,8 +1,10 @@
 # Start Here
 
-Nieuwste overdracht 18 november: mySASY is toegevoegd met migratie0161, individuele koppelbevestiging, coachschakelaar/status, recent meetoverzicht en bestaande vitals-deelrechten voor coachinzage. Voor echt gebruik moet Render `MYSASY_CLIENT_SECRET` krijgen; application-ID standaard31. Nog geen echte atleet-/API-controle en geen automatische import. Zie DEVELOPMENT en CURRENT_STATUS voor configuratie, callbackgrenzen en teststatus.
+Actuele overdracht — 19 november 2026: de code staat op `main` tot en met `977676f`. mySASY heeft nu ook een coachtestveld voor de volledige meetrespons (migraties 0161–0162). Bepaal daarmee eerst welke vitals daadwerkelijk worden aangeleverd; er is nog geen mySASY-import in Daily vitals. De eigenaar wil mySASY juist voor vitals gebruiken. Beschrijf de publieke API-documentatie niet als bewijs dat de hele mySASY-app bepaalde gegevens nooit kan bevatten. Zie [INTEGRATIONS.md](INTEGRATIONS.md) voor huidige koppelingen, gebruikersstappen en open verificatie.
 
-Bijgewerkt: 5 november 2026.
+Verder actueel: COROS importeert FIT-bestanden iedere vijftien minuten én op verzoek via Hardware; import wijzigt de Diary niet. Oura controleert alleen overdag in de apparaattijdzone. Garmin E Combine bewaart de gecontroleerde Main, het meetklokje ondersteunt E en gewone tekstbewerkingen bewaren ongewijzigde horlogemetingen. Strength kent waarschuwing/gebruiksbeveiliging/archief; LT1/LT2 zijn invoervelden zonder berekeningsfunctie. Zie CURRENT_STATUS, FEATURES en DATA_RULES. De oudere gedateerde overdrachten hieronder zijn historische context, geen actuele deploybevestiging.
+
+Bijgewerkt: 19 november 2026.
 
 ## Project in één minuut
 

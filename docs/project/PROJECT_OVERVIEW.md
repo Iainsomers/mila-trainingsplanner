@@ -8,6 +8,8 @@ MiLa Training Planner ondersteunt trainers bij het maken, personaliseren en volg
 
 ## Techniek
 
+- Integraties zijn gescheiden van de Diary-opslag. COROS MCP (`core/views/coros_mcp.py`, `core/coros_sync.py`) bewaart originele FIT-bestanden in de bestaande GarminActivity-analyseopslag. Oura gebruikt `core/oura_sync.py` voor de dagtijdgebonden vitalimport. mySASY heeft een eigen begrensde client (`core/mysasy.py`), koppel-/coachviews (`core/views/mysasy.py`), verbindingsmodel, tijdelijke koppelverzoeken en gedeelde quotateller. De mySASY-diagnostiek bewaart alleen een van credentials ontdane respons, geen nieuwe Daily-vitalmapping. Zie [INTEGRATIONS.md](INTEGRATIONS.md) voor de huidige productstroom en open vragen.
+
 - De experimentele Garmin E heeft een eigen endpoint (`core/views/garmin_e.py`), prompt en meetvalidator (`core/garmin_e.py`). Alleen het bestaande gemeten Garmin-readerpad wordt hergebruikt; E doorloopt de C/D-chatcorrectieregels niet. `GarminEConversation` bewaart server-eigen context per gebruiker/atleet/opname en een korte verwerkingslock in de database, zodat meerdere Render-workers dezelfde context gebruiken. Gesprekken ouder dan zeven dagen worden bij een volgend E-bezoek van die gebruiker opgeruimd; gewijzigde bronfeiten beginnen een nieuw gesprek.
 
 - Django 5.2 met server-rendered templates en JavaScript voor interactieve planners en popups.

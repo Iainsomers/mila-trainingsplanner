@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- mySASY-coachpagina: onder het meetoverzicht staat `API test data · coach only`. Alleen coaches met bewerktoegang zien `Fetch API test data`; view-only toont de opgeslagen respons. Het JSON-tekstvak is alleen-lezen, escaped en kan binnen het vak scrollen, ook bij lange/onbekende velden. Atleten zien geen diagnostisch vak. De normale verbindings-/bevestigingspagina blijft beschikbaar voor de eigen atleet. Zie INTEGRATIONS.md voor de exacte navigatie.
+
 - COROS-verbindingsstatus toont compacte datums voor laatste controle, geslaagde controle en import, plus een veilige foutstatus. Toon dit op de eigen COROS-pagina en bij de coach in Athlete Settings > Connections; handmatige importacties blijven beschikbaar.
 
 - COROS toont recente activiteiten als compacte kaarten, één kolom mobiel en twee op desktop, met datum/sport en beschikbare duur/afstand/tempo/HR. Per kaart staat `Import FIT for analysis` of een reeds-geïmporteerdmelding. Technische labels en getekende downloadlinks blijven verborgen.

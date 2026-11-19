@@ -2,6 +2,8 @@
 
 Dit is geen changelog. Noteer alleen keuzes die toekomstige ontwikkeling sturen. Nieuwste beslissing bovenaan.
 
+- 19 november 2026 — Beschrijf beoogde functionaliteit, gedocumenteerde API-velden en werkelijk ontvangen data afzonderlijk. mySASY is bedoeld als vitalbron; het coachtestveld stelt de echte velden vast vóór nieuwe mapping. Geen ongefundeerde omzetting naar HRV-ms of algemene uitsluiting op basis van het huidige schema. Garmin E reconstrueert uitgevoerde training; verbeterde herkenningsregels en gesprekscorrecties zijn geen trainingsadvies of al gebouwde algemene zelflerende pipeline. Combine voegt gecontroleerde segmenten samen en laat de gecontroleerde Main intact.
+
 - 18 november 2026 — mySASY wordt individueel door de atleet gekoppeld, na coachtoestemming. Omdat de leverancier geen `state` terugstuurt en geen externe accountidentiteit biedt, is een sessiecontrole alleen geen volledige cryptografische accountbinding. De atleet controleert daarom de metingen en bevestigt het eigen account afzonderlijk vóór definitieve opslag. Deze gebruikerscontrole vervangt geen door de leverancier ondersteunde state-binding; voeg die toe als het protocol later wordt uitgebreid. De eerste versie haalt metingen alleen op verzoek op en deelt ze uitsluitend binnen de bestaande atleet-/coachrechten; geen AI-verwerking, trainingsadvies of herinterpretatie als HRV-ms.
 
 - Gebruikte Standard Strength-programma’s worden nooit hard verwijderd; zij worden gearchiveerd om historische en geplande trainingskoppelingen intact te houden. Alleen nooit gebruikte programma’s mogen na een expliciete waarschuwing permanent worden verwijderd.
