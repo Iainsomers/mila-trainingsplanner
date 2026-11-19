@@ -1,5 +1,7 @@
 # Ontwikkelen, testen en documenteren
 
+- Stats-navigatie (19 november): trainer_stats_view is alleen GET en leest geen DCO-selecties meer. trainer_stats.html bevat uitsluitend het weekoverzicht; planning.html bevat de Stats-tegel onder de coach-Views. under_dev.html bevat deze niet meer. Regressies: manage.py test core.tests.TrainerStatsTests core.tests_under_dev, plus manage.py check. De echte servertemplates zijn met synthetische accounts gecontroleerd in Chrome op390 en1440px: Stats binnen Views, direct zichtbare resultaten, geen pagina-overflow. Tijdelijke scripts/screenshots in output/stats-validation niet committen. Geen migratie nodig.
+
 ## mySASY — bijgewerkt 19 november 2026
 
 Actuele testset: 35 gerichte tests voor mySASY, COROS MCP en AthleteZoneHeartRateTests slagen, plus `manage.py check` en migratieconsistentie. Na de laatste view-only-beperking zijn de20 mySASY-tests opnieuw geslaagd. Vereiste migraties:0161 en0162, beide lokaal toegepast. Functionele commits: `53f72db` en `977676f`, beide gepusht naar main; dat bevestigt niet zelfstandig de Render-uitrol. Gebruikersstappen, de gemelde gewenste vitals en open API-vragen staan in [INTEGRATIONS.md](INTEGRATIONS.md). Een echte respons is nog niet bevestigd.

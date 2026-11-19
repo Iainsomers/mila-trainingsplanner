@@ -12699,106 +12699,16 @@ def _athlete_week_distance_history(
 
 
 @login_required
-@require_http_methods(["GET", "POST"])
+@require_GET
 def trainer_stats_view(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponse("Not allowed", status=403)
 
     all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
-    all_athlete_ids = {athlete.id for athlete in all_athletes}
-    # Saved DCO selections belong to the active coach, not necessarily the
-    # logged-in account (a coach with delegated access can switch owners).
     coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
-    dco_saved_selections = []
-    for item in coach_settings.dco_saved_selections or []:
-        if not isinstance(item, dict):
-            continue
-        selection_id = str(item.get("id") or "").strip()
-        name = str(item.get("name") or "").strip()
-        athlete_ids = [
-            int(value) for value in (item.get("athlete_ids") or [])
-            if str(value).isdigit() and int(value) in all_athlete_ids
-        ]
-        if selection_id and name:
-            dco_saved_selections.append({
-                "id": selection_id,
-                "name": name,
-                "athlete_ids": athlete_ids,
-                "athlete_ids_csv": ",".join(str(value) for value in athlete_ids),
-                "is_standard": selection_id == (coach_settings.dco_standard_selection_id or ""),
-            })
-    standard_selection = next((item for item in dco_saved_selections if item["is_standard"]), None)
-    requested_selection_mode = (request.GET.get("selection") or "").strip().lower()
-    selection_mode = requested_selection_mode or ("selection" if standard_selection else "all")
-    if selection_mode not in {"all", "selection", "trains", "planned_training"}:
-        selection_mode = "all"
-    selected_saved_selection_id = (request.GET.get("saved_selection") or "").strip()
-    if not selected_saved_selection_id and not requested_selection_mode and standard_selection:
-        selected_saved_selection_id = standard_selection["id"]
-
-    if request.method == "POST" and request.POST.get("action") == "save_dco_selection":
-        selected_ids = sorted({
-            int(value) for value in request.POST.getlist("athletes")
-            if str(value).isdigit() and int(value) in all_athlete_ids
-        })
-        selection_id = (request.POST.get("saved_selection") or "").strip()
-        selection_name = (request.POST.get("selection_name") or "").strip()
-        make_standard = request.POST.get("standard_selection") == "on"
-        saved_rows = []
-        updated = False
-        existing_selection_name = ""
-        if selection_id:
-            existing_selection_name = next(
-                (item["name"] for item in dco_saved_selections if item["id"] == selection_id),
-                "",
-            )
-        for item in dco_saved_selections:
-            row = {"id": item["id"], "name": item["name"], "athlete_ids": item["athlete_ids"]}
-            # A different name means "Save as" a new selection.  Keeping the
-            # selected item id only updates the current selection when the
-            # name was left unchanged.
-            if (
-                selection_id
-                and item["id"] == selection_id
-                and (not selection_name or selection_name == existing_selection_name)
-            ):
-                row.update({"name": selection_name or item["name"], "athlete_ids": selected_ids})
-                updated = True
-            saved_rows.append(row)
-        if not updated and selection_name:
-            selection_id = secrets.token_hex(8)
-            saved_rows.append({"id": selection_id, "name": selection_name, "athlete_ids": selected_ids})
-        if make_standard and selection_id:
-            coach_settings.dco_standard_selection_id = selection_id
-        elif selection_id == coach_settings.dco_standard_selection_id and not make_standard:
-            coach_settings.dco_standard_selection_id = ""
-        coach_settings.dco_saved_selections = saved_rows
-        coach_settings.save(update_fields=["dco_saved_selections", "dco_standard_selection_id", "updated_at"])
-        query = {"selection": "selection", "saved_selection": selection_id, "athletes": [str(value) for value in selected_ids]}
-        return redirect(f"{reverse('trainer_stats')}?{urlencode(query, doseq=True)}")
-
-    show_results = request.GET.get("ok") == "1"
     sort_mode = (request.GET.get("sort") or "name").strip().lower()
     if sort_mode not in {"name", "previous", "this"}:
         sort_mode = "name"
-
-    selected_saved_selection = next(
-        (item for item in dco_saved_selections if item["id"] == selected_saved_selection_id), None
-    )
-    if selection_mode == "selection" and selected_saved_selection:
-        selected_athlete_ids = set(selected_saved_selection["athlete_ids"])
-    elif selection_mode == "selection":
-        selected_athlete_ids = {
-            int(value) for value in request.GET.getlist("athletes")
-            if str(value).isdigit() and int(value) in all_athlete_ids
-        }
-    elif selection_mode == "trains":
-        selected_athlete_ids = {
-            int(value) for value in (coach_settings.dco_train_athlete_ids or [])
-            if str(value).isdigit() and int(value) in all_athlete_ids
-        }
-    else:
-        selected_athlete_ids = set(all_athlete_ids)
 
     plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
     flex_owner_id = _active_coach_user(request).id
@@ -12815,18 +12725,11 @@ def trainer_stats_view(request):
         )
         rows.append({
             "athlete": athlete,
-            "has_planned_training": bool(totals[previous_week_start] or totals[this_week_start]),
             "previous_week_m": totals[previous_week_start],
             "this_week_m": totals[this_week_start],
             "previous_week_km": f"{totals[previous_week_start] / 1000.0:.1f}",
             "this_week_km": f"{totals[this_week_start] / 1000.0:.1f}",
         })
-    if selection_mode == "planned_training":
-        rows = [row for row in rows if row["has_planned_training"]]
-        selected_athlete_ids = {row["athlete"].id for row in rows}
-    elif selection_mode != "all":
-        rows = [row for row in rows if row["athlete"].id in selected_athlete_ids]
-
     if sort_mode == "previous":
         rows.sort(key=lambda row: (-row["previous_week_m"], row["athlete"].name.lower(), row["athlete"].id))
     elif sort_mode == "this":
@@ -12834,29 +12737,13 @@ def trainer_stats_view(request):
     else:
         rows.sort(key=lambda row: (row["athlete"].name.lower(), row["athlete"].id))
 
-    selection_query = {"selection": selection_mode}
-    if selection_mode == "selection":
-        if selected_saved_selection_id:
-            selection_query["saved_selection"] = selected_saved_selection_id
-        selection_query["athletes"] = [str(value) for value in sorted(selected_athlete_ids)]
-    results_query = dict(selection_query)
-    results_query["ok"] = "1"
-
     def stats_sort_url(value):
-        query = dict(results_query)
-        query["sort"] = value
+        query = {"sort": value}
         return f"{reverse('trainer_stats')}?{urlencode(query, doseq=True)}"
 
     return render(request, "core/trainer_stats.html", {
         "rows": rows,
-        "all_athletes": all_athletes,
-        "selection_mode": selection_mode,
-        "selected_athlete_ids": selected_athlete_ids,
-        "dco_saved_selections": dco_saved_selections,
-        "selected_saved_selection_id": selected_saved_selection_id,
-        "show_results": show_results,
         "sort_mode": sort_mode,
-        "selection_url": f"{reverse('trainer_stats')}?{urlencode(selection_query, doseq=True)}",
         "sort_name_url": stats_sort_url("name"),
         "sort_previous_url": stats_sort_url("previous"),
         "sort_this_url": stats_sort_url("this"),

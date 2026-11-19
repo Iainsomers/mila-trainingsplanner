@@ -36,7 +36,7 @@
       <h1 class="mb-1">{{ athlete.name }}</h1>
       <div class="text-muted">Weekly distance · {{ period_start|date:"d M Y" }} – {{ period_end|date:"d M Y" }}</div>
     </div>
-    <a href="{% url 'trainer_stats' %}?ok=1" class="btn btn-outline-secondary">Back to stats</a>
+    <a href="{% url 'trainer_stats' %}" class="btn btn-outline-secondary">Back to stats</a>
   </div>
 
   <div class="card">

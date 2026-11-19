@@ -12090,10 +12090,12 @@ class TrainerStatsTests(TestCase):
         self.client.force_login(athlete_user)
         self.assertEqual(self.client.get(f"/planning/stats/athlete/{athlete.id}/").status_code, 403)
 
-    def test_stats_uses_same_athlete_selector_modes_as_dco(self):
+    def test_stats_ignores_legacy_athlete_selection_and_shows_all_accessible_athletes(self):
         trainer = get_user_model().objects.create_user(username="selectorcoach", password="secret", is_staff=True)
         selected = Athlete.objects.create(owner=trainer, name="Selected Athlete", birth_year=2000, gender="X")
         Athlete.objects.create(owner=trainer, name="Hidden Athlete", birth_year=2001, gender="X")
+        other = get_user_model().objects.create_user(username="stats-other-coach", is_staff=True)
+        Athlete.objects.create(owner=other, name="Inaccessible Athlete", birth_year=2000, gender="X")
         self.client.force_login(trainer)
 
         response = self.client.get(
@@ -12101,11 +12103,12 @@ class TrainerStatsTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Selection")
+        self.assertNotContains(response, "statsSelectionForm")
         self.assertContains(response, "Selected Athlete")
-        self.assertNotContains(response, "Hidden Athlete")
+        self.assertContains(response, "Hidden Athlete")
+        self.assertNotContains(response, "Inaccessible Athlete")
 
-    def test_stats_loads_dco_saved_selection(self):
+    def test_stats_is_independent_of_dco_saved_selection(self):
         trainer = get_user_model().objects.create_user(username="sharedselectioncoach", password="secret", is_staff=True)
         selected = Athlete.objects.create(owner=trainer, name="Shared Selected", birth_year=2000, gender="X")
         Athlete.objects.create(owner=trainer, name="Shared Hidden", birth_year=2001, gender="X")
@@ -12119,9 +12122,15 @@ class TrainerStatsTests(TestCase):
         selector = self.client.get("/planning/stats/")
         response = self.client.get("/planning/stats/?selection=selection&saved_selection=squad-a&ok=1")
 
-        self.assertContains(selector, "Squad A *")
+        self.assertNotContains(selector, "Squad A")
+        self.assertContains(selector, "Shared Selected")
+        self.assertContains(selector, "Shared Hidden")
         self.assertContains(response, "Shared Selected")
-        self.assertNotContains(response, "Shared Hidden")
+        self.assertContains(response, "Shared Hidden")
+        self.assertEqual(self.client.post("/planning/stats/", {
+            "action": "save_dco_selection", "selection_name": "Unwanted selection",
+        }).status_code, 405)
+        self.assertEqual(CoachSettings.objects.get(user=trainer).dco_standard_selection_id, "squad-a")
 
     def test_dco_saved_selection_save_as_keeps_existing_selection(self):
         trainer = get_user_model().objects.create_user(
@@ -12210,17 +12219,17 @@ class TrainerStatsTests(TestCase):
             "Logged-in selection",
         )
 
-    def test_stats_landing_page_shows_selector_before_results(self):
+    def test_stats_landing_page_shows_results_directly(self):
         trainer = get_user_model().objects.create_user(username="statslanding", password="secret", is_staff=True)
         Athlete.objects.create(owner=trainer, name="Landing Athlete", birth_year=2000, gender="X")
         self.client.force_login(trainer)
 
         response = self.client.get("/planning/stats/")
 
-        self.assertContains(response, 'id="statsSelectionMode"', html=False)
-        self.assertContains(response, ">Trains<", html=False)
-        self.assertContains(response, ">Planned training<", html=False)
-        self.assertNotContains(response, "Previous week")
+        self.assertNotContains(response, 'id="statsSelectionMode"', html=False)
+        self.assertNotContains(response, "under development")
+        self.assertContains(response, "Previous week")
+        self.assertContains(response, "Landing Athlete")
 
     def test_tile_and_page_are_trainer_only(self):
         User = get_user_model()
@@ -12234,13 +12243,14 @@ class TrainerStatsTests(TestCase):
         )
 
         self.client.force_login(trainer)
-        trainer_overview = self.client.get("/")
-        self.assertContains(trainer_overview, "Stats (under development)")
+        trainer_overview = self.client.get("/planning/")
+        self.assertContains(trainer_overview, 'href="/planning/stats/"')
+        self.assertNotContains(trainer_overview, "Stats (under development)")
         self.assertEqual(self.client.get("/planning/stats/").status_code, 200)
 
         self.client.force_login(athlete_user)
-        athlete_overview = self.client.get("/")
-        self.assertNotContains(athlete_overview, "Stats (under development)")
+        athlete_overview = self.client.get("/planning/")
+        self.assertNotContains(athlete_overview, 'href="/planning/stats/"')
         self.assertEqual(self.client.get("/planning/stats/").status_code, 403)
 
     def test_page_shows_previous_and_current_week_distance(self):
