@@ -160,7 +160,10 @@ def garmin_type_e_ayc_view(request):
                 continue
             fields = part.get("training_fields") or {}
             is_alternative = bool(fields.get("alt"))
-            if not ((part.get("watch_loads") and fields.get("main"))
+            # Chat is most valuable when fixed recognition could not name a
+            # Main yet. Valid measured running laps are enough to open E; only
+            # a checked proposal may later enable Use/Add.
+            if not (part.get("watch_loads")
                     or (is_alternative and part.get("alternative_laps"))):
                 part["ai_structure_status"] = "e_unavailable"
                 continue

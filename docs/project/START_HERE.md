@@ -2,6 +2,7 @@
 
 ## Overdracht voor de volgende chat — 19 november 2026
 
+- Garmin E Chat/Analyze is nu beschikbaar bij geldige hardlooplaps zonder vooraf herkende Main; Use/Add blijft uit tot validatie. 41 Garmin-E-tests en check groen.
 - Alternative-chat accepteert nu algemene expliciete duur-zonelabels zoals `45″ = Z1` en `30 sec = Z2`. Geen speciale 121-lap/59×45-30-herkenning: modeltoewijzing en bestaande volledige validator blijven leidend. 40 Garmin-E-tests en check groen.
 - COROS-atleten hebben nu direct in de COROS-kaart op Hardware een afzonderlijke FIT-AI-toestemming; Garmin FIT-upload hoeft niet meer aan te staan. De achterliggende accountpagina blijft voor koppeling/import. Alleen de atleet kan wijzigen. Bron-neutrale analysemelding, geen migratie, 79 gerichte tests/check/migratiecheck groen.
 - Stats onthoudt nu ook de actieve sorteervolgorde per ingelogde trainer (migratie 0164), zowel Athlete alfabetisch als meetkolommen aflopend. 35 gerichte tests, check en migratiecheck slagen.

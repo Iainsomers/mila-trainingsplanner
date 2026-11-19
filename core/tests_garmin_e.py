@@ -420,6 +420,28 @@ class GarminEValidationTests(SimpleTestCase):
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
     @patch("core.views.garmin_e.ask_model")
+    def test_running_laps_without_recognized_main_still_offer_chat(self, model):
+        self.record.distance_m = 349
+        self.record.duration_s = 133
+        self.record.analysis_data = {"laps": [
+            {"distance": 172, "elapsed_time": 60},
+            {"distance": 24, "elapsed_time": 20},
+            {"distance": 153, "elapsed_time": 53},
+        ]}
+        self.record.save()
+
+        part = self.client.get(
+            self.url, {**self.query, "preview": "measured"},
+        ).json()["results"][0]["parts"][0]
+
+        self.assertEqual(part["training_fields"]["main"], "")
+        self.assertEqual(part["description"], "No clear main section detected.")
+        self.assertTrue(part["e_auto_analyze"])
+        self.assertFalse(part["e_usable"])
+        self.assertEqual(len(part["watch_loads"]), 3)
+        model.assert_not_called()
+
+    @patch("core.views.garmin_e.ask_model")
     def test_single_alternative_lap_is_immediately_usable_and_saves_actual_seconds(self, model):
         from core.models import GarminEConversation, TrainingSlot
         from core.stats import _alt_zone_durations

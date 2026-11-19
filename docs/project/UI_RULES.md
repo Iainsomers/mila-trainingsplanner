@@ -16,6 +16,7 @@
 - De drie grafiekonderwerpen zijn km, ALT min en ACWR. Alleen assen van actieve onderwerpen zijn zichtbaar. Eén actief onderwerp staat altijd links. Bij twee onderwerpen staat het eerste in de volgorde km, ALT, ACWR links en het tweede rechts. Bij alle drie staat km links-buiten, ALT links-binnen en ACWR rechts. De lichte hulplijnen volgen km wanneer km actief is, anders ALT; ACWR behoudt uitsluitend zijn 0,8/1,3-grenslijnen. ALT heeft dezelfde staafbediening als km: een afzonderlijk totaalvinkje en losse Z1–Z6-vinkjes, gekozen zones in één stapel en de totaalkolom daarnaast wanneer beide typen actief zijn.
 - Stats toont loopafstanden in hele kilometers in het overzicht, de grafiektooltips en de weeksamenvatting.
 - Het Stats-overzicht heeft vier compacte meetkolomselectors boven de tabelwaarden. Selector en sorteeractie staan op één regel; sorteren gebruikt een klein neerwaarts pijltje zonder los tekstlabel en de actieve sortering krijgt de primaire blauwe kleur. De tabel mag op mobiel horizontaal scrollen zodat labels en waarden leesbaar blijven. Reeds gekozen meetwaarden zijn in de andere selectors niet opnieuw beschikbaar; `No column` maakt een positie leeg.
+- In Garmin E blijven Chat en Analyze zichtbaar bij bruikbare gemeten laps, ook wanneer de eerste preview nog geen duidelijke Main heeft. Use AM/PM en Add AM/PM zijn in die toestand uitgeschakeld en worden pas actief na een gecontroleerd voorstel.
 
 ## Year Planner voor atleten
 
