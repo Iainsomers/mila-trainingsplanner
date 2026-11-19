@@ -60,20 +60,22 @@ class CorosMCPTests(TestCase):
 
     def test_coros_page_offers_and_saves_separate_fit_ai_permission(self):
         self.assertFalse(self.athlete.garmin_fit_upload_enabled)
-        page = self.client.get("/integrations/coros/mcp/")
+        page = self.client.get("/planning/?section=hardware")
         self.assertContains(page, "AI analysis permission")
         self.assertContains(page, "optional AI analysis using OpenAI")
+        self.assertNotContains(self.client.get("/integrations/coros/mcp/"), "AI analysis permission")
         self.assertFalse(fit_ai_allowed(self.athlete))
 
         response = self.client.post(
-            "/integrations/coros/mcp/ai-permission/", {"consent_fit_ai": "on"},
+            "/integrations/coros/mcp/ai-permission/",
+            {"consent_fit_ai": "on", "next": "hardware"},
         )
-        self.assertRedirects(response, "/integrations/coros/mcp/")
+        self.assertRedirects(response, "/planning/?section=hardware")
         self.athlete.refresh_from_db()
         self.assertEqual(self.athlete.fit_ai_consent_version, CONSENT_VERSION)
         self.assertTrue(fit_ai_allowed(self.athlete))
         self.assertContains(
-            self.client.get("/integrations/coros/mcp/"),
+            self.client.get("/planning/?section=hardware"),
             'id="coros-fit-ai-consent" checked',
             html=False,
         )

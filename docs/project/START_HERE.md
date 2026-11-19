@@ -2,7 +2,7 @@
 
 ## Overdracht voor de volgende chat — 19 november 2026
 
-- COROS-atleten hebben nu op de eigen COROS-pagina een afzonderlijke FIT-AI-toestemming; Garmin FIT-upload hoeft niet meer aan te staan. Alleen de atleet kan wijzigen. Bron-neutrale analysemelding, geen migratie, 79 gerichte tests/check/migratiecheck groen.
+- COROS-atleten hebben nu direct in de COROS-kaart op Hardware een afzonderlijke FIT-AI-toestemming; Garmin FIT-upload hoeft niet meer aan te staan. De achterliggende accountpagina blijft voor koppeling/import. Alleen de atleet kan wijzigen. Bron-neutrale analysemelding, geen migratie, 79 gerichte tests/check/migratiecheck groen.
 - Stats onthoudt nu ook de actieve sorteervolgorde per ingelogde trainer (migratie 0164), zowel Athlete alfabetisch als meetkolommen aflopend. 35 gerichte tests, check en migratiecheck slagen.
 - Stats-vervolg: vijf weken worden per atleet in één gegevensronde berekend in plaats van drie; de tabelkop is compacter met selector en sorteerpijl op één regel. 35 gerichte tests, check en migratiecheck slagen. Eigenaar doet de visuele eindcontrole.
 - Stats-overzicht heeft vier per ingelogde trainer opgeslagen meetkolommen (migratie 0163): week-km, ALT-minuten, vierweekse totaal-/zone-km en total ACWR. Standaard huidige/vorige week km. View-only gedeelde trainers wijzigen alleen hun eigen voorkeur. 34 gerichte tests, check en migratiecheck slagen.

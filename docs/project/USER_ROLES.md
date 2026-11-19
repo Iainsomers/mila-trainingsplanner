@@ -9,7 +9,7 @@
 - COROS coachtoestemming plus de eigen accountkoppeling activeert ook de automatische FIT-import; uitschakelen of ontkoppelen stopt verdere import. De coach ziet bij Connections de importstatus van toegankelijke atleten, zonder tokens of downloadlinks.
 
 - COROS MCP wordt uitsluitend vanuit het eigen atleetaccount gekoppeld en getest. Trainers kunnen geen account namens een atleet koppelen en hebben geen toegang tot de tijdelijke MCP-preview. Elke atleet geeft afzonderlijk toestemming.
-- Alleen de eigen COROS-atleet kan op de COROS-pagina de afzonderlijke FIT-AI-toestemming geven of intrekken. De coach kan de status niet namens de atleet wijzigen. Dit recht vereist `Allow COROS connection`, maar niet `Allow Garmin FIT uploads`.
+- Alleen de eigen COROS-atleet kan op Hardware in de COROS-kaart de afzonderlijke FIT-AI-toestemming geven of intrekken. De coach kan de status niet namens de atleet wijzigen. Dit recht vereist `Allow COROS connection`, maar niet `Allow Garmin FIT uploads`.
 - De coach bepaalt per atleet `Allow COROS connection` in Athlete Settings > General > Connections (standaard uit). De atleet kan dit recht niet wijzigen. De coach ziet daar Connected/Not connected; uitschakelen verwijdert lokaal de verbinding en blokkeert alle MCP-acties.
 
 - Alleen coaches met bewerktoegang kunnen onder Athlete Info de experimentele Garmin-model-E-toestemming per atleet aan-/uitzetten. Atleten zien de instelling niet en kunnen deze ook niet via een aangepast formulier wijzigen; hun eigen instellingen opslaan behoudt de coachkeuze.

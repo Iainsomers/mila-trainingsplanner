@@ -163,6 +163,8 @@ def coros_mcp_ai_permission(request):
     athlete.save(update_fields=[
         "fit_ai_consent_at", "fit_ai_consent_version", "fit_ai_withdrawn_at",
     ])
+    if request.POST.get("next") == "hardware":
+        return redirect(reverse("planning_overview") + "?section=hardware")
     return redirect("coros_mcp")
 
 

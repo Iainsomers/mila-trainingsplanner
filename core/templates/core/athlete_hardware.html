@@ -9,6 +9,21 @@
   {% include 'core/partials/planning_athlete_oura.html' %}
   {% include 'core/partials/planning_athlete_garmin.html' %}
   {% if is_athlete_user and mysasy_connection_enabled %}<section class="card card-body mb-4"><h2 class="h5">mySASY Connection</h2><p>Connect your own mySASY account and view recent measurements.</p><a class="btn btn-outline-primary align-self-start" href="{% url 'mysasy' %}">mySASY account</a></section>{% endif %}
-  {% if is_athlete_user and coros_connection_enabled %}<section class="card card-body mb-4"><h2 class="h5">COROS Connection</h2><p>Connect your COROS account and preview recent activities.</p><a class="btn btn-outline-primary align-self-start" href="{% url 'coros_mcp' %}">COROS account</a></section>{% endif %}
+  {% if is_athlete_user and coros_connection_enabled %}
+  <section class="card card-body mb-4">
+    <h2 class="h5">COROS Connection</h2>
+    <p>Connect your COROS account and preview recent activities.</p>
+    <h3 class="h6">AI analysis permission</h3>
+    <form method="post" action="{% url 'coros_mcp_ai_permission' %}" class="mb-3">
+      {% csrf_token %}<input type="hidden" name="next" value="hardware">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" name="consent_fit_ai" id="coros-fit-ai-consent" {% if fit_ai_allowed %}checked{% endif %}>
+        <label class="form-check-label small" for="coros-fit-ai-consent">I explicitly agree to optional AI analysis using OpenAI to interpret my COROS FIT workouts. Selected lap distances, durations, pace and heart-rate data may be processed, as described in the <a href="{% url 'privacy_policy' %}">Privacy Policy</a>. This applies to my existing and future COROS FIT imports. I can withdraw permission here at any time without removing my files or disconnecting COROS.</label>
+      </div>
+      <button class="btn btn-sm btn-outline-primary" type="submit">Save AI permission</button>
+    </form>
+    <a class="btn btn-outline-primary align-self-start" href="{% url 'coros_mcp' %}">COROS account</a>
+  </section>
+  {% endif %}
 </div>
 {% endblock %}

@@ -548,7 +548,7 @@ def dashboard_view(request):
             Athlete.objects.filter(oura_connection_enabled=True, oura_connection__isnull=False), request
         ).exists()
 
-    from core.views.garmin import configured as garmin_configured, ai_allowed as garmin_ai_allowed
+    from core.views.garmin import configured as garmin_configured, ai_allowed as garmin_ai_allowed, fit_ai_allowed
     from core.models import GarminConnection
     garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
 
@@ -584,6 +584,7 @@ def dashboard_view(request):
         "oura_preview_available": oura_preview_available,
         "polar_enabled": bool(is_athlete_user and getattr(athlete, "polar_enabled", False)),
         "coros_connection_enabled": bool(is_athlete_user and athlete.coros_connection_enabled),
+        "fit_ai_allowed": fit_ai_allowed(athlete) if is_athlete_user else False,
         "mysasy_connection_enabled": bool(is_athlete_user and athlete.mysasy_connection_enabled),
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
         "oura_status": request.GET.get("oura", ""),
@@ -6740,7 +6741,7 @@ def planning_overview_view(request):
     evaluation_settings = CoachSettings.objects.filter(user=evaluation_owner).first()
     evaluations_enabled = (not is_coach_tools_only_user(request.user)
                            and getattr(evaluation_settings, 'evaluations_enabled', True))
-    from core.views.garmin import configured as garmin_configured, ai_allowed as garmin_ai_allowed
+    from core.views.garmin import configured as garmin_configured, ai_allowed as garmin_ai_allowed, fit_ai_allowed
     from core.models import GarminConnection, OuraConnection
     garmin_connection = GarminConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
     oura_connection = OuraConnection.objects.filter(athlete=athlete).first() if is_athlete_user else None
@@ -6762,6 +6763,7 @@ def planning_overview_view(request):
         "garmin_status": request.GET.get('garmin', ''),
         "oura_connection_enabled": bool(is_athlete_user and athlete.oura_connection_enabled),
         "coros_connection_enabled": bool(is_athlete_user and athlete.coros_connection_enabled),
+        "fit_ai_allowed": fit_ai_allowed(athlete) if is_athlete_user else False,
         "mysasy_connection_enabled": bool(is_athlete_user and athlete.mysasy_connection_enabled),
         "oura_connection": oura_connection,
         "oura_configured": bool(settings.OURA_CLIENT_ID and settings.OURA_CLIENT_SECRET and settings.OURA_REDIRECT_URI),
