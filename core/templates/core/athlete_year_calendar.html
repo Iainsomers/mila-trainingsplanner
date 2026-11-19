@@ -2140,37 +2140,41 @@
 (function() {
   var table = document.querySelector(".year-table");
   if (!table) return;
-
+  var shiftsHistoryWindow = "{{ hide_mode }}" !== "none";
   var weekRows = Array.from(table.querySelectorAll("tr.week-start-row[data-week-start]"));
   var currentIndex = weekRows.findIndex(function(row) { return row.classList.contains("current-week"); });
   if (currentIndex < 0) currentIndex = 0;
 
-  function updateWeekButtons() {
-    var previous = document.getElementById("aycDesktopPrev");
-    var next = document.getElementById("aycDesktopNext");
-    if (previous) previous.disabled = currentIndex === 0;
-    if (next) next.disabled = currentIndex === weekRows.length - 1;
+  function moveHistoryWindow(delta) {
+    var url = new URL(window.location.href);
+    var currentOffset = parseInt(url.searchParams.get("week_offset") || "0", 10);
+    if (!Number.isFinite(currentOffset)) currentOffset = 0;
+    url.searchParams.set("week_offset", String(currentOffset + delta));
+    window.location.assign(url.toString());
   }
 
-  function goToWeek(index) {
+  function moveInsideFullYear(delta) {
     if (!weekRows.length) return;
-    currentIndex = Math.max(0, Math.min(index, weekRows.length - 1));
+    currentIndex = Math.max(0, Math.min(currentIndex + delta, weekRows.length - 1));
     var row = weekRows[currentIndex];
     var top = window.scrollY + row.getBoundingClientRect().top;
-    window.scrollTo({top: Math.max(0, top - 8), left: window.scrollX, behavior: "smooth"});
-    updateWeekButtons();
+    window.scrollTo({top:Math.max(0, top - 8), behavior:"smooth"});
   }
 
   var previous = document.getElementById("aycDesktopPrev");
   var todayButton = document.getElementById("aycDesktopToday");
   var next = document.getElementById("aycDesktopNext");
-  if (previous) previous.addEventListener("click", function() { goToWeek(currentIndex - 1); });
-  if (todayButton) todayButton.addEventListener("click", function() {
-    var todayIndex = weekRows.findIndex(function(row) { return row.classList.contains("current-week"); });
-    goToWeek(todayIndex >= 0 ? todayIndex : 0);
+  if (previous) previous.addEventListener("click", function() {
+    if (shiftsHistoryWindow) moveHistoryWindow(1); else moveInsideFullYear(-1);
   });
-  if (next) next.addEventListener("click", function() { goToWeek(currentIndex + 1); });
-  updateWeekButtons();
+  if (todayButton) todayButton.addEventListener("click", function() {
+    var url = new URL(window.location.href);
+    url.searchParams.delete("week_offset");
+    window.location.assign(url.toString());
+  });
+  if (next) next.addEventListener("click", function() {
+    if (shiftsHistoryWindow) moveHistoryWindow(-1); else moveInsideFullYear(1);
+  });
 
   var reportDetails = Array.from(table.querySelectorAll(".week-report-details"));
   function syncReportWidth() {

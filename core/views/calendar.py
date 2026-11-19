@@ -3816,16 +3816,21 @@ def athlete_year_calendar_view(request):
             visible_until_date = current_week_start + timedelta(days=(7 * weeks_ahead) - 1)
 
     hide_mode = request.GET.get("hide", "t1")
+    try:
+        week_offset = max(-52, min(52, int(request.GET.get("week_offset", "0") or 0)))
+    except (TypeError, ValueError):
+        week_offset = 0
 
     today = date.today()
     current_week_start = today - timedelta(days=today.weekday())
 
     if hide_mode == "t1":
-        cutoff = current_week_start - timedelta(days=7)
+        cutoff = current_week_start - timedelta(days=7 + (7 * week_offset))
     elif hide_mode == "t4":
-        cutoff = current_week_start - timedelta(days=28)
+        cutoff = current_week_start - timedelta(days=28 + (7 * week_offset))
     else:
         cutoff = None
+        week_offset = 0
 
     jan1 = date(year, 1, 1)
     full_start = jan1 - timedelta(days=jan1.weekday())
@@ -4537,6 +4542,7 @@ def athlete_year_calendar_view(request):
             "week_rows": week_rows,
             "today": date.today(),
             "hide_mode": hide_mode,
+            "week_offset": week_offset,
             "athletes": athletes,
             "selected_athlete_id": str(selected_athlete_id or ""),
             "selected_athlete": selected_athlete,

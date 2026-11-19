@@ -1,5 +1,7 @@
 # Actuele status
 
+- 19 november — `Previous week` en `Next week` in Athlete Diary verschuiven het volledige gekozen History-venster nu telkens één kalenderweek. Ze rekenen niet langer iedere klik opnieuw relatief aan de huidige week. `Today` herstelt de oorspronkelijke History-periode; jaar-, atleet- en History-keuze blijven behouden.
+
 - 19 november — Garmin E kan een variabele Alternative-werkreeks met gelijke herstelduur nu als één korte Main-preview tonen, bijvoorbeeld `1×(12' - 10' - … - 1') Z2>Z3 p1`, in plaats van ieder Work/Recovery-blok te herhalen. Een expliciet zonebereik wordt geaccepteerd wanneer alle gemeten werkzones binnen het bereik vallen en beide grenzen werkelijk voorkomen. Alle individuele gemeten laps, HR-zones en seconden blijven onder de compacte tekst bewaard.
 
 - 19 november — Een gecontroleerde Garmin E-preview met een gemengde korte sprintset in compacte `1×(60 m // 70 m // …) Z6`-notatie kan nu werkelijk via `Use AM/PM` worden opgeslagen. De algemene Main-parser accepteert `//` binnen sethaakjes als opeenvolgende atomen. Watch-parsefouten geven voortaan HTTP 400 terug in plaats van een schijnbaar succesvolle herlaadactie met de oude training.

@@ -8515,7 +8515,7 @@ class SlotModalSaveTests(TestCase):
         athlete.save(update_fields=["week_report_enabled", "daily_vitals_enabled"])
         AthleteDailyVital.objects.create(
             athlete=athlete,
-            date=date(2026, 11, 8),
+            date=date.today(),
             sleep_quality=Decimal("7.0"),
         )
 
@@ -8525,9 +8525,11 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, 'id="aycDesktopPrev"', html=False)
         self.assertContains(response, 'id="aycDesktopToday"', html=False)
         self.assertContains(response, 'id="aycDesktopNext"', html=False)
+        self.assertContains(response, 'url.searchParams.set("week_offset", String(currentOffset + delta))', html=False)
+        self.assertContains(response, 'moveHistoryWindow(1)', html=False)
+        self.assertContains(response, 'moveHistoryWindow(-1)', html=False)
         self.assertNotContains(response, 'max-height: calc(100vh - 270px)', html=False)
         self.assertNotContains(response, 'tableWrap.scrollTo({', html=False)
-        self.assertContains(response, 'left: window.scrollX', html=False)
         self.assertNotContains(response, 'weekRows[currentIndex].scrollIntoView', html=False)
         self.assertContains(response, "Zones &amp; times")
         self.assertContains(response, "Today's training")
@@ -8565,6 +8567,22 @@ class SlotModalSaveTests(TestCase):
         self.assertIn(".session-feedback-row td", template_source)
         self.assertIn("grid-template-columns: 1fr;", template_source)
         self.assertIn("min-height: 28px;", template_source)
+
+    def test_desktop_history_navigation_shifts_the_cutoff_one_week(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        base = f"/athlete/year/?year={date.today().year}&athlete={athlete.id}&hide=t4"
+        current = self.client.get(base)
+        previous = self.client.get(base + "&week_offset=1")
+        following = self.client.get(base + "&week_offset=-1")
+
+        self.assertEqual(
+            previous.context["week_rows"][0]["week_start"],
+            current.context["week_rows"][0]["week_start"] - timedelta(days=7),
+        )
+        self.assertEqual(
+            following.context["week_rows"][0]["week_start"],
+            current.context["week_rows"][0]["week_start"] + timedelta(days=7),
+        )
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()
