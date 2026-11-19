@@ -192,6 +192,54 @@ class GarminEValidationTests(SimpleTestCase):
         self.assertEqual([load["zone"] for load in checked["watch_loads"]],
                          [load["zone"] for load in loads])
 
+    def test_explicit_short_sprint_sequence_can_raise_mixed_reps_to_z6(self):
+        loads = [{"meters":1000, "seconds":300, "zone":"1", "segment":"WU"}]
+        reps, recovery = [], []
+        for index, meters in enumerate((60, 70, 80, 70, 60)):
+            lap = len(loads) + 1
+            loads.append({
+                "meters": meters, "seconds": 10 + index % 2,
+                "zone": "6" if index in {1, 3} else "4", "segment": "CORE",
+            })
+            reps.append({"laps":[lap], "target_meters":meters})
+            if index < 4:
+                recovery.append(len(loads) + 1)
+                loads.append({"meters":100, "seconds":60, "zone":"1", "segment":"CORE"})
+        loads.append({"meters":800, "seconds":300, "zone":"1", "segment":"CD"})
+        proposal = {
+            "warmup_laps":[1], "recovery_laps":recovery,
+            "cooldown_laps":[len(loads)], "reps":reps,
+        }
+
+        updated, changed = apply_explicit_zone_labels(
+            proposal, "maak er 1*(60m-70m-80m-70-60m) z6 van",
+        )
+        checked = checked_proposal({"watch_loads":loads}, updated, zone_basis="pace")
+
+        self.assertTrue(changed)
+        self.assertEqual(updated["explicit_lap_zones"], {
+            str(rep["laps"][0]): "6" for rep in reps
+        })
+        self.assertTrue(all(
+            checked["watch_loads"][rep["laps"][0] - 1]["zone"] == "6" for rep in reps
+        ))
+        self.assertIn("60 m Z6 // 70 m Z6 // 80 m Z6 // 70 m Z6 // 60 m Z6", checked["training_fields"]["main"])
+
+    def test_explicit_short_repeated_group_can_raise_partly_correct_reps_to_z6(self):
+        proposal = {
+            "reps":[
+                {"laps":[1], "target_meters":60},
+                {"laps":[2], "target_meters":60},
+                {"laps":[3], "target_meters":60},
+            ],
+        }
+
+        updated, changed = apply_explicit_zone_labels(proposal, "maak de 3x60m z6")
+
+        self.assertTrue(changed)
+        self.assertEqual(updated["explicit_lap_zones"], {"1":"6", "2":"6", "3":"6"})
+        self.assertEqual(updated["zone_labels"], [])
+
     def test_equal_three_minute_reps_override_variable_distance_targets(self):
         work_distances = [746.9, 767.8, 775.67, 783.19, 763.08, 753.62, 765.641, 786.32]
         loads = [{"meters":1783.44, "seconds":572, "zone":"1", "segment":"WU"}]

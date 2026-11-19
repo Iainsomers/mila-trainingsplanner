@@ -179,6 +179,37 @@ def apply_explicit_zone_labels(proposal, message):
             overrides["Cooldown"] = cooldown[1]
         updated["explicit_role_zones"] = overrides
         return updated, True
+
+    # A literal short-sprint sequence identifies its work reps by order, not
+    # by a single distance-group key. This lets a trainer correct mixed short
+    # targets such as 60-70-80-70-60 m to Z6 even when a distance repeats or
+    # some measured reps already carry Z6.
+    short_sequence = re.search(
+        r"(?:(\d+)\s*[×x*]\s*)?\(\s*([^()]*)\)\s*z\s*6\b",
+        message,
+        re.IGNORECASE,
+    )
+    if short_sequence:
+        sequence_text = short_sequence.group(2)
+        if re.fullmatch(r"\s*\d+\s*m?(?:\s*[-–—/]\s*\d+\s*m?)+\s*", sequence_text, re.I):
+            distances = [int(value) for value in re.findall(r"\d+", sequence_text)]
+            distances *= int(short_sequence.group(1) or 1)
+            reps = proposal.get("reps") if isinstance(proposal.get("reps"), list) else []
+            targets = [rep.get("target_meters") if isinstance(rep, dict) else None for rep in reps]
+            if distances and all(25 <= value < 100 for value in distances):
+                starts = [
+                    index for index in range(len(targets) - len(distances) + 1)
+                    if targets[index:index + len(distances)] == distances
+                ]
+                if len(starts) == 1:
+                    updated = deepcopy(proposal)
+                    overrides = dict(updated.get("explicit_lap_zones") or {})
+                    selected = reps[starts[0]:starts[0] + len(distances)]
+                    for rep in selected:
+                        for lap in rep.get("laps", []):
+                            overrides[str(lap)] = "6"
+                    updated["explicit_lap_zones"] = overrides
+                    return updated, True
     pattern = re.compile(
         r"(?:(\d+)\s*[×x*]\s*)?(\d+)\s*m\b.{0,24}?"
         r"\bZ\s*([1-6])(?:\s*(?:>|→|-|tot)\s*Z?\s*([1-6]))?\b",
@@ -195,12 +226,29 @@ def apply_explicit_zone_labels(proposal, message):
     if not labels:
         return proposal, False
     updated = deepcopy(proposal)
+    remaining_labels = []
+    lap_overrides = dict(updated.get("explicit_lap_zones") or {})
+    proposal_reps = updated.get("reps") if isinstance(updated.get("reps"), list) else []
+    for item in labels:
+        if item["target_meters"] < 100 and item["label"] == "Z6":
+            matching_reps = [
+                rep for rep in proposal_reps
+                if isinstance(rep, dict) and rep.get("target_meters") == item["target_meters"]
+            ]
+            if len(matching_reps) == item["count"]:
+                for rep in matching_reps:
+                    for lap in rep.get("laps", []):
+                        lap_overrides[str(lap)] = "6"
+                continue
+        remaining_labels.append(item)
+    if lap_overrides:
+        updated["explicit_lap_zones"] = lap_overrides
     existing = updated.get("zone_labels") if isinstance(updated.get("zone_labels"), list) else []
-    replaced = {(item["target_meters"], item["count"]) for item in labels}
+    replaced = {(item["target_meters"], item["count"]) for item in remaining_labels}
     updated["zone_labels"] = [
         item for item in existing
         if isinstance(item, dict) and (item.get("target_meters"), item.get("count")) not in replaced
-    ] + labels
+    ] + remaining_labels
     return updated, True
 
 
@@ -571,6 +619,8 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         from core.garmin_d import hr_zone
         from core.watch_hr import tail_hr
         for block in blocks:
+            if any(str(i) in (proposal.get("explicit_lap_zones") or {}) for i in block["ids"]):
+                continue
             if zone_basis == "auto" and block["meters"] < 400 and block["seconds"] < 50:
                 continue
             rep_loads = [loads[i-1] for i in block["ids"]]

@@ -398,6 +398,7 @@ class WatchAIStructureTests(SimpleTestCase):
         self.assertEqual(representative_zones(['Z3']*9 + ['Z5']), ['Z3','Z5'])
         self.assertEqual(representative_zones(['Z3']*10 + ['Z5']), ['Z3'])
         self.assertEqual(representative_zones(['Z3']*3 + ['Z5']), ['Z3','Z5'])
+        self.assertEqual(representative_zones(['Z6', 'Z6', 'Z4']), ['Z4', 'Z6'])
         self.assertEqual(representative_zones([None]*24), [])
 
     def test_minute_block_separator_preserves_nested_sets_zones_and_paces(self):

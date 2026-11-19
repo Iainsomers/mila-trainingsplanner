@@ -11,7 +11,7 @@ def representative_zones(labels):
     retain the observed zones rather than inventing or removing a label.
     """
     labels = list(labels)
-    counts = Counter(label for label in labels if label in {'Z1','Z2','Z3','Z4','Z5'})
+    counts = Counter(label for label in labels if label in {'Z1','Z2','Z3','Z4','Z5','Z6'})
     retained = [label for label,count in counts.items() if count * 10 >= len(labels)]
     return sorted(retained or counts)
 

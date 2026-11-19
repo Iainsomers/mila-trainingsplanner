@@ -2,6 +2,7 @@
 
 ## Overdracht voor de volgende chat — 19 november 2026
 
+- Een expliciete unieke gemengde sprintreeks onder 100 m kan in Garmin E handmatig volledig naar Z6 worden verhoogd, ook bij herhaalde afstanden en deels al correcte zones.
 - Strength-minuten tellen als middengrijze ALT Z7 in Diary, Individual Plans en Stats; geen loopkilometers.
 - Volledig uitgeschreven compacte Alternative-notatie (`WU-N×(A-B)-losse blokken-CD`) wordt nu algemeen en meetgecontroleerd een echte preview, ook als het model anders alleen instemmende tekst zou geven. Geen specifieke trainingsregel. 43 Garmin-E-tests/check/migratiecheck groen.
 - Garmin E Chat/Analyze wordt nu ook door de activiteitspopup getoond bij geldige hardlooplaps zonder vooraf herkende Main; Use/Add verschijnt pas na validatie.
