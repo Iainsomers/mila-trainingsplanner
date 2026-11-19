@@ -13192,9 +13192,13 @@ def daily_overview_view(request):
             })
     standard_selection = next((item for item in dco_saved_selections if item["is_standard"]), None)
 
+    general_plan_choices = {
+        f"plan:{plan.id}": plan for plan in _trainer_planning_qs(request)
+    }
     requested_selection_mode = (request.GET.get("selection") or "").strip().lower()
     selection_mode = requested_selection_mode or ("selection" if standard_selection else "all")
-    if selection_mode not in {"all", "selection", "planned_training"}:
+    selected_general_plan = general_plan_choices.get(selection_mode)
+    if not selected_general_plan and selection_mode not in {"all", "selection", "planned_training"}:
         selection_mode = "all"
     selected_saved_selection_id = (request.GET.get("saved_selection") or "").strip()
     if not selected_saved_selection_id and not requested_selection_mode and standard_selection:
@@ -13260,10 +13264,19 @@ def daily_overview_view(request):
         }
         return redirect(f"{reverse('daily_overview')}?{urlencode(redirect_query, doseq=True)}")
 
-    selected_athlete_ids = set()
     selected_saved_selection = next((item for item in dco_saved_selections if item["id"] == selected_saved_selection_id), None)
     if selection_mode == "selection" and selected_saved_selection:
         selected_athlete_ids = set(selected_saved_selection["athlete_ids"])
+    elif selected_general_plan:
+        selected_athlete_ids = selected_general_plan.targeted_athlete_ids()
+        selected_athlete_ids.update(
+            AthleteBasePlanningSlot.objects.filter(
+                block__athlete_id__in=all_athlete_ids,
+                block__planning_kind=AthleteBasePlanningBlock.KIND_BASE,
+                mode=AthleteBasePlanningSlot.MODE_TRAINER,
+                trainer_plan=selected_general_plan,
+            ).values_list("block__athlete_id", flat=True).distinct()
+        )
     else:
         selected_athlete_ids = {
             int(value)
@@ -13271,7 +13284,7 @@ def daily_overview_view(request):
             if str(value).isdigit()
         }
 
-    if selection_mode == "selection":
+    if selection_mode == "selection" or selected_general_plan:
         athletes = [athlete for athlete in all_athletes if athlete.id in selected_athlete_ids]
     else:
         athletes = all_athletes
@@ -13482,6 +13495,7 @@ def daily_overview_view(request):
         "date_value": date_value,
         "slot_filter": slot_filter,
         "selection_mode": selection_mode,
+        "general_plan_choices": general_plan_choices,
         "all_athletes": all_athletes,
         "selected_athlete_ids": selected_athlete_ids,
         "dco_saved_selections": dco_saved_selections,

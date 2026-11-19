@@ -5899,6 +5899,48 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(result, "DCO Print Athlete")
         self.assertContains(result, "daily-print-grid")
 
+    def test_dco_selects_athletes_linked_to_a_general_plan(self):
+        coach = get_user_model().objects.create_user(username="dco-general", is_staff=True)
+        other = get_user_model().objects.create_user(username="dco-general-other", is_staff=True)
+        direct, grouped, based, unrelated = [
+            Athlete.objects.create(owner=coach, name=name, birth_year=2000, gender="X")
+            for name in ("Direct", "Grouped", "Base", "Unrelated")
+        ]
+        outside = Athlete.objects.create(owner=other, name="Outside", birth_year=2000, gender="X")
+        plan = TrainingPlan.objects.create(
+            owner=coach, name="Distance General Plan", plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        inaccessible_plan = TrainingPlan.objects.create(
+            owner=other, name="Outside General Plan", plan_kind=TrainingPlan.PLAN_KIND_TRAINER,
+        )
+        PlanMembership.objects.create(plan=plan, athlete=direct)
+        group = Group.objects.create(owner=coach, name="Distance Group")
+        group.athletes.add(grouped, outside)
+        plan.groups.add(group)
+        block = AthleteBasePlanningBlock.objects.create(
+            athlete=based, start_month=1, start_day=1, end_month=12, end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=block, weekday=0, slot_index=1,
+            mode=AthleteBasePlanningSlot.MODE_TRAINER, trainer_plan=plan,
+        )
+        self.client.force_login(coach)
+
+        selection = self.client.get("/coach/daily-overview/")
+        self.assertContains(selection, '<optgroup label="General Plans">')
+        self.assertContains(selection, f'value="plan:{plan.id}"')
+        self.assertNotContains(selection, inaccessible_plan.name)
+
+        response = self.client.get("/coach/daily-overview/", {
+            "selection": f"plan:{plan.id}", "ok": "1", "athletes": unrelated.id,
+        })
+        self.assertEqual(
+            [row["athlete"] for row in response.context["rows"]], [based, direct, grouped],
+        )
+        self.assertIn(f"selection=plan%3A{plan.id}", response.context["next_day_url"])
+        selector = self.client.get(response.context["selection_url"])
+        self.assertContains(selector, f'value="plan:{plan.id}" selected')
+
     def test_ayc_session_km_includes_running_segments_but_excludes_alternative_and_strength(self):
         _, plan, athlete = self._user_plan_and_athlete()
         day = date.today()

@@ -279,7 +279,7 @@ Flex Planner en AYC kiezen voor een atleet op een datum dezelfde actieve bronpla
 
 ## Daily Coach Overview Training
 
-Selectie op datum, AM/PM, alle atleten, selectie, geplande training en opgeslagen selecties. Opgeslagen selecties kunnen onbeperkt naast elkaar bestaan: een andere naam maakt een nieuwe selectie, dezelfde naam werkt de gekozen selectie bij. Ze worden opgeslagen per actieve trainer, zodat gedelegeerde coachweergaven geen selecties met elkaar delen. De resultaatpagina behoudt de selectie, toont atleet-specifieke tempo's, RPE en opmerkingen en heeft een Print-knop voor de gekozen atleten en dag. Naast een zichtbare trainingsevaluatie staat ook het Fit/Issues-bolletje: groen voor Fit, oranje voor Some issues en rood voor Serious issues. Zonder opgeslagen keuze blijft het bolletje weg.
+Selectie op datum, AM/PM, alle atleten, selectie, geplande training, General Plans en opgeslagen selecties. Een General Plan toont de toegankelijke atleten die rechtstreeks, via een groep of via een Base Planning-slot aan dat plan gekoppeld zijn. Opgeslagen selecties kunnen onbeperkt naast elkaar bestaan: een andere naam maakt een nieuwe selectie, dezelfde naam werkt de gekozen selectie bij. Ze worden opgeslagen per actieve trainer, zodat gedelegeerde coachweergaven geen selecties met elkaar delen. De resultaatpagina behoudt de selectie, toont atleet-specifieke tempo's, RPE en opmerkingen en heeft een Print-knop voor de gekozen atleten en dag. Naast een zichtbare trainingsevaluatie staat ook het Fit/Issues-bolletje: groen voor Fit, oranje voor Some issues en rood voor Serious issues. Zonder opgeslagen keuze blijft het bolletje weg.
 
 ## Stats
 

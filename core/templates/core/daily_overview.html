@@ -163,6 +163,13 @@
               <option value="all" {% if selection_mode == "all" %}selected{% endif %}>All</option>
               <option value="selection" {% if selection_mode == "selection" %}selected{% endif %}>Selection</option>
               <option value="planned_training" {% if selection_mode == "planned_training" %}selected{% endif %}>Planned training</option>
+              {% if general_plan_choices %}
+                <optgroup label="General Plans">
+                  {% for value, plan in general_plan_choices.items %}
+                    <option value="{{ value }}"{% if selection_mode == value %} selected{% endif %}>{{ plan.name }}</option>
+                  {% endfor %}
+                </optgroup>
+              {% endif %}
             </select>
           </div>
         </div>
