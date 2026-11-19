@@ -2957,11 +2957,14 @@
             });
             box.appendChild(alternatives);
           }
-          if (fields.main || fields.alt || fields.alternative) {
+          var hasUsableTrainingFields = !!(fields.main || fields.alt || fields.alternative);
+          var canDiscussGarminE = model === "E" && (part.watch_loads || []).length;
+          if (hasUsableTrainingFields || canDiscussGarminE) {
             var actions = document.createElement("div");
             actions.className = "d-flex flex-wrap gap-1";
             actions.style.maxWidth = "100%";
-            if ((model === "C" || model === "D" || model === "E") && (fields.main || (model === "E" && (fields.alt || fields.alternative)))) {
+            if ((model === "C" || model === "D" || model === "E") &&
+                (fields.main || (model === "E" && ((fields.alt || fields.alternative) || canDiscussGarminE)))) {
               var key = model + ":" + (session.e_session_id || session.start);
               var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [], open:model === "E" && !part.e_usable});
               if (model === "E" && part.e_history) chat.messages = part.e_history;
@@ -3121,30 +3124,32 @@
                 });
               }
             }
-            [1, 2].forEach(function(slotIndex) {
-              var button = document.createElement("button");
-              button.type = "button";
-              button.className = "btn btn-sm btn-outline-primary";
-              button.textContent = slotIndex === 1 ? "Use AM" : "Use PM";
-              if (model === "E" && !part.e_usable) button.disabled = true;
-              button.addEventListener("click", function(event) {
-                event.preventDefault();
-                useWatchTraining(fields, part.watch_loads || [], slotIndex, button, model, false, part.e_validation);
+            if (hasUsableTrainingFields) {
+              [1, 2].forEach(function(slotIndex) {
+                var button = document.createElement("button");
+                button.type = "button";
+                button.className = "btn btn-sm btn-outline-primary";
+                button.textContent = slotIndex === 1 ? "Use AM" : "Use PM";
+                if (model === "E" && !part.e_usable) button.disabled = true;
+                button.addEventListener("click", function(event) {
+                  event.preventDefault();
+                  useWatchTraining(fields, part.watch_loads || [], slotIndex, button, model, false, part.e_validation);
+                });
+                actions.appendChild(button);
               });
-              actions.appendChild(button);
-            });
-            [1, 2].forEach(function(slotIndex) {
-              var button = document.createElement("button");
-              button.type = "button";
-              button.className = "btn btn-sm btn-outline-primary";
-              button.textContent = slotIndex === 1 ? "Add AM" : "Add PM";
-              if (model === "E" && !part.e_usable) button.disabled = true;
-              button.addEventListener("click", function(event) {
-                event.preventDefault();
-                useWatchTraining(fields, (fields.main || model === "E") ? (part.watch_loads || []) : [], slotIndex, button, model, true, part.e_validation);
+              [1, 2].forEach(function(slotIndex) {
+                var button = document.createElement("button");
+                button.type = "button";
+                button.className = "btn btn-sm btn-outline-primary";
+                button.textContent = slotIndex === 1 ? "Add AM" : "Add PM";
+                if (model === "E" && !part.e_usable) button.disabled = true;
+                button.addEventListener("click", function(event) {
+                  event.preventDefault();
+                  useWatchTraining(fields, (fields.main || model === "E") ? (part.watch_loads || []) : [], slotIndex, button, model, true, part.e_validation);
+                });
+                actions.appendChild(button);
               });
-              actions.appendChild(button);
-            });
+            }
             description.appendChild(actions);
           }
           box.appendChild(description);

@@ -987,7 +987,18 @@ class GarminEEndpointTests(TestCase):
         self.athlete.garmin_model_e_enabled = True
         self.athlete.garmin_ai_consent_at = None
         self.athlete.save()
-        self.assertContains(self.client.get(diary),'id="suggestInputBtnE"')
+        diary_response = self.client.get(diary)
+        self.assertContains(diary_response,'id="suggestInputBtnE"')
+        self.assertContains(
+            diary_response,
+            'var canDiscussGarminE = model === "E" && (part.watch_loads || []).length;',
+            html=False,
+        )
+        self.assertContains(
+            diary_response,
+            'if (hasUsableTrainingFields || canDiscussGarminE)',
+            html=False,
+        )
         result = self.client.get(self.url,self.query).json()["results"][0]["parts"][0]
         self.assertFalse(result["e_usable"])
         model.assert_not_called()
