@@ -2,6 +2,7 @@
 
 ## Overdracht voor de volgende chat — 19 november 2026
 
+- Stats onthoudt nu ook de actieve sorteervolgorde per ingelogde trainer (migratie 0164), zowel Athlete alfabetisch als meetkolommen aflopend. 35 gerichte tests, check en migratiecheck slagen.
 - Stats-vervolg: vijf weken worden per atleet in één gegevensronde berekend in plaats van drie; de tabelkop is compacter met selector en sorteerpijl op één regel. 35 gerichte tests, check en migratiecheck slagen. Eigenaar doet de visuele eindcontrole.
 - Stats-overzicht heeft vier per ingelogde trainer opgeslagen meetkolommen (migratie 0163): week-km, ALT-minuten, vierweekse totaal-/zone-km en total ACWR. Standaard huidige/vorige week km. View-only gedeelde trainers wijzigen alleen hun eigen voorkeur. 34 gerichte tests, check en migratiecheck slagen.
 - Laatste functionele commit: `0d77b75`, gepusht naar `main`. Stats staat nu onder **Views** op de coachhoofdpagina, zonder Under Development-label. Het overzicht opent direct alle toegankelijke atleten van de actieve coach; de selectiestap, Selection-knop en Stats-selectieopslag zijn verwijderd. DCO-selecties blijven bestaan voor DCO. Sortering, weektotalen en individuele grafieken zijn behouden. Geen migratie nodig. Validatie: 32 gerichte tests (`core.tests.TrainerStatsTests core.tests_under_dev`), `manage.py check` en synthetische Chrome-controle op 390/1440 px geslaagd. De Render-uitrol is niet onafhankelijk bevestigd.

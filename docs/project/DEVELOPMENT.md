@@ -1,6 +1,7 @@
 # Ontwikkelen, testen en documenteren
 
 - Stats-overzicht (19 november): `trainer_stats_view` accepteert GET voor weergave en POST uitsluitend voor de eigen `CoachSettings.stats_overview_columns`. De expliciete middleware-uitzondering voor `/planning/stats/` staat dit ook bij view-only coachtoegang toe, omdat er geen gegevens van de actieve coach worden geschreven. DCO-selecties hebben geen invloed. Migratie 0163 voegt de JSON-voorkeur toe. Regressies: `manage.py test core.tests.TrainerStatsTests core.tests_under_dev`, `manage.py check` en `makemigrations --check --dry-run`.
+- Stats-sortering wordt via dezelfde POST opgeslagen in `CoachSettings.stats_overview_sort` (migratie 0164). De sorteerknoppen zetten eerst het verborgen sortveld en versturen daarna het kolomformulier; een gewone GET zonder sortparameter herstelt de opgeslagen keuze.
 - Stats-performance: `_effective_week_distance_m` accepteert een variabele aaneengesloten dagperiode. `_athlete_week_distance_history` vraagt de hele periode één keer op; splits dit niet opnieuw in weekparen, omdat iedere ronde dezelfde plannen, basisblokken en slots opnieuw opvraagt. De een-pas-regressie controleert voor vijf weken exact één aanroep met 35 dagen.
 
 ## mySASY — bijgewerkt 19 november 2026

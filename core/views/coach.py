@@ -12743,18 +12743,23 @@ def trainer_stats_view(request):
     preference_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
     if request.method == "POST":
         selected_columns = _clean_stats_overview_columns(request.POST.getlist("columns"))
-        preference_settings.stats_overview_columns = selected_columns
-        preference_settings.save(update_fields=["stats_overview_columns", "updated_at"])
         sort_value = (request.POST.get("sort") or "name").strip().lower()
-        query = {"sort": sort_value} if sort_value != "name" else {}
-        target = reverse("trainer_stats")
-        return redirect(f"{target}?{urlencode(query)}" if query else target)
+        if sort_value not in {"name", *STATS_OVERVIEW_METRIC_MAP.keys()}:
+            sort_value = "name"
+        preference_settings.stats_overview_columns = selected_columns
+        preference_settings.stats_overview_sort = sort_value
+        preference_settings.save(update_fields=[
+            "stats_overview_columns", "stats_overview_sort", "updated_at",
+        ])
+        return redirect("trainer_stats")
 
     selected_columns = _clean_stats_overview_columns(preference_settings.stats_overview_columns or [])
     if not selected_columns:
         selected_columns = list(STATS_OVERVIEW_DEFAULT_COLUMNS)
     column_slots = selected_columns + [""] * (4 - len(selected_columns))
-    sort_mode = (request.GET.get("sort") or "name").strip().lower()
+    sort_mode = (
+        request.GET.get("sort") or preference_settings.stats_overview_sort or "name"
+    ).strip().lower()
     if sort_mode not in {"name", *STATS_OVERVIEW_METRIC_MAP.keys()}:
         sort_mode = "name"
 

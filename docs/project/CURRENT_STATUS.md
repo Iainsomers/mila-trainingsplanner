@@ -1,5 +1,6 @@
 # Actuele status
 
+- 19 november — Stats onthoudt naast de vier kolomkeuzes nu ook de gekozen sorteervolgorde per ingelogde trainer. Athlete herstelt alfabetische sortering; een meetkolom herstelt aflopende sortering. Gedeelde coachweergaven blijven gescheiden. Migratie 0164. Validatie: 35 gerichte tests, check en migratiecheck geslaagd.
 - 19 november — Vervolg Stats-overzicht: de vijf benodigde kalenderweken worden per atleet nu in één gegevensronde geladen in plaats van drie herhaalde rondes. De tabelkop is compacter gemaakt: selector en klein sorteerpijltje staan op één regel, de losse tekst `Sort` is verwijderd en kolomkop/rijhoogtes zijn aangescherpt. 35 gerichte tests, `manage.py check` en migratiecheck slagen. Visuele eindcontrole doet de eigenaar zelf.
 - 19 november — Stats-atletenoverzicht heeft nu vier per trainer onthouden meetkolomselectors. Beschikbaar: huidige/vorige week km, huidige/vorige week ALT-minuten, totaal en Z1–Z6 km over de laatste vier weken, en total ACWR volgens dezelfde huidige-week/vier-voorwekenberekening als de detailgrafiek. De standaard blijft huidige/vorige week km; lege posities en aflopend sorteren worden ondersteund. Voorkeuren van gedeelde trainers blijven van elkaar gescheiden. Migratie 0163. Validatie: 34 gerichte tests, `manage.py check` en migratiecheck geslaagd.
 

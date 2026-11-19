@@ -105,6 +105,7 @@ class CoachSettings(models.Model):
 
     # Stats overview: up to four metric columns, remembered per logged-in coach.
     stats_overview_columns = models.JSONField(default=list, blank=True)
+    stats_overview_sort = models.CharField(max_length=40, blank=True, default="name")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

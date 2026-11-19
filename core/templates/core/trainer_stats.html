@@ -28,12 +28,12 @@
   <div class="card">
     <form method="post" id="statsColumnsForm">
       {% csrf_token %}
-      <input type="hidden" name="sort" value="{{ sort_mode }}">
+      <input type="hidden" name="sort" id="statsSortValue" value="{{ sort_mode }}">
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0 stats-overview-table">
         <thead class="table-light">
           <tr>
-            <th class="stats-athlete-heading"><a href="{{ sort_name_url }}" class="text-decoration-none text-reset">Athlete{% if sort_mode == "name" %} ▲{% endif %}</a></th>
+            <th class="stats-athlete-heading"><button type="button" class="btn btn-link p-0 text-decoration-none text-reset fw-semibold" data-stats-sort="name">Athlete{% if sort_mode == "name" %} ▲{% endif %}</button></th>
             {% for selected_key in column_slots %}
             <th class="text-end stats-column-heading">
               <label class="visually-hidden" for="statsColumn{{ forloop.counter }}">Statistic column {{ forloop.counter }}</label>
@@ -45,7 +45,7 @@
                   {% endfor %}
                 </select>
                 {% if selected_key %}
-                <a class="stats-sort-link{% if sort_mode == selected_key %} is-active{% endif %}" href="{% url 'trainer_stats' %}?sort={{ selected_key }}" title="Sort highest first" aria-label="Sort this column highest first">↓</a>
+                <button type="button" class="stats-sort-link{% if sort_mode == selected_key %} is-active{% endif %}" data-stats-sort="{{ selected_key }}" title="Sort highest first" aria-label="Sort this column highest first">↓</button>
                 {% else %}<span class="stats-sort-placeholder" aria-hidden="true"></span>{% endif %}
               </div>
             </th>
@@ -82,6 +82,12 @@
   selects.forEach(function (select) {
     select.addEventListener("change", function () {
       updateOptions();
+      form.submit();
+    });
+  });
+  Array.from(form.querySelectorAll("[data-stats-sort]")).forEach(function (button) {
+    button.addEventListener("click", function () {
+      document.getElementById("statsSortValue").value = button.getAttribute("data-stats-sort");
       form.submit();
     });
   });

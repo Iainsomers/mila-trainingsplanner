@@ -12425,11 +12425,21 @@ class TrainerStatsTests(TestCase):
             CoachSettings.objects.get(user=viewer).stats_overview_columns,
             ["current_alt_min", "last_4_weeks_z2_km", "acwr", "previous_km"],
         )
+        self.assertEqual(CoachSettings.objects.get(user=viewer).stats_overview_sort, "name")
         self.assertEqual(CoachSettings.objects.get(user=owner).stats_overview_columns, [])
         page = self.client.get("/planning/stats/")
         self.assertEqual(page.context["column_slots"], [
             "current_alt_min", "last_4_weeks_z2_km", "acwr", "previous_km",
         ])
+
+        sorted_response = self.client.post("/planning/stats/", {
+            "columns": ["current_alt_min", "last_4_weeks_z2_km", "acwr", "previous_km"],
+            "sort": "acwr",
+        })
+        self.assertRedirects(sorted_response, "/planning/stats/")
+        self.assertEqual(CoachSettings.objects.get(user=viewer).stats_overview_sort, "acwr")
+        reopened = self.client.get("/planning/stats/")
+        self.assertEqual(reopened.context["sort_mode"], "acwr")
 
     def test_stats_overview_metrics_include_alt_zones_four_weeks_and_detail_acwr_definition(self):
         trainer = get_user_model().objects.create_user(username="statsmetriccoach", is_staff=True)
