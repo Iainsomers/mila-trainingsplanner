@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Strength-minuten tellen als ALT Z7 in de weektotalen van Diary en Individual Plans en in de ALT-totalen van Stats. Expliciete minuutnotaties in Strength worden opgeteld; herhalingen zoals `2×15 min` worden vermenigvuldigd. Z7 is duur-only en voegt geen loopkilometers toe.
+
 De actuele integratiestappen en het onderscheid tussen beschikbare code, beoogde vitalimport en nog te verifiëren API-gegevens staan in [INTEGRATIONS.md](INTEGRATIONS.md). mySASY is volgens de eigenaar juist bedoeld als vitalbron; de huidige versie is een koppel-/meet-/coachteststap. De nog niet gebouwde mapping mag niet als werkende import worden beschreven. E-gespreksgeheugen is evenmin een algemene zelflerende pipeline of zelfstandig trainingsadvies.
 
 - mySASY-coachtest: Athlete settings → Connections → View mySASY measurements → `Fetch API test data`. Deze haalt expliciet de volledige meetrespons op, inclusief nog onbekende velden, en toont deze als leesbare JSON in een alleen-lezen tekstvak. Dit is een coachtest om feitelijke API-velden vast te stellen; geen automatische mapping naar dagelijkse vitals. Het bestaande account hoeft niet opnieuw gekoppeld te worden. De atleet ziet dit testvak niet.

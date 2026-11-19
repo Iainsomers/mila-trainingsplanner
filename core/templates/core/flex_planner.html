@@ -437,6 +437,7 @@
     .pill-z4 { background-color: #bfe7bf; }
     .pill-z5 { background-color: #b7d7ff; }
     .pill-z6 { background-color: #f2c200; }
+    .pill-z7 { background-color: #999999; color: #fff; }
   .pill-race { background-color: #ff7a00; }
   .pill-important-race { background-color: #cc0000; color: #ffffff; }
   .pill-race-pending { background-color: #ffffff; border: 2px solid #ff7a00; color: #8a4300; }
@@ -861,7 +862,7 @@
         const zMeters = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         const zSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
         const tMeters = {"10000": 0, "5000": 0, "3000": 0, "1500": 0, "1000": 0, "800": 0, "600": 0, "TM": 0, "THM": 0, "T4": 0};
-        const altSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0};
+        const altSeconds = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0};
         let raceMeters = 0;
         let raceSeconds = 0;
 
@@ -902,6 +903,10 @@
           if (zMeters[z] > 0) line += flexPill("pill-z" + z, "Z" + z, flexKm(zMeters[z]));
         });
         if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
+
+        if (altSeconds["7"] > 0) {
+          lines.push(`<div class="flex-total-line">${flexPill("pill-z7", "ALT Z7", Number((altSeconds["7"] / 60).toFixed(1)) + "'")}</div>`);
+        }
 
         line = "";
         ["4", "5", "6"].forEach((z) => {
@@ -1448,6 +1453,9 @@
                     {% endif %}
                     {% if row.alt_z3_min %}
                       <div class="flex-total-line"><span class="pill pill-z3">ALT Z3 {{ row.alt_z3_min }}m</span></div>
+                    {% endif %}
+                    {% if row.alt_z7_min %}
+                      <div class="flex-total-line"><span class="pill pill-z7">ALT Z7 {{ row.alt_z7_min }}m</span></div>
                     {% endif %}
                   </div>
                 </td>

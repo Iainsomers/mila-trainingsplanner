@@ -2,6 +2,7 @@
 
 ## Overdracht voor de volgende chat — 19 november 2026
 
+- Strength-minuten tellen als middengrijze ALT Z7 in Diary, Individual Plans en Stats; geen loopkilometers.
 - Volledig uitgeschreven compacte Alternative-notatie (`WU-N×(A-B)-losse blokken-CD`) wordt nu algemeen en meetgecontroleerd een echte preview, ook als het model anders alleen instemmende tekst zou geven. Geen specifieke trainingsregel. 43 Garmin-E-tests/check/migratiecheck groen.
 - Garmin E Chat/Analyze wordt nu ook door de activiteitspopup getoond bij geldige hardlooplaps zonder vooraf herkende Main; Use/Add verschijnt pas na validatie.
 - Alternative-chat accepteert nu algemene expliciete duur-zonelabels zoals `45″ = Z1` en `30 sec = Z2`. Geen speciale 121-lap/59×45-30-herkenning: modeltoewijzing en bestaande volledige validator blijven leidend. 40 Garmin-E-tests en check groen.

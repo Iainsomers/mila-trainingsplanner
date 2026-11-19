@@ -2878,7 +2878,13 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
 
     for seg in segments:
         seg_type = (getattr(seg, "type", "") or "").upper()
-        if seg_type in ("MOB", "TECH", "CORE2"):
+        if seg_type == "CORE2":
+            from core.strength import strength_duration_s
+            strength_seconds = strength_duration_s(getattr(seg, "text", ""))
+            if strength_seconds:
+                loads.append({"kind": "alt", "zone": "7", "seconds": strength_seconds})
+            continue
+        if seg_type in ("MOB", "TECH"):
             continue
         # Actual Watch laps take precedence for the segment they belong to;
         # edited/non-measured segments are calculated from their current text.
@@ -4345,6 +4351,7 @@ def athlete_year_calendar_view(request):
         alt_z4_min = 0
         alt_z5_min = 0
         alt_z6_min = 0
+        alt_z7_min = 0
 
         if selected_athlete:
             for cell in cells1 + cells2:
@@ -4367,6 +4374,8 @@ def athlete_year_calendar_view(request):
                             alt_z5_min += minutes
                         elif zone == "6":
                             alt_z6_min += minutes
+                        elif zone == "7":
+                            alt_z7_min += minutes
                         continue
 
                     zone = str(load.get("zone") or "")
@@ -4410,7 +4419,7 @@ def athlete_year_calendar_view(request):
         has_race = (race_m > 0)
         has_t = {t: (t_m[t] > 0) for t in ("10000", "5000", "3000", "1500", "1000", "800", "600", "TM", "THM", "T4")}
         has_alt = any(value > 0 for value in (
-            alt_z1_min, alt_z2_min, alt_z3_min, alt_z4_min, alt_z5_min, alt_z6_min
+            alt_z1_min, alt_z2_min, alt_z3_min, alt_z4_min, alt_z5_min, alt_z6_min, alt_z7_min
         ))
 
         def _vitals_week_avg(field_name, decimals=0):
@@ -4507,6 +4516,7 @@ def athlete_year_calendar_view(request):
             "alt_z4_min": alt_z4_min,
             "alt_z5_min": alt_z5_min,
             "alt_z6_min": alt_z6_min,
+            "alt_z7_min": alt_z7_min,
             "has_alt": has_alt,
             "sum_pct_tooltip": sum_pct_tooltip,
         })

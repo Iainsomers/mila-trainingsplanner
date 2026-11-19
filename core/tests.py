@@ -11592,7 +11592,7 @@ class FlexPlannerAltTotalsTests(TestCase):
         stats = athlete_week_stats(plan, athlete, week_start)
         self.assertEqual(
             {zone: values["duration_s"] for zone, values in stats["alt_zones"].items()},
-            {"1": 1200, "2": 600, "3": 600, "4": 0, "5": 0, "6": 0},
+            {"1": 1200, "2": 600, "3": 600, "4": 0, "5": 0, "6": 0, "7": 0},
         )
 
     def test_progressive_zone_range_includes_intermediate_zones(self):
@@ -11999,7 +11999,8 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, 'data-stats-toggle="alt-total"')
         self.assertContains(response, 'data-stats-toggle="alt-z1"')
         self.assertContains(response, 'data-alt-kind="total"')
-        self.assertContains(response, 'data-alt-kind="zone"', count=6)
+        self.assertContains(response, 'data-alt-kind="zone"', count=7)
+        self.assertContains(response, 'data-stats-series="alt-z7"')
         self.assertContains(response, 'data-axis-topic="alt"')
         self.assertContains(response, "updateStatsAxes")
         self.assertContains(response, "ALT total")

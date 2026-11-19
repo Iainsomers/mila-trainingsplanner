@@ -15,7 +15,7 @@ from core.views.common import _week_days
 
 STATS_CACHE_TTL_S = 300  # 5 min; version bump houdt het toch actueel
 STATS_VERSION_KEY = "mila:stats:version"
-STATS_SCHEMA_VERSION = "v23"
+STATS_SCHEMA_VERSION = "v24"
 
 
 def active_pause_distance_m(text, reps, speed_mps, pause_mode):
@@ -138,8 +138,8 @@ def _empty_zone_bucket(speeds: dict):
 
 
 def _empty_alt_bucket():
-    # Alternative load is duration-only and can use every training zone.
-    return {z: {"duration_s": 0} for z in ("1", "2", "3", "4", "5", "6")}
+    # Alternative load is duration-only; Z7 contains Strength minutes.
+    return {z: {"duration_s": 0} for z in ("1", "2", "3", "4", "5", "6", "7")}
 
 
 def _empty_t_bucket():
@@ -711,7 +711,11 @@ def base_week_stats(plan, week_start: date_cls, pause_mode=None):
                 continue
 
             for seg in slot.segments.all():
-                if seg.type in {"MOB", "CORE2"}:
+                if seg.type == "CORE2":
+                    from core.strength import strength_duration_s
+                    alt_zones["7"]["duration_s"] += strength_duration_s(seg.text)
+                    continue
+                if seg.type == "MOB":
                     continue
 
                 special = (getattr(seg, "special", "") or "").strip()
@@ -885,7 +889,11 @@ def athlete_week_stats(plan, athlete, week_start: date_cls, pause_mode=None):
                 continue
 
             for seg in slot.segments.all():
-                if seg.type in {"MOB", "CORE2"}:
+                if seg.type == "CORE2":
+                    from core.strength import strength_duration_s
+                    alt_zones["7"]["duration_s"] += strength_duration_s(seg.text)
+                    continue
+                if seg.type == "MOB":
                     continue
 
                 special = (getattr(seg, "special", "") or "").strip()
@@ -1065,7 +1073,11 @@ def group_week_stats(plan, athletes, week_start: date_cls, pause_mode=None):
                 continue
 
             for seg in slot.segments.all():
-                if seg.type in {"MOB", "CORE2"}:
+                if seg.type == "CORE2":
+                    from core.strength import strength_duration_s
+                    alt_zones["7"]["duration_s"] += strength_duration_s(seg.text)
+                    continue
+                if seg.type == "MOB":
                     continue
 
                 special = (getattr(seg, "special", "") or "").strip()

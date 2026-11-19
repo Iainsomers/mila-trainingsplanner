@@ -12656,7 +12656,7 @@ def _effective_week_distance_m(
                 if load.get("kind") == "alt":
                     if alt_zone_totals is not None:
                         zone = str(load.get("zone") or "")
-                        if zone in {"1", "2", "3", "4", "5", "6"}:
+                        if zone in {"1", "2", "3", "4", "5", "6", "7"}:
                             bucket = alt_zone_totals.setdefault(target_week, {})
                             bucket[zone] = bucket.get(zone, 0.0) + float(load.get("seconds") or 0)
                 else:
@@ -13022,9 +13022,10 @@ def trainer_athlete_stats_view(request, athlete_id):
     alt_series = []
     for week in weeks:
         week["alt_total_minutes"] = sum(week["alt_zone_minutes"].values())
+    alt_zone_colors = (*zone_colors, "#999999")
     alt_definitions = [("alt-total", "ALT total min", "#7b3f91", "alt_total_minutes", True)] + [
         (f"alt-z{zone}", f"ALT Z{zone}", color, f"alt_zone_{zone}", False)
-        for zone, color in enumerate(zone_colors, 1)
+        for zone, color in enumerate(alt_zone_colors, 1)
     ]
     for series_id, label, color, value_key, is_total in alt_definitions:
         if value_key.startswith("alt_zone_"):

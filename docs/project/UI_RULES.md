@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- Z7 staat voor Strength-minuten en gebruikt middengrijs (`#999999`). In Diary en Individual Plans verschijnt dit als `ALT Z7`; Stats neemt dezelfde Z7 mee in ALT-totalen en toont een afzonderlijke Z7-reeks.
+
 - Stats staat als vierde tegel onder Views op de coachhoofdpagina, met dezelfde compacte kaartopmaak als de andere Views. Het verschijnt onafhankelijk van de Under Dev-schakelaar en staat niet meer in Under Dev. Titel en browsertitel zijn Stats, zonder ontwikkellabel. Geen selectieformulier of Selection-knop; direct het bestaande responsieve weekoverzicht. De terugknop gaat naar de coachhoofdpagina en de individuele grafiek terug naar Stats.
 
 - mySASY-coachpagina: onder het meetoverzicht staat `API test data · coach only`. Alleen coaches met bewerktoegang zien `Fetch API test data`; view-only toont de opgeslagen respons. Het JSON-tekstvak is alleen-lezen, escaped en kan binnen het vak scrollen, ook bij lange/onbekende velden. Atleten zien geen diagnostisch vak. De normale verbindings-/bevestigingspagina blijft beschikbaar voor de eigen atleet. Zie INTEGRATIONS.md voor de exacte navigatie.
