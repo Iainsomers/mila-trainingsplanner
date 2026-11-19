@@ -212,7 +212,7 @@ class GarminEValidationTests(SimpleTestCase):
         }
 
         updated, changed = apply_explicit_zone_labels(
-            proposal, "maak er 1*(60m-70m-80m-70-60m) z6 van",
+            proposal, "maak er 1*(60m//70m//80m//70m//60m) z6 van",
         )
         checked = checked_proposal({"watch_loads":loads}, updated, zone_basis="pace")
 
@@ -223,9 +223,14 @@ class GarminEValidationTests(SimpleTestCase):
         self.assertTrue(all(
             checked["watch_loads"][rep["laps"][0] - 1]["zone"] == "6" for rep in reps
         ))
-        self.assertEqual(checked["training_fields"]["main"], "1×(60 m - 70 m - 80 m - 70 m - 60 m) Z6")
+        self.assertEqual(checked["training_fields"]["main"], "1×(60 m // 70 m // 80 m // 70 m // 60 m) Z6")
         self.assertEqual(checked["watch_loads"][recovery[0] - 1]["segment"], "CORE")
         self.assertFalse(checked["watch_loads"][recovery[0] - 1]["work_rep"])
+        hyphenated, hyphenated_changed = apply_explicit_zone_labels(
+            proposal, "maak er 1*(60m-70m-80m-70m-60m) z6 van",
+        )
+        self.assertTrue(hyphenated_changed)
+        self.assertEqual(hyphenated["explicit_sprint_sequences"], updated["explicit_sprint_sequences"])
 
     def test_explicit_short_repeated_group_can_raise_partly_correct_reps_to_z6(self):
         proposal = {

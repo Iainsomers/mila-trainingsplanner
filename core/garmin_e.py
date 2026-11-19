@@ -191,7 +191,7 @@ def apply_explicit_zone_labels(proposal, message):
     )
     if short_sequence:
         sequence_text = short_sequence.group(2)
-        if re.fullmatch(r"\s*\d+\s*m?(?:\s*[-–—/]\s*\d+\s*m?)+\s*", sequence_text, re.I):
+        if re.fullmatch(r"\s*\d+\s*m?(?:\s*(?:[-–—]|//?)\s*\d+\s*m?)+\s*", sequence_text, re.I):
             distances = [int(value) for value in re.findall(r"\d+", sequence_text)]
             distances *= int(short_sequence.group(1) or 1)
             reps = proposal.get("reps") if isinstance(proposal.get("reps"), list) else []
@@ -674,7 +674,7 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
             raise ValueError("The explicit sprint sequence cannot be shown as one work block.")
         sequence_groups[group_indexes[0]] = {
             "end": group_indexes[-1],
-            "text": "1×(" + " - ".join(f"{target} m" for target in targets) + ") Z6",
+            "text": "1×(" + " // ".join(f"{target} m" for target in targets) + ") Z6",
         }
     manual_zone_labels = {}
     zone_labels = proposal.get("zone_labels", [])
