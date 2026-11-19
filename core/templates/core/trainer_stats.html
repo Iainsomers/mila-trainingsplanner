@@ -3,11 +3,21 @@
 {% block content %}
 <style>
   .stats-overview-table { min-width: 920px; }
-  .stats-metric-select { min-width: 175px; max-width: 230px; margin-left: auto; }
-  .stats-sort-link { display: inline-block; margin-top: .25rem; font-size: .78rem; }
+  .stats-overview-table thead th { padding: .55rem .5rem; vertical-align: middle; }
+  .stats-overview-table tbody td { padding-top: .48rem; padding-bottom: .48rem; }
+  .stats-athlete-heading { width: 220px; min-width: 220px; }
+  .stats-column-heading { min-width: 175px; }
+  .stats-column-control { display: flex; align-items: center; justify-content: flex-end; gap: .3rem; }
+  .stats-metric-select { min-width: 0; max-width: 220px; font-size: .82rem; font-weight: 600; border-color: #cbd3dc; background-color: #fff; }
+  .stats-sort-link { flex: 0 0 30px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cbd3dc; border-radius: .3rem; color: #5f6b76; background: #fff; text-decoration: none; }
+  .stats-sort-link:hover, .stats-sort-link:focus { color: #0d6efd; border-color: #86b7fe; background: #f4f8ff; }
+  .stats-sort-link.is-active { color: #fff; border-color: #0d6efd; background: #0d6efd; }
+  .stats-sort-placeholder { flex: 0 0 30px; width: 30px; }
   @media (max-width: 767.98px) {
     .stats-overview-table { min-width: 800px; }
-    .stats-metric-select { min-width: 155px; font-size: .82rem; }
+    .stats-athlete-heading { width: 180px; min-width: 180px; }
+    .stats-column-heading { min-width: 150px; }
+    .stats-metric-select { font-size: .78rem; }
   }
 </style>
 <div class="container py-4">
@@ -23,19 +33,21 @@
       <table class="table table-hover align-middle mb-0 stats-overview-table">
         <thead class="table-light">
           <tr>
-            <th><a href="{{ sort_name_url }}" class="text-decoration-none text-reset">Athlete{% if sort_mode == "name" %} ▲{% endif %}</a></th>
+            <th class="stats-athlete-heading"><a href="{{ sort_name_url }}" class="text-decoration-none text-reset">Athlete{% if sort_mode == "name" %} ▲{% endif %}</a></th>
             {% for selected_key in column_slots %}
-            <th class="text-end">
+            <th class="text-end stats-column-heading">
               <label class="visually-hidden" for="statsColumn{{ forloop.counter }}">Statistic column {{ forloop.counter }}</label>
-              <select class="form-select form-select-sm stats-metric-select" id="statsColumn{{ forloop.counter }}" name="columns" data-stats-column>
-                <option value="">No column</option>
-                {% for option in metric_options %}
-                <option value="{{ option.key }}"{% if option.key == selected_key %} selected{% endif %}>{{ option.label }}</option>
-                {% endfor %}
-              </select>
-              {% if selected_key %}
-              <a class="stats-sort-link text-decoration-none text-reset" href="{% url 'trainer_stats' %}?sort={{ selected_key }}">Sort{% if sort_mode == selected_key %} ▼{% endif %}</a>
-              {% endif %}
+              <div class="stats-column-control">
+                <select class="form-select form-select-sm stats-metric-select" id="statsColumn{{ forloop.counter }}" name="columns" data-stats-column>
+                  <option value="">No column</option>
+                  {% for option in metric_options %}
+                  <option value="{{ option.key }}"{% if option.key == selected_key %} selected{% endif %}>{{ option.label }}</option>
+                  {% endfor %}
+                </select>
+                {% if selected_key %}
+                <a class="stats-sort-link{% if sort_mode == selected_key %} is-active{% endif %}" href="{% url 'trainer_stats' %}?sort={{ selected_key }}" title="Sort highest first" aria-label="Sort this column highest first">↓</a>
+                {% else %}<span class="stats-sort-placeholder" aria-hidden="true"></span>{% endif %}
+              </div>
             </th>
             {% endfor %}
           </tr>

@@ -12458,9 +12458,10 @@ from core.views.calendar import (
 
 def _effective_week_distance_m(
         athlete, plans, week_start, pause_mode=None, zone_totals=None, alt_zone_totals=None, flex_owner_id=None,
-        diagnostics=None):
-    end = week_start + timedelta(days=14)
-    days = [week_start + timedelta(days=offset) for offset in range(14)]
+        diagnostics=None, day_count=14):
+    day_count = max(7, int(day_count or 14))
+    end = week_start + timedelta(days=day_count)
+    days = [week_start + timedelta(days=offset) for offset in range(day_count)]
     non_flex_plans = [
         plan for plan in plans
         if not _is_flex_planner_plan(plan)
@@ -12549,7 +12550,10 @@ def _effective_week_distance_m(
         for slot in trainer_slots
     }
 
-    totals = {week_start: 0.0, week_start + timedelta(days=7): 0.0}
+    totals = {
+        week_start + timedelta(days=7 * week_offset): 0.0
+        for week_offset in range(math.ceil(day_count / 7))
+    }
     for day in days:
         override_plan_ids = personal_override_plan_ids_by_day.get(day, set())
         matching_plan = next(
@@ -12620,7 +12624,7 @@ def _effective_week_distance_m(
                     )
                     source_label = f"Base Planning · {base_planning_slot.trainer_plan.name} fallback"
 
-            target_week = week_start if day < week_start + timedelta(days=7) else week_start + timedelta(days=7)
+            target_week = week_start + timedelta(days=7 * ((day - week_start).days // 7))
             loads = _ayc_slot_loads_for_totals(slot, athlete, pause_mode)
             if diagnostics is not None and (slot or loads):
                 segments = []
@@ -12671,19 +12675,17 @@ def _athlete_week_distance_history(
     totals_by_week = {}
     zones_by_week = {}
     alt_zones_by_week = {}
-    for offset in range(0, week_count, 2):
-        pair_start = first_week_start + timedelta(days=7 * offset)
-        pair_totals = _effective_week_distance_m(
-            athlete,
-            plans,
-            pair_start,
-            pause_mode,
-            zone_totals=zones_by_week,
-            alt_zone_totals=alt_zones_by_week,
-            flex_owner_id=flex_owner_id,
-            diagnostics=diagnostics,
-        )
-        totals_by_week.update(pair_totals)
+    totals_by_week.update(_effective_week_distance_m(
+        athlete,
+        plans,
+        first_week_start,
+        pause_mode,
+        zone_totals=zones_by_week,
+        alt_zone_totals=alt_zones_by_week,
+        flex_owner_id=flex_owner_id,
+        diagnostics=diagnostics,
+        day_count=week_count * 7,
+    ))
 
     return [
         {

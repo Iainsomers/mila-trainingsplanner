@@ -20,6 +20,7 @@ from core.models import Athlete, AthleteBasePlanningBlock, AthleteBasePlanningSl
 from core.focus_point_import import FOCUS_POINT_HEADERS
 from core.views.calendar import _annotate_slot_segment_display_times, _ayc_pause_distance_m, _ayc_slot_loads_for_totals, _ayc_slot_session_km, _clone_slot_for_display, _segment_hr_label, _segment_rep_time_label, _virtual_slot_from_base_training, _watch_actual_time_label, _watch_segment_loads, _whereabout_dots
 from core.views.coach import (
+    _athlete_week_distance_history,
     _effective_week_distance_m,
     _build_alternative_watch_suggestion,
     _build_polar_v4_lap_suggestion,
@@ -11632,6 +11633,22 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    @patch("core.views.coach._effective_week_distance_m")
+    def test_week_history_loads_the_full_period_in_one_pass(self, effective_totals):
+        trainer = get_user_model().objects.create_user(username="stats-one-pass", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="One pass", birth_year=2000, gender="X")
+        current_week = date.today() - timedelta(days=date.today().weekday())
+        first_week = current_week - timedelta(weeks=4)
+        effective_totals.return_value = {
+            first_week + timedelta(weeks=offset): 0.0 for offset in range(5)
+        }
+
+        history = _athlete_week_distance_history(athlete, [], current_week, week_count=5)
+
+        self.assertEqual(len(history), 5)
+        effective_totals.assert_called_once()
+        self.assertEqual(effective_totals.call_args.kwargs["day_count"], 35)
+
     def test_stats_discovers_personal_flex_plan_outside_filtered_plan_list(self):
         athlete_owner = get_user_model().objects.create_user(username="statsflexowner", is_staff=True)
         viewing_coach = get_user_model().objects.create_user(username="statsflexviewer", is_staff=True)
