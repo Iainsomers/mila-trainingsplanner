@@ -12698,42 +12698,121 @@ def _athlete_week_distance_history(
     ]
 
 
+STATS_OVERVIEW_METRICS = (
+    ("current_km", "Total km current week", "km"),
+    ("previous_km", "Total km previous week", "km"),
+    ("current_alt_min", "Total ALT min current week", "min"),
+    ("previous_alt_min", "Total ALT min previous week", "min"),
+    ("last_4_weeks_km", "Total km last 4 weeks", "km"),
+    ("last_4_weeks_z1_km", "Total km Z1 last 4 weeks", "km"),
+    ("last_4_weeks_z2_km", "Total km Z2 last 4 weeks", "km"),
+    ("last_4_weeks_z3_km", "Total km Z3 last 4 weeks", "km"),
+    ("last_4_weeks_z4_km", "Total km Z4 last 4 weeks", "km"),
+    ("last_4_weeks_z5_km", "Total km Z5 last 4 weeks", "km"),
+    ("last_4_weeks_z6_km", "Total km Z6 last 4 weeks", "km"),
+    ("acwr", "ACWR", "ratio"),
+)
+STATS_OVERVIEW_METRIC_MAP = {
+    key: {"key": key, "label": label, "unit": unit}
+    for key, label, unit in STATS_OVERVIEW_METRICS
+}
+STATS_OVERVIEW_DEFAULT_COLUMNS = ["current_km", "previous_km"]
+
+
+def _clean_stats_overview_columns(values):
+    columns = []
+    for value in values:
+        value = str(value or "").strip()
+        if value in STATS_OVERVIEW_METRIC_MAP and value not in columns:
+            columns.append(value)
+        if len(columns) == 4:
+            break
+    return columns
+
+
 @login_required
-@require_GET
+@require_http_methods(["GET", "POST"])
 def trainer_stats_view(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponse("Not allowed", status=403)
 
     all_athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
-    coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
+    active_coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
+    preference_settings, _ = CoachSettings.objects.get_or_create(user=request.user)
+    if request.method == "POST":
+        selected_columns = _clean_stats_overview_columns(request.POST.getlist("columns"))
+        preference_settings.stats_overview_columns = selected_columns
+        preference_settings.save(update_fields=["stats_overview_columns", "updated_at"])
+        sort_value = (request.POST.get("sort") or "name").strip().lower()
+        query = {"sort": sort_value} if sort_value != "name" else {}
+        target = reverse("trainer_stats")
+        return redirect(f"{target}?{urlencode(query)}" if query else target)
+
+    selected_columns = _clean_stats_overview_columns(preference_settings.stats_overview_columns or [])
+    if not selected_columns:
+        selected_columns = list(STATS_OVERVIEW_DEFAULT_COLUMNS)
+    column_slots = selected_columns + [""] * (4 - len(selected_columns))
     sort_mode = (request.GET.get("sort") or "name").strip().lower()
-    if sort_mode not in {"name", "previous", "this"}:
+    if sort_mode not in {"name", *STATS_OVERVIEW_METRIC_MAP.keys()}:
         sort_mode = "name"
 
     plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
     flex_owner_id = _active_coach_user(request).id
     this_week_start = date.today() - timedelta(days=date.today().weekday())
     previous_week_start = this_week_start - timedelta(days=7)
+    last_four_week_start = this_week_start - timedelta(days=21)
     rows = []
     for athlete in all_athletes:
-        totals = _effective_week_distance_m(
+        history = _athlete_week_distance_history(
             athlete,
             plans,
-            previous_week_start,
-            getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
+            this_week_start,
+            week_count=5,
+            pause_mode=getattr(athlete, "pause_mode", None) or active_coach_settings.pause_mode,
             flex_owner_id=flex_owner_id,
         )
+        previous_four = history[:4]
+        last_four = history[1:]
+        current = history[-1]
+        previous = history[-2]
+        chronic_average = sum(week["km"] for week in previous_four) / 4.0
+        values = {
+            "current_km": current["km"],
+            "previous_km": previous["km"],
+            "current_alt_min": sum(current["alt_zone_minutes"].values()),
+            "previous_alt_min": sum(previous["alt_zone_minutes"].values()),
+            "last_4_weeks_km": sum(week["km"] for week in last_four),
+            "acwr": current["km"] / chronic_average if chronic_average > 0 else None,
+        }
+        for zone in range(1, 7):
+            values[f"last_4_weeks_z{zone}_km"] = sum(
+                week["zone_km"].get(str(zone), 0.0) for week in last_four
+            )
+        display_values = {}
+        for key, value in values.items():
+            unit = STATS_OVERVIEW_METRIC_MAP[key]["unit"]
+            if value is None:
+                display_values[key] = "—"
+            elif unit == "ratio":
+                display_values[key] = f"{value:.2f}"
+            else:
+                display_values[key] = f"{value:.1f} {unit}"
         rows.append({
             "athlete": athlete,
-            "previous_week_m": totals[previous_week_start],
-            "this_week_m": totals[this_week_start],
-            "previous_week_km": f"{totals[previous_week_start] / 1000.0:.1f}",
-            "this_week_km": f"{totals[this_week_start] / 1000.0:.1f}",
+            "values": values,
+            "display_values": display_values,
+            "cells": [
+                {"key": key, "display": display_values.get(key, "")}
+                for key in column_slots
+            ],
         })
-    if sort_mode == "previous":
-        rows.sort(key=lambda row: (-row["previous_week_m"], row["athlete"].name.lower(), row["athlete"].id))
-    elif sort_mode == "this":
-        rows.sort(key=lambda row: (-row["this_week_m"], row["athlete"].name.lower(), row["athlete"].id))
+    if sort_mode in STATS_OVERVIEW_METRIC_MAP:
+        rows.sort(key=lambda row: (
+            row["values"].get(sort_mode) is None,
+            -(row["values"].get(sort_mode) or 0),
+            row["athlete"].name.lower(),
+            row["athlete"].id,
+        ))
     else:
         rows.sort(key=lambda row: (row["athlete"].name.lower(), row["athlete"].id))
 
@@ -12745,10 +12824,12 @@ def trainer_stats_view(request):
         "rows": rows,
         "sort_mode": sort_mode,
         "sort_name_url": stats_sort_url("name"),
-        "sort_previous_url": stats_sort_url("previous"),
-        "sort_this_url": stats_sort_url("this"),
+        "metric_options": STATS_OVERVIEW_METRIC_MAP.values(),
+        "column_slots": column_slots,
+        "selected_columns": [STATS_OVERVIEW_METRIC_MAP[key] for key in selected_columns],
         "previous_week_start": previous_week_start,
         "this_week_start": this_week_start,
+        "last_four_week_start": last_four_week_start,
     })
 
 

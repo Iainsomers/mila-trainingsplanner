@@ -103,6 +103,9 @@ class CoachSettings(models.Model):
     dco_saved_selections = models.JSONField(default=list, blank=True)
     dco_standard_selection_id = models.CharField(max_length=40, blank=True, default="")
 
+    # Stats overview: up to four metric columns, remembered per logged-in coach.
+    stats_overview_columns = models.JSONField(default=list, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

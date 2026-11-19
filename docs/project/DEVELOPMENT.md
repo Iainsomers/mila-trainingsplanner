@@ -1,6 +1,6 @@
 # Ontwikkelen, testen en documenteren
 
-- Stats-navigatie (19 november): trainer_stats_view is alleen GET en leest geen DCO-selecties meer. trainer_stats.html bevat uitsluitend het weekoverzicht; planning.html bevat de Stats-tegel onder de coach-Views. under_dev.html bevat deze niet meer. Regressies: manage.py test core.tests.TrainerStatsTests core.tests_under_dev, plus manage.py check. De echte servertemplates zijn met synthetische accounts gecontroleerd in Chrome op390 en1440px: Stats binnen Views, direct zichtbare resultaten, geen pagina-overflow. Tijdelijke scripts/screenshots in output/stats-validation niet committen. Geen migratie nodig.
+- Stats-overzicht (19 november): `trainer_stats_view` accepteert GET voor weergave en POST uitsluitend voor de eigen `CoachSettings.stats_overview_columns`. De expliciete middleware-uitzondering voor `/planning/stats/` staat dit ook bij view-only coachtoegang toe, omdat er geen gegevens van de actieve coach worden geschreven. DCO-selecties hebben geen invloed. Migratie 0163 voegt de JSON-voorkeur toe. Regressies: `manage.py test core.tests.TrainerStatsTests core.tests_under_dev`, `manage.py check` en `makemigrations --check --dry-run`.
 
 ## mySASY — bijgewerkt 19 november 2026
 

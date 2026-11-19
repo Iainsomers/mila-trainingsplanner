@@ -1,34 +1,79 @@
 {% extends "core/base.html" %}
 {% block title %}Stats{% endblock %}
 {% block content %}
+<style>
+  .stats-overview-table { min-width: 920px; }
+  .stats-metric-select { min-width: 175px; max-width: 230px; margin-left: auto; }
+  .stats-sort-link { display: inline-block; margin-top: .25rem; font-size: .78rem; }
+  @media (max-width: 767.98px) {
+    .stats-overview-table { min-width: 800px; }
+    .stats-metric-select { min-width: 155px; font-size: .82rem; }
+  }
+</style>
 <div class="container py-4">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="mb-0">Stats</h1>
     <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
   </div>
   <div class="card">
+    <form method="post" id="statsColumnsForm">
+      {% csrf_token %}
+      <input type="hidden" name="sort" value="{{ sort_mode }}">
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-hover align-middle mb-0 stats-overview-table">
         <thead class="table-light">
           <tr>
             <th><a href="{{ sort_name_url }}" class="text-decoration-none text-reset">Athlete{% if sort_mode == "name" %} ▲{% endif %}</a></th>
-            <th class="text-end"><a href="{{ sort_previous_url }}" class="text-decoration-none text-reset">Previous week{% if sort_mode == "previous" %} ▼{% endif %}<br><small class="text-muted">from {{ previous_week_start|date:"d M" }}</small></a></th>
-            <th class="text-end"><a href="{{ sort_this_url }}" class="text-decoration-none text-reset">This week{% if sort_mode == "this" %} ▼{% endif %}<br><small class="text-muted">from {{ this_week_start|date:"d M" }}</small></a></th>
+            {% for selected_key in column_slots %}
+            <th class="text-end">
+              <label class="visually-hidden" for="statsColumn{{ forloop.counter }}">Statistic column {{ forloop.counter }}</label>
+              <select class="form-select form-select-sm stats-metric-select" id="statsColumn{{ forloop.counter }}" name="columns" data-stats-column>
+                <option value="">No column</option>
+                {% for option in metric_options %}
+                <option value="{{ option.key }}"{% if option.key == selected_key %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+              </select>
+              {% if selected_key %}
+              <a class="stats-sort-link text-decoration-none text-reset" href="{% url 'trainer_stats' %}?sort={{ selected_key }}">Sort{% if sort_mode == selected_key %} ▼{% endif %}</a>
+              {% endif %}
+            </th>
+            {% endfor %}
           </tr>
         </thead>
         <tbody>
           {% for row in rows %}
           <tr>
             <td><a href="{% url 'trainer_athlete_stats' row.athlete.id %}" class="fw-semibold text-decoration-none">{{ row.athlete.name }}</a></td>
-            <td class="text-end fw-semibold">{{ row.previous_week_km }} km</td>
-            <td class="text-end fw-semibold">{{ row.this_week_km }} km</td>
+            {% for cell in row.cells %}<td class="text-end fw-semibold">{{ cell.display }}</td>{% endfor %}
           </tr>
           {% empty %}
-          <tr><td colspan="3" class="text-center text-muted py-4">No athletes found.</td></tr>
+          <tr><td colspan="5" class="text-center text-muted py-4">No athletes found.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    </form>
   </div>
 </div>
+<script>
+(function () {
+  var form = document.getElementById("statsColumnsForm");
+  var selects = Array.from(form.querySelectorAll("[data-stats-column]"));
+  function updateOptions() {
+    var selected = selects.map(function (select) { return select.value; }).filter(Boolean);
+    selects.forEach(function (select) {
+      Array.from(select.options).forEach(function (option) {
+        option.disabled = Boolean(option.value && option.value !== select.value && selected.indexOf(option.value) !== -1);
+      });
+    });
+  }
+  selects.forEach(function (select) {
+    select.addEventListener("change", function () {
+      updateOptions();
+      form.submit();
+    });
+  });
+  updateOptions();
+})();
+</script>
 {% endblock %}

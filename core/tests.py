@@ -12129,7 +12129,7 @@ class TrainerStatsTests(TestCase):
         self.assertContains(response, "Shared Hidden")
         self.assertEqual(self.client.post("/planning/stats/", {
             "action": "save_dco_selection", "selection_name": "Unwanted selection",
-        }).status_code, 405)
+        }).status_code, 302)
         self.assertEqual(CoachSettings.objects.get(user=trainer).dco_standard_selection_id, "squad-a")
 
     def test_dco_saved_selection_save_as_keeps_existing_selection(self):
@@ -12228,7 +12228,7 @@ class TrainerStatsTests(TestCase):
 
         self.assertNotContains(response, 'id="statsSelectionMode"', html=False)
         self.assertNotContains(response, "under development")
-        self.assertContains(response, "Previous week")
+        self.assertContains(response, "Total km previous week")
         self.assertContains(response, "Landing Athlete")
 
     def test_tile_and_page_are_trainer_only(self):
@@ -12379,12 +12379,77 @@ class TrainerStatsTests(TestCase):
         self.client.force_login(trainer)
 
         by_name = self.client.get("/planning/stats/?ok=1")
-        by_previous = self.client.get("/planning/stats/?ok=1&sort=previous")
-        by_this = self.client.get("/planning/stats/?ok=1&sort=this")
+        by_previous = self.client.get("/planning/stats/?ok=1&sort=previous_km")
+        by_this = self.client.get("/planning/stats/?ok=1&sort=current_km")
 
         self.assertEqual([row["athlete"].name for row in by_name.context["rows"]], ["Alpha", "Bravo"])
         self.assertEqual([row["athlete"].name for row in by_previous.context["rows"]], ["Alpha", "Bravo"])
         self.assertEqual([row["athlete"].name for row in by_this.context["rows"]], ["Bravo", "Alpha"])
+
+    def test_stats_remembers_up_to_four_metric_columns_per_logged_in_trainer(self):
+        owner = get_user_model().objects.create_user(username="statscolumnowner", is_staff=True)
+        viewer = get_user_model().objects.create_user(username="statscolumnviewer", is_staff=True)
+        Athlete.objects.create(owner=owner, name="Column athlete", birth_year=2000, gender="X")
+        CoachAccess.objects.create(owner=owner, grantee=viewer, can_edit=False)
+        self.client.force_login(viewer)
+        session = self.client.session
+        session["active_coach_owner_id"] = owner.id
+        session.save()
+
+        response = self.client.post("/planning/stats/", {
+            "columns": [
+                "current_alt_min", "last_4_weeks_z2_km", "acwr", "current_alt_min",
+                "previous_km",
+            ],
+        })
+
+        self.assertRedirects(response, "/planning/stats/")
+        self.assertEqual(
+            CoachSettings.objects.get(user=viewer).stats_overview_columns,
+            ["current_alt_min", "last_4_weeks_z2_km", "acwr", "previous_km"],
+        )
+        self.assertEqual(CoachSettings.objects.get(user=owner).stats_overview_columns, [])
+        page = self.client.get("/planning/stats/")
+        self.assertEqual(page.context["column_slots"], [
+            "current_alt_min", "last_4_weeks_z2_km", "acwr", "previous_km",
+        ])
+
+    def test_stats_overview_metrics_include_alt_zones_four_weeks_and_detail_acwr_definition(self):
+        trainer = get_user_model().objects.create_user(username="statsmetriccoach", is_staff=True)
+        athlete = Athlete.objects.create(owner=trainer, name="Metric athlete", birth_year=2000, gender="X")
+        current_week = date.today() - timedelta(days=date.today().weekday())
+        plan = TrainingPlan.objects.create(
+            owner=trainer,
+            name="Metric plan",
+            start_date=current_week - timedelta(weeks=4),
+            end_date=current_week + timedelta(days=6),
+        )
+        PlanMembership.objects.create(plan=plan, athlete=athlete)
+        for weeks_ago, km in enumerate((50, 40, 30, 20, 10)):
+            day = current_week - timedelta(weeks=4 - weeks_ago)
+            slot = TrainingSlot.objects.create(plan=plan, date=day, slot_index=1)
+            TrainingSegment.objects.create(
+                slot=slot, type="CORE", text=f"{km}km z2", zone="2",
+                distance_m=km * 1000, norm_distance_m=km * 1000,
+            )
+            TrainingSegment.objects.create(
+                slot=slot, type="ALT", text=f"{weeks_ago + 1} min bike z1", zone="1",
+                duration_s=(weeks_ago + 1) * 60,
+            )
+        CoachSettings.objects.create(
+            user=trainer,
+            stats_overview_columns=["current_alt_min", "last_4_weeks_km", "last_4_weeks_z2_km", "acwr"],
+        )
+        self.client.force_login(trainer)
+
+        response = self.client.get("/planning/stats/")
+        values = response.context["rows"][0]["values"]
+
+        self.assertEqual(values["current_alt_min"], 5)
+        self.assertEqual(values["last_4_weeks_km"], 100)
+        self.assertEqual(values["last_4_weeks_z2_km"], 100)
+        self.assertAlmostEqual(values["acwr"], 10 / 35)
+        self.assertContains(response, "0.29")
 
 
 class HomeScreenIconTests(TestCase):

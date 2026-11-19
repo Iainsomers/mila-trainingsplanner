@@ -1,5 +1,7 @@
 # Actuele status
 
+- 19 november — Stats-atletenoverzicht heeft nu vier per trainer onthouden meetkolomselectors. Beschikbaar: huidige/vorige week km, huidige/vorige week ALT-minuten, totaal en Z1–Z6 km over de laatste vier weken, en total ACWR volgens dezelfde huidige-week/vier-voorwekenberekening als de detailgrafiek. De standaard blijft huidige/vorige week km; lege posities en aflopend sorteren worden ondersteund. Voorkeuren van gedeelde trainers blijven van elkaar gescheiden. Migratie 0163. Validatie: 34 gerichte tests, `manage.py check` en migratiecheck geslaagd.
+
 Laatste functionele wijziging: `0d77b75` (19 november), gepusht naar `main`: Stats onder coach-Views, direct weekoverzicht zonder atleetselectiestap of ontwikkellabel. 32 gerichte tests, Django-check en mobiele/desktopcontrole geslaagd; geen migratie. Navigatie, rechten en selectiegedrag zijn bijgewerkt in FEATURES, UI_RULES, USER_ROLES en DEVELOPMENT. De actuele korte overdracht staat bovenaan START_HERE. Push is bevestigd; Render-uitrol nog niet onafhankelijk gecontroleerd.
 
 - 19 november — Stats verplaatst van Under Dev naar Views op de coachhoofdpagina. Direct alle toegankelijke atleten van de actieve coach; selectiestap en selectie-opslag in Stats verwijderd. Oude selectieparameters hebben geen filtereffect. DCO-selecties blijven behouden voor DCO. Sortering en individuele grafiek blijven beschikbaar. Geen migratie of wijziging van de afstandsberekeningen. Gerichte tests: TrainerStatsTests en tests_under_dev; visueel gecontroleerd op390/1440px.

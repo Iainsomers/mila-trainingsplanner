@@ -82,7 +82,9 @@ class CoachViewEditAccessMiddleware:
 
     SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
     ALLOWED_PREFIXES = ("/admin/",)
-    ALLOWED_PATHS = {"/", "/logout/"}
+    # Stats POST only changes the logged-in coach's own display preference,
+    # never data belonging to the coach currently being viewed.
+    ALLOWED_PATHS = {"/", "/logout/", "/planning/stats/"}
 
     def __init__(self, get_response):
         self.get_response = get_response
