@@ -162,7 +162,6 @@
             <select name="selection" id="dailySelectionMode" class="form-select">
               <option value="all" {% if selection_mode == "all" %}selected{% endif %}>All</option>
               <option value="selection" {% if selection_mode == "selection" %}selected{% endif %}>Selection</option>
-              <option value="trains" {% if selection_mode == "trains" %}selected{% endif %}>Trains</option>
               <option value="planned_training" {% if selection_mode == "planned_training" %}selected{% endif %}>Planned training</option>
             </select>
           </div>
@@ -235,44 +234,6 @@
       <div id="dcoSelectionSaveAthletes"></div>
     </form>
 
-    <div class="card daily-selection-panel mb-3">
-      <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between gap-2">
-          <strong>Select trains</strong>
-          <button type="button" id="dcoTrainToggle" class="btn btn-outline-primary btn-sm">Select</button>
-        </div>
-
-        <form method="post" id="dcoTrainForm" class="mt-3 d-none">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="save_dco_trains">
-          <input type="hidden" name="date" id="dcoTrainDate" value="{{ date_value }}">
-          <input type="hidden" name="slots" id="dcoTrainSlots" value="{{ slot_filter }}">
-          <input type="hidden" name="selection" id="dcoTrainSelection" value="{{ selection_mode }}">
-          <div id="dcoTrainSelectedAthletes"></div>
-
-          <div class="daily-athlete-list">
-            {% for athlete in all_athletes %}
-              <label class="form-check mb-0">
-                <input
-                  type="checkbox"
-                  class="form-check-input"
-                  name="train_athletes"
-                  value="{{ athlete.id }}"
-                  {% if athlete.id in dco_train_athlete_ids %}checked{% endif %}
-                >
-                <span class="form-check-label">{{ athlete.name }}</span>
-              </label>
-            {% empty %}
-              <span class="text-muted">No athletes found.</span>
-            {% endfor %}
-          </div>
-
-          <div class="mt-3">
-            <button type="submit" class="btn btn-primary btn-sm">OK</button>
-          </div>
-        </form>
-      </div>
-    </div>
   {% endif %}
 
   {% if show_results %}
@@ -383,8 +344,6 @@ applyFlexProgressivePillColors();
   const mode = document.getElementById("dailySelectionMode");
   const athleteSelection = document.getElementById("dailyAthleteSelection");
   const selectionForm = document.getElementById("dailySelectionForm");
-  const trainToggle = document.getElementById("dcoTrainToggle");
-  const trainForm = document.getElementById("dcoTrainForm");
   const savedSelection = document.getElementById("dailySavedSelection");
   const selectionNameInput = document.getElementById("dcoSelectionNameInput");
   const standardSelectionInput = document.getElementById("dcoStandardSelectionInput");
@@ -441,36 +400,6 @@ applyFlexProgressivePillColors();
         });
       }
       selectionSaveForm.submit();
-    });
-  }
-
-  if (trainToggle && trainForm) {
-    trainToggle.addEventListener("click", function() {
-      trainForm.classList.toggle("d-none");
-    });
-  }
-
-  if (selectionForm && trainForm) {
-    trainForm.addEventListener("submit", function() {
-      const dateInput = selectionForm.querySelector("input[name='date']");
-      const slotInput = selectionForm.querySelector("input[name='slots']:checked");
-      const selectionInput = selectionForm.querySelector("select[name='selection']");
-      const selectedBox = document.getElementById("dcoTrainSelectedAthletes");
-
-      document.getElementById("dcoTrainDate").value = dateInput ? dateInput.value : "";
-      document.getElementById("dcoTrainSlots").value = slotInput ? slotInput.value : "both";
-      document.getElementById("dcoTrainSelection").value = selectionInput ? selectionInput.value : "all";
-
-      if (selectedBox) {
-        selectedBox.innerHTML = "";
-        selectionForm.querySelectorAll("input[name='athletes']:checked").forEach(function(input) {
-          const hidden = document.createElement("input");
-          hidden.type = "hidden";
-          hidden.name = "athletes";
-          hidden.value = input.value;
-          selectedBox.appendChild(hidden);
-        });
-      }
     });
   }
 })();

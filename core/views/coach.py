@@ -13171,11 +13171,6 @@ def daily_overview_view(request):
     all_athlete_ids = {athlete.id for athlete in all_athletes}
     # Keep quick selections scoped to the trainer currently being viewed.
     coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
-    dco_train_athlete_ids = {
-        int(value)
-        for value in (coach_settings.dco_train_athlete_ids or [])
-        if str(value).isdigit() and int(value) in all_athlete_ids
-    }
     dco_saved_selections = []
     for item in coach_settings.dco_saved_selections or []:
         if not isinstance(item, dict):
@@ -13199,34 +13194,11 @@ def daily_overview_view(request):
 
     requested_selection_mode = (request.GET.get("selection") or "").strip().lower()
     selection_mode = requested_selection_mode or ("selection" if standard_selection else "all")
-    if selection_mode not in {"all", "selection", "trains", "planned_training"}:
+    if selection_mode not in {"all", "selection", "planned_training"}:
         selection_mode = "all"
     selected_saved_selection_id = (request.GET.get("saved_selection") or "").strip()
     if not selected_saved_selection_id and not requested_selection_mode and standard_selection:
         selected_saved_selection_id = standard_selection["id"]
-
-    if request.method == "POST" and request.POST.get("action") == "save_dco_trains":
-        new_train_ids = [
-            int(value)
-            for value in request.POST.getlist("train_athletes")
-            if str(value).isdigit() and int(value) in all_athlete_ids
-        ]
-        coach_settings.dco_train_athlete_ids = new_train_ids
-        coach_settings.save(update_fields=["dco_train_athlete_ids", "updated_at"])
-
-        redirect_query = {
-            "date": request.POST.get("date") or date_value,
-            "slots": request.POST.get("slots") or slot_filter,
-            "selection": request.POST.get("selection") or selection_mode,
-        }
-        posted_selected = [
-            value
-            for value in request.POST.getlist("athletes")
-            if str(value).isdigit() and int(value) in all_athlete_ids
-        ]
-        if redirect_query["selection"] == "selection":
-            redirect_query["athletes"] = posted_selected
-        return redirect(f"{reverse('daily_overview')}?{urlencode(redirect_query, doseq=True)}")
 
     if request.method == "POST" and request.POST.get("action") == "save_dco_selection":
         selected_ids = [
@@ -13301,12 +13273,6 @@ def daily_overview_view(request):
 
     if selection_mode == "selection":
         athletes = [athlete for athlete in all_athletes if athlete.id in selected_athlete_ids]
-    elif selection_mode == "trains":
-        athletes = [athlete for athlete in all_athletes if athlete.id in dco_train_athlete_ids]
-        selected_athlete_ids = set(dco_train_athlete_ids)
-    elif selection_mode == "planned_training":
-        athletes = all_athletes
-        selected_athlete_ids = {athlete.id for athlete in athletes}
     else:
         athletes = all_athletes
         selected_athlete_ids = {athlete.id for athlete in athletes}
@@ -13518,7 +13484,6 @@ def daily_overview_view(request):
         "selection_mode": selection_mode,
         "all_athletes": all_athletes,
         "selected_athlete_ids": selected_athlete_ids,
-        "dco_train_athlete_ids": dco_train_athlete_ids,
         "dco_saved_selections": dco_saved_selections,
         "selected_saved_selection_id": selected_saved_selection_id,
         "show_results": show_results,

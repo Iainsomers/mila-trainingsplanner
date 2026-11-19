@@ -5887,6 +5887,14 @@ class SlotModalSaveTests(TestCase):
         )
 
         self.assertNotContains(selection, "onclick=\"window.print()\"")
+        self.assertNotContains(selection, "Select trains")
+        self.assertNotContains(selection, 'value="trains"')
+        self.assertContains(selection, 'value="planned_training"')
+
+        legacy = self.client.get("/coach/daily-overview/?selection=trains&ok=1")
+        self.assertEqual(legacy.context["selection_mode"], "all")
+        self.assertContains(legacy, "DCO Print Athlete")
+
         self.assertContains(result, "Print")
         self.assertContains(result, "DCO Print Athlete")
         self.assertContains(result, "daily-print-grid")
