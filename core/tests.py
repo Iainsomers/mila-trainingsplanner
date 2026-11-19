@@ -11989,8 +11989,8 @@ class TrainerStatsTests(TestCase):
         self.assertContains(detail, "Weekly totals and ACWR")
         self.assertContains(detail, "ACWR is the current week divided by the average of the four preceding weeks")
         self.assertEqual(len(detail.context["weeks"]), 26)
-        self.assertEqual(detail.context["weeks"][0]["km_label"], "5.0")
-        self.assertEqual(detail.context["weeks"][-1]["km_label"], "12.0")
+        self.assertEqual(detail.context["weeks"][0]["km_label"], "5")
+        self.assertEqual(detail.context["weeks"][-1]["km_label"], "12")
 
     def test_acwr_uses_current_week_over_previous_four_week_average(self):
         trainer = get_user_model().objects.create_user(username="acwrcoach", is_staff=True)
@@ -12072,9 +12072,9 @@ class TrainerStatsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["selected_months"], 1)
         self.assertEqual(len(response.context["weeks"]), 4)
-        self.assertEqual(response.context["average_km"], "3.8")
-        self.assertEqual(response.context["minimum_km"], "0.0")
-        self.assertEqual(response.context["maximum_km"], "15.0")
+        self.assertEqual(response.context["average_km"], "4")
+        self.assertEqual(response.context["minimum_km"], "0")
+        self.assertEqual(response.context["maximum_km"], "15")
         self.assertContains(response, "Weekly average")
         self.assertContains(response, "Highest week")
         self.assertContains(response, "Lowest week")
@@ -12315,8 +12315,8 @@ class TrainerStatsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Distance Athlete")
-        self.assertContains(response, "5.0 km")
-        self.assertContains(response, "10.0 km")
+        self.assertContains(response, "5 km")
+        self.assertContains(response, "10 km")
 
     def test_page_includes_trainer_plan_selected_via_base_planning(self):
         trainer = get_user_model().objects.create_user(
@@ -12370,7 +12370,7 @@ class TrainerStatsTests(TestCase):
         response = self.client.get("/planning/stats/?ok=1")
 
         self.assertContains(response, "Base Stats Athlete")
-        self.assertContains(response, "7.0 km")
+        self.assertContains(response, "7 km")
 
     def test_stats_columns_sort_name_ascending_and_distances_descending(self):
         trainer = get_user_model().objects.create_user(username="statssort", password="secret", is_staff=True)

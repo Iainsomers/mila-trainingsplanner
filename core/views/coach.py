@@ -12802,6 +12802,8 @@ def trainer_stats_view(request):
                 display_values[key] = "—"
             elif unit == "ratio":
                 display_values[key] = f"{value:.2f}"
+            elif unit == "km":
+                display_values[key] = f"{value:.0f} {unit}"
             else:
                 display_values[key] = f"{value:.1f} {unit}"
         rows.append({
@@ -12960,7 +12962,7 @@ def trainer_athlete_stats_view(request, athlete_id):
     column_width = plot_width / len(weeks)
     for index, week in enumerate(weeks):
         week.update({
-            "km_label": f'{week["km"]:.1f}',
+            "km_label": f'{week["km"]:.0f}',
             "show_label": index % 4 == 0 or index == len(weeks) - 1,
             "label_x": plot_left + (index * column_width) + (column_width / 2),
         })
@@ -13115,10 +13117,10 @@ def trainer_athlete_stats_view(request, athlete_id):
         "acwr_low_band_height": plot_top + plot_height - acwr_low_y,
         "period_start": weeks[0]["week_start"],
         "period_end": weeks[-1]["week_start"] + timedelta(days=6),
-        "average_km": f"{average_km:.1f}",
-        "minimum_km": f'{minimum_week["km"]:.1f}',
+        "average_km": f"{average_km:.0f}",
+        "minimum_km": f'{minimum_week["km"]:.0f}',
         "minimum_week_start": minimum_week["week_start"],
-        "maximum_km": f'{maximum_week["km"]:.1f}',
+        "maximum_km": f'{maximum_week["km"]:.0f}',
         "maximum_week_start": maximum_week["week_start"],
           "stats_diagnostics": stats_diagnostics,
           "stats_personal_slot_inventory": stats_personal_slot_inventory,

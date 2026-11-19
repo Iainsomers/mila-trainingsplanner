@@ -99,7 +99,7 @@
           {% endfor %}
           {% for series in km_series %}
             <g data-stats-series="{{ series.id }}" data-km-kind="{{ series.kind }}"{% if not series.checked %} style="display:none"{% endif %}>
-              {% for bar in series.bars %}<rect class="stats-km-bar" data-km-bar data-week="{{ forloop.counter0 }}" data-week-label="{{ bar.week_start|date:'d M Y' }}" data-km-label="{{ series.label }}" data-km-value="{{ bar.value }}" data-center="{{ bar.x }}" data-max-width="{{ bar.max_width }}" data-height="{{ bar.height }}" data-base-y="{{ plot_bottom_y }}" x="{{ bar.x }}" y="{{ bar.y }}" width="0" height="{{ bar.height }}" fill="{{ series.color }}"><title>{{ bar.week_start|date:"d M Y" }} · {{ series.label }}: {{ bar.value }} km</title></rect>{% endfor %}
+              {% for bar in series.bars %}<rect class="stats-km-bar" data-km-bar data-week="{{ forloop.counter0 }}" data-week-label="{{ bar.week_start|date:'d M Y' }}" data-km-label="{{ series.label }}" data-km-value="{{ bar.value }}" data-center="{{ bar.x }}" data-max-width="{{ bar.max_width }}" data-height="{{ bar.height }}" data-base-y="{{ plot_bottom_y }}" x="{{ bar.x }}" y="{{ bar.y }}" width="0" height="{{ bar.height }}" fill="{{ series.color }}"><title>{{ bar.week_start|date:"d M Y" }} · {{ series.label }}: {{ bar.value|floatformat:"0u" }} km</title></rect>{% endfor %}
             </g>
           {% endfor %}
           {% for series in alt_series %}
@@ -330,13 +330,13 @@
           return {label: bar.dataset.kmLabel, value: Number(bar.dataset.kmValue)};
         });
         var selectedTotal = zoneRows.reduce(function(total, row) { return total + row.value; }, 0);
-        lines.push("Selected zones total: " + selectedTotal.toFixed(1) + " km");
+        lines.push("Selected zones total: " + selectedTotal.toFixed(0) + " km");
         zoneRows.forEach(function(row) {
-          lines.push(row.label + ": " + row.value.toFixed(1) + " km");
+          lines.push(row.label + ": " + row.value.toFixed(0) + " km");
         });
       } else if (totalGroup) {
         var totalBar = totalGroup.querySelector('[data-km-bar][data-week="' + week + '"]');
-        lines.push("Total km: " + Number(totalBar.dataset.kmValue).toFixed(1) + " km");
+        lines.push("Total km: " + Number(totalBar.dataset.kmValue).toFixed(0) + " km");
       }
       visibleKmGroups.forEach(function(group) {
         var bar = group.querySelector('[data-km-bar][data-week="' + week + '"]');
