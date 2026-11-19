@@ -1,5 +1,7 @@
 # Gebruikersrollen en toegang
 
+- De mySASY-diagnostiek is uitsluitend zichtbaar voor coaches met toegang tot de betreffende atleet en diens vitals. GET leest de gecachte, ontdane API-respons. Expliciet ophalen gebruikt POST met CSRF en volgt de bestaande blokkade voor een actieve view-only coachweergave. Atleten krijgen het testvak en de diagnostische JSON niet, ook niet via de directe coachroute. Ontkoppelen, uitschakelen of opnieuw koppelen verwijdert de vorige testgegevens.
+
 - mySASY: alleen een eigen ingelogd atleetaccount met expliciete coachtoestemming kan verbinden, bevestigen, verversen en ontkoppelen. Een meegestuurde atleet-ID wordt nooit gebruikt. Coaches zien uitsluitend de opgeslagen metingen van atleten in hun actieve toegankelijke coachweergave; de bestaande vitals-deelmatrix blijft gelden. Ook een coach met bewerkrecht kan geen extern account voor een atleet koppelen. Uitschakelen door de coach verwijdert verbinding, metingen en lopende koppelpogingen; de atleet kan de coachschakelaar niet zelf aanzetten.
 
 - COROS coachtoestemming plus de eigen accountkoppeling activeert ook de automatische FIT-import; uitschakelen of ontkoppelen stopt verdere import. De coach ziet bij Connections de importstatus van toegankelijke atleten, zonder tokens of downloadlinks.

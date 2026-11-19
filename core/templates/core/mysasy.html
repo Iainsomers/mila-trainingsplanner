@@ -54,6 +54,15 @@
     </div>
     <p class="small text-muted">Times and values are displayed as provided by mySASY. Consumption: sympathetic activity. Replenishment: parasympathetic activity.</p>
   {% endif %}
+  {% if read_only and connection %}
+    <section class="card card-body mt-3">
+      <h2 class="h5">API test data · coach only</h2>
+      <p class="small">Inspect all fields returned by mySASY for measurements in the last 30 days, including fields not yet shown above. Credentials are removed. This test does not fill daily vitals.</p>
+      {% if can_test %}<form method="post" class="mb-2">{% csrf_token %}<button class="btn btn-outline-primary">Fetch API test data</button></form>{% else %}<p class="small text-muted">View-only access: you can inspect the saved test response.</p>{% endif %}
+      {% if connection.diagnostic_checked_at %}<p class="small text-muted">Last test attempt: {{ connection.diagnostic_checked_at|date:'d M Y H:i' }}. A new request is available every 10 minutes.</p>{% endif %}
+      {% if diagnostic_json != None %}<label for="mysasy-test-data" class="form-label small">Last successful response · /measurements</label><textarea id="mysasy-test-data" class="form-control font-monospace small" rows="14" readonly spellcheck="false" wrap="off" style="width:100%;min-width:0;">{{ diagnostic_json }}</textarea>{% else %}<p class="small text-muted mb-0">No API test data fetched yet.</p>{% endif %}
+    </section>
+  {% endif %}
   <img src="{% static 'core/mysasy/powered-by.png' %}" alt="Powered by mySASY" class="mt-3" style="width:180px;max-width:100%;height:auto">
 </div>
 {% endblock %}

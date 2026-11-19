@@ -1,5 +1,6 @@
 """Individual consent and a clean-URL confirmation for mySASY's stateless redirect."""
 from datetime import timedelta
+import json
 from uuid import UUID
 
 from django.conf import settings
@@ -12,13 +13,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_variables
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from core.models import Athlete, MySasyConnection, MySasyLinkAttempt
-from core.mysasy import MySasyError, configured, measurements
+from core.mysasy import MySasyError, configured, measurements, diagnostic_response
 from core.views.oura import _athlete_user
 from core.views.athlete_identity import _is_ayc_coach_user
-from core.views.common import _filter_owned
+from core.views.common import _filter_owned, _active_coach_can_edit
 from core.access import evaluation_visibility_for_request
 
 PENDING = "mysasy_link_attempt"
@@ -157,6 +158,7 @@ def mysasy_finish(request):
                 "auth_token": attempt.auth_token, "consented_by": request.user,
                 "consented_at": timezone.now(), "last_checked_at": timezone.now(),
                 "measurements": attempt.measurements["rows"],
+                "diagnostic_payload": None, "diagnostic_checked_at": None,
             })
             messages.success(request, "Your mySASY account is connected.")
         attempt.delete()
@@ -207,7 +209,7 @@ def mysasy_disconnect(request):
 
 @login_required
 @never_cache
-@require_GET
+@require_http_methods(["GET", "POST"])
 def mysasy_coach_view(request, athlete_id):
     if not (request.user.is_staff or request.user.is_superuser or _is_ayc_coach_user(request.user)):
         return HttpResponseForbidden()
@@ -215,8 +217,30 @@ def mysasy_coach_view(request, athlete_id):
     if not athlete.mysasy_connection_enabled or not evaluation_visibility_for_request(request, athlete.owner)["vitals"]:
         return HttpResponseForbidden()
     connection = MySasyConnection.objects.filter(athlete=athlete).first()
+    if request.method == "POST":
+        if not _active_coach_can_edit(request):
+            return HttpResponseForbidden()
+        with transaction.atomic():
+            connection = MySasyConnection.objects.select_for_update().filter(athlete=athlete).first()
+            if not connection:
+                messages.info(request, "Connect the athlete's mySASY account first.")
+            elif connection.diagnostic_checked_at and connection.diagnostic_checked_at > timezone.now() - timedelta(minutes=10):
+                messages.info(request, "The latest API test is shown below. A new request is available every 10 minutes.")
+            else:
+                connection.diagnostic_checked_at = timezone.now()
+                connection.save(update_fields=["diagnostic_checked_at"])
+                try:
+                    connection.diagnostic_payload = diagnostic_response(connection.auth_token)
+                    connection.save(update_fields=["diagnostic_payload"])
+                    messages.success(request, "API test data received.")
+                except MySasyError as error:
+                    messages.error(request, str(error))
+        return redirect("mysasy_coach", athlete_id=athlete.pk)
     return render(request, "core/mysasy.html", {
         "connection": connection, "rows": connection.measurements if connection else [],
         "read_only": True, "athlete_name": athlete.name,
+        "can_test": _active_coach_can_edit(request),
         "back_url": reverse("coach_athlete_edit", args=[athlete.pk]),
+        "diagnostic_json": json.dumps(connection.diagnostic_payload, indent=2, ensure_ascii=False)
+            if connection and connection.diagnostic_payload is not None else None,
     })

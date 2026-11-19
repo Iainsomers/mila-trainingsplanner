@@ -1687,6 +1687,8 @@ class MySasyConnection(models.Model):
     consented_at = models.DateTimeField()
     measurements = models.JSONField(default=list)
     last_checked_at = models.DateTimeField()
+    diagnostic_payload = models.JSONField(null=True, blank=True)
+    diagnostic_checked_at = models.DateTimeField(null=True, blank=True)
 
 
 class MySasyLinkAttempt(models.Model):

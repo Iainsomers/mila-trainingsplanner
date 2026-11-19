@@ -189,6 +189,71 @@ class MySasyTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 403)
         CoachEvaluationSharing.objects.create(owner=self.coach, grantee=other, vitals=True)
         self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(self.client.post(url).status_code, 403)
+
+    @patch("core.mysasy.requests.get")
+    def test_coach_test_preserves_unknown_fields_and_redacts_credentials(self, get):
+        payload = [dict(ROWS[0], sleepDuration=7.5, sleepQuality=82,
+            additional={"nightHR": 42, "HRV": 67, "access_token": "never-show", "password": "private"},
+            echo="saved-token test-client-secret", note="</textarea><script>bad()</script>")]
+        response = Mock(status_code=200)
+        response.iter_content.return_value = [json.dumps(payload).encode()]
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        get.return_value = response
+        connection = self.connection()
+        self.client.force_login(self.coach)
+        url = f"/coach/athletes/{self.athlete.pk}/mysasy/"
+        page = self.client.post(url, follow=True)
+        self.assertContains(page, "sleepDuration")
+        self.assertContains(page, "nightHR")
+        self.assertContains(page, "[redacted]")
+        for secret in ("never-show", "saved-token", "test-client-secret", "<script>bad()</script>"):
+            self.assertNotContains(page, secret)
+        connection.refresh_from_db()
+        self.assertEqual(connection.diagnostic_payload[0]["sleepQuality"], 82)
+        self.assertEqual(connection.diagnostic_payload[0]["additional"]["access_token"], "[redacted]")
+        self.assertEqual(connection.measurements, ROWS)
+        self.client.post(url)
+        self.client.get(url)
+        get.assert_called_once()
+        self.client.force_login(self.user)
+        own_page = self.client.get(BASE)
+        self.assertNotContains(own_page, "API test data")
+        self.assertNotContains(own_page, "sleepDuration")
+        self.assertEqual(self.client.post(url).status_code, 403)
+
+    @patch("core.views.mysasy.diagnostic_response", side_effect=MySasyError("Unavailable"))
+    def test_failed_test_preserves_previous_data_and_cools_down(self, api):
+        connection = self.connection()
+        connection.diagnostic_payload = []
+        connection.save()
+        self.client.force_login(self.coach)
+        url = f"/coach/athletes/{self.athlete.pk}/mysasy/"
+        self.assertContains(self.client.post(url, follow=True), "Unavailable")
+        self.client.post(url)
+        api.assert_called_once()
+        connection.refresh_from_db()
+        self.assertEqual(connection.diagnostic_payload, [])
+        self.assertIsNotNone(connection.diagnostic_checked_at)
+
+    @patch("core.views.mysasy.diagnostic_response")
+    def test_test_action_checks_scope_privacy_csrf_and_connection(self, api):
+        self.connection()
+        url = f"/coach/athletes/{self.athlete.pk}/mysasy/"
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.coach)
+        self.assertEqual(csrf_client.post(url).status_code, 403)
+        outsider = get_user_model().objects.create_user(username="outsider-test", is_staff=True)
+        self.client.force_login(outsider)
+        self.assertEqual(self.client.post(url).status_code, 404)
+        self.client.force_login(self.coach)
+        Athlete.objects.filter(pk=self.athlete.pk).update(mysasy_connection_enabled=False)
+        self.assertEqual(self.client.post(url).status_code, 403)
+        Athlete.objects.filter(pk=self.athlete.pk).update(mysasy_connection_enabled=True)
+        MySasyConnection.objects.all().delete()
+        self.assertEqual(self.client.post(url).status_code, 302)
+        api.assert_not_called()
 
     @patch("core.views.mysasy.measurements", return_value=ROWS)
     def test_refresh_cooldown_and_disconnect(self, api):

@@ -21,7 +21,8 @@ def configured():
     return bool(settings.MYSASY_CLIENT_SECRET and str(settings.MYSASY_APPLICATION_ID).isdigit())
 
 
-def measurements(token):
+def measurement_response(token):
+    """Return the complete measurements response, including undocumented fields."""
     if not configured():
         raise MySasyError("mySASY is not configured yet.")
     month = timezone.now().strftime("%Y-%m")
@@ -50,6 +51,44 @@ def measurements(token):
             data = json.loads(b"".join(chunks))
         if not isinstance(data, list) or len(data) > 1000:
             raise ValueError()
+        return data
+    except (requests.RequestException, ValueError, TypeError, OverflowError):
+        raise MySasyError("mySASY could not retrieve the measurements. Please try again later.") from None
+
+
+def diagnostic_response(token):
+    """Preserve fields for coach inspection while removing credential values."""
+    data = measurement_response(token)
+    secrets = [value for value in (token, settings.MYSASY_CLIENT_SECRET) if value]
+
+    def clean(value, depth=0):
+        if depth > 20:
+            return "[nested data omitted]"
+        if isinstance(value, dict):
+            result = {}
+            for key, item in value.items():
+                normalized = "".join(c for c in key.lower() if c.isalnum())
+                name = clean(key, depth + 1)
+                result[name] = "[redacted]" if any(part in normalized for part in (
+                    "token", "secret", "password", "authorization", "cookie", "apikey"
+                )) or normalized in {"auth", "credential", "credentials"} else clean(item, depth + 1)
+            return result
+        if isinstance(value, list):
+            return [clean(item, depth + 1) for item in value]
+        if isinstance(value, str):
+            for secret in secrets:
+                value = value.replace(secret, "[redacted]")
+            return value
+        if isinstance(value, float) and not math.isfinite(value):
+            return None
+        return value
+
+    return clean(data)
+
+
+def measurements(token):
+    data = measurement_response(token)
+    try:
         rows = []
         for item in data:
             if not isinstance(item, dict):
