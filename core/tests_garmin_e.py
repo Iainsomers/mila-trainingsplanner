@@ -36,6 +36,40 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_explicit_alternative_duration_zones_override_summary_without_changing_laps(self):
+        athlete = SimpleNamespace(zone_hr_bpm={"1":"145","2":"146-160"}, alternative_hr_correction=10)
+        durations = [600, 45, 30, 45, 30, 45, 300]
+        part = {
+            "training_fields": {"alt": "Elliptical 18' Z1"},
+            "alternative_label": "Elliptical",
+            "alternative_laps": [
+                {"seconds": seconds, "average_hr": 110, "end_hr": 110}
+                for seconds in durations
+            ],
+        }
+        proposal = {
+            "warmup_laps": [1], "cooldown_laps": [7], "recovery_laps": [3, 5],
+            "ignored_laps": [],
+            "reps": [{"laps": [lap], "target_seconds": 45} for lap in (2, 4, 6)],
+            "format": "compact",
+            "presentation": {"warmup_seconds": 600, "cooldown_seconds": 300,
+                             "work_zone": "1", "recovery_zone": "2"},
+        }
+        proposal, changed = apply_explicit_zone_labels(proposal, '45"=z1 en 30 seconden: z2')
+        self.assertTrue(changed)
+        self.assertEqual(proposal["explicit_duration_zones"], {"45": "1", "30": "2"})
+        self.assertEqual(proposal["warmup_laps"], [1])
+        checked = checked_proposal(part, proposal, athlete=athlete, zone_basis="hr")
+        self.assertEqual(
+            checked["training_fields"]["alt"],
+            "Elliptical 10' Z1 // Elliptical 2×(45s Z1 - 30s Z2) // "
+            "Elliptical 45s Z1 // Elliptical 5' Z1",
+        )
+        measured = [lap for load in checked["watch_loads"] for lap in load["alt_laps"]]
+        self.assertEqual(len(measured), 7)
+        self.assertEqual(sum(lap["seconds"] for lap in measured), sum(durations))
+        self.assertEqual(measured[1]["zone_source"], "user")
+        self.assertEqual(measured[2]["zone"], "2")
 
     def test_progressive_work_and_high_zone_recovery_remain_one_rep_series(self):
         loads = [{"segment":"CORE", "meters":1200, "seconds":360, "zone":"1"}]

@@ -75,6 +75,10 @@ are recovery. Never infer unrecorded recovery duration. Your prose is not the us
 only a complete, checked lap assignment can update the preview. Do not output model-generated
 pace, HR, totals, training text or URLs; the server calculates those from measurements.
 Only the validated Alternative presentation schema below can request a supported summary zone.
+For Alternative, an explicit user correction such as `45s Z1 and 30s Z2` labels every matching
+measured-duration block in that chronological pattern. It does not by itself decide which laps
+are work or recovery and never permits reordering. Return the complete assignment matching the
+stated lap order; the server separately validates every source lap and duration.
 Users can say 'kijk naar snelheid ipv hr' or vice versa: set zone_basis accordingly and explain
 the choice. Preserve the current basis unless asked to change it. auto uses end HR for reps
 at least 400m OR 50s and pace for shorter reps. pace always uses speed, hr requests measured
@@ -136,7 +140,7 @@ def ask_model(facts, history, current=None, validation_error=None, *, timeout=20
 
 
 def apply_explicit_zone_labels(proposal, message):
-    """Attach only literal user-stated distance-group zone ranges to a proposal."""
+    """Attach literal user-stated lap, duration or distance zone labels to a proposal."""
     if not isinstance(proposal, dict) or not isinstance(message, str):
         return proposal, False
     lap_zone = re.search(r"\blap\s*(\d+)\b.{0,30}?\bz\s*([1-6])\b", message, re.I)
@@ -145,6 +149,23 @@ def apply_explicit_zone_labels(proposal, message):
         overrides = dict(updated.get("explicit_lap_zones") or {})
         overrides[lap_zone[1]] = lap_zone[2]
         updated["explicit_lap_zones"] = overrides
+        return updated, True
+    duration_pattern = re.compile(
+        r"(\d+(?:[.,]\d+)?)\s*(\"|″|s(?:ec(?:onden?)?)?|['′]|min(?:u(?:ut|ten)?)?)"
+        r"\s*(?:=|is|:)?\s*z\s*([1-6])\b", re.I,
+    )
+    duration_zones = {}
+    for duration, unit, zone in duration_pattern.findall(message):
+        seconds = float(duration.replace(",", "."))
+        if unit.lower().startswith("min") or unit in {"'", "′"}:
+            seconds *= 60
+        if 1 <= seconds <= 86400:
+            duration_zones[str(round(seconds))] = zone
+    if duration_zones:
+        updated = deepcopy(proposal)
+        existing = dict(updated.get("explicit_duration_zones") or {})
+        existing.update(duration_zones)
+        updated["explicit_duration_zones"] = existing
         return updated, True
     # Explicit boundary corrections are user input, not inferred HR facts.
     boundary = re.search(r"(?:eerste|1e|wu|warm[ -]?up).*?\bz\s*([1-6])\b", message, re.I)
@@ -677,6 +698,11 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
     roles.update({i:"Recovery" for i in recovery})
     block_at = {indices[0]:indices for indices,_ in blocks}
     correction = max(0,int(getattr(athlete,"alternative_hr_correction",10) or 0))
+    explicit_duration_zones = proposal.get("explicit_duration_zones") or {}
+    if (not isinstance(explicit_duration_zones, dict)
+            or any(not str(key).isdigit() or str(value) not in set("123456")
+                   for key, value in explicit_duration_zones.items())):
+        raise ValueError("Invalid explicit Alternative duration zone.")
     from core.garmin_d import hr_zone
     texts, entries, missing = [],[],False
     i = 1
@@ -698,6 +724,10 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
             if role not in {"Warmup", "Cooldown"} or str(explicit) not in set("123456"):
                 raise ValueError("Invalid explicit Alternative boundary zone.")
             label = str(explicit)
+        duration_explicit = explicit_duration_zones.get(str(round(seconds)))
+        if duration_explicit is not None and role in {"Work", "Recovery"}:
+            label = str(duration_explicit)
+            explicit = duration_explicit
         texts.append(f"{part.get('alternative_label','Alternative')} {role} {duration}"+(f" Z{label}" if label else ""))
         entries.append(dict(ids=indices,seconds=seconds,zone=label,role=role,
                             explicit_zone=bool(explicit),
