@@ -13,6 +13,8 @@ class WatchOriginalPlanTests(TestCase):
 
     def test_watch_use_buttons_save_to_the_plan_shown_in_the_target_daypart(self):
         source = get_template("core/athlete_year_calendar.html").template.source
+        self.assertIn('var targetPlanId = "";', source)
+        self.assertNotIn('var targetPlanId = activePlanId', source)
         self.assertIn("slotBox.getAttribute(\"data-date\") === activeDate", source)
         self.assertIn("slotBox.getAttribute(\"data-slot-index\") === String(slotIndex)", source)
         self.assertIn('"&plan=" + encodeURIComponent(targetPlanId)', source)
