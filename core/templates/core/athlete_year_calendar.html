@@ -3204,7 +3204,7 @@
     document.querySelectorAll('.slotbox[data-date][data-slot-index]').forEach(function(slotBox) {
       if (slotBox.getAttribute("data-date") === activeDate &&
           slotBox.getAttribute("data-slot-index") === String(slotIndex)) {
-        targetPlanId = slotBox.getAttribute("data-plan-id") || "";
+        targetPlanId = slotBox.getAttribute("data-plan-id") || targetPlanId;
       }
     });
     var saveUrl = "/slot-modal/" + dateParts[0] + "/" + dateParts[1] + "/" + dateParts[2] + "/" + slotIndex

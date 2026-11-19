@@ -232,6 +232,11 @@ class GarminEValidationTests(SimpleTestCase):
         self.assertTrue(hyphenated_changed)
         self.assertEqual(hyphenated["explicit_sprint_sequences"], updated["explicit_sprint_sequences"])
 
+        from core.parser import parse_segment_text
+        parsed = parse_segment_text(checked["training_fields"]["main"])
+        self.assertTrue(parsed.ok, parsed.message)
+        self.assertEqual(parsed.distance_m, 340)
+
     def test_explicit_short_repeated_group_can_raise_partly_correct_reps_to_z6(self):
         proposal = {
             "reps":[
@@ -503,6 +508,48 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    def test_checked_mixed_sprint_sequence_can_be_used_as_pm_training(self):
+        from django.core import signing
+        from core.models import TrainingSlot
+        from core.views.garmin_e import preview_digest
+
+        loads = [{"meters":1000, "seconds":300, "zone":"1", "segment":"WU"}]
+        reps, recovery = [], []
+        for index, meters in enumerate((60, 70, 80, 70, 60)):
+            lap = len(loads) + 1
+            loads.append({"meters":meters, "seconds":10, "zone":"4", "segment":"CORE"})
+            reps.append({"laps":[lap], "target_meters":meters})
+            if index < 4:
+                recovery.append(len(loads) + 1)
+                loads.append({"meters":100, "seconds":60, "zone":"1", "segment":"CORE"})
+        loads.append({"meters":800, "seconds":300, "zone":"1", "segment":"CD"})
+        proposal = {"warmup_laps":[1], "recovery_laps":recovery,
+                    "cooldown_laps":[len(loads)], "reps":reps}
+        proposal, changed = apply_explicit_zone_labels(
+            proposal, "maak er 1*(60m//70m//80m//70m//60m) z6 van",
+        )
+        self.assertTrue(changed)
+        checked = checked_proposal({"watch_loads":loads}, proposal, zone_basis="pace")
+        fields = checked["training_fields"]
+        validation = signing.dumps(
+            [self.coach.pk, self.athlete.pk, "2026-11-14",
+             preview_digest(fields, checked["watch_loads"])],
+            salt="garmin-e-save",
+        )
+        url = reverse("slot_modal", args=[2026, 11, 14, 2]) + "?" + urlencode({
+            "athlete":self.athlete.pk, "source":"athlete_year",
+        })
+        response = self.client.post(url, {
+            "watch_origin":"watch_e", "watch_validation":validation,
+            "watch_loads":json.dumps(checked["watch_loads"]),
+            "wu_text":fields["wu"], "core_text":fields["main"], "cd_text":fields["cd"],
+        })
+        self.assertEqual(response.status_code, 200, response.content.decode())
+        slot = TrainingSlot.objects.get(athlete=self.athlete, date="2026-11-14", slot_index=2)
+        self.assertEqual(slot.source, "watch_e")
+        sprint = slot.segments.get(type="CORE", text=fields["main"])
+        self.assertEqual(sprint.distance_m, 340)
+
     @patch("core.views.garmin_e.ask_model")
     def test_explicit_compact_alternative_chat_updates_preview_without_model_prose(self, model):
         durations = [600, 45, 30, 45, 30, 45, 300]

@@ -1,5 +1,7 @@
 # Actuele status
 
+- 19 november — Een gecontroleerde Garmin E-preview met een gemengde korte sprintset in compacte `1×(60 m // 70 m // …) Z6`-notatie kan nu werkelijk via `Use AM/PM` worden opgeslagen. De algemene Main-parser accepteert `//` binnen sethaakjes als opeenvolgende atomen. Watch-parsefouten geven voortaan HTTP 400 terug in plaats van een schijnbaar succesvolle herlaadactie met de oude training.
+
 - 19 november — Watch `Use AM/PM` bewaart nu naar het plan dat het gekozen Diary-dagdeel werkelijk toont. De browser stuurt het `data-plan-id` van het doelvak mee; eerder ontbrak dit en kon de server bij atleten met meerdere toegankelijke plannen een ander plan kiezen, waardoor de correcte Garmin E-preview na herladen niet zichtbaar werd. De planselectie leest uitsluitend het doelvak en gebruikt geen variabele uit de afzonderlijk afgeschermde trainingspopup-scriptcontext.
 
 - 19 november — Expliciete Garmin E-correcties kunnen nu een unieke gemengde sprintreeks of eenduidige herhaalde groep onder 100 m volledig naar Z6 verhogen. Zowel `60m-70m-…` als de gewenste `60m//70m//…` wordt geaccepteerd; de preview gebruikt compact `1×(… // …) Z6`, terwijl de gemeten recovery-laps intern recovery blijven. Selectie gebeurt op de hele chronologische afstandsreeks of het exacte aantal gelijke reps; reeds correcte Z6-reps en 1–2 lager afgeleide reps mogen samen worden overschreven. Een tegenstrijdig AI-antwoord wordt na succesvolle lokale toepassing vervangen door een feitelijke bevestiging. 73 Garmin E-/structuurtests, check en migratiecheck slagen.

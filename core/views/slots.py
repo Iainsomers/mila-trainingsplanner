@@ -2078,6 +2078,15 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         parse_block = True
 
     if parse_block:
+        if preserve_watch_fields:
+            messages = [
+                parsed.message for parsed in (wu_parse, core_parse, alt_parse, cd_parse)
+                if parsed is not None and not parsed.ok and parsed.message
+            ]
+            return HttpResponse(
+                messages[0] if messages else "The checked Watch proposal could not be saved.",
+                status=400,
+            )
         return render(
             request,
             "core/partials/slot_modal.html",

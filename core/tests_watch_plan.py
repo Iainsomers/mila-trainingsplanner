@@ -17,6 +17,7 @@ class WatchOriginalPlanTests(TestCase):
         self.assertNotIn('var targetPlanId = activePlanId', source)
         self.assertIn("slotBox.getAttribute(\"data-date\") === activeDate", source)
         self.assertIn("slotBox.getAttribute(\"data-slot-index\") === String(slotIndex)", source)
+        self.assertIn('slotBox.getAttribute("data-plan-id") || targetPlanId', source)
         self.assertIn('"&plan=" + encodeURIComponent(targetPlanId)', source)
 
     def test_model_e_clock_is_rendered_with_measured_rows(self):

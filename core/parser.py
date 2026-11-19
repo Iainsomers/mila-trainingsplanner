@@ -429,7 +429,10 @@ def parse_segment_text(text: str, zone_required: bool = True) -> ParseResult:
     if sm:
         reps = int(sm.group(1))
         inner = sm.group(2) or ""
-        parts = [p.strip() for p in re.split(r"\s*-\s*", inner) if p.strip()]
+        # Checked Watch previews use ``//`` to separate consecutive work
+        # atoms inside a compact set. Treat it like the existing hyphen
+        # separator; it is presentation syntax, not a recovery marker here.
+        parts = [p.strip() for p in re.split(r"\s*(?://+|-)\s*", inner) if p.strip()]
 
         if not parts:
             return ParseResult(
