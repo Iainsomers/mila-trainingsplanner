@@ -905,7 +905,7 @@
         if (line) lines.push(`<div class="flex-total-line">${line}</div>`);
 
         if (altSeconds["7"] > 0) {
-          lines.push(`<div class="flex-total-line">${flexPill("pill-z7", "ALT Z7", Number((altSeconds["7"] / 60).toFixed(1)) + "'")}</div>`);
+          lines.push(`<div class="flex-total-line">${flexPill("pill-z7", "Strength", Number((altSeconds["7"] / 60).toFixed(1)) + "'")}</div>`);
         }
 
         line = "";
@@ -1455,7 +1455,7 @@
                       <div class="flex-total-line"><span class="pill pill-z3">ALT Z3 {{ row.alt_z3_min }}m</span></div>
                     {% endif %}
                     {% if row.alt_z7_min %}
-                      <div class="flex-total-line"><span class="pill pill-z7">ALT Z7 {{ row.alt_z7_min }}m</span></div>
+                      <div class="flex-total-line"><span class="pill pill-z7">Strength {{ row.alt_z7_min }}m</span></div>
                     {% endif %}
                   </div>
                 </td>
