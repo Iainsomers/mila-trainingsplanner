@@ -3,13 +3,19 @@ import json
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django.template.loader import render_to_string
+from django.template.loader import get_template, render_to_string
 
 from core.models import Athlete, TrainingPlan, TrainingSlot, CoachAccess, TrainingPhoto, StandardStrengthProgram, AthleteBasePlanningBlock, AthleteBasePlanningSlot
 from core.views.calendar import _clone_slot_for_display
 
 
 class WatchOriginalPlanTests(TestCase):
+
+    def test_watch_use_buttons_save_to_the_plan_shown_in_the_target_daypart(self):
+        source = get_template("core/athlete_year_calendar.html").template.source
+        self.assertIn("slotBox.getAttribute(\"data-date\") === activeDate", source)
+        self.assertIn("slotBox.getAttribute(\"data-slot-index\") === String(slotIndex)", source)
+        self.assertIn('"&plan=" + encodeURIComponent(targetPlanId)', source)
 
     def test_model_e_clock_is_rendered_with_measured_rows(self):
         from types import SimpleNamespace

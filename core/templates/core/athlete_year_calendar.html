@@ -3200,7 +3200,17 @@
     formData.append("watch_loads", JSON.stringify(watchLoads || []));
     if (model === "E") formData.append("watch_validation", validation || "");
     var dateParts = activeDate.split("-");
-    var saveUrl = "/slot-modal/" + dateParts[0] + "/" + dateParts[1] + "/" + dateParts[2] + "/" + slotIndex + "/?athlete=" + encodeURIComponent(activeAthlete) + "&source=athlete_year";
+    var targetPlanId = activePlanId || "";
+    document.querySelectorAll('.slotbox[data-date][data-slot-index]').forEach(function(slotBox) {
+      if (slotBox.getAttribute("data-date") === activeDate &&
+          slotBox.getAttribute("data-slot-index") === String(slotIndex)) {
+        targetPlanId = slotBox.getAttribute("data-plan-id") || targetPlanId;
+      }
+    });
+    var saveUrl = "/slot-modal/" + dateParts[0] + "/" + dateParts[1] + "/" + dateParts[2] + "/" + slotIndex
+      + "/?athlete=" + encodeURIComponent(activeAthlete)
+      + "&plan=" + encodeURIComponent(targetPlanId)
+      + "&source=athlete_year";
     fetch(saveUrl, {
       method: "POST",
       body: formData,
