@@ -18,6 +18,7 @@ from core.garmin_e import (
     ask_model,
     checked_proposal,
     complete_partial_running_proposal,
+    explicit_alternative_compact_proposal,
     lap_facts,
     prefer_measured_time_groups,
 )
@@ -259,8 +260,15 @@ def garmin_type_e_ayc_view(request):
                            "checked_assignment":state["proposal"],"pending_confirmation":state.get("pending")}
                 deadline = monotonic()+26
                 initial_retry_used = False
+                explicit_compact = (
+                    explicit_alternative_compact_proposal(facts, message)
+                    if is_alternative else None
+                )
                 try:
-                    answer = ask_model(facts,history,current,timeout=16)
+                    answer = ({
+                        "reply": "De expliciete notatie past op alle gemeten laps en staat als gecontroleerd voorstel in de preview.",
+                        "intent": "update", "zone_basis": "hr", "proposal": explicit_compact,
+                    } if explicit_compact else ask_model(facts,history,current,timeout=16))
                 except OSError:
                     remaining = deadline-monotonic()
                     if remaining < 3:

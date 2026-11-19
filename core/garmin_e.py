@@ -204,6 +204,89 @@ def apply_explicit_zone_labels(proposal, message):
     return updated, True
 
 
+def explicit_alternative_compact_proposal(facts, message):
+    """Translate a user-written WU–repeated pair–optional tail–CD notation.
+
+    This parses explicit intent, not a particular workout pattern. Every atom
+    must still match the next measured lap before the ordinary validator runs.
+    """
+    if not isinstance(facts, list) or not isinstance(message, str):
+        return None
+    notation = re.search(
+        r"\b(?:wu|warm[ -]?up)\b\s*[-–—/]\s*(\d+)\s*[×x*]\s*\(([^()]*)\)"
+        r"(.*?)\s*[-–—/]\s*\b(?:cd|cool[ -]?down)\b",
+        message, re.I,
+    )
+    if not notation:
+        return None
+    count = int(notation[1])
+    if not 1 <= count <= 60:
+        return None
+
+    atom_pattern = re.compile(
+        r"^\s*(\d+(?:[.,]\d+)?)\s*(\"|″|s(?:ec(?:onden?)?)?|['′]|min(?:u(?:ut|ten)?)?)"
+        r"\s*z\s*([1-6])\s*$", re.I,
+    )
+    def atom(value):
+        match = atom_pattern.match(value)
+        if not match:
+            return None
+        seconds = float(match[1].replace(",", "."))
+        if match[2].lower().startswith("min") or match[2] in {"'", "′"}:
+            seconds *= 60
+        if not 1 <= seconds <= 86400:
+            return None
+        return round(seconds), match[3]
+
+    pair_values = re.split(r"\s*[-–—/]\s*", notation[2].strip())
+    pair = [atom(value) for value in pair_values]
+    if len(pair) != 2 or any(value is None for value in pair):
+        return None
+    tail_text = notation[3].strip().strip("-–—/ ")
+    tail_values = [] if not tail_text else re.split(r"\s*[-–—/]\s*", tail_text)
+    tail = [atom(value) for value in tail_values]
+    if any(value is None for value in tail):
+        return None
+
+    expected = [pair[index % 2] for index in range(count * 2)] + tail
+    if len(facts) != len(expected) + 2:
+        return None
+    for fact, (target, _zone) in zip(facts[1:-1], expected):
+        try:
+            measured = float(fact["duration_s"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        if not math.isfinite(measured) or abs(measured - target) > max(2, target * .06):
+            return None
+
+    work_laps = list(range(2, 2 + count * 2, 2))
+    recovery_laps = list(range(3, 2 + count * 2, 2))
+    tail_laps = list(range(2 + count * 2, len(facts)))
+    proposal = {
+        "warmup_laps": [1], "cooldown_laps": [len(facts)],
+        "recovery_laps": recovery_laps, "ignored_laps": [],
+        "reps": [
+            {"laps": [lap], "target_seconds": pair[0][0]} for lap in work_laps
+        ] + [
+            {"laps": [lap], "target_seconds": target[0]}
+            for lap, target in zip(tail_laps, tail)
+        ],
+        "format": "compact",
+        "presentation": {
+            "warmup_seconds": round(float(facts[0]["duration_s"])),
+            "cooldown_seconds": round(float(facts[-1]["duration_s"])),
+            "work_zone": pair[0][1], "recovery_zone": pair[1][1],
+        },
+        "explicit_duration_zones": {},
+    }
+    for seconds, zone in [*pair, *tail]:
+        existing = proposal["explicit_duration_zones"].get(str(seconds))
+        if existing is not None and existing != zone:
+            return None
+        proposal["explicit_duration_zones"][str(seconds)] = zone
+    return proposal
+
+
 def lap_facts(part):
     if (part.get("training_fields") or {}).get("alt"):
         facts = []
@@ -772,7 +855,9 @@ def compact_alternative(part, result, entries, presentation):
         tolerance = max(15,target*.06) if role=="Work" else max(30,target*.06)
         if abs(target-seconds)>tolerance:
             raise ValueError(f"{role}: nominal {target:g}s does not fit measured {seconds:g}s.")
-        zone = selected_zones.get(role,entry["zone"])
+        # A literal duration-zone correction is more specific than the
+        # repeated-role summary (e.g. a differently zoned trailing work atom).
+        zone = entry["zone"] if entry.get("explicit_zone") else selected_zones.get(role,entry["zone"])
         display.append((target,zone,role))
     def atom(item):
         seconds,zone,_ = item

@@ -15,6 +15,7 @@ from core.garmin_e import (
     ask_model,
     checked_proposal,
     complete_partial_running_proposal,
+    explicit_alternative_compact_proposal,
     lap_facts,
     prefer_measured_time_groups,
 )
@@ -36,6 +37,34 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_general_explicit_alternative_compact_notation_is_measured_and_checked(self):
+        athlete = SimpleNamespace(zone_hr_bpm={"1":"200"}, alternative_hr_correction=10)
+        examples = [
+            ([600, 45, 30, 45, 30, 45, 300],
+             'WU-2*(45" Z2-30" Z1)-45" Z2-CD',
+             "Elliptical 10' Z1 // Elliptical 2×(45s Z2 - 30s Z1) // Elliptical 45s Z2 // Elliptical 5' Z1"),
+            ([300, 120, 60, 120, 60, 120, 60, 240, 180],
+             "warmup / 3×(2 min Z3 / 1 min Z1) / 4 min Z2 / cooldown",
+             "Elliptical 5' Z1 // Elliptical 3×(2' Z3 - 1' Z1) // Elliptical 4' Z2 // Elliptical 3' Z1"),
+        ]
+        for durations, notation, expected in examples:
+            with self.subTest(notation=notation):
+                part = {"training_fields": {"alt": "Elliptical"}, "alternative_label": "Elliptical",
+                        "alternative_laps": [{"seconds": value, "average_hr": 100, "end_hr": 100}
+                                             for value in durations]}
+                proposal = explicit_alternative_compact_proposal(lap_facts(part), notation)
+                self.assertIsNotNone(proposal)
+                checked = checked_proposal(part, proposal, athlete=athlete, zone_basis="hr")
+                self.assertEqual(checked["training_fields"]["alt"], expected)
+                self.assertEqual(sum(load["seconds"] for load in checked["watch_loads"]), sum(durations))
+
+                changed = deepcopy(durations)
+                changed[2] += 10
+                facts = lap_facts({**part, "alternative_laps": [
+                    {"seconds": value, "average_hr": 100, "end_hr": 100} for value in changed
+                ]})
+                self.assertIsNone(explicit_alternative_compact_proposal(facts, notation))
+
     def test_explicit_alternative_duration_zones_override_summary_without_changing_laps(self):
         athlete = SimpleNamespace(zone_hr_bpm={"1":"145","2":"146-160"}, alternative_hr_correction=10)
         durations = [600, 45, 30, 45, 30, 45, 300]
@@ -419,6 +448,37 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    @patch("core.views.garmin_e.ask_model")
+    def test_explicit_compact_alternative_chat_updates_preview_without_model_prose(self, model):
+        durations = [600, 45, 30, 45, 30, 45, 300]
+        self.record.distance_m = None
+        self.record.duration_s = sum(durations)
+        self.record.analysis_data = {
+            "activity_metrics": {"sport": "ELLIPTICAL", "average_hr": 110},
+            "laps": [{"elapsed_time": value, "avg_heart_rate": 100, "hr_tail": 100}
+                     for value in durations],
+        }
+        self.record.save()
+        preview = self.client.get(
+            self.url, {**self.query, "preview": "measured"},
+        ).json()["results"][0]
+        chat_url = self.url + "?" + urlencode({
+            **self.query, "suggestion_session": preview["start"],
+        })
+
+        result = self.client.post(chat_url, {"chat": json.dumps([{
+            "role": "user", "content": 'WU-2*(45" Z2-30" Z1)-45" Z2-CD',
+        }])}).json()["results"][0]["parts"][0]
+
+        self.assertTrue(result["e_usable"], result)
+        self.assertEqual(
+            result["training_fields"]["alt"],
+            "Elliptical 10' // Elliptical 2×(45s Z2 - 30s Z1) // "
+            "Elliptical 45s Z2 // Elliptical 5'",
+        )
+        self.assertIn("staat als gecontroleerd voorstel in de preview", result["chat_reply"])
+        model.assert_not_called()
+
     @patch("core.views.garmin_e.ask_model")
     def test_running_laps_without_recognized_main_still_offer_chat(self, model):
         self.record.distance_m = 349

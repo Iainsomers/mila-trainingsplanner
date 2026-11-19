@@ -307,7 +307,9 @@ Gekoppelde atleten met coachtoestemming krijgen automatisch iedere vijftien minu
 
 De COROS-kaart op de eigen Hardware-pagina bevat ook de afzonderlijke FIT-AI-toestemming voor OpenAI-analyse. Deze geldt voor bestaande en toekomstige eigen COROS FIT-imports en kan daar worden gegeven of ingetrokken, ook wanneer `Allow Garmin FIT uploads` uit staat. Alleen de atleet kan dit wijzigen. De achterliggende COROS-accountpagina blijft voor de koppeling en imports. De consentmelding in de analyse verwijst bronneutraal naar MiLa en de COROS-/FIT-uploadpagina.
 
-In de Alternative-chat kunnen expliciete duur-zonelabels zoals `45″ = Z1`, `30 sec = Z2` en minutenvarianten een compact voorstel corrigeren. Dit is een algemene labelcorrectie voor blokken met dezelfde gemeten duur, geen vaste herkenning van één training. De volledige modeltoewijzing van bronlaps blijft verplicht en de server behoudt de echte tijden, volgorde en rollen.
+In de Alternative-chat kunnen expliciete duur-zonelabels zoals `45″ = Z1`, `30 sec = Z2` en minutenvarianten een compact voorstel corrigeren. Dit is een algemene labelcorrectie voor blokken met dezelfde gemeten duur, geen vaste herkenning van één training. Een volledige toewijzing van alle bronlaps blijft verplicht en de server behoudt de echte tijden, volgorde en rollen.
+
+Wanneer de gebruiker zelf een volledige compacte Alternative-indeling schrijft, bijvoorbeeld `WU-4×(2' Z2-1' Z1)-2' Z2-CD`, zet MiLa die algemeen om in een echt previewvoorstel in plaats van alleen in antwoordtekst. Willekeurige aantallen, seconde-/minuutduren, zones en losse slotblokken worden ondersteund. Iedere genoteerde stap moet chronologisch op de gemeten laps passen; de gewone meetvalidator blijft beslissend.
 
 Garmin E biedt Chat en Analyze ook wanneer de vaste gemeten preview nog `No clear main section detected` toont, zolang er geldige gemeten hardlooplaps zijn. Juist dan kan E de lapstructuur bespreken en een volledig voorstel maken. Use/Add blijft uitgeschakeld totdat de gewone validator een complete, chronologische en meetkundig passende toewijzing heeft goedgekeurd.
 
