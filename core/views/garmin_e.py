@@ -286,7 +286,7 @@ def garmin_type_e_ayc_view(request):
                         return value
                     value = deepcopy(value)
                     prior = state.get("proposal") or {}
-                    for key in ("explicit_role_zones", "explicit_lap_zones", "zone_labels"):
+                    for key in ("explicit_role_zones", "explicit_lap_zones", "zone_labels", "explicit_sprint_sequences"):
                         value.pop(key, None)
                         if key in prior:
                             value[key] = deepcopy(prior[key])
@@ -308,6 +308,11 @@ def garmin_type_e_ayc_view(request):
                         proposal.pop("zone_labels", None)
                 labeled_proposal, explicit_zone_update = apply_explicit_zone_labels(
                     proposal if proposal is not None else state.get("proposal"), message
+                )
+                explicit_sprint_update = bool(
+                    explicit_zone_update
+                    and re.search(r"\([^()]*\d+\s*m?\s*[-–—/]", message or "", re.I)
+                    and re.search(r"\bz\s*6\b", message or "", re.I)
                 )
                 if explicit_zone_update:
                     proposal = labeled_proposal
@@ -377,6 +382,9 @@ def garmin_type_e_ayc_view(request):
                                 except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
                                     error = str(exc)
                 reply = answer["reply"]
+                if candidate and explicit_sprint_update:
+                    reply = ("Het korte sprintblok is als één gecontroleerd werkblok in de preview gezet. "
+                             "De afzonderlijke sprintlaps en herstel-laps blijven in hun gemeten volgorde behouden.")
                 if wants_update and not candidate and (error or answer.get("intent") == "update"):
                     reply = "Het gecontroleerde voorstel is niet aangepast." + ("\n\n" + error if error else " De gevraagde wijziging leverde nog geen bruikbaar voorstel op.")
                 if candidate and time_group_adjusted:

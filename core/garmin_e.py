@@ -209,6 +209,11 @@ def apply_explicit_zone_labels(proposal, message):
                         for lap in rep.get("laps", []):
                             overrides[str(lap)] = "6"
                     updated["explicit_lap_zones"] = overrides
+                    updated["explicit_sprint_sequences"] = [{
+                        "first_lap": selected[0]["laps"][0],
+                        "targets": distances,
+                        "zone": "6",
+                    }]
                     return updated, True
     pattern = re.compile(
         r"(?:(\d+)\s*[×x*]\s*)?(\d+)\s*m\b.{0,24}?"
@@ -641,6 +646,36 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         if not groups or groups[-1][0] != key:
             groups.append((key,[]))
         groups[-1][1].append(block)
+    sequence_groups = {}
+    sprint_sequences = proposal.get("explicit_sprint_sequences") or []
+    if not isinstance(sprint_sequences, list):
+        raise ValueError("Invalid explicit sprint sequence.")
+    for sequence in sprint_sequences:
+        if not isinstance(sequence, dict):
+            raise ValueError("Invalid explicit sprint sequence.")
+        first_lap = sequence.get("first_lap")
+        targets = sequence.get("targets")
+        sequence_zone = sequence.get("zone")
+        if (type(first_lap) is not int or not isinstance(targets, list) or not targets
+                or any(type(target) is not int or not 25 <= target < 100 for target in targets)
+                or sequence_zone != "6"):
+            raise ValueError("Invalid explicit sprint sequence.")
+        start = next((index for index, block in enumerate(blocks) if block["ids"][0] == first_lap), None)
+        selected_blocks = blocks[start:start + len(targets)] if start is not None else []
+        if len(selected_blocks) != len(targets) or [block["distance"] for block in selected_blocks] != targets:
+            raise ValueError("The explicit sprint sequence no longer matches the measured work reps.")
+        group_indexes = [
+            index for index, (_key, group) in enumerate(groups)
+            if any(block is selected for block in group for selected in selected_blocks)
+        ]
+        if (not group_indexes or group_indexes != list(range(group_indexes[0], group_indexes[-1] + 1))
+                or [block for index in group_indexes for block in groups[index][1]] != selected_blocks
+                or any(index in sequence_groups for index in group_indexes)):
+            raise ValueError("The explicit sprint sequence cannot be shown as one work block.")
+        sequence_groups[group_indexes[0]] = {
+            "end": group_indexes[-1],
+            "text": "1×(" + " - ".join(f"{target} m" for target in targets) + ") Z6",
+        }
     manual_zone_labels = {}
     zone_labels = proposal.get("zone_labels", [])
     if not isinstance(zone_labels, list):
@@ -658,6 +693,13 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
             raise ValueError("The explicit zone label does not identify exactly one measured work group.")
         manual_zone_labels[matches[0]] = label
     for group_index, ((distance,duration), group) in enumerate(groups):
+        covering_sequence = next((value for start, value in sequence_groups.items()
+                                  if start < group_index <= value["end"]), None)
+        if covering_sequence:
+            continue
+        if group_index in sequence_groups:
+            texts.append(sequence_groups[group_index]["text"])
+            continue
         label = f"{distance} m" if distance is not None else (f"{duration//60}'" if duration%60==0 else f"{duration}s")
         zone_label = " "+manual_zone_labels[group_index] if group_index in manual_zone_labels else zone(
             [i for b in group for i in b["ids"]])

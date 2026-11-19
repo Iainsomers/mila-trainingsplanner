@@ -223,7 +223,9 @@ class GarminEValidationTests(SimpleTestCase):
         self.assertTrue(all(
             checked["watch_loads"][rep["laps"][0] - 1]["zone"] == "6" for rep in reps
         ))
-        self.assertIn("60 m Z6 // 70 m Z6 // 80 m Z6 // 70 m Z6 // 60 m Z6", checked["training_fields"]["main"])
+        self.assertEqual(checked["training_fields"]["main"], "1×(60 m - 70 m - 80 m - 70 m - 60 m) Z6")
+        self.assertEqual(checked["watch_loads"][recovery[0] - 1]["segment"], "CORE")
+        self.assertFalse(checked["watch_loads"][recovery[0] - 1]["work_rep"])
 
     def test_explicit_short_repeated_group_can_raise_partly_correct_reps_to_z6(self):
         proposal = {
