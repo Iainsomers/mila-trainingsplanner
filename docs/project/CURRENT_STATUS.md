@@ -1,5 +1,7 @@
 # Actuele status
 
+- 19 november — Garmin E kan een variabele Alternative-werkreeks met gelijke herstelduur nu als één korte Main-preview tonen, bijvoorbeeld `1×(12' - 10' - … - 1') Z2>Z3 p1`, in plaats van ieder Work/Recovery-blok te herhalen. Een expliciet zonebereik wordt geaccepteerd wanneer alle gemeten werkzones binnen het bereik vallen en beide grenzen werkelijk voorkomen. Alle individuele gemeten laps, HR-zones en seconden blijven onder de compacte tekst bewaard.
+
 - 19 november — Een gecontroleerde Garmin E-preview met een gemengde korte sprintset in compacte `1×(60 m // 70 m // …) Z6`-notatie kan nu werkelijk via `Use AM/PM` worden opgeslagen. De algemene Main-parser accepteert `//` binnen sethaakjes als opeenvolgende atomen. Watch-parsefouten geven voortaan HTTP 400 terug in plaats van een schijnbaar succesvolle herlaadactie met de oude training.
 
 - 19 november — Watch `Use AM/PM` bewaart nu naar het plan dat het gekozen Diary-dagdeel werkelijk toont. De browser stuurt het `data-plan-id` van het doelvak mee; eerder ontbrak dit en kon de server bij atleten met meerdere toegankelijke plannen een ander plan kiezen, waardoor de correcte Garmin E-preview na herladen niet zichtbaar werd. De planselectie leest uitsluitend het doelvak en gebruikt geen variabele uit de afzonderlijk afgeschermde trainingspopup-scriptcontext.

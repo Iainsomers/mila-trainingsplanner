@@ -96,6 +96,10 @@ optional proposal.presentation:{"warmup_seconds":900,"recovery_seconds":300,"wor
 target_seconds. Boundary/recovery nominal times must fit max(30s,6%) of measured time.
 Summary zones must be supported by at least half of the measured blocks of that role;
 actual HR-derived zones and exact seconds remain separately preserved for totals.
+For a strictly ascending or descending Alternative work sequence with equal recovery, work_zone
+may be a measured range such as "2>3". Both boundary zones must occur and every work block must
+fall inside that range. Then use one compact sequence with the shared pause, not repeated
+Work/Recovery labels (for example 1×(12' - 10' - 8') Z2>Z3 p1).
 Example 930s warmup, 604/601/601/601s work with 300/300/323/307s recoveries, and final
 388s work can display 15' Z1 // 4×(10' Z2 - 5' Z1) // 6'28 Z2 when those zones are supported.
 This is only an illustration, never a default workout.
@@ -929,14 +933,26 @@ def compact_alternative(part, result, entries, presentation):
         raise ValueError("Deze activiteit heeft geen bruikbare HR-zone; de gemeten tijd blijft behouden.")
     from core.alternative import expand_time_notation
     selected_zones = {}
+    summary_zone_labels = {}
     for role,key in (("Work","work_zone"),("Recovery","recovery_zone")):
         if key not in presentation:
             continue
         selected = str(presentation[key]).upper().removeprefix("Z")
         observed = [e["zone"] for e in entries if e["role"]==role]
+        zone_range = re.fullmatch(r"([1-6])\s*>\s*Z?([1-6])", selected)
+        if zone_range:
+            start, end = map(int, zone_range.groups())
+            step = 1 if end >= start else -1
+            supported = {str(zone) for zone in range(start, end + step, step)}
+            if (not observed or any(zone not in supported for zone in observed)
+                    or str(start) not in observed or str(end) not in observed):
+                raise ValueError(f"The {role} summary zone is not supported by the measured blocks.")
+            summary_zone_labels[role] = f"{start}>{end}"
+            continue
         if selected not in set("123456") or not observed or observed.count(selected)*2<len(observed):
             raise ValueError(f"The {role} summary zone is not supported by the measured blocks.")
         selected_zones[role] = selected
+        summary_zone_labels[role] = selected
     display = []
     for entry in entries:
         role,seconds = entry["role"],entry["seconds"]
@@ -961,6 +977,62 @@ def compact_alternative(part, result, entries, presentation):
         else:
             label = f"{seconds:g}s"
         return label+(" Z"+zone if zone else "")
+    def measured_load(start, end, text):
+        measured = []
+        for entry in entries[start:end]:
+            for lap_id in entry["ids"]:
+                raw = part["alternative_laps"][lap_id-1]
+                measured.append(dict(lap=lap_id,seconds=raw["seconds"],zone=entry["zone"],
+                    zone_source="user" if entry.get("explicit_zone") else "hr",
+                    average_hr=raw.get("average_hr"),end_hr=raw.get("end_hr")))
+        return dict(segment="ALT",meters=0,seconds=sum(lap["seconds"] for lap in measured),
+                    alt_text=text,alt_laps=measured)
+
+    # A monotone or otherwise varying Work sequence with equal recoveries is
+    # one compact Main block, not a repetition of "Work" and "Recovery".
+    first_main = next((index for index, entry in enumerate(entries)
+                       if entry["role"] in {"Work", "Recovery"}), None)
+    last_main = next((index for index in range(len(entries)-1, -1, -1)
+                      if entries[index]["role"] in {"Work", "Recovery"}), None)
+    if first_main is not None and last_main is not None:
+        main_entries = entries[first_main:last_main+1]
+        expected_roles = ["Work" if index % 2 == 0 else "Recovery"
+                          for index in range(len(main_entries))]
+        recovery_targets = [display[first_main+index][0] for index in range(1, len(main_entries), 2)]
+        work_targets = [display[first_main+index][0] for index in range(0, len(main_entries), 2)]
+        work_is_directional = (
+            all(left > right for left, right in zip(work_targets, work_targets[1:]))
+            or all(left < right for left, right in zip(work_targets, work_targets[1:]))
+        )
+        if (len(main_entries) >= 3 and len(main_entries) % 2 == 1
+                and [entry["role"] for entry in main_entries] == expected_roles
+                and work_is_directional
+                and recovery_targets
+                and max(recovery_targets) - min(recovery_targets) <= 1):
+            work_atoms = [atom(display[first_main+index]).split(" Z", 1)[0]
+                          for index in range(0, len(main_entries), 2)]
+            work_zone = summary_zone_labels.get("Work")
+            pause = atom((recovery_targets[0], None, "Recovery"))
+            main_body = "1×(" + " - ".join(work_atoms) + ")"
+            if work_zone:
+                main_body += " Z" + work_zone.replace(">", ">Z")
+            main_body += " p" + pause.rstrip("'")
+            compact_entries = []
+            for index in range(first_main):
+                compact_entries.append((index, index+1, atom(display[index])))
+            compact_entries.append((first_main, last_main+1, main_body))
+            for index in range(last_main+1, len(entries)):
+                compact_entries.append((index, index+1, atom(display[index])))
+            texts, loads = [], []
+            for start, end, body in compact_entries:
+                text = part.get("alternative_label", "Alternative") + " " + body
+                texts.append(text)
+                loads.append(measured_load(start, end, text))
+            text = " // ".join(texts)
+            result.update(training_fields={"alt":text},description=text,watch_loads=loads)
+            result["e_zone_note"] += " Compact notation uses nominal targets; totals retain measured time and HR zones."
+            return result
+
     texts,loads = [],[]
     position = 0
     while position<len(display):
@@ -982,16 +1054,8 @@ def compact_alternative(part, result, entries, presentation):
         expanded = expand_time_notation(text)
         if all(item[1] for item in display[position:end]) and (not expanded or len(expanded)!=end-position):
             raise ValueError("Compact Alternative notation could not be checked.")
-        measured = []
-        for entry in entries[position:end]:
-            for lap_id in entry["ids"]:
-                raw = part["alternative_laps"][lap_id-1]
-                measured.append(dict(lap=lap_id,seconds=raw["seconds"],zone=entry["zone"],
-                    zone_source="user" if entry.get("explicit_zone") else "hr",
-                    average_hr=raw.get("average_hr"),end_hr=raw.get("end_hr")))
         texts.append(text)
-        loads.append(dict(segment="ALT",meters=0,seconds=sum(l["seconds"] for l in measured),
-                          alt_text=text,alt_laps=measured))
+        loads.append(measured_load(position, end, text))
         position = end
     text = " // ".join(texts)
     result.update(training_fields={"alt":text},description=text,watch_loads=loads)

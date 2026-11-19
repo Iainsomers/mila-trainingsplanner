@@ -86,6 +86,26 @@ def parse_alternative_text(text):
         zones = {zone for zone,_ in expanded}
         return ParseResult(ok=True,duration_s=round(sum(seconds for _,seconds in expanded)),
             zone=int(next(iter(zones))) if len(zones)==1 else None,raw=text)
+    compact_sequence = re.search(
+        r"\b(\d+)\s*[×x*]\s*\(([^)]+)\)\s*Z([1-6])\s*>\s*Z?([1-6])\s+p\s*(\d+(?:[.,]\d+)?)\s*$",
+        text or "", re.IGNORECASE,
+    )
+    if compact_sequence:
+        reps = int(compact_sequence.group(1))
+        atoms = [item.strip() for item in re.split(r"\s*(?://+|-)\s*", compact_sequence.group(2)) if item.strip()]
+        seconds = []
+        for atom in atoms:
+            minute = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*['′’]", atom)
+            second = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*(?:s|sec|[\"″])", atom, re.IGNORECASE)
+            if minute:
+                seconds.append(float(minute.group(1).replace(",", ".")) * 60)
+            elif second:
+                seconds.append(float(second.group(1).replace(",", ".")))
+            else:
+                seconds = []
+                break
+        if 1 <= reps <= 60 and seconds and all(0 < value <= 86400 for value in seconds):
+            return ParseResult(ok=True, duration_s=round(reps * sum(seconds)), zone=None, raw=text)
     return parse_segment_text(text,zone_required=False)
 
 

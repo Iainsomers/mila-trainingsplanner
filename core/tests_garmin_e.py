@@ -379,6 +379,47 @@ class GarminEValidationTests(SimpleTestCase):
         with self.assertRaises(ValueError):
             checked_proposal(part,bad,athlete=athlete)
 
+    def test_compact_descending_alternative_sequence_uses_one_main_summary(self):
+        from core.watch_alternative import alternative_part
+        from core.alternative import parse_alternative_text
+        athlete = SimpleNamespace(
+            zone_hr_bpm={"1":"120", "2":"121-155", "3":"156-175"},
+            alternative_hr_correction=0,
+        )
+        work_seconds = [720, 600, 480, 360, 300, 240, 180, 120, 60]
+        work_hr = [140, 145, 150, 152, 158, 160, 162, 164, 155]
+        seconds, hrs = [900], [100]
+        for index, (duration, hr) in enumerate(zip(work_seconds, work_hr)):
+            seconds.append(duration); hrs.append(hr)
+            if index < len(work_seconds)-1:
+                seconds.append(60); hrs.append(110)
+        seconds.append(720); hrs.append(105)
+        part = alternative_part(
+            athlete, {"sport":"ELLIPTICAL", "average_hr":137}, sum(seconds),
+            [dict(elapsed_time=duration, avg_heart_rate=hr, hr_tail=hr)
+             for duration, hr in zip(seconds, hrs)],
+        )
+        proposal = {
+            "warmup_laps":[1], "cooldown_laps":[len(seconds)],
+            "recovery_laps":list(range(3, 18, 2)),
+            "reps":[{"laps":[lap], "target_seconds":duration}
+                    for lap, duration in zip(range(2, 19, 2), work_seconds)],
+            "format":"compact",
+            "presentation":{"warmup_seconds":900, "cooldown_seconds":720,
+                            "recovery_seconds":60, "work_zone":"2>3"},
+        }
+        checked = checked_proposal(part, proposal, athlete=athlete, zone_basis="hr")
+        expected_main = "Elliptical 1×(12' - 10' - 8' - 6' - 5' - 4' - 3' - 2' - 1') Z2>Z3 p1"
+        self.assertEqual(
+            checked["training_fields"]["alt"],
+            "Elliptical 15' Z1 // " + expected_main + " // Elliptical 12' Z1",
+        )
+        self.assertEqual(len(checked["watch_loads"]), 3)
+        self.assertTrue(parse_alternative_text(expected_main).ok)
+        self.assertEqual(
+            sum(lap["seconds"] for load in checked["watch_loads"] for lap in load["alt_laps"]),
+            sum(seconds),
+        )
     def test_alternative_uses_all_time_only_laps_and_corrected_hr(self):
         from core.watch_alternative import alternative_part
         athlete = SimpleNamespace(zone_hr_bpm={"1":"145","2":"146-160","3":"161-175"},alternative_hr_correction=10)
