@@ -173,7 +173,7 @@ def garmin_type_e_ayc_view(request):
                 continue
             if not permitted:
                 part["ai_structure_status"] = "e_unavailable"
-                part["chat_reply"] = "AI consent is required before Garmin E can analyze or discuss this recording."
+                part["chat_reply"] = "AI permission is required before MiLa can analyze or discuss this FIT recording. You can enable it on your COROS or FIT upload page."
                 continue
             # Keep existing conversation identities stable across save-format fixes.
             identity = conversation_identity(request.user.pk,athlete.pk,session.get("start"),facts)

@@ -305,6 +305,8 @@ Gekoppelde atleten met coachtoestemming krijgen automatisch iedere vijftien minu
 
 `Import FIT for analysis` haalt per activiteit het originele FIT-bestand op en slaat dat via de bestaande FIT-parser per atleet op. De activiteitenlijst toont compacte kaarten. Dubbele imports worden op bestandshash/COROS-activiteit herkend. Diary wordt pas aangepast via Use AM/PM; AI-toestemming blijft apart vereist. OAuth en activiteitenpreview zijn live bevestigd; FIT-download nog te controleren.
 
+De eigen COROS-pagina bevat ook de afzonderlijke FIT-AI-toestemming voor OpenAI-analyse. Deze geldt voor bestaande en toekomstige eigen COROS FIT-imports en kan daar worden gegeven of ingetrokken, ook wanneer `Allow Garmin FIT uploads` uit staat. Alleen de atleet kan dit wijzigen. De consentmelding in de analyse verwijst bronneutraal naar MiLa en de COROS-/FIT-uploadpagina.
+
 Atleten kunnen via Hardware > COROS account hun eigen Europese COROS-account koppelen via MCP OAuth (dynamische clientregistratie, PKCE en state). Een tijdelijke activiteitenpreview haalt maximaal twintig recente activiteiten op, zonder Diary-trainingen aan te maken. Tokens worden zo nodig vernieuwd; Disconnect verwijdert de lokale koppeling en probeert de token bij COROS in te trekken. Eerste echte OAuth/MCP-test na deploy staat nog open.
 
 De voorbereidende partnerinfrastructuur bestaat uit een publieke statuscheck en een workout-pushendpoint volgens sectie 5.3 van de COROS API Reference. Pushes worden alleen geaccepteerd met de door COROS verstrekte `client`- en `secret`-headers, dubbele payloads leveren opnieuw succes op zonder dubbele opslag. OAuth-koppeling en verwerking naar atleettrainingen worden pas toegevoegd nadat COROS API-credentials heeft verstrekt.

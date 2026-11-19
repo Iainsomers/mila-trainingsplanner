@@ -35,7 +35,9 @@ MAX_FIT_BYTES = 12 * 1024 * 1024
 def render(request, template, context):
     athlete = _athlete_user(request)
     if athlete:
+        from core.views.garmin import fit_ai_allowed
         context["sync_connection"] = CorosMCPConnection.objects.filter(athlete=athlete).first()
+        context["fit_ai_allowed"] = fit_ai_allowed(athlete)
     return django_render(request, template, context)
 
 
@@ -142,6 +144,26 @@ def coros_mcp_view(request):
         return HttpResponseForbidden("Connect from your own athlete account.")
     connection = CorosMCPConnection.objects.filter(athlete=athlete).first()
     return render(request, "core/coros_mcp.html", {"connected": bool(connection)})
+
+
+@login_required
+@require_POST
+def coros_mcp_ai_permission(request):
+    athlete = _athlete_user(request)
+    if not athlete:
+        return HttpResponseForbidden("Only the athlete can change AI permission.")
+    from core.views.garmin import CONSENT_VERSION
+    now = timezone.now()
+    if request.POST.get("consent_fit_ai") == "on":
+        athlete.fit_ai_consent_at = now
+        athlete.fit_ai_consent_version = CONSENT_VERSION
+        athlete.fit_ai_withdrawn_at = None
+    else:
+        athlete.fit_ai_withdrawn_at = now
+    athlete.save(update_fields=[
+        "fit_ai_consent_at", "fit_ai_consent_version", "fit_ai_withdrawn_at",
+    ])
+    return redirect("coros_mcp")
 
 
 @login_required

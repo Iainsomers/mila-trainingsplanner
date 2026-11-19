@@ -6,6 +6,7 @@ from django.core import signing
 import json
 from core.models import Athlete, CorosMCPConnection, GarminActivity, TrainingSlot
 from core.views.coros_mcp import _download_fit
+from core.views.garmin import CONSENT_VERSION, fit_ai_allowed
 
 
 class CorosMCPTests(TestCase):
@@ -56,6 +57,41 @@ class CorosMCPTests(TestCase):
         self.athlete.save()
         page = self.client.get("/planning/?section=hardware")
         self.assertNotContains(page, "COROS account")
+
+    def test_coros_page_offers_and_saves_separate_fit_ai_permission(self):
+        self.assertFalse(self.athlete.garmin_fit_upload_enabled)
+        page = self.client.get("/integrations/coros/mcp/")
+        self.assertContains(page, "AI analysis permission")
+        self.assertContains(page, "optional AI analysis using OpenAI")
+        self.assertFalse(fit_ai_allowed(self.athlete))
+
+        response = self.client.post(
+            "/integrations/coros/mcp/ai-permission/", {"consent_fit_ai": "on"},
+        )
+        self.assertRedirects(response, "/integrations/coros/mcp/")
+        self.athlete.refresh_from_db()
+        self.assertEqual(self.athlete.fit_ai_consent_version, CONSENT_VERSION)
+        self.assertTrue(fit_ai_allowed(self.athlete))
+        self.assertContains(
+            self.client.get("/integrations/coros/mcp/"),
+            'id="coros-fit-ai-consent" checked',
+            html=False,
+        )
+
+        self.client.post("/integrations/coros/mcp/ai-permission/")
+        self.athlete.refresh_from_db()
+        self.assertIsNotNone(self.athlete.fit_ai_withdrawn_at)
+        self.assertFalse(fit_ai_allowed(self.athlete))
+
+    def test_only_own_enabled_coros_athlete_can_change_fit_ai_permission(self):
+        self.user.is_staff = True
+        self.user.save()
+        response = self.client.post(
+            "/integrations/coros/mcp/ai-permission/", {"consent_fit_ai": "on"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.athlete.refresh_from_db()
+        self.assertIsNone(self.athlete.fit_ai_consent_at)
 
     @patch("core.views.coros_mcp.requests.post")
     def test_valid_callback_saves_only_own_connection(self, post):

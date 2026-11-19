@@ -5,6 +5,13 @@
 <p><a class="btn btn-outline-secondary btn-sm" href="{% url 'planning_overview' %}?section=hardware">Back</a></p>
 {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
 {% if notice %}<div class="alert alert-success" role="status">{{ notice }}</div>{% endif %}
+<section class="card card-body mb-3">
+<h2 class="h5">AI analysis permission</h2>
+<form method="post" action="{% url 'coros_mcp_ai_permission' %}">{% csrf_token %}
+<div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="consent_fit_ai" id="coros-fit-ai-consent" {% if fit_ai_allowed %}checked{% endif %}><label class="form-check-label small" for="coros-fit-ai-consent">I explicitly agree to optional AI analysis using OpenAI to interpret my COROS FIT workouts. Selected lap distances, durations, pace and heart-rate data may be processed, as described in the <a href="{% url 'privacy_policy' %}">Privacy Policy</a>. This applies to my existing and future COROS FIT imports. I can withdraw permission here at any time without removing my files or disconnecting COROS.</label></div>
+<button class="btn btn-sm btn-outline-primary" type="submit">Save AI permission</button>
+</form>
+</section>
 {% if connected %}
 <p>Your COROS account is connected.</p>
 {% include 'core/partials/coros_sync_status.html' with connection=sync_connection %}

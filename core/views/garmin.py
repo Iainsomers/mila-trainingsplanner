@@ -13,6 +13,7 @@ import requests
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
+from django.db.models import Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -347,8 +348,9 @@ def ai_allowed(athlete):
 
 def fit_ai_allowed(athlete):
     """FIT consent is independent of Garmin OAuth and its withdrawal."""
-    return bool(athlete and Athlete.objects.filter(pk=athlete.pk,
-        garmin_fit_upload_enabled=True, fit_ai_consent_at__isnull=False,
+    return bool(athlete and Athlete.objects.filter(
+        Q(garmin_fit_upload_enabled=True) | Q(coros_connection_enabled=True), pk=athlete.pk,
+        fit_ai_consent_at__isnull=False,
         fit_ai_withdrawn_at__isnull=True, fit_ai_consent_version=CONSENT_VERSION).exists())
 
 
