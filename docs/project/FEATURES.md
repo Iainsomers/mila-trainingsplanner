@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Athlete Diary gebruikt een rollend bereik van 53 weken vanaf `Start week`. Previous/Next week verplaatsen dit bereik zonder jaargrens; oude links met `year=` blijven als overgang ondersteund.
+
 - Garmin E kan een expliciet opgegeven gemengde sprintreeks onder 100 meter, bijvoorbeeld `1×(60m//70m//80m//70m//60m) Z6`, als één unieke chronologische correctie toepassen en in dezelfde compacte `//`-notatie tonen. De afzonderlijke sprintlaps en tussenliggende herstel-laps behouden intern hun gemeten rollen en volgorde. Ook een eenduidige groep zoals `3×60m Z6` werkt. Alle geselecteerde bronlaps worden gebruikers-Z6, ook als enkele reps vooraf al Z6 waren en andere door startvertraging lager uitvielen.
 - Strength-minuten tellen als ALT Z7 in de weektotalen van Diary en Individual Plans en in de ALT-totalen van Stats. Expliciete minuutnotaties in Strength worden opgeteld; herhalingen zoals `2×15 min` worden vermenigvuldigd. Z7 is duur-only en voegt geen loopkilometers toe.
 

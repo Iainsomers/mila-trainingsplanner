@@ -3832,14 +3832,25 @@ def athlete_year_calendar_view(request):
         cutoff = None
         week_offset = 0
 
-    jan1 = date(year, 1, 1)
-    full_start = jan1 - timedelta(days=jan1.weekday())
+    requested_start = None
+    try:
+        requested_start = date.fromisoformat((request.GET.get("start") or "").strip())
+    except (TypeError, ValueError):
+        requested_start = None
 
-    dec31 = date(year, 12, 31)
-    end = dec31 + timedelta(days=(6 - dec31.weekday()))
+    if requested_start:
+        start = requested_start - timedelta(days=requested_start.weekday())
+    else:
+        jan1 = date(year, 1, 1)
+        legacy_year_start = jan1 - timedelta(days=jan1.weekday())
+        start = max(legacy_year_start, cutoff) if cutoff else legacy_year_start
 
-    start = max(full_start, cutoff) if cutoff else full_start
-    weeks = max(0, ((end - start).days // 7) + 1)
+    # The Diary is a rolling 53-week view. It is deliberately not capped at
+    # 31 December: Previous/Next week and the start-week field may cross any
+    # number of year boundaries.
+    full_start = start
+    weeks = 53
+    end = start + timedelta(days=(weeks * 7) - 1)
 
     whereabouts_owner = selected_athlete.owner if selected_athlete else None
     whereabouts_dots = _whereabout_dots(
@@ -4539,6 +4550,7 @@ def athlete_year_calendar_view(request):
         "core/athlete_year_calendar.html",
         {
             "year": year,
+            "calendar_start": start,
             "week_rows": week_rows,
             "today": date.today(),
             "hide_mode": hide_mode,

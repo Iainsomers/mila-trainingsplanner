@@ -1,6 +1,8 @@
 # Actuele status
 
-- 19 november — `Previous week` en `Next week` in Athlete Diary verschuiven het volledige gekozen History-venster nu telkens één kalenderweek. Ze rekenen niet langer iedere klik opnieuw relatief aan de huidige week. `Today` herstelt de oorspronkelijke History-periode; jaar-, atleet- en History-keuze blijven behouden.
+- 21 november — Athlete Diary heeft `Start week` in plaats van Year en toont vanaf die maandag 53 weken. Previous/Next week lopen door over jaargrenzen; bestaande `year=`-links blijven compatibel.
+
+- 19 november — `Previous week` en `Next week` in Athlete Diary verschuiven het volledige gekozen History-venster telkens één kalenderweek. Deze eerdere jaargebonden navigatie is op 21 november vervangen door een rollende startweek.
 
 - 19 november — Garmin E kan een variabele Alternative-werkreeks met gelijke herstelduur nu als één korte Main-preview tonen, bijvoorbeeld `1×(12' - 10' - … - 1') Z2>Z3 p1`, in plaats van ieder Work/Recovery-blok te herhalen. Een expliciet zonebereik wordt geaccepteerd wanneer alle gemeten werkzones binnen het bereik vallen en beide grenzen werkelijk voorkomen. Alle individuele gemeten laps, HR-zones en seconden blijven onder de compacte tekst bewaard.
 

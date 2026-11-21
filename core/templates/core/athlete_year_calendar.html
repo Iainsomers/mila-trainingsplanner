@@ -520,7 +520,7 @@
   }
   .ayc-control-field { display: flex; flex-direction: column; gap: 2px; }
   .ayc-control-label { color: #6c757d; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-  .ayc-control-year { width: 100px; }
+  .ayc-control-start { width: 145px; }
   .ayc-control-athlete { width: 220px; }
   .ayc-control-history { width: 150px; }
   .ayc-week-navigation { display: inline-flex; gap: 4px; margin-left: 4px; }
@@ -1138,8 +1138,8 @@
 
   <form method="get" class="mb-3 ayc-desktop-controls">
     <label class="ayc-control-field">
-      <span class="ayc-control-label">Year</span>
-      <input name="year" value="{{ year }}" class="form-control form-control-sm ayc-control-year">
+      <span class="ayc-control-label">Start week</span>
+      <input type="date" name="start" value="{{ calendar_start|date:'Y-m-d' }}" class="form-control form-control-sm ayc-control-start" onchange="this.form.submit()">
     </label>
     <label class="ayc-control-field">
       <span class="ayc-control-label">Athlete</span>
@@ -1152,7 +1152,7 @@
     </label>
     <label class="ayc-control-field">
       <span class="ayc-control-label">History</span>
-      <select name="hide" class="form-select form-select-sm ayc-control-history" onchange="this.form.submit()">
+      <select name="hide" class="form-select form-select-sm ayc-control-history" onchange="this.form.querySelector('[name=start]').value=''; this.form.submit()">
         <option value="none" {% if hide_mode == "none" %}selected{% endif %}>All weeks</option>
         <option value="t1" {% if hide_mode == "t1" %}selected{% endif %}>From last week</option>
         <option value="t4" {% if hide_mode == "t4" %}selected{% endif %}>From last 4 weeks</option>
@@ -1182,7 +1182,7 @@
     <div class="ayc-mobile-toolbar">
       {% if is_coach_user %}
       <form method="get">
-        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="start" value="{{ calendar_start|date:'Y-m-d' }}">
         <input type="hidden" name="hide" value="{{ hide_mode }}">
         {% if simple_diary_view %}<input type="hidden" name="simple" value="1">{% endif %}
         <select name="athlete" class="form-select form-select-sm ayc-mobile-athlete" onchange="this.form.submit()">
@@ -1192,7 +1192,7 @@
         </select>
       </form>
       <form method="get" class="ayc-mobile-simple-form">
-        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="start" value="{{ calendar_start|date:'Y-m-d' }}">
         <input type="hidden" name="athlete" value="{{ selected_athlete_id }}">
         <input type="hidden" name="hide" value="{{ hide_mode }}">
         <label class="form-check form-switch ayc-simple-switch mb-0">
@@ -2140,40 +2140,31 @@
 (function() {
   var table = document.querySelector(".year-table");
   if (!table) return;
-  var shiftsHistoryWindow = "{{ hide_mode }}" !== "none";
-  var weekRows = Array.from(table.querySelectorAll("tr.week-start-row[data-week-start]"));
-  var currentIndex = weekRows.findIndex(function(row) { return row.classList.contains("current-week"); });
-  if (currentIndex < 0) currentIndex = 0;
-
-  function moveHistoryWindow(delta) {
+  function moveCalendarStart(delta) {
     var url = new URL(window.location.href);
-    var currentOffset = parseInt(url.searchParams.get("week_offset") || "0", 10);
-    if (!Number.isFinite(currentOffset)) currentOffset = 0;
-    url.searchParams.set("week_offset", String(currentOffset + delta));
+    var currentStart = new Date("{{ calendar_start|date:'Y-m-d' }}T12:00:00");
+    currentStart.setDate(currentStart.getDate() + (delta * 7));
+    url.searchParams.set("start", currentStart.getFullYear() + "-" + String(currentStart.getMonth() + 1).padStart(2, "0") + "-" + String(currentStart.getDate()).padStart(2, "0"));
+    url.searchParams.delete("year");
+    url.searchParams.delete("week_offset");
     window.location.assign(url.toString());
-  }
-
-  function moveInsideFullYear(delta) {
-    if (!weekRows.length) return;
-    currentIndex = Math.max(0, Math.min(currentIndex + delta, weekRows.length - 1));
-    var row = weekRows[currentIndex];
-    var top = window.scrollY + row.getBoundingClientRect().top;
-    window.scrollTo({top:Math.max(0, top - 8), behavior:"smooth"});
   }
 
   var previous = document.getElementById("aycDesktopPrev");
   var todayButton = document.getElementById("aycDesktopToday");
   var next = document.getElementById("aycDesktopNext");
   if (previous) previous.addEventListener("click", function() {
-    if (shiftsHistoryWindow) moveHistoryWindow(1); else moveInsideFullYear(-1);
+    moveCalendarStart(-1);
   });
   if (todayButton) todayButton.addEventListener("click", function() {
     var url = new URL(window.location.href);
+    url.searchParams.set("start", "{{ today|date:'Y-m-d' }}");
+    url.searchParams.delete("year");
     url.searchParams.delete("week_offset");
     window.location.assign(url.toString());
   });
   if (next) next.addEventListener("click", function() {
-    if (shiftsHistoryWindow) moveHistoryWindow(-1); else moveInsideFullYear(1);
+    moveCalendarStart(1);
   });
 
   var reportDetails = Array.from(table.querySelectorAll(".week-report-details"));

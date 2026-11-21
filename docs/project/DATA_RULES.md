@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- Het zichtbare Athlete Diary-bereik begint op de maandag van `Start week` en bevat 53 volledige kalenderweken. Het bereik is niet begrensd door 31 december. Een handmatig gekozen datum binnen een week wordt eerst naar de maandag van die week genormaliseerd.
+
 - Een handmatige Garmin E-Z6-correctie voor een volledig uitgeschreven afstandsreeks mag alleen een unieke opeenvolgende reeks werkreps raken en uitsluitend wanneer alle nominale afstanden 25 tot kleiner dan 100 meter zijn. Herhaalde afstanden binnen de reeks zijn toegestaan. De preview mag die werkreps als één compact sprintblok presenteren; tussenliggende recovery-laps blijven afzonderlijk toegewezen. De correctie overschrijft pace/HR-zone voor die laps, maar nooit afstand, tijd, rol of hersteltoewijzing.
 - `CORE2` (UI: Strength) levert uitsluitend Z7-duur. Alle expliciete minuutwaarden (`40'`, `30 min`, `2×15 min`) in het Strength-tekstveld worden opgeteld. Andere getallen, waaronder HR-waarden, tellen niet mee. Z7 wordt bij ALT-minuten opgeteld en nooit bij loopafstand.
 

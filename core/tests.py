@@ -8448,13 +8448,14 @@ class SlotModalSaveTests(TestCase):
         _, _, athlete = self._user_plan_and_athlete()
         self.assertFalse(athlete.mobile_diary_week_view)
 
-        response = self.client.get(f"/athlete/year/?year=2026&athlete={athlete.id}")
+        response = self.client.get(f"/athlete/year/?start=2026-12-28&athlete={athlete.id}")
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'class="ayc-mobile is-week-view"', html=False)
+        self.assertContains(response, 'type="hidden" name="start" value="2026-12-28"', html=False)
 
         athlete.mobile_diary_week_view = True
         athlete.save(update_fields=["mobile_diary_week_view"])
-        response = self.client.get(f"/athlete/year/?year=2026&athlete={athlete.id}")
+        response = self.client.get(f"/athlete/year/?start=2026-12-28&athlete={athlete.id}")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="ayc-mobile is-week-view"', html=False)
@@ -8525,9 +8526,12 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response, 'id="aycDesktopPrev"', html=False)
         self.assertContains(response, 'id="aycDesktopToday"', html=False)
         self.assertContains(response, 'id="aycDesktopNext"', html=False)
-        self.assertContains(response, 'url.searchParams.set("week_offset", String(currentOffset + delta))', html=False)
-        self.assertContains(response, 'moveHistoryWindow(1)', html=False)
-        self.assertContains(response, 'moveHistoryWindow(-1)', html=False)
+        self.assertContains(response, 'name="start"', html=False)
+        self.assertContains(response, 'type="date"', html=False)
+        self.assertNotContains(response, '<span class="ayc-control-label">Year</span>', html=False)
+        self.assertContains(response, 'url.searchParams.set("start", currentStart.getFullYear()', html=False)
+        self.assertContains(response, 'moveCalendarStart(-1)', html=False)
+        self.assertContains(response, 'moveCalendarStart(1)', html=False)
         self.assertNotContains(response, 'max-height: calc(100vh - 270px)', html=False)
         self.assertNotContains(response, 'tableWrap.scrollTo({', html=False)
         self.assertNotContains(response, 'weekRows[currentIndex].scrollIntoView', html=False)
@@ -8583,6 +8587,30 @@ class SlotModalSaveTests(TestCase):
             following.context["week_rows"][0]["week_start"],
             current.context["week_rows"][0]["week_start"] + timedelta(days=7),
         )
+
+    def test_diary_start_week_and_next_navigation_cross_year_boundary(self):
+        _, _, athlete = self._user_plan_and_athlete()
+        response = self.client.get(
+            f"/athlete/year/?start=2026-12-28&athlete={athlete.id}&hide=t1"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["calendar_start"], date(2026, 12, 28))
+        self.assertEqual(response.context["week_rows"][0]["week_start"], date(2026, 12, 28))
+        self.assertEqual(response.context["week_rows"][1]["week_start"], date(2027, 1, 4))
+        self.assertEqual(len(response.context["week_rows"]), 53)
+        self.assertContains(response, 'value="2026-12-28"', html=False)
+        self.assertContains(response, 'moveCalendarStart(1)', html=False)
+
+        following = self.client.get(
+            f"/athlete/year/?start=2027-01-04&athlete={athlete.id}&hide=t1"
+        )
+        self.assertEqual(following.context["week_rows"][0]["week_start"], date(2027, 1, 4))
+
+        midweek = self.client.get(
+            f"/athlete/year/?start=2027-01-07&athlete={athlete.id}&hide=t1"
+        )
+        self.assertEqual(midweek.context["calendar_start"], date(2027, 1, 4))
 
     def test_ayc_today_modal_is_moved_outside_team_stacking_context(self):
         _, _, athlete = self._user_plan_and_athlete()
