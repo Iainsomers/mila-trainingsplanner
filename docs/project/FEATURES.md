@@ -153,6 +153,7 @@ Prio en de Other-namen zijn gedeelde atleetinstellingen, niet gekoppeld aan de c
 ## Flex Planner
 
 - Toont de effectieve planning per geselecteerde atleet.
+- De Weeks-keuze ondersteunt 1, 2, 3, 4, 5, 12, 26 en 100 weken. Het gekozen bereik blijft behouden bij Previous/Next week en loopt door over jaargrenzen.
 - In Main kunnen zelfstandige trainingsonderdelen met `//` of `+` worden gescheiden; ieder onderdeel wordt apart opgeslagen en weergegeven, en telt mee in de eigen zone-totalen.
 - Ondersteunt persoonlijke wijzigingen, kopiëren en drag-copy.
 - Toont alle trainingsonderdelen en atleet-specifieke richttijden/tempo's.

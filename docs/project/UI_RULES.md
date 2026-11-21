@@ -63,6 +63,7 @@ mySASY gebruikt de officiële ongewijzigde `mySASY account`-knop en het Powered 
 - Na Use AM/PM staat naast het AYC-klokje een compacte `p/w`-knop. Die opent een kleine popup met `Watch` en `Plan`; de actieve versie is gemarkeerd. Het klokje toont in beide standen de bewaarde Watch-reptijden. De keuzepopup volgt de bestaande trainingsbewerkrechten en staat buiten de team-stackingcontext.
 
 - Flex Planner-rijen groeien mee met de training, met 48 px als minimum. Gebruik rondom de training slechts 2 px verticale padding; reserveer geen lege strook onderaan.
+- De Weeks-dropdown in Individual Plans bevat uitsluitend 1, 2, 3, 4, 5, 12, 26 en 100. Ook de lange bereiken zijn echte kalenderweergaven; Previous/Next week behoudt de gekozen lengte.
 - Compact, functioneel en rustig; planningsinformatie krijgt voorrang op uitlegtekst.
 - Gebruik bestaande Bootstrap-componenten en de huidige MiLa-visuele taal.
 - Segmenten, zones, totalen en weektypen mogen als compacte pills worden weergegeven.

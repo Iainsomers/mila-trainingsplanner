@@ -1140,12 +1140,14 @@ def flex_planner_view(request):
         start = default_start
     start = start - timedelta(days=start.weekday())
 
+    week_options = (1, 2, 3, 4, 5, 12, 26, 100)
     weeks_raw = (request.GET.get("weeks") or "2").strip()
     try:
         weeks = int(weeks_raw)
     except Exception:
         weeks = 2
-    weeks = max(1, min(5, weeks))
+    if weeks not in week_options:
+        weeks = 2
 
     selected_group_value = (request.GET.get("group") or "all").strip()
     selected_group = None
@@ -1666,10 +1668,11 @@ def flex_planner_view(request):
             "week_rows": week_rows,
             "start": start,
             "weeks": weeks,
+            "week_options": week_options,
             "prev_url": prev_url,
             "next_url": next_url,
             "max_athletes": 20,
-            "max_weeks": 5,
+            "max_weeks": max(week_options),
             "show_session_km": coach_settings.see_session_km,
             "pause_mode": coach_settings.pause_mode,
         },

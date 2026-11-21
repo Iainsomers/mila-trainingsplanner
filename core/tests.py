@@ -1469,6 +1469,34 @@ Vortex	16,36	30/05/2026
 
 
 class PlanningOverviewTests(TestCase):
+    def test_individual_plans_supports_extended_week_choices(self):
+        coach = get_user_model().objects.create_user(
+            username="extended-weeks-coach", password="secret", is_staff=True
+        )
+        athlete = Athlete.objects.create(
+            owner=coach,
+            name="Extended Weeks Athlete",
+            birth_year=2000,
+            gender="X",
+        )
+        self.client.force_login(coach)
+
+        for weeks in (12, 26, 100):
+            response = self.client.get(
+                f"/flex-planner/?start=2026-12-28&weeks={weeks}&athletes={athlete.id}"
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.context["weeks"], weeks)
+            self.assertEqual(len(response.context["week_rows"]), weeks)
+            self.assertContains(response, f'<option value="{weeks}" selected>', html=False)
+            self.assertIn(f"weeks={weeks}", response.context["prev_url"])
+            self.assertIn(f"weeks={weeks}", response.context["next_url"])
+
+        invalid = self.client.get(
+            f"/flex-planner/?start=2026-12-28&weeks=99&athletes={athlete.id}"
+        )
+        self.assertEqual(invalid.context["weeks"], 2)
+
     def test_fit_issues_marker_is_visible_in_dco_and_flex(self):
         coach = get_user_model().objects.create_user(
             username="pain-marker-coach", password="secret", is_staff=True

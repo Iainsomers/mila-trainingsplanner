@@ -1319,8 +1319,8 @@
     <div>
       <label class="form-label mb-1 small text-secondary">Weeks</label>
       <select name="weeks" class="form-select form-select-sm" onchange="submitFlexPlannerForm(this.form, {{ max_athletes }});">
-        {% for n in "12345" %}
-          <option value="{{ n }}" {% if weeks|stringformat:"s" == n %}selected{% endif %}>{{ n }}</option>
+        {% for n in week_options %}
+          <option value="{{ n }}" {% if weeks == n %}selected{% endif %}>{{ n }}</option>
         {% endfor %}
       </select>
     </div>

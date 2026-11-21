@@ -1,5 +1,7 @@
 # Actuele status
 
+- 21 november — Individual Plans ondersteunt in de Weeks-dropdown nu ook 12, 26 en 100 weken. De server accepteert precies 1–5, 12, 26 en 100; navigatie behoudt de gekozen lengte.
+
 - 21 november — Athlete Diary heeft `Start week` in plaats van Year en toont vanaf die maandag 53 weken. Previous/Next week lopen door over jaargrenzen; bestaande `year=`-links blijven compatibel.
 
 - 19 november — `Previous week` en `Next week` in Athlete Diary verschuiven het volledige gekozen History-venster telkens één kalenderweek. Deze eerdere jaargebonden navigatie is op 21 november vervangen door een rollende startweek.
