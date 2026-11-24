@@ -304,6 +304,64 @@ class GarminEValidationTests(SimpleTestCase):
             for lap in recovery
         ))
 
+    def test_follow_up_can_set_all_timed_work_blocks_to_z2(self):
+        loads = [
+            {"meters": 1000, "seconds": 301, "zone": "1", "segment": "WU"},
+            {"meters": 1000, "seconds": 290, "zone": "1", "segment": "WU"},
+            {"meters": 43, "seconds": 14, "zone": "1", "segment": "WU"},
+        ]
+        reps = []
+        recovery = []
+        for index in range(12):
+            work_lap = len(loads) + 1
+            loads.append({
+                "meters": 620,
+                "seconds": 120,
+                "zone": "2" if index in {0, 4, 8, 10, 11} else "3",
+                "segment": "CORE",
+            })
+            reps.append({"laps": [work_lap], "target_seconds": 120})
+            if index < 11:
+                recovery_lap = len(loads) + 1
+                recovery.append(recovery_lap)
+                loads.append({
+                    "meters": 60 if index == 7 else 330,
+                    "seconds": 215 if index == 7 else 90,
+                    "zone": "1",
+                    "segment": "CORE",
+                })
+        recovery.append(len(loads) + 1)
+        loads.append({"meters": 74, "seconds": 140, "zone": "1", "segment": "CORE"})
+        loads.append({"meters": 935, "seconds": 301, "zone": "1", "segment": "CD"})
+        proposal = {
+            "warmup_laps": [1, 2, 3],
+            "cooldown_laps": [len(loads)],
+            "recovery_laps": recovery,
+            "reps": reps,
+            "zone_labels": [{"target_seconds": 120, "count": 12, "label": "Z1>Z2"}],
+        }
+
+        updated, changed = apply_explicit_zone_labels(
+            proposal, "maak van de werkblokken z2",
+        )
+        checked = checked_proposal({"watch_loads": loads}, updated, zone_basis="pace")
+
+        self.assertTrue(changed)
+        self.assertEqual(updated["zone_labels"], [])
+        self.assertEqual(
+            updated["explicit_lap_zones"],
+            {str(rep["laps"][0]): "2" for rep in reps},
+        )
+        self.assertEqual(checked["training_fields"]["main"], "12×2' Z2 p90")
+        self.assertTrue(all(
+            checked["watch_loads"][rep["laps"][0] - 1]["zone"] == "2"
+            for rep in reps
+        ))
+        self.assertTrue(all(
+            checked["watch_loads"][lap - 1]["zone"] == "1"
+            for lap in [1, 2, 3, *recovery, len(loads)]
+        ))
+
     def test_equal_three_minute_reps_override_variable_distance_targets(self):
         work_distances = [746.9, 767.8, 775.67, 783.19, 763.08, 753.62, 765.641, 786.32]
         loads = [{"meters":1783.44, "seconds":572, "zone":"1", "segment":"WU"}]

@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Garmin E past expliciete vervolgcorrecties zoals `maak van de werkblokken Z2` nu server-side toe op alle gecontroleerde werkreps. Een regressie met 12×2 minuten bewaart warming-up, rustige tussenlaps, langere blokpauze, overgang en cooldown en wijzigt uitsluitend de werkzone.
+
 - 24 november — Garmin E past een ondubbelzinnige vervolgcorrectie `maak er Z6 van in plaats van Z3>Z4` nu toe wanneer alle gecontroleerde Main-reps afstanden van 25 tot onder 100 m hebben. Regressie voor `2×(8×85 m ... p42) sp283` bewaart alle zestien werkreps, herstel-laps en setpauze en verandert uitsluitend de werkzone naar Z6.
 
 - 24 november — De nutteloze atletennamenlijst op de startpagina van Staff Team Overview is verwijderd. Vier hoofdtegels openen Vitals, Information Quality, Injury/Issue Overview en Training / Quick Coach Report; Log staat kleiner onderaan. Detailpagina's keren met Overview terug naar de tegelpagina.
