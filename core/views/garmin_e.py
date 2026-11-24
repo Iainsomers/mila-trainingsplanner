@@ -270,15 +270,36 @@ def garmin_type_e_ayc_view(request):
                     if is_alternative else None
                 )
                 explicit_distance = None
-                if message and not is_alternative:
+                explanation_only = bool(message and re.match(
+                    r"\s*(?:waarom|hoe komt het|why|how come)\b", message, re.I,
+                ))
+                local_basis = state["basis"]
+                local_reply = "De nominale sprintafstand is aangepast in het gecontroleerde voorstel."
+                if message and not is_alternative and not explanation_only:
                     base = state["proposal"] or complete_partial_running_proposal(part, {
                         "warmup_laps": [i for i, load in enumerate(part["watch_loads"], 1)
                                         if load.get("segment") == "WU"],
                     })
                     explicit_distance = correct_short_rep_distance(base, message)
+                    if explicit_distance is not None and not state["proposal"]:
+                        # The measured preview uses pace zones. A local sprint
+                        # correction must not introduce HR reclassification.
+                        local_basis = "pace"
+                    elif state["proposal"] and re.fullmatch(
+                        r"\s*(?:kijk naar|gebruik)\s+(?:de\s+)?(?:snelheid|tempo)(?:\s+voor de zones)?[.!]?\s*",
+                        message, re.I,
+                    ):
+                        explicit_distance = base
+                        local_basis = "pace"
+                        local_reply = "De zones zijn opnieuw bepaald op basis van snelheid."
+                    elif explicit_distance is None and state["proposal"]:
+                        corrected, changed = apply_explicit_zone_labels(base, message)
+                        if changed:
+                            explicit_distance = corrected
+                            local_reply = "De gevraagde zonecorrectie staat in het gecontroleerde voorstel."
                     if explicit_distance is not None:
                         try:
-                            checked_proposal(part, explicit_distance, athlete=athlete, zone_basis=state["basis"])
+                            checked_proposal(part, explicit_distance, athlete=athlete, zone_basis=local_basis)
                         except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError):
                             explicit_distance = None
                 try:
@@ -286,9 +307,13 @@ def garmin_type_e_ayc_view(request):
                         "reply": "De expliciete notatie past op alle gemeten laps en staat als gecontroleerd voorstel in de preview.",
                         "intent": "update", "zone_basis": "hr", "proposal": explicit_compact,
                     } if explicit_compact else {
-                        "reply": "De nominale sprintafstand is aangepast in het gecontroleerde voorstel.",
-                        "intent": "update", "zone_basis": state["basis"], "proposal": explicit_distance,
-                    } if explicit_distance else ask_model(facts,history,current,timeout=16))
+                        "reply": local_reply,
+                        "intent": "update", "zone_basis": local_basis, "proposal": explicit_distance,
+                    } if explicit_distance else ask_model(
+                        facts, history, current,
+                        "Answer the user's question directly from the current preview and lap facts. Do not propose changes.",
+                        timeout=16,
+                    ) if explanation_only else ask_model(facts, history, current, timeout=16))
                 except OSError:
                     remaining = deadline-monotonic()
                     if remaining < 3:
@@ -300,6 +325,9 @@ def garmin_type_e_ayc_view(request):
                         timeout=min(8, remaining),
                     )
                     initial_retry_used = True
+                if explanation_only:
+                    answer = {"reply": answer["reply"], "zone_basis": state["basis"]}
+                    compact_requested = False
                 proposal = answer.get("proposal")
                 def apply_conversation_corrections(value):
                     if not isinstance(value, dict):
@@ -315,7 +343,7 @@ def garmin_type_e_ayc_view(request):
                             value, _ = apply_explicit_zone_labels(value, turn.get("content", ""))
                     return value
                 basis = answer.get("zone_basis",state["basis"])
-                if isinstance(proposal, dict):
+                if isinstance(proposal, dict) and explicit_distance is None:
                     proposal = deepcopy(proposal)
                     prior_roles = (state.get("proposal") or {}).get("explicit_role_zones")
                     proposal.pop("explicit_role_zones", None)
@@ -326,7 +354,7 @@ def garmin_type_e_ayc_view(request):
                         proposal["zone_labels"] = deepcopy(prior_labels)
                     else:
                         proposal.pop("zone_labels", None)
-                labeled_proposal, explicit_zone_update = apply_explicit_zone_labels(
+                labeled_proposal, explicit_zone_update = (proposal, False) if explanation_only or explicit_distance is not None else apply_explicit_zone_labels(
                     proposal if proposal is not None else state.get("proposal"), message
                 )
                 explicit_sprint_update = bool(
@@ -336,7 +364,7 @@ def garmin_type_e_ayc_view(request):
                 )
                 if explicit_zone_update:
                     proposal = labeled_proposal
-                action_requested = bool(message and (
+                action_requested = bool(message and not explanation_only and (
                     re.search(r"\b(?:voorstel|proposal|gebruik|gebruiken|use|usen|apply|toepassen|overnemen|aanpassen|corrigeer|update)\b",message,re.I)
                     or explicit_zone_update
                     or (re.fullmatch(r"(?:ja|yes|ok|doe maar)[.!]?",message,re.I) and state["history"]
@@ -376,7 +404,8 @@ def garmin_type_e_ayc_view(request):
                             proposal = apply_conversation_corrections(proposal)
                         if wants_update:
                             proposal = complete_partial_running_proposal(part, proposal)
-                        proposal, time_group_adjusted = prefer_measured_time_groups(part, proposal)
+                        if explicit_distance is None:
+                            proposal, time_group_adjusted = prefer_measured_time_groups(part, proposal)
                         if compact_requested and proposal.get("format")!="compact":
                             raise ValueError("De gevraagde compacte notatie ontbreekt nog in de laptoewijzing.")
                         candidate = checked_proposal(part,proposal,athlete=athlete,zone_basis=basis,
@@ -407,7 +436,7 @@ def garmin_type_e_ayc_view(request):
                     reply = ("Het korte sprintblok is als één gecontroleerd werkblok in de preview gezet. "
                              "De afzonderlijke sprintlaps en herstel-laps blijven in hun gemeten volgorde behouden.")
                 if wants_update and not candidate and (error or answer.get("intent") == "update"):
-                    reply = "Het gecontroleerde voorstel is niet aangepast." + ("\n\n" + error if error else " De gevraagde wijziging leverde nog geen bruikbaar voorstel op.")
+                    reply = "Het gecontroleerde voorstel is niet aangepast." + (" De gevraagde wijziging leverde nog geen bruikbaar voorstel op." if not error else "")
                 if candidate and time_group_adjusted:
                     reply += "\n\nDe werkblokken hebben vrijwel exact dezelfde hele-minuutduur; daarom toont het gecontroleerde voorstel deze groep als tijdreps."
                 if error:

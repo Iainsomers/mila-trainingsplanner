@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Garmin E beantwoordt waarom-vragen zonder voorstelcontrole. Gerichte, valide zonecorrecties gebruiken de gecontroleerde lapindeling. Sprintcorrecties vanuit de gemeten preview behouden tempo als zonebasis.
+
 - 24 november — Garmin E kan een unieke korte werkgroep corrigeren van bijvoorbeeld 4×50 m naar 4×70 m Z6, ook met expliciete lapnummers. De volledige meetvalidator blijft gelden.
 
 - 24 november — Quick Coach Report toont nu `Watch Training` wanneer een persoonlijke training binnen het gekozen uren-/dagvenster dezelfde `watch_a`–`watch_e`-bron heeft die het klokje in Athlete Diary en Individual Planning aanstuurt. Dit omvat ook een planned slot met bewaarde Watch-snapshot en zichtbaar klokje. De regel bevat naam, datum, AM/PM en Polar A/B of Garmin C/D/E. Regressie dekt actieve horlogebron, planned zonder Watch-versie, planned met Watch-snapshot, oud slot en private atleet.

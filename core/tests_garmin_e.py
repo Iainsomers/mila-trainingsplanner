@@ -1180,6 +1180,20 @@ class GarminEEndpointTests(TestCase):
         self.assertIn("werkblok",result["chat_reply"])
 
     @patch("core.views.garmin_e.ask_model")
+    def test_why_question_keeps_checked_preview_even_if_model_proposes_update(self, model):
+        model.return_value = {"reply": "Dit past.", "proposal": self.proposal, "zone_basis": "pace"}
+        initial = self.chat("Bekijk deze training").json()["results"][0]["parts"][0]
+        self.assertTrue(initial["e_usable"])
+        model.reset_mock()
+        model.return_value = {"reply": "Deze zones komen uit het tempo.", "intent": "update",
+                              "proposal": {"reps": []}, "zone_basis": "hr"}
+        result = self.chat("Waarom krijgt 2*1000m Z1>Z3?").json()["results"][0]["parts"][0]
+        self.assertEqual(result["chat_reply"], "Deze zones komen uit het tempo.")
+        self.assertEqual(result["training_fields"], initial["training_fields"])
+        self.assertEqual(result["watch_loads"], initial["watch_loads"])
+        model.assert_called_once()
+
+    @patch("core.views.garmin_e.ask_model")
     def test_unfulfilled_update_request_cannot_silently_look_applied(self, model):
         model.return_value = {"reply":"Dit past.","proposal":self.proposal}
         initial = self.chat("Bekijk deze training").json()["results"][0]["parts"][0]
