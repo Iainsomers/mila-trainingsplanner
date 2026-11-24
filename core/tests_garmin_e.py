@@ -1180,6 +1180,21 @@ class GarminEEndpointTests(TestCase):
         self.assertIn("werkblok",result["chat_reply"])
 
     @patch("core.views.garmin_e.ask_model")
+    def test_long_block_hr_request_reuses_checked_assignment(self, model):
+        model.return_value = {"reply": "Dit past.", "proposal": self.proposal, "zone_basis": "pace"}
+        initial = self.chat("Bekijk deze training").json()["results"][0]["parts"][0]
+        self.assertTrue(initial["e_usable"])
+        model.reset_mock()
+        model.return_value = {"reply": "Eindhartslag voor lange blokken.", "intent": "zone_basis",
+                              "zone_basis": "auto", "proposal": {"reps": []}}
+        result = self.chat("kijk naar hr voor zones van de lange blokken").json()["results"][0]["parts"][0]
+        self.assertEqual(result["e_zone_basis"], "auto")
+        self.assertIn("eindhartslag", result["chat_reply"].lower())
+        self.assertEqual([lap.get("ai_rep") for lap in result["watch_loads"]],
+                         [lap.get("ai_rep") for lap in initial["watch_loads"]])
+        model.assert_called_once()
+
+    @patch("core.views.garmin_e.ask_model")
     def test_why_question_keeps_checked_preview_even_if_model_proposes_update(self, model):
         model.return_value = {"reply": "Dit past.", "proposal": self.proposal, "zone_basis": "pace"}
         initial = self.chat("Bekijk deze training").json()["results"][0]["parts"][0]

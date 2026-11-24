@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Garmin E verwerkt een expliciet verzoek om hartslagzones voor lange blokken op de bestaande gecontroleerde lapindeling, met de Auto-grens van 400 m of 50 s. Expliciete zones blijven behouden.
+
 - 24 november — Garmin E beantwoordt waarom-vragen zonder voorstelcontrole. Gerichte, valide zonecorrecties gebruiken de gecontroleerde lapindeling. Sprintcorrecties vanuit de gemeten preview behouden tempo als zonebasis.
 
 - 24 november — Garmin E kan een unieke korte werkgroep corrigeren van bijvoorbeeld 4×50 m naar 4×70 m Z6, ook met expliciete lapnummers. De volledige meetvalidator blijft gelden.

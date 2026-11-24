@@ -328,6 +328,12 @@ def garmin_type_e_ayc_view(request):
                 if explanation_only:
                     answer = {"reply": answer["reply"], "zone_basis": state["basis"]}
                     compact_requested = False
+                if (message and not is_alternative and state["proposal"]
+                        and answer.get("intent") == "zone_basis"
+                        and answer.get("zone_basis") in {"auto", "pace", "hr"}):
+                    explicit_distance = deepcopy(state["proposal"])
+                    answer = {**answer, "intent": "update", "proposal": explicit_distance,
+                              "confirmation_required": False}
                 proposal = answer.get("proposal")
                 def apply_conversation_corrections(value):
                     if not isinstance(value, dict):

@@ -49,7 +49,7 @@ duration may contribute to recovery pauses, but their distance is not running mi
 Preserve unrelated parts when a user corrects only one block. Recount from original laps.
 If the user accidentally ran one rep longer, discuss it; actual times always remain measured.
 For an explanation/question return proposal:null. Do not say a training was saved or accepted.
-Return JSON: {"reply":"natural helpful answer", "intent":"discuss" or "update",
+Return JSON: {"reply":"natural helpful answer", "intent":"discuss" or "update" or "zone_basis",
 "zone_basis":"auto" or "pace" or "hr", "proposal":null or
 {"warmup_laps":[1], "cooldown_laps":[], "recovery_laps":[3], "ignored_laps":[],
 "reps":[{"laps":[2],"target_meters":200},{"laps":[4],"target_meters":100}]}}.
@@ -80,7 +80,11 @@ measured-duration block in that chronological pattern. It does not by itself dec
 are work or recovery and never permits reordering. Return the complete assignment matching the
 stated lap order; the server separately validates every source lap and duration.
 Users can say 'kijk naar snelheid ipv hr' or vice versa: set zone_basis accordingly and explain
-the choice. Preserve the current basis unless asked to change it. auto uses end HR for reps
+the choice. For a running request that only changes how zones are calculated, use intent
+"zone_basis" and proposal:null. The server reuses the checked assignment and manual zones.
+Requests to use heart rate for long reps only use "auto". Interpret the meaning across
+different phrasings and languages. Questions about why a zone was chosen use "discuss".
+Preserve the current basis unless asked to change it. auto uses end HR for reps
 at least 400m OR 50s and pace for shorter reps. pace always uses speed, hr requests measured
 end HR even on short reps. If HR is absent the server retains pace and reports that limitation.
 For Alternative (elliptical, cycling, swimming, etc.) distance_m may be null. Discuss these just
