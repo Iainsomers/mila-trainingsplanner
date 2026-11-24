@@ -39,6 +39,16 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_watch_clock_keeps_all_e_reps_in_mixed_sets(self):
+        distances = [1800, 1300, 800] * 2 + [800, 800]
+        loads = [{"segment": "CORE", "work_rep": True, "ai_rep": i,
+                  "ai_nominal_m": distance, "meters": distance + 10, "seconds": distance / 4}
+                 for i, distance in enumerate(distances, 1)]
+        loads.insert(1, {"segment": "CORE", "work_rep": False, "meters": 200, "seconds": 120})
+        rows = processed_main_reps(SimpleNamespace(source="watch_e", watch_loads=loads))
+        self.assertEqual([row["distance_m"] for row in rows], distances)
+        self.assertEqual([row["rep"] for row in rows], list(range(1, 9)))
+
     def test_explicit_mixed_sets_split_equal_distance_tail(self):
         distances = [120, 1800, 1300, 800, 1500, 1300, 800, 800, 800]
         loads = [{"meters": distance, "seconds": distance / 4, "zone": "2", "segment": "CORE"}

@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Het Garmin E-klokje leest meerdere gevalideerde werkreps rechtstreeks uit de opgeslagen lapmarkeringen. Gemengde sets en een apart slotblok blijven samen zichtbaar, ook bij bestaande trainingen met die markeringen.
+
 - 24 november — Bij een herhaalverzoek kan Garmin E de laatste expliciete setnotatie uit de gebruikersberichten opnieuw toepassen. Een ongeldige koppeling geeft een concrete melding.
 
 - 24 november — Garmin E kan expliciete gemengde afstandssets als presentatie bewaren wanneer ze één unieke aaneengesloten reeks gecontroleerde werkreps aanwijzen. Setgrenzen kunnen een reeks gelijke afstanden splitsen.

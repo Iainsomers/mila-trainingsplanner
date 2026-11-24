@@ -374,6 +374,37 @@ def processed_main_reps(slot):
     if not isinstance(raw_loads, list):
         return []
 
+    # Garmin E already validated the rep boundaries. Mixed set notation is
+    # presentation and may span several different nominal distances.
+    if slot.source == "watch_e":
+        work = [load for load in raw_loads if isinstance(load, dict)
+                and load.get("segment") == "CORE" and load.get("work_rep") is True
+                and not load.get("combined_outer")]
+        if work and all(type(load.get("ai_rep")) is int and load["ai_rep"] > 0 for load in work):
+            reps = {}
+            for load in work:
+                reps.setdefault(load["ai_rep"], []).append(load)
+            if len(reps) > 1:
+                output = []
+                for block in reps.values():
+                    meters = sum(float(load["meters"]) for load in block)
+                    seconds = sum(float(load["seconds"]) for load in block)
+                    distance = block[0].get("ai_nominal_m") or round(meters)
+                    if meters <= 0 or seconds <= 0:
+                        continue
+                    output.append({
+                        "rep": len(output) + 1,
+                        "distance_m": distance,
+                        "measured_distance_m": round(meters, 4),
+                        "measured_seconds": round(seconds, 4),
+                        "seconds": round(seconds * distance / meters, 2),
+                        "pace_seconds_per_km": round(seconds * 1000 / meters, 2),
+                        "average_hr": _block_average_hr(block),
+                        "average_hr_last_15": block[-1].get("average_hr_last_15"),
+                        "hr_tail": tail_hr(block),
+                    })
+                return output
+
     candidates = []
     for index, load in enumerate(raw_loads):
         if not isinstance(load, dict) or str(load.get("segment") or "CORE").upper() != "CORE":
