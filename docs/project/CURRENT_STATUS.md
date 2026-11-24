@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Garmin E past een ondubbelzinnige vervolgcorrectie `maak er Z6 van in plaats van Z3>Z4` nu toe wanneer alle gecontroleerde Main-reps afstanden van 25 tot onder 100 m hebben. Regressie voor `2×(8×85 m ... p42) sp283` bewaart alle zestien werkreps, herstel-laps en setpauze en verandert uitsluitend de werkzone naar Z6.
+
 - 24 november — De nutteloze atletennamenlijst op de startpagina van Staff Team Overview is verwijderd. Vier hoofdtegels openen Vitals, Information Quality, Injury/Issue Overview en Training / Quick Coach Report; Log staat kleiner onderaan. Detailpagina's keren met Overview terug naar de tegelpagina.
 
 - 21 november — Individual Plans ondersteunt in de Weeks-dropdown nu ook 12, 26 en 100 weken. De server accepteert precies 1–5, 12, 26 en 100; navigatie behoudt de gekozen lengte.

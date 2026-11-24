@@ -252,6 +252,58 @@ class GarminEValidationTests(SimpleTestCase):
         self.assertEqual(updated["explicit_lap_zones"], {"1":"6", "2":"6", "3":"6"})
         self.assertEqual(updated["zone_labels"], [])
 
+    def test_follow_up_can_raise_entire_checked_short_set_to_z6(self):
+        loads = []
+        reps = []
+        recovery = []
+        for index in range(16):
+            work_lap = len(loads) + 1
+            loads.append({
+                "meters": 85,
+                "seconds": 14,
+                "zone": "3" if index in {0, 6} else "4",
+                "segment": "CORE",
+            })
+            reps.append({"laps": [work_lap], "target_meters": 85})
+            if index < 15:
+                recovery.append(len(loads) + 1)
+                loads.append({
+                    "meters": 135,
+                    "seconds": 283 if index == 7 else 42,
+                    "zone": "1",
+                    "segment": "CORE",
+                })
+        proposal = {
+            "recovery_laps": recovery,
+            "set_start_laps": [1, 17],
+            "reps": reps,
+            "zone_labels": [{"target_meters": 85, "count": 16, "label": "Z3>Z4"}],
+        }
+
+        updated, changed = apply_explicit_zone_labels(
+            proposal, "maak er z6 van ipv z3>z4",
+        )
+        checked = checked_proposal({"watch_loads": loads}, updated, zone_basis="pace")
+
+        self.assertTrue(changed)
+        self.assertEqual(updated["zone_labels"], [])
+        self.assertEqual(
+            updated["explicit_lap_zones"],
+            {str(rep["laps"][0]): "6" for rep in reps},
+        )
+        self.assertEqual(
+            checked["training_fields"]["main"],
+            "2×(8×85 m Z6 p42) sp283",
+        )
+        self.assertTrue(all(
+            checked["watch_loads"][rep["laps"][0] - 1]["zone"] == "6"
+            for rep in reps
+        ))
+        self.assertTrue(all(
+            not checked["watch_loads"][lap - 1]["work_rep"]
+            for lap in recovery
+        ))
+
     def test_equal_three_minute_reps_override_variable_distance_targets(self):
         work_distances = [746.9, 767.8, 775.67, 783.19, 763.08, 753.62, 765.641, 786.32]
         loads = [{"meters":1783.44, "seconds":572, "zone":"1", "segment":"WU"}]

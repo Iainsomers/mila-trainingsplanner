@@ -219,6 +219,40 @@ def apply_explicit_zone_labels(proposal, message):
                         "zone": "6",
                     }]
                     return updated, True
+    # A follow-up such as "maak er Z6 van in plaats van Z3>Z4" refers to the
+    # already checked Main group. When every work rep is an explicit short
+    # distance, that instruction is unambiguous even if the trainer does not
+    # repeat "16x85m". Apply the user zone to work laps only; recovery roles,
+    # set starts, nominal distances and measured facts remain untouched.
+    direct_short_z6 = (
+        re.search(
+            r"(?:maak|zet|verander|wijzig|corrigeer|pas|change|make|set|correct|update)"
+            r".{0,80}?\bz\s*6\b",
+            message,
+            re.IGNORECASE,
+        )
+        or re.search(r"\bz\s*6\b.{0,40}?(?:maken|zetten|make|set)\b", message, re.IGNORECASE)
+    )
+    if direct_short_z6:
+        reps = proposal.get("reps") if isinstance(proposal.get("reps"), list) else []
+        if reps and all(
+            isinstance(rep, dict)
+            and type(rep.get("target_meters")) is int
+            and 25 <= rep["target_meters"] < 100
+            and isinstance(rep.get("laps"), list)
+            and rep["laps"]
+            for rep in reps
+        ):
+            updated = deepcopy(proposal)
+            overrides = dict(updated.get("explicit_lap_zones") or {})
+            for rep in reps:
+                for lap in rep["laps"]:
+                    overrides[str(lap)] = "6"
+            updated["explicit_lap_zones"] = overrides
+            # A previous model-generated range for the same short work group
+            # must not override the trainer's later literal Z6 correction.
+            updated["zone_labels"] = []
+            return updated, True
     pattern = re.compile(
         r"(?:(\d+)\s*[×x*]\s*)?(\d+)\s*m\b.{0,24}?"
         r"\bZ\s*([1-6])(?:\s*(?:>|→|-|tot)\s*Z?\s*([1-6]))?\b",
