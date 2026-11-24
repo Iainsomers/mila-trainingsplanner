@@ -93,6 +93,14 @@
     box-shadow: 0 .25rem .8rem rgba(40, 67, 95, .14);
     transform: translateY(-1px);
   }
+  .staff-overview-tile[aria-disabled="true"] {
+    cursor: default;
+  }
+  .staff-overview-tile[aria-disabled="true"]:hover {
+    border-color: #d5d5d5;
+    box-shadow: none;
+    transform: none;
+  }
   .staff-overview-tile-content { min-width: 0; }
   .staff-overview-tile-heading { display: flex; align-items: center; gap: .5rem; }
   .staff-overview-tile-icon {
@@ -215,9 +223,9 @@
     <a class="staff-overview-tile" href="?view=injury_issues">
       <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">I</span><span class="staff-overview-tile-title">Injury/Issue Overview</span></span><span class="staff-overview-tile-text d-block">Recent athlete feedback and coach comments</span></span>
     </a>
-    <a class="staff-overview-tile" href="{% url 'daily_overview' %}">
-      <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">D</span><span class="staff-overview-tile-title">Training</span></span><span class="staff-overview-tile-text d-block">Quick Coach Report</span></span>
-    </a>
+    <div class="staff-overview-tile" aria-disabled="true">
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">Q</span><span class="staff-overview-tile-title">Quick Coach Report</span></span><span class="staff-overview-tile-text d-block">Under development</span></span>
+    </div>
   </nav>
   <div class="staff-overview-log-wrap">
     <a class="staff-overview-log-tile" href="?view=log"><span>Log</span><span aria-hidden="true">→</span></a>

@@ -1,6 +1,8 @@
 # Actuele status
 
-- 24 november — De startpagina van Staff Team Overview volgt nu de normale MiLa/Planning-opmaak: dezelfde brede contentmaat en sectierand, paarse zware tegeltitels, ronde pictogrammen en responsief drie/twee/één kolommen. De vier bestemmingen en de kleine Log-tegel zijn functioneel ongewijzigd.
+- 24 november — De vierde Staff Team Overview-tegel heet nu `Quick Coach Report` en is voorlopig een niet-klikbare dummy met `Under development`. De eerdere titel Training en koppeling naar Daily Coach Overview zijn verwijderd; DCO zelf blijft via Planning beschikbaar.
+
+- 24 november — De startpagina van Staff Team Overview volgt nu de normale MiLa/Planning-opmaak: dezelfde brede contentmaat en sectierand, paarse zware tegeltitels, ronde pictogrammen en responsief drie/twee/één kolommen. De bestaande overzichtsbestemmingen en de kleine Log-tegel zijn bij deze stijlaanpassing functioneel ongewijzigd.
 
 - 24 november — Garmin E Combine haalt een opgeslagen en gevalideerde Main nu ook op wanneer de verse gemeten bronpreview een lege Main-beschrijving heeft. Daarmee kan een in Chat opgebouwde Main zoals `30×45s ...` met een losse WU/CD-opname worden gecombineerd; de server blijft dezelfde gebruiker, atleet, opname en lapfeiten eisen.
 
