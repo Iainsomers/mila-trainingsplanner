@@ -16,10 +16,12 @@ from core.garmin_e import (
     checked_proposal,
     complete_partial_running_proposal,
     explicit_alternative_compact_proposal,
+    explicit_distance_sets,
     lap_facts,
     prefer_measured_time_groups,
 )
 from core.models import Athlete, GarminActivitySummary
+from core.parser import parse_segment_text
 from core.views.garmin import CONSENT_VERSION
 from core.watch_processing import processed_main_reps
 from core.views.calendar import _virtual_segment_from_text
@@ -37,6 +39,18 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_explicit_mixed_sets_split_equal_distance_tail(self):
+        distances = [120, 1800, 1300, 800, 1500, 1300, 800, 800, 800]
+        loads = [{"meters": distance, "seconds": distance / 4, "zone": "2", "segment": "CORE"}
+                 for distance in distances]
+        proposal = {"reps": [{"laps": [i], "target_meters": distance}
+                             for i, distance in enumerate(distances, 1)]}
+        updated = explicit_distance_sets(proposal, "maak er 3 sets van 1*(1800m-1300m-800m)//1*(1500m-1300m-800m)//2*800m")
+        checked = checked_proposal({"watch_loads": loads}, updated, zone_basis="pace")
+        main = checked["training_fields"]["main"]
+        self.assertEqual(main, "120 m Z2 // 1×(1800 m Z2 - 1300 m Z2 - 800 m Z2) // 1×(1500 m Z2 - 1300 m Z2 - 800 m Z2) // 2×800 m Z2")
+        self.assertTrue(parse_segment_text(main).ok)
+
     def test_retarget_short_reps_in_mixed_main(self):
         proposal = {"reps": [{"laps": [lap], "target_meters": 50} for lap in (3, 5, 7, 9)]
                     + [{"laps": [11], "target_meters": 1500}], "recovery_laps": [4, 6, 8, 10]}

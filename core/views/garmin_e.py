@@ -19,6 +19,7 @@ from core.garmin_e import (
     checked_proposal,
     complete_partial_running_proposal,
     correct_short_rep_distance,
+    explicit_distance_sets,
     explicit_alternative_compact_proposal,
     lap_facts,
     prefer_measured_time_groups,
@@ -281,6 +282,10 @@ def garmin_type_e_ayc_view(request):
                                         if load.get("segment") == "WU"],
                     })
                     explicit_distance = correct_short_rep_distance(base, message)
+                    if explicit_distance is None and state["proposal"]:
+                        explicit_distance = explicit_distance_sets(base, message)
+                        if explicit_distance is not None:
+                            local_reply = "De gevraagde setindeling staat in de gecontroleerde preview."
                     if explicit_distance is not None and not state["proposal"]:
                         # The measured preview uses pace zones. A local sprint
                         # correction must not introduce HR reclassification.

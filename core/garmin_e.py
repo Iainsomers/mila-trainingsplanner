@@ -147,6 +147,32 @@ def ask_model(facts, history, current=None, validation_error=None, *, timeout=20
     return answer
 
 
+def explicit_distance_sets(proposal, message):
+    """Locate a unique consecutive sequence of existing distance reps."""
+    if not isinstance(proposal, dict):
+        return None
+    atom = r"\d+\s*m"
+    mixed = rf"1\s*[×x*]\s*\(\s*{atom}(?:\s*[-–]\s*{atom})+\s*\)"
+    single = rf"\d+\s*[×x*]\s*{atom}"
+    match = re.search(rf"{mixed}(?:\s*//\s*(?:{mixed}|{single}))*", message, re.I)
+    if not match:
+        return None
+    sets = []
+    for token in match[0].split("//"):
+        count, *distances = map(int, re.findall(r"\d+", token))
+        if not 1 <= count <= 200:
+            return None
+        sets.append(distances * count)
+    targets = [rep.get("target_meters") for rep in proposal.get("reps", [])]
+    sequence = [distance for group in sets for distance in group]
+    matches = [i for i in range(len(targets)) if targets[i:i+len(sequence)] == sequence]
+    if len(matches) != 1:
+        return None
+    updated = deepcopy(proposal)
+    updated["presentation_sets"] = [matches[0], [len(group) for group in sets]]
+    return updated
+
+
 def correct_short_rep_distance(proposal, message):
     """Retarget existing short reps by their lap IDs or a unique old group."""
     if not isinstance(proposal, dict) or not isinstance(message, str):
@@ -747,10 +773,23 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
     def boundary(rows):
         return f"{round(sum(facts[i-1]['distance_m'] for i in rows)/50)*50} m"+zone(rows) if rows else ""
     texts, groups = [], []
-    for block in blocks:
+    presentation = proposal.get("presentation_sets")
+    cuts = []
+    if presentation:
+        start, sizes = presentation
+        if (type(start) is not int or not 0 <= start < len(blocks)
+                or not sizes or any(type(size) is not int or size < 1 for size in sizes)
+                or start + sum(sizes) > len(blocks)):
+            raise ValueError("Presentation sets must refer to existing work reps.")
+        cuts = [start]
+        for size in sizes:
+            cuts.append(cuts[-1] + size)
+    group_positions = []
+    for position, block in enumerate(blocks):
         key = (block["distance"],block["duration"])
-        if not groups or groups[-1][0] != key:
+        if not groups or groups[-1][0] != key or position in cuts:
             groups.append((key,[]))
+            group_positions.append(position)
         groups[-1][1].append(block)
     sequence_groups = {}
     sprint_sequences = proposal.get("explicit_sprint_sequences") or []
@@ -902,6 +941,18 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
                     tail_text += f" p{round(median(tail_pauses))}"
                 main = f"{repeats}×(" + " - ".join(pattern_parts) + f") // {tail_text}"
                 break
+    if cuts:
+        if sequence_groups or len(texts) != len(group_positions):
+            raise ValueError("The requested sets conflict with an existing sprint sequence.")
+        rendered = []
+        for index, position in enumerate(group_positions):
+            if position < cuts[0] or position >= cuts[-1]:
+                rendered.append(texts[index])
+            elif position in cuts:
+                end = cuts[cuts.index(position) + 1]
+                items = texts[index:next((i for i, value in enumerate(group_positions) if value == end), len(texts))]
+                rendered.append(items[0] if len(items) == 1 else "1×(" + " - ".join(items) + ")")
+        main = " // ".join(rendered)
     result["training_fields"] = {"wu":boundary(wu),"main":main,"cd":boundary(cd)}
     result["description"] = description(result["training_fields"])
     result["e_usable"] = True
