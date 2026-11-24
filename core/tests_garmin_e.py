@@ -845,6 +845,19 @@ class GarminEEndpointTests(TestCase):
         model.assert_not_called()
 
     @patch("core.views.garmin_e.ask_model")
+    def test_single_elliptical_near_minute_without_lap_hr(self, model):
+        self.record.distance_m = None
+        self.record.duration_s = 3601
+        self.record.analysis_data = {"activity_metrics": {"sport": "ELLIPTICAL", "average_hr": 127},
+                                     "laps": [dict(elapsed_time=3601)]}
+        self.record.save()
+        part = self.client.get(self.url, {**self.query, "preview": "measured"}).json()["results"][0]["parts"][0]
+        self.assertEqual(part["training_fields"]["alt"], "Elliptical 60'")
+        self.assertEqual(part["watch_loads"][0]["seconds"], 3601)
+        self.assertIsNone(part["watch_loads"][0]["alt_laps"][0]["zone"])
+        model.assert_not_called()
+
+    @patch("core.views.garmin_e.ask_model")
     def test_first_analysis_makes_supported_result_usable_without_chat(self, model):
         preview = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]
         self.assertTrue(preview["parts"][0]["e_auto_analyze"])

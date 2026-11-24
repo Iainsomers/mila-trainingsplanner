@@ -198,7 +198,12 @@ def garmin_type_e_ayc_view(request):
             # split. Validate it through the same compiler, including old conversations
             # that only discussed it and never returned a usable assignment.
             if (request.method == "GET" and is_alternative and len(facts)==1
-                    and not state["part"].get("e_usable") and not state.get("pending")
+                    and (not state["part"].get("e_usable") or (
+                        not state["part"].get("watch_loads")
+                        and (state["part"].get("training_fields") or {}).get("alt") ==
+                            f"{part.get('alternative_label', 'Alternative')} Work {facts[0]['duration_s']:g}s"
+                        and 0 < abs(facts[0]["duration_s"] - round(facts[0]["duration_s"] / 60) * 60) <= 2
+                    )) and not state.get("pending")
                     and state["basis"] in {"auto","hr"}
                     and abs(facts[0]["duration_s"]-float(part.get("alternative_duration_s") or 0))<.001):
                 seconds = facts[0]["duration_s"]

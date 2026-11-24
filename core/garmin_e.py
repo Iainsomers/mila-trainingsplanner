@@ -1076,7 +1076,14 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
     if missing:
         result["e_zone_note"] += " Some blocks have no usable HR/limits; their zone is left empty."
     result.pop("training_alternatives",None)
-    if proposal.get("format") == "compact":
+    single_near_minute = (
+        len(entries) == 1 and entries[0]["role"] == "Work"
+        and round(entries[0]["seconds"] / 60) > 0
+        and abs(entries[0]["seconds"] - round(entries[0]["seconds"] / 60) * 60) <= 2
+    )
+    if single_near_minute:
+        entries[0]["target"] = round(entries[0]["seconds"] / 60) * 60
+    if proposal.get("format") == "compact" or single_near_minute:
         result = compact_alternative(part,result,entries,proposal.get("presentation") or {})
     return result
 
@@ -1085,7 +1092,8 @@ def compact_alternative(part, result, entries, presentation):
     """Compile compact, bounded notation without losing measured per-lap facts."""
     if not isinstance(presentation,dict):
         raise ValueError("Compact Alternative presentation must be an object.")
-    if len(entries) == 1 and not entries[0]["zone"]:
+    if (len(entries) == 1 and not entries[0]["zone"]
+            and (entries[0]["target"] % 60 or abs(entries[0]["seconds"] - entries[0]["target"]) > 2)):
         raise ValueError("Deze activiteit heeft geen bruikbare HR-zone; de gemeten tijd blijft behouden.")
     from core.alternative import expand_time_notation
     selected_zones = {}

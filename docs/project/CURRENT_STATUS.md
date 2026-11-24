@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Garmin E toont één doorlopend Alternative-blok binnen twee seconden van een hele minuut in minuutnotatie, ook zonder bruikbare lapzone. De gemeten seconden blijven in de Watch-gegevens.
+
 - 24 november — Het Garmin E-klokje leest meerdere gevalideerde werkreps rechtstreeks uit de opgeslagen lapmarkeringen. Gemengde sets en een apart slotblok blijven samen zichtbaar, ook bij bestaande trainingen met die markeringen.
 
 - 24 november — Bij een herhaalverzoek kan Garmin E de laatste expliciete setnotatie uit de gebruikersberichten opnieuw toepassen. Een ongeldige koppeling geeft een concrete melding.
