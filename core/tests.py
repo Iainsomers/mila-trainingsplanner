@@ -2215,6 +2215,56 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(two_days, "Old Evaluation")
         self.assertNotContains(two_days, "Private Evaluation")
 
+    def test_quick_coach_report_lists_slots_that_show_a_watch_clock(self):
+        coach = get_user_model().objects.create_user(
+            username="quick-report-watch", password="secret", is_staff=True,
+        )
+        other = get_user_model().objects.create_user(
+            username="quick-report-watch-private", password="secret", is_staff=True,
+        )
+        athlete = Athlete.objects.create(owner=coach, name="Watch Athlete", birth_year=2000, gender="X")
+        private = Athlete.objects.create(owner=other, name="Private Watch Athlete", birth_year=2000, gender="X")
+        plan = TrainingPlan.objects.create(owner=coach, name="Watch report plan")
+        private_plan = TrainingPlan.objects.create(owner=other, name="Private watch report plan")
+        today = timezone.localdate()
+        TrainingSlot.objects.create(
+            plan=plan, athlete=athlete, date=today, slot_index=1,
+            source="watch_c", watch_loads=[{"meters": 1000, "seconds": 240}],
+        )
+        TrainingSlot.objects.create(
+            plan=plan, athlete=athlete, date=today, slot_index=2,
+            source="planned", watch_training_snapshot={
+                "source": "watch_a",
+                "watch_loads": [{"meters": 800, "seconds": 210}],
+                "segments": [],
+            },
+        )
+        private_slot = TrainingSlot.objects.create(
+            plan=private_plan, athlete=private, date=today, slot_index=1,
+            source="watch_e", watch_loads=[{"meters": 1000, "seconds": 240}],
+        )
+        old_slot = TrainingSlot.objects.create(
+            plan=plan, athlete=athlete, date=today - timedelta(days=1), slot_index=2,
+            source="watch_d", watch_loads=[{"meters": 1000, "seconds": 240}],
+        )
+        TrainingSlot.objects.filter(pk=old_slot.pk).update(
+            updated_at=timezone.now() - timedelta(hours=25),
+        )
+        self.client.force_login(coach)
+
+        one_day = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "24",
+        })
+        two_days = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "48",
+        })
+
+        self.assertContains(one_day, f"Watch Athlete</strong>: Watch Training {today:%d-%m-%Y} AM, Garmin C", html=False)
+        self.assertContains(one_day, f"Watch Athlete</strong>: Watch Training {today:%d-%m-%Y} PM, Polar A", html=False)
+        self.assertNotContains(one_day, "Private Watch Athlete")
+        self.assertNotContains(one_day, "Garmin D")
+        self.assertContains(two_days, f"Watch Athlete</strong>: Watch Training {(today - timedelta(days=1)):%d-%m-%Y} PM, Garmin D", html=False)
+
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(
             username="team-coach", password="secret", is_staff=True
