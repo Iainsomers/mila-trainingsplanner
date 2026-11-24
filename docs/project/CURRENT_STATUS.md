@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Bij een herhaalverzoek kan Garmin E de laatste expliciete setnotatie uit de gebruikersberichten opnieuw toepassen. Een ongeldige koppeling geeft een concrete melding.
+
 - 24 november — Garmin E kan expliciete gemengde afstandssets als presentatie bewaren wanneer ze één unieke aaneengesloten reeks gecontroleerde werkreps aanwijzen. Setgrenzen kunnen een reeks gelijke afstanden splitsen.
 
 - 24 november — Garmin E verwerkt een expliciet verzoek om hartslagzones voor lange blokken op de bestaande gecontroleerde lapindeling, met de Auto-grens van 400 m of 50 s. Expliciete zones blijven behouden.

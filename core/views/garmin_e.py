@@ -20,6 +20,7 @@ from core.garmin_e import (
     complete_partial_running_proposal,
     correct_short_rep_distance,
     explicit_distance_sets,
+    distance_set_notation,
     explicit_alternative_compact_proposal,
     lap_facts,
     prefer_measured_time_groups,
@@ -276,14 +277,23 @@ def garmin_type_e_ayc_view(request):
                 ))
                 local_basis = state["basis"]
                 local_reply = "De nominale sprintafstand is aangepast in het gecontroleerde voorstel."
+                set_request = distance_set_notation(message or "") if not is_alternative else None
+                if not set_request and message and not is_alternative and re.search(
+                    r"\b(?:probeer|opnieuw|try again|(?:zegt|zeg) het maar je doet het niet|dat zeg je maar doe je niet)\b",
+                    message, re.I,
+                ):
+                    set_request = next((
+                        notation for turn in reversed(state["history"])
+                        if turn["role"] == "user" and (notation := distance_set_notation(turn["content"]))
+                    ), None)
                 if message and not is_alternative and not explanation_only:
                     base = state["proposal"] or complete_partial_running_proposal(part, {
                         "warmup_laps": [i for i, load in enumerate(part["watch_loads"], 1)
                                         if load.get("segment") == "WU"],
                     })
                     explicit_distance = correct_short_rep_distance(base, message)
-                    if explicit_distance is None and state["proposal"]:
-                        explicit_distance = explicit_distance_sets(base, message)
+                    if explicit_distance is None and set_request:
+                        explicit_distance = explicit_distance_sets(base, set_request)
                         if explicit_distance is not None:
                             local_reply = "De gevraagde setindeling staat in de gecontroleerde preview."
                     if explicit_distance is not None and not state["proposal"]:
@@ -314,7 +324,10 @@ def garmin_type_e_ayc_view(request):
                     } if explicit_compact else {
                         "reply": local_reply,
                         "intent": "update", "zone_basis": local_basis, "proposal": explicit_distance,
-                    } if explicit_distance else ask_model(
+                    } if explicit_distance else {
+                        "reply": "De gevraagde setindeling is niet toegepast. De afstanden wijzen geen unieke, geldige reeks werkherhalingen aan in de huidige indeling.",
+                        "intent": "discuss", "zone_basis": state["basis"], "proposal": None,
+                    } if set_request and not explanation_only else ask_model(
                         facts, history, current,
                         "Answer the user's question directly from the current preview and lap facts. Do not propose changes.",
                         timeout=16,

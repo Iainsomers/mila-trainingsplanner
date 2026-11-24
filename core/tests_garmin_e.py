@@ -1194,6 +1194,19 @@ class GarminEEndpointTests(TestCase):
         self.assertIn("werkblok",result["chat_reply"])
 
     @patch("core.views.garmin_e.ask_model")
+    def test_retry_reuses_latest_explicit_set_request(self, model):
+        model.return_value = {"reply": "Dit past.", "proposal": self.proposal, "zone_basis": "pace"}
+        self.chat("Bekijk deze training")
+        first = self.chat("Maak 1*(200m-100m)//1*(200m-100m)").json()["results"][0]["parts"][0]
+        self.assertIn(" // 1×(", first["training_fields"]["main"])
+        model.reset_mock()
+        for message in ("probeer nu", "je zegt het maar je doet het niet"):
+            result = self.chat(message).json()["results"][0]["parts"][0]
+            self.assertEqual(result["training_fields"], first["training_fields"])
+            self.assertIn("setindeling", result["chat_reply"])
+        model.assert_not_called()
+
+    @patch("core.views.garmin_e.ask_model")
     def test_long_block_hr_request_reuses_checked_assignment(self, model):
         model.return_value = {"reply": "Dit past.", "proposal": self.proposal, "zone_basis": "pace"}
         initial = self.chat("Bekijk deze training").json()["results"][0]["parts"][0]

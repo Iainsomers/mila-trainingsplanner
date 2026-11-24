@@ -147,18 +147,21 @@ def ask_model(facts, history, current=None, validation_error=None, *, timeout=20
     return answer
 
 
-def explicit_distance_sets(proposal, message):
-    """Locate a unique consecutive sequence of existing distance reps."""
-    if not isinstance(proposal, dict):
-        return None
+def distance_set_notation(message):
     atom = r"\d+\s*m"
     mixed = rf"1\s*[×x*]\s*\(\s*{atom}(?:\s*[-–]\s*{atom})+\s*\)"
     single = rf"\d+\s*[×x*]\s*{atom}"
     match = re.search(rf"{mixed}(?:\s*//\s*(?:{mixed}|{single}))*", message, re.I)
-    if not match:
+    return match[0] if match and not message[match.end():].lstrip().startswith("//") else None
+
+
+def explicit_distance_sets(proposal, message):
+    """Locate a unique consecutive sequence of existing distance reps."""
+    notation = distance_set_notation(message)
+    if not isinstance(proposal, dict) or not notation:
         return None
     sets = []
-    for token in match[0].split("//"):
+    for token in notation.split("//"):
         count, *distances = map(int, re.findall(r"\d+", token))
         if not 1 <= count <= 200:
             return None
