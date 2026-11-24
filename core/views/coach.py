@@ -13611,6 +13611,7 @@ def daily_overview_other_view(request):
         report_until = timezone.now()
         report_since = report_until - timedelta(hours=report_hours)
         current_vitals_date = current_time.date() - timedelta(days=1) if current_time.hour < 8 else current_time.date()
+        first_vitals_date = current_vitals_date - timedelta(days=(report_hours // 24) - 1)
         snapshot_dates_by_athlete = {}
         for event in (
             AthleteActivityEvent.objects.filter(
@@ -13624,7 +13625,7 @@ def daily_overview_other_view(request):
                 snapshot_date = date.fromisoformat(str((event.metadata or {}).get("date", "")))
             except ValueError:
                 snapshot_date = timezone.localtime(event.occurred_at).date()
-            if snapshot_date <= current_vitals_date:
+            if first_vitals_date <= snapshot_date <= current_vitals_date:
                 snapshot_dates_by_athlete.setdefault(event.athlete_id, set()).add(snapshot_date)
         score_by_class = {
             "vital-extreme-red-dark": -3,

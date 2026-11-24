@@ -2106,6 +2106,40 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual({row["date"] for row in warnings}, {today - timedelta(days=1), today})
         self.assertContains(response, "Two Warning Days", count=2)
 
+    def test_quick_coach_report_excludes_recently_imported_vitals_outside_day_window(self):
+        coach = get_user_model().objects.create_user(
+            username="quick-report-old-date", password="secret", is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="Imported Old Warning", birth_year=2000, gender="X",
+        )
+        today = timezone.localdate()
+        warning_date = today - timedelta(days=5)
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=warning_date - timedelta(days=2),
+            sleep_hours=8, sleep_quality=8, morning_hr=45, hrv=80,
+        )
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=warning_date - timedelta(days=1),
+            sleep_hours=7.5, sleep_quality=7.5, morning_hr=46, hrv=75,
+        )
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=warning_date,
+            sleep_hours=4, sleep_quality=4, morning_hr=60, hrv=30,
+        )
+        self.client.force_login(coach)
+
+        one_day = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "24",
+        })
+        six_days = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "144",
+        })
+
+        self.assertNotContains(one_day, "Imported Old Warning")
+        self.assertContains(six_days, "Imported Old Warning")
+        self.assertContains(six_days, "Relative Vitals Warning -8")
+
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(
             username="team-coach", password="secret", is_staff=True
