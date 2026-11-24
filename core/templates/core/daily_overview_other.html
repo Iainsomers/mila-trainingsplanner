@@ -11,9 +11,9 @@
   .other-overview [class*="vital-extreme-"] { border-radius: 3px; padding: 1px 4px; font-weight: 600; }
 
   .other-overview {
-    max-width: 980px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+    max-width: 1320px;
+    margin: 1rem auto;
+    padding: 0 .75rem;
   }
   .overview-block {
     border: 1px solid #d9e0e7;
@@ -64,33 +64,61 @@
   .vital-table td:not(:first-child) { white-space: nowrap; }
   .staff-overview-tiles {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .85rem;
-    margin-top: 1.25rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .5rem;
+  }
+  .staff-overview-section {
+    margin-top: 1rem;
+    padding: .5rem;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    background: #fff;
   }
   .staff-overview-tile {
     display: flex;
-    min-height: 128px;
-    padding: 1rem 1.1rem;
-    border: 1px solid #d9e0e7;
-    border-radius: 10px;
+    align-items: center;
+    min-height: 96px;
+    padding: .5rem;
+    border: 1px solid #d5d5d5;
+    border-radius: 8px;
     background: #fff;
-    color: #17324d;
+    color: inherit;
     text-decoration: none;
-    box-shadow: 0 2px 8px rgba(23, 50, 77, .06);
     transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
   }
   .staff-overview-tile:hover,
   .staff-overview-tile:focus-visible {
-    border-color: #6f9d7d;
-    color: #17324d;
-    box-shadow: 0 5px 14px rgba(23, 50, 77, .12);
+    border-color: #b9c5d1;
+    color: inherit;
+    box-shadow: 0 .25rem .8rem rgba(40, 67, 95, .14);
     transform: translateY(-1px);
   }
-  .staff-overview-tile-content { align-self: flex-end; }
-  .staff-overview-tile-title { margin: 0 0 .25rem; color: #1d7549; font-size: 1.12rem; font-weight: 700; }
-  .staff-overview-tile-text { margin: 0; color: #6c757d; font-size: .88rem; }
-  .staff-overview-log-wrap { margin-top: 1rem; text-align: right; }
+  .staff-overview-tile-content { min-width: 0; }
+  .staff-overview-tile-heading { display: flex; align-items: center; gap: .5rem; }
+  .staff-overview-tile-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    border: 1px solid #c7d2df;
+    border-radius: 50%;
+    background: #f5f8fb;
+    color: #28435f;
+    font-size: .86rem;
+    line-height: 1;
+  }
+  .staff-overview-tile-title {
+    margin: 0;
+    color: var(--mila-team-color-2, #8a4f7d);
+    font-size: 1.6rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    font-weight: 800;
+  }
+  .staff-overview-tile-text { margin: .2rem 0 0 2.2rem; color: #65758b; font-size: .82rem; line-height: 1.25; }
+  .staff-overview-log-wrap { margin-top: .5rem; text-align: right; }
   .staff-overview-log-tile {
     display: inline-flex;
     align-items: center;
@@ -105,9 +133,14 @@
   }
   .staff-overview-log-tile:hover,
   .staff-overview-log-tile:focus-visible { border-color: #9aa7b2; color: #17324d; }
+  @media (max-width: 991.98px) {
+    .staff-overview-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   @media (max-width: 575.98px) {
     .staff-overview-tiles { grid-template-columns: 1fr; }
-    .staff-overview-tile { min-height: 104px; }
+    .other-overview { margin-top: .75rem; }
+    .staff-overview-tile { min-height: 80px; }
+    .staff-overview-tile-title { font-size: 1.35rem; }
     .staff-overview-log-wrap { text-align: left; }
   }
   .hr-zone-table th, .hr-zone-table td { vertical-align: middle; text-align: center; }
@@ -171,23 +204,25 @@
   </div>
 
   {% if not overview_mode %}
+  <section class="staff-overview-section" aria-label="Staff overview choices">
   <nav class="staff-overview-tiles" aria-label="Staff overview sections">
     <a class="staff-overview-tile" href="?view=vitals">
-      <span class="staff-overview-tile-content"><span class="staff-overview-tile-title d-block">Vitals</span><span class="staff-overview-tile-text d-block">Team recovery and daily measurements</span></span>
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">V</span><span class="staff-overview-tile-title">Vitals</span></span><span class="staff-overview-tile-text d-block">Team recovery and daily measurements</span></span>
     </a>
     <a class="staff-overview-tile" href="?view=information_quality">
-      <span class="staff-overview-tile-content"><span class="staff-overview-tile-title d-block">Information Quality</span><span class="staff-overview-tile-text d-block">Evaluations, vitals completion and activity</span></span>
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">Q</span><span class="staff-overview-tile-title">Information Quality</span></span><span class="staff-overview-tile-text d-block">Evaluations, vitals completion and activity</span></span>
     </a>
     <a class="staff-overview-tile" href="?view=injury_issues">
-      <span class="staff-overview-tile-content"><span class="staff-overview-tile-title d-block">Injury/Issue Overview</span><span class="staff-overview-tile-text d-block">Recent athlete feedback and coach comments</span></span>
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">I</span><span class="staff-overview-tile-title">Injury/Issue Overview</span></span><span class="staff-overview-tile-text d-block">Recent athlete feedback and coach comments</span></span>
     </a>
     <a class="staff-overview-tile" href="{% url 'daily_overview' %}">
-      <span class="staff-overview-tile-content"><span class="staff-overview-tile-title d-block">Training</span><span class="staff-overview-tile-text d-block">Quick Coach Report</span></span>
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">D</span><span class="staff-overview-tile-title">Training</span></span><span class="staff-overview-tile-text d-block">Quick Coach Report</span></span>
     </a>
   </nav>
   <div class="staff-overview-log-wrap">
     <a class="staff-overview-log-tile" href="?view=log"><span>Log</span><span aria-hidden="true">→</span></a>
   </div>
+  </section>
   {% elif overview_mode == 'log' %}
   <section class="overview-block" aria-labelledby="activity-log-heading">
     <div class="overview-content">

@@ -1938,6 +1938,8 @@ class PlanningOverviewTests(TestCase):
         self.assertNotContains(response, ">Athletes<", html=False)
         self.assertContains(response, 'class="staff-overview-tiles"', html=False)
         self.assertContains(response, 'class="staff-overview-tile"', count=4, html=False)
+        self.assertContains(response, 'class="staff-overview-section"', html=False)
+        self.assertContains(response, 'class="staff-overview-tile-icon"', count=4, html=False)
         self.assertContains(response, "?view=vitals")
         self.assertContains(response, "?view=information_quality")
         self.assertContains(response, "?view=injury_issues")

@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — De startpagina van Staff Team Overview volgt nu de normale MiLa/Planning-opmaak: dezelfde brede contentmaat en sectierand, paarse zware tegeltitels, ronde pictogrammen en responsief drie/twee/één kolommen. De vier bestemmingen en de kleine Log-tegel zijn functioneel ongewijzigd.
+
 - 24 november — Garmin E Combine haalt een opgeslagen en gevalideerde Main nu ook op wanneer de verse gemeten bronpreview een lege Main-beschrijving heeft. Daarmee kan een in Chat opgebouwde Main zoals `30×45s ...` met een losse WU/CD-opname worden gecombineerd; de server blijft dezelfde gebruiker, atleet, opname en lapfeiten eisen.
 
 - 24 november — Garmin E past expliciete vervolgcorrecties zoals `maak van de werkblokken Z2` nu server-side toe op alle gecontroleerde werkreps. Een regressie met 12×2 minuten bewaart warming-up, rustige tussenlaps, langere blokpauze, overgang en cooldown en wijzigt uitsluitend de werkzone.
