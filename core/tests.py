@@ -1944,11 +1944,92 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "?view=information_quality")
         self.assertContains(response, "?view=injury_issues")
         self.assertContains(response, "Quick Coach Report")
-        self.assertContains(response, 'class="staff-overview-tile" aria-disabled="true"', html=False)
+        self.assertContains(response, "?view=quick_coach_report")
         self.assertNotContains(response, f'href="{reverse("daily_overview")}"', html=False)
         self.assertContains(response, 'class="staff-overview-log-wrap"', html=False)
         self.assertContains(response, 'class="staff-overview-log-tile"', html=False)
         self.assertContains(response, "?view=log")
+
+    def test_quick_coach_report_shows_recent_relative_vitals_warning_and_respects_hours(self):
+        from core.models import AthleteActivityEvent
+
+        coach = get_user_model().objects.create_user(
+            username="quick-report-coach", password="secret", is_staff=True,
+        )
+        juan = Athlete.objects.create(owner=coach, name="Juan Zijderland", birth_year=2000, gender="X")
+        old_warning = Athlete.objects.create(owner=coach, name="Old Warning", birth_year=2000, gender="X")
+        mild = Athlete.objects.create(owner=coach, name="Mild Warning", birth_year=2000, gender="X")
+        today = timezone.localdate()
+
+        def create_warning(athlete):
+            AthleteDailyVital.objects.create(
+                athlete=athlete, date=today - timedelta(days=6),
+                sleep_hours=8, sleep_quality=8, morning_hr=45, hrv=80,
+            )
+            AthleteDailyVital.objects.create(
+                athlete=athlete, date=today - timedelta(days=5),
+                sleep_hours=7.5, sleep_quality=7.5, morning_hr=46, hrv=75,
+            )
+            AthleteDailyVital.objects.create(
+                athlete=athlete, date=today,
+                sleep_hours=4, sleep_quality=4, morning_hr=60, hrv=30,
+            )
+
+        create_warning(juan)
+        create_warning(old_warning)
+        AthleteActivityEvent.objects.filter(athlete=old_warning).update(
+            occurred_at=timezone.now() - timedelta(hours=25),
+        )
+        AthleteDailyVital.objects.create(
+            athlete=mild, date=today - timedelta(days=6), sleep_hours=8,
+        )
+        AthleteDailyVital.objects.create(
+            athlete=mild, date=today - timedelta(days=5), sleep_hours=7.5,
+        )
+        AthleteDailyVital.objects.create(
+            athlete=mild, date=today, sleep_hours=4,
+        )
+        self.client.force_login(coach)
+
+        response = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["report_hours"], 24)
+        self.assertContains(response, "Juan Zijderland")
+        self.assertContains(response, "Relative Vitals Warning -12")
+        self.assertNotContains(response, "Old Warning")
+        self.assertNotContains(response, "Mild Warning")
+        self.assertContains(response, 'type="range" name="hours" min="1" max="168"', html=False)
+
+        expanded = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "48",
+        })
+        self.assertEqual(expanded.context["report_hours"], 48)
+        self.assertContains(expanded, "Juan Zijderland")
+        self.assertContains(expanded, "Old Warning")
+
+    def test_quick_coach_report_clamps_invalid_hours_and_hides_private_vitals(self):
+        coach = get_user_model().objects.create_user(
+            username="quick-report-visible", password="secret", is_staff=True,
+        )
+        other = get_user_model().objects.create_user(
+            username="quick-report-private", password="secret", is_staff=True,
+        )
+        Athlete.objects.create(owner=other, name="Private Warning", birth_year=2000, gender="X")
+        self.client.force_login(coach)
+
+        invalid = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "invalid",
+        })
+        oversized = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "999",
+        })
+
+        self.assertEqual(invalid.context["report_hours"], 24)
+        self.assertEqual(oversized.context["report_hours"], 168)
+        self.assertNotContains(invalid, "Private Warning")
 
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(

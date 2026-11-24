@@ -13513,6 +13513,58 @@ def daily_overview_view(request):
     })
 
 
+RELATIVE_VITAL_COLUMNS = (
+    {"key": "sleep_hours", "label": "Sleep length", "suffix": " h"},
+    {"key": "sleep_quality", "label": "Sleep quality", "suffix": ""},
+    {"key": "morning_hr", "label": "Morning HR", "suffix": ""},
+    {"key": "hrv", "label": "HRV", "suffix": ""},
+)
+
+
+def _relative_vital_rows(athletes, visible_athlete_ids, current_time):
+    """Build the relative-extreme cells used by Vitals and Quick Coach Report."""
+    vital_columns = [dict(column) for column in RELATIVE_VITAL_COLUMNS]
+    vitals_today = current_time.date() - timedelta(days=1) if current_time.hour < 8 else current_time.date()
+    vitals_window_start = vitals_today - timedelta(days=13)
+    vital_values = {}
+    vital_dates = {}
+    if visible_athlete_ids:
+        for vital in AthleteDailyVital.objects.filter(
+            athlete_id__in=visible_athlete_ids,
+            date__range=(vitals_window_start, vitals_today),
+        ).only("athlete_id", "date", *(column["key"] for column in vital_columns)):
+            for column in vital_columns:
+                value = getattr(vital, column["key"], None)
+                if value is not None:
+                    vital_values.setdefault(vital.athlete_id, {}).setdefault(column["key"], []).append(float(value))
+                    vital_dates.setdefault(vital.athlete_id, {}).setdefault(column["key"], []).append((float(value), vital.date))
+
+    rows = []
+    for athlete in athletes:
+        if athlete.id not in visible_athlete_ids:
+            continue
+        cells = []
+        for column in vital_columns:
+            values = vital_values.get(athlete.id, {}).get(column["key"], [])
+            cell = {"key": column["key"], "label": column["label"], "value": "NA", "range": "", "sample_count": len(values)}
+            if len(values) >= 3:
+                cell["value"] = f"{sum(values) / len(values):.1f}{column['suffix']}"
+                cell["range"] = f"{min(values):.1f}–{max(values):.1f}"
+                low_color, high_color = ("green", "red") if column["key"] == "morning_hr" else ("red", "green")
+                for bound, value, color in (("low", min(values), low_color), ("high", max(values), high_color)):
+                    latest = max(day for observed, day in vital_dates[athlete.id][column["key"]] if observed == value)
+                    age = (vitals_today - latest).days
+                    cell[bound] = f"{value:.1f}"
+                    cell[f"{bound}_date"] = latest
+                    cell[f"{bound}_class"] = (
+                        f"vital-extreme-{color}-{'dark' if age == 0 else 'light'}"
+                        if min(values) != max(values) and 0 <= age <= 2 else ""
+                    )
+            cells.append(cell)
+        rows.append({"athlete": athlete, "values": cells})
+    return rows, vital_columns, vitals_window_start, vitals_today
+
+
 @login_required
 def daily_overview_other_view(request):
     """Show the staff overview landing page or one of its all-athlete views."""
@@ -13528,7 +13580,7 @@ def daily_overview_other_view(request):
     athletes = list(_filter_owned(Athlete.objects.order_by("name"), request))
     requested_view = request.GET.get("view", "").strip().lower()
     # Keep links/bookmarks using the old ?vital=... URL working.
-    if requested_view not in {"vitals", "information_quality", "injury_issues", "log"}:
+    if requested_view not in {"vitals", "information_quality", "injury_issues", "quick_coach_report", "log"}:
         requested_view = "vitals" if request.GET.get("vital") else ""
     if not requested_view:
         return render(request, "core/daily_overview_other.html", {
@@ -13547,6 +13599,51 @@ def daily_overview_other_view(request):
         for athlete in athletes
         if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
     }
+    if requested_view == "quick_coach_report":
+        try:
+            report_hours = int(request.GET.get("hours", 24))
+        except (TypeError, ValueError):
+            report_hours = 24
+        report_hours = min(168, max(1, report_hours))
+        report_until = timezone.now()
+        report_since = report_until - timedelta(hours=report_hours)
+        recent_vital_athlete_ids = set(
+            AthleteActivityEvent.objects.filter(
+                athlete_id__in=visible_vital_athlete_ids,
+                category=AthleteActivityEvent.CATEGORY_VITALS,
+                occurred_at__gte=report_since,
+                occurred_at__lte=report_until,
+            ).values_list("athlete_id", flat=True)
+        )
+        relative_rows, _, _, _ = _relative_vital_rows(athletes, visible_vital_athlete_ids, current_time)
+        score_by_class = {
+            "vital-extreme-red-dark": -3,
+            "vital-extreme-red-light": -1,
+            "vital-extreme-green-dark": 3,
+            "vital-extreme-green-light": 1,
+        }
+        report_rows = []
+        for row in relative_rows:
+            if row["athlete"].id not in recent_vital_athlete_ids:
+                continue
+            score = sum(
+                score_by_class.get(cell.get(class_key, ""), 0)
+                for cell in row["values"]
+                for class_key in ("low_class", "high_class")
+            )
+            if score <= -5:
+                report_rows.append({
+                    "athlete": row["athlete"],
+                    "warning": "Relative Vitals Warning",
+                    "score": score,
+                })
+        return render(request, "core/daily_overview_other.html", {
+            "overview_mode": "quick_coach_report",
+            "report_hours": report_hours,
+            "report_since": report_since,
+            "report_until": report_until,
+            "report_rows": report_rows,
+        })
     if requested_view == "log":
         if not _is_coach_user(request.user):
             return HttpResponseForbidden("The activity log is available to staff only.")
@@ -13875,32 +13972,14 @@ def daily_overview_other_view(request):
     if requested_view == "information_quality" and request.GET.get("show_na") != "1":
         counts = [row for row in counts if row['evaluation_percentage'] is not None]
 
-    vital_columns = [
-        {"key": "sleep_hours", "label": "Sleep length", "suffix": " h"},
-        {"key": "sleep_quality", "label": "Sleep quality", "suffix": ""},
-        {"key": "morning_hr", "label": "Morning HR", "suffix": ""},
-        {"key": "hrv", "label": "HRV", "suffix": ""},
-    ]
+    relative_vital_rows, vital_columns, vitals_window_start, vitals_today = _relative_vital_rows(
+        athletes, visible_vital_athlete_ids, current_time,
+    )
     vital_options = [{"key": "summary", "label": "Daily vitals"}, {"key": "hr_zones", "label": "HR zones"}]
     selected_vital_key = request.GET.get("vital", "summary")
     vitals_open = bool(request.GET.get("vital"))
     show_na = request.GET.get("show_na") == "1"
     selected_vital = next((option for option in vital_options if option["key"] == selected_vital_key), vital_options[0])
-    vitals_today = today - timedelta(days=1) if current_time.hour < 8 else today
-    vitals_window_start = vitals_today - timedelta(days=13)
-    vital_values = {}
-    vital_dates = {}
-    if visible_vital_athlete_ids and selected_vital["key"] != "hr_zones":
-        for vital in AthleteDailyVital.objects.filter(
-            athlete_id__in=visible_vital_athlete_ids,
-            date__range=(vitals_window_start, vitals_today),
-        ).only("athlete_id", "date", *(column["key"] for column in vital_columns)):
-            for column in vital_columns:
-                value = getattr(vital, column["key"], None)
-                if value is not None:
-                    vital_values.setdefault(vital.athlete_id, {}).setdefault(column["key"], []).append(float(value))
-                    vital_dates.setdefault(vital.athlete_id, {}).setdefault(column["key"], []).append((float(value), vital.date))
-
     vital_rows = []
     hr_zone_rows = []
     if selected_vital["key"] == "hr_zones":
@@ -13963,29 +14042,10 @@ def daily_overview_other_view(request):
                     "zones": zones or [{"text": "NA", "misaligned": False} for _ in range(5)],
                 })
     else:
-        for athlete in athletes:
-            if athlete.id not in visible_vital_athlete_ids:
-                continue
-            cells = []
-            for column in vital_columns:
-                values = vital_values.get(athlete.id, {}).get(column["key"], [])
-                cell = {"key": column["key"], "label": column["label"], "value": "NA", "range": "", "sample_count": len(values)}
-                if len(values) >= 3:
-                    cell["value"] = f"{sum(values) / len(values):.1f}{column['suffix']}"
-                    cell["range"] = f"{min(values):.1f}–{max(values):.1f}"
-                    low_color, high_color = ("green", "red") if column["key"] == "morning_hr" else ("red", "green")
-                    for bound, value, color in (("low", min(values), low_color), ("high", max(values), high_color)):
-                        latest = max(day for observed, day in vital_dates[athlete.id][column["key"]] if observed == value)
-                        age = (vitals_today - latest).days
-                        cell[bound] = f"{value:.1f}"
-                        cell[f"{bound}_date"] = latest
-                        cell[f"{bound}_class"] = (
-                            f"vital-extreme-{color}-{'dark' if age == 0 else 'light'}"
-                            if min(values) != max(values) and 0 <= age <= 2 else ""
-                        )
-                cells.append(cell)
-            if show_na or any(cell["sample_count"] >= 3 for cell in cells):
-                vital_rows.append({"athlete": athlete, "values": cells})
+        vital_rows = [
+            row for row in relative_vital_rows
+            if show_na or any(cell["sample_count"] >= 3 for cell in row["values"])
+        ]
 
     # Meeting requests are private to the athlete's main coach. Delegated
     # coaches may see only the standard data permitted by their access level.

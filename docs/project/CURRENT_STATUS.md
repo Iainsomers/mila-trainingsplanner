@@ -1,6 +1,8 @@
 # Actuele status
 
-- 24 november — De vierde Staff Team Overview-tegel heet nu `Quick Coach Report` en is voorlopig een niet-klikbare dummy met `Under development`. De eerdere titel Training en koppeling naar Daily Coach Overview zijn verwijderd; DCO zelf blijft via Planning beschikbaar.
+- 24 november — Quick Coach Report heeft zijn eerste werkende melding. Een urenschuif kiest 1–168 uur (standaard 24). Atleten met een recent vital-event en een relatieve vitalsscore ≤ -5 verschijnen als `Naam: Relative Vitals Warning SCORE`; de score hergebruikt exact de vier kleurklassen uit het Vitals-tabblad. Regressie dekt Juan Zijderland op -12, de drempel, het urenvenster en afscherming van niet-toegankelijke atleten.
+
+- 24 november — De vierde Staff Team Overview-tegel heet `Quick Coach Report` en verwijst niet naar Daily Coach Overview; DCO zelf blijft via Planning beschikbaar.
 
 - 24 november — De startpagina van Staff Team Overview volgt nu de normale MiLa/Planning-opmaak: dezelfde brede contentmaat en sectierand, paarse zware tegeltitels, ronde pictogrammen en responsief drie/twee/één kolommen. De bestaande overzichtsbestemmingen en de kleine Log-tegel zijn bij deze stijlaanpassing functioneel ongewijzigd.
 

@@ -101,6 +101,11 @@
     box-shadow: none;
     transform: none;
   }
+  .quick-report-controls { max-width: 34rem; }
+  .quick-report-slider { width: min(100%, 28rem); }
+  .quick-report-list { max-width: 52rem; }
+  .quick-report-item { border-bottom: 1px solid #e4e9ee; padding: .7rem 0; }
+  .quick-report-item:last-child { border-bottom: 0; }
   .staff-overview-tile-content { min-width: 0; }
   .staff-overview-tile-heading { display: flex; align-items: center; gap: .5rem; }
   .staff-overview-tile-icon {
@@ -223,13 +228,32 @@
     <a class="staff-overview-tile" href="?view=injury_issues">
       <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">I</span><span class="staff-overview-tile-title">Injury/Issue Overview</span></span><span class="staff-overview-tile-text d-block">Recent athlete feedback and coach comments</span></span>
     </a>
-    <div class="staff-overview-tile" aria-disabled="true">
-      <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">Q</span><span class="staff-overview-tile-title">Quick Coach Report</span></span><span class="staff-overview-tile-text d-block">Under development</span></span>
-    </div>
+    <a class="staff-overview-tile" href="?view=quick_coach_report">
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-heading"><span class="staff-overview-tile-icon" aria-hidden="true">Q</span><span class="staff-overview-tile-title">Quick Coach Report</span></span><span class="staff-overview-tile-text d-block">Recent team warnings</span></span>
+    </a>
   </nav>
   <div class="staff-overview-log-wrap">
     <a class="staff-overview-log-tile" href="?view=log"><span>Log</span><span aria-hidden="true">→</span></a>
   </div>
+  </section>
+  {% elif overview_mode == 'quick_coach_report' %}
+  <section class="overview-block" aria-labelledby="quick-report-heading">
+    <div class="overview-content">
+      <h2 id="quick-report-heading" class="h5 mb-3">Quick Coach Report</h2>
+      <form method="get" class="quick-report-controls mb-3">
+        <input type="hidden" name="view" value="quick_coach_report">
+        <label for="quick-report-hours" class="form-label mb-1">Look back: <output id="quick-report-hours-output" for="quick-report-hours">{{ report_hours }}</output> hours</label>
+        <input id="quick-report-hours" class="form-range quick-report-slider" type="range" name="hours" min="1" max="168" step="1" value="{{ report_hours }}" oninput="document.getElementById('quick-report-hours-output').value=this.value" onchange="this.form.requestSubmit()">
+      </form>
+      <p class="text-muted small">Warnings based on relevant updates from the selected period.</p>
+      <div class="quick-report-list">
+        {% for row in report_rows %}
+          <div class="quick-report-item"><strong>{{ row.athlete.name }}</strong>: {{ row.warning }} {{ row.score }}</div>
+        {% empty %}
+          <p class="text-muted mb-0">No warnings in the selected period.</p>
+        {% endfor %}
+      </div>
+    </div>
   </section>
   {% elif overview_mode == 'log' %}
   <section class="overview-block" aria-labelledby="activity-log-heading">
