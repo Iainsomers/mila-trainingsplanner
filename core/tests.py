@@ -2140,6 +2140,81 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(six_days, "Imported Old Warning")
         self.assertContains(six_days, "Relative Vitals Warning -8")
 
+    def test_quick_coach_report_lists_important_evaluations(self):
+        coach = get_user_model().objects.create_user(
+            username="quick-report-evaluations", password="secret", is_staff=True,
+        )
+        yellow = Athlete.objects.create(owner=coach, name="Yellow Athlete", birth_year=2000, gender="X")
+        red = Athlete.objects.create(owner=coach, name="Red Athlete", birth_year=2000, gender="X")
+        long_text = Athlete.objects.create(owner=coach, name="Long Text Athlete", birth_year=2000, gender="X")
+        normal = Athlete.objects.create(owner=coach, name="Normal Athlete", birth_year=2000, gender="X")
+        today = timezone.localdate()
+        AthleteDayCheck.objects.create(
+            athlete=yellow, date=today, slot_index=1, updated_by=coach,
+            pain=AthleteDayCheck.PAIN_SOME, comment="Korte tekst",
+        )
+        AthleteDayCheck.objects.create(
+            athlete=red, date=today, slot_index=2, updated_by=coach,
+            pain=AthleteDayCheck.PAIN_SERIOUS, comment="",
+        )
+        AthleteDayCheck.objects.create(
+            athlete=long_text, date=today, slot_index=2, updated_by=coach,
+            pain=AthleteDayCheck.PAIN_NONE, comment="Deze evaluatietekst is zeker langer dan dertig tekens.",
+        )
+        AthleteDayCheck.objects.create(
+            athlete=normal, date=today, slot_index=1, updated_by=coach,
+            pain=AthleteDayCheck.PAIN_NONE, comment="123456789012345678901234567890",
+        )
+        self.client.force_login(coach)
+
+        response = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "24",
+        })
+
+        self.assertContains(response, f"Yellow Athlete</strong>: Important Evaluation {today:%d-%m-%Y} AM,", html=False)
+        self.assertContains(response, "🟠")
+        self.assertContains(response, "Korte tekst")
+        self.assertContains(response, f"Red Athlete</strong>: Important Evaluation {today:%d-%m-%Y} PM,", html=False)
+        self.assertContains(response, "🔴")
+        self.assertContains(response, ", —")
+        self.assertContains(response, "Long Text Athlete")
+        self.assertContains(response, "🟢")
+        self.assertNotContains(response, "Normal Athlete")
+
+    def test_quick_coach_report_important_evaluation_respects_time_date_and_access(self):
+        coach = get_user_model().objects.create_user(
+            username="quick-report-eval-access", password="secret", is_staff=True,
+        )
+        other = get_user_model().objects.create_user(
+            username="quick-report-eval-private", password="secret", is_staff=True,
+        )
+        visible = Athlete.objects.create(owner=coach, name="Old Evaluation", birth_year=2000, gender="X")
+        private = Athlete.objects.create(owner=other, name="Private Evaluation", birth_year=2000, gender="X")
+        today = timezone.localdate()
+        old_check = AthleteDayCheck.objects.create(
+            athlete=visible, date=today - timedelta(days=1), slot_index=1, updated_by=coach,
+            pain=AthleteDayCheck.PAIN_SERIOUS, comment="Old but important",
+        )
+        AthleteDayCheck.objects.filter(pk=old_check.pk).update(
+            updated_at=timezone.now() - timedelta(hours=25),
+        )
+        AthleteDayCheck.objects.create(
+            athlete=private, date=today, slot_index=1, updated_by=other,
+            pain=AthleteDayCheck.PAIN_SERIOUS, comment="Must stay private",
+        )
+        self.client.force_login(coach)
+
+        one_day = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "24",
+        })
+        two_days = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "48",
+        })
+
+        self.assertNotContains(one_day, "Old Evaluation")
+        self.assertContains(two_days, "Old Evaluation")
+        self.assertNotContains(two_days, "Private Evaluation")
+
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(
             username="team-coach", password="secret", is_staff=True

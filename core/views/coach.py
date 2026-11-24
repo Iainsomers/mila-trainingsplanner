@@ -13649,11 +13649,44 @@ def daily_overview_other_view(request):
                 )
                 if score <= -5:
                     report_rows.append({
+                        "kind": "relative_vitals",
                         "athlete": row["athlete"],
                         "warning": "Relative Vitals Warning",
                         "score": score,
                         "date": snapshot_date,
                     })
+        evaluation_first_date = current_time.date() - timedelta(days=(report_hours // 24) - 1)
+        visible_training_report_ids = {
+            athlete.id for athlete in athletes
+            if athlete.id in training_visible_athlete_ids and athlete.training_reports_enabled
+        }
+        fitness_symbols = {
+            AthleteDayCheck.PAIN_NONE: "🟢",
+            AthleteDayCheck.PAIN_SOME: "🟠",
+            AthleteDayCheck.PAIN_SERIOUS: "🔴",
+            "": "⚪",
+        }
+        for check in (
+            AthleteDayCheck.objects.filter(
+                athlete_id__in=visible_training_report_ids,
+                updated_at__gte=report_since,
+                updated_at__lte=report_until,
+                date__range=(evaluation_first_date, current_time.date()),
+                slot_index__in=(1, 2),
+            ).select_related("athlete")
+        ):
+            evaluation_text = (check.comment or "").strip()
+            if check.pain not in {AthleteDayCheck.PAIN_SOME, AthleteDayCheck.PAIN_SERIOUS} and len(evaluation_text) <= 30:
+                continue
+            report_rows.append({
+                "kind": "important_evaluation",
+                "athlete": check.athlete,
+                "warning": "Important Evaluation",
+                "date": check.date,
+                "slot_label": "AM" if check.slot_index == 1 else "PM",
+                "fitness_symbol": fitness_symbols.get(check.pain, "⚪"),
+                "evaluation_text": evaluation_text or "—",
+            })
         report_rows.sort(key=lambda row: (row["date"], row["athlete"].name), reverse=True)
         return render(request, "core/daily_overview_other.html", {
             "overview_mode": "quick_coach_report",

@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Quick Coach Report toont nu ook `Important Evaluation`: fitness 🟠/🔴 of meer dan 30 tekens evaluatietekst. De regel bevat naam, datum, AM/PM, bolletje en volledige tekst. Dezelfde uren-/dagbegrenzing en trainingsrapportrechten als het rapport blijven gelden; regressies dekken geel, rood, lange groene tekst, exact 30 tekens, lege tekst, tijdvenster en private atleten.
+
 - 24 november — Quick Coach Report heeft zijn eerste werkende melding. De schuif kiest 24–168 uur in stappen van 24 uur. Zowel het vital-event als de vitaldatum moeten binnen het gekozen venster vallen; daardoor toont 24 uur geen vandaag geïmporteerde oude vitaldatum. Atleten met een relatieve vitalsscore ≤ -5 verschijnen als `Naam: Relative Vitals Warning SCORE`; de score hergebruikt exact de vier kleurklassen uit het Vitals-tabblad. Langere vensters reconstrueren ook de dagstand van eerdere events en tonen iedere waarschuwingsdag afzonderlijk met datum. Regressie dekt Juan Zijderland op -12, herstel vandaag na een waarschuwing gisteren, twee afzonderlijke waarschuwingsdagen, een recent geïmporteerde oude vital, de drempel en afscherming van niet-toegankelijke atleten.
 
 - 24 november — De vierde Staff Team Overview-tegel heet `Quick Coach Report` en verwijst niet naar Daily Coach Overview; DCO zelf blijft via Planning beschikbaar.
