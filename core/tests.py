@@ -1918,7 +1918,7 @@ class PlanningOverviewTests(TestCase):
                 self.assertContains(response, "Average from")
                 self.assertNotContains(response, "Open evaluations from")
 
-    def test_staff_team_overview_landing_lists_accessible_athletes_and_view_choices(self):
+    def test_staff_team_overview_landing_uses_view_tiles_without_athlete_list(self):
         coach = get_user_model().objects.create_user(
             username="staff-overview-landing", password="secret", is_staff=True
         )
@@ -1933,10 +1933,19 @@ class PlanningOverviewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Staff Team Overview")
-        self.assertContains(response, "Visible Athlete")
+        self.assertNotContains(response, "Visible Athlete")
         self.assertNotContains(response, "Private Athlete")
+        self.assertNotContains(response, ">Athletes<", html=False)
+        self.assertContains(response, 'class="staff-overview-tiles"', html=False)
+        self.assertContains(response, 'class="staff-overview-tile"', count=4, html=False)
         self.assertContains(response, "?view=vitals")
         self.assertContains(response, "?view=information_quality")
+        self.assertContains(response, "?view=injury_issues")
+        self.assertContains(response, reverse("daily_overview"))
+        self.assertContains(response, "Quick Coach Report")
+        self.assertContains(response, 'class="staff-overview-log-wrap"', html=False)
+        self.assertContains(response, 'class="staff-overview-log-tile"', html=False)
+        self.assertContains(response, "?view=log")
 
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(

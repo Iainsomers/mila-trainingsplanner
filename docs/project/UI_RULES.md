@@ -89,7 +89,7 @@ mySASY gebruikt de officiële ongewijzigde `mySASY account`-knop en het Powered 
 - In de linkerbovenhoek van een AM-cel staan één of meerdere kleine dots voor de whereabouts van die dag, ook wanneer er geen training gepland is. De dotkleur volgt de Year Planner-legenda; overlappende whereabouts tonen meerdere dots.
 - De coachbrede variant van `See session km` gebruikt dezelfde compacte `T`-notatie zonder `km`-label in Flex Planner en DCO Training. In Flex reserveert de volledige sessiesamenvatting rechtsboven ruimte voor evaluatie-iconen, zodat de zonekilometers er niet onder vallen.
 - In Details Camps kan een trainer met voldoende editrechten de kampnaam direct via de titel bewerken; de titel blijft visueel compact en wordt pas na een klik een invoerveld.
-- Staff Team Overview opent met een compacte lijst van de toegankelijke atleten en twee duidelijke keuzes: Vitals en Information Quality. De gekozen weergave blijft team-breed.
+- Staff Team Overview opent zonder atletenlijst. De team-brede hoofdkeuzes Vitals, Information Quality, Injury/Issue Overview en Training staan als vier responsieve tegels; Training opent het bestaande Daily Coach Overview als `Quick Coach Report`. Log staat afzonderlijk als kleine secundaire tegel onderaan. Een detailweergave gebruikt `Overview` om naar deze tegelpagina terug te keren.
 - De Staff Team Overview-tab `Log` toont de onbewerkte gebeurtenissen van exact de laatste 24 uur, nieuwste eerst. Desktop gebruikt een compacte tabel met tijd, atleet, gebeurtenis, details en bron. Op mobiel worden dezelfde kolommen als gelabelde blokken onder elkaar gezet; er wordt inhoudelijk niets weggelaten.
 
 ## Terminologie

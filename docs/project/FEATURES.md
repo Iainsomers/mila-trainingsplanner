@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- Staff Team Overview gebruikt een tegelpagina zonder namenlijst: Vitals, Information Quality en Injury/Issue Overview openen de bestaande teamoverzichten; Training opent het bestaande Daily Coach Overview als Quick Coach Report. De 24-uurslog blijft beschikbaar via een kleine tegel onderaan.
+
 - Athlete Diary gebruikt een rollend bereik van 53 weken vanaf `Start week`. Previous/Next week verplaatsen dit bereik zonder jaargrens; oude links met `year=` blijven als overgang ondersteund.
 
 - Garmin E kan een expliciet opgegeven gemengde sprintreeks onder 100 meter, bijvoorbeeld `1×(60m//70m//80m//70m//60m) Z6`, als één unieke chronologische correctie toepassen en in dezelfde compacte `//`-notatie tonen. De afzonderlijke sprintlaps en tussenliggende herstel-laps behouden intern hun gemeten rollen en volgorde. Ook een eenduidige groep zoals `3×60m Z6` werkt. Alle geselecteerde bronlaps worden gebruikers-Z6, ook als enkele reps vooraf al Z6 waren en andere door startvertraging lager uitvielen.

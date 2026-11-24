@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — De nutteloze atletennamenlijst op de startpagina van Staff Team Overview is verwijderd. Vier hoofdtegels openen Vitals, Information Quality, Injury/Issue Overview en Training / Quick Coach Report; Log staat kleiner onderaan. Detailpagina's keren met Overview terug naar de tegelpagina.
+
 - 21 november — Individual Plans ondersteunt in de Weeks-dropdown nu ook 12, 26 en 100 weken. De server accepteert precies 1–5, 12, 26 en 100; navigatie behoudt de gekozen lengte.
 
 - 21 november — Athlete Diary heeft `Start week` in plaats van Year en toont vanaf die maandag 53 weken. Previous/Next week lopen door over jaargrenzen; bestaande `year=`-links blijven compatibel.

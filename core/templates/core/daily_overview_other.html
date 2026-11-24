@@ -62,9 +62,54 @@
   .vital-table { min-width: 650px; }
   .vital-table th, .vital-table td { vertical-align: middle; }
   .vital-table td:not(:first-child) { white-space: nowrap; }
-  .staff-overview-athletes { columns: 2; column-gap: 2rem; }
-  .staff-overview-athletes li { break-inside: avoid; padding: .2rem 0; }
-  @media (max-width: 575.98px) { .staff-overview-athletes { columns: 1; } }
+  .staff-overview-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .85rem;
+    margin-top: 1.25rem;
+  }
+  .staff-overview-tile {
+    display: flex;
+    min-height: 128px;
+    padding: 1rem 1.1rem;
+    border: 1px solid #d9e0e7;
+    border-radius: 10px;
+    background: #fff;
+    color: #17324d;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(23, 50, 77, .06);
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  }
+  .staff-overview-tile:hover,
+  .staff-overview-tile:focus-visible {
+    border-color: #6f9d7d;
+    color: #17324d;
+    box-shadow: 0 5px 14px rgba(23, 50, 77, .12);
+    transform: translateY(-1px);
+  }
+  .staff-overview-tile-content { align-self: flex-end; }
+  .staff-overview-tile-title { margin: 0 0 .25rem; color: #1d7549; font-size: 1.12rem; font-weight: 700; }
+  .staff-overview-tile-text { margin: 0; color: #6c757d; font-size: .88rem; }
+  .staff-overview-log-wrap { margin-top: 1rem; text-align: right; }
+  .staff-overview-log-tile {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .45rem .7rem;
+    border: 1px solid #d9e0e7;
+    border-radius: 8px;
+    background: #fff;
+    color: #58636f;
+    font-size: .82rem;
+    text-decoration: none;
+  }
+  .staff-overview-log-tile:hover,
+  .staff-overview-log-tile:focus-visible { border-color: #9aa7b2; color: #17324d; }
+  @media (max-width: 575.98px) {
+    .staff-overview-tiles { grid-template-columns: 1fr; }
+    .staff-overview-tile { min-height: 104px; }
+    .staff-overview-log-wrap { text-align: left; }
+  }
   .hr-zone-table th, .hr-zone-table td { vertical-align: middle; text-align: center; }
   .hr-zone-table th:first-child, .hr-zone-table td:first-child { text-align: left; }
   .hr-zone-table td.hr-zone-misaligned { color: #c00000 !important; font-weight: 700; }
@@ -120,28 +165,29 @@
       <p class="text-muted mb-0">Team vitals, information quality, injury/issue overview and recent activity.</p>
     </div>
     <div class="d-flex gap-2">
-      {% if overview_mode %}<a href="{% url 'daily_overview_other' %}" class="btn btn-outline-secondary">All athletes</a>{% endif %}
+      {% if overview_mode %}<a href="{% url 'daily_overview_other' %}" class="btn btn-outline-secondary">Overview</a>{% endif %}
       <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
     </div>
   </div>
 
-  <nav class="d-flex flex-wrap gap-2 mt-3" aria-label="Staff overview sections">
-    <a class="btn {% if overview_mode == 'vitals' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=vitals">Vitals</a>
-    <a class="btn {% if overview_mode == 'information_quality' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=information_quality">Information Quality</a>
-    <a class="btn {% if overview_mode == 'injury_issues' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=injury_issues">Injury/Issue Overview</a>
-    <a class="btn {% if overview_mode == 'log' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=log">Log</a>
-  </nav>
-
   {% if not overview_mode %}
-  <section class="overview-block" aria-labelledby="staff-athletes-heading">
-    <div class="overview-content">
-      <h2 id="staff-athletes-heading" class="h5">Athletes</h2>
-      <ul class="staff-overview-athletes list-unstyled mb-0">
-        {% for athlete in athletes %}<li>{{ athlete.name }}</li>
-        {% empty %}<li class="text-muted">No athletes found.</li>{% endfor %}
-      </ul>
-    </div>
-  </section>
+  <nav class="staff-overview-tiles" aria-label="Staff overview sections">
+    <a class="staff-overview-tile" href="?view=vitals">
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-title d-block">Vitals</span><span class="staff-overview-tile-text d-block">Team recovery and daily measurements</span></span>
+    </a>
+    <a class="staff-overview-tile" href="?view=information_quality">
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-title d-block">Information Quality</span><span class="staff-overview-tile-text d-block">Evaluations, vitals completion and activity</span></span>
+    </a>
+    <a class="staff-overview-tile" href="?view=injury_issues">
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-title d-block">Injury/Issue Overview</span><span class="staff-overview-tile-text d-block">Recent athlete feedback and coach comments</span></span>
+    </a>
+    <a class="staff-overview-tile" href="{% url 'daily_overview' %}">
+      <span class="staff-overview-tile-content"><span class="staff-overview-tile-title d-block">Training</span><span class="staff-overview-tile-text d-block">Quick Coach Report</span></span>
+    </a>
+  </nav>
+  <div class="staff-overview-log-wrap">
+    <a class="staff-overview-log-tile" href="?view=log"><span>Log</span><span aria-hidden="true">→</span></a>
+  </div>
   {% elif overview_mode == 'log' %}
   <section class="overview-block" aria-labelledby="activity-log-heading">
     <div class="overview-content">
