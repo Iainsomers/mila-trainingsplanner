@@ -1,6 +1,6 @@
 # Actuele status
 
-- 24 november — Quick Coach Report heeft zijn eerste werkende melding. Een urenschuif kiest 1–168 uur (standaard 24). Atleten met een recent vital-event en een relatieve vitalsscore ≤ -5 verschijnen als `Naam: Relative Vitals Warning SCORE`; de score hergebruikt exact de vier kleurklassen uit het Vitals-tabblad. Regressie dekt Juan Zijderland op -12, de drempel, het urenvenster en afscherming van niet-toegankelijke atleten.
+- 24 november — Quick Coach Report heeft zijn eerste werkende melding. De schuif kiest 24–168 uur in stappen van 24 uur. Atleten met een vital-event in dat venster en een relatieve vitalsscore ≤ -5 verschijnen als `Naam: Relative Vitals Warning SCORE`; de score hergebruikt exact de vier kleurklassen uit het Vitals-tabblad. Langere vensters reconstrueren ook de dagstand van eerdere events en tonen iedere waarschuwingsdag afzonderlijk met datum. Regressie dekt Juan Zijderland op -12, herstel vandaag na een waarschuwing gisteren, twee afzonderlijke waarschuwingsdagen, de drempel, het urenvenster en afscherming van niet-toegankelijke atleten.
 
 - 24 november — De vierde Staff Team Overview-tegel heet `Quick Coach Report` en verwijst niet naar Daily Coach Overview; DCO zelf blijft via Planning beschikbaar.
 

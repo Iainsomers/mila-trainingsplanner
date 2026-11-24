@@ -13521,10 +13521,12 @@ RELATIVE_VITAL_COLUMNS = (
 )
 
 
-def _relative_vital_rows(athletes, visible_athlete_ids, current_time):
+def _relative_vital_rows(athletes, visible_athlete_ids, current_time, as_of_date=None):
     """Build the relative-extreme cells used by Vitals and Quick Coach Report."""
     vital_columns = [dict(column) for column in RELATIVE_VITAL_COLUMNS]
-    vitals_today = current_time.date() - timedelta(days=1) if current_time.hour < 8 else current_time.date()
+    vitals_today = as_of_date or (
+        current_time.date() - timedelta(days=1) if current_time.hour < 8 else current_time.date()
+    )
     vitals_window_start = vitals_today - timedelta(days=13)
     vital_values = {}
     vital_dates = {}
@@ -13604,18 +13606,26 @@ def daily_overview_other_view(request):
             report_hours = int(request.GET.get("hours", 24))
         except (TypeError, ValueError):
             report_hours = 24
-        report_hours = min(168, max(1, report_hours))
+        report_hours = min(168, max(24, report_hours))
+        report_hours = min(168, max(24, round(report_hours / 24) * 24))
         report_until = timezone.now()
         report_since = report_until - timedelta(hours=report_hours)
-        recent_vital_athlete_ids = set(
+        current_vitals_date = current_time.date() - timedelta(days=1) if current_time.hour < 8 else current_time.date()
+        snapshot_dates_by_athlete = {}
+        for event in (
             AthleteActivityEvent.objects.filter(
                 athlete_id__in=visible_vital_athlete_ids,
                 category=AthleteActivityEvent.CATEGORY_VITALS,
                 occurred_at__gte=report_since,
                 occurred_at__lte=report_until,
-            ).values_list("athlete_id", flat=True)
-        )
-        relative_rows, _, _, _ = _relative_vital_rows(athletes, visible_vital_athlete_ids, current_time)
+            ).only("athlete_id", "occurred_at", "metadata")
+        ):
+            try:
+                snapshot_date = date.fromisoformat(str((event.metadata or {}).get("date", "")))
+            except ValueError:
+                snapshot_date = timezone.localtime(event.occurred_at).date()
+            if snapshot_date <= current_vitals_date:
+                snapshot_dates_by_athlete.setdefault(event.athlete_id, set()).add(snapshot_date)
         score_by_class = {
             "vital-extreme-red-dark": -3,
             "vital-extreme-red-light": -1,
@@ -13623,20 +13633,27 @@ def daily_overview_other_view(request):
             "vital-extreme-green-light": 1,
         }
         report_rows = []
-        for row in relative_rows:
-            if row["athlete"].id not in recent_vital_athlete_ids:
-                continue
-            score = sum(
-                score_by_class.get(cell.get(class_key, ""), 0)
-                for cell in row["values"]
-                for class_key in ("low_class", "high_class")
+        for snapshot_date in sorted({day for days in snapshot_dates_by_athlete.values() for day in days}):
+            snapshot_rows, _, _, _ = _relative_vital_rows(
+                athletes, visible_vital_athlete_ids, current_time, as_of_date=snapshot_date,
             )
-            if score <= -5:
-                report_rows.append({
-                    "athlete": row["athlete"],
-                    "warning": "Relative Vitals Warning",
-                    "score": score,
-                })
+            for row in snapshot_rows:
+                athlete_id = row["athlete"].id
+                if snapshot_date not in snapshot_dates_by_athlete.get(athlete_id, set()):
+                    continue
+                score = sum(
+                    score_by_class.get(cell.get(class_key, ""), 0)
+                    for cell in row["values"]
+                    for class_key in ("low_class", "high_class")
+                )
+                if score <= -5:
+                    report_rows.append({
+                        "athlete": row["athlete"],
+                        "warning": "Relative Vitals Warning",
+                        "score": score,
+                        "date": snapshot_date,
+                    })
+        report_rows.sort(key=lambda row: (row["date"], row["athlete"].name), reverse=True)
         return render(request, "core/daily_overview_other.html", {
             "overview_mode": "quick_coach_report",
             "report_hours": report_hours,

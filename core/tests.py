@@ -2001,7 +2001,7 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(response, "Relative Vitals Warning -12")
         self.assertNotContains(response, "Old Warning")
         self.assertNotContains(response, "Mild Warning")
-        self.assertContains(response, 'type="range" name="hours" min="1" max="168"', html=False)
+        self.assertContains(response, 'type="range" name="hours" min="24" max="168" step="24"', html=False)
 
         expanded = self.client.get("/coach/daily-overview-other/", {
             "view": "quick_coach_report", "hours": "48",
@@ -2030,6 +2030,81 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(invalid.context["report_hours"], 24)
         self.assertEqual(oversized.context["report_hours"], 168)
         self.assertNotContains(invalid, "Private Warning")
+
+    def test_quick_coach_report_uses_yesterdays_warning_in_48_hour_view(self):
+        from core.models import AthleteActivityEvent
+
+        coach = get_user_model().objects.create_user(
+            username="quick-report-history", password="secret", is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="Recovered Athlete", birth_year=2000, gender="X",
+        )
+        today = timezone.localdate()
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=today - timedelta(days=7),
+            sleep_hours=8, sleep_quality=8, morning_hr=45, hrv=80,
+        )
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=today - timedelta(days=6),
+            sleep_hours=7.5, sleep_quality=7.5, morning_hr=46, hrv=75,
+        )
+        yesterday_vital = AthleteDailyVital.objects.create(
+            athlete=athlete, date=today - timedelta(days=1),
+            sleep_hours=4, sleep_quality=4, morning_hr=60, hrv=30,
+        )
+        AthleteActivityEvent.objects.filter(
+            athlete=athlete, metadata__date=yesterday_vital.date.isoformat(),
+        ).update(occurred_at=timezone.now() - timedelta(hours=25))
+        AthleteDailyVital.objects.create(
+            athlete=athlete, date=today,
+            sleep_hours=7.7, sleep_quality=7.7, morning_hr=46, hrv=76,
+        )
+        self.client.force_login(coach)
+
+        current = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "24",
+        })
+        historical = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "48",
+        })
+
+        self.assertNotContains(current, "Recovered Athlete")
+        self.assertContains(historical, "Recovered Athlete")
+        self.assertContains(historical, "Relative Vitals Warning -12")
+
+    def test_quick_coach_report_lists_each_warning_day_instead_of_only_the_lowest(self):
+        coach = get_user_model().objects.create_user(
+            username="quick-report-each-day", password="secret", is_staff=True,
+        )
+        athlete = Athlete.objects.create(
+            owner=coach, name="Two Warning Days", birth_year=2000, gender="X",
+        )
+        today = timezone.localdate()
+        for offset, values in (
+            (7, (8, 8, 45, 80)),
+            (6, (7.5, 7.5, 46, 75)),
+            (1, (4, 4, 60, 30)),
+            (0, (3.5, 3.5, 65, 25)),
+        ):
+            AthleteDailyVital.objects.create(
+                athlete=athlete,
+                date=today - timedelta(days=offset),
+                sleep_hours=values[0],
+                sleep_quality=values[1],
+                morning_hr=values[2],
+                hrv=values[3],
+            )
+        self.client.force_login(coach)
+
+        response = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "48",
+        })
+
+        warnings = [row for row in response.context["report_rows"] if row["athlete"] == athlete]
+        self.assertEqual(len(warnings), 2)
+        self.assertEqual({row["date"] for row in warnings}, {today - timedelta(days=1), today})
+        self.assertContains(response, "Two Warning Days", count=2)
 
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(
