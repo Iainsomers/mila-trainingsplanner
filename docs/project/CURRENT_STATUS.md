@@ -1,5 +1,7 @@
 # Actuele status
 
+- 24 november — Garmin E kan een unieke korte werkgroep corrigeren van bijvoorbeeld 4×50 m naar 4×70 m Z6, ook met expliciete lapnummers. De volledige meetvalidator blijft gelden.
+
 - 24 november — Quick Coach Report toont nu `Watch Training` wanneer een persoonlijke training binnen het gekozen uren-/dagvenster dezelfde `watch_a`–`watch_e`-bron heeft die het klokje in Athlete Diary en Individual Planning aanstuurt. Dit omvat ook een planned slot met bewaarde Watch-snapshot en zichtbaar klokje. De regel bevat naam, datum, AM/PM en Polar A/B of Garmin C/D/E. Regressie dekt actieve horlogebron, planned zonder Watch-versie, planned met Watch-snapshot, oud slot en private atleet.
 
 - 24 november — Quick Coach Report toont nu ook `Important Evaluation`: fitness 🟠/🔴 of meer dan 30 tekens evaluatietekst. De regel bevat naam, datum, AM/PM, bolletje en volledige tekst. Dezelfde uren-/dagbegrenzing en trainingsrapportrechten als het rapport blijven gelden; regressies dekken geel, rood, lange groene tekst, exact 30 tekens, lege tekst, tijdvenster en private atleten.

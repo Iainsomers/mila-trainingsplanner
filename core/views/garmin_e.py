@@ -18,6 +18,7 @@ from core.garmin_e import (
     ask_model,
     checked_proposal,
     complete_partial_running_proposal,
+    correct_short_rep_distance,
     explicit_alternative_compact_proposal,
     lap_facts,
     prefer_measured_time_groups,
@@ -268,11 +269,26 @@ def garmin_type_e_ayc_view(request):
                     explicit_alternative_compact_proposal(facts, message)
                     if is_alternative else None
                 )
+                explicit_distance = None
+                if message and not is_alternative:
+                    base = state["proposal"] or complete_partial_running_proposal(part, {
+                        "warmup_laps": [i for i, load in enumerate(part["watch_loads"], 1)
+                                        if load.get("segment") == "WU"],
+                    })
+                    explicit_distance = correct_short_rep_distance(base, message)
+                    if explicit_distance is not None:
+                        try:
+                            checked_proposal(part, explicit_distance, athlete=athlete, zone_basis=state["basis"])
+                        except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError):
+                            explicit_distance = None
                 try:
                     answer = ({
                         "reply": "De expliciete notatie past op alle gemeten laps en staat als gecontroleerd voorstel in de preview.",
                         "intent": "update", "zone_basis": "hr", "proposal": explicit_compact,
-                    } if explicit_compact else ask_model(facts,history,current,timeout=16))
+                    } if explicit_compact else {
+                        "reply": "De nominale sprintafstand is aangepast in het gecontroleerde voorstel.",
+                        "intent": "update", "zone_basis": state["basis"], "proposal": explicit_distance,
+                    } if explicit_distance else ask_model(facts,history,current,timeout=16))
                 except OSError:
                     remaining = deadline-monotonic()
                     if remaining < 3:
@@ -356,7 +372,8 @@ def garmin_type_e_ayc_view(request):
                         repair_used = True
                 if proposal is not None:
                     try:
-                        proposal = apply_conversation_corrections(proposal)
+                        if explicit_distance is None:
+                            proposal = apply_conversation_corrections(proposal)
                         if wants_update:
                             proposal = complete_partial_running_proposal(part, proposal)
                         proposal, time_group_adjusted = prefer_measured_time_groups(part, proposal)

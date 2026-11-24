@@ -37,6 +37,17 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_retarget_short_reps_in_mixed_main(self):
+        proposal = {"reps": [{"laps": [lap], "target_meters": 50} for lap in (3, 5, 7, 9)]
+                    + [{"laps": [11], "target_meters": 1500}], "recovery_laps": [4, 6, 8, 10]}
+        for message in ("de 4*50m is 4*70m in z6", "lap 3-5-7-9 zijn 4*70m z6"):
+            with self.subTest(message=message):
+                updated, changed = apply_explicit_zone_labels(proposal, message)
+                self.assertTrue(changed)
+                self.assertEqual([rep["target_meters"] for rep in updated["reps"]], [70]*4 + [1500])
+                self.assertEqual(updated["explicit_lap_zones"], dict.fromkeys(("3", "5", "7", "9"), "6"))
+                self.assertEqual(updated["recovery_laps"], proposal["recovery_laps"])
+
     def test_general_explicit_alternative_compact_notation_is_measured_and_checked(self):
         athlete = SimpleNamespace(zone_hr_bpm={"1":"200"}, alternative_hr_correction=10)
         examples = [

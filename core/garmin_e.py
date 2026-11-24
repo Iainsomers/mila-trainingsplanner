@@ -143,10 +143,65 @@ def ask_model(facts, history, current=None, validation_error=None, *, timeout=20
     return answer
 
 
+def correct_short_rep_distance(proposal, message):
+    """Retarget existing short reps by their lap IDs or a unique old group."""
+    if not isinstance(proposal, dict) or not isinstance(message, str):
+        return None
+    group = r"(\d+)\s*[×x*]\s*(\d+)\s*m\b"
+    ids = re.search(r"(?:\blaps?\s+)?(\d+(?:\s*[,–-]\s*\d+)+)\s+zijn\s+" + group, message, re.I)
+    forward = re.search(group + r"\s+is\s+" + group, message, re.I)
+    backward = re.search(group + r"\s*(?:sprints?\s*)?(?:ipv|in plaats van)\s+" + group, message, re.I)
+    reps = proposal.get("reps") or []
+    if not isinstance(reps, list) or any(not isinstance(rep, dict) for rep in reps):
+        return None
+    if ids:
+        count, target = map(int, ids.groups()[1:])
+        lap_ids = [int(value) for value in re.findall(r"\d+", ids[1])]
+        matches = [i for i in range(len(reps)-len(lap_ids)+1)
+                   if [rep.get("laps") for rep in reps[i:i+len(lap_ids)]] == [[lap] for lap in lap_ids]]
+        if len(lap_ids) != count:
+            return None
+    elif forward or backward:
+        old_count, old, count, target = map(int, forward.groups() if forward else backward.groups()[2:] + backward.groups()[:2])
+        if old_count != count or not 25 <= old < 100:
+            return None
+        matches = []
+        for i in range(len(reps)-count+1):
+            distances = [rep.get("target_meters") for rep in reps[i:i+count]]
+            if distances not in ([old]*count, [target]*count):
+                continue
+            if any(j in range(len(reps)) and reps[j].get("target_meters") == distances[0]
+                   for j in (i-1, i+count)):
+                continue
+            matches.append(i)
+    else:
+        return None
+    if not 25 <= target < 100 or not count or len(matches) != 1:
+        return None
+    updated = deepcopy(proposal)
+    zone = re.search(r"\bz\s*6\b", message, re.I)
+    selected = updated["reps"][matches[0]:matches[0]+count]
+    old_targets = [rep.get("target_meters") for rep in selected] + [target]
+    for rep in selected:
+        rep.pop("target_seconds", None)
+        rep["target_meters"] = target
+        if zone:
+            for lap in rep["laps"]:
+                updated.setdefault("explicit_lap_zones", {})[str(lap)] = "6"
+    updated["zone_labels"] = [
+        label for label in (updated.get("zone_labels") or [])
+        if not isinstance(label, dict) or label.get("target_meters") not in old_targets or label.get("count") != count
+    ]
+    return updated
+
+
 def apply_explicit_zone_labels(proposal, message):
     """Attach literal user-stated lap, duration or distance zone labels to a proposal."""
     if not isinstance(proposal, dict) or not isinstance(message, str):
         return proposal, False
+    corrected = correct_short_rep_distance(proposal, message)
+    if corrected is not None:
+        return corrected, True
     lap_zone = re.search(r"\blap\s*(\d+)\b.{0,30}?\bz\s*([1-6])\b", message, re.I)
     if lap_zone:
         updated = deepcopy(proposal)
