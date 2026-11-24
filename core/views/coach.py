@@ -9241,23 +9241,16 @@ def _standard_strength_form_rows(program=None, request_post=None):
 
 
 def _standard_strength_visible_via_base_planning(program, athlete):
+    from core.views.calendar import _base_planning_slot_for_day
+
     blocks = list(
         AthleteBasePlanningBlock.objects
         .filter(athlete=athlete, planning_kind=AthleteBasePlanningBlock.KIND_BASE)
-        .prefetch_related("slots")
+        .prefetch_related(Prefetch("slots", to_attr="_prefetched_base_slots"))
         .order_by("sort_order", "start_month", "start_day", "id")
     )
     if not blocks:
         return False
-
-    def block_covers_day(block, day):
-        marker_year = 2024
-        start_index = date(marker_year, block.start_month, block.start_day).timetuple().tm_yday
-        end_index = date(marker_year, block.end_month, block.end_day).timetuple().tm_yday
-        day_index = date(marker_year, day.month, day.day).timetuple().tm_yday
-        if start_index <= end_index:
-            return start_index <= day_index <= end_index
-        return day_index >= start_index or day_index <= end_index
 
     trainer_segments = (
         program.segments
@@ -9266,18 +9259,9 @@ def _standard_strength_visible_via_base_planning(program, athlete):
     )
     for segment in trainer_segments:
         trainer_slot = segment.slot
-        selected_base_slot = None
-        for block in blocks:
-            if not block_covers_day(block, trainer_slot.date):
-                continue
-            selected_base_slot = next((
-                base_slot
-                for base_slot in block.slots.all()
-                if base_slot.weekday == trainer_slot.date.weekday()
-                and base_slot.slot_index == trainer_slot.slot_index
-            ), None)
-            if selected_base_slot:
-                break
+        selected_base_slot = _base_planning_slot_for_day(
+            {athlete.id: blocks}, athlete.id, trainer_slot.date, trainer_slot.slot_index,
+        )
         if (
             selected_base_slot
             and selected_base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER
@@ -9423,10 +9407,12 @@ def standard_strength_detail_view(request, program_id: int):
             and (
                 program.segments.filter(
                     Q(slot__athlete=athlete)
-                    | Q(slot__athletes=athlete)
-                    | Q(slot__groups__athletes=athlete)
-                    | Q(slot__plan__athletes=athlete)
-                    | Q(slot__plan__groups__athletes=athlete)
+                    | (Q(slot__athlete__isnull=True) & (
+                        Q(slot__athletes=athlete)
+                        | Q(slot__groups__athletes=athlete)
+                        | Q(slot__plan__athletes=athlete)
+                        | Q(slot__plan__groups__athletes=athlete)
+                    ))
                 ).exists()
                 or _standard_strength_visible_via_base_planning(program, athlete)
             )

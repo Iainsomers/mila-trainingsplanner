@@ -156,3 +156,4 @@ Hardware acces is uitsluitend beschikbaar voor trainers buiten coach-tools-only.
 
 
 Under Dev-module volgt actieve coachinstelling; uitsluitend coachdashboard (geen atleten of coach-tools-only). Eigenaar en bevoegde edit-coach kunnen schakelen via bestaande settingsrechten; view-only niet.
+- Een atleet kan een standaard krachtschema uit een gekoppeld trainerplan openen via de Base Planning-versie die op de trainingsdatum geldt. Een persoonlijk slot van een andere atleet verleent geen toegang via het groepsplan.

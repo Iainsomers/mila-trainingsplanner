@@ -10976,6 +10976,7 @@ class StandardStrengthAccessTests(TestCase):
             athlete=athlete,
             planning_kind=AthleteBasePlanningBlock.KIND_BASE,
             label="Full year",
+            effective_from=date(2026, 8, 1),
             start_month=1,
             start_day=1,
             end_month=12,
@@ -10989,6 +10990,14 @@ class StandardStrengthAccessTests(TestCase):
             trainer_plan=trainer_plan,
         )
         program = StandardStrengthProgram.objects.create(owner=coach, name="Base circuit")
+        older_block = AthleteBasePlanningBlock.objects.create(
+            athlete=athlete, label="Previous plan", sort_order=0,
+            effective_from=date(2026, 1, 1),
+            start_month=1, start_day=1, end_month=12, end_day=31,
+        )
+        AthleteBasePlanningSlot.objects.create(
+            block=older_block, weekday=0, slot_index=1, mode=AthleteBasePlanningSlot.MODE_REST,
+        )
         trainer_slot = TrainingSlot.objects.create(
             plan=trainer_plan,
             date=date(2026, 8, 10),
