@@ -892,6 +892,47 @@ class GarminEEndpointTests(TestCase):
         self.assertEqual(bad.status_code,400)
 
     @patch("core.views.garmin_e.ask_model")
+    def test_combine_uses_checked_main_when_fresh_measured_description_is_empty(self, model):
+        selection = self.combine_example()
+        main_url = self.url+"?"+urlencode({**self.query,"suggestion_session":selection[1]["start"]})
+        main_proposal = dict(
+            recovery_laps=[2],
+            reps=[dict(laps=[i],target_meters=500) for i in (1,3)],
+        )
+        model.return_value = {
+            "reply":"Twee gemeten 500m-reps.",
+            "proposal":main_proposal,
+            "zone_basis":"pace",
+        }
+        analyzed = self.client.post(main_url,{
+            "chat":json.dumps([{"role":"user","content":"Analyseer Main"}]),
+        }).json()
+        self.assertTrue(analyzed["results"][0]["parts"][0]["e_usable"])
+
+        from django.http import JsonResponse
+        from core.views.coach import garmin_type_c_ayc_view as measured_reader
+
+        def measured_without_main(request):
+            response = measured_reader(request)
+            data = json.loads(response.content)
+            source = next(item for item in data["results"] if item["start"] == selection[1]["start"])
+            source["parts"][0]["training_fields"]["main"] = ""
+            return JsonResponse(data, status=response.status_code)
+
+        with patch("core.views.coach.garmin_type_c_ayc_view", side_effect=measured_without_main):
+            response = self.client.post(
+                self.url+"?"+urlencode(self.query),
+                {"combine":json.dumps(selection)},
+            )
+
+        self.assertEqual(response.status_code, 200, response.json())
+        part = response.json()["results"][0]["parts"][0]
+        self.assertTrue(part["e_usable"])
+        self.assertEqual(part["training_fields"]["main"], "2×500 m Z4 p60")
+        self.assertEqual(part["training_fields"]["wu"], "800 m Z1")
+        self.assertEqual(part["training_fields"]["cd"], "1000 m Z1")
+
+    @patch("core.views.garmin_e.ask_model")
     def test_combine_before_analysis_has_one_conversation_and_requires_checked_proposal(self, model):
         selection = self.combine_example()
         response = self.client.post(self.url+"?"+urlencode(self.query),{"combine":json.dumps(selection)})

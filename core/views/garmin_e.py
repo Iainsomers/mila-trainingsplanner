@@ -101,7 +101,11 @@ def garmin_type_e_ayc_view(request):
             main_state = None
             if main_source and len(main_source.get("parts") or [])==1:
                 raw_part = main_source["parts"][0]
-                if raw_part.get("watch_loads") and (raw_part.get("training_fields") or {}).get("main"):
+                # The checked E proposal is authoritative for Combine. A fresh
+                # measured decode can still have an empty Main description;
+                # requiring that raw description here would make the saved,
+                # validated proposal impossible to retrieve.
+                if raw_part.get("watch_loads"):
                     identity = conversation_identity(request.user.pk,athlete.pk,main_start,lap_facts(raw_part))
                     stored = GarminEConversation.objects.filter(user=request.user,athlete=athlete,activity_key=identity).first()
                     if stored and (stored.state.get("part") or {}).get("e_usable"):
