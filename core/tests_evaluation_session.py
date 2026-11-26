@@ -49,10 +49,11 @@ class EvaluationSessionTests(TestCase):
         self.assertContains(self.client.get(self.url), 'data-lactate-open aria-haspopup="dialog"', count=2)
         payload = {"date": self.day.isoformat(), "slot_index": 2}
         rows = [{"rep": 10, "lactate": "2,5", "rpe": "5", "comment": "After set", "length": "400",
-                 "speed": "3:20", "hr": "170"}]
+                 "speed": "3:20", "hr": "170", "end_hr": "178"}]
         result = self.client.post(self.url, {**payload, "evaluation_lactate": "save", "rows": json.dumps(rows)})
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.json()["rows"], rows)
+        self.assertContains(self.client.get(self.url), 'data-lactate-values="{&quot;10&quot;:&quot;2,5&quot;}"')
         self.assertFalse(AthleteDayCheck.objects.filter(athlete=self.athlete).exists())
         runner = get_user_model().objects.create_user(username="Evaluation_Runner")
         self.client.force_login(runner)
@@ -84,7 +85,7 @@ const document = {getElementById: () => body, createElement: () => ({
 })};
 """ + source + """
 const watch = Array.from({length: 20}, (_, index) => ({
-    distance_m: 400, pace_seconds_per_km: 192 + index, average_hr: 164 + index
+    distance_m: 400, pace_seconds_per_km: 192 + index, average_hr: 164 + index, hr_tail: 170 + index
 }));
 renderLactateRows([{rep: 10, lactate: "2,5"}], watch);
 assert.equal(body.rows.length, 2);
@@ -92,10 +93,10 @@ assert.equal(body.rows[0].cells[1].children[0].value, "2,5");
 const row = body.rows[1];
 const rep = row.cells[0].children[0];
 assert.equal(rep.value, "");
-assert.deepEqual(row.cells.slice(4).map(cell => cell.children[1].placeholder), ["m", "m", "m"]);
+assert.deepEqual(row.cells.slice(4).map(cell => cell.children[1].placeholder), ["m", "m", "m", "m"]);
 rep.value = "10";
 rep.input();
-assert.deepEqual(row.cells.slice(4).map(cell => cell.children[0].textContent), ["400", "3:21", "173"]);
+assert.deepEqual(row.cells.slice(4).map(cell => cell.children[0].textContent), ["400", "3:21", "173", "179"]);
 assert.ok(row.cells.slice(4).every(cell => cell.children[1].hidden));
 rep.value = "21";
 rep.input();

@@ -161,6 +161,7 @@ class ShortSetsStructureTests(SimpleTestCase):
     def test_garmin_mixed_main_displays_one_time_and_pace_per_segment(self):
         from types import SimpleNamespace
         from django.template.loader import render_to_string
+        from django.utils.html import escape
         from core.views.calendar import _annotate_slot_segment_display_times, _virtual_segment_from_text
 
         values = [(3578.77,736,2),(175.69,218,1),(3579.66,740,2),(170.95,239,1),
@@ -173,14 +174,14 @@ class ShortSetsStructureTests(SimpleTestCase):
             for segment in segments:
                 segment.slot = slot
             _annotate_slot_segment_display_times(slot, None)
-            expected = ["2×3600 m Z2 p218 (12:18 · 3:26 min/km)",
+            expected = ["2×3600 m Z2 p3'38\" (12:18 · 3:26 min/km)",
                         "3000m - 10:14 - 3:26/km", "1000m - 3:01 - 3:01/km"]
             self.assertEqual([segment.display_text for segment in segments], expected)
             self.assertEqual([row["measured_seconds"] for row in slot.watch_main_reps], [736,740,614,181])
             # Desktop and mobile Diary both include this segment partial.
             for segment, label in zip(segments, expected):
                 html = render_to_string("core/partials/segment_display.html", {"seg":segment})
-                self.assertIn(label, html)
+                self.assertIn(escape(label), html)
 
     def test_two_kilometres_and_short_remainder_are_one_continuous_run(self):
         from types import SimpleNamespace

@@ -1715,17 +1715,17 @@
       empty.textContent = "No processed Main rep data is available for this training.";
       body.appendChild(empty);
     } else {
-      var useEndHr = /Garmin [CD]/.test(model);
+      var useEndHr = /Garmin [CDE]/.test(model);
       var explanation = document.createElement("div");
       explanation.className = "small text-muted mb-2";
       explanation.textContent = hasSplits ? "Split times are adjusted to the shown distance. The final short lap keeps its measured time. Stops remain included." : "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
-      if (useEndHr) explanation.textContent += " End HR: last 10% of measured rep time, minimum 15s; Avg HR for reps under 15s.";
+      if (useEndHr) explanation.textContent += " HR last 10% uses at least the final 15 seconds, or average HR for reps shorter than 15 seconds.";
       body.appendChild(explanation);
       var table = document.createElement("table");
       table.className = "table table-sm table-striped mb-0";
       var thead = document.createElement("thead");
       var header = document.createElement("tr");
-      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Avg HR", useEndHr ? "End HR" : "Last 15s HR"].forEach(function(label) {
+      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Avg HR", useEndHr ? "HR last 10%" : "Last 15s HR"].forEach(function(label) {
         var th = document.createElement("th"); th.scope = "col"; th.textContent = label; header.appendChild(th);
       });
       thead.appendChild(header); table.appendChild(thead);

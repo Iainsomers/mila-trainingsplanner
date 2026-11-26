@@ -3473,7 +3473,7 @@ def _evaluation_lactate_response(request, athlete, is_coach, action):
             or (not is_coach and day > timezone.localdate() and not athlete.extended_edit_rights)):
         return JsonResponse({}, status=403)
 
-    limits = {"lactate": 12, "rpe": 12, "comment": 500, "length": 12, "speed": 20, "hr": 6}
+    limits = {"lactate": 12, "rpe": 12, "comment": 500, "length": 12, "speed": 20, "hr": 6, "end_hr": 6}
     try:
         raw = request.POST.get("rows", "")
         if len(raw) > 240000:
@@ -3494,7 +3494,7 @@ def _evaluation_lactate_response(request, athlete, is_coach, action):
                 if not isinstance(value, str) or len(value) > limit:
                     raise ValueError
                 value = value.strip()
-                if value and field in {"lactate", "rpe", "length", "hr"}:
+                if value and field in {"lactate", "rpe", "length", "hr", "end_hr"}:
                     if not re.fullmatch(r"[0-9]+(?:[.,][0-9]+)?", value):
                         raise ValueError
                     if field == "rpe" and Decimal(value.replace(",", ".")) > 10:
@@ -4195,6 +4195,14 @@ def athlete_year_calendar_view(request):
         for c in comments:
             comment_map[c.date] = c
 
+    lactate_values = {}
+    if show_training_reports:
+        logs = EvaluationLactateLog.objects.filter(athlete=selected_athlete, date__range=(start, end))
+        for day, slot_index, rows in logs.values_list("date", "slot_index", "rows"):
+            values = {row["rep"]: row["lactate"] for row in rows if row.get("lactate")}
+            if values:
+                lactate_values[(day, slot_index)] = json.dumps(values, separators=(",", ":"))
+
     week_report_map = {}
     if selected_athlete and evaluation_visibility["week"]:
         reports = AthleteWeekReport.objects.filter(
@@ -4395,6 +4403,7 @@ def athlete_year_calendar_view(request):
                 "plan_id": slot1.plan_id if slot1 and getattr(slot1, "plan_id", None) else (plan1.id if plan1 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot1),
                 "watch_main_reps_json": json.dumps(getattr(slot1, "watch_main_reps", []) or [], separators=(",", ":")),
+                "lactate_values_json": lactate_values.get((day, 1), ""),
                 "session_km": _ayc_slot_session_km(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
                 "session_zones": _ayc_slot_session_zones(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
                 "session_alt_zones": _ayc_slot_session_alt_zones(slot1, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
@@ -4409,6 +4418,7 @@ def athlete_year_calendar_view(request):
                 "plan_id": slot2.plan_id if slot2 and getattr(slot2, "plan_id", None) else (plan2.id if plan2 else ""),
                 "modal_prefill": _slot_modal_prefill_texts(slot2),
                 "watch_main_reps_json": json.dumps(getattr(slot2, "watch_main_reps", []) or [], separators=(",", ":")),
+                "lactate_values_json": lactate_values.get((day, 2), ""),
                 "session_km": _ayc_slot_session_km(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_km", True) else "",
                 "session_zones": _ayc_slot_session_zones(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],
                 "session_alt_zones": _ayc_slot_session_alt_zones(slot2, selected_athlete, athlete_pause_mode) if selected_athlete and getattr(selected_athlete, "see_session_zones", True) else [],

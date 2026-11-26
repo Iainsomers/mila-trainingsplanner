@@ -3,7 +3,7 @@
   const lactateStatus = document.getElementById("evaluationLactateStatus");
   const lactateAdd = document.getElementById("evaluationLactateAdd");
   const lactateSave = document.getElementById("evaluationLactateSave");
-  const lactateFields = {lactate: 12, rpe: 12, comment: 500, length: 12, speed: 20, hr: 6};
+  const lactateFields = {lactate: 12, rpe: 12, comment: 500, length: 12, speed: 20, hr: 6, end_hr: 6};
   const canWriteLactate = {% if is_coach_user %}{{ coach_can_edit_training|yesno:"true,false" }}{% else %}true{% endif %};
   let lactateSession;
 
@@ -30,7 +30,8 @@
     return {
       length: Number(watch?.distance_m) > 0 ? String(Math.round(watch.distance_m)) : "",
       speed: paceSeconds > 0 ? Math.floor(paceSeconds / 60) + ":" + String(paceSeconds % 60).padStart(2, "0") : "",
-      hr: Number(watch?.average_hr) > 0 ? String(Math.round(watch.average_hr)) : ""
+      hr: Number(watch?.average_hr) > 0 ? String(Math.round(watch.average_hr)) : "",
+      end_hr: Number(watch?.hr_tail) > 0 ? String(Math.round(watch.hr_tail)) : ""
     };
   }
 
@@ -68,7 +69,7 @@
       input.setAttribute("aria-label", field + ", rep " + rep);
       input.maxLength = limit;
       input.value = value;
-      if (["lactate", "rpe", "length", "hr"].includes(field)) input.inputMode = "decimal";
+      if (["lactate", "rpe", "length", "hr", "end_hr"].includes(field)) input.inputMode = "decimal";
       if (manual) {
         input.placeholder = "m";
         input.title = "Manual entry";
@@ -137,7 +138,10 @@
     lactateSave.disabled = true;
     lactateStatus.textContent = "Saving…";
     try {
-      await lactateRequest("save", session, rows);
+      const saved = await lactateRequest("save", session, rows);
+      const values = JSON.stringify(Object.fromEntries(saved.filter(row => row.lactate).map(row => [row.rep, row.lactate])));
+      document.querySelectorAll('.slotbox[data-date="' + session.day + '"][data-slot-index="' + session.slot + '"]')
+        .forEach(box => { box.dataset.lactateValues = values; });
       if (lactateSession === session && session.opening === opening && lactateDialog.open) lactateDialog.close();
     } catch (error) {
       if (lactateSession === session && session.opening === opening) lactateStatus.textContent = error.message;

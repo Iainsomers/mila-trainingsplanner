@@ -712,3 +712,5 @@ De oude Iain Somers-accountnamen tonen ook zonder ingevulde achternaam IS. Dit g
 Lactate naast Comment in een Diary-evaluatie opent een tabel per AM/PM-dagdeel. Lengte, tempo en gemiddelde hartslag komen uit dezelfde gemeten reps als het kloksymbool. Ontbrekende meetwaarden zijn handmatig in te vullen en extra reps kunnen worden toegevoegd. De tabel wordt onafhankelijk van de trainingsevaluatie opgeslagen volgens dezelfde zichtbaarheids- en bewerkrechten.
 
 De Lactate-tabel toont opgeslagen regels en een lege invoerregel. Na invoer van een repnummer vult de tabel alleen de bijbehorende horlogewaarden in.
+
+Opgeslagen lactaatwaarden verschijnen per rep bij het Diary-klokje. De Lactate-invoer toont gemiddelde HR en HR last 10% apart. Voor Garmin C/D/E gebruikt het klokje HR last 10% uit dezelfde eind-HR-berekening, met een venster van minimaal 15 seconden en gemiddelde hartslag bij reps korter dan 15 seconden.

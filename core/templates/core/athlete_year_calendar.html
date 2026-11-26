@@ -1285,7 +1285,7 @@
           {% if cell.slot or cell.whereabouts or athlete_extended_edit_rights %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">AM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% elif not simple_diary_view %}{% include "core/partials/whereabout_dots.html" with cell=cell %}{% endif %}{% if not simple_diary_view %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button>{% endif %}</div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% elif not simple_diary_view %}{% include "core/partials/whereabout_dots.html" with cell=cell %}{% endif %}{% if not simple_diary_view %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button>{% endif %}</div>
           </div>
           {% endif %}
           {% endwith %}
@@ -1293,7 +1293,7 @@
           {% if cell.slot or athlete_extended_edit_rights %}
           <div class="ayc-mobile-slot">
             <div class="ayc-mobile-slot-label">PM</div>
-            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% endif %}{% if not simple_diary_view %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button>{% endif %}</div>
+            <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">{% if cell.slot %}{% include "core/partials/ayc_slot_segments.html" with cell=cell %}{% endif %}{% if not simple_diary_view %}<button type="button" class="btn btn-sm btn-outline-secondary ayc-mobile-open-training" onclick="event.preventDefault(); event.stopPropagation(); window.openAycSlotModal(this.closest('.slotbox'))">Open</button>{% endif %}</div>
           </div>
           {% endif %}
           {% endwith %}
@@ -1697,12 +1697,12 @@
               {% for cell in w.cells1 %}
                 {% if cell.day == today %}
                   {% if cell.slot %}
-                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                       {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                     </div>
                   {% else %}
                     {% if cell.plan_id %}
-                      <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                      <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}">
                       </div>
                     {% else %}
                       <div class="text-muted small">No training.</div>
@@ -1719,12 +1719,12 @@
               {% for cell in w.cells2 %}
                 {% if cell.day == today %}
                   {% if cell.slot %}
-                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
+                    <div class="slotbox" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                       {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                     </div>
                   {% else %}
                     {% if cell.plan_id %}
-                      <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}">
+                      <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}">
                       </div>
                     {% else %}
                       <div class="text-muted small">No training.</div>
@@ -1877,16 +1877,16 @@
               <div class="daycell">
                 <span class="daypart-label">AM</span>
                 {% if cell.slot %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                     {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                   </div>
                 {% elif cell.plan_id %}
                   {% if is_coach_user or athlete_extended_edit_rights %}
-                    <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
+                    <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                     </div>
                   {% endif %}
                 {% elif athlete_extended_edit_rights %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="" data-prefill-wu="" data-prefill-mob="" data-prefill-sprint="" data-prefill-core="" data-prefill-core2="" data-prefill-alt="" data-prefill-cd="">
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="" data-prefill-wu="" data-prefill-mob="" data-prefill-sprint="" data-prefill-core="" data-prefill-core2="" data-prefill-alt="" data-prefill-cd="">
                   </div>
                 {% endif %}
                 {% if not simple_diary_view and not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
@@ -1913,16 +1913,16 @@
               <div class="emptyline">
                 <span class="daypart-label">PM</span>
                 {% if cell.slot %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                     {% include "core/partials/ayc_slot_segments.html" with cell=cell %}
                   </div>
                 {% elif cell.plan_id %}
                   {% if is_coach_user or athlete_extended_edit_rights %}
-                    <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
+                    <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="{{ cell.plan_id }}" data-prefill-wu="{{ cell.modal_prefill.wu_text|default:''|escape }}" data-prefill-mob="{{ cell.modal_prefill.mob_text|default:''|escape }}" data-prefill-sprint="{{ cell.modal_prefill.sprint_text|default:''|escape }}" data-prefill-core="{{ cell.modal_prefill.core_text|default:''|escape }}" data-prefill-core2="{{ cell.modal_prefill.core2_text|default:''|escape }}" data-prefill-alt="{{ cell.modal_prefill.alt_text|default:''|escape }}" data-prefill-cd="{{ cell.modal_prefill.cd_text|default:''|escape }}">
                     </div>
                   {% endif %}
                 {% elif athlete_extended_edit_rights %}
-                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-plan-id="" data-prefill-wu="" data-prefill-mob="" data-prefill-sprint="" data-prefill-core="" data-prefill-core2="" data-prefill-alt="" data-prefill-cd="">
+                  <div class="slotbox{% if cell.day > today %} disabled{% endif %}" data-date="{{ cell.day|date:'Y-m-d' }}" data-slot-index="{{ cell.slot_index }}" data-lactate-values="{{ cell.lactate_values_json|default:'{}'|escape }}" data-plan-id="" data-prefill-wu="" data-prefill-mob="" data-prefill-sprint="" data-prefill-core="" data-prefill-core2="" data-prefill-alt="" data-prefill-cd="">
                   </div>
                 {% endif %}
                 {% if not simple_diary_view and not cell.slot and cell.whereabouts %}<div class="whereabout-empty-marker">{% include "core/partials/whereabout_dots.html" with cell=cell %}</div>{% endif %}
@@ -2789,7 +2789,7 @@
     var headers = ["Lap", "Distance (m)", "Rounded 50 m", "Duration", "min/km"];
     if (showPaceZone) headers.push("Pace Zx");
     headers.push(showPaceZone ? "HR Zx" : "Zx", "Tx", "Avg HR");
-    if (showLast15Hr) headers.push(useEndHr ? "End HR" : "Last 15s HR");
+    if (showLast15Hr) headers.push(useEndHr ? "HR last 10%" : "Last 15s HR");
     headers.forEach(function(label) {
       var cell = document.createElement("th"); cell.textContent = label; head.appendChild(cell);
     });
@@ -4055,14 +4055,20 @@
     body.replaceChildren();
     var reps = [];
     try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
-    var useEndHr = /Garmin [CD]/.test(button.getAttribute("data-watch-model") || "");
+    const lactate = JSON.parse(button.closest(".slotbox")?.dataset.lactateValues || "{}");
+    const showLactate = Object.keys(lactate).length > 0;
+    var useEndHr = /Garmin [CDE]/.test(button.getAttribute("data-watch-model") || "");
     var hasSplits = Array.isArray(reps) && reps.some(function(rep) { return Array.isArray(rep.splits) && rep.splits.length; });
     if (hasSplits) {
       title.textContent = "Recorded splits — " + (button.getAttribute("data-watch-model") || "Watch");
       var splitRows = [];
-      reps.forEach(function(rep) {
-        if (Array.isArray(rep.splits) && rep.splits.length) splitRows.push.apply(splitRows, rep.splits);
-        else splitRows.push(rep);
+      reps.forEach(function(rep, index) {
+        const value = lactate[rep.rep || index + 1];
+        if (Array.isArray(rep.splits) && rep.splits.length) {
+          rep.splits.forEach((split, i) => splitRows.push({
+            ...split, lactate: i === rep.splits.length - 1 ? value : ""
+          }));
+        } else splitRows.push({...rep, lactate: value});
       });
       reps = splitRows;
     }
@@ -4075,13 +4081,16 @@
       var explanation = document.createElement("div");
       explanation.className = "small text-muted mb-2";
       explanation.textContent = hasSplits ? "Split times are adjusted to the shown distance. The final short lap keeps its measured time. Stops remain included." : "Rep times are adjusted to the shown rep distance. Pace uses the measured distance.";
-      if (useEndHr) explanation.textContent += " End HR: last 10% of measured rep time, minimum 15s; Avg HR for reps under 15s.";
+      if (useEndHr) explanation.textContent += " HR last 10% uses at least the final 15 seconds, or average HR for reps shorter than 15 seconds.";
       body.appendChild(explanation);
       var table = document.createElement("table");
       table.className = "table table-sm table-striped mb-0";
       var thead = document.createElement("thead");
       var header = document.createElement("tr");
-      [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Avg HR", useEndHr ? "End HR" : "Last 15s HR"].forEach(function(label) {
+      const headers = [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Avg HR",
+                       useEndHr ? "HR last 10%" : "Last 15s HR"];
+      if (showLactate) headers.push("Lactate (mmol/L)");
+      headers.forEach(function(label) {
         var th = document.createElement("th"); th.scope = "col"; th.textContent = label; header.appendChild(th);
       });
       thead.appendChild(header); table.appendChild(thead);
@@ -4099,6 +4108,7 @@
           Number(rep.average_hr) > 0 ? String(Math.round(Number(rep.average_hr))) : "NA",
           Number(useEndHr ? rep.hr_tail : rep.average_hr_last_15) > 0 ? String(Math.round(Number(useEndHr ? rep.hr_tail : rep.average_hr_last_15))) : "NA"
         ];
+        if (showLactate) values.push((hasSplits ? rep.lactate : lactate[rep.rep || index + 1]) || "—");
         values.forEach(function(value) { var td = document.createElement("td"); td.textContent = value; tr.appendChild(td); });
         tbody.appendChild(tr);
       });
