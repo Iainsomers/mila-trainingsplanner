@@ -126,6 +126,7 @@ from core.views.mysasy import mysasy_view, mysasy_connect, mysasy_callback, mysa
 from core.views.coros_mcp import coros_mcp_view, coros_mcp_connect, coros_mcp_callback, coros_mcp_disconnect, coros_mcp_preview, coros_mcp_import, coros_mcp_ai_permission
 from core.views.garmin import garmin_connect_view, garmin_callback_view, garmin_withdraw_view, garmin_connections_view, garmin_athlete_activities_view, garmin_activity_push_view, garmin_health_push_view
 from core.views.oura import oura_connect_view, oura_callback_view, oura_disconnect_view, oura_test_view, oura_vitals_import_view, oura_device_timezone_view
+from core.views.oura import oura_daily_data_view
 
 
 urlpatterns = [
@@ -142,6 +143,7 @@ urlpatterns = [
     path("integrations/oura/callback/", oura_callback_view, name="oura_callback"),
     path("integrations/oura/disconnect/", oura_disconnect_view, name="oura_disconnect"),
     path("integrations/oura/test/", oura_test_view, name="oura_test"),
+    path("coach/hardware/oura/", oura_daily_data_view, name="oura_daily_data"),
     path("integrations/oura/vitals-import/", oura_vitals_import_view, name="oura_vitals_import"),
     path("integrations/oura/device-timezone/", oura_device_timezone_view, name="oura_device_timezone"),
     path(

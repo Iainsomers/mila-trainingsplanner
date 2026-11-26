@@ -11,12 +11,13 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import HttpResponseForbidden, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
-from core.access import evaluation_visibility_for_request
+from core.access import evaluation_visibility_for_request, is_coach_tools_only_user
 from core.models import Athlete, AthleteDailyVital, OuraConnection
 from core.views.athlete_identity import _athlete_for_user, _is_ayc_coach_user
 from core.views.common import _filter_owned
@@ -458,6 +459,74 @@ def oura_disconnect_view(request):
         return HttpResponseForbidden("Oura can only be disconnected from the athlete's own account.")
     revoke_oura_connection(athlete)
     return _hardware_redirect("disconnected")
+
+
+@login_required
+@never_cache
+@require_http_methods(["GET", "POST"])
+def oura_daily_data_view(request):
+    if not _is_ayc_coach_user(request.user) or is_coach_tools_only_user(request.user):
+        return HttpResponseForbidden("Coach access required.")
+    athletes = [
+        athlete for athlete in _filter_owned(Athlete.objects.filter(
+            oura_connection_enabled=True, oura_connection__health_data_consent_at__isnull=False,
+        ).select_related("owner").order_by("name"), request)
+        if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
+    ]
+    today = timezone.localdate()
+    day = today
+    selected = None
+    collections = {}
+    error = ""
+    sleep_summary = None
+    if request.method == "POST":
+        selected = next((a for a in athletes if str(a.pk) == request.POST.get("athlete")), None)
+        if selected is None:
+            return HttpResponseForbidden("Oura data is unavailable for this athlete.")
+        try:
+            day = date.fromisoformat(request.POST.get("day", ""))
+            if day > today or day < date(2015, 1, 1):
+                raise ValueError
+        except ValueError:
+            day = today
+            error = "Choose a valid date in the past or today."
+        if not error:
+            connection = get_object_or_404(OuraConnection, athlete=selected)
+            for name in ("sleep", "daily_sleep", "daily_readiness"):
+                try:
+                    records = _oura_collection(connection, name, day, day + timedelta(days=1))
+                    collections[name] = [record for record in records if record.get("day") == day.isoformat()]
+                except (requests.RequestException, ValueError, KeyError):
+                    collections[name] = None
+            durations = []
+            seen = set()
+            for record in collections.get("sleep") or []:
+                key = record.get("id")
+                if isinstance(key, str) and key in seen:
+                    continue
+                duration = record.get("total_sleep_duration", record.get("total_sleep_time"))
+                if type(duration) in (int, float) and 0 < duration <= 86400:
+                    durations.append((duration, record.get("type")))
+                    if isinstance(key, str):
+                        seen.add(key)
+            if durations:
+                def sleep_label(seconds):
+                    hours, minutes = divmod(round(seconds / 60), 60)
+                    return f"{hours} h {minutes:02d} min"
+
+                longest = max((duration for duration, kind in durations if kind != "nap"), default=None)
+                sleep_summary = {
+                    "longest": sleep_label(longest) if longest else "—",
+                    "total": sleep_label(sum(duration for duration, _ in durations)),
+                }
+    return render(request, "core/oura_daily_data.html", {
+        "athletes": athletes, "selected": selected, "day": day, "today": today,
+        "error": error, "sleep_summary": sleep_summary,
+        "collections": [
+            (name, None if records is None else json.dumps(records, indent=2, ensure_ascii=False))
+            for name, records in collections.items()
+        ],
+    })
 
 
 @login_required

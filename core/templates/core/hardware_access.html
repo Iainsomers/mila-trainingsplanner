@@ -29,6 +29,14 @@
     {% endif %}
     {% if is_trainer_user %}
     <div class="col-md-6 col-lg-4">
+      <a href="{% url 'oura_daily_data' %}" class="card h-100 dashboard-tile">
+        <div class="card-body">
+          <h5 class="card-title">Oura daily data</h5>
+          <p class="card-text">Inspect sleep and readiness data by athlete and date.</p>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
       <a href="{% url 'garmin_connections' %}" class="card h-100 dashboard-tile" id="coach-garmin-connections">
         <div class="card-body d-flex flex-column">
           <h5 class="card-title" id="coach-garmin-heading">Garmin (Under Construction)</h5>

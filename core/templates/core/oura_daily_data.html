@@ -1,0 +1,46 @@
+{% extends "core/base.html" %}
+{% block title %}Oura daily data{% endblock %}
+{% block content %}
+<main class="container py-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h1 class="h3 mb-0">Oura daily data</h1>
+    <a href="{% url 'dashboard' %}?section=hardware" class="btn btn-sm btn-outline-secondary">Hardware acces</a>
+  </div>
+  {% if athletes %}
+  <form method="post" class="row g-2 align-items-end mb-3">
+    {% csrf_token %}
+    <div class="col-12 col-sm-5">
+      <label for="oura-athlete" class="form-label">Athlete</label>
+      <select id="oura-athlete" name="athlete" class="form-select" required>
+        <option value="">Select an athlete</option>
+        {% for athlete in athletes %}
+        <option value="{{ athlete.pk }}"{% if athlete.pk == selected.pk %} selected{% endif %}>{{ athlete.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-sm-auto">
+      <label for="oura-day" class="form-label">Oura day</label>
+      <input id="oura-day" name="day" type="date" class="form-control" value="{{ day|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" required>
+    </div>
+    <div class="col-12 col-sm-auto"><button class="btn btn-primary">Fetch Oura data</button></div>
+  </form>
+  {% else %}
+  <p>No accessible athletes with an active, consented Oura connection.</p>
+  {% endif %}
+  {% if error %}<p class="alert alert-warning">{{ error }}</p>{% endif %}
+  {% if sleep_summary %}
+  <dl class="mb-3">
+    <dt>Longest sleep (excluding naps)</dt><dd>{{ sleep_summary.longest }}</dd>
+    <dt>Total sleep (including naps)</dt><dd>{{ sleep_summary.total }}</dd>
+  </dl>
+  {% endif %}
+  {% for name, data in collections %}
+  <details class="border rounded p-2 mb-2" {% if forloop.first %}open{% endif %}>
+    <summary>{{ name }}</summary>
+    {% if data is None %}<p class="text-muted mb-0">Oura data could not be fetched for this collection.</p>
+    {% elif data == "[]" %}<p class="text-muted mb-0">No records for this day.</p>
+    {% else %}<pre class="overflow-auto mt-2 mb-0" style="max-height: 28rem">{{ data }}</pre>{% endif %}
+  </details>
+  {% endfor %}
+</main>
+{% endblock %}

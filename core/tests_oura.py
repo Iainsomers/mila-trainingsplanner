@@ -42,6 +42,39 @@ class OuraDashboardAndOAuthTests(TestCase):
         self.assertContains(response, "Oura Connection")
         self.assertContains(response, reverse("oura_connect"))
 
+    @patch("core.views.oura._oura_collection")
+    def test_coach_daily_data_shows_sleep_sessions_for_selected_day(self, collection):
+        OuraConnection.objects.create(
+            athlete=self.athlete, access_token="secret-token", scope="daily",
+            health_data_consent_at="2026-10-29T08:00:00+00:00",
+        )
+        url = reverse("oura_daily_data")
+        payload = {"athlete": self.athlete.pk, "day": "2026-10-29"}
+        self.assertEqual(self.client.post(url, payload).status_code, 403)
+        collection.assert_not_called()
+        self.client.force_login(self.coach)
+        collection.side_effect = [
+            [
+                {"day": payload["day"], "type": "long_sleep", "total_sleep_duration": 28800},
+                {"day": payload["day"], "type": "nap", "total_sleep_duration": 1800, "nested": {"metric": 42}},
+                {"day": "2026-10-30", "other_day_marker": True},
+            ],
+            [{"day": payload["day"], "score": 90}],
+            [{"day": payload["day"], "score": 80}],
+        ]
+        response = self.client.post(url, payload)
+        self.assertContains(response, "8 h 00 min")
+        self.assertContains(response, "8 h 30 min")
+        self.assertContains(response, "nested")
+        self.assertNotContains(response, "other_day_marker")
+        self.assertNotContains(response, "secret-token")
+        self.assertFalse(AthleteDailyVital.objects.filter(athlete=self.athlete).exists())
+        self.assertIn("no-store", response.headers["Cache-Control"])
+        self.athlete.oura_connection_enabled = False
+        self.athlete.save(update_fields=["oura_connection_enabled"])
+        self.assertEqual(self.client.post(url, payload).status_code, 403)
+        self.assertEqual(collection.call_count, 3)
+
     def test_oura_import_button_is_shown_on_the_athletes_ayc_when_vitals_are_available(self):
         OuraConnection.objects.create(
             athlete=self.athlete,
