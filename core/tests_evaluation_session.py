@@ -70,22 +70,36 @@ class EvaluationSessionTests(TestCase):
         source = source[:source.index('  document.querySelectorAll("[data-lactate-open]")')]
         script = """
 const assert = require("node:assert/strict");
-const body = {insertRow() {
+const body = {rows: [], replaceChildren() { this.rows = []; }, insertRow() {
     const row = {dataset: {}, cells: [], insertCell() {
-        const cell = {append(input) { this.input = input; }};
+        const cell = {children: [], append(child) { this.children.push(child); }};
         this.cells.push(cell);
         return cell;
     }};
-    this.lastRow = row;
+    this.rows.push(row);
     return row;
 }};
-const document = {getElementById: () => body, createElement: () => ({dataset: {}, setAttribute() {}})};
+const document = {getElementById: () => body, createElement: () => ({
+    dataset: {}, setAttribute() {}, addEventListener(name, callback) { this[name] = callback; }
+})};
 """ + source + """
-addLactateRow(10, {lactate: "2,5"}, {distance_m: 400, pace_seconds_per_km: 201, average_hr: 173});
-assert.deepEqual(body.lastRow.cells.slice(4).map(cell => cell.textContent), ["400", "3:21", "173"]);
-assert.equal(body.lastRow.cells[1].input.value, "2,5");
-addLactateRow(11, {}, null);
-assert.deepEqual(body.lastRow.cells.slice(4).map(cell => cell.input.placeholder), ["m", "m", "m"]);
+const watch = Array.from({length: 20}, (_, index) => ({
+    distance_m: 400, pace_seconds_per_km: 192 + index, average_hr: 164 + index
+}));
+renderLactateRows([{rep: 10, lactate: "2,5"}], watch);
+assert.equal(body.rows.length, 2);
+assert.equal(body.rows[0].cells[1].children[0].value, "2,5");
+const row = body.rows[1];
+const rep = row.cells[0].children[0];
+assert.equal(rep.value, "");
+assert.deepEqual(row.cells.slice(4).map(cell => cell.children[1].placeholder), ["m", "m", "m"]);
+rep.value = "10";
+rep.input();
+assert.deepEqual(row.cells.slice(4).map(cell => cell.children[0].textContent), ["400", "3:21", "173"]);
+assert.ok(row.cells.slice(4).every(cell => cell.children[1].hidden));
+rep.value = "21";
+rep.input();
+assert.ok(row.cells.slice(4).every(cell => !cell.children[1].hidden));
 """
         result = subprocess.run(["node", "-"], input=script, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)

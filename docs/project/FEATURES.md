@@ -710,3 +710,5 @@ Athlete Diary toont React bij het evaluatiecommentaar aan trainers die de evalua
 De oude Iain Somers-accountnamen tonen ook zonder ingevulde achternaam IS. Dit geldt ook voor eerdere reacties met één opgeslagen initiaal.
 
 Lactate naast Comment in een Diary-evaluatie opent een tabel per AM/PM-dagdeel. Lengte, tempo en gemiddelde hartslag komen uit dezelfde gemeten reps als het kloksymbool. Ontbrekende meetwaarden zijn handmatig in te vullen en extra reps kunnen worden toegevoegd. De tabel wordt onafhankelijk van de trainingsevaluatie opgeslagen volgens dezelfde zichtbaarheids- en bewerkrechten.
+
+De Lactate-tabel toont opgeslagen regels en een lege invoerregel. Na invoer van een repnummer vult de tabel alleen de bijbehorende horlogewaarden in.

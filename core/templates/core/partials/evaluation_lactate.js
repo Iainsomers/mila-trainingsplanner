@@ -25,38 +25,41 @@
     return result.rows;
   }
 
-  function addLactateRow(rep, saved, watch) {
-    const row = lactateBody.insertRow();
+  function lactateWatchValues(watch) {
     const paceSeconds = Math.round(Number(watch?.pace_seconds_per_km));
-    const measured = {
+    return {
       length: Number(watch?.distance_m) > 0 ? String(Math.round(watch.distance_m)) : "",
       speed: paceSeconds > 0 ? Math.floor(paceSeconds / 60) + ":" + String(paceSeconds % 60).padStart(2, "0") : "",
       hr: Number(watch?.average_hr) > 0 ? String(Math.round(watch.average_hr)) : ""
     };
+  }
+
+  function addLactateRow(rep, saved, watchReps) {
+    const row = lactateBody.insertRow();
     const repCell = row.insertCell();
-    if (watch || !canWriteLactate) {
+    let number;
+    if (!canWriteLactate) {
       repCell.textContent = rep;
       row.dataset.rep = rep;
     } else {
-      const number = document.createElement("input");
+      number = document.createElement("input");
       number.type = "number";
       number.min = "1";
       number.max = "200";
       number.value = rep;
+      number.placeholder = "#";
       number.className = "form-control form-control-sm";
       number.setAttribute("aria-label", "Rep number");
       repCell.append(number);
     }
+    const watchFields = {};
+    const measured = lactateWatchValues(watchReps[Number(rep) - 1]);
     for (const [field, limit] of Object.entries(lactateFields)) {
       const cell = row.insertCell();
-      if (measured[field]) {
-        cell.textContent = measured[field];
-        continue;
-      }
       const manual = Object.hasOwn(measured, field);
       const value = saved[field] || "";
       if (!canWriteLactate) {
-        cell.textContent = value || (manual ? "m" : "—");
+        cell.textContent = measured[field] || value || (manual ? "m" : "—");
         continue;
       }
       const input = document.createElement("input");
@@ -69,19 +72,31 @@
       if (manual) {
         input.placeholder = "m";
         input.title = "Manual entry";
+        const reading = document.createElement("span");
+        cell.append(reading);
+        watchFields[field] = {input, reading};
       }
       cell.append(input);
+    }
+    if (number) {
+      function updateWatchFields() {
+        const readings = lactateWatchValues(watchReps[Number(number.value) - 1]);
+        for (const [field, {input, reading}] of Object.entries(watchFields)) {
+          reading.textContent = readings[field];
+          reading.hidden = !readings[field];
+          input.hidden = Boolean(readings[field]);
+        }
+      }
+      number.addEventListener("input", updateWatchFields);
+      updateWatchFields();
     }
   }
 
   function renderLactateRows(saved, measured) {
-    const rows = new Map(saved.map(row => [row.rep, row]));
-    const watchRows = new Map(measured.map((row, index) => [index + 1, row]));
-    const numbers = [...new Set([...rows.keys(), ...watchRows.keys()])].sort((a, b) => a - b);
-    if (!numbers.length) numbers.push(1);
     lactateBody.replaceChildren();
-    numbers.forEach(rep => addLactateRow(rep, rows.get(rep) || {}, watchRows.get(rep)));
-    lactateAdd.hidden = !canWriteLactate || numbers.length >= 200;
+    saved.forEach(row => addLactateRow(row.rep, row, measured));
+    if (canWriteLactate && saved.length < 200) addLactateRow("", {}, measured);
+    lactateAdd.hidden = !canWriteLactate || lactateBody.rows.length >= 200;
     lactateSave.hidden = !canWriteLactate;
   }
 
@@ -106,11 +121,8 @@
     });
   });
   lactateAdd.addEventListener("click", () => {
-    const taken = new Set(Array.from(lactateBody.rows, row => Number(row.dataset.rep || row.cells[0].firstElementChild.value)));
-    let rep = 1;
-    while (taken.has(rep)) rep++;
-    if (rep > 200 || lactateBody.rows.length >= 200) return;
-    addLactateRow(rep, {}, null);
+    if (lactateBody.rows.length >= 200) return;
+    addLactateRow("", {}, lactateSession.measured);
     lactateBody.lastElementChild.querySelector("input").focus();
     lactateAdd.hidden = lactateBody.rows.length >= 200;
   });
@@ -121,7 +133,7 @@
       rep: Number(row.dataset.rep || row.cells[0].firstElementChild.value),
       ...Object.fromEntries(Array.from(row.querySelectorAll("[data-lactate-field]"),
         input => [input.dataset.lactateField, input.value.trim()]))
-    }));
+    })).filter(({rep, ...values}) => rep || Object.values(values).some(Boolean));
     lactateSave.disabled = true;
     lactateStatus.textContent = "Saving…";
     try {
