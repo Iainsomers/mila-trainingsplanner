@@ -24,9 +24,12 @@ class EvaluationSessionTests(TestCase):
         self.url=f'/athlete/year/?start=2026-10-26&athlete={self.athlete.pk}'
 
     def test_page_contains_current_training_and_daypart_targets_on_desktop_and_mobile(self):
+        TrainingSlot.objects.get(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=1).segments.create(
+            type="WU", text="Warmup-only label", order=0,
+        )
         response=self.client.get(self.url)
         self.assertEqual(response.status_code,200)
-        self.assertContains(response,'data-t1-training="AM easy 5000m Z1"')
+        self.assertContains(response,'data-t1-training="Warmup-only label')
         texts=re.findall(r'data-t2-training="([^"]+)"',response.content.decode())
         self.assertTrue(any('PM 6' in text and '400m' in text for text in texts),texts)
         self.assertContains(response,'data-evaluation-slot="1" role="button"')
@@ -38,6 +41,7 @@ class EvaluationSessionTests(TestCase):
         self.assertContains(response, 'id="aycMobileWeekView"')
         self.assertContains(response, 'data-overview-day="2026-10-29"')
         self.assertContains(response, 'class="ayc-mobile-overview-text">AM easy 5000m Z1')
+        self.assertNotContains(response, 'class="ayc-mobile-overview-text">Warmup-only label')
 
     @skipUnless(shutil.which("node"), "Node required for mobile Diary navigation")
     def test_mobile_week_overview_opens_day_and_keeps_selected_week(self):
@@ -65,7 +69,10 @@ function week(weekStart, weekEnd, day) {
 const first = week("2026-11-16", "2026-11-22", "2026-11-19");
 const current = week("2026-11-23", "2026-11-29", "2026-11-26");
 const diary = element(), controls = {};
-const window = {scrollTo() {}};
+let requestedUrl;
+const window = {scrollTo() {}, location: {search: "", href: "https://example.org/athlete/year/?athlete=42",
+    assign(url) { requestedUrl = new URL(url); }
+}};
 const document = {querySelectorAll: () => [first, current], querySelector: () => diary,
     getElementById: id => controls[id] ??= element(),
     addEventListener: (_, action) => action()};
@@ -81,6 +88,11 @@ assert.ok(!diary.classList.contains("is-week-view"));
 controls.aycMobileWeekView.click();
 assert.ok(first.classList.contains("is-active"));
 assert.ok(first.overview[1].classList.contains("is-selected"));
+controls.aycMobilePrev.click();
+assert.equal(requestedUrl.searchParams.get("start"), "2026-11-09");
+assert.equal(requestedUrl.searchParams.get("mobile_week"), "2026-11-09");
+assert.equal(requestedUrl.searchParams.get("mobile_view"), "week");
+assert.equal(requestedUrl.searchParams.get("athlete"), "42");
 """
         result = subprocess.run(["node", "-"], input=script, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)

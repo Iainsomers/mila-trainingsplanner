@@ -974,8 +974,20 @@
     .ayc-mobile-day.is-active-day { display: block; }
     .ayc-mobile.is-week-view .ayc-mobile-day { display: none; }
     .ayc-mobile.is-week-view .ayc-mobile-day-nav { display: none; }
-    .ayc-mobile-view-switch { display: flex; margin-top: 8px; }
-    .ayc-mobile-view-switch button { flex: 1; min-height: 38px; }
+    .ayc-mobile-view-switch { display: flex; gap: 4px; margin-top: 8px; }
+    .ayc-mobile-view-switch button {
+      flex: 1;
+      min-height: 38px;
+      border: 1px solid var(--mila-team-color-1, #0d6efd);
+      border-radius: 6px;
+      background: var(--mila-team-color-2, #fff);
+      color: var(--mila-team-color-1, #0d6efd);
+    }
+    .ayc-mobile-view-switch button[aria-pressed="true"] {
+      background: var(--mila-team-color-1, #0d6efd);
+      color: var(--mila-team-color-2, #fff);
+      font-weight: 700;
+    }
     .ayc-mobile-week-overview { display: none; }
     .ayc-mobile.is-week-view .ayc-mobile-week-overview { display: grid; gap: 6px; margin-bottom: 12px; }
     .ayc-mobile-overview-day {
@@ -1233,10 +1245,10 @@
         <div class="ayc-mobile-week-title" id="aycMobileWeekTitle"></div>
         <button type="button" class="btn btn-sm btn-outline-secondary" id="aycMobileNext" aria-label="Next week">&rsaquo;</button>
       </div>
-      <div class="btn-group ayc-mobile-view-switch" role="group" aria-label="Diary view">
-        <button type="button" class="btn btn-sm btn-outline-primary" id="aycMobileDayView"
+      <div class="ayc-mobile-view-switch" role="group" aria-label="Diary view">
+        <button type="button" id="aycMobileDayView"
                 aria-pressed="{% if mobile_diary_week_view %}false{% else %}true{% endif %}">Day</button>
-        <button type="button" class="btn btn-sm btn-outline-primary" id="aycMobileWeekView"
+        <button type="button" id="aycMobileWeekView"
                 aria-pressed="{% if mobile_diary_week_view %}true{% else %}false{% endif %}">Week</button>
       </div>
       {% if show_oura_vitals_import %}
@@ -1652,8 +1664,10 @@
       if (!weeks.length) return;
 
       var today = "{{ today|date:'Y-m-d' }}";
+      var params = new URLSearchParams(window.location.search);
+      var targetDate = params.get("mobile_week") || today;
       var currentIndex = weeks.findIndex(function (week) {
-        return week.dataset.weekStart <= today && today <= week.dataset.weekEnd;
+        return week.dataset.weekStart <= targetDate && targetDate <= week.dataset.weekEnd;
       });
       if (currentIndex < 0) currentIndex = 0;
 
@@ -1668,8 +1682,6 @@
         diary.classList.toggle("is-week-view", showOverview);
         dayView.setAttribute("aria-pressed", String(!showOverview));
         weekView.setAttribute("aria-pressed", String(showOverview));
-        dayView.classList.toggle("active", !showOverview);
-        weekView.classList.toggle("active", showOverview);
       }
 
       function selectDay(week, day) {
@@ -1714,16 +1726,29 @@
           week.classList.toggle("is-active", i === currentIndex);
         });
         if (title) title.textContent = weeks[currentIndex].dataset.weekLabel || "";
-        if (previous) previous.disabled = currentIndex === 0;
         if (next) next.disabled = currentIndex === weeks.length - 1;
         if (scrollToTop) window.scrollTo({top: 0, behavior: "smooth"});
       }
 
-      if (previous) previous.addEventListener("click", function () { showWeek(currentIndex - 1, true); });
+      if (previous) previous.addEventListener("click", function () {
+        if (currentIndex > 0) {
+          showWeek(currentIndex - 1, true);
+          return;
+        }
+        var firstWeek = new Date(weeks[0].dataset.weekStart + "T00:00:00Z");
+        firstWeek.setUTCDate(firstWeek.getUTCDate() - 7);
+        var earlier = firstWeek.toISOString().slice(0, 10);
+        var url = new URL(window.location.href);
+        url.searchParams.set("start", earlier);
+        url.searchParams.set("mobile_week", earlier);
+        url.searchParams.set("mobile_view", diary.classList.contains("is-week-view") ? "week" : "day");
+        window.location.assign(url.toString());
+      });
       if (next) next.addEventListener("click", function () { showWeek(currentIndex + 1, true); });
       dayView.addEventListener("click", function() { setView(false); });
       weekView.addEventListener("click", function() { setView(true); });
-      setView(diary.classList.contains("is-week-view"));
+      var requestedView = params.get("mobile_view");
+      setView(requestedView ? requestedView === "week" : diary.classList.contains("is-week-view"));
       showWeek(currentIndex, false);
     });
   </script>
