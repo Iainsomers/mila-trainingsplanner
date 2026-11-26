@@ -446,3 +446,5 @@ Afstandloze Garmin Push-activiteiten (14 november 2026): lapgrenzen volgen de vo
 Validatie: 67 gerichte tests (Garmin C Push, Push en D), inclusief C/D/E-routes voor pauzes, ontbrekende/reset/sparse timertellers, dubbele lapmarkeringen en herverwerking van bewaarde tijdgegevens; manage.py check geslaagd. Geen visuele browsercontrole: bestaande layout behouden.
 
 Bij een Garmin E-opname met rol Sprint tellen de gemeten werkreps in Diary en Stats mee in Z6. Herstel behoudt de gemeten zone en blijft onder de bestaande wandelregels vallen. Dit wordt ook op eerder opgeslagen sprintopnames toegepast.
+
+Een gecontroleerde Sprint-opname kan een eigen WU/CD bevatten. Zonder losse WU levert haar WU het WU-segment. Overige grenslaps tussen de gekozen onderdelen blijven gemeten overgangslaps. De laatste Main of een losse CD levert de afsluiting.

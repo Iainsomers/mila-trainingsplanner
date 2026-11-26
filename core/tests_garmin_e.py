@@ -1033,6 +1033,31 @@ class GarminEEndpointTests(TestCase):
         self.assertEqual([(load["zone"], load["meters"]) for load in sprint_loads], [("6", 800)])
         self.assertIn({"zone": "6", "km": "0.8"}, _ayc_slot_session_zones(slot))
 
+    def test_combine_sprint_with_its_own_warmup_and_cooldown(self):
+        from core.garmin_e_combine import combine_recordings
+
+        def part(wu, main, cd, segments):
+            return {
+                "e_usable": True, "training_fields": {"wu": wu, "main": main, "cd": cd},
+                "watch_loads": [
+                    {"segment": segment, "meters": 100, "seconds": 30,
+                     "work_rep": segment == "CORE", "zone": "1"}
+                    for segment in segments
+                ],
+            }
+
+        recordings = [
+            {"start": "09:00", "parts": [part("100 m Z1", "100 m Z6", "100 m Z1", ["WU", "CORE", "CD"])]},
+            {"start": "09:10", "parts": [part("100 m Z1", "100 m Z3", "100 m Z1", ["WU", "CORE", "CD"])]},
+        ]
+        selection = [{"start": "09:00", "role": "sprint"}, {"start": "09:10", "role": "main"}]
+        combined, _, _ = combine_recordings(recordings, selection)
+        preview = combined["parts"][0]
+        self.assertEqual(preview["training_fields"],
+                         {"wu": "100 m Z1", "sprint": "100 m Z6", "main": "100 m Z3", "cd": "100 m Z1"})
+        self.assertEqual([(load["segment"], load["work_rep"]) for load in preview["watch_loads"]],
+                         [("WU", False), ("SPR", True), ("SPR", False), ("CORE", False), ("CORE", True), ("CD", False)])
+
     @patch("core.views.garmin_e.ask_model")
     def test_combine_uses_checked_main_when_fresh_measured_description_is_empty(self, model):
         selection = self.combine_example()

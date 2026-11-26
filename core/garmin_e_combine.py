@@ -48,16 +48,15 @@ def combine_recordings(results, selection):
             raise ValueError("Combine supports running recordings with measured laps.")
         if item["role"]=="main" and not fields.get("main"):
             raise ValueError("Choose an activity with a Main description as Main.")
-        if item["role"] == "sprint" and (
-                not part.get("e_usable") or not fields.get("main") or fields.get("wu") or fields.get("cd")):
-            raise ValueError("Choose a checked Sprint recording without its own WU or CD.")
-        if "sprint" in roles and item["role"] == "main" and (not part.get("e_usable") or fields.get("wu")):
-            raise ValueError("Analyze Main first and choose any warmup as a separate WU recording.")
+        if item["role"] == "sprint" and (not part.get("e_usable") or not fields.get("main")):
+            raise ValueError("Analyze the selected Sprint recording first.")
+        if "sprint" in roles and item["role"] == "main" and not part.get("e_usable"):
+            raise ValueError("Analyze the selected Main recording first.")
         if roles.count("main") == 2 and item["role"] == "main":
             if not part.get("e_usable"):
                 raise ValueError("Analyze both Main recordings before combining.")
             ordered_mains = sorted(starts[i] for i, role in enumerate(roles) if role == "main")
-            if ((fields.get("wu") and item["start"] != ordered_mains[0])
+            if ((fields.get("wu") and "sprint" not in roles and item["start"] != ordered_mains[0])
                     or (fields.get("cd") and item["start"] != ordered_mains[-1])):
                 raise ValueError("Warmup must precede both Main blocks and cooldown must follow them.")
         chosen.append((item,source))
@@ -81,7 +80,10 @@ def combine_recordings(results, selection):
             copy.pop("combined_outer",None)
             copy.update(recording_role=role,recording_start=item["start"])
             if role == "sprint" and copy.get("segment") != "IGNORE":
-                copy["segment"] = "SPR"
+                if copy.get("segment") != "WU" or "wu" in roles:
+                    copy["segment"] = "SPR"
+            elif role == "main" and "sprint" in roles and copy.get("segment") == "WU":
+                copy.update(segment="CORE", work_rep=False)
             elif role in ("wu", "cd"):
                 copy["segment"] = role.upper()
             recording_loads.append(copy)
@@ -93,10 +95,14 @@ def combine_recordings(results, selection):
             manual.append(row)
         if role == "sprint":
             fields["sprint"] = part["training_fields"]["main"]
+            if "wu" not in roles:
+                fields["wu"] = part["training_fields"].get("wu", "")
         elif role=="main":
             source_fields = part["training_fields"]
             fields["main"] = " // ".join(filter(None, (fields["main"], source_fields["main"])))
             for boundary in ("wu", "cd"):
+                if boundary == "wu" and "sprint" in roles:
+                    continue
                 if source_fields.get(boundary):
                     fields[boundary] = source_fields[boundary]
     for role in ("wu","cd"):
