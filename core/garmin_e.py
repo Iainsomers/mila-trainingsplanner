@@ -1076,14 +1076,13 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
     if missing:
         result["e_zone_note"] += " Some blocks have no usable HR/limits; their zone is left empty."
     result.pop("training_alternatives",None)
-    single_near_minute = (
+    single_work_display = (
         len(entries) == 1 and entries[0]["role"] == "Work"
-        and round(entries[0]["seconds"] / 60) > 0
-        and abs(entries[0]["seconds"] - round(entries[0]["seconds"] / 60) * 60) <= 2
+        and entries[0]["seconds"] >= 60
     )
-    if single_near_minute:
-        entries[0]["target"] = round(entries[0]["seconds"] / 60) * 60
-    if proposal.get("format") == "compact" or single_near_minute:
+    if single_work_display:
+        entries[0]["target"] = round(entries[0]["seconds"])
+    if proposal.get("format") == "compact" or single_work_display:
         result = compact_alternative(part,result,entries,proposal.get("presentation") or {})
     return result
 
@@ -1092,8 +1091,7 @@ def compact_alternative(part, result, entries, presentation):
     """Compile compact, bounded notation without losing measured per-lap facts."""
     if not isinstance(presentation,dict):
         raise ValueError("Compact Alternative presentation must be an object.")
-    if (len(entries) == 1 and not entries[0]["zone"]
-            and (entries[0]["target"] % 60 or abs(entries[0]["seconds"] - entries[0]["target"]) > 2)):
+    if len(entries) == 1 and not entries[0]["zone"] and entries[0]["seconds"] < 60:
         raise ValueError("Deze activiteit heeft geen bruikbare HR-zone; de gemeten tijd blijft behouden.")
     from core.alternative import expand_time_notation
     selected_zones = {}
@@ -1137,7 +1135,8 @@ def compact_alternative(part, result, entries, presentation):
         if seconds%60==0:
             label = f"{int(seconds)//60}'"
         elif seconds>=60 and seconds==int(seconds):
-            label = f"{int(seconds)//60}'{int(seconds)%60:02d}"
+            suffix = '"' if len(entries) == 1 and item[2] == "Work" else ""
+            label = f"{int(seconds)//60}'{int(seconds)%60:02d}{suffix}"
         else:
             label = f"{seconds:g}s"
         return label+(" Z"+zone if zone else "")

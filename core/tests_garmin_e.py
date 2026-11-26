@@ -802,7 +802,7 @@ class GarminEEndpointTests(TestCase):
         self.athlete.save()
         part = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]["parts"][0]
         self.assertTrue(part["e_usable"],part)
-        self.assertEqual(part["training_fields"]["alt"],"Elliptical 60' Z1")
+        self.assertEqual(part["training_fields"]["alt"],'Elliptical 60\'03" Z1')
         self.assertTrue(part["e_validation"])
         self.assertEqual(part["watch_loads"][0]["seconds"],3603)
         self.assertEqual(part["watch_loads"][0]["alt_laps"][0]["average_hr"],146)
@@ -840,20 +840,20 @@ class GarminEEndpointTests(TestCase):
         part = self.client.get(self.url,{**self.query,"preview":"measured"}).json()["results"][0]["parts"][0]
         self.assertTrue(part["e_usable"],part)
         self.assertNotIn(" Z",part["training_fields"]["alt"])
-        self.assertIn("3603s",part["training_fields"]["alt"])
+        self.assertEqual(part["training_fields"]["alt"], 'Elliptical 60\'03"')
         self.assertIn("no usable HR",part["e_zone_note"])
         model.assert_not_called()
 
     @patch("core.views.garmin_e.ask_model")
-    def test_single_elliptical_near_minute_without_lap_hr(self, model):
+    def test_single_elliptical_displays_minutes_and_seconds_without_lap_hr(self, model):
         self.record.distance_m = None
-        self.record.duration_s = 3601
+        self.record.duration_s = 1154
         self.record.analysis_data = {"activity_metrics": {"sport": "ELLIPTICAL", "average_hr": 127},
-                                     "laps": [dict(elapsed_time=3601)]}
+                                     "laps": [dict(elapsed_time=1154)]}
         self.record.save()
         part = self.client.get(self.url, {**self.query, "preview": "measured"}).json()["results"][0]["parts"][0]
-        self.assertEqual(part["training_fields"]["alt"], "Elliptical 60'")
-        self.assertEqual(part["watch_loads"][0]["seconds"], 3601)
+        self.assertEqual(part["training_fields"]["alt"], 'Elliptical 19\'14"')
+        self.assertEqual(part["watch_loads"][0]["seconds"], 1154)
         self.assertIsNone(part["watch_loads"][0]["alt_laps"][0]["zone"])
         model.assert_not_called()
 
