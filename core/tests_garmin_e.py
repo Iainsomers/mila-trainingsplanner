@@ -826,10 +826,18 @@ class GarminEEndpointTests(TestCase):
         self.record.save()
         initial = self.chat("15' wu//6*6'z2 p1//10'cd").json()["results"][0]["parts"][0]
         self.assertIn("6×6' Z2 p1'", initial["training_fields"]["alt"])
+        self.assertIn("first minute of the cooldown", initial["chat_reply"])
+        self.assertTrue(initial["e_final_recovery_pending"])
+        declined = self.chat("nee").json()["results"][0]["parts"][0]
+        self.assertFalse(declined["e_final_recovery_pending"])
+        self.assertEqual(declined["training_fields"], initial["training_fields"])
         rejected = self.chat("15'wu// 6*6'z2 p1//9'cd").json()["results"][0]["parts"][0]
         self.assertEqual(rejected["training_fields"], initial["training_fields"])
         self.assertIn("601s", rejected["chat_reply"])
-        updated = self.chat("ik pak er 1'van die 10' om van de main een kloppende set te maken").json()["results"][0]["parts"][0]
+        pending = self.chat("ik pak er 1'van die 10' om van de main een kloppende set te maken").json()["results"][0]["parts"][0]
+        self.assertEqual(pending["training_fields"], initial["training_fields"])
+        updated = self.chat("ja doe dat").json()["results"][0]["parts"][0]
+        self.assertFalse(updated["e_final_recovery_pending"])
         self.assertIn("6×(6' Z2 - 1'", updated["training_fields"]["alt"])
         self.assertIn("Elliptical 9'", updated["training_fields"]["alt"])
         self.assertIn(updated["training_fields"]["alt"], updated["chat_reply"])
@@ -837,6 +845,33 @@ class GarminEEndpointTests(TestCase):
         self.assertEqual(sum(load["seconds"] for load in updated["watch_loads"]), sum(durations))
         self.assertEqual(sum(lap["seconds"] for load in updated["watch_loads"] for lap in load["alt_laps"]), sum(durations))
         model.assert_not_called()
+
+    @patch("core.views.garmin_e.localize_garmin_e_notice", side_effect=lambda text, message: text)
+    @patch("core.views.garmin_e.ask_model")
+    def test_alternative_descending_set_suggests_first_cooldown_minute(self, model, translate):
+        work = [720, 600, 480, 360, 300, 240, 180, 120, 60]
+        durations = [900, *[seconds for target in work[:-1] for seconds in (target, 60)], work[-1], 721]
+        self.record.distance_m = None
+        self.record.duration_s = sum(durations)
+        self.record.analysis_data = {
+            "activity_metrics": {"sport": "ELLIPTICAL", "average_hr": 110},
+            "laps": [{"elapsed_time": value, "avg_heart_rate": 100, "hr_tail": 100} for value in durations],
+        }
+        self.record.save()
+        model.return_value = {"reply": "Descending set.", "intent": "update", "zone_basis": "hr",
+                              "proposal": {"warmup_laps": [1], "cooldown_laps": [len(durations)],
+                                           "recovery_laps": list(range(3, len(durations) - 1, 2)),
+                                           "reps": [{"laps": [2 + 2 * index], "target_seconds": target}
+                                                    for index, target in enumerate(work)]}}
+        initial = self.chat("Analyze the descending intervals.").json()["results"][0]["parts"][0]
+        self.assertTrue(initial["e_usable"], initial["chat_reply"])
+        self.assertIn("first minute of the cooldown", initial["chat_reply"])
+        updated = self.chat("yes").json()["results"][0]["parts"][0]
+        self.assertNotEqual(updated["training_fields"], initial["training_fields"])
+        self.assertIn(" - 1' Z1)", updated["training_fields"]["alt"])
+        self.assertEqual(updated["watch_loads"][-1]["seconds"], 661)
+        self.assertEqual(sum(load["seconds"] for load in updated["watch_loads"]), sum(durations))
+        model.assert_called_once()
 
     @patch("core.views.garmin_e.ask_model")
     def test_running_laps_without_recognized_main_still_offer_chat(self, model):

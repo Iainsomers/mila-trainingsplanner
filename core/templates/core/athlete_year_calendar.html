@@ -3135,7 +3135,8 @@
             if (!fields.sprint && (model === "C" || model === "D" || model === "E") &&
                 (fields.main || (model === "E" && ((fields.alt || fields.alternative) || canDiscussGarminE)))) {
               var key = model + ":" + (session.e_session_id || session.start);
-              var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [], open:model === "E" && !part.e_usable});
+              var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [],
+                open:model === "E" && (!part.e_usable || part.e_final_recovery_pending)});
               if (model === "E" && part.e_history) chat.messages = part.e_history;
               if (model === "E" && !chat.messages.length && part.chat_reply) chat.messages = [{role:"assistant",content:part.chat_reply}];
               var panel = document.createElement("div"); panel.className = "border rounded p-2 mt-2 w-100";
@@ -3206,7 +3207,8 @@
                   chat.messages = replacement.parts[0].e_history || chat.messages.concat([{role:"assistant",content:reply}]);
                   if (!replacement.parts[0].e_history) replacement.parts[0].e_history = chat.messages;
                   updatedE[position] = replacement;
-                  if (automatic && replacement.parts[0].e_usable && !chat.draft) chat.open=false;
+                  if (replacement.parts[0].e_final_recovery_pending) chat.open = true;
+                  else if (automatic && replacement.parts[0].e_usable && !chat.draft) chat.open=false;
                 } else {
                   chat.messages.push({role:"assistant",content:reply});
                   updatedE[position].parts[0].e_history = chat.messages;

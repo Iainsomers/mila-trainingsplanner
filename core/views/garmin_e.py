@@ -16,6 +16,7 @@ from core.models import Athlete, GarminEConversation
 from core.training_text import display_pause_times
 from core.garmin_e import (
     apply_explicit_zone_labels,
+    alternative_final_recovery_proposal,
     ask_model,
     checked_proposal,
     complete_partial_running_proposal,
@@ -263,8 +264,13 @@ def garmin_type_e_ayc_view(request):
             conversation.refresh_from_db()
             state = conversation.state or {"history":[],"part":deepcopy(part),"proposal":None,"basis":"auto"}
             try:
-                if message and re.fullmatch(r"(?:nee|no|cancel|annuleer)[.!]?",message,re.I):
+                declined = bool(message and re.fullmatch(r"(?:nee|no|cancel|annuleer)[.!]?",message,re.I))
+                pending_transfer = (state.get("pending") or {}).get("final_recovery")
+                if declined:
                     state.pop("pending",None)
+                confirmed = bool(state.get("pending") and message and re.fullmatch(
+                    r"(?:ja|yes|zeker|ok|doe maar|ja doe dat)(?:[.!]|,? (?:klopt|graag|doen|dat klopt))?",
+                    message.strip(), re.I))
                 initial_analysis = message is None
                 turn = {"role":"user","content":message or
                     "Analyze the whole recording and explain the pattern. Provide a complete usable proposal when the measured laps support it."}
@@ -289,6 +295,8 @@ def garmin_type_e_ayc_view(request):
                     explicit_alternative_compact_proposal(facts, message)
                     if is_alternative else None
                 )
+                if is_alternative and confirmed and pending_transfer:
+                    explicit_compact = state["pending"]["proposal"]
                 if is_alternative and not explicit_compact and message:
                     transfer = re.search(
                         r"(?:pak|haal|neem|take|move)\s+(?:er\s+)?(\d+)\s*['′’]\s*(?:van|from)\b",
@@ -353,7 +361,8 @@ def garmin_type_e_ayc_view(request):
                         except (ValueError, TypeError, KeyError, OverflowError, ZeroDivisionError):
                             explicit_distance = None
                 try:
-                    answer = ({
+                    answer = ({"reply": "The cooldown stays as shown in the checked preview.", "intent": "discuss"}
+                    if declined and pending_transfer else {
                         "reply": "The requested notation fits the measured laps and is shown in the checked preview.",
                         "intent": "update", "zone_basis": "hr", "proposal": explicit_compact,
                     } if explicit_compact else {
@@ -433,10 +442,9 @@ def garmin_type_e_ayc_view(request):
                         and re.search(r"voorstel|gebruik|use|apply|toepassen",state["history"][-1]["content"],re.I))))
                 wants_update = (initial_analysis or action_requested or answer.get("intent") == "update" or
                     (compact_requested and (state.get("proposal") or {}).get("format")!="compact"))
+                if declined and pending_transfer:
+                    wants_update = False
                 repair_used = initial_retry_used
-                confirmed = bool(state.get("pending") and message and re.fullmatch(
-                    r"(?:ja|yes|zeker|ok|doe maar)(?:[.!]|,? (?:klopt|graag|doen|dat klopt))?",
-                    message.strip(),re.I))
                 if confirmed:
                     proposal = state["pending"]["proposal"]
                     basis = state["pending"]["basis"]
@@ -509,6 +517,25 @@ def garmin_type_e_ayc_view(request):
                     state["pending"] = {"proposal":proposal,"basis":basis}
                     candidate = None
                     reply += "\n\nReply affirmatively if you want to use this proposal. The measured times are preserved."
+                final_recovery = None
+                if (is_alternative and not declined and not confirmed and not explanation_only
+                        and answer.get("confirmation_required") is not True):
+                    if candidate and explicit_compact and (proposal.get("presentation") or {}).get("cooldown_transfer"):
+                        final_recovery = proposal
+                        candidate = None
+                        reply = "The current preview stays as shown."
+                    else:
+                        base = proposal if candidate else state.get("proposal")
+                        final_recovery = alternative_final_recovery_proposal(facts, base)
+                        if final_recovery:
+                            try:
+                                checked_proposal(part, final_recovery, athlete=athlete, zone_basis=basis)
+                            except (ValueError, TypeError, KeyError, OverflowError):
+                                final_recovery = None
+                    if final_recovery:
+                        reply += ("\n\nI can use the first minute of the cooldown as the final Z1 recovery. "
+                                  "The remaining time stays in cooldown, and the total measured time stays the same. "
+                                  "Reply yes to apply this split.")
                 updated = candidate or deepcopy(state["part"])
                 updated.pop("e_history",None)
                 if not candidate and wants_update and not state.get("pending"):
@@ -526,6 +553,9 @@ def garmin_type_e_ayc_view(request):
                         [request.user.pk,athlete.pk,request.GET.get("date"),preview_digest(
                             updated["training_fields"],updated["watch_loads"])],salt="garmin-e-save")
                     state.update(proposal=proposal,basis=basis)
+                if final_recovery:
+                    state["pending"] = {"proposal": final_recovery, "basis": basis, "final_recovery": True}
+                updated["e_final_recovery_pending"] = bool((state.get("pending") or {}).get("final_recovery"))
                 history.append({"role":"assistant","content":reply})
                 state.update(part=updated,history=history[-20:])
                 GarminEConversation.objects.filter(pk=conversation.pk).update(state=state,updated_at=timezone.now())

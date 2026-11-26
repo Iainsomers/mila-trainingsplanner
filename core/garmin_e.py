@@ -1193,6 +1193,41 @@ def checked_alternative(part, proposal, *, athlete=None, zone_basis="auto", conf
     return result
 
 
+def alternative_final_recovery_proposal(facts, proposal):
+    """Suggest splitting a long cooldown when minute recoveries stop at the last rep."""
+    if not isinstance(proposal, dict):
+        return None
+    prior_presentation = proposal.get("presentation")
+    if isinstance(prior_presentation, dict) and prior_presentation.get("cooldown_transfer"):
+        return None
+    reps = proposal.get("reps") or []
+    recovery = proposal.get("recovery_laps") or []
+    cooldown = proposal.get("cooldown_laps") or []
+    if len(reps) < 2 or len(recovery) != len(reps) - 1 or not cooldown:
+        return None
+    targets = [rep["target_seconds"] for rep in reps]
+    if min(targets) < 60 or not (
+        len(set(targets)) == 1 or all(left > right for left, right in zip(targets, targets[1:]))
+    ):
+        return None
+    last = reps[-1]["laps"][-1]
+    if cooldown[0] != last + 1 or facts[last]["duration_s"] < 120:
+        return None
+    for rep, pause, following in zip(reps, recovery, reps[1:]):
+        if (rep["laps"][-1] + 1 != pause or pause + 1 != following["laps"][0]
+                or abs(facts[pause - 1]["duration_s"] - 60) > 2):
+            return None
+    updated = deepcopy(proposal)
+    updated["format"] = "compact"
+    presentation = updated["presentation"] = dict(prior_presentation) if isinstance(prior_presentation, dict) else {}
+    nominal = presentation.get("cooldown_seconds", facts[last]["duration_s"])
+    if not isinstance(nominal, (int, float)) or not math.isfinite(nominal):
+        nominal = facts[last]["duration_s"]
+    presentation.update(recovery_seconds=60, cooldown_transfer=60,
+                        cooldown_after_transfer=max(1, round((nominal - 60) / 60) * 60))
+    return updated
+
+
 def compact_alternative(part, result, entries, presentation):
     """Compile compact, bounded notation without losing measured per-lap facts."""
     if not isinstance(presentation,dict):
@@ -1223,16 +1258,19 @@ def compact_alternative(part, result, entries, presentation):
         summary_zone_labels[role] = selected
     display = []
     transfer = presentation.get("cooldown_transfer") or 0
+    transfer_index = next((index for index, entry in enumerate(entries) if entry["role"] == "Cooldown"), None)
     if (type(transfer) is not int or transfer < 0
-            or (transfer and (entries[-1]["role"] != "Cooldown" or transfer >= entries[-1]["seconds"]
+            or (transfer and (transfer_index is None or transfer >= entries[transfer_index]["seconds"]
                               or transfer != presentation.get("recovery_seconds")))):
-        raise ValueError("The requested transfer must be one recovery interval at the start of the final cooldown.")
-    for entry in entries:
+        raise ValueError("The requested transfer must be one recovery interval at the start of cooldown.")
+    for index, entry in enumerate(entries):
         role,seconds = entry["role"],entry["seconds"]
-        if transfer and entry is entries[-1]:
+        if transfer and index == transfer_index:
             seconds -= transfer
         key = {"Warmup":"warmup_seconds","Cooldown":"cooldown_seconds","Recovery":"recovery_seconds"}.get(role)
         target = presentation.get(key,seconds) if key else entry["target"]
+        if transfer and index == transfer_index:
+            target = presentation.get("cooldown_after_transfer", target)
         if not isinstance(target,(int,float)) or isinstance(target,bool) or not math.isfinite(target) or target<=0:
             raise ValueError("Compact Alternative durations must be positive measured targets.")
         tolerance = max(15,target*.06) if role=="Work" else max(30,target*.06)
@@ -1273,13 +1311,15 @@ def compact_alternative(part, result, entries, presentation):
     if first_main is not None and last_main is not None:
         main_entries = entries[first_main:last_main+1]
         interval_zone = presentation.get("interval_work_zone")
-        if interval_zone is not None:
+        if interval_zone is not None or transfer:
             expected = ["Work" if index % 2 == 0 else "Recovery" for index in range(len(main_entries))]
             work_targets = [display[index][0] for index in range(first_main, last_main + 1, 2)]
             pause = presentation.get("recovery_seconds")
-            if (interval_zone not in set("123456") or type(pause) is not int or pause <= 0 or len(main_entries) % 2 != 1
-                    or [entry["role"] for entry in main_entries] != expected or len(set(work_targets)) != 1):
-                raise ValueError("The requested intervals must alternate work and recovery with a single work duration.")
+            if (type(pause) is not int or pause <= 0 or len(main_entries) % 2 != 1
+                    or [entry["role"] for entry in main_entries] != expected
+                    or (interval_zone is not None and (interval_zone not in set("123456") or len(set(work_targets)) != 1))
+                    or (transfer and transfer_index != last_main + 1)):
+                raise ValueError("The requested intervals must alternate work and recovery before cooldown.")
             prefix = part.get("alternative_label", "Alternative") + " "
             work = atom((work_targets[0], interval_zone, "Work"))
             pause_label = f"{pause // 60}'" if pause % 60 == 0 else f"{pause}s"
@@ -1290,7 +1330,7 @@ def compact_alternative(part, result, entries, presentation):
             loads.extend(measured_load(index, index + 1, prefix + atom(display[index]))
                          for index in range(last_main + 1, len(entries)))
             if transfer:
-                cooldown = loads[-1]
+                cooldown = loads[first_main + 1]
                 source = cooldown["alt_laps"][0]
                 if len(cooldown["alt_laps"]) != 1:
                     raise ValueError("The transfer requires a single final cooldown lap.")
@@ -1298,8 +1338,13 @@ def compact_alternative(part, result, entries, presentation):
                 source.update(seconds=source["seconds"] - transfer, average_hr=None, end_hr=None)
                 main_load["seconds"] += transfer
                 cooldown["seconds"] -= transfer
-                recovery = atom((transfer, source["zone"], "Recovery"))
-                main_load["alt_text"] = prefix + f"{len(work_targets)}×({work} - {recovery})"
+                recovery = atom((transfer, "1", "Recovery"))
+                work_atoms = [work if interval_zone else atom(display[index])
+                              for index in range(first_main, last_main + 1, 2)]
+                main_load["alt_text"] = prefix + (
+                    f"{len(work_atoms)}×({work_atoms[0]} - {recovery})" if len(set(work_atoms)) == 1
+                    else "1×(" + " - ".join(f"{label} - {recovery}" for label in work_atoms) + ")"
+                )
             text = " // ".join(load["alt_text"] for load in loads)
             result.update(training_fields={"alt":text}, description=text, watch_loads=loads)
             result["e_zone_note"] += " Compact notation uses nominal targets; totals retain measured time and HR zones."
