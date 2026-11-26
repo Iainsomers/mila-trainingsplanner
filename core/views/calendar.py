@@ -4623,6 +4623,18 @@ def athlete_year_calendar_view(request):
                 "slot2": slot2,
                 "report": report,
                 "vitals": vitals.get("vitals"),
+                "summary_slots": [
+                    {
+                        "label": label,
+                        "text": report[f"training_text{cell['slot_index']}"].partition("\n")[0],
+                        "km": f"{cell['session_km']} km" if cell["session_km"] else "",
+                        "status": (
+                            _flex_check_payload(cell["check"])
+                            or ({"label": "Not evaluated", "icon": "○"} if cell["slot"] and cell["day"] <= today else None)
+                        ) if show_training_reports else None,
+                    }
+                    for label, cell in (("AM", slot1), ("PM", slot2))
+                ],
             }
             for slot1, slot2, report, vitals in zip(cells1, cells2, cells3, cells4)
         ]

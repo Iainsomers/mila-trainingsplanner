@@ -42,7 +42,7 @@ Bij ingeschakelde Whereabouts-toegang toont de eigen Year Planner de whereabouts
 
 - Het klokje bij een gemeten training heeft in Athlete Diary en Individual Planner dezelfde betekenis en popup-inhoud. In Individual Planner staat het compact in de sessiekop naast de totalen; aanklikken mag niet tegelijk het trainingsformulier openen.
 
-- De mobiele Athlete Diary gebruikt standaard de compacte dagselector met één zichtbare dag. Alleen wanneer de atleetinstelling `Week view in mob diary` aanstaat, verdwijnt de dagselector en worden maandag tot en met zondag als volledige kaarten onder elkaar getoond.
+- De mobiele Athlete Diary opent standaard op vandaag in Day. Week toont zeven aanklikbare regels met korte AM/PM-trainingstekst, zichtbare sessiekilometers en evaluatiestatus. Day / Week behoudt de actieve week en dag. `Week view in mob diary` opent desgewenst direct in Week.
 
 Bijgewerkt: 20 oktober 2026.
 

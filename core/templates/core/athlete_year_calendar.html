@@ -972,8 +972,38 @@
     .ayc-mobile-day-tab.is-active { border-color: #2e7d5b; background: #e5f3ec; color: #155d40; font-weight: 800; }
     .ayc-mobile-day { display: none; }
     .ayc-mobile-day.is-active-day { display: block; }
-    .ayc-mobile.is-week-view .ayc-mobile-day { display: block; }
+    .ayc-mobile.is-week-view .ayc-mobile-day { display: none; }
     .ayc-mobile.is-week-view .ayc-mobile-day-nav { display: none; }
+    .ayc-mobile-view-switch { display: flex; margin-top: 8px; }
+    .ayc-mobile-view-switch button { flex: 1; min-height: 38px; }
+    .ayc-mobile-week-overview { display: none; }
+    .ayc-mobile.is-week-view .ayc-mobile-week-overview { display: grid; gap: 6px; margin-bottom: 12px; }
+    .ayc-mobile-overview-day {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+      min-height: 48px;
+      padding: 8px;
+      text-align: left;
+      color: inherit;
+      background: #fff;
+      border: 1px solid #dbe2e7;
+      border-radius: 8px;
+    }
+    .ayc-mobile-overview-day[aria-current="date"] { border-color: #d4a900; background: #fff8d9; }
+    .ayc-mobile-overview-day.is-selected { box-shadow: inset 3px 0 #2e7d5b; }
+    .ayc-mobile-overview-date { font-size: .8rem; }
+    .ayc-mobile-overview-slot {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 5px;
+      align-items: baseline;
+      font-size: .75rem;
+    }
+    .ayc-mobile-overview-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ayc-mobile-overview-meta { white-space: nowrap; color: #465565; }
     .ayc-mobile-day.is-weekend:not(.is-today) { background: #f7f9fb; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day { background: #fff9c4; border-color: #e5cf57; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day-head { background: #fff1a3; }
@@ -1203,6 +1233,12 @@
         <div class="ayc-mobile-week-title" id="aycMobileWeekTitle"></div>
         <button type="button" class="btn btn-sm btn-outline-secondary" id="aycMobileNext" aria-label="Next week">&rsaquo;</button>
       </div>
+      <div class="btn-group ayc-mobile-view-switch" role="group" aria-label="Diary view">
+        <button type="button" class="btn btn-sm btn-outline-primary" id="aycMobileDayView"
+                aria-pressed="{% if mobile_diary_week_view %}false{% else %}true{% endif %}">Day</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="aycMobileWeekView"
+                aria-pressed="{% if mobile_diary_week_view %}true{% else %}false{% endif %}">Week</button>
+      </div>
       {% if show_oura_vitals_import %}
       <button type="button" class="btn btn-sm btn-outline-primary" data-oura-import-open>Use Oura data</button>
       {% endif %}
@@ -1242,6 +1278,25 @@
           <span>HRV<strong>{{ w.daily_vitals_avg.hrv }}</strong></span>
         </div>
         {% endif %}
+      </div>
+
+      <div class="ayc-mobile-week-overview" aria-label="Week overview">
+        {% for mobile_day in w.mobile_days %}
+          <button type="button" class="ayc-mobile-overview-day" data-overview-day="{{ mobile_day.day|date:'Y-m-d' }}"
+                  {% if mobile_day.day == today %}aria-current="date"{% endif %}>
+            <span class="ayc-mobile-overview-date"><strong>{{ mobile_day.day|date:"D" }}</strong><br>{{ mobile_day.day|date:"d M" }}</span>
+            <span>
+              {% for slot in mobile_day.summary_slots %}
+                <span class="ayc-mobile-overview-slot">
+                  <strong>{{ slot.label }}</strong>
+                  <span class="ayc-mobile-overview-text">{{ slot.text|default:"—" }}</span>
+                  <span class="ayc-mobile-overview-meta">{{ slot.km }}{% if slot.status %} <span class="visually-hidden">{{ slot.status.label }}</span><span aria-hidden="true" title="{{ slot.status.label }}">{{ slot.status.icon }}</span>{% endif %}</span>
+                </span>
+              {% endfor %}
+            </span>
+            <span aria-hidden="true">›</span>
+          </button>
+        {% endfor %}
       </div>
 
       <div class="ayc-mobile-day-nav" role="tablist" aria-label="Days in this week">
@@ -1605,6 +1660,17 @@
       var title = document.getElementById("aycMobileWeekTitle");
       var previous = document.getElementById("aycMobilePrev");
       var next = document.getElementById("aycMobileNext");
+      var diary = document.querySelector(".ayc-mobile");
+      var dayView = document.getElementById("aycMobileDayView");
+      var weekView = document.getElementById("aycMobileWeekView");
+
+      function setView(showOverview) {
+        diary.classList.toggle("is-week-view", showOverview);
+        dayView.setAttribute("aria-pressed", String(!showOverview));
+        weekView.setAttribute("aria-pressed", String(showOverview));
+        dayView.classList.toggle("active", !showOverview);
+        weekView.classList.toggle("active", showOverview);
+      }
 
       function selectDay(week, day) {
         var buttons = Array.from(week.querySelectorAll(".ayc-mobile-day-tab"));
@@ -1617,6 +1683,9 @@
         cards.forEach(function(card) {
           card.classList.toggle("is-active-day", card.dataset.day === day);
         });
+        week.querySelectorAll("[data-overview-day]").forEach(function(button) {
+          button.classList.toggle("is-selected", button.dataset.overviewDay === day);
+        });
       }
 
       weeks.forEach(function(week) {
@@ -1628,6 +1697,14 @@
         selectDay(week, initialDay);
         buttons.forEach(function(button) {
           button.addEventListener("click", function() { selectDay(week, button.dataset.dayTarget); });
+        });
+        week.querySelectorAll("[data-overview-day]").forEach(function(button) {
+          button.addEventListener("click", function() {
+            selectDay(week, button.dataset.overviewDay);
+            setView(false);
+            dayView.focus({preventScroll: true});
+            window.scrollTo({top: 0});
+          });
         });
       });
 
@@ -1644,6 +1721,9 @@
 
       if (previous) previous.addEventListener("click", function () { showWeek(currentIndex - 1, true); });
       if (next) next.addEventListener("click", function () { showWeek(currentIndex + 1, true); });
+      dayView.addEventListener("click", function() { setView(false); });
+      weekView.addEventListener("click", function() { setView(true); });
+      setView(diary.classList.contains("is-week-view"));
       showWeek(currentIndex, false);
     });
   </script>

@@ -8819,7 +8819,7 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('class="ayc-mobile-vitals-avg"', template_source)
         self.assertIn('document.body.appendChild(modalEl);', template_source)
 
-    def test_mobile_diary_week_view_setting_shows_all_days(self):
+    def test_mobile_diary_week_view_setting_opens_compact_overview(self):
         _, _, athlete = self._user_plan_and_athlete()
         self.assertFalse(athlete.mobile_diary_week_view)
 
@@ -8834,8 +8834,9 @@ class SlotModalSaveTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="ayc-mobile is-week-view"', html=False)
-        self.assertContains(response, ".ayc-mobile.is-week-view .ayc-mobile-day { display: block; }", html=False)
+        self.assertContains(response, ".ayc-mobile.is-week-view .ayc-mobile-day { display: none; }", html=False)
         self.assertContains(response, ".ayc-mobile.is-week-view .ayc-mobile-day-nav { display: none; }", html=False)
+        self.assertContains(response, 'data-overview-day="2026-12-28"', html=False)
 
     def test_simple_diary_view_is_staff_only_and_keeps_evaluations(self):
         coach, plan, athlete = self._user_plan_and_athlete()

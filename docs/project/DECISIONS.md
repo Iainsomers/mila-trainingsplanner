@@ -16,7 +16,7 @@ De toekomstige AI-update voor coaches wordt eerst gevoed door een duurzame, chro
 
 ## 2026-11-09 — Mobiele Diary blijft standaard compact
 
-De mobiele Diary blijft voor bestaande en nieuwe atleten standaard een één-dagweergave. Een volledige week onder elkaar is een expliciete instelling per atleet (`Week view in mob diary`) en verandert de desktopweergave niet.
+De mobiele Diary blijft voor bestaande en nieuwe atleten standaard een één-dagweergave. Het compacte weekoverzicht is direct beschikbaar via Day / Week. Per atleet kan `Week view in mob diary` het weekoverzicht als openingsstand kiezen.
 
 ## 2026-11-05 — AI kiest repgroepering; meetcontroles houden een drempel
 

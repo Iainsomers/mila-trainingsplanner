@@ -34,6 +34,56 @@ class EvaluationSessionTests(TestCase):
         self.assertContains(response,'data-evaluation-slot="1"')
         self.assertContains(response,'class="evaluation-actions"')
         self.assertContains(response,'max-height:92dvh')
+        self.assertContains(response, 'id="aycMobileDayView"')
+        self.assertContains(response, 'id="aycMobileWeekView"')
+        self.assertContains(response, 'data-overview-day="2026-10-29"')
+        self.assertContains(response, 'class="ayc-mobile-overview-text">AM easy 5000m Z1')
+
+    @skipUnless(shutil.which("node"), "Node required for mobile Diary navigation")
+    def test_mobile_week_overview_opens_day_and_keeps_selected_week(self):
+        source = Path("core/templates/core/athlete_year_calendar.html").read_text(encoding="utf-8")
+        start = source.index('    document.addEventListener("DOMContentLoaded", function () {\n      var weeks')
+        source = source[start:source.index("</script>", start)].replace("{{ today|date:'Y-m-d' }}", "2026-11-26")
+        script = """
+const assert = require("node:assert/strict");
+function element(dataset = {}) {
+    const classes = new Set();
+    return {dataset, disabled: false, classList: {
+        toggle: (name, on) => on ? classes.add(name) : classes.delete(name),
+        contains: name => classes.has(name),
+    }, setAttribute() {}, focus() {}, addEventListener(name, action) { this[name] = action; }};
+}
+function week(weekStart, weekEnd, day) {
+    const box = element({weekStart, weekEnd});
+    box.cards = [element({day: weekStart}), element({day})];
+    box.overview = [element({overviewDay: weekStart}), element({overviewDay: day})];
+    const tabs = [element({dayTarget: weekStart}), element({dayTarget: day})];
+    box.querySelectorAll = selector => selector === ".ayc-mobile-day" ? box.cards
+        : selector === ".ayc-mobile-day-tab" ? tabs : box.overview;
+    return box;
+}
+const first = week("2026-11-16", "2026-11-22", "2026-11-19");
+const current = week("2026-11-23", "2026-11-29", "2026-11-26");
+const diary = element(), controls = {};
+const window = {scrollTo() {}};
+const document = {querySelectorAll: () => [first, current], querySelector: () => diary,
+    getElementById: id => controls[id] ??= element(),
+    addEventListener: (_, action) => action()};
+""" + source + """
+assert.ok(current.classList.contains("is-active"));
+assert.ok(current.cards[1].classList.contains("is-active-day"));
+controls.aycMobilePrev.click();
+controls.aycMobileWeekView.click();
+assert.ok(diary.classList.contains("is-week-view"));
+first.overview[1].click();
+assert.ok(first.cards[1].classList.contains("is-active-day"));
+assert.ok(!diary.classList.contains("is-week-view"));
+controls.aycMobileWeekView.click();
+assert.ok(first.classList.contains("is-active"));
+assert.ok(first.overview[1].classList.contains("is-selected"));
+"""
+        result = subprocess.run(["node", "-"], input=script, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_posting_one_daypart_leaves_other_evaluation_unchanged(self):
         other=AthleteDayCheck.objects.create(athlete=self.athlete,date=self.day,slot_index=2,
