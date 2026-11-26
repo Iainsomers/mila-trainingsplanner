@@ -19,6 +19,7 @@ from core.access import evaluation_visibility_for_request
 from core.models import (
     AthleteDayCheck,
     EvaluationReaction,
+    EvaluationLactateLog,
     AthleteDayComment,
     TrainingSlot,
     TrainingSegment,
@@ -3452,6 +3453,64 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     save_processed_main_reps(override_slot)
 
 
+def _evaluation_lactate_response(request, athlete, is_coach, action):
+    visibility = evaluation_visibility_for_request(request, athlete.owner, athlete_self=not is_coach)
+    if not athlete.training_reports_enabled or not visibility["training"]:
+        return JsonResponse({}, status=403)
+    try:
+        day = date.fromisoformat(request.POST.get("date", ""))
+        slot = int(request.POST.get("slot_index", ""))
+        if slot not in (1, 2):
+            raise ValueError
+    except ValueError:
+        return JsonResponse({}, status=400)
+    logs = EvaluationLactateLog.objects.filter(athlete=athlete, date=day, slot_index=slot)
+    if action == "list":
+        return JsonResponse({"rows": logs.values_list("rows", flat=True).first() or []})
+    if action != "save":
+        return JsonResponse({}, status=400)
+    if ((is_coach and not _can_edit_coach_owner(request, athlete.owner_id))
+            or (not is_coach and day > timezone.localdate() and not athlete.extended_edit_rights)):
+        return JsonResponse({}, status=403)
+
+    limits = {"lactate": 12, "rpe": 12, "comment": 500, "length": 12, "speed": 20, "hr": 6}
+    try:
+        raw = request.POST.get("rows", "")
+        if len(raw) > 240000:
+            raise ValueError
+        rows = json.loads(raw)
+        if not isinstance(rows, list) or len(rows) > 200:
+            raise ValueError
+        cleaned = {}
+        for row in rows:
+            if not isinstance(row, dict) or set(row) - (limits.keys() | {"rep"}):
+                raise ValueError
+            rep = row.get("rep")
+            if type(rep) is not int or not 1 <= rep <= 200 or rep in cleaned:
+                raise ValueError
+            values = {}
+            for field, limit in limits.items():
+                value = row.get(field, "")
+                if not isinstance(value, str) or len(value) > limit:
+                    raise ValueError
+                value = value.strip()
+                if value and field in {"lactate", "rpe", "length", "hr"}:
+                    if not re.fullmatch(r"[0-9]+(?:[.,][0-9]+)?", value):
+                        raise ValueError
+                    if field == "rpe" and Decimal(value.replace(",", ".")) > 10:
+                        raise ValueError
+                if value:
+                    values[field] = value
+            cleaned[rep] = values
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Check the numeric fields and use an RPE from 0 to 10."}, status=400)
+    result = [{"rep": rep, **values} for rep, values in sorted(cleaned.items()) if values]
+    EvaluationLactateLog.objects.update_or_create(
+        athlete=athlete, date=day, slot_index=slot, defaults={"rows": result},
+    )
+    return JsonResponse({"rows": result})
+
+
 def _evaluation_reaction_response(request, athlete, is_coach, action):
     visibility = evaluation_visibility_for_request(request, athlete.owner, athlete_self=not is_coach)
     if not athlete.training_reports_enabled or not visibility["training"]:
@@ -3532,6 +3591,9 @@ def athlete_year_calendar_view(request):
         reaction_action = request.POST.get("evaluation_reaction")
         if reaction_action:
             return _evaluation_reaction_response(request, athlete, is_ayc_coach, reaction_action)
+        lactate_action = request.POST.get("evaluation_lactate")
+        if lactate_action:
+            return _evaluation_lactate_response(request, athlete, is_ayc_coach, lactate_action)
 
         if athlete and date_str:
             try:
@@ -4374,6 +4436,8 @@ def athlete_year_calendar_view(request):
                 ),
                 "training_text1": _slot_evaluation_training_text(slot1),
                 "training_text2": _slot_evaluation_training_text(slot2),
+                "watch_reps1": cells1[-1]["watch_main_reps_json"],
+                "watch_reps2": cells2[-1]["watch_main_reps_json"],
                 "plan_text1": _slot_watch_plan_text(slot1),
                 "plan_text2": _slot_watch_plan_text(slot2),
             }

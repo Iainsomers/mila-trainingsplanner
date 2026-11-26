@@ -45,6 +45,51 @@ class EvaluationSessionTests(TestCase):
         self.assertEqual((other.rpe,other.pain,other.comment),(7,'some_pain','PM original comment'))
         self.assertEqual(AthleteDayCheck.objects.get(athlete=self.athlete,date=self.day,slot_index=1).comment,'AM evaluation only')
 
+    def test_lactate_rows_are_saved_per_daypart_and_visible_to_the_athlete(self):
+        self.assertContains(self.client.get(self.url), 'data-lactate-open aria-haspopup="dialog"', count=2)
+        payload = {"date": self.day.isoformat(), "slot_index": 2}
+        rows = [{"rep": 10, "lactate": "2,5", "rpe": "5", "comment": "After set", "length": "400",
+                 "speed": "3:20", "hr": "170"}]
+        result = self.client.post(self.url, {**payload, "evaluation_lactate": "save", "rows": json.dumps(rows)})
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json()["rows"], rows)
+        self.assertFalse(AthleteDayCheck.objects.filter(athlete=self.athlete).exists())
+        runner = get_user_model().objects.create_user(username="Evaluation_Runner")
+        self.client.force_login(runner)
+        self.assertEqual(self.client.post(self.url, {**payload, "evaluation_lactate": "list"}).json()["rows"], rows)
+        self.assertEqual(self.client.post(self.url, {**payload, "slot_index": 1,
+                                                   "evaluation_lactate": "list"}).json()["rows"], [])
+        invalid = self.client.post(self.url, {**payload, "evaluation_lactate": "save",
+                                             "rows": json.dumps([{"rep": 10, "rpe": "11"}])})
+        self.assertEqual(invalid.status_code, 400)
+
+    @skipUnless(shutil.which("node"), "Node required for lactate row checks")
+    def test_lactate_row_uses_watch_values_and_marks_missing_values_manual(self):
+        source = Path("core/templates/core/partials/evaluation_lactate.js").read_text(encoding="utf-8")
+        source = re.sub(r"const canWriteLactate = .*?;", "const canWriteLactate = true;", source)
+        source = source[:source.index('  document.querySelectorAll("[data-lactate-open]")')]
+        script = """
+const assert = require("node:assert/strict");
+const body = {insertRow() {
+    const row = {dataset: {}, cells: [], insertCell() {
+        const cell = {append(input) { this.input = input; }};
+        this.cells.push(cell);
+        return cell;
+    }};
+    this.lastRow = row;
+    return row;
+}};
+const document = {getElementById: () => body, createElement: () => ({dataset: {}, setAttribute() {}})};
+""" + source + """
+addLactateRow(10, {lactate: "2,5"}, {distance_m: 400, pace_seconds_per_km: 201, average_hr: 173});
+assert.deepEqual(body.lastRow.cells.slice(4).map(cell => cell.textContent), ["400", "3:21", "173"]);
+assert.equal(body.lastRow.cells[1].input.value, "2,5");
+addLactateRow(11, {}, null);
+assert.deepEqual(body.lastRow.cells.slice(4).map(cell => cell.input.placeholder), ["m", "m", "m"]);
+"""
+        result = subprocess.run(["node", "-"], input=script, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_coach_reply_is_visible_and_acknowledged_only_by_the_athlete(self):
         User = get_user_model()
         self.coach.first_name = "Iain"
@@ -145,6 +190,7 @@ function val(id){return document.getElementById(id).value;}
 function setNotDoneRpe(){}
 function setSavedWatchResult(id,summary){savedWatch=[id,summary];}
 function loadEvaluationReactions(){}
+function setLactateSession(){}
 function validate(){}
 function stopVoiceComment(){}
 function post(...args){requests.push(args);return Promise.resolve();}

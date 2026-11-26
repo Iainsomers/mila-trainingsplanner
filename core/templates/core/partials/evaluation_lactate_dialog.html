@@ -1,0 +1,25 @@
+<dialog id="evaluationLactate" class="border rounded shadow p-3" aria-labelledby="evaluationLactateTitle"
+        style="width:min(860px, calc(100% - 1.5rem)); max-height:90dvh; overflow:auto;">
+  <h5 id="evaluationLactateTitle">Lactate</h5>
+  <div class="table-responsive" tabindex="0" aria-label="Lactate measurements by rep">
+    <table class="table table-sm align-middle mb-2" style="min-width:680px;">
+      <colgroup>
+        <col style="width:70px"><col style="width:86px"><col style="width:65px"><col>
+        <col style="width:86px"><col style="width:88px"><col style="width:80px">
+      </colgroup>
+      <thead><tr>
+        <th scope="col">Rep</th><th scope="col">Lactate<br><small>mmol/L</small></th>
+        <th scope="col">RPE</th><th scope="col">Comment</th>
+        <th scope="col">Length<br><small>m</small></th><th scope="col">Speed<br><small>min/km</small></th>
+        <th scope="col">HR<br><small>avg bpm</small></th>
+      </tr></thead>
+      <tbody id="evaluationLactateRows"></tbody>
+    </table>
+  </div>
+  <p class="small mb-2" role="status" id="evaluationLactateStatus"></p>
+  <div class="d-flex flex-wrap gap-2 justify-content-end">
+    <button type="button" class="btn btn-sm btn-outline-primary me-auto" id="evaluationLactateAdd" hidden>Add rep</button>
+    <form method="dialog"><button class="btn btn-sm btn-outline-secondary">Close</button></form>
+    <button type="button" class="btn btn-sm btn-primary" id="evaluationLactateSave" hidden>Save</button>
+  </div>
+</dialog>

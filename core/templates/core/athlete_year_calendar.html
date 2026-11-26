@@ -1304,6 +1304,8 @@
           {% if show_training_reports and mobile_day.report.has_slot1 or show_training_reports and mobile_day.report.has_slot2 %}
           {% with d=mobile_day.report %}
           <div class="{% if mobile_day.day <= today or athlete_extended_edit_rights %}comment-display {% endif %}ayc-mobile-evaluation"
+               data-t1-lactate-reps="{{ d.watch_reps1|default:'[]'|escape }}"
+               data-t2-lactate-reps="{{ d.watch_reps2|default:'[]'|escape }}"
                data-date="{{ d.day|date:'Y-m-d' }}"
                data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
                data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
@@ -2349,6 +2351,8 @@
 </dialog>
 {% endif %}
 
+{% include "core/partials/evaluation_lactate_dialog.html" %}
+
 <div id="commentModal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
   <div class="evaluation-dialog">
     <h5 id="reportModalTitle">Evaluation</h5>
@@ -2385,6 +2389,7 @@
         <div>
           <div class="form-label mb-1 report-comment-label">
             <label for="reportT1Comment">Comment</label>
+            <button type="button" class="btn btn-sm btn-primary text-white me-auto" data-lactate-open aria-haspopup="dialog">Lactate</button>
             <button type="button" class="voice-comment-btn" data-voice-comment-target="reportT1Comment" aria-label="Speak comment" title="Speak comment">🎙</button>
           {% if coach_can_edit_training %}<button type="button" class="btn btn-sm btn-outline-primary" data-react="reportT1" aria-controls="reportT1Reactions">React</button>{% endif %}
           </div>
@@ -2423,6 +2428,7 @@
         <div>
           <div class="form-label mb-1 report-comment-label">
             <label for="reportT2Comment">Comment</label>
+            <button type="button" class="btn btn-sm btn-primary text-white me-auto" data-lactate-open aria-haspopup="dialog">Lactate</button>
             <button type="button" class="voice-comment-btn" data-voice-comment-target="reportT2Comment" aria-label="Speak comment" title="Speak comment">🎙</button>
           {% if coach_can_edit_training %}<button type="button" class="btn btn-sm btn-outline-primary" data-react="reportT2" aria-controls="reportT2Reactions">React</button>{% endif %}
           </div>
@@ -3324,6 +3330,7 @@
       return result;
     });
   }
+  {% include "core/partials/evaluation_lactate.js" %}
   var reactionSession = null;
   function renderEvaluationReactions(list, reactions) {
     list.replaceChildren();
@@ -3420,6 +3427,7 @@
       var savedWatchSummary = el.getAttribute("data-t" + selectedSlot + "-watch-summary") || "";
       setSavedWatchResult(savedWatchId, savedWatchSummary);
       loadEvaluationReactions(activeDate, selectedSlot);
+      setLactateSession(activeDate, selectedSlot, el.getAttribute("data-t" + selectedSlot + "-lactate-reps"));
       document.getElementById("commentModal").style.display = "flex";
       validate();
     }, true);

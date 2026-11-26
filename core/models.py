@@ -1767,6 +1767,17 @@ class AthleteDayComment(models.Model):
         return f"{self.athlete} - {self.date}"
 
 
+class EvaluationLactateLog(models.Model):
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE)
+    date = models.DateField()
+    slot_index = models.PositiveSmallIntegerField()
+    rows = models.JSONField(default=list)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["athlete", "date", "slot_index"],
+                                                name="unique_lactate_log_per_daypart")]
+
+
 class EvaluationReaction(models.Model):
     evaluation = models.ForeignKey("AthleteDayCheck", on_delete=models.CASCADE, related_name="reactions")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)

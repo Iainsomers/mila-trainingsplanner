@@ -708,3 +708,5 @@ Garmin C/D-chat kan op verzoek losse afstandsblokken voor de herhalingen in Main
 Athlete Diary toont React bij het evaluatiecommentaar aan trainers die de evaluatie mogen bewerken. Reacties staan apart van het commentaar, met de eerste letter van voornaam en het laatste woord van de achternaam. Bij het openen van de Diary krijgt de atleet een popup met onbevestigde reacties. Na bevestiging blijven de reacties zichtbaar in de evaluatie.
 
 De oude Iain Somers-accountnamen tonen ook zonder ingevulde achternaam IS. Dit geldt ook voor eerdere reacties met één opgeslagen initiaal.
+
+Lactate naast Comment in een Diary-evaluatie opent een tabel per AM/PM-dagdeel. Lengte, tempo en gemiddelde hartslag komen uit dezelfde gemeten reps als het kloksymbool. Ontbrekende meetwaarden zijn handmatig in te vullen en extra reps kunnen worden toegevoegd. De tabel wordt onafhankelijk van de trainingsevaluatie opgeslagen volgens dezelfde zichtbaarheids- en bewerkrechten.

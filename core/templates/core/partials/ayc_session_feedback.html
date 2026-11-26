@@ -1,5 +1,7 @@
 <div class="comment-display"
      data-date="{{ d.day|date:'Y-m-d' }}"
+     data-t1-lactate-reps="{{ d.watch_reps1|default:'[]'|escape }}"
+     data-t2-lactate-reps="{{ d.watch_reps2|default:'[]'|escape }}"
      data-t1-enabled="{% if d.has_slot1 %}1{% else %}0{% endif %}"
      data-t1-status="{% if d.check1 %}{{ d.check1.effective_status }}{% endif %}"
      data-t1-rpe="{% if d.check1.rpe != None %}{{ d.check1.rpe }}{% endif %}"
