@@ -69,8 +69,6 @@ def garmin_type_e_ayc_view(request):
             athlete = None
     if not athlete:
         return JsonResponse({"ok":False,"message":"Athlete not found.","results":[]},status=404)
-    if not athlete.garmin_model_e_enabled:
-        return JsonResponse({"ok":False,"message":"Garmin E is not enabled for this athlete.","results":[]},status=403)
     GarminEConversation.objects.filter(user=request.user,updated_at__lt=timezone.now()-timezone.timedelta(days=7)).delete()
     # The measured C reader is reused solely to decode recordings, never its chat.
     measured_request = copy(request)

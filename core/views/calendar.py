@@ -4703,7 +4703,7 @@ def athlete_year_calendar_view(request):
             "selected_athlete_id": str(selected_athlete_id or ""),
             "selected_athlete": selected_athlete,
             "show_polar_tools": bool(is_ayc_coach or (selected_athlete and getattr(selected_athlete, "polar_enabled", False))),
-            "show_garmin_e": bool(selected_athlete and selected_athlete.garmin_model_e_enabled),
+            "show_garmin_e": bool(selected_athlete),
             "show_session_km": bool(selected_athlete and getattr(selected_athlete, "see_session_km", True)),
             "show_session_zones": bool(selected_athlete and getattr(selected_athlete, "see_session_zones", True)),
             "mobile_diary_week_view": bool(selected_athlete and getattr(selected_athlete, "mobile_diary_week_view", False)),

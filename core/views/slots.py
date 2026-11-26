@@ -1406,8 +1406,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if request.method == "POST" and request.POST.get("watch_origin","").strip().lower() == "watch_e":
         from django.core import signing
         from core.views.garmin_e import preview_digest
-        if not athlete or not athlete.garmin_model_e_enabled:
-            return HttpResponse("Garmin E is not enabled for this athlete.",status=403)
+        if not athlete:
+            return HttpResponse("Athlete not found.",status=403)
         try:
             fields = {"wu":request.POST.get("wu_text",""),"main":request.POST.get("core_text",""),
                       "cd":request.POST.get("cd_text","")}

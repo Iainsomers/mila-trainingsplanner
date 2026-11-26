@@ -763,8 +763,6 @@ class GarminCPushTests(TestCase):
         self.assertEqual(saved['total_timer_s'], 1320)
         self.assertEqual(saved['laps'][0]['paused_time'], 330)
         self.assertEqual(saved['time_source']['lap_starts'][-1], self.start+1530)
-        self.athlete.garmin_model_e_enabled = True
-        self.athlete.save(update_fields=['garmin_model_e_enabled'])
         self.client.force_login(self.coach)
         for route in ('garmin_type_c_ayc', 'garmin_type_d_ayc', 'garmin_type_e_ayc'):
             part = self.client.get(reverse(route), {'athlete': self.athlete.pk,

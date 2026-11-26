@@ -496,7 +496,6 @@ class Athlete(models.Model):
     oura_next_check_at = models.DateTimeField(null=True, blank=True)
     oura_last_check_at = models.DateTimeField(null=True, blank=True)
     garmin_connection_enabled = models.BooleanField(default=False)
-    garmin_model_e_enabled = models.BooleanField(default=False)
     last_active_at = models.DateTimeField(null=True, blank=True)
     garmin_ai_consent_at = models.DateTimeField(null=True, blank=True)
     garmin_ai_withdrawn_at = models.DateTimeField(null=True, blank=True)

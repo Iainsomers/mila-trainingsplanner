@@ -1224,7 +1224,7 @@ class GarminEEndpointTests(TestCase):
         cache.clear()
         self.coach = get_user_model().objects.create_user(username="e-coach",is_staff=True)
         self.athlete = Athlete.objects.create(owner=self.coach,name="E Runner",birth_year=2000,gender="X",
-            garmin_model_e_enabled=True,garmin_connection_enabled=True,
+            garmin_connection_enabled=True,
             garmin_ai_consent_at=datetime.now(timezone.utc),garmin_ai_consent_version=CONSENT_VERSION)
         self.part,self.proposal = fixture()
         self.record = GarminActivitySummary.objects.create(athlete=self.athlete,activity_id="e-example",
@@ -1529,13 +1529,8 @@ class GarminEEndpointTests(TestCase):
         self.assertEqual(translate.call_args.args[1], "Analyseer deze opname.")
 
     @patch("core.views.garmin_e.ask_model")
-    def test_opt_in_access_and_consent(self, model):
-        self.athlete.garmin_model_e_enabled = False
-        self.athlete.save()
-        self.assertEqual(self.client.get(self.url,self.query).status_code,403)
+    def test_default_availability_does_not_bypass_access_or_consent(self, model):
         diary = reverse("athlete_year_calendar")+"?"+urlencode({"athlete":self.athlete.pk,"year":2026})
-        self.assertNotContains(self.client.get(diary),'id="suggestInputBtnE"')
-        self.athlete.garmin_model_e_enabled = True
         self.athlete.garmin_ai_consent_at = None
         self.athlete.save()
         diary_response = self.client.get(diary)
@@ -1589,6 +1584,3 @@ class GarminEEndpointTests(TestCase):
         self.assertIsNotNone(pm)
         self.assertTrue(pm.segments.filter(type="ALT",text__contains="Bike").exists())
         self.assertEqual(len(pm.watch_main_reps),4)
-        self.athlete.garmin_model_e_enabled = False
-        self.athlete.save()
-        self.assertEqual(self.client.post(url,payload).status_code,403)

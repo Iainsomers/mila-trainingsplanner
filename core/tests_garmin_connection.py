@@ -13,34 +13,13 @@ from core.views.garmin import CONSENT_VERSION, ai_allowed
 @override_settings(GARMIN_CLIENT_ID="test-client", GARMIN_CLIENT_SECRET="test-secret",
                    GARMIN_REDIRECT_URI="https://example.org/integrations/garmin/callback/")
 class GarminConnectionTests(TestCase):
-    def test_model_e_is_opt_in_and_only_coach_can_change_it(self):
-        self.assertFalse(self.athlete.garmin_model_e_enabled)
-        url = reverse('coach_athlete_edit',args=[self.athlete.pk])
+    def test_model_e_is_not_an_athlete_info_setting(self):
+        url = reverse("coach_athlete_edit", args=[self.athlete.pk])
         self.client.force_login(self.coach)
-        self.assertContains(self.client.get(url),'id="garmin_model_e_enabled"')
-        response = self.client.post(url,{**self.settings_data(),'garmin_model_e_enabled':'on'})
-        self.assertEqual(response.status_code,302)
-        self.athlete.refresh_from_db()
-        self.assertTrue(self.athlete.garmin_model_e_enabled)
+        self.assertNotContains(self.client.get(url), 'id="garmin_model_e_enabled"')
+        self.assertEqual(self.client.post(url, self.settings_data()).status_code, 302)
         self.client.force_login(self.user)
-        self.assertNotContains(self.client.get(reverse('athlete_settings')),'id="garmin_model_e_enabled"')
-        self.assertEqual(self.client.post(reverse('athlete_settings'),self.settings_data()).status_code,302)
-        self.athlete.refresh_from_db()
-        self.assertTrue(self.athlete.garmin_model_e_enabled)
-        other_coach = get_user_model().objects.create_user(username='e-unrelated',is_staff=True)
-        self.client.force_login(other_coach)
-        self.assertEqual(self.client.post(url,self.settings_data()).status_code,404)
-        self.athlete.refresh_from_db()
-        self.assertTrue(self.athlete.garmin_model_e_enabled)
-        self.client.force_login(self.coach)
-        self.assertEqual(self.client.post(url,self.settings_data()).status_code,302)
-        self.athlete.refresh_from_db()
-        self.assertFalse(self.athlete.garmin_model_e_enabled)
-        self.client.force_login(self.user)
-        self.assertEqual(self.client.post(reverse('athlete_settings'),{
-            **self.settings_data(),'garmin_model_e_enabled':'on'}).status_code,302)
-        self.athlete.refresh_from_db()
-        self.assertFalse(self.athlete.garmin_model_e_enabled)
+        self.assertNotContains(self.client.get(reverse("athlete_settings")), 'id="garmin_model_e_enabled"')
 
     def setUp(self):
         identity = patch("core.views.garmin.requests.get", return_value=Mock(json=lambda: {"userId": "test-garmin-user"}))
