@@ -683,13 +683,26 @@ class GarminEValidationTests(SimpleTestCase):
         urlopen.return_value = response
         part,_ = fixture()
         history = [{"role":"user","content":"Leg uit waarom die 100m herstel is."}]
-        answer = ask_model(lap_facts(part),history,{"zone_basis":"pace"})
+        automatic = {"role": "user", "content": "Analyze the whole recording", "automatic": True}
+        answer = ask_model(lap_facts(part),history + [automatic],{"zone_basis":"pace"})
         self.assertIn("tweede blok",answer["reply"])
         body = json.loads(urlopen.call_args.args[0].data)
         self.assertEqual(body["messages"][-1],history[-1])
+        self.assertIn("Use English if no actual user message is available", body["messages"][0]["content"])
         self.assertFalse(body["store"])
         self.assertEqual(body["reasoning_effort"], "low")
         self.assertEqual(body["response_format"],{"type":"json_object"})
+
+    @patch("core.garmin_e.ask_model", return_value={"reply": "La proposition a été mise à jour."})
+    def test_fixed_notice_uses_latest_message_and_english_for_training_notation(self, model):
+        from core.garmin_e import localize_garmin_e_notice
+        notice = "The proposal has been updated."
+        self.assertEqual(localize_garmin_e_notice(notice, None), notice)
+        self.assertEqual(localize_garmin_e_notice(notice, "WU 6×400 m Z3 CD"), notice)
+        model.assert_not_called()
+        self.assertEqual(localize_garmin_e_notice(notice, "Corrige les zones, s'il te plaît."),
+                         "La proposition a été mise à jour.")
+        self.assertEqual(model.call_args.args[2]["latest_user_message"], "Corrige les zones, s'il te plaît.")
 
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
@@ -764,7 +777,7 @@ class GarminEEndpointTests(TestCase):
             "Elliptical 10' // Elliptical 2×(45s Z2 - 30s Z1) // "
             "Elliptical 45s Z2 // Elliptical 5'",
         )
-        self.assertIn("staat als gecontroleerd voorstel in de preview", result["chat_reply"])
+        self.assertIn("shown in the checked preview", result["chat_reply"])
         model.assert_not_called()
 
     @patch("core.views.garmin_e.ask_model")
@@ -1228,7 +1241,7 @@ class GarminEEndpointTests(TestCase):
         self.assertNotEqual(part["training_fields"],old_fields)
         self.assertIn("Work 388s",part["training_fields"]["alt"])
         self.assertNotIn("Cooldown",part["training_fields"]["alt"])
-        self.assertIn("bijgewerkt",part["e_update_note"])
+        self.assertIn("updated",part["e_update_note"])
         self.assertEqual(model.call_args.args[2]["checked_assignment"]["cooldown_laps"],[10])
         model.side_effect = None
         payload = {"watch_origin":"watch_e","watch_loads":"[]","watch_validation":part["e_validation"],
@@ -1281,7 +1294,7 @@ class GarminEEndpointTests(TestCase):
         self.assertTrue(part["e_usable"], part)
         self.assertEqual(part["training_fields"]["wu"], "1200 m Z1")
         self.assertIn("2×(200 m - 100 m)", part["training_fields"]["main"])
-        self.assertIn("bijgewerkt", part["e_update_note"])
+        self.assertIn("updated", part["e_update_note"])
         self.assertEqual(model.call_count, 1)
 
     @patch("core.views.garmin_e.ask_model")
@@ -1298,7 +1311,7 @@ class GarminEEndpointTests(TestCase):
 
         self.assertTrue(part["e_usable"], part)
         self.assertEqual(part["watch_loads"][4]["segment"], "IGNORE")
-        self.assertIn("bijgewerkt", part["e_update_note"])
+        self.assertIn("updated", part["e_update_note"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_endpoint_prefers_eight_three_minute_reps_over_distance_guess(self, model):
@@ -1326,7 +1339,7 @@ class GarminEEndpointTests(TestCase):
         self.assertTrue(part["e_usable"], part)
         self.assertIn("8×3'", part["training_fields"]["main"])
         self.assertNotIn("750 m", part["training_fields"]["main"])
-        self.assertIn("daarom toont", part["chat_reply"])
+        self.assertIn("shows timed reps", part["chat_reply"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_question_does_not_produce_usable_training(self, model):
@@ -1345,7 +1358,7 @@ class GarminEEndpointTests(TestCase):
         for message in ("probeer nu", "je zegt het maar je doet het niet"):
             result = self.chat(message).json()["results"][0]["parts"][0]
             self.assertEqual(result["training_fields"], first["training_fields"])
-            self.assertIn("setindeling", result["chat_reply"])
+            self.assertIn("set structure", result["chat_reply"])
         model.assert_not_called()
 
     @patch("core.views.garmin_e.ask_model")
@@ -1384,8 +1397,8 @@ class GarminEEndpointTests(TestCase):
         model.return_value = {"reply":"Ja, zo houden we het als voorstel.","proposal":None,"intent":"update"}
         result = self.chat("Ik wil het gecorrigeerde voorstel gebruiken").json()["results"][0]["parts"][0]
         self.assertEqual(result["training_fields"],initial["training_fields"])
-        self.assertIn("nog niet bijgewerkt",result["chat_reply"])
-        self.assertIn("ongewijzigd",result["e_update_note"])
+        self.assertIn("unchanged",result["chat_reply"])
+        self.assertIn("unchanged",result["e_update_note"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_chat_zone_basis_switch_preserves_reps(self, model):
@@ -1426,7 +1439,7 @@ class GarminEEndpointTests(TestCase):
 
         self.assertTrue(result["e_usable"], result)
         self.assertIn("3×250 m Z3>Z5", result["training_fields"]["main"])
-        self.assertIn("Voorstel bijgewerkt", result["e_update_note"])
+        self.assertIn("Proposal updated", result["e_update_note"])
 
     @patch("core.views.garmin_e.ask_model")
     def test_confirmation_keeps_unusable_preview_until_yes(self, model):
@@ -1449,7 +1462,7 @@ class GarminEEndpointTests(TestCase):
         model.return_value = {"reply":"Laten we dit controleren.","proposal":bad}
         rejected = self.chat("Maak die 200 een 800").json()["results"][0]["parts"][0]
         self.assertEqual(rejected["training_fields"],good["training_fields"])
-        self.assertIn("niet toepassen",rejected["chat_reply"])
+        self.assertIn("could not be applied",rejected["chat_reply"])
         model.side_effect = OSError("unavailable")
         unavailable = self.chat("En nu?").json()["results"][0]["parts"][0]
         self.assertEqual(unavailable["training_fields"],good["training_fields"])
@@ -1471,7 +1484,8 @@ class GarminEEndpointTests(TestCase):
         self.assertIn("previous service request timed out", model.call_args_list[1].args[3])
 
     @patch("core.views.garmin_e.ask_model")
-    def test_repeated_model_timeout_reports_time_limit_and_keeps_conversation(self, model):
+    @patch("core.views.garmin_e.localize_garmin_e_notice", return_value="Garmin E kreeg niet op tijd antwoord.")
+    def test_repeated_model_timeout_reports_time_limit_and_keeps_conversation(self, translate, model):
         model.side_effect = TimeoutError("still timed out")
 
         part = self.chat("Analyseer deze opname.").json()["results"][0]["parts"][0]
@@ -1479,6 +1493,7 @@ class GarminEEndpointTests(TestCase):
         self.assertFalse(part["e_usable"])
         self.assertEqual(model.call_count, 2)
         self.assertIn("niet op tijd antwoord", part["chat_reply"])
+        self.assertEqual(translate.call_args.args[1], "Analyseer deze opname.")
 
     @patch("core.views.garmin_e.ask_model")
     def test_opt_in_access_and_consent(self, model):

@@ -23,6 +23,7 @@ from core.garmin_e import (
     distance_set_notation,
     explicit_alternative_compact_proposal,
     lap_facts,
+    localize_garmin_e_notice,
     prefer_measured_time_groups,
 )
 from core.views.garmin import ai_allowed, fit_ai_allowed
@@ -140,7 +141,7 @@ def garmin_type_e_ayc_view(request):
                         if key in main_state["part"]:
                             candidate[key] = main_state["part"][key]
                     combined_seed = dict(proposal=proposal,part=candidate,basis=main_state["basis"],
-                        history=[{"role":"assistant","content":"Je gecontroleerde Main is gecombineerd met de gekozen WU/CD. Alle gemeten laps blijven behouden en zijn opnieuw genummerd."}])
+                        history=[{"role":"assistant","content":"The checked Main has been combined with the selected WU/CD. All measured laps have been retained and renumbered."}])
                 except (ValueError,KeyError,TypeError):
                     pass
             results = [combined]
@@ -232,9 +233,9 @@ def garmin_type_e_ayc_view(request):
                     updated_state = deepcopy(state)
                     updated_state.update(part=candidate,proposal=proposal,basis="hr")
                     updated_state["history"].append({"role":"assistant","content":
-                        f"Lap 1 bevat één opgenomen tijdsblok van {seconds:g} seconden. "
-                        "Dit blok staat klaar om te gebruiken; binnen deze lap zijn geen afzonderlijke intervallen vastgelegd. "
-                        "De gemeten duur en hartslag blijven behouden."})
+                        f"Lap 1 contains one recorded block of {seconds:g} seconds. "
+                        "This block is ready to use. No separate intervals were recorded within this lap. "
+                        "The measured duration and heart rate are preserved."})
                     GarminEConversation.objects.filter(pk=conversation.pk,state=conversation.state).filter(
                         Q(busy_until__isnull=True)|Q(busy_until__lt=timezone.now())).update(
                             state=updated_state,updated_at=timezone.now())
@@ -266,10 +267,12 @@ def garmin_type_e_ayc_view(request):
                     state.pop("pending",None)
                 initial_analysis = message is None
                 turn = {"role":"user","content":message or
-                    "Analyseer de hele opname en geef direct een volledig bruikbaar voorstel als de laps dat ondersteunen. Leg het patroon uit. Vraag alleen iets als de meetgegevens echt onduidelijk zijn."}
+                    "Analyze the whole recording and explain the pattern. Provide a complete usable proposal when the measured laps support it."}
                 if initial_analysis:
                     turn["automatic"] = True
                 history = state["history"] + [turn]
+                language_message = next((entry["content"] for entry in reversed(history)
+                                         if entry["role"] == "user" and not entry.get("automatic")), None)
                 compact_requested = bool(is_alternative and any(
                     m["role"]=="user" and re.search(r"compact|notatie|\d+\s*['′].*(?://|[×x*]\s*\()|\d+\s*[×x*]\s*\d+:\d{2}|\bwu\s+\d+:\d{2}",m["content"],re.I)
                     for m in history))
@@ -291,7 +294,7 @@ def garmin_type_e_ayc_view(request):
                     r"\s*(?:waarom|hoe komt het|why|how come)\b", message, re.I,
                 ))
                 local_basis = state["basis"]
-                local_reply = "De nominale sprintafstand is aangepast in het gecontroleerde voorstel."
+                local_reply = "The checked proposal shows the corrected sprint distance."
                 set_request = distance_set_notation(message or "") if not is_alternative else None
                 if not set_request and message and not is_alternative and re.search(
                     r"\b(?:probeer|opnieuw|try again|(?:zegt|zeg) het maar je doet het niet|dat zeg je maar doe je niet)\b",
@@ -310,7 +313,7 @@ def garmin_type_e_ayc_view(request):
                     if explicit_distance is None and set_request:
                         explicit_distance = explicit_distance_sets(base, set_request)
                         if explicit_distance is not None:
-                            local_reply = "De gevraagde setindeling staat in de gecontroleerde preview."
+                            local_reply = "The requested set structure is shown in the checked preview."
                     if explicit_distance is not None and not state["proposal"]:
                         # The measured preview uses pace zones. A local sprint
                         # correction must not introduce HR reclassification.
@@ -321,12 +324,12 @@ def garmin_type_e_ayc_view(request):
                     ):
                         explicit_distance = base
                         local_basis = "pace"
-                        local_reply = "De zones zijn opnieuw bepaald op basis van snelheid."
+                        local_reply = "The zones have been recalculated using pace."
                     elif explicit_distance is None and state["proposal"]:
                         corrected, changed = apply_explicit_zone_labels(base, message)
                         if changed:
                             explicit_distance = corrected
-                            local_reply = "De gevraagde zonecorrectie staat in het gecontroleerde voorstel."
+                            local_reply = "The checked proposal shows the requested zone correction."
                     if explicit_distance is not None:
                         try:
                             checked_proposal(part, explicit_distance, athlete=athlete, zone_basis=local_basis)
@@ -334,13 +337,13 @@ def garmin_type_e_ayc_view(request):
                             explicit_distance = None
                 try:
                     answer = ({
-                        "reply": "De expliciete notatie past op alle gemeten laps en staat als gecontroleerd voorstel in de preview.",
+                        "reply": "The requested notation fits the measured laps and is shown in the checked preview.",
                         "intent": "update", "zone_basis": "hr", "proposal": explicit_compact,
                     } if explicit_compact else {
                         "reply": local_reply,
                         "intent": "update", "zone_basis": local_basis, "proposal": explicit_distance,
                     } if explicit_distance else {
-                        "reply": "De gevraagde setindeling is niet toegepast. De afstanden wijzen geen unieke, geldige reeks werkherhalingen aan in de huidige indeling.",
+                        "reply": "The requested set structure could not be applied. The distances do not identify one valid sequence of work reps.",
                         "intent": "discuss", "zone_basis": state["basis"], "proposal": None,
                     } if set_request and not explanation_only else ask_model(
                         facts, history, current,
@@ -472,26 +475,28 @@ def garmin_type_e_ayc_view(request):
                                     error = str(exc)
                 reply = answer["reply"]
                 if candidate and explicit_sprint_update:
-                    reply = ("Het korte sprintblok is als één gecontroleerd werkblok in de preview gezet. "
-                             "De afzonderlijke sprintlaps en herstel-laps blijven in hun gemeten volgorde behouden.")
+                    reply = ("The checked preview shows one short sprint block. "
+                             "The sprint and recovery laps remain in their recorded order.")
                 if wants_update and not candidate and (error or answer.get("intent") == "update"):
-                    reply = "Het gecontroleerde voorstel is niet aangepast." + (" De gevraagde wijziging leverde nog geen bruikbaar voorstel op." if not error else "")
+                    reply = "The checked proposal is unchanged." + (" The requested change did not produce a usable proposal." if not error else "")
                 if candidate and time_group_adjusted:
-                    reply += "\n\nDe werkblokken hebben vrijwel exact dezelfde hele-minuutduur; daarom toont het gecontroleerde voorstel deze groep als tijdreps."
+                    reply += "\n\nThe work blocks have nearly identical whole-minute durations, so the checked proposal shows timed reps."
                 if error:
-                    reply += "\n\nDit voorstel kan ik nog niet toepassen op de metingen: "+error
+                    reply += "\n\nThe proposal could not be applied to the measured laps: "+error
                 if candidate and answer.get("confirmation_required") is True and not confirmed:
                     state["pending"] = {"proposal":proposal,"basis":basis}
                     candidate = None
-                    reply += "\n\nAntwoord ‘ja’ als je dit voorstel wilt gebruiken; de gemeten tijden blijven behouden."
+                    reply += "\n\nReply affirmatively if you want to use this proposal. The measured times are preserved."
                 updated = candidate or deepcopy(state["part"])
                 updated.pop("e_history",None)
                 if not candidate and wants_update and not state.get("pending"):
-                    reply += ("\n\nHet bruikbare voorstel hieronder is nog niet bijgewerkt; de vorige gecontroleerde versie staat er nog."
+                    reply += ("\n\nThe previous checked proposal is still available below."
                               if state["part"].get("e_usable") else
-                              "\n\nEr is nog geen gecontroleerd bruikbaar voorstel; zie de toelichting hierboven.")
-                updated["e_update_note"] = ("Voorstel bijgewerkt vanuit de gemeten laps." if candidate else
-                    "Voorstel ongewijzigd; zie het antwoord hierboven." if wants_update else "")
+                              "\n\nThere is no usable checked proposal yet.")
+                updated["e_update_note"] = ("Proposal updated from the measured laps." if candidate else
+                    "Proposal unchanged. See the reply above." if wants_update else "")
+                if reply != answer["reply"] or explicit_compact or explicit_distance or (set_request and not explanation_only):
+                    reply = localize_garmin_e_notice(reply, language_message)
                 updated["chat_reply"] = reply
                 if candidate:
                     state.pop("pending",None)
@@ -505,12 +510,14 @@ def garmin_type_e_ayc_view(request):
                 session["parts"] = [{**updated,"e_history":visible_history(state["history"])}]
             except TimeoutError:
                 updated = deepcopy(state["part"])
-                updated["chat_reply"] = "Garmin E kreeg niet op tijd antwoord. Het gesprek en je laatste gecontroleerde voorstel zijn behouden. Probeer het opnieuw."
+                updated["chat_reply"] = localize_garmin_e_notice(
+                    "Garmin E timed out. Your conversation and last checked proposal are preserved. Try again.", message)
                 updated["ai_structure_status"] = "e_error"
                 session["parts"] = [updated]
             except (OSError,ValueError,KeyError,TypeError,IndexError):
                 updated = deepcopy(state["part"])
-                updated["chat_reply"] = "Garmin E kon dit bericht niet afronden. Je laatste gecontroleerde voorstel blijft behouden. Probeer het opnieuw."
+                updated["chat_reply"] = localize_garmin_e_notice(
+                    "Garmin E could not finish this message. Your last checked proposal is preserved. Try again.", message)
                 updated["ai_structure_status"] = "e_error"
                 session["parts"] = [updated]
             finally:
