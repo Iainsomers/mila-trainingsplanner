@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 import json
 import re
+from uuid import UUID, uuid4
 
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect
@@ -3515,6 +3516,17 @@ def athlete_year_calendar_view(request):
         if athlete is None:
             return HttpResponse("", status=403)
 
+        if request.POST.get("week_report_notice_read"):
+            visibility = evaluation_visibility_for_request(request, athlete.owner, athlete_self=True)
+            if is_ayc_coach or not athlete.week_report_enabled or not visibility["week"]:
+                return JsonResponse({}, status=403)
+            try:
+                token = UUID(request.POST["week_report_notice_read"])
+            except ValueError:
+                return JsonResponse({}, status=400)
+            AthleteWeekReport.objects.filter(athlete=athlete, trainer_comment_notice=token).update(trainer_comment_notice=None)
+            return JsonResponse({})
+
         reaction_action = request.POST.get("evaluation_reaction")
         if reaction_action:
             return _evaluation_reaction_response(request, athlete, is_ayc_coach, reaction_action)
@@ -3575,7 +3587,7 @@ def athlete_year_calendar_view(request):
                         week_start = d - timedelta(days=d.weekday())
 
                     field = (request.POST.get("field") or "").strip()
-                    value = request.POST.get("value") or ""
+                    value = (request.POST.get("value") or "").strip()
                     is_coach_user = is_ayc_coach
                     allowed_fields = {"match_report", "injuries"}
                     if is_coach_user:
@@ -3583,15 +3595,22 @@ def athlete_year_calendar_view(request):
                     else:
                         allowed_fields.add("comm_athlete")
 
-                    if field in allowed_fields:
-                        report, _ = AthleteWeekReport.objects.get_or_create(
-                            athlete=athlete,
-                            week_start=week_start,
-                            defaults={"updated_by": request.user},
+                    if field not in allowed_fields or not athlete.week_report_enabled:
+                        return HttpResponse("", status=403)
+                    with transaction.atomic():
+                        report, _ = AthleteWeekReport.objects.select_for_update().get_or_create(
+                            athlete=athlete, week_start=week_start, defaults={"updated_by": request.user},
                         )
-                        setattr(report, field, value)
-                        report.updated_by = request.user
-                        report.save()
+                        if getattr(report, field) != value:
+                            setattr(report, field, value)
+                            report.updated_by = request.user
+                            fields = [field, "updated_by", "updated_at"]
+                            if field == "comm_trainer":
+                                report.trainer_comment_notice = uuid4()
+                                fields.append("trainer_comment_notice")
+                            report.save(update_fields=fields)
+                    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                        return JsonResponse({"has_content": bool(value)})
 
                 elif daily_vitals_submit is not None:
                     if d > today and not is_ayc_coach:
@@ -4628,6 +4647,9 @@ def athlete_year_calendar_view(request):
             ).select_related("evaluation", "author").order_by("pk")[:50]) if athlete_self_view and show_training_reports else [],
             "evaluation_pain_enabled": evaluation_pain_enabled,
             "show_week_reports": show_week_reports,
+            "week_report_notices": AthleteWeekReport.objects.filter(
+                athlete=selected_athlete, trainer_comment_notice__isnull=False,
+            ) if athlete_self_view and show_week_reports else [],
             "show_daily_vitals": show_daily_vitals,
             "show_oura_vitals_import": show_oura_vitals_import,
             "ayc_rowspan": ayc_rowspan,

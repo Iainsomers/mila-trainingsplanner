@@ -1519,6 +1519,7 @@ class AthleteWeekReport(models.Model):
 
     comm_athlete = models.TextField(blank=True, default="")
     comm_trainer = models.TextField(blank=True, default="")
+    trainer_comment_notice = models.UUIDField(null=True, blank=True, editable=False)
     match_report = models.TextField(blank=True, default="")
     injuries = models.TextField(blank=True, default="")
 

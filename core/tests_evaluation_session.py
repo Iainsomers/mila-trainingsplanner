@@ -7,7 +7,7 @@ import subprocess
 from unittest import skipUnless
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from core.models import Athlete, TrainingPlan, PlanMembership, TrainingSlot, AthleteDayCheck, EvaluationReaction
+from core.models import Athlete, AthleteWeekReport, TrainingPlan, PlanMembership, TrainingSlot, AthleteDayCheck, EvaluationReaction
 
 
 class EvaluationSessionTests(TestCase):
@@ -82,6 +82,44 @@ class EvaluationSessionTests(TestCase):
         self.assertNotContains(self.client.get(self.url), 'id="evaluationReactionNotice"')
         self.assertEqual(self.client.post(self.url, {**payload, "evaluation_reaction": "list"}).json(),
                          {"reactions": [{"initials": "IS", "text": "<Good work>"}]})
+
+    def test_week_report_trainer_comment_notifies_only_for_changes(self):
+        self.athlete.week_report_enabled = True
+        self.athlete.save(update_fields=["week_report_enabled"])
+        runner = get_user_model().objects.create_user(username="Evaluation_Runner")
+        payload = {"date": "2026-10-26", "week_start": "2026-10-26", "week_report_submit": "1"}
+
+        def save(field, value):
+            response = self.client.post(self.url, {**payload, "field": field, "value": value},
+                                        headers={"X-Requested-With": "XMLHttpRequest"})
+            self.assertEqual(response.status_code, 200)
+            return response.json()
+
+        self.assertEqual(save("match_report", "Report"), {"has_content": True})
+        week = AthleteWeekReport.objects.get(athlete=self.athlete)
+        self.assertIsNone(week.trainer_comment_notice)
+        self.assertEqual(save("comm_trainer", "First comment"), {"has_content": True})
+        week.refresh_from_db()
+        first_notice = week.trainer_comment_notice
+        self.assertIsNotNone(first_notice)
+        save("comm_trainer", "First comment")
+        week.refresh_from_db()
+        self.assertEqual(week.trainer_comment_notice, first_notice)
+        self.assertNotContains(self.client.get(self.url), 'id="weekReportNotice"')
+        save("comm_trainer", "Updated comment")
+        week.refresh_from_db()
+        self.assertNotEqual(week.trainer_comment_notice, first_notice)
+
+        self.client.force_login(runner)
+        page = self.client.get(self.url)
+        self.assertContains(page, 'id="weekReportNotice"')
+        self.assertContains(page, 'week-report-indicator-trainer has-content')
+        self.assertContains(page, 'week-report-indicator-match has-content')
+        self.assertContains(page, 'Updated comment')
+        self.assertEqual(self.client.post(self.url, {"week_report_notice_read": first_notice}).status_code, 200)
+        self.assertContains(self.client.get(self.url), 'id="weekReportNotice"')
+        self.assertEqual(self.client.post(self.url, {"week_report_notice_read": week.trainer_comment_notice}).status_code, 200)
+        self.assertNotContains(self.client.get(self.url), 'id="weekReportNotice"')
 
     @skipUnless(shutil.which('node'),'Node required for actual browser handler regression')
     def test_actual_js_opens_and_saves_only_clicked_session(self):

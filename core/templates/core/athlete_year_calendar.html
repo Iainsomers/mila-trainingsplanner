@@ -462,12 +462,9 @@
     width: 11px;
     height: 11px;
     border-color: #fff;
+    background: #138a4b !important;
     box-shadow: 0 0 0 2px rgba(40, 55, 70, .32);
   }
-  .week-report-indicator-athlete.has-content { background: #d4aa00 !important; }
-  .week-report-indicator-trainer.has-content { background: #138a4b !important; }
-  .week-report-indicator-match.has-content { background: #e06b00 !important; }
-  .week-report-indicator-injuries.has-content { background: #7652a8 !important; }
   .week-report-details:not([open]) .week-report-grid { display: none; }
 
   .week-report-grid {
@@ -2318,6 +2315,23 @@
 </div>
 {% endif %}
 
+{% if week_report_notices %}
+<dialog id="weekReportNotice" class="evaluation-dialog border rounded shadow" aria-labelledby="weekReportNoticeTitle"
+        style="width: min(540px, calc(100% - 2rem)); max-height: 80vh; overflow: auto;">
+  <h5 id="weekReportNoticeTitle">Trainer comment updated</h5>
+  <ul class="list-unstyled">
+    {% for report in week_report_notices %}
+      <li class="mb-2" data-week-notice="{{ report.trainer_comment_notice }}">
+        <div class="text-muted small">Week of {{ report.week_start|date:"d-m-Y" }}</div>
+        <div class="text-break" style="white-space: pre-wrap">{{ report.comm_trainer|default:"Trainer comment removed." }}</div>
+      </li>
+    {% endfor %}
+  </ul>
+  <button type="button" id="weekReportNoticeDismiss" class="btn btn-sm btn-primary">OK</button>
+  <p id="weekReportNoticeError" class="small text-danger mb-0" role="status"></p>
+</dialog>
+{% endif %}
+
 {% if unread_evaluation_reactions %}
 <dialog id="evaluationReactionNotice" class="evaluation-dialog border rounded shadow" aria-labelledby="evaluationReactionTitle"
         style="width: min(540px, calc(100% - 2rem)); max-height: 80vh; overflow: auto;">
@@ -3564,20 +3578,62 @@
     fd.append("week_start", weekStart);
     fd.append("week_report_submit", "1");
     fd.append("field", field);
-    fd.append("value", el.value || "");
+    var value = el.value.trim();
+    fd.append("value", value);
 
     fetch("?year={{ year }}&athlete={{ selected_athlete_id }}&hide={{ hide_mode }}", {
       method: "POST",
       body: fd,
-      headers: {"X-CSRFToken": getCookie("csrftoken")},
+      headers: {"X-CSRFToken": getCookie("csrftoken"), "X-Requested-With": "XMLHttpRequest"},
       credentials: "same-origin"
+    }).then(function(response) {
+      if (!response.ok || response.redirected) throw new Error();
+      return response.json();
+    }).then(function(result) {
+      if (el.value.trim() !== value) return;
+      document.querySelectorAll('.week-report-field[data-week-start="' + weekStart + '"][data-field="' + field + '"]').forEach(function(other) {
+        if (other !== el && document.activeElement !== other) other.value = value;
+      });
+      var row = document.querySelector('.week-start-row[data-week-start="' + weekStart + '"]');
+      var kind = {comm_athlete: "athlete", comm_trainer: "trainer", match_report: "match", injuries: "injuries"}[field];
+      var indicator = row && row.querySelector(".week-report-indicator-" + kind);
+      if (indicator) indicator.classList.toggle("has-content", result.has_content);
+    }).catch(function() {
+      window.alert("The week report could not be saved. Please try again.");
     });
   }
 
   document.querySelectorAll(".week-report-field").forEach(function(el) {
-    el.addEventListener("blur", function() { postWeekReport(el); });
     el.addEventListener("change", function() { postWeekReport(el); });
   });
+  var notice = document.getElementById("weekReportNotice");
+  if (notice) {
+    var replyNotice = document.getElementById("evaluationReactionNotice");
+    if (replyNotice && replyNotice.open) {
+      replyNotice.addEventListener("close", function() { notice.showModal(); }, {once: true});
+    } else {
+      notice.showModal();
+    }
+    notice.addEventListener("cancel", function(event) { event.preventDefault(); });
+    var dismiss = document.getElementById("weekReportNoticeDismiss");
+    dismiss.addEventListener("click", async function() {
+      dismiss.disabled = true;
+      try {
+        await Promise.all(Array.from(notice.querySelectorAll("[data-week-notice]"), async function(item) {
+          var response = await fetch("{% url 'athlete_year_calendar' %}", {
+            method: "POST", credentials: "same-origin",
+            headers: {"X-CSRFToken": getCookie("csrftoken")},
+            body: new URLSearchParams({week_report_notice_read: item.dataset.weekNotice})
+          });
+          if (!response.ok || response.redirected) throw new Error();
+        }));
+        notice.close();
+      } catch (error) {
+        document.getElementById("weekReportNoticeError").textContent = "Could not confirm the update. Please try again.";
+        dismiss.disabled = false;
+      }
+    });
+  }
 })();
 </script>
 
