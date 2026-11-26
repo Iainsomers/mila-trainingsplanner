@@ -20,6 +20,7 @@ from core.garmin_e import (
     complete_partial_running_proposal,
     correct_short_rep_distance,
     explicit_distance_sets,
+    explicit_running_plan,
     distance_set_notation,
     explicit_alternative_compact_proposal,
     lap_facts,
@@ -289,7 +290,8 @@ def garmin_type_e_ayc_view(request):
                     explicit_alternative_compact_proposal(facts, message)
                     if is_alternative else None
                 )
-                explicit_distance = None
+                literal_plan = explicit_running_plan(facts, message) if not is_alternative else None
+                explicit_distance = literal_plan
                 explanation_only = bool(message and re.match(
                     r"\s*(?:waarom|hoe komt het|why|how come)\b", message, re.I,
                 ))
@@ -304,7 +306,10 @@ def garmin_type_e_ayc_view(request):
                         notation for turn in reversed(state["history"])
                         if turn["role"] == "user" and (notation := distance_set_notation(turn["content"]))
                     ), None)
-                if message and not is_alternative and not explanation_only:
+                if literal_plan:
+                    local_reply = "The checked preview uses your warmup and work blocks in the order you supplied."
+                    local_basis = state["basis"] if state["proposal"] else "pace"
+                elif message and not is_alternative and not explanation_only:
                     base = state["proposal"] or complete_partial_running_proposal(part, {
                         "warmup_laps": [i for i, load in enumerate(part["watch_loads"], 1)
                                         if load.get("segment") == "WU"],
@@ -380,9 +385,9 @@ def garmin_type_e_ayc_view(request):
                         value.pop(key, None)
                         if key in prior:
                             value[key] = deepcopy(prior[key])
-                    for turn in history:
-                        if turn.get("role") == "user":
-                            value, _ = apply_explicit_zone_labels(value, turn.get("content", ""))
+                    # The checked proposal carries accepted corrections. A
+                    # rejected earlier request must not block this turn again.
+                    value, _ = apply_explicit_zone_labels(value, message)
                     return value
                 basis = answer.get("zone_basis",state["basis"])
                 if isinstance(proposal, dict) and explicit_distance is None:
@@ -477,12 +482,12 @@ def garmin_type_e_ayc_view(request):
                 if candidate and explicit_sprint_update:
                     reply = ("The checked preview shows one short sprint block. "
                              "The sprint and recovery laps remain in their recorded order.")
-                if wants_update and not candidate and (error or answer.get("intent") == "update"):
+                if wants_update and not candidate and not error and answer.get("intent") == "update":
                     reply = "The checked proposal is unchanged." + (" The requested change did not produce a usable proposal." if not error else "")
                 if candidate and time_group_adjusted:
                     reply += "\n\nThe work blocks have nearly identical whole-minute durations, so the checked proposal shows timed reps."
                 if error:
-                    reply += "\n\nThe proposal could not be applied to the measured laps: "+error
+                    reply = "The proposal could not be applied to the measured laps: " + error
                 if candidate and answer.get("confirmation_required") is True and not confirmed:
                     state["pending"] = {"proposal":proposal,"basis":basis}
                     candidate = None

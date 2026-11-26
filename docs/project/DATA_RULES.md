@@ -448,3 +448,5 @@ Validatie: 67 gerichte tests (Garmin C Push, Push en D), inclusief C/D/E-routes 
 Bij een Garmin E-opname met rol Sprint tellen de gemeten werkreps in Diary en Stats mee in Z6. Herstel behoudt de gemeten zone en blijft onder de bestaande wandelregels vallen. Dit wordt ook op eerder opgeslagen sprintopnames toegepast.
 
 Een gecontroleerde Sprint-opname kan een eigen WU/CD bevatten. Zonder losse WU levert haar WU het WU-segment. Overige grenslaps tussen de gekozen onderdelen blijven gemeten overgangslaps. De laatste Main of een losse CD levert de afsluiting.
+
+Garmin E controleert een letterlijk opgegeven WU met opeenvolgende afstandssets en zones rechtstreeks tegen de gemeten laps als er één chronologische repvolgorde past. Zeer korte overgangslaps tot 25 m en 8 s mogen als herstel tussen werkreps staan. Bij een ongeldige zonetoewijzing toont de melding de gevraagde groep en beschikbare afstanden met lapnummers.

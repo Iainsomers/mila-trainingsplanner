@@ -171,6 +171,61 @@ def distance_set_notation(message):
     return match[0] if match and not message[match.end():].lstrip().startswith("//") else None
 
 
+def explicit_running_plan(facts, message):
+    """Resolve a literal warmup and ordered distance sets against the source laps."""
+    sections = [section.strip() for section in (message or "").split("//")]
+    warmup = re.fullmatch(r"(\d+)\s*m\s*(?:wu|warm[ -]?up)(?:\s*z([12]))?", sections[0], re.I)
+    if not warmup or len(sections) < 2:
+        return None
+    sets = [re.fullmatch(r"(\d+)\s*[×x*]\s*(\d+)\s*m\s*z([1-6])", section, re.I)
+            for section in sections[1:]]
+    if not all(sets):
+        return None
+    groups = [(int(item[1]), int(item[2]), item[3]) for item in sets]
+    if any(count < 1 or not 25 <= meters <= 100000 for count, meters, _ in groups):
+        return None
+    if sum(count for count, _, _ in groups) > len(facts):
+        return None
+    targets = [meters for count, meters, _ in groups for _ in range(count)]
+    warmup_meters = int(warmup[1])
+    warmup_ends = []
+    distance = 0
+    for row in facts:
+        if row["distance_m"] / row["duration_s"] < 2 or row["zone"] not in {"Z1", "Z2", "Z", "ZNA"}:
+            break
+        distance += row["distance_m"]
+        if abs(distance - warmup_meters) <= max(30, warmup_meters * .08):
+            warmup_ends.append((abs(distance - warmup_meters), row["lap"]))
+    if not warmup_ends:
+        return None
+    _, end = min(warmup_ends)
+    eligible = [[row["lap"] for row in facts[end:]
+                 if row["distance_m"] / row["duration_s"] >= 2
+                 and abs(row["distance_m"] - target) <= max(30, target * .08)]
+                for target in targets]
+    earliest, latest = [], []
+    for choices in eligible:
+        match = next((lap for lap in choices if lap > (earliest[-1] if earliest else end)), None)
+        if match is None:
+            return None
+        earliest.append(match)
+    for choices in reversed(eligible):
+        match = next((lap for lap in reversed(choices) if lap < (latest[-1] if latest else len(facts) + 1)), None)
+        if match is None:
+            return None
+        latest.append(match)
+    if earliest != latest[::-1]:
+        return None
+    return {
+        "warmup_laps": list(range(1, end + 1)),
+        "reps": [{"laps": [lap], "target_meters": target} for lap, target in zip(earliest, targets)],
+        "recovery_laps": [row["lap"] for row in facts[end:] if row["lap"] not in earliest],
+        "zone_labels": [{"count": count, "target_meters": meters, "label": "Z" + zone}
+                        for count, meters, zone in groups],
+        "explicit_lap_zones": {str(lap): warmup[2] for lap in range(1, end + 1)} if warmup[2] else {},
+    }
+
+
 def explicit_distance_sets(proposal, message):
     """Locate a unique consecutive sequence of existing distance reps."""
     notation = distance_set_notation(message)
@@ -746,7 +801,7 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
             raise ValueError(f"Lap {i} is not supported as warmup/cooldown.")
     for i in recovery:
         row = facts[i-1]
-        if i in resting:
+        if i in resting or (row["distance_m"] <= 25 and row["duration_s"] <= 8):
             continue
         speed = row["distance_m"]/row["duration_s"]
         # A role is supported by the measured work/recovery contrast, not
@@ -854,7 +909,12 @@ def checked_proposal(part, proposal, *, athlete=None, zone_basis="auto", confirm
         matches = [index for index, ((distance, duration), group) in enumerate(groups)
                    if distance == target and duration is None and len(group) == count]
         if len(matches) != 1 or matches[0] in manual_zone_labels:
-            raise ValueError("The explicit zone label does not identify exactly one measured work group.")
+            available = ", ".join(
+                f"{len(group)}×{meters} m (laps {', '.join(str(lap) for rep in group for lap in rep['ids'])})"
+                for (meters, seconds), group in groups if meters is not None and seconds is None
+            )
+            raise ValueError(f"{count}×{target} m {label} does not select one work group. "
+                             f"Distance groups in the proposed assignment: {available or 'none'}.")
         manual_zone_labels[matches[0]] = label
     for group_index, ((distance,duration), group) in enumerate(groups):
         covering_sequence = next((value for start, value in sequence_groups.items()

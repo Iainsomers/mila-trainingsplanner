@@ -707,6 +707,33 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    @patch("core.views.garmin_e.ask_model")
+    def test_literal_warmup_sprints_and_long_reps_follow_measured_order(self, model):
+        laps = [
+            (1004.77, 311), (1001.54, 294), (265.32, 74), (6.68, 7),
+            (95.75, 15), (20.77, 6), (101.99, 16), (16.81, 4),
+            (1018.06, 209), (68.24, 60), (1008.02, 211), (59.54, 60),
+            (1006.50, 207), (78.15, 59), (1005.36, 210), (21.84, 85),
+            (1003.20, 202), (77.95, 60), (1004.18, 206), (45.61, 65),
+            (1008.84, 204), (78.94, 59), (1005.35, 208), (14.32, 58),
+        ]
+        self.record.analysis_data = {"laps": [{"distance": meters, "elapsed_time": seconds}
+                                              for meters, seconds in laps]}
+        self.record.distance_m = sum(meters for meters, _ in laps)
+        self.record.duration_s = sum(seconds for _, seconds in laps)
+        self.record.save()
+        response = self.chat("2250m wu//2*100m z6//8*1000m z2")
+        self.assertEqual(response.status_code, 200, response.json())
+        part = response.json()["results"][0]["parts"][0]
+        self.assertTrue(part["e_usable"], part["chat_reply"])
+        self.assertIn("2250 m", part["training_fields"]["wu"])
+        self.assertIn("2×100 m Z6", part["training_fields"]["main"])
+        self.assertIn("8×1000 m Z2", part["training_fields"]["main"])
+        self.assertEqual([idx for idx, load in enumerate(part["watch_loads"], 1) if load["work_rep"]],
+                         [5, 7, *range(9, 24, 2)])
+        self.assertEqual(len(part["watch_loads"]), len(laps))
+        model.assert_not_called()
+
     def test_checked_mixed_sprint_sequence_can_be_used_as_pm_training(self):
         from django.core import signing
         from core.models import TrainingSlot
