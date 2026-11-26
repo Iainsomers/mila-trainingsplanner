@@ -59,6 +59,12 @@ class EvaluationSessionTests(TestCase):
         result = self.client.post(self.url, {**payload, "evaluation_reaction": "create"})
         self.assertEqual(result.json()["reactions"], [{"initials": "IS", "text": "<Good work>"}])
         reply = EvaluationReaction.objects.get()
+        self.coach.username = "iains"
+        self.coach.last_name = ""
+        self.coach.save()
+        self.assertEqual(EvaluationReaction.author_initials(self.coach), "IS")
+        reply.initials = "I"
+        reply.save(update_fields=["initials"])
         check.refresh_from_db()
         self.assertEqual(check.comment, "Original comment")
 
@@ -67,6 +73,7 @@ class EvaluationSessionTests(TestCase):
         self.assertNotContains(page, 'data-react="reportT2"')
         self.assertContains(page, 'id="evaluationReactionNotice"')
         self.assertContains(page, '&lt;Good work&gt;')
+        self.assertContains(page, '<strong>IS:</strong>')
         self.assertContains(page, 'min(540px, calc(100% - 2rem))')
         self.assertEqual(self.client.post(self.url, {**payload, "evaluation_reaction": "create"}).status_code, 403)
         self.assertEqual(self.client.post(self.url, {

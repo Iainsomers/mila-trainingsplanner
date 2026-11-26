@@ -1774,6 +1774,24 @@ class EvaluationReaction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)
 
+    @staticmethod
+    def author_initials(user):
+        first = user.first_name.split()
+        last = user.last_name.split()
+        username = user.get_username().strip()
+        # The legacy Iain Somers account can have only a username or first name.
+        if not last and username.casefold() in {"iain", "iains", "iain_somers", "iain.somers", "iain somers"}:
+            return "IS"
+        if not last and len(first) > 1:
+            last = first[-1:]
+        return ((first[0] if first else username)[:1] + (last[-1][:1] if last else "")).upper()[:2]
+
+    @property
+    def display_initials(self):
+        if len(self.initials) < 2 and self.author_id:
+            return self.author_initials(self.author) or self.initials
+        return self.initials
+
 
 class AthleteDayCheck(models.Model):
     PAIN_NONE = "no_pain"

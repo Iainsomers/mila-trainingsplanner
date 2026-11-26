@@ -2326,7 +2326,7 @@
     {% for reaction in unread_evaluation_reactions %}
       <li class="mb-2" data-reaction-id="{{ reaction.pk }}">
         <div class="text-muted small">{{ reaction.evaluation.date|date:"d-m-Y" }} · {% if reaction.evaluation.slot_index == 1 %}AM{% else %}PM{% endif %}</div>
-        <div class="text-break" style="white-space: pre-wrap"><strong>{{ reaction.initials }}:</strong> {{ reaction.text }}</div>
+        <div class="text-break" style="white-space: pre-wrap"><strong>{{ reaction.display_initials }}:</strong> {{ reaction.text }}</div>
       </li>
     {% endfor %}
   </ul>

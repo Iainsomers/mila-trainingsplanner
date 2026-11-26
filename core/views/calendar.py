@@ -3476,15 +3476,14 @@ def _evaluation_reaction_response(request, athlete, is_coach, action):
         evaluation = AthleteDayCheck.objects.filter(athlete=athlete, date=day, slot_index=slot).first()
         if not body or len(body) > 2000 or not evaluation or not evaluation.comment.strip():
             return JsonResponse({"error": "Save an evaluation comment first and enter a reply of up to 2000 characters."}, status=400)
-        user = request.user
-        first = user.first_name.split()
-        last = user.last_name.split()
-        initials = ((first[0] if first else user.get_username())[:1] + (last[-1][:1] if last else "")).upper()[:2]
-        EvaluationReaction.objects.create(evaluation=evaluation, author=user, initials=initials, text=body)
+        EvaluationReaction.objects.create(evaluation=evaluation, author=request.user,
+                                          initials=EvaluationReaction.author_initials(request.user), text=body)
     elif action != "list":
         return JsonResponse({}, status=400)
-    return JsonResponse({"reactions": list(reactions.filter(evaluation__date=day, evaluation__slot_index=slot)
-                                           .order_by("pk").values("initials", "text"))})
+    session_reactions = reactions.filter(evaluation__date=day, evaluation__slot_index=slot).select_related("author").order_by("pk")
+    return JsonResponse({"reactions": [
+        {"initials": reaction.display_initials, "text": reaction.text} for reaction in session_reactions
+    ]})
 
 
 @login_required
@@ -4626,7 +4625,7 @@ def athlete_year_calendar_view(request):
             "show_training_reports": show_training_reports,
             "unread_evaluation_reactions": list(EvaluationReaction.objects.filter(
                 evaluation__athlete=selected_athlete, read_at__isnull=True,
-            ).select_related("evaluation").order_by("pk")[:50]) if athlete_self_view and show_training_reports else [],
+            ).select_related("evaluation", "author").order_by("pk")[:50]) if athlete_self_view and show_training_reports else [],
             "evaluation_pain_enabled": evaluation_pain_enabled,
             "show_week_reports": show_week_reports,
             "show_daily_vitals": show_daily_vitals,
