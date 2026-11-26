@@ -450,3 +450,5 @@ Bij een Garmin E-opname met rol Sprint tellen de gemeten werkreps in Diary en St
 Een gecontroleerde Sprint-opname kan een eigen WU/CD bevatten. Zonder losse WU levert haar WU het WU-segment. Overige grenslaps tussen de gekozen onderdelen blijven gemeten overgangslaps. De laatste Main of een losse CD levert de afsluiting.
 
 Garmin E controleert een letterlijk opgegeven WU met opeenvolgende afstandssets en zones rechtstreeks tegen de gemeten laps als er één chronologische repvolgorde past. Zeer korte overgangslaps tot 25 m en 8 s mogen als herstel tussen werkreps staan. Bij een ongeldige zonetoewijzing toont de melding de gevraagde groep en beschikbare afstanden met lapnummers.
+
+Garmin E controleert bij Alternative ook letterlijk opgegeven WU, herhaalde tijdreps met p-pauzes en CD. Bij een expliciete verplaatsing van één pauze uit de laatste cooldown verdeelt het die bronlap in twee tijdsdelen. Gemeten totale tijd en zone blijven behouden. Deel-HR wordt alleen getoond waar gemeten.

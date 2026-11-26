@@ -810,7 +810,32 @@ class GarminEEndpointTests(TestCase):
             "Elliptical 10' // Elliptical 2×(45s Z2 - 30s Z1) // "
             "Elliptical 45s Z2 // Elliptical 5'",
         )
-        self.assertIn("shown in the checked preview", result["chat_reply"])
+        self.assertIn(result["training_fields"]["alt"], result["chat_reply"])
+        model.assert_not_called()
+
+    @patch("core.views.garmin_e.localize_garmin_e_notice", side_effect=lambda text, message: text)
+    @patch("core.views.garmin_e.ask_model")
+    def test_alternative_literal_pause_and_explicit_cooldown_transfer(self, model, translate):
+        durations = [900, 360, 60, 367, 61, 360, 60, 361, 61, 360, 60, 361, 601]
+        self.record.distance_m = None
+        self.record.duration_s = sum(durations)
+        self.record.analysis_data = {
+            "activity_metrics": {"sport": "ELLIPTICAL", "average_hr": 110},
+            "laps": [{"elapsed_time": value, "avg_heart_rate": 100, "hr_tail": 100} for value in durations],
+        }
+        self.record.save()
+        initial = self.chat("15' wu//6*6'z2 p1//10'cd").json()["results"][0]["parts"][0]
+        self.assertIn("6×6' Z2 p1'", initial["training_fields"]["alt"])
+        rejected = self.chat("15'wu// 6*6'z2 p1//9'cd").json()["results"][0]["parts"][0]
+        self.assertEqual(rejected["training_fields"], initial["training_fields"])
+        self.assertIn("601s", rejected["chat_reply"])
+        updated = self.chat("ik pak er 1'van die 10' om van de main een kloppende set te maken").json()["results"][0]["parts"][0]
+        self.assertIn("6×(6' Z2 - 1'", updated["training_fields"]["alt"])
+        self.assertIn("Elliptical 9'", updated["training_fields"]["alt"])
+        self.assertIn(updated["training_fields"]["alt"], updated["chat_reply"])
+        self.assertEqual([load["seconds"] for load in updated["watch_loads"]][-1], 541)
+        self.assertEqual(sum(load["seconds"] for load in updated["watch_loads"]), sum(durations))
+        self.assertEqual(sum(lap["seconds"] for load in updated["watch_loads"] for lap in load["alt_laps"]), sum(durations))
         model.assert_not_called()
 
     @patch("core.views.garmin_e.ask_model")

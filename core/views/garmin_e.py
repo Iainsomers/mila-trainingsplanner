@@ -289,6 +289,19 @@ def garmin_type_e_ayc_view(request):
                     explicit_alternative_compact_proposal(facts, message)
                     if is_alternative else None
                 )
+                if is_alternative and not explicit_compact and message:
+                    transfer = re.search(
+                        r"(?:pak|haal|neem|take|move)\s+(?:er\s+)?(\d+)\s*['′’]\s*(?:van|from)\b",
+                        message, re.I,
+                    )
+                    source_minutes = round(facts[-1]["duration_s"] / 60)
+                    if transfer and re.search(
+                            rf"\b(?:cd|cool[ -]?down|(?:die|the)\s+{source_minutes}\s*['′’])",
+                            message[transfer.end():], re.I):
+                        for earlier in reversed(state["history"]):
+                            if earlier.get("role") == "user" and (explicit_compact := explicit_alternative_compact_proposal(
+                                    facts, earlier["content"], cooldown_transfer=int(transfer[1]) * 60)):
+                                break
                 literal_plan = explicit_running_plan(facts, message) if not is_alternative else None
                 explicit_distance = literal_plan
                 explanation_only = bool(message and re.match(
@@ -379,6 +392,9 @@ def garmin_type_e_ayc_view(request):
                     if not isinstance(value, dict):
                         return value
                     value = deepcopy(value)
+                    if isinstance(value.get("presentation"), dict):
+                        value["presentation"].pop("cooldown_transfer", None)
+                        value["presentation"].pop("interval_work_zone", None)
                     prior = state.get("proposal") or {}
                     for key in ("explicit_role_zones", "explicit_lap_zones", "zone_labels", "explicit_sprint_sequences"):
                         value.pop(key, None)
@@ -400,7 +416,7 @@ def garmin_type_e_ayc_view(request):
                         proposal["zone_labels"] = deepcopy(prior_labels)
                     else:
                         proposal.pop("zone_labels", None)
-                labeled_proposal, explicit_zone_update = (proposal, False) if explanation_only or explicit_distance is not None else apply_explicit_zone_labels(
+                labeled_proposal, explicit_zone_update = (proposal, False) if explanation_only or explicit_distance is not None or explicit_compact else apply_explicit_zone_labels(
                     proposal if proposal is not None else state.get("proposal"), message
                 )
                 explicit_sprint_update = bool(
@@ -446,7 +462,7 @@ def garmin_type_e_ayc_view(request):
                         repair_used = True
                 if proposal is not None:
                     try:
-                        if explicit_distance is None:
+                        if explicit_distance is None and not explicit_compact:
                             proposal = apply_conversation_corrections(proposal)
                         if wants_update:
                             proposal = complete_partial_running_proposal(part, proposal)
@@ -460,7 +476,7 @@ def garmin_type_e_ayc_view(request):
                         error = str(exc)
                         # One repair, with the original facts and concrete measurement feedback.
                         remaining = deadline-monotonic()
-                        if remaining >= 3 and not repair_used:
+                        if remaining >= 3 and not repair_used and not explicit_compact:
                             answer = ask_model(facts,history,current,error,timeout=min(20,remaining))
                             proposal = answer.get("proposal")
                             basis = answer.get("zone_basis",state["basis"])
@@ -478,6 +494,8 @@ def garmin_type_e_ayc_view(request):
                                 except (ValueError,TypeError,KeyError,OverflowError,ZeroDivisionError) as exc:
                                     error = str(exc)
                 reply = answer["reply"]
+                if candidate and is_alternative and proposal.get("format") == "compact":
+                    reply = "The checked preview shows: " + candidate["training_fields"]["alt"]
                 if candidate and explicit_sprint_update:
                     reply = ("The checked preview shows one short sprint block. "
                              "The sprint and recovery laps remain in their recorded order.")

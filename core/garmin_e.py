@@ -12,7 +12,11 @@ from core.watch_ai_structure import description, representative_zones
 
 SYSTEM = """You are MiLa, a thoughtful running-workout analyst talking with a coach or athlete.
 Understand the WHOLE ordered recording before labeling it. Write the reply in the language of
-the latest actual user message. Ignore prior assistant replies and automatic analysis instructions
+the latest actual user message. Treat the user's latest workout correction as authoritative when
+the measurements support it, including changes of notation. Count a final work rep separately
+when the user writes a repeated work/recovery pair followed by one final work rep. Never claim
+the preview changed unless a complete proposal implements the correction.
+Ignore prior assistant replies and automatic analysis instructions
 when determining language. Use English if no actual user message is available, for ambiguous language or workout
 notation without a clear language. Explain your observations using lap numbers, answer questions and ask a focused
 question when intent or evidence is ambiguous. Do not just repeat fixed rejection phrases.
@@ -463,7 +467,7 @@ def apply_explicit_zone_labels(proposal, message):
     return updated, True
 
 
-def explicit_alternative_compact_proposal(facts, message):
+def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0):
     """Translate a user-written WU–repeated pair–optional tail–CD notation.
 
     This parses explicit intent, not a particular workout pattern. Every atom
@@ -471,6 +475,32 @@ def explicit_alternative_compact_proposal(facts, message):
     """
     if not isinstance(facts, list) or not isinstance(message, str):
         return None
+    interval = re.fullmatch(
+        r"\s*(\d+)\s*['′’]\s*wu\s*//\s*(\d+)\s*[×x*]\s*(\d+)\s*['′’]"
+        r"\s*z\s*([1-6])\s*p\s*(\d+)\s*(['′’])?\s*//\s*(\d+)\s*['′’]\s*cd\s*",
+        message, re.I,
+    )
+    if interval:
+        warmup, count, work, zone, pause = map(int, interval.groups()[:5])
+        cooldown = int(interval[7])
+        if not 1 <= count <= 60 or len(facts) != 2 * count + 1 or not all(
+                1 <= value <= 1440 for value in (warmup, work, cooldown)) or not 1 <= pause <= 86400:
+            return None
+        pause = pause * 60 if interval[6] or pause <= 10 else pause
+        if pause > 86400:
+            return None
+        if cooldown_transfer not in (0, pause):
+            return None
+        work_laps = list(range(2, len(facts), 2))
+        return {
+            "warmup_laps": [1], "cooldown_laps": [len(facts)],
+            "recovery_laps": list(range(3, len(facts), 2)),
+            "reps": [{"laps": [lap], "target_seconds": work * 60} for lap in work_laps],
+            "format": "compact",
+            "presentation": {"warmup_seconds": warmup * 60, "cooldown_seconds": cooldown * 60,
+                             "recovery_seconds": pause, "interval_work_zone": str(zone),
+                             "cooldown_transfer": cooldown_transfer},
+        }
     notation = re.search(
         r"\b(?:wu|warm[ -]?up)\b\s*[-–—/]\s*(\d+)\s*[×x*]\s*\(([^()]*)\)"
         r"(.*?)\s*[-–—/]\s*\b(?:cd|cool[ -]?down)\b",
@@ -1192,8 +1222,15 @@ def compact_alternative(part, result, entries, presentation):
         selected_zones[role] = selected
         summary_zone_labels[role] = selected
     display = []
+    transfer = presentation.get("cooldown_transfer") or 0
+    if (type(transfer) is not int or transfer < 0
+            or (transfer and (entries[-1]["role"] != "Cooldown" or transfer >= entries[-1]["seconds"]
+                              or transfer != presentation.get("recovery_seconds")))):
+        raise ValueError("The requested transfer must be one recovery interval at the start of the final cooldown.")
     for entry in entries:
         role,seconds = entry["role"],entry["seconds"]
+        if transfer and entry is entries[-1]:
+            seconds -= transfer
         key = {"Warmup":"warmup_seconds","Cooldown":"cooldown_seconds","Recovery":"recovery_seconds"}.get(role)
         target = presentation.get(key,seconds) if key else entry["target"]
         if not isinstance(target,(int,float)) or isinstance(target,bool) or not math.isfinite(target) or target<=0:
@@ -1235,6 +1272,38 @@ def compact_alternative(part, result, entries, presentation):
                       if entries[index]["role"] in {"Work", "Recovery"}), None)
     if first_main is not None and last_main is not None:
         main_entries = entries[first_main:last_main+1]
+        interval_zone = presentation.get("interval_work_zone")
+        if interval_zone is not None:
+            expected = ["Work" if index % 2 == 0 else "Recovery" for index in range(len(main_entries))]
+            work_targets = [display[index][0] for index in range(first_main, last_main + 1, 2)]
+            pause = presentation.get("recovery_seconds")
+            if (interval_zone not in set("123456") or type(pause) is not int or pause <= 0 or len(main_entries) % 2 != 1
+                    or [entry["role"] for entry in main_entries] != expected or len(set(work_targets)) != 1):
+                raise ValueError("The requested intervals must alternate work and recovery with a single work duration.")
+            prefix = part.get("alternative_label", "Alternative") + " "
+            work = atom((work_targets[0], interval_zone, "Work"))
+            pause_label = f"{pause // 60}'" if pause % 60 == 0 else f"{pause}s"
+            main_text = prefix + f"{len(work_targets)}×{work} p{pause_label}"
+            loads = [measured_load(index, index + 1, prefix + atom(display[index])) for index in range(first_main)]
+            main_load = measured_load(first_main, last_main + 1, main_text)
+            loads.append(main_load)
+            loads.extend(measured_load(index, index + 1, prefix + atom(display[index]))
+                         for index in range(last_main + 1, len(entries)))
+            if transfer:
+                cooldown = loads[-1]
+                source = cooldown["alt_laps"][0]
+                if len(cooldown["alt_laps"]) != 1:
+                    raise ValueError("The transfer requires a single final cooldown lap.")
+                main_load["alt_laps"].append({**source, "seconds": transfer, "average_hr": None, "end_hr": None})
+                source.update(seconds=source["seconds"] - transfer, average_hr=None, end_hr=None)
+                main_load["seconds"] += transfer
+                cooldown["seconds"] -= transfer
+                recovery = atom((transfer, source["zone"], "Recovery"))
+                main_load["alt_text"] = prefix + f"{len(work_targets)}×({work} - {recovery})"
+            text = " // ".join(load["alt_text"] for load in loads)
+            result.update(training_fields={"alt":text}, description=text, watch_loads=loads)
+            result["e_zone_note"] += " Compact notation uses nominal targets; totals retain measured time and HR zones."
+            return result
         expected_roles = ["Work" if index % 2 == 0 else "Recovery"
                           for index in range(len(main_entries))]
         recovery_targets = [display[first_main+index][0] for index in range(1, len(main_entries), 2)]
