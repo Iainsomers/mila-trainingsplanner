@@ -68,6 +68,13 @@ function checkGarminECombine() {
     check.listeners.change();
   }
   assert.equal(button.disabled, false);
+  roles[3].value = 'cd';
+  checks[3].checked = true;
+  checks[3].listeners.change();
+  assert.equal(button.disabled, false);
+  checks[3].checked = false;
+  checks[3].listeners.change();
+  chats['E:second'] = {busy: true};
   checks[0].checked = false;
   checks[0].listeners.change();
   assert.equal(button.disabled, false);

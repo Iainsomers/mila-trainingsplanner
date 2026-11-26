@@ -2782,13 +2782,8 @@
     var combinedHost = model === "E" && !combinedPreview && parent.eCombinedHost
       ? parent.eCombinedHost : document.createElement("div");
     var combineButton;
-    function eAnalysisBusy() {
-      return model === "E" && selections.some(function(item) {
-        if (!item.check.checked || item.role.value !== "main") return false;
-        var session = item.session;
-        var state = watchChats["E:" + (session.e_session_id || session.start)] || {};
-        return state.busy;
-      });
+    function invalidCombineCount(count) {
+      return count < 2 || count > (model === "E" ? 4 : 3);
     }
     if ((model === "C" || model === "D" || model === "E") && !combinedPreview && results.filter(function(session) {
       return (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length &&
@@ -2798,7 +2793,7 @@
       toolbar.className = "d-flex flex-wrap align-items-center gap-2 mb-2";
       var hint = document.createElement("span");
       hint.textContent = model === "E"
-        ? "Select 2–3 activities, with up to two checked Main recordings."
+        ? "Select 2–4 activities, with up to two checked Main recordings."
         : "Select 2–3 activities and choose WU / Main / CD.";
       toolbar.appendChild(hint);
       combineButton = document.createElement("button");
@@ -2813,7 +2808,6 @@
         try {
           var selected = selections.filter(function(item) { return item.check.checked; });
           if (model === "E") {
-            if (eAnalysisBusy()) { errorText.textContent="Wait for the current analyses to finish."; return; }
             combineButton.disabled = true;
             var combineSequence = watchPreviewSequence;
             var requestSelection = JSON.stringify(selected.map(function(item) {return {start:item.session.start,role:item.role.value};}));
@@ -2831,7 +2825,7 @@
             }).catch(function(error){errorText.textContent=error.message;})
               .finally(function(){
                 var count=selections.filter(function(item){return item.check.checked;}).length;
-                combineButton.disabled=count<2 || count>3 || eAnalysisBusy();
+                combineButton.disabled = invalidCombineCount(count);
               });
             return;
           }
@@ -2876,7 +2870,7 @@
           combinedHost.eResults = [];
           errorText.textContent = "";
           var count = selections.filter(function(item) { return item.check.checked; }).length;
-          combineButton.disabled = count < 2 || count > 3 || eAnalysisBusy();
+          combineButton.disabled = invalidCombineCount(count);
           role.disabled = !check.checked;
           if (model === "E") {
             parent.eCombineSelection = {};
@@ -2888,7 +2882,7 @@
         controls.appendChild(label); controls.appendChild(role); box.appendChild(controls);
         if (model === "E") {
           var selectedCount=selections.filter(function(item){return item.check.checked;}).length;
-          combineButton.disabled=selectedCount<2 || selectedCount>3 || eAnalysisBusy();
+          combineButton.disabled = invalidCombineCount(selectedCount);
         }
       }
       var title = document.createElement("div"); title.className = "fw-bold";

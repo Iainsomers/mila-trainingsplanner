@@ -941,7 +941,8 @@ class GarminEEndpointTests(TestCase):
 
     @patch("core.views.garmin_e.ask_model")
     def test_two_checked_main_recordings_can_be_combined_or_appended(self, model):
-        selection = self.combine_example()[:2]
+        recordings = self.combine_example()
+        selection = recordings[:2]
         parts = []
         for item, reps, recovery in zip(selection, ([800], [500, 500]), ([], [2])):
             item["role"] = "main"
@@ -969,6 +970,23 @@ class GarminEEndpointTests(TestCase):
         self.assertTrue(combined["e_usable"], combined)
         expected = " // ".join(part["training_fields"]["main"] for part in parts)
         self.assertEqual(combined["training_fields"]["main"], expected)
+        self.assertEqual(model.call_count, calls)
+
+        GarminActivitySummary.objects.create(
+            athlete=self.athlete, activity_id="extra-wu",
+            activity_start=datetime(2026, 11, 14, 9, 30, tzinfo=timezone.utc),
+            activity_date="2026-11-14", distance_m=600, duration_s=200,
+            analysis_data={"laps": [{"distance": 600, "elapsed_time": 200}]},
+        )
+        sessions = self.client.get(self.url, {**self.query, "preview": "measured"}).json()["results"]
+        self.assertEqual(len(sessions), 4)
+        response = self.client.post(self.url + "?" + urlencode(self.query), {
+            "combine": json.dumps([{"start": sessions[0]["start"], "role": "wu"}, *recordings]),
+        })
+        self.assertEqual(response.status_code, 200, response.json())
+        full = response.json()["results"][0]["parts"][0]
+        self.assertTrue(full["e_usable"])
+        self.assertEqual(full["training_fields"], {"wu": "600 m Z1", "main": expected, "cd": "1000 m Z1"})
         self.assertEqual(model.call_count, calls)
 
         from core.models import TrainingSlot

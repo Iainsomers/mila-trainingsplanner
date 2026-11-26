@@ -21,8 +21,8 @@ def append_watch_loads(existing, incoming):
 
 
 def combine_recordings(results, selection):
-    if not isinstance(selection,list) or not 2<=len(selection)<=3:
-        raise ValueError("Select two or three activities.")
+    if not isinstance(selection,list) or not 2<=len(selection)<=4:
+        raise ValueError("Select two to four activities.")
     if any(not isinstance(item,dict) or set(item)!={"start","role"} for item in selection):
         raise ValueError("Choose the activity and WU/Main/CD role.")
     starts = [item["start"] for item in selection]
