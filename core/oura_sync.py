@@ -58,14 +58,17 @@ def sync_due(*, now=None):
             if not connection:
                 continue
             try:
+                local_day = now.astimezone(zone).date()
                 with timezone.override(zone):
-                    suggestions = build_oura_vitals_suggestions(connection, athlete, today=now.astimezone(zone).date())
+                    suggestions = build_oura_vitals_suggestions(connection, athlete, today=local_day, refresh_today=True)
                 with transaction.atomic():
                     current = Athlete.objects.select_for_update().get(pk=athlete.pk)
                     if (current.oura_auto_import_enabled and current.oura_connection_enabled
                             and current.daily_vitals_enabled and current.device_time_zone == athlete.device_time_zone
                             and OuraConnection.objects.filter(pk=connection.pk, athlete=current).exists()):
-                        saved = apply_oura_vitals_suggestions(current, suggestions, actor=connection.consented_by)
+                        saved = apply_oura_vitals_suggestions(
+                            current, suggestions, actor=connection.consented_by, refresh_day=local_day,
+                        )
                         if saved:
                             logger.info("Oura automatic import saved %s day(s)", len(saved))
                 processed += 1

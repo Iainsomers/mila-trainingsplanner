@@ -1553,6 +1553,7 @@ class AthleteDailyVital(models.Model):
     sleep_quality = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True)
     morning_hr = models.PositiveSmallIntegerField(null=True, blank=True)
     hrv = models.PositiveSmallIntegerField(null=True, blank=True)
+    oura_fields = models.JSONField(default=list, blank=True)
 
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

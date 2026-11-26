@@ -3574,40 +3574,28 @@ def athlete_year_calendar_view(request):
                             return None
                         return value
 
-                    if request.POST.get("daily_vitals_batch") == "1":
-                        vital, _ = AthleteDailyVital.objects.get_or_create(
-                            athlete=athlete,
-                            date=d,
-                            defaults={"updated_by": request.user},
-                        )
-                        vital.sleep_hours = _parse_vital_value("sleep_hours", request.POST.get("sleep_hours"))
-                        vital.sleep_quality = _parse_vital_value("sleep_quality", request.POST.get("sleep_quality"))
-                        vital.morning_hr = _parse_vital_value("morning_hr", request.POST.get("morning_hr"))
-                        vital.hrv = _parse_vital_value("hrv", request.POST.get("hrv"))
-                        vital.updated_by = request.user
-                        vital.save()
-                        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                            return HttpResponse("", status=204)
-                        return redirect(request.get_full_path())
-
+                    batch = request.POST.get("daily_vitals_batch") == "1"
                     field = (request.POST.get("field") or "").strip()
                     raw_value = (request.POST.get("value") or "").strip()
                     allowed_fields = {"sleep_hours", "sleep_quality", "morning_hr", "hrv"}
 
-                    if field in allowed_fields:
-                        vital, _ = AthleteDailyVital.objects.get_or_create(
-                            athlete=athlete,
-                            date=d,
-                            defaults={"updated_by": request.user},
-                        )
-
-                        value = _parse_vital_value(field, raw_value)
-
-                        setattr(vital, field, value)
-                        vital.updated_by = request.user
-                        vital.save()
+                    if batch or field in allowed_fields:
+                        values = ({key: _parse_vital_value(key, request.POST.get(key)) for key in allowed_fields}
+                                  if batch else {field: _parse_vital_value(field, raw_value)})
+                        with transaction.atomic():
+                            Athlete.objects.select_for_update().get(pk=athlete.pk)
+                            vital, _ = AthleteDailyVital.objects.select_for_update().get_or_create(
+                                athlete=athlete, date=d, defaults={"updated_by": request.user},
+                            )
+                            for key, value in values.items():
+                                setattr(vital, key, value)
+                            vital.oura_fields = sorted(set(vital.oura_fields) - values.keys())
+                            vital.updated_by = request.user
+                            vital.save()
                         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                             return HttpResponse("", status=204)
+                        if batch:
+                            return redirect(request.get_full_path())
 
                 elif check_status is not None or toggle_check is not None or report_submit is not None:
                     if (

@@ -38,7 +38,7 @@ In het Oura-testvenster volgt bij meerdere gekoppelde atleten de verplichte atle
 
 Onder Hardware acces → Oura daily data kan een bevoegde coach per gekoppelde atleet en Oura-datum alle recordvelden uit de huidige koppeling bekijken (`sleep`, `daily_sleep` en `daily_readiness`). Actieve toestemming en zichtbaarheid van vitals zijn vereist. De pagina berekent langste slaap zonder dutjes en totale aangeboden slaap inclusief dutjes. De gegevens worden op verzoek opgehaald en niet in Diary opgeslagen.
 
-De apparaattijdzone van de atleet bepaalt het schema: 07:30 tot en met 09:00 elke tien minuten, daarna op de hele uren 10:00–20:00. Geen controles van 21:00 tot 07:30; een achterstallige controle wordt dan uitgesteld. Een controle is geen garantie dat Oura al definitieve slaapgegevens heeft. De bestaande import vult lege velden en overschrijft geen reeds opgeslagen waarden. Dat geldt ook wanneer die eerste waarde later onjuist blijkt; er is geen automatische correctie van gevulde vitals toegevoegd.
+De apparaattijdzone van de atleet bepaalt het schema: 07:30 tot en met 09:00 elke tien minuten, daarna op de hele uren 10:00–20:00. Geen controles van 21:00 tot 07:30. Automatische import vult lege velden en ververst op de actuele lokale dag alleen waarden die MiLa per veld als Oura-import heeft opgeslagen. Een handmatige invoer verwijdert die markering. Bestaande waarden krijgen bij migratie geen afgeleide herkomst. Handmatige Oura-import vult alleen lege velden. Slaapduur blijft gebaseerd op de hoofdslaap.
 
 ## COROS: automatische én handmatige FIT-import
 

@@ -32,6 +32,26 @@ class OuraScheduleTests(SimpleTestCase):
 
 
 class OuraAutoImportTests(TestCase):
+    @patch("core.views.oura.build_oura_test_data")
+    def test_refreshes_only_current_day_fields_written_by_oura(self, preview):
+        today = self.now.date()
+        yesterday = today - timedelta(days=1)
+        preview.return_value = [
+            {"day": day, "sleep_hours": 4, "sleep_score": 54, "readiness_score": 80,
+             "average_hrv": 70, "lowest_heart_rate": 42}
+            for day in (today, yesterday)
+        ]
+        AthleteDailyVital.objects.create(athlete=self.athlete, date=today, hrv=120)
+        self.assertEqual(sync_due(now=self.now), 1)
+        preview.return_value = [
+            {**item, "sleep_hours": 8, "sleep_score": 87, "average_hrv": 90}
+            for item in preview.return_value
+        ]
+        self.assertEqual(sync_due(now=self.now + timedelta(minutes=10)), 1)
+        current = AthleteDailyVital.objects.get(date=today)
+        self.assertEqual((current.sleep_hours, float(current.sleep_quality), current.hrv), (8, 8.7, 120))
+        self.assertEqual(AthleteDailyVital.objects.get(date=yesterday).sleep_hours, 4)
+
     def setUp(self):
         self.coach = get_user_model().objects.create_user(username="oura-auto-coach", is_staff=True)
         self.user = get_user_model().objects.create_user(username="Morning_Runner")

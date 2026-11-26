@@ -3,6 +3,7 @@ import hashlib
 import secrets
 import math
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 import json
 from urllib.parse import urlencode
 
@@ -190,8 +191,8 @@ def build_oura_test_data(connection, *, today=None):
     return preview
 
 
-def build_oura_vitals_suggestions(connection, athlete, *, today=None):
-    """Return only readiness-backed Oura values for still-empty Daily Vitals fields."""
+def build_oura_vitals_suggestions(connection, athlete, *, today=None, refresh_today=False):
+    """Return readiness-backed values eligible for import."""
     today = today or timezone.localdate()
     preview = build_oura_test_data(connection, today=today)
     existing = {
@@ -213,14 +214,18 @@ def build_oura_vitals_suggestions(connection, athlete, *, today=None):
         vital = existing.get(item["day"])
         row = {"day": item["day"].isoformat()}
 
+        def eligible(field):
+            return (not vital or getattr(vital, field) is None
+                    or (refresh_today and item["day"] == today and field in vital.oura_fields))
+
         sleep_hours = item["sleep_hours"]
-        if (not vital or vital.sleep_hours is None) and sleep_hours is not None and 0 < sleep_hours <= 24:
+        if eligible("sleep_hours") and sleep_hours is not None and 0 < sleep_hours <= 24:
             row["sleep_hours"] = sleep_hours
         else:
             row["sleep_hours"] = None
 
         sleep_score = item["sleep_score"]
-        if (not vital or vital.sleep_quality is None) and sleep_score is not None:
+        if eligible("sleep_quality") and sleep_score is not None:
             try:
                 score = float(sleep_score)
                 row["sleep_quality"] = round(score / 10, 1) if 1 <= score <= 100 else None
@@ -230,7 +235,7 @@ def build_oura_vitals_suggestions(connection, athlete, *, today=None):
             row["sleep_quality"] = None
 
         average_hrv = item["average_hrv"]
-        if (not vital or vital.hrv is None) and average_hrv is not None:
+        if eligible("hrv") and average_hrv is not None:
             try:
                 hrv = round(float(average_hrv))
                 row["hrv"] = hrv if 0 <= hrv <= 65535 else None
@@ -240,7 +245,7 @@ def build_oura_vitals_suggestions(connection, athlete, *, today=None):
             row["hrv"] = None
 
         lowest_heart_rate = item["lowest_heart_rate"]
-        if (not vital or vital.morning_hr is None) and lowest_heart_rate is not None:
+        if eligible("morning_hr") and lowest_heart_rate is not None:
             try:
                 morning_hr = round(float(lowest_heart_rate))
                 row["morning_hr"] = morning_hr if 1 <= morning_hr <= 300 else None
@@ -300,8 +305,8 @@ def oura_vitals_import_view(request):
     return JsonResponse({"items": saved, "saved_count": len(saved)})
 
 
-def apply_oura_vitals_suggestions(athlete, suggestions, *, actor=None, selected_days=None):
-    """Shared manual/automatic writer: serialize per athlete and fill blanks only."""
+def apply_oura_vitals_suggestions(athlete, suggestions, *, actor=None, selected_days=None, refresh_day=None):
+    """Fill blanks and optionally refresh known Oura fields on one day."""
     saved = []
     with transaction.atomic():
         Athlete.objects.select_for_update().get(pk=athlete.pk)
@@ -313,18 +318,25 @@ def apply_oura_vitals_suggestions(athlete, suggestions, *, actor=None, selected_
             if vital is None:
                 vital = AthleteDailyVital(athlete=athlete, date=day)
             changed_fields = []
+            oura_fields = set(vital.oura_fields)
             for field in ("sleep_hours", "sleep_quality", "morning_hr", "hrv"):
                 value = item.get(field)
-                if value is not None and getattr(vital, field) is None:
+                if field == "sleep_quality" and value is not None:
+                    value = Decimal(str(value))
+                previous = getattr(vital, field)
+                if (value is not None and value != previous
+                        and (previous is None or (day == refresh_day and field in oura_fields))):
                     setattr(vital, field, value)
                     changed_fields.append(field)
+                    oura_fields.add(field)
             if changed_fields:
+                vital.oura_fields = sorted(oura_fields)
                 vital.updated_by = actor
                 vital.save()
                 saved.append({
                     "day": day.isoformat(),
                     "sleep_hours": vital.sleep_hours,
-                    "sleep_quality": vital.sleep_quality,
+                    "sleep_quality": float(vital.sleep_quality) if vital.sleep_quality is not None else None,
                     "morning_hr": vital.morning_hr,
                     "hrv": vital.hrv,
                 })
