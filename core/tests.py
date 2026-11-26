@@ -12093,6 +12093,33 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_own_stats_tile_and_page_follow_pending_diary_evaluations(self):
+        user = get_user_model().objects.create_user(username="Self Stats")
+        coach = get_user_model().objects.create_user(username="stats-owner", is_staff=True)
+        athlete = Athlete.objects.create(owner=coach, name="Self Stats", birth_year=2000, gender="X")
+        other = Athlete.objects.create(owner=coach, name="Other Stats", birth_year=2000, gender="X")
+        plan = TrainingPlan.objects.create(owner=coach, name="Stats training")
+        plan.athletes.add(athlete)
+        yesterday = date.today() - timedelta(days=1)
+        for offset in (0, 6, 7):
+            slot = TrainingSlot.objects.create(plan=plan, date=yesterday-timedelta(days=offset), slot_index=1)
+            TrainingSegment.objects.create(slot=slot, type="CORE", text="5000 m Z1", order=1)
+        self.client.force_login(user)
+        home = reverse("planning_overview")
+        graph = reverse("trainer_athlete_stats", args=[athlete.pk])
+        self.assertNotContains(self.client.get(home), graph)
+        self.assertEqual(self.client.get(graph).status_code, 403)
+        AthleteDayCheck.objects.create(athlete=athlete, date=yesterday, slot_index=1,
+                                       updated_by=user, checked=True)
+        self.assertContains(self.client.get(home), graph)
+        self.assertContains(self.client.get(graph), "Weekly totals and ACWR")
+        self.assertEqual(self.client.get(reverse("trainer_athlete_stats", args=[other.pk])).status_code, 403)
+        AthleteDayCheck.objects.filter(athlete=athlete).delete()
+        athlete.always_stats = True
+        athlete.save(update_fields=["always_stats"])
+        self.assertContains(self.client.get(home), graph)
+        self.assertContains(self.client.get(graph), "Weekly totals and ACWR")
+
     @patch("core.views.coach._effective_week_distance_m")
     def test_week_history_loads_the_full_period_in_one_pass(self, effective_totals):
         trainer = get_user_model().objects.create_user(username="stats-one-pass", is_staff=True)

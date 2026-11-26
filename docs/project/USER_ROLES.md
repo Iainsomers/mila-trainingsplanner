@@ -1,6 +1,6 @@
 # Gebruikersrollen en toegang
 
-- Stats is een gewone coach-View, onafhankelijk van Under Dev. Het directe overzicht gebruikt dezelfde server-side eigenaar-/actieve coachfilter als voorheen; atleten krijgen geen overzicht en geen toegang tot andermans grafiek. Verwijdering van de selectiestap geeft geen extra coachtoegang. Een actieve view-only coach kan het GET-overzicht en de grafieken lezen.
+- Stats is een gewone coach-View, onafhankelijk van Under Dev. Het coachoverzicht volgt de bestaande actieve coachfilter. Atleten krijgen de eigen grafiek via de Stats-tegel als in de vorige zeven dagen maximaal één Diary-evaluatie openstaat of als een bevoegde coach in Athlete Info `Always stats` inschakelt. Bij uitgeschakelde trainingsrapporten zijn er nul openstaande evaluaties. Atleten hebben geen toegang tot het teamoverzicht of andermans grafiek.
 
 - De mySASY-diagnostiek is uitsluitend zichtbaar voor coaches met toegang tot de betreffende atleet en diens vitals. GET leest de gecachte, ontdane API-respons. Expliciet ophalen gebruikt POST met CSRF en volgt de bestaande blokkade voor een actieve view-only coachweergave. Atleten krijgen het testvak en de diagnostische JSON niet, ook niet via de directe coachroute. Ontkoppelen, uitschakelen of opnieuw koppelen verwijdert de vorige testgegevens.
 

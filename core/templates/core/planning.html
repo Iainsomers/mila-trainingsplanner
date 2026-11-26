@@ -206,6 +206,15 @@
           </div>
         </div>
 
+        {% if own_stats_athlete_id %}
+        <div class="col-md-6 col-lg-4">
+          <a href="{% url 'trainer_athlete_stats' own_stats_athlete_id %}" class="card h-100 planning-card text-decoration-none text-reset">
+            <div class="card-body">
+              <div class="planning-card-title-row"><span class="planning-card-icon" aria-hidden="true">S</span><h5 class="card-title">Stats</h5></div>
+            </div>
+          </a>
+        </div>
+        {% endif %}
         {% if athlete_can_view_year_planner %}
         <div class="col-md-6 col-lg-4">
           <div class="card h-100 planning-card">

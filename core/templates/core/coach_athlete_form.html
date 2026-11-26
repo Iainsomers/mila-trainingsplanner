@@ -676,6 +676,7 @@
                   <div class="form-check"><input class="form-check-input" type="checkbox" id="daily_vitals_enabled" name="daily_vitals_enabled" {% if form.daily_vitals_enabled %}checked{% endif %}><label class="form-check-label" for="daily_vitals_enabled">Daily vitals</label></div>
                 {% endif %}
                 {% if mode == "edit" and athlete %}
+                  {% if not self_view %}<div class="form-check"><input class="form-check-input" type="checkbox" id="always_stats" name="always_stats" {% if form.always_stats %}checked{% endif %}><label class="form-check-label" for="always_stats">Always stats</label></div>{% endif %}
                   <div class="form-check"><input class="form-check-input" type="checkbox" id="see_session_km" name="see_session_km" {% if form.see_session_km %}checked{% endif %}><label class="form-check-label" for="see_session_km">See session km</label></div>
                   <div class="form-check"><input class="form-check-input" type="checkbox" id="see_session_zones" name="see_session_zones" {% if form.see_session_zones %}checked{% endif %}><label class="form-check-label" for="see_session_zones">See session zones</label></div>
                   <div class="form-check"><input class="form-check-input" type="checkbox" id="start_on_ayc" name="start_on_ayc" {% if form.start_on_ayc %}checked{% endif %}><label class="form-check-label" for="start_on_ayc">Start on Diary</label></div>

@@ -53,6 +53,7 @@ from .common import (
     _coach_view_owner_ids,
     _set_active_coach_user,
     _active_coach_access_label,
+    _can_edit_coach_owner,
     _live_shared_trainer_plans_for_request,
     _is_coach_user,
 )
@@ -6703,6 +6704,8 @@ def coach_console_view(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def planning_overview_view(request):
+    from core.views.calendar import athlete_has_stats_access
+
     athlete = _athlete_for_user(request.user)
     is_athlete_user = bool(athlete and not request.user.is_staff and not request.user.is_superuser)
     is_trainer_user = bool(request.user.is_staff or request.user.is_superuser)
@@ -6774,6 +6777,7 @@ def planning_overview_view(request):
         "today": date.today(),
         "is_athlete_user": is_athlete_user,
         "athlete_can_view_year_planner": athlete_can_view_year_planner,
+        "own_stats_athlete_id": athlete.pk if is_athlete_user and athlete_has_stats_access(request, athlete) else None,
         "athlete_can_view_detailed_camps": athlete_can_view_detailed_camps,
         "detailed_camps_enabled": detailed_camps_enabled,
         "focus_points_enabled": focus_points_enabled,
@@ -11765,6 +11769,7 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         "start_on_ayc": getattr(athlete, "start_on_ayc", False),
         "mobile_diary_week_view": getattr(athlete, "mobile_diary_week_view", False),
         "see_session_km": getattr(athlete, "see_session_km", True),
+        "always_stats": athlete.always_stats,
         "see_session_zones": getattr(athlete, "see_session_zones", True),
         "see_desired_improvement_points": getattr(athlete, "see_desired_improvement_points", False),
         "garmin_fit_upload_enabled": getattr(athlete, "garmin_fit_upload_enabled", False),
@@ -11829,6 +11834,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
         form["target_t4"] = (request.POST.get("target_t4") or "").strip()
         form["is_private"] = (request.POST.get("is_private") == "on")
         form["see_session_km"] = (request.POST.get("see_session_km") == "on")
+        if not self_view and _can_edit_coach_owner(request, athlete.owner_id):
+            form["always_stats"] = request.POST.get("always_stats") == "on"
         form["see_session_zones"] = (request.POST.get("see_session_zones") == "on")
         form["start_on_ayc"] = (request.POST.get("start_on_ayc") == "on")
         form["mobile_diary_week_view"] = (request.POST.get("mobile_diary_week_view") == "on")
@@ -12064,6 +12071,8 @@ def coach_athlete_edit_view(request, athlete_id: int, self_view: bool = False):
             athlete.view_weeks_ahead = view_weeks_ahead
             athlete.training_reports_enabled = form["training_reports_enabled"]
             athlete.see_session_km = form["see_session_km"]
+            if not self_view and _can_edit_coach_owner(request, athlete.owner_id):
+                athlete.always_stats = form["always_stats"]
             athlete.see_session_zones = form["see_session_zones"]
             athlete.start_on_ayc = form["start_on_ayc"]
             athlete.mobile_diary_week_view = form["mobile_diary_week_view"]
@@ -12833,14 +12842,25 @@ def trainer_stats_view(request):
 @login_required
 @require_GET
 def trainer_athlete_stats_view(request, athlete_id):
-    if not (request.user.is_staff or request.user.is_superuser):
-        return HttpResponse("Not allowed", status=403)
+    from core.views.calendar import athlete_has_stats_access
 
-    athlete = get_object_or_404(
-        _filter_owned(Athlete.objects.all(), request),
-        id=athlete_id,
-    )
-    coach_settings, _ = CoachSettings.objects.get_or_create(user=_active_coach_user(request))
+    athlete_self_stats = not (request.user.is_staff or request.user.is_superuser)
+    available_plans = TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name")
+    if athlete_self_stats:
+        athlete = _athlete_for_user(request.user)
+        if not athlete or athlete.pk != athlete_id or not athlete_has_stats_access(request, athlete):
+            return HttpResponseForbidden("Not allowed")
+        owner_id = athlete.owner_id
+        coach_settings = CoachSettings.objects.filter(user_id=owner_id).first()
+        plans = list(available_plans.filter(
+            Q(owner_id=owner_id) | Q(athletes=athlete) | Q(groups__athletes=athlete) | Q(slots__athlete=athlete)
+        ).distinct())
+    else:
+        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
+        active_coach = _active_coach_user(request)
+        owner_id = active_coach.pk
+        coach_settings, _ = CoachSettings.objects.get_or_create(user=active_coach)
+        plans = list(_filter_owned(available_plans, request))
     try:
         selected_months = int(request.GET.get("months") or 6)
     except (TypeError, ValueError):
@@ -12853,17 +12873,16 @@ def trainer_athlete_stats_view(request, athlete_id):
         period_index = 0
     period_index = min(max(period_index, 0), 120)
 
-    plans = list(_filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request))
     current_week_start = date.today() - timedelta(days=date.today().weekday())
     period_last_week_start = current_week_start - timedelta(weeks=week_count * period_index)
-    stats_diagnostics = [] if request.GET.get("debug") == "1" else None
+    stats_diagnostics = [] if not athlete_self_stats and request.GET.get("debug") == "1" else None
     history_weeks = _athlete_week_distance_history(
         athlete,
         plans,
         period_last_week_start,
         week_count=week_count + 4,
-        pause_mode=getattr(athlete, "pause_mode", None) or coach_settings.pause_mode,
-        flex_owner_id=_active_coach_user(request).id,
+        pause_mode=athlete.pause_mode or (coach_settings.pause_mode if coach_settings else CoachSettings.PAUSE_MODE_ALWAYS_STATIC),
+        flex_owner_id=owner_id,
         diagnostics=stats_diagnostics,
     )
     weeks = history_weeks[4:]
@@ -13073,6 +13092,7 @@ def trainer_athlete_stats_view(request, athlete_id):
 
     return render(request, "core/trainer_athlete_stats.html", {
         "athlete": athlete,
+        "athlete_self_stats": athlete_self_stats,
         "weeks": weeks,
         "selected_months": selected_months,
         "period_index": period_index,

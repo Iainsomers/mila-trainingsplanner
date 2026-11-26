@@ -36,7 +36,11 @@
       <h1 class="mb-1">{{ athlete.name }}</h1>
       <div class="text-muted">Weekly distance · {{ period_start|date:"d M Y" }} – {{ period_end|date:"d M Y" }}</div>
     </div>
-    <a href="{% url 'trainer_stats' %}" class="btn btn-outline-secondary">Back to stats</a>
+    {% if athlete_self_stats %}
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+    {% else %}
+      <a href="{% url 'trainer_stats' %}" class="btn btn-outline-secondary">Back to stats</a>
+    {% endif %}
   </div>
 
   <div class="card">
