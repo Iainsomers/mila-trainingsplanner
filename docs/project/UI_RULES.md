@@ -42,7 +42,7 @@ Bij ingeschakelde Whereabouts-toegang toont de eigen Year Planner de whereabouts
 
 - Het klokje bij een gemeten training heeft in Athlete Diary en Individual Planner dezelfde betekenis en popup-inhoud. In Individual Planner staat het compact in de sessiekop naast de totalen; aanklikken mag niet tegelijk het trainingsformulier openen.
 
-- De mobiele Athlete Diary opent standaard op vandaag in Day. Week toont zeven aanklikbare regels met korte AM/PM-trainingstekst, zichtbare sessiekilometers en evaluatiestatus. Day / Week behoudt de actieve week en dag. `Week view in mob diary` opent desgewenst direct in Week.
+- De mobiele Athlete Diary opent standaard op vandaag in Day. Week toont zeven aanklikbare regels met zichtbare AM/PM-sessiekilometers, kilometers per zone vanaf Z2 en evaluatiestatus. Day / Week behoudt de actieve week en dag. `Week view in mob diary` opent desgewenst direct in Week.
 
 Bijgewerkt: 20 oktober 2026.
 
@@ -494,4 +494,4 @@ Garmin E gebruikt de taal van het laatste echte chatbericht. Zonder bericht of b
 
 Toon p en sp boven 90 seconden in minuten en seconden in de trainingsweergave en Garmin E-preview, bijvoorbeeld `p2'15"` voor 135 seconden. De opgeslagen pauselengte blijft leidend voor berekeningen.
 
-De mobiele Day / Week-schakelaar gebruikt teamkleur 1 als actieve achtergrond en teamkleur 2 als actieve tekstkleur. Week toont naast AM en PM de Main-segmenten. De vorige-weekknop laadt oudere weken zodra de eerste geladen week is bereikt en behoudt de weergavestand.
+De mobiele Day / Week-schakelaar gebruikt een neutrale achtergrond en een lichte actieve knop. Evaluatiesymbolen zijn groen voor vinkjes, rood voor kruisjes, oranje voor pijlen en blauw voor een open rondje. De vorige-weekknop laadt oudere weken zodra de eerste geladen week is bereikt en behoudt de weergavestand.

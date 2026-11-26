@@ -27,6 +27,9 @@ class EvaluationSessionTests(TestCase):
         TrainingSlot.objects.get(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=1).segments.create(
             type="WU", text="Warmup-only label", order=0,
         )
+        TrainingSlot.objects.get(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=2).segments.filter(
+            type="CORE",
+        ).update(zone="3", reps=6, distance_m=400, norm_distance_m=2400, parse_ok=True)
         response=self.client.get(self.url)
         self.assertEqual(response.status_code,200)
         self.assertContains(response,'data-t1-training="Warmup-only label')
@@ -40,8 +43,12 @@ class EvaluationSessionTests(TestCase):
         self.assertContains(response, 'id="aycMobileDayView"')
         self.assertContains(response, 'id="aycMobileWeekView"')
         self.assertContains(response, 'data-overview-day="2026-10-29"')
-        self.assertContains(response, 'class="ayc-mobile-overview-text">AM easy 5000m Z1')
-        self.assertNotContains(response, 'class="ayc-mobile-overview-text">Warmup-only label')
+        day = next(day for week in response.context["week_rows"] for day in week["mobile_days"] if day["day"] == self.day)
+        am, pm = day["summary_slots"]
+        self.assertEqual(am["zones"], [])
+        self.assertEqual(pm["zones"], [{"zone": "3", "km": "2.4"}])
+        self.assertEqual(pm["km"], "2.4 km")
+        self.assertContains(response, "<span>Z3 2.4 km</span>", html=True)
 
     @skipUnless(shutil.which("node"), "Node required for mobile Diary navigation")
     def test_mobile_week_overview_opens_day_and_keeps_selected_week(self):

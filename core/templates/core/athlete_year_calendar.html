@@ -974,18 +974,22 @@
     .ayc-mobile-day.is-active-day { display: block; }
     .ayc-mobile.is-week-view .ayc-mobile-day { display: none; }
     .ayc-mobile.is-week-view .ayc-mobile-day-nav { display: none; }
-    .ayc-mobile-view-switch { display: flex; gap: 4px; margin-top: 8px; }
+    .ayc-mobile-view-switch {
+      display: flex; width: fit-content; margin: 8px auto 0; padding: 2px;
+      border-radius: 999px; background: #edf0f2;
+    }
     .ayc-mobile-view-switch button {
-      flex: 1;
-      min-height: 38px;
-      border: 1px solid var(--mila-team-color-1, #0d6efd);
-      border-radius: 6px;
-      background: var(--mila-team-color-2, #fff);
-      color: var(--mila-team-color-1, #0d6efd);
+      min-height: 36px;
+      min-width: 68px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: #465565;
     }
     .ayc-mobile-view-switch button[aria-pressed="true"] {
-      background: var(--mila-team-color-1, #0d6efd);
-      color: var(--mila-team-color-2, #fff);
+      background: #fff;
+      color: #263543;
+      border-color: #dbe2e7;
       font-weight: 700;
     }
     .ayc-mobile-week-overview { display: none; }
@@ -1014,8 +1018,12 @@
       align-items: baseline;
       font-size: .75rem;
     }
-    .ayc-mobile-overview-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ayc-mobile-overview-meta { white-space: nowrap; color: #465565; }
+    .ayc-mobile-overview-km { display: flex; flex-wrap: wrap; gap: 0 6px; color: #465565; }
+    .ayc-mobile-overview-km span { white-space: nowrap; }
+    .ayc-mobile-overview-status { color: #1768b0; font-weight: 700; }
+    .ayc-mobile-overview-status.is-done { color: #137348; }
+    .ayc-mobile-overview-status.is-not-done { color: #b42318; }
+    .ayc-mobile-overview-status.is-adjusted { color: #a64b00; }
     .ayc-mobile-day.is-weekend:not(.is-today) { background: #f7f9fb; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day { background: #fff9c4; border-color: #e5cf57; }
     .ayc-mobile-week.is-current-week .ayc-mobile-day-head { background: #fff1a3; }
@@ -1301,8 +1309,13 @@
               {% for slot in mobile_day.summary_slots %}
                 <span class="ayc-mobile-overview-slot">
                   <strong>{{ slot.label }}</strong>
-                  <span class="ayc-mobile-overview-text">{{ slot.text|default:"—" }}</span>
-                  <span class="ayc-mobile-overview-meta">{{ slot.km }}{% if slot.status %} <span class="visually-hidden">{{ slot.status.label }}</span><span aria-hidden="true" title="{{ slot.status.label }}">{{ slot.status.icon }}</span>{% endif %}</span>
+                  <span class="ayc-mobile-overview-km">
+                    {% if slot.km %}<span><strong>{{ slot.km }}</strong></span>{% endif %}
+                    {% for zone in slot.zones %}<span>Z{{ zone.zone }} {{ zone.km }} km</span>{% empty %}{% if not slot.km %}—{% endif %}{% endfor %}
+                  </span>
+                  <span>{% if slot.status %}<span class="visually-hidden">{{ slot.status.label }}</span><span
+                    class="ayc-mobile-overview-status{% if slot.status.icon == '✓' %} is-done{% elif slot.status.icon == '✕' %} is-not-done{% elif slot.status.icon == '↑' or slot.status.icon == '↓' %} is-adjusted{% endif %}"
+                    aria-hidden="true" title="{{ slot.status.label }}">{{ slot.status.icon }}</span>{% endif %}</span>
                 </span>
               {% endfor %}
             </span>
