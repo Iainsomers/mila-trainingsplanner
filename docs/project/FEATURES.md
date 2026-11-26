@@ -704,3 +704,5 @@ Garmin C/D-chat kan op verzoek losse afstandsblokken voor de herhalingen in Main
 
 
 14 november — Staff Team Overview heeft een staff-only tab `Log`. Deze toont de nieuwste gebeurtenissen eerst voor alle nieuw geregistreerde gebeurtenissen van de actieve coachweergave binnen exact de laatste 24 uur: trainingsevaluaties, dagelijkse vitals, weekrapporten, dagcomments, Garmin-ontvangsten, wedstrijdselecties en whereabouts. De registratie is append-only en start bij ingebruikname; eerdere historie wordt niet teruggebouwd. Bestaande toegangs- en evaluatiedeelrechten worden opnieuw toegepast voordat een logregel zichtbaar wordt. Desktop gebruikt een compacte tabel en mobiel gelabelde kaartregels. Deze onbewerkte log is de bron voor een latere AI-coachupdate.
+
+Athlete Diary toont React bij het evaluatiecommentaar aan trainers die de evaluatie mogen bewerken. Reacties staan apart van het commentaar, met de eerste letter van voornaam en het laatste woord van de achternaam. Bij het openen van de Diary krijgt de atleet een popup met onbevestigde reacties. Na bevestiging blijven de reacties zichtbaar in de evaluatie.

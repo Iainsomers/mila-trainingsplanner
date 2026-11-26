@@ -2318,6 +2318,23 @@
 </div>
 {% endif %}
 
+{% if unread_evaluation_reactions %}
+<dialog id="evaluationReactionNotice" class="evaluation-dialog border rounded shadow" aria-labelledby="evaluationReactionTitle"
+        style="width: min(540px, calc(100% - 2rem)); max-height: 80vh; overflow: auto;">
+  <h5 id="evaluationReactionTitle">Coach replies</h5>
+  <ul class="list-unstyled">
+    {% for reaction in unread_evaluation_reactions %}
+      <li class="mb-2" data-reaction-id="{{ reaction.pk }}">
+        <div class="text-muted small">{{ reaction.evaluation.date|date:"d-m-Y" }} · {% if reaction.evaluation.slot_index == 1 %}AM{% else %}PM{% endif %}</div>
+        <div class="text-break" style="white-space: pre-wrap"><strong>{{ reaction.initials }}:</strong> {{ reaction.text }}</div>
+      </li>
+    {% endfor %}
+  </ul>
+  <button type="button" id="evaluationReactionDismiss" class="btn btn-sm btn-primary">OK</button>
+  <p id="evaluationReactionNoticeError" class="small text-danger mb-0" role="status"></p>
+</dialog>
+{% endif %}
+
 <div id="commentModal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:9999; align-items:center; justify-content:center;">
   <div class="evaluation-dialog">
     <h5 id="reportModalTitle">Evaluation</h5>
@@ -2352,11 +2369,13 @@
           </div>
         </div>
         <div>
-          <label class="form-label mb-1 report-comment-label" for="reportT1Comment">
-            <span>Comment</span>
+          <div class="form-label mb-1 report-comment-label">
+            <label for="reportT1Comment">Comment</label>
             <button type="button" class="voice-comment-btn" data-voice-comment-target="reportT1Comment" aria-label="Speak comment" title="Speak comment">🎙</button>
-          </label>
+          {% if coach_can_edit_training %}<button type="button" class="btn btn-sm btn-outline-primary" data-react="reportT1" aria-controls="reportT1Reactions">React</button>{% endif %}
+          </div>
           <textarea id="reportT1Comment" class="form-control form-control-sm report-field" rows="3"></textarea>
+          {% include "core/partials/evaluation_reactions.html" with prefix="reportT1" %}
         </div>
       </div>
 
@@ -2388,11 +2407,13 @@
           </div>
         </div>
         <div>
-          <label class="form-label mb-1 report-comment-label" for="reportT2Comment">
-            <span>Comment</span>
+          <div class="form-label mb-1 report-comment-label">
+            <label for="reportT2Comment">Comment</label>
             <button type="button" class="voice-comment-btn" data-voice-comment-target="reportT2Comment" aria-label="Speak comment" title="Speak comment">🎙</button>
-          </label>
+          {% if coach_can_edit_training %}<button type="button" class="btn btn-sm btn-outline-primary" data-react="reportT2" aria-controls="reportT2Reactions">React</button>{% endif %}
+          </div>
           <textarea id="reportT2Comment" class="form-control form-control-sm report-field" rows="3"></textarea>
+          {% include "core/partials/evaluation_reactions.html" with prefix="reportT2" %}
         </div>
       </div>
     </div>
@@ -3276,6 +3297,84 @@
   document.querySelectorAll(".report-preview-half[data-evaluation-slot]").forEach(function(el) {
     el.addEventListener("keydown", function(event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); el.click(); } });
   });
+  function reactionRequest(action, fields) {
+    var data = new URLSearchParams(fields);
+    data.set("evaluation_reaction", action);
+    data.set("athlete", "{{ selected_athlete_id }}");
+    return fetch("{% url 'athlete_year_calendar' %}", {
+      method: "POST", body: data, credentials: "same-origin",
+      headers: {"X-CSRFToken": getCookie("csrftoken")}
+    }).then(async function(response) {
+      var result = await response.json().catch(function() { return {}; });
+      if (!response.ok || response.redirected) throw new Error(result.error || "Coach replies are unavailable. Try again.");
+      return result;
+    });
+  }
+  var reactionSession = null;
+  function renderEvaluationReactions(list, reactions) {
+    list.replaceChildren();
+    reactions.forEach(function(reaction) {
+      var item = document.createElement("li");
+      item.className = "mb-1 text-break";
+      item.style.whiteSpace = "pre-wrap";
+      var initials = document.createElement("strong");
+      initials.textContent = reaction.initials + ": ";
+      item.append(initials, document.createTextNode(reaction.text));
+      list.appendChild(item);
+    });
+  }
+  function loadEvaluationReactions(day, slot) {
+    var panel = document.getElementById("reportT" + slot + "Reactions");
+    var session = {fields: {date: day, slot_index: slot}, panel: panel};
+    reactionSession = session;
+    var list = panel.querySelector("[data-reaction-list]");
+    var error = panel.querySelector("[data-reaction-error]");
+    var editor = panel.querySelector("[data-reaction-editor]");
+    list.replaceChildren();
+    error.textContent = "";
+    if (editor) {
+      editor.hidden = true;
+      editor.querySelector("textarea").value = "";
+      editor.querySelector("button").disabled = false;
+    }
+    reactionRequest("list", session.fields).then(function(result) {
+      if (reactionSession === session && !session.saved) renderEvaluationReactions(list, result.reactions);
+    }).catch(function(errorResponse) {
+      if (reactionSession === session && !session.saved) error.textContent = errorResponse.message;
+    });
+  }
+  document.querySelectorAll("[data-react]").forEach(function(button) {
+    var editor = document.getElementById(button.dataset.react + "Reactions").querySelector("[data-reaction-editor]");
+    var input = editor.querySelector("textarea");
+    var send = editor.querySelector("[data-reaction-send]");
+    button.addEventListener("click", function() {
+      editor.hidden = !editor.hidden;
+      button.setAttribute("aria-expanded", String(!editor.hidden));
+      if (!editor.hidden) input.focus();
+    });
+    send.addEventListener("click", async function() {
+      var session = reactionSession;
+      if (!session || !session.panel.contains(editor)) return;
+      var error = session.panel.querySelector("[data-reaction-error]");
+      if (!input.value.trim()) { input.focus(); return; }
+      send.disabled = true;
+      error.textContent = "";
+      try {
+        var result = await reactionRequest("create", {...session.fields, reaction_text: input.value});
+        if (reactionSession !== session) return;
+        session.saved = true;
+        renderEvaluationReactions(session.panel.querySelector("[data-reaction-list]"), result.reactions);
+        input.value = "";
+        editor.hidden = true;
+        button.setAttribute("aria-expanded", "false");
+        button.focus();
+      } catch (failure) {
+        if (reactionSession === session) error.textContent = failure.message;
+      } finally {
+        if (reactionSession === session) send.disabled = false;
+      }
+    });
+  });
   document.querySelectorAll(".comment-display").forEach(function(el){
     el.addEventListener("click", function(event){
       event.preventDefault(); event.stopImmediatePropagation();
@@ -3306,6 +3405,7 @@
       var savedWatchId = el.getAttribute("data-t" + selectedSlot + "-watch-id") || "";
       var savedWatchSummary = el.getAttribute("data-t" + selectedSlot + "-watch-summary") || "";
       setSavedWatchResult(savedWatchId, savedWatchSummary);
+      loadEvaluationReactions(activeDate, selectedSlot);
       document.getElementById("commentModal").style.display = "flex";
       validate();
     }, true);
@@ -3337,6 +3437,25 @@
   }
   }
   showPendingEvaluations();
+  var reactionNotice = document.getElementById("evaluationReactionNotice");
+  if (reactionNotice) {
+    reactionNotice.addEventListener("cancel", function(event) { event.preventDefault(); });
+    reactionNotice.showModal();
+    var dismissReaction = document.getElementById("evaluationReactionDismiss");
+    dismissReaction.addEventListener("click", async function() {
+      dismissReaction.disabled = true;
+      try {
+        var ids = Array.from(reactionNotice.querySelectorAll("[data-reaction-id]"), function(item) {
+          return ["reaction_id", item.dataset.reactionId];
+        });
+        await reactionRequest("read", ids);
+        reactionNotice.close();
+      } catch (failure) {
+        document.getElementById("evaluationReactionNoticeError").textContent = failure.message;
+        dismissReaction.disabled = false;
+      }
+    });
+  }
   {% if enable_idle_evaluation_reminders %}
   // Refresh reminders after an idle hour without reloading unsaved forms.
   var reminderLastInteraction = Date.now();

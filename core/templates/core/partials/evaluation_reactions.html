@@ -1,0 +1,11 @@
+<div id="{{ prefix }}Reactions" class="mt-2">
+  <ul class="list-unstyled small mb-0" data-reaction-list></ul>
+  {% if coach_can_edit_training %}
+    <div data-reaction-editor hidden>
+      <label for="{{ prefix }}Reaction" class="form-label small mb-1">Coach reply</label>
+      <textarea id="{{ prefix }}Reaction" class="form-control form-control-sm" rows="2" maxlength="2000"></textarea>
+      <button type="button" class="btn btn-sm btn-primary mt-1" data-reaction-send>Send reply</button>
+    </div>
+  {% endif %}
+  <p class="small text-danger mb-0" role="status" data-reaction-error></p>
+</div>

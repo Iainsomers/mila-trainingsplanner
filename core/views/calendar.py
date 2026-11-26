@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 import json
 import re
 
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect
 from django.utils.html import escape
 from django.utils import timezone
@@ -17,6 +17,7 @@ from core.access import evaluation_visibility_for_request
 
 from core.models import (
     AthleteDayCheck,
+    EvaluationReaction,
     AthleteDayComment,
     TrainingSlot,
     TrainingSegment,
@@ -3448,6 +3449,44 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
     save_processed_main_reps(override_slot)
 
 
+def _evaluation_reaction_response(request, athlete, is_coach, action):
+    visibility = evaluation_visibility_for_request(request, athlete.owner, athlete_self=not is_coach)
+    if not athlete.training_reports_enabled or not visibility["training"]:
+        return JsonResponse({}, status=403)
+    reactions = EvaluationReaction.objects.filter(evaluation__athlete=athlete)
+    if action == "read":
+        if is_coach:
+            return JsonResponse({}, status=403)
+        ids = request.POST.getlist("reaction_id")
+        if not ids or len(ids) > 50 or any(not value.isascii() or not value.isdigit() or len(value) > 18 for value in ids):
+            return JsonResponse({}, status=400)
+        reactions.filter(pk__in=ids, read_at__isnull=True).update(read_at=timezone.now())
+        return JsonResponse({})
+    try:
+        day = date.fromisoformat(request.POST.get("date", ""))
+        slot = int(request.POST.get("slot_index", ""))
+        if slot not in (1, 2):
+            raise ValueError
+    except ValueError:
+        return JsonResponse({}, status=400)
+    if action == "create":
+        if not is_coach or not _can_edit_coach_owner(request, athlete.owner_id):
+            return JsonResponse({}, status=403)
+        body = request.POST.get("reaction_text", "").strip()
+        evaluation = AthleteDayCheck.objects.filter(athlete=athlete, date=day, slot_index=slot).first()
+        if not body or len(body) > 2000 or not evaluation or not evaluation.comment.strip():
+            return JsonResponse({"error": "Save an evaluation comment first and enter a reply of up to 2000 characters."}, status=400)
+        user = request.user
+        first = user.first_name.split()
+        last = user.last_name.split()
+        initials = ((first[0] if first else user.get_username())[:1] + (last[-1][:1] if last else "")).upper()[:2]
+        EvaluationReaction.objects.create(evaluation=evaluation, author=user, initials=initials, text=body)
+    elif action != "list":
+        return JsonResponse({}, status=400)
+    return JsonResponse({"reactions": list(reactions.filter(evaluation__date=day, evaluation__slot_index=slot)
+                                           .order_by("pk").values("initials", "text"))})
+
+
 @login_required
 def athlete_year_calendar_view(request):
     is_ayc_coach = _is_ayc_coach_user(request.user)
@@ -3476,6 +3515,10 @@ def athlete_year_calendar_view(request):
 
         if athlete is None:
             return HttpResponse("", status=403)
+
+        reaction_action = request.POST.get("evaluation_reaction")
+        if reaction_action:
+            return _evaluation_reaction_response(request, athlete, is_ayc_coach, reaction_action)
 
         if athlete and date_str:
             try:
@@ -4581,6 +4624,9 @@ def athlete_year_calendar_view(request):
             "show_session_zones": bool(selected_athlete and getattr(selected_athlete, "see_session_zones", True)),
             "mobile_diary_week_view": bool(selected_athlete and getattr(selected_athlete, "mobile_diary_week_view", False)),
             "show_training_reports": show_training_reports,
+            "unread_evaluation_reactions": list(EvaluationReaction.objects.filter(
+                evaluation__athlete=selected_athlete, read_at__isnull=True,
+            ).select_related("evaluation").order_by("pk")[:50]) if athlete_self_view and show_training_reports else [],
             "evaluation_pain_enabled": evaluation_pain_enabled,
             "show_week_reports": show_week_reports,
             "show_daily_vitals": show_daily_vitals,

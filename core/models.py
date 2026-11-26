@@ -1766,6 +1766,15 @@ class AthleteDayComment(models.Model):
         return f"{self.athlete} - {self.date}"
 
 
+class EvaluationReaction(models.Model):
+    evaluation = models.ForeignKey("AthleteDayCheck", on_delete=models.CASCADE, related_name="reactions")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    initials = models.CharField(max_length=2)
+    text = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+
 class AthleteDayCheck(models.Model):
     PAIN_NONE = "no_pain"
     PAIN_SOME = "some_pain"

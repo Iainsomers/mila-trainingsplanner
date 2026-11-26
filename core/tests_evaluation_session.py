@@ -7,7 +7,7 @@ import subprocess
 from unittest import skipUnless
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from core.models import Athlete, TrainingPlan, PlanMembership, TrainingSlot, AthleteDayCheck
+from core.models import Athlete, TrainingPlan, PlanMembership, TrainingSlot, AthleteDayCheck, EvaluationReaction
 
 
 class EvaluationSessionTests(TestCase):
@@ -21,7 +21,7 @@ class EvaluationSessionTests(TestCase):
         for index,text in ((1,'AM easy 5000m Z1'),(2,'PM 6*400m Z3')):
             slot=TrainingSlot.objects.create(plan=self.plan,athlete=self.athlete,date=self.day,slot_index=index)
             slot.segments.create(type='CORE',text=text,order=3)
-        self.url=f'/athlete/year/?year=2026&athlete={self.athlete.pk}'
+        self.url=f'/athlete/year/?start=2026-10-26&athlete={self.athlete.pk}'
 
     def test_page_contains_current_training_and_daypart_targets_on_desktop_and_mobile(self):
         response=self.client.get(self.url)
@@ -44,6 +44,37 @@ class EvaluationSessionTests(TestCase):
         other.refresh_from_db()
         self.assertEqual((other.rpe,other.pain,other.comment),(7,'some_pain','PM original comment'))
         self.assertEqual(AthleteDayCheck.objects.get(athlete=self.athlete,date=self.day,slot_index=1).comment,'AM evaluation only')
+
+    def test_coach_reply_is_visible_and_acknowledged_only_by_the_athlete(self):
+        User = get_user_model()
+        self.coach.first_name = "Iain"
+        self.coach.last_name = "van Somers"
+        self.coach.save()
+        runner = User.objects.create_user(username="Evaluation_Runner")
+        check = AthleteDayCheck.objects.create(
+            athlete=self.athlete, date=self.day, slot_index=2, updated_by=runner, comment="Original comment",
+        )
+        payload = {"date": self.day.isoformat(), "slot_index": 2, "reaction_text": "<Good work>"}
+        self.assertContains(self.client.get(self.url), 'data-react="reportT2"')
+        result = self.client.post(self.url, {**payload, "evaluation_reaction": "create"})
+        self.assertEqual(result.json()["reactions"], [{"initials": "IS", "text": "<Good work>"}])
+        reply = EvaluationReaction.objects.get()
+        check.refresh_from_db()
+        self.assertEqual(check.comment, "Original comment")
+
+        self.client.force_login(runner)
+        page = self.client.get(self.url)
+        self.assertNotContains(page, 'data-react="reportT2"')
+        self.assertContains(page, 'id="evaluationReactionNotice"')
+        self.assertContains(page, '&lt;Good work&gt;')
+        self.assertContains(page, 'min(540px, calc(100% - 2rem))')
+        self.assertEqual(self.client.post(self.url, {**payload, "evaluation_reaction": "create"}).status_code, 403)
+        self.assertEqual(self.client.post(self.url, {
+            "evaluation_reaction": "read", "reaction_id": reply.pk,
+        }).status_code, 200)
+        self.assertNotContains(self.client.get(self.url), 'id="evaluationReactionNotice"')
+        self.assertEqual(self.client.post(self.url, {**payload, "evaluation_reaction": "list"}).json(),
+                         {"reactions": [{"initials": "IS", "text": "<Good work>"}]})
 
     @skipUnless(shutil.which('node'),'Node required for actual browser handler regression')
     def test_actual_js_opens_and_saves_only_clicked_session(self):
@@ -68,6 +99,7 @@ function setVal(id,v){document.getElementById(id).value=v||'';}
 function val(id){return document.getElementById(id).value;}
 function setNotDoneRpe(){}
 function setSavedWatchResult(id,summary){savedWatch=[id,summary];}
+function loadEvaluationReactions(){}
 function validate(){}
 function stopVoiceComment(){}
 function post(...args){requests.push(args);return Promise.resolve();}
