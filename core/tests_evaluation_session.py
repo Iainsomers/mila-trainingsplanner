@@ -59,7 +59,7 @@ class EvaluationSessionTests(TestCase):
         self.assertEqual(am["zones"], [])
         self.assertEqual(pm["zones"], [{"zone": "3", "km": "2.4"}])
         self.assertEqual(pm["km"], "2.4 km")
-        self.assertContains(response, "<span>Z3 2.4 km</span>", html=True)
+        self.assertContains(response, '<span class="total-pill total-z3">Z3 2.4 km</span>', html=True)
 
     @skipUnless(shutil.which("node"), "Node required for mobile Diary navigation")
     def test_mobile_week_overview_opens_day_and_keeps_selected_week(self):
