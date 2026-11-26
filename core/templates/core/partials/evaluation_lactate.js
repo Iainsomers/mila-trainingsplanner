@@ -139,7 +139,8 @@
     lactateStatus.textContent = "Saving…";
     try {
       const saved = await lactateRequest("save", session, rows);
-      const values = JSON.stringify(Object.fromEntries(saved.filter(row => row.lactate).map(row => [row.rep, row.lactate])));
+      const values = JSON.stringify(Object.fromEntries(saved.filter(row => row.lactate || row.rpe)
+        .map(({rep, lactate, rpe}) => [rep, {lactate, rpe}])));
       document.querySelectorAll('.slotbox[data-date="' + session.day + '"][data-slot-index="' + session.slot + '"]')
         .forEach(box => { box.dataset.lactateValues = values; });
       if (lactateSession === session && session.opening === opening && lactateDialog.open) lactateDialog.close();

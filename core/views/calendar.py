@@ -4199,7 +4199,10 @@ def athlete_year_calendar_view(request):
     if show_training_reports:
         logs = EvaluationLactateLog.objects.filter(athlete=selected_athlete, date__range=(start, end))
         for day, slot_index, rows in logs.values_list("date", "slot_index", "rows"):
-            values = {row["rep"]: row["lactate"] for row in rows if row.get("lactate")}
+            values = {
+                row["rep"]: {field: row[field] for field in ("lactate", "rpe") if row.get(field)}
+                for row in rows if row.get("lactate") or row.get("rpe")
+            }
             if values:
                 lactate_values[(day, slot_index)] = json.dumps(values, separators=(",", ":"))
 

@@ -4055,20 +4055,20 @@
     body.replaceChildren();
     var reps = [];
     try { reps = JSON.parse(button.getAttribute("data-main-reps") || "[]"); } catch (_) {}
-    const lactate = JSON.parse(button.closest(".slotbox")?.dataset.lactateValues || "{}");
-    const showLactate = Object.keys(lactate).length > 0;
+    const measurements = JSON.parse(button.closest(".slotbox")?.dataset.lactateValues || "{}");
+    if (!Array.isArray(reps)) reps = [];
+    reps = reps.map((rep, index) => ({...rep, measurements: measurements[rep.rep || index + 1]}));
     var useEndHr = /Garmin [CDE]/.test(button.getAttribute("data-watch-model") || "");
     var hasSplits = Array.isArray(reps) && reps.some(function(rep) { return Array.isArray(rep.splits) && rep.splits.length; });
     if (hasSplits) {
       title.textContent = "Recorded splits — " + (button.getAttribute("data-watch-model") || "Watch");
       var splitRows = [];
-      reps.forEach(function(rep, index) {
-        const value = lactate[rep.rep || index + 1];
+      reps.forEach(function(rep) {
         if (Array.isArray(rep.splits) && rep.splits.length) {
           rep.splits.forEach((split, i) => splitRows.push({
-            ...split, lactate: i === rep.splits.length - 1 ? value : ""
+            ...split, measurements: i === rep.splits.length - 1 ? rep.measurements : undefined
           }));
-        } else splitRows.push({...rep, lactate: value});
+        } else splitRows.push(rep);
       });
       reps = splitRows;
     }
@@ -4089,7 +4089,9 @@
       var header = document.createElement("tr");
       const headers = [hasSplits ? "Lap" : "Rep", "Distance", "Time", "min/km", "Avg HR",
                        useEndHr ? "HR last 10%" : "Last 15s HR"];
-      if (showLactate) headers.push("Lactate (mmol/L)");
+      const columns = [["lactate", "Lac"], ["rpe", "RPE"]].filter(([field]) =>
+        reps.some(rep => rep.measurements?.[field]));
+      headers.push(...columns.map(([, label]) => label));
       headers.forEach(function(label) {
         var th = document.createElement("th"); th.scope = "col"; th.textContent = label; header.appendChild(th);
       });
@@ -4108,7 +4110,7 @@
           Number(rep.average_hr) > 0 ? String(Math.round(Number(rep.average_hr))) : "NA",
           Number(useEndHr ? rep.hr_tail : rep.average_hr_last_15) > 0 ? String(Math.round(Number(useEndHr ? rep.hr_tail : rep.average_hr_last_15))) : "NA"
         ];
-        if (showLactate) values.push((hasSplits ? rep.lactate : lactate[rep.rep || index + 1]) || "—");
+        values.push(...columns.map(([field]) => rep.measurements?.[field] || "—"));
         values.forEach(function(value) { var td = document.createElement("td"); td.textContent = value; tr.appendChild(td); });
         tbody.appendChild(tr);
       });

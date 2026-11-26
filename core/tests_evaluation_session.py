@@ -53,7 +53,8 @@ class EvaluationSessionTests(TestCase):
         result = self.client.post(self.url, {**payload, "evaluation_lactate": "save", "rows": json.dumps(rows)})
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.json()["rows"], rows)
-        self.assertContains(self.client.get(self.url), 'data-lactate-values="{&quot;10&quot;:&quot;2,5&quot;}"')
+        self.assertContains(self.client.get(self.url),
+                            'data-lactate-values="{&quot;10&quot;:{&quot;lactate&quot;:&quot;2,5&quot;,&quot;rpe&quot;:&quot;5&quot;}}"')
         self.assertFalse(AthleteDayCheck.objects.filter(athlete=self.athlete).exists())
         runner = get_user_model().objects.create_user(username="Evaluation_Runner")
         self.client.force_login(runner)
@@ -63,6 +64,36 @@ class EvaluationSessionTests(TestCase):
         invalid = self.client.post(self.url, {**payload, "evaluation_lactate": "save",
                                              "rows": json.dumps([{"rep": 10, "rpe": "11"}])})
         self.assertEqual(invalid.status_code, 400)
+
+    @skipUnless(shutil.which("node"), "Node required for clock popup checks")
+    def test_clock_popup_only_shows_columns_with_rep_measurements(self):
+        source = Path("core/templates/core/athlete_year_calendar.html").read_text(encoding="utf-8")
+        source = source[source.index("  function showStoredWatchMainReps("):source.index("  function formatWatchDuration(")]
+        script = """
+const assert = require("node:assert/strict");
+const nodes = {};
+function node() {
+    return {children: [], style: {}, focus() {}, replaceChildren() { this.children = []; },
+        appendChild(child) { this.children.push(child); }};
+}
+const document = {createElement: node, getElementById: id => nodes[id] ??= node()};
+const formatWatchDuration = () => "", formatWatchPace = () => "";
+""" + source + """
+function show(values) {
+    showStoredWatchMainReps({
+        closest: () => ({dataset: {lactateValues: JSON.stringify(values)}}),
+        getAttribute: key => key === "data-watch-model" ? "Garmin E" : '[{"rep":10}]'
+    });
+    const [, table] = nodes.watchMainRepsBody.children;
+    return table.children.map(section => section.children[0].children.map(cell => cell.textContent));
+}
+assert.equal(show({})[0].length, 6);
+assert.equal(show({20: {rpe: "8"}})[0].length, 6);
+assert.deepEqual(show({10: {rpe: "0"}}).map(row => row.slice(6)), [["RPE"], ["0"]]);
+assert.deepEqual(show({10: {lactate: "2.5", rpe: "6"}}).map(row => row.slice(6)), [["Lac", "RPE"], ["2.5", "6"]]);
+"""
+        result = subprocess.run(["node", "-"], input=script, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     @skipUnless(shutil.which("node"), "Node required for lactate row checks")
     def test_lactate_row_uses_watch_values_and_marks_missing_values_manual(self):
