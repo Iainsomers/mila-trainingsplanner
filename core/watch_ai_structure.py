@@ -417,7 +417,8 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
 
 
 def description(fields):
-    return f"WU: {fields.get('wu') or 'none'} · Main: {fields['main']} · CD: {fields.get('cd') or 'none'}"
+    sprint = f" · Sprint: {fields['sprint']}" if fields.get("sprint") else ""
+    return f"WU: {fields.get('wu') or 'none'}{sprint} · Main: {fields['main']} · CD: {fields.get('cd') or 'none'}"
 
 
 def apply_lap_structure(part, loads, structure):

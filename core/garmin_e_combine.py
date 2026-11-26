@@ -21,18 +21,19 @@ def append_watch_loads(existing, incoming):
 
 
 def combine_recordings(results, selection):
-    if not isinstance(selection,list) or not 2<=len(selection)<=4:
-        raise ValueError("Select two to four activities.")
+    if not isinstance(selection,list) or not 2<=len(selection)<=5:
+        raise ValueError("Select two to five activities.")
     if any(not isinstance(item,dict) or set(item)!={"start","role"} for item in selection):
-        raise ValueError("Choose the activity and WU/Main/CD role.")
+        raise ValueError("Choose the activity and WU/Sprint/Main/CD role.")
     starts = [item["start"] for item in selection]
     roles = [item["role"] for item in selection]
     if any(not isinstance(value,str) for value in starts+roles):
         raise ValueError("Invalid activity selection.")
-    if (len(set(starts))!=len(starts) or roles.count("wu")>1 or roles.count("cd")>1
+    role_order = ("wu", "sprint", "main", "cd")
+    if (len(set(starts))!=len(starts) or any(roles.count(role)>1 for role in ("wu", "sprint", "cd"))
             or not 1 <= roles.count("main") <= 2
-            or any(role not in {"wu","main","cd"} for role in roles)):
-        raise ValueError("Select one or two Main recordings and at most one WU and CD.")
+            or any(role not in role_order for role in roles)):
+        raise ValueError("Select one or two Main recordings and at most one WU, Sprint and CD.")
     chosen = []
     for item in selection:
         matches = [session for session in results if session.get("start")==item["start"]]
@@ -47,6 +48,11 @@ def combine_recordings(results, selection):
             raise ValueError("Combine supports running recordings with measured laps.")
         if item["role"]=="main" and not fields.get("main"):
             raise ValueError("Choose an activity with a Main description as Main.")
+        if item["role"] == "sprint" and (
+                not part.get("e_usable") or not fields.get("main") or fields.get("wu") or fields.get("cd")):
+            raise ValueError("Choose a checked Sprint recording without its own WU or CD.")
+        if "sprint" in roles and item["role"] == "main" and (not part.get("e_usable") or fields.get("wu")):
+            raise ValueError("Analyze Main first and choose any warmup as a separate WU recording.")
         if roles.count("main") == 2 and item["role"] == "main":
             if not part.get("e_usable"):
                 raise ValueError("Analyze both Main recordings before combining.")
@@ -56,8 +62,8 @@ def combine_recordings(results, selection):
                 raise ValueError("Warmup must precede both Main blocks and cooldown must follow them.")
         chosen.append((item,source))
     chosen.sort(key=lambda pair:pair[0]["start"])
-    if [item["role"] for item,_ in chosen]!=sorted(roles, key=("wu","main","cd").index):
-        raise ValueError("Use chronological order: WU, Main, CD.")
+    if [item["role"] for item,_ in chosen]!=sorted(roles, key=role_order.index):
+        raise ValueError("Use chronological order: WU, Sprint, Main, CD.")
     ordered = [item for item,_ in chosen]
     identity = hashlib.sha256(json.dumps(ordered,sort_keys=True).encode()).hexdigest()
     fields = {"wu":"","main":"","cd":""}
@@ -74,7 +80,9 @@ def combine_recordings(results, selection):
             copy = deepcopy(load)
             copy.pop("combined_outer",None)
             copy.update(recording_role=role,recording_start=item["start"])
-            if role!="main":
+            if role == "sprint" and copy.get("segment") != "IGNORE":
+                copy["segment"] = "SPR"
+            elif role in ("wu", "cd"):
                 copy["segment"] = role.upper()
             recording_loads.append(copy)
         ranges.setdefault(role, []).extend(range(len(loads)+1, len(loads)+len(recording_loads)+1))
@@ -83,7 +91,9 @@ def combine_recordings(results, selection):
             row = deepcopy(row)
             row["index"] = len(manual)+1
             manual.append(row)
-        if role=="main":
+        if role == "sprint":
+            fields["sprint"] = part["training_fields"]["main"]
+        elif role=="main":
             source_fields = part["training_fields"]
             fields["main"] = " // ".join(filter(None, (fields["main"], source_fields["main"])))
             for boundary in ("wu", "cd"):

@@ -62,6 +62,7 @@ function checkGarminECombine() {
   const checks = nodes.filter(node => node.tag === 'input' && node.type === 'checkbox');
   const roles = nodes.filter(node => node.tag === 'select');
   assert.ok(parent.children[0].className.includes('flex-wrap'));
+  assert.deepEqual(roles[0].children.map(option => option.textContent), ['WU', 'Sprint', 'Main', 'CD']);
   roles[0].value = 'wu';
   for (const check of checks.slice(0, 3)) {
     check.checked = true;

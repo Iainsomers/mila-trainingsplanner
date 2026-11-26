@@ -90,7 +90,7 @@ def garmin_type_e_ayc_view(request):
         try:
             if selection_text:
                 if len(selection_text)>4000:
-                    raise ValueError("Choose at most three activities.")
+                    raise ValueError("Choose at most five activities.")
                 selection = json.loads(selection_text)
             else:
                 signed = signing.loads(combine_token,salt="garmin-e-combine",max_age=86400)
@@ -99,7 +99,7 @@ def garmin_type_e_ayc_view(request):
                 selection = signed[3]
             from core.garmin_e_combine import combine_recordings, shifted_main_proposal
             main_starts = [item.get("start") for item in selection
-                           if isinstance(item,dict) and item.get("role")=="main"] if isinstance(selection,list) else []
+                           if isinstance(item,dict) and item.get("role") in ("main", "sprint")] if isinstance(selection,list) else []
             main_states = {}
             for main_source in results:
                 main_start = main_source.get("start")
@@ -120,10 +120,12 @@ def garmin_type_e_ayc_view(request):
             combined["e_combine_token"] = signing.dumps(
                 [request.user.pk,athlete.pk,request.GET.get("date"),ordered],salt="garmin-e-combine")
             main_state = main_states.get(main_starts[0]) if main_starts else None
-            if len(main_starts) == 2:
+            if combined["parts"][0]["training_fields"].get("sprint") and request.method == "POST" and not combining:
+                return JsonResponse({"ok": False, "message": "Edit the source recordings and combine them again."}, status=400)
+            if len(main_starts) >= 2:
                 candidate = deepcopy(combined["parts"][0])
                 candidate.update(e_usable=True, ai_structure_status="e_validated",
-                                 e_zone_note="Both Main recordings retain their checked zones.")
+                                 e_zone_note="The combined work recordings retain their checked zones.")
                 combined_seed = dict(proposal=None, part=candidate, basis="auto", history=[])
             elif main_state and main_state.get("proposal"):
                 try:

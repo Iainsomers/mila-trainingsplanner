@@ -989,6 +989,16 @@ class GarminEEndpointTests(TestCase):
         self.assertEqual(full["training_fields"], {"wu": "600 m Z1", "main": expected, "cd": "1000 m Z1"})
         self.assertEqual(model.call_count, calls)
 
+        sprint_selection = [{"start": recordings[0]["start"], "role": "sprint"}, *recordings[1:]]
+        response = self.client.post(self.url + "?" + urlencode(self.query), {
+            "combine": json.dumps(sprint_selection),
+        })
+        self.assertEqual(response.status_code, 200, response.json())
+        sprint = response.json()["results"][0]["parts"][0]
+        self.assertTrue(sprint["e_usable"])
+        self.assertEqual(sprint["training_fields"]["sprint"], parts[0]["training_fields"]["main"])
+        self.assertEqual(sprint["watch_loads"][0]["segment"], "SPR")
+
         from core.models import TrainingSlot
         for slot_index, imports in ((1, parts), (2, [combined])):
             save = reverse("slot_modal", args=[2026, 11, 14, slot_index]) + "?" + urlencode({
@@ -1005,6 +1015,19 @@ class GarminEEndpointTests(TestCase):
             slot = TrainingSlot.objects.get(athlete=self.athlete, date="2026-11-14", slot_index=slot_index)
             self.assertEqual(slot.core_text(), expected)
             self.assertEqual([rep["measured_seconds"] for rep in slot.watch_main_reps], [260, 100, 100])
+
+        slot.segments.create(type="SPR", text="5×60 m Z6", order=2)
+        fields = sprint["training_fields"]
+        response = self.client.post(save, dict(
+            watch_origin="watch_e", watch_loads=json.dumps(sprint["watch_loads"]),
+            watch_validation=sprint["e_validation"], sprint_text=fields["sprint"],
+            wu_text=fields["wu"], core_text=fields["main"], cd_text=fields["cd"],
+        ))
+        self.assertEqual(response.status_code, 200, response.content[:500])
+        slot.refresh_from_db()
+        self.assertEqual(slot.segments.get(type="SPR").text, fields["sprint"])
+        self.assertEqual(slot.core_text(), fields["main"])
+        self.assertEqual([rep["measured_seconds"] for rep in slot.watch_main_reps], [100, 100])
 
     @patch("core.views.garmin_e.ask_model")
     def test_combine_uses_checked_main_when_fresh_measured_description_is_empty(self, model):

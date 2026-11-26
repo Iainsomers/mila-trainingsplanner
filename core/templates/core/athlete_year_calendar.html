@@ -2783,7 +2783,7 @@
       ? parent.eCombinedHost : document.createElement("div");
     var combineButton;
     function invalidCombineCount(count) {
-      return count < 2 || count > (model === "E" ? 4 : 3);
+      return count < 2 || count > (model === "E" ? 5 : 3);
     }
     if ((model === "C" || model === "D" || model === "E") && !combinedPreview && results.filter(function(session) {
       return (session.parts || []).length === 1 && (session.parts[0].watch_loads || []).length &&
@@ -2793,7 +2793,7 @@
       toolbar.className = "d-flex flex-wrap align-items-center gap-2 mb-2";
       var hint = document.createElement("span");
       hint.textContent = model === "E"
-        ? "Select 2–4 activities, with up to two checked Main recordings."
+        ? "Select 2–5 activities. Choose WU, Sprint, Main or CD."
         : "Select 2–3 activities and choose WU / Main / CD.";
       toolbar.appendChild(hint);
       combineButton = document.createElement("button");
@@ -2854,9 +2854,12 @@
         var role = document.createElement("select");
         role.className = "form-select form-select-sm w-auto";
         role.setAttribute("aria-label", "Role for " + (session.name || "activity"));
-        [["wu", "WU"], ["main", "Main"], ["cd", "CD"]].forEach(function(pair) {
+        var roles = model === "E" ? [["wu", "WU"], ["sprint", "Sprint"], ["main", "Main"], ["cd", "CD"]]
+          : [["wu", "WU"], ["main", "Main"], ["cd", "CD"]];
+        roles.forEach(function(pair) {
           var option = document.createElement("option"); option.value = pair[0]; option.textContent = pair[1];
           if (pair[0] === "main" && !(session.parts[0].training_fields || {}).main) option.disabled = true;
+          if (pair[0] === "sprint" && (!session.parts[0].e_usable || !(session.parts[0].training_fields || {}).main)) option.disabled = true;
           role.appendChild(option);
         });
         role.value = !(session.parts[0].training_fields || {}).main ? "wu" :
@@ -2965,7 +2968,7 @@
             var actions = document.createElement("div");
             actions.className = "d-flex flex-wrap gap-1";
             actions.style.maxWidth = "100%";
-            if ((model === "C" || model === "D" || model === "E") &&
+            if (!fields.sprint && (model === "C" || model === "D" || model === "E") &&
                 (fields.main || (model === "E" && ((fields.alt || fields.alternative) || canDiscussGarminE)))) {
               var key = model + ":" + (session.e_session_id || session.start);
               var chat = watchChats[key] || (watchChats[key] = {messages:model === "E" ? (part.e_history || []) : [], open:model === "E" && !part.e_usable});
@@ -3186,6 +3189,7 @@
     formData.append("slot_index", String(slotIndex));
     formData.append("slot_text", [fields.wu, fields.main, fields.cd].filter(Boolean).join("\n"));
     formData.append("wu_text", fields.wu || "");
+    if (fields.sprint) formData.append("sprint_text", fields.sprint);
     formData.append("core_text", fields.main || "");
     formData.append("alt_text", fields.alt || fields.alternative || "");
     if (!fields.main && (fields.alt || fields.alternative)) {

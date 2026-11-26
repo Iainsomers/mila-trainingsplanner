@@ -1411,6 +1411,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         try:
             fields = {"wu":request.POST.get("wu_text",""),"main":request.POST.get("core_text",""),
                       "cd":request.POST.get("cd_text","")}
+            if request.POST.get("sprint_text"):
+                fields["sprint"] = request.POST["sprint_text"]
             alternative = request.POST.get("alt_text","")
             if alternative and not any(fields.values()):
                 fields = {"alt":alternative}
@@ -1481,7 +1483,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         return HttpResponse('Main training required.', status=400)
     # Add AM/PM appends a new Alternative segment. Use AM/PM keeps the
     # replacement semantics for the complete running/Alternative part.
+    watch_sprint = request.POST.get('watch_origin') == 'watch_e' and bool(request.POST.get('sprint_text', '').strip())
     watch_replaced_types = set() if alternative_only else {'WU', 'CORE', 'CD'}
+    if watch_sprint:
+        watch_replaced_types.add('SPR')
     if not running_add and not alternative_only:
         watch_replaced_types.add('ALT')
     # Trainingsbuilder toggles (uit session)
@@ -1779,7 +1784,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         append_running = bool(running_add and getattr(original_slot, "watch_loads", None)
                               and any(segment.type == "CORE" for segment in original_slot.segments.all()))
         if append_running:
-            watch_replaced_types = set()
+            watch_replaced_types.intersection_update({'SPR'})
         form_segment_order = normalize_segment_order(getattr(original_slot,'segment_order',None))
         if original_slot:
             protected_watch_segments = [
@@ -1827,7 +1832,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     mob_text = (request.POST.get("mob_text") or "").strip() if tb_show_mob else ""
     selected_standard_strength = _standard_strength_for_user(request, request.POST.get("standard_strength_id")) if tb_show_mob else None
     selected_standard_strength_id = str(selected_standard_strength.id) if selected_standard_strength else ""
-    sprint_text = (request.POST.get("sprint_text") or "").strip() if tb_show_sprint else ""
+    sprint_text = (request.POST.get("sprint_text") or "").strip() if tb_show_sprint or watch_sprint else ""
     core_text = (request.POST.get("core_text") or "").strip()
     core2_text = (request.POST.get("core2_text") or "").strip() if tb_show_core2 else ""
     alt_text = (request.POST.get("alt_text") or "").strip()
@@ -1837,7 +1842,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if append_running:
         wu_text = cd_text = ""
     if preserve_watch_fields:
-        mob_text = sprint_text = core2_text = ''
+        mob_text = core2_text = ''
+        if not watch_sprint:
+            sprint_text = ''
         selected_standard_strength = None
         core_text = normalize_watch_main_text(core_text)
     if alternative_only or alternative_replace:
@@ -2163,7 +2170,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         if append_running:
             from core.garmin_e_combine import append_watch_loads
             watch_loads = append_watch_loads(
-                watch_preserve_source.watch_loads,
+                [load for load in watch_preserve_source.watch_loads
+                 if not watch_sprint or (load.get("segment") != "SPR" and load.get("recording_role") != "sprint")],
                 [load for load in watch_loads if load.get("segment", "CORE") not in {"WU", "CD"}],
             )
         slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"} else "planned"
@@ -2210,6 +2218,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             mob_seg.photo_ids = kept_photo_ids
             mob_seg.save(update_fields=["photo_ids"])
 
+    if not preserve_watch_fields or watch_sprint:
         # Save SPRINT
         if sprint_text:
             if sprint_seg:
