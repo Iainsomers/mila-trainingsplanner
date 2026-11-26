@@ -12093,7 +12093,7 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
-    def test_own_stats_tile_and_page_follow_pending_diary_evaluations(self):
+    def test_own_stats_tile_and_page_are_available_with_pending_evaluations(self):
         user = get_user_model().objects.create_user(username="Self Stats")
         coach = get_user_model().objects.create_user(username="stats-owner", is_staff=True)
         athlete = Athlete.objects.create(owner=coach, name="Self Stats", birth_year=2000, gender="X")
@@ -12107,18 +12107,9 @@ class TrainerStatsTests(TestCase):
         self.client.force_login(user)
         home = reverse("planning_overview")
         graph = reverse("trainer_athlete_stats", args=[athlete.pk])
-        self.assertNotContains(self.client.get(home), graph)
-        self.assertEqual(self.client.get(graph).status_code, 403)
-        AthleteDayCheck.objects.create(athlete=athlete, date=yesterday, slot_index=1,
-                                       updated_by=user, checked=True)
         self.assertContains(self.client.get(home), graph)
         self.assertContains(self.client.get(graph), "Weekly totals and ACWR")
         self.assertEqual(self.client.get(reverse("trainer_athlete_stats", args=[other.pk])).status_code, 403)
-        AthleteDayCheck.objects.filter(athlete=athlete).delete()
-        athlete.always_stats = True
-        athlete.save(update_fields=["always_stats"])
-        self.assertContains(self.client.get(home), graph)
-        self.assertContains(self.client.get(graph), "Weekly totals and ACWR")
 
     @patch("core.views.coach._effective_week_distance_m")
     def test_week_history_loads_the_full_period_in_one_pass(self, effective_totals):

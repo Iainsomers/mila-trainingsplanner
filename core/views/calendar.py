@@ -3446,16 +3446,6 @@ def _save_athlete_slot_override(request, athlete, d, slot_index, slot_text):
 
 @login_required
 def athlete_year_calendar_view(request):
-    return _athlete_year_calendar(request)
-
-
-def athlete_has_stats_access(request, athlete):
-    if athlete.always_stats or not athlete.training_reports_enabled:
-        return True
-    return _athlete_year_calendar(request, stats_access_only=True)
-
-
-def _athlete_year_calendar(request, *, stats_access_only=False):
     is_ayc_coach = _is_ayc_coach_user(request.user)
     simple_diary_view = bool(is_ayc_coach and request.GET.get("simple") == "1")
     if request.method == "POST":
@@ -3851,10 +3841,6 @@ def _athlete_year_calendar(request, *, stats_access_only=False):
     # number of year boundaries.
     full_start = start
     weeks = 53
-    if stats_access_only:
-        previous_day = today - timedelta(days=7)
-        start = previous_day - timedelta(days=previous_day.weekday())
-        weeks = 2
     end = start + timedelta(days=(weeks * 7) - 1)
 
     whereabouts_owner = selected_athlete.owner if selected_athlete else None
@@ -4266,16 +4252,6 @@ def _athlete_year_calendar(request, *, stats_access_only=False):
                     slot2 = None
                     check2 = None
 
-            if stats_access_only:
-                if reminder_start <= day <= reminder_end:
-                    for slot_index, slot in ((1, slot1), (2, slot2)):
-                        if slot and not _slot_is_visually_empty(slot):
-                            check = check_map.get((day, slot_index))
-                            if not check or not check.effective_status:
-                                pending_evaluation_reminders.append(None)
-                                if len(pending_evaluation_reminders) > 1:
-                                    return False
-                continue
             slot1 = _clone_slot_for_display(slot1)
             slot2 = _clone_slot_for_display(slot2)
             _annotate_slot_segment_display_times(slot1, selected_athlete)
@@ -4357,9 +4333,6 @@ def _athlete_year_calendar(request, *, stats_access_only=False):
                 "vitals": daily_vitals_map.get(day),
             })
 
-        if stats_access_only:
-            d += timedelta(days=7)
-            continue
         week_phase_style, week_phase = ayc_week_training_style([week_start + timedelta(days=i) for i in range(7)])
 
         z_m = {str(i): 0.0 for i in range(1, 7)}
@@ -4557,8 +4530,6 @@ def _athlete_year_calendar(request, *, stats_access_only=False):
 
         d += timedelta(days=7)
 
-    if stats_access_only:
-        return True
     if athlete_self_view and visible_until_date:
         week_rows = [
             w for w in week_rows
