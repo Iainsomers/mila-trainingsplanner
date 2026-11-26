@@ -1028,6 +1028,10 @@ class GarminEEndpointTests(TestCase):
         self.assertEqual(slot.segments.get(type="SPR").text, fields["sprint"])
         self.assertEqual(slot.core_text(), fields["main"])
         self.assertEqual([rep["measured_seconds"] for rep in slot.watch_main_reps], [100, 100])
+        from core.views.calendar import _ayc_slot_loads_for_totals, _ayc_slot_session_zones
+        sprint_loads = [load for load in _ayc_slot_loads_for_totals(slot) if load.get("segment") == "SPR"]
+        self.assertEqual([(load["zone"], load["meters"]) for load in sprint_loads], [("6", 800)])
+        self.assertIn({"zone": "6", "km": "0.8"}, _ayc_slot_session_zones(slot))
 
     @patch("core.views.garmin_e.ask_model")
     def test_combine_uses_checked_main_when_fresh_measured_description_is_empty(self, model):

@@ -2236,7 +2236,7 @@ def _watch_segment_loads(seg):
     for load in watch_loads:
         if not isinstance(load, dict) or str(load.get("segment") or "CORE").upper() != segment_type:
             continue
-        if segment_type == "CORE" and load.get("work_rep") is False:
+        if segment_type in {"CORE", "SPR"} and load.get("work_rep") is False:
             continue
         if load.get("nominal_rep_m") and getattr(seg, "distance_m", None):
             if float(load["nominal_rep_m"]) != float(seg.distance_m):
@@ -2856,9 +2856,11 @@ def _ayc_slot_loads_for_totals(slot, athlete=None, pause_mode=None):
                     continue
                 if meters <= 0 or seconds <= 0:
                     continue
+                segment_type = str(load.get("segment") or "CORE").upper()
+                sprint_rep = segment_type == "SPR" and load.get("work_rep") is True
                 actual.append({
-                    "segment": str(load.get("segment") or "CORE").upper(),
-                    "zone": str(load.get("zone") or "1"),
+                    "segment": segment_type,
+                    "zone": "6" if sprint_rep else str(load.get("zone") or "1"),
                     "meters": meters,
                     "seconds": seconds,
                     "t_key": str(load.get("t_key") or ""),
