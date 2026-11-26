@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from core.models import Athlete, GarminEConversation
+from core.training_text import display_pause_times
 from core.garmin_e import (
     apply_explicit_zone_labels,
     ask_model,
@@ -530,6 +531,8 @@ def garmin_type_e_ayc_view(request):
     for session in results:
         for part in session.get("parts",[]):
             part["description_label"] = "Checked E preview" if part.get("e_usable") else "Measured preview"
+            if part.get("description"):
+                part["description"] = display_pause_times(part["description"])
             if part.get("e_usable"):
                 part["e_validation"] = signing.dumps(
                     [request.user.pk,athlete.pk,request.GET.get("date"),

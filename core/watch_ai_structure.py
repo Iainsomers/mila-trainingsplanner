@@ -417,8 +417,11 @@ def validate_lap_structure(data, facts, *, issues=None, minimum_confidence=.75, 
 
 
 def description(fields):
+    from core.training_text import display_pause_times
     sprint = f" · Sprint: {fields['sprint']}" if fields.get("sprint") else ""
-    return f"WU: {fields.get('wu') or 'none'}{sprint} · Main: {fields['main']} · CD: {fields.get('cd') or 'none'}"
+    return display_pause_times(
+        f"WU: {fields.get('wu') or 'none'}{sprint} · Main: {fields['main']} · CD: {fields.get('cd') or 'none'}"
+    )
 
 
 def apply_lap_structure(part, loads, structure):

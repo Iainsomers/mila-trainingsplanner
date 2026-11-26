@@ -491,3 +491,5 @@ Garmin C/D toont een Z2-warming-up als aandachtspunt voor coaches bij de analyse
 Elk ingevuld veld in de weekrapportkolom heeft een groen bolletje. Na opslaan werkt het bolletje direct bij. Bij het openen van de Athlete Diary toont een popup het nieuwste onbevestigde trainercommentaar per week, ook op mobiel.
 
 Garmin E gebruikt de taal van het laatste echte chatbericht. Zonder bericht of bij onduidelijke taal (bijvoorbeeld alleen trainingsnotatie) antwoordt Garmin E in het Engels. Automatische analyse-instructies tellen niet mee voor de taalkeuze.
+
+Toon p en sp boven 90 seconden in minuten en seconden in de trainingsweergave en Garmin E-preview, bijvoorbeeld `p2'15"` voor 135 seconden. De opgeslagen pauselengte blijft leidend voor berekeningen.

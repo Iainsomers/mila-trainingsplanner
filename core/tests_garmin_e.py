@@ -707,6 +707,12 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    def test_preview_formats_only_pauses_over_ninety_seconds(self):
+        from core.watch_ai_structure import description
+        preview = description({"main": '2×(10×400 m Z3 p135") sp359 // 3×200 m p90 // 2×200 m p135m'})
+        self.assertIn('p2\'15") sp5\'59"', preview)
+        self.assertIn("p90 // 2×200 m p135m", preview)
+
     @patch("core.views.garmin_e.ask_model")
     def test_literal_warmup_sprints_and_long_reps_follow_measured_order(self, model):
         laps = [

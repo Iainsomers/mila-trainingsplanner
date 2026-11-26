@@ -3,6 +3,22 @@
 import re
 
 
+def display_pause_times(text):
+    """Show long p/sp durations in minutes and seconds."""
+    def format_pause(match):
+        seconds = int(match["seconds"])
+        if seconds <= 90:
+            return match[0]
+        minutes, remainder = divmod(seconds, 60)
+        duration = f"{minutes}'{remainder:02d}\"" if remainder else f"{minutes}'"
+        return match["prefix"] + duration
+
+    return re.sub(
+        r'(?P<prefix>\b(?:sp|p)\.?\s*=?\s*)(?P<seconds>[0-9]{1,5})(?:["″]|\s*(?:secs?|seconds?|s))?(?=$|[\s)/;]|,(?!\d))',
+        format_pause, str(text or ""), flags=re.IGNORECASE,
+    )
+
+
 def normalize_watch_main_text(text):
     """Use planner separators for Watch summaries.
 

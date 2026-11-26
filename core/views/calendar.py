@@ -42,7 +42,7 @@ from core.models import (
 )
 from core.stats import active_pause_distance_m, base_week_stats, athlete_week_stats, group_week_stats, STATS_VERSION_KEY
 from core.parser import parse_segment_text
-from core.training_text import split_main_segments
+from core.training_text import display_pause_times, split_main_segments
 from core.wucd import apply_auto_wucd_texts
 from .common import (
     _calendar_display_mode,
@@ -2626,7 +2626,9 @@ def _annotate_slot_segment_display_times(slot, athlete):
             label = _watch_actual_time_label(actual_loads, seg) if is_watch_segment else _segment_rep_time_label(athlete, seg)
         hr_label = "" if is_watch_segment else _segment_hr_label(athlete, seg)
         display_labels = "; ".join(part for part in (label, hr_label) if part)
-        seg.display_text = single_rep_display or (f"{text} ({display_labels})" if text and display_labels else text)
+        seg.display_text = display_pause_times(
+            single_rep_display or (f"{text} ({display_labels})" if text and display_labels else text)
+        )
     return slot
 
 
