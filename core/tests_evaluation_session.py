@@ -7,7 +7,7 @@ import subprocess
 from unittest import skipUnless
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from core.models import Athlete, AthleteWeekReport, TrainingPlan, PlanMembership, TrainingSlot, AthleteDayCheck, EvaluationReaction
+from core.models import Athlete, AthleteWeekReport, TrainingPlan, PlanMembership, TrainingSlot, AthleteDayCheck, EvaluationReaction, YearPlannerEntry
 
 
 class EvaluationSessionTests(TestCase):
@@ -22,6 +22,17 @@ class EvaluationSessionTests(TestCase):
             slot=TrainingSlot.objects.create(plan=self.plan,athlete=self.athlete,date=self.day,slot_index=index)
             slot.segments.create(type='CORE',text=text,order=3)
         self.url=f'/athlete/year/?start=2026-10-26&athlete={self.athlete.pk}'
+
+    def test_mobile_week_phase_colour_is_on_header_and_mixed_week_has_label(self):
+        for day, phase in ((date(2026, 10, 26), "aerobe"), (self.day, "specific"),
+                           (date(2026, 11, 2), "aerobe")):
+            YearPlannerEntry.objects.create(owner=self.coach, athlete=self.athlete, date=day, training_type=phase)
+        response = self.client.get(self.url)
+        self.assertEqual(response.context["week_rows"][0]["week_phase_label"], "Mixed")
+        self.assertEqual(response.context["week_rows"][1]["week_phase_label"], "Aerobe")
+        self.assertContains(response, 'class="ayc-mobile-summary-head d-flex justify-content-between align-items-center gap-2" style="background: linear-gradient')
+        self.assertContains(response, 'class="ayc-mobile-summary-body"')
+        self.assertNotContains(response, 'class="ayc-mobile-summary phase-')
 
     def test_page_contains_current_training_and_daypart_targets_on_desktop_and_mobile(self):
         TrainingSlot.objects.get(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=1).segments.create(

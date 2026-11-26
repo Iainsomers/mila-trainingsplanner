@@ -4110,6 +4110,7 @@ def athlete_year_calendar_view(request):
         "intense": "Intense",
         "racing": "Racing",
         "taper": "Taper",
+        "mixed": "Mixed",
     }
 
     week_starts = [start + timedelta(days=7 * i) for i in range(weeks)]
@@ -4163,7 +4164,7 @@ def athlete_year_calendar_view(request):
             cursor += (item["count"] / total) * 100.0
             color = year_training_colors[item["value"]]
             stops.append(f"{color} {start_pct:.2f}%, {color} {cursor:.2f}%")
-        return f"background: linear-gradient(135deg, {', '.join(stops)});", ""
+        return f"background: linear-gradient(135deg, {', '.join(stops)});", "mixed"
 
     # BULK FETCH checks & comments (performance)
     check_map = {}

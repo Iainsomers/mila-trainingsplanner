@@ -495,3 +495,5 @@ Garmin E gebruikt de taal van het laatste echte chatbericht. Zonder bericht of b
 Toon p en sp boven 90 seconden in minuten en seconden in de trainingsweergave en Garmin E-preview, bijvoorbeeld `p2'15"` voor 135 seconden. De opgeslagen pauselengte blijft leidend voor berekeningen.
 
 De mobiele Day / Week-schakelaar gebruikt een neutrale achtergrond en een lichte actieve knop. Evaluatiesymbolen zijn groen voor vinkjes, rood voor kruisjes, oranje voor pijlen en blauw voor een open rondje. De vorige-weekknop laadt oudere weken zodra de eerste geladen week is bereikt en behoudt de weergavestand.
+
+De mobiele Week-kaart kleurt alleen de kop met het kilometertotaal volgens de trainingsfase. De zonekilometers en vitals staan op een neutrale achtergrond. Een week met meerdere fases heet Mixed.
