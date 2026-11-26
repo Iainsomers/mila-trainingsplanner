@@ -2793,7 +2793,9 @@
       var toolbar = document.createElement("div");
       toolbar.className = "d-flex flex-wrap align-items-center gap-2 mb-2";
       var hint = document.createElement("span");
-      hint.textContent = "Select 2–3 activities and choose WU / Main / CD.";
+      hint.textContent = model === "E"
+        ? "Select 2–3 activities, with up to two checked Main recordings."
+        : "Select 2–3 activities and choose WU / Main / CD.";
       toolbar.appendChild(hint);
       combineButton = document.createElement("button");
       combineButton.type = "button";

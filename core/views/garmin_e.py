@@ -98,11 +98,13 @@ def garmin_type_e_ayc_view(request):
                     raise ValueError("Reopen Garmin E and combine these activities again.")
                 selection = signed[3]
             from core.garmin_e_combine import combine_recordings, shifted_main_proposal
-            main_start = next((item.get("start") for item in selection
-                               if isinstance(item,dict) and item.get("role")=="main"),None) if isinstance(selection,list) else None
-            main_source = next((s for s in results if s.get("start")==main_start),None)
-            main_state = None
-            if main_source and len(main_source.get("parts") or [])==1:
+            main_starts = [item.get("start") for item in selection
+                           if isinstance(item,dict) and item.get("role")=="main"] if isinstance(selection,list) else []
+            main_states = {}
+            for main_source in results:
+                main_start = main_source.get("start")
+                if main_start not in main_starts or len(main_source.get("parts") or []) != 1:
+                    continue
                 raw_part = main_source["parts"][0]
                 # The checked E proposal is authoritative for Combine. A fresh
                 # measured decode can still have an empty Main description;
@@ -112,12 +114,18 @@ def garmin_type_e_ayc_view(request):
                     identity = conversation_identity(request.user.pk,athlete.pk,main_start,lap_facts(raw_part))
                     stored = GarminEConversation.objects.filter(user=request.user,athlete=athlete,activity_key=identity).first()
                     if stored and (stored.state.get("part") or {}).get("e_usable"):
-                        main_state = stored.state
-                        main_source["parts"] = [deepcopy(main_state["part"])]
+                        main_states[main_start] = stored.state
+                        main_source["parts"] = [deepcopy(stored.state["part"])]
             combined,ordered,ranges = combine_recordings(results,selection)
             combined["e_combine_token"] = signing.dumps(
                 [request.user.pk,athlete.pk,request.GET.get("date"),ordered],salt="garmin-e-combine")
-            if main_state and main_state.get("proposal"):
+            main_state = main_states.get(main_starts[0]) if main_starts else None
+            if len(main_starts) == 2:
+                candidate = deepcopy(combined["parts"][0])
+                candidate.update(e_usable=True, ai_structure_status="e_validated",
+                                 e_zone_note="Both Main recordings retain their checked zones.")
+                combined_seed = dict(proposal=None, part=candidate, basis="auto", history=[])
+            elif main_state and main_state.get("proposal"):
                 try:
                     proposal = shifted_main_proposal(main_state["proposal"],ranges)
                     # Composition does not reinterpret an already checked Main.
@@ -233,7 +241,7 @@ def garmin_type_e_ayc_view(request):
                 except (ValueError,KeyError,TypeError,OverflowError):
                     pass  # Unsupported measurements still require the ordinary E analysis.
             if (request.GET.get("preview") == "measured" or combining) and message is None and not analyzing:
-                if state["history"]:
+                if state["history"] or state["part"].get("e_usable"):
                     session["parts"] = [state["part"]]
                     session["parts"][0]["e_history"] = visible_history(state["history"])
                 else:

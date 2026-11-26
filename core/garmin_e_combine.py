@@ -5,6 +5,21 @@ import json
 import math
 
 
+def append_watch_loads(existing, incoming):
+    """Keep lap and group identities distinct between recordings."""
+    rep_offset = max(len(existing), max((load["ai_rep"] for load in existing
+                                         if type(load.get("ai_rep")) is int), default=0))
+    group_offset = 1 + max((load.get("ai_group", -1) for load in existing
+                            if type(load.get("ai_group")) is int), default=-1)
+    added = deepcopy(incoming)
+    for load in added:
+        if type(load.get("ai_rep")) is int:
+            load["ai_rep"] += rep_offset
+        if type(load.get("ai_group")) is int:
+            load["ai_group"] += group_offset
+    return [*existing, *added]
+
+
 def combine_recordings(results, selection):
     if not isinstance(selection,list) or not 2<=len(selection)<=3:
         raise ValueError("Select two or three activities.")
@@ -14,9 +29,10 @@ def combine_recordings(results, selection):
     roles = [item["role"] for item in selection]
     if any(not isinstance(value,str) for value in starts+roles):
         raise ValueError("Invalid activity selection.")
-    if (len(set(starts))!=len(starts) or len(set(roles))!=len(roles) or "main" not in roles
+    if (len(set(starts))!=len(starts) or roles.count("wu")>1 or roles.count("cd")>1
+            or not 1 <= roles.count("main") <= 2
             or any(role not in {"wu","main","cd"} for role in roles)):
-        raise ValueError("Select one Main and use each activity and role only once.")
+        raise ValueError("Select one or two Main recordings and at most one WU and CD.")
     chosen = []
     for item in selection:
         matches = [session for session in results if session.get("start")==item["start"]]
@@ -31,9 +47,16 @@ def combine_recordings(results, selection):
             raise ValueError("Combine supports running recordings with measured laps.")
         if item["role"]=="main" and not fields.get("main"):
             raise ValueError("Choose an activity with a Main description as Main.")
+        if roles.count("main") == 2 and item["role"] == "main":
+            if not part.get("e_usable"):
+                raise ValueError("Analyze both Main recordings before combining.")
+            ordered_mains = sorted(starts[i] for i, role in enumerate(roles) if role == "main")
+            if ((fields.get("wu") and item["start"] != ordered_mains[0])
+                    or (fields.get("cd") and item["start"] != ordered_mains[-1])):
+                raise ValueError("Warmup must precede both Main blocks and cooldown must follow them.")
         chosen.append((item,source))
     chosen.sort(key=lambda pair:pair[0]["start"])
-    if [item["role"] for item,_ in chosen]!=[role for role in ("wu","main","cd") if role in roles]:
+    if [item["role"] for item,_ in chosen]!=sorted(roles, key=("wu","main","cd").index):
         raise ValueError("Use chronological order: WU, Main, CD.")
     ordered = [item for item,_ in chosen]
     identity = hashlib.sha256(json.dumps(ordered,sort_keys=True).encode()).hexdigest()
@@ -43,28 +66,29 @@ def combine_recordings(results, selection):
     ranges = {}
     for item,source in chosen:
         part,role = source["parts"][0],item["role"]
-        offset = len(loads)
-        indices = []
+        recording_loads = []
         for load in part["watch_loads"]:
             meters,seconds = float(load["meters"]),float(load["seconds"])
             if not math.isfinite(meters+seconds) or meters<0 or seconds<=0:
                 raise ValueError("A recording has incomplete lap measurements.")
             copy = deepcopy(load)
             copy.pop("combined_outer",None)
-            if role == "main" and type(copy.get("ai_rep")) is int:
-                copy["ai_rep"] += offset
             copy.update(recording_role=role,recording_start=item["start"])
             if role!="main":
                 copy["segment"] = role.upper()
-            indices.append(len(loads)+1)
-            loads.append(copy)
-        ranges[role] = indices
+            recording_loads.append(copy)
+        ranges.setdefault(role, []).extend(range(len(loads)+1, len(loads)+len(recording_loads)+1))
+        loads = append_watch_loads(loads, recording_loads)
         for row in part.get("manual") or []:
             row = deepcopy(row)
             row["index"] = len(manual)+1
             manual.append(row)
         if role=="main":
-            fields.update(part["training_fields"])
+            source_fields = part["training_fields"]
+            fields["main"] = " // ".join(filter(None, (fields["main"], source_fields["main"])))
+            for boundary in ("wu", "cd"):
+                if source_fields.get(boundary):
+                    fields[boundary] = source_fields[boundary]
     for role in ("wu","cd"):
         if role not in ranges:
             continue

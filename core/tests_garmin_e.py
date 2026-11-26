@@ -940,6 +940,55 @@ class GarminEEndpointTests(TestCase):
         self.assertEqual(bad.status_code,400)
 
     @patch("core.views.garmin_e.ask_model")
+    def test_two_checked_main_recordings_can_be_combined_or_appended(self, model):
+        selection = self.combine_example()[:2]
+        parts = []
+        for item, reps, recovery in zip(selection, ([800], [500, 500]), ([], [2])):
+            item["role"] = "main"
+            model.return_value = {
+                "reply": "Gemeten Main.",
+                "proposal": dict(recovery_laps=recovery, reps=[
+                    dict(laps=[2 * i + 1], target_meters=meters)
+                    for i, meters in enumerate(reps)
+                ]),
+                "zone_basis": "pace",
+            }
+            url = self.url + "?" + urlencode({**self.query, "suggestion_session": item["start"]})
+            part = self.client.post(url, {
+                "chat": json.dumps([{"role": "user", "content": "Analyseer Main"}]),
+            }).json()["results"][0]["parts"][0]
+            self.assertTrue(part["e_usable"], part)
+            parts.append(part)
+
+        calls = model.call_count
+        response = self.client.post(self.url + "?" + urlencode(self.query), {
+            "combine": json.dumps(selection[::-1]),
+        })
+        self.assertEqual(response.status_code, 200, response.json())
+        combined = response.json()["results"][0]["parts"][0]
+        self.assertTrue(combined["e_usable"], combined)
+        expected = " // ".join(part["training_fields"]["main"] for part in parts)
+        self.assertEqual(combined["training_fields"]["main"], expected)
+        self.assertEqual(model.call_count, calls)
+
+        from core.models import TrainingSlot
+        for slot_index, imports in ((1, parts), (2, [combined])):
+            save = reverse("slot_modal", args=[2026, 11, 14, slot_index]) + "?" + urlencode({
+                "athlete": self.athlete.pk, "source": "athlete_year",
+            })
+            for part in imports:
+                fields = part["training_fields"]
+                response = self.client.post(save, dict(
+                    watch_fields="running_add", watch_origin="watch_e",
+                    watch_loads=json.dumps(part["watch_loads"]), watch_validation=part["e_validation"],
+                    wu_text=fields["wu"], core_text=fields["main"], cd_text=fields["cd"],
+                ))
+                self.assertEqual(response.status_code, 200, response.content[:500])
+            slot = TrainingSlot.objects.get(athlete=self.athlete, date="2026-11-14", slot_index=slot_index)
+            self.assertEqual(slot.core_text(), expected)
+            self.assertEqual([rep["measured_seconds"] for rep in slot.watch_main_reps], [260, 100, 100])
+
+    @patch("core.views.garmin_e.ask_model")
     def test_combine_uses_checked_main_when_fresh_measured_description_is_empty(self, model):
         selection = self.combine_example()
         main_url = self.url+"?"+urlencode({**self.query,"suggestion_session":selection[1]["start"]})

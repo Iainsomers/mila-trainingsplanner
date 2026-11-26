@@ -43,10 +43,11 @@ async function check() {
     for (const slot of [1, 2]) {
       let saved;
       let reloaded = false;
-      const save = new Function('activeDate', 'activeAthlete', 'getCookie', 'fetch', 'window',
+      const save = new Function('activeDate', 'activeAthlete', 'getCookie', 'fetch', 'window', 'document',
         source + '\nreturn useWatchTraining;')('2026-11-05', '42', () => 'csrf',
         async (url, request) => { saved = {url, data: request.body}; return {ok: true}; },
-        {location: {reload() { reloaded = true; }}, alert(message) { throw Error(message); }});
+        {location: {reload() { reloaded = true; }}, alert(message) { throw Error(message); }},
+        {querySelectorAll() { return []; }});
       save({alt: "Elliptical 90' Z2"}, [], slot, {textContent: 'Use', disabled: false}, model);
       await new Promise(resolve => setImmediate(resolve));
       assert.equal(saved.data.get('watch_fields'), 'alternative_replace');

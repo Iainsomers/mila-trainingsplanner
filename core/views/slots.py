@@ -1765,6 +1765,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # POST: maak slot (base/override)
     original_watch_plan = None
     protected_watch_segments = []
+    append_running = False
     watch_preserve_source = visible_slot
     if (request.POST.get("watch_origin") or "").strip().lower() in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"}:
         original_slot = visible_slot
@@ -1775,6 +1776,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             elif not original_slot:
                 original_slot = _get_effective_slot(display_plan, athlete, d, slot_index, prefetch_segments=True)["visible_slot"] if display_plan else None
         watch_preserve_source = original_slot
+        append_running = bool(running_add and getattr(original_slot, "watch_loads", None)
+                              and any(segment.type == "CORE" for segment in original_slot.segments.all()))
+        if append_running:
+            watch_replaced_types = set()
         form_segment_order = normalize_segment_order(getattr(original_slot,'segment_order',None))
         if original_slot:
             protected_watch_segments = [
@@ -1798,9 +1803,9 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         slot.segments.exclude(type__in=watch_replaced_types).delete()
         for payload in protected_watch_segments:
             slot.segments.create(**payload)
-        if alternative_only:
+        if alternative_only or append_running:
             # Preserve measured running data and version history when inheriting
-            # a complete workout into a personal Alternative-only override.
+            # a complete workout into a personal override.
             for field in ('source', 'watch_loads', 'watch_main_reps', 'watch_plan_snapshot', 'watch_training_snapshot'):
                 if hasattr(watch_preserve_source, field):
                     setattr(slot, field, getattr(watch_preserve_source, field))
@@ -1829,6 +1834,8 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     if running_add:
         alt_text = ""
     cd_text = (request.POST.get("cd_text") or "").strip() if tb_show_cd else ""
+    if append_running:
+        wu_text = cd_text = ""
     if preserve_watch_fields:
         mob_text = sprint_text = core2_text = ''
         selected_standard_strength = None
@@ -2153,6 +2160,12 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         existing_loads = getattr(visible_slot, "watch_loads", [])
         watch_loads = list(existing_loads) if isinstance(existing_loads, list) else []
     if not alternative_only:
+        if append_running:
+            from core.garmin_e_combine import append_watch_loads
+            watch_loads = append_watch_loads(
+                watch_preserve_source.watch_loads,
+                [load for load in watch_loads if load.get("segment", "CORE") not in {"WU", "CD"}],
+            )
         slot.source = watch_origin if watch_origin in {"watch_a", "watch_b", "watch_c", "watch_d", "watch_e"} else "planned"
         slot.watch_loads = watch_loads
         slot.save(update_fields=["source", "watch_loads", "updated_at"])
@@ -2170,7 +2183,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         wu_seg.parsed_at = now
         wu_seg.save()
     else:
-        if wu_seg and not alternative_only:
+        if wu_seg and not alternative_only and not append_running:
             wu_seg.delete()
 
     if not preserve_watch_fields:
@@ -2220,9 +2233,11 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         for core_part in split_main_segments(core_text):
             parts.extend(_expand_repeated_core_set_parts(core_part))
 
-        slot.segments.filter(type="CORE").delete()
-
-        order = 3
+        if append_running:
+            order = max((seg.order for seg in slot.segments.filter(type="CORE")), default=2) + 1
+        else:
+            slot.segments.filter(type="CORE").delete()
+            order = 3
 
         for part in parts:
             zone_range_parts = _core_zone_range_parts(part)
@@ -2332,7 +2347,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         cd_seg.parsed_at = now
         cd_seg.save()
     else:
-        if cd_seg and not alternative_only:
+        if cd_seg and not alternative_only and not append_running:
             cd_seg.delete()
 
     # Race Calendar entries are virtual and would otherwise replace the
