@@ -38,6 +38,42 @@ function checkButtons() {
 }
 checkButtons();
 
+function checkGarminECombine() {
+  const renderSource = template.slice(template.indexOf('  function renderTypeAResults('),
+    template.indexOf('  function useWatchTraining('));
+  function element(tag) {
+    return {tag, style: {}, children: [], listeners: {}, setAttribute() {},
+      appendChild(child) { this.children.push(child); },
+      addEventListener(event, callback) { this.listeners[event] = callback; }};
+  }
+  const chats = {'E:fourth': {busy: true}};
+  const render = new Function('document', 'renderTypeALaps', 'watchChats',
+    renderSource.replace('{{ is_coach_user|yesno:"true,false" }}', 'false') + '\nreturn renderTypeAResults;')(
+      {createElement: element, createTextNode: () => element('text')}, () => {}, chats);
+  const parent = element('div');
+  // Only the fourth recording is busy. It is outside the WU + Main + Main selection.
+  const results = ['first', 'second', 'third', 'fourth'].map(start => ({
+    start, parts: [{watch_loads: [{meters: 500, seconds: 100}], training_fields: {main: '500m Z2'}}],
+  }));
+  render(parent, results, '', 'E');
+  const flatten = node => [node, ...node.children.flatMap(flatten)];
+  const nodes = flatten(parent);
+  const button = nodes.find(node => node.tag === 'button' && node.textContent === 'Combine');
+  const checks = nodes.filter(node => node.tag === 'input' && node.type === 'checkbox');
+  const roles = nodes.filter(node => node.tag === 'select');
+  assert.ok(parent.children[0].className.includes('flex-wrap'));
+  roles[0].value = 'wu';
+  for (const check of checks.slice(0, 3)) {
+    check.checked = true;
+    check.listeners.change();
+  }
+  assert.equal(button.disabled, false);
+  checks[0].checked = false;
+  checks[0].listeners.change();
+  assert.equal(button.disabled, false);
+}
+checkGarminECombine();
+
 async function check() {
   for (const model of ['C', 'D']) {
     for (const slot of [1, 2]) {

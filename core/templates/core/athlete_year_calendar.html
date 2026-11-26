@@ -2662,6 +2662,8 @@
     var sequence = ++watchPreviewSequence;
     var popup = document.getElementById("suggestInputPlaceholder");
     var body = document.getElementById("suggestInputPlaceholderBody");
+    body.eCombineSelection = {};
+    body.eCombinedHost = null;
     popup.style.display = "flex";
     var sourceName = (model === "C" || model === "D" || model === "E") ? "Garmin" : "Polar";
     document.getElementById("suggestInputPlaceholderText").textContent = (model === "C" || model === "D" || model === "E") ? "Garmin " + model : "Polar " + model;
@@ -2777,13 +2779,15 @@
     parent.innerHTML = "";
     if (!results.length) { parent.textContent = message || "No Polar training found for this day."; return; }
     var selections = [];
-    var combinedHost = document.createElement("div");
+    var combinedHost = model === "E" && !combinedPreview && parent.eCombinedHost
+      ? parent.eCombinedHost : document.createElement("div");
     var combineButton;
     function eAnalysisBusy() {
-      return model === "E" && results.some(function(item) {
-        var state = watchChats["E:" + (item.e_session_id || item.start)] || {};
-        return state.busy || ((item.parts || []).some(function(part){return part.e_auto_analyze;}) &&
-          !state.autoStarted && !(state.messages || []).length);
+      return model === "E" && selections.some(function(item) {
+        if (!item.check.checked || item.role.value !== "main") return false;
+        var session = item.session;
+        var state = watchChats["E:" + (session.e_session_id || session.start)] || {};
+        return state.busy;
       });
     }
     if ((model === "C" || model === "D" || model === "E") && !combinedPreview && results.filter(function(session) {
@@ -2817,15 +2821,17 @@
               method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded","X-CSRFToken":getCookie("csrftoken")},
               body:new URLSearchParams({combine:requestSelection}).toString()
             }).then(function(response){return response.json();}).then(function(data) {
-              if (combineSequence !== watchPreviewSequence || !combineButton.isConnected) return;
-              if (requestSelection !== JSON.stringify(selections.filter(function(item){return item.check.checked;})
-                  .map(function(item){return {start:item.session.start,role:item.role.value};}))) return;
+              if (combineSequence !== watchPreviewSequence || !combinedHost.isConnected) return;
+              var currentSelection = parent.eCombineSelection || {};
+              if (requestSelection !== JSON.stringify(Object.keys(currentSelection)
+                  .filter(function(start){return currentSelection[start].checked;})
+                  .map(function(start){return {start:start,role:currentSelection[start].role};}))) return;
               if (!data.ok) throw new Error(data.message || "These recordings could not be combined.");
               renderTypeAResults(combinedHost,data.results || [],"",model,true);
             }).catch(function(error){errorText.textContent=error.message;})
               .finally(function(){
                 var count=selections.filter(function(item){return item.check.checked;}).length;
-                combineButton.disabled=count<2 || count>3;
+                combineButton.disabled=count<2 || count>3 || eAnalysisBusy();
               });
             return;
           }
@@ -2837,6 +2843,7 @@
       toolbar.appendChild(errorText);
       parent.appendChild(toolbar);
       parent.appendChild(combinedHost);
+      if (model === "E") parent.eCombinedHost = combinedHost;
     }
     results.forEach(function(session, sessionIndex) {
       var box = document.createElement("div"); box.className = "border rounded p-2 mb-2";
