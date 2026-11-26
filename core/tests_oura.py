@@ -34,6 +34,21 @@ class OuraDashboardAndOAuthTests(TestCase):
         )
         self.client.force_login(self.athlete_user)
 
+    def test_coach_can_submit_oura_test_after_selecting_from_multiple_athletes(self):
+        other = Athlete.objects.create(
+            owner=self.coach, name="Runner Two", birth_year=2000, gender="X",
+            oura_connection_enabled=True,
+        )
+        for athlete in (self.athlete, other):
+            OuraConnection.objects.create(
+                athlete=athlete, access_token="test", scope="daily",
+                health_data_consent_at="2026-10-29T08:00:00+00:00",
+            )
+        self.client.force_login(self.coach)
+        response = self.client.get(reverse("oura_test"))
+        self.assertContains(response, 'id="oura-test-athlete" required')
+        self.assertContains(response, '<button type="submit" class="btn btn-primary">Fetch latest Oura data</button>', html=True)
+
     def test_athlete_hardware_has_a_separate_oura_block(self):
         response = self.client.get(reverse("planning_overview"), {"section": "hardware"})
 

@@ -30,7 +30,7 @@
       <p class="mb-3">Athlete: <strong>{{ selected_athlete.name }}</strong></p>
     {% endif %}
     <div>
-      <button type="submit" class="btn btn-primary" {% if athletes|length > 1 and not selected_athlete %}disabled{% endif %}>Fetch latest Oura data</button>
+      <button type="submit" class="btn btn-primary">Fetch latest Oura data</button>
     </div>
   </form>
   {% else %}
