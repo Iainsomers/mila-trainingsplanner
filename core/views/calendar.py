@@ -612,6 +612,8 @@ def calendar_view(request):
             f"Z6: {_fmt_min(z_time_s['6'])}/{_pct(z_time_s['6'], total_time_s)}\n"
             f"Race: {_fmt_min(race_time_s)}/{_pct(race_time_s, total_time_s)}"
         )
+        if show_evaluated_totals:
+            sum_pct_tooltip = "Evaluated / weekly total\n" + sum_pct_tooltip
 
         has_z = {z: (z_m[z] > 0) for z in ("1", "2", "3", "4", "5", "6")}
         has_race = (race_m > 0)
@@ -4360,15 +4362,24 @@ def athlete_year_calendar_view(request):
         alt_z6_min = 0
         alt_z7_min = 0
 
+        show_evaluated_totals = week_start == current_week_start and show_training_reports
+        evaluated_z = dict.fromkeys(z_m, 0.0)
+        evaluated_t = dict.fromkeys(t_m, 0.0)
+        evaluated_race = 0.0
+        evaluated_alt = dict.fromkeys("1234567", 0.0)
         if selected_athlete:
             for cell in cells1 + cells2:
                 if (cell["day"], cell["slot_index"]) in not_done_slot_keys:
                     continue
                 slot = cell.get("slot")
+                check = cell["report"][f"check{cell['slot_index']}"]
+                evaluated = show_evaluated_totals and check and check.has_evaluation
                 for load in _ayc_slot_loads_for_totals(slot, selected_athlete, athlete_pause_mode):
+                    zone = str(load.get("zone") or "")
                     if load.get("kind") == "alt":
-                        zone = str(load.get("zone") or "")
                         minutes = float(load.get("seconds") or 0) / 60.0
+                        if evaluated and zone in evaluated_alt:
+                            evaluated_alt[zone] += minutes
                         if zone == "1":
                             alt_z1_min += minutes
                         elif zone == "2":
@@ -4385,7 +4396,6 @@ def athlete_year_calendar_view(request):
                             alt_z7_min += minutes
                         continue
 
-                    zone = str(load.get("zone") or "")
                     meters = float(load.get("meters") or 0)
                     if meters <= 0:
                         continue
@@ -4398,13 +4408,19 @@ def athlete_year_calendar_view(request):
                     if load.get("race"):
                         race_m += meters
                         race_time_s += seconds
+                        if evaluated:
+                            evaluated_race += meters
                     elif zone in z_m:
                         z_m[zone] += meters
                         z_time_s[zone] += seconds
+                        if evaluated:
+                            evaluated_z[zone] += meters
 
                     t_key = str(load.get("t_key") or "")
                     if t_key in t_m:
                         t_m[t_key] += meters
+                        if evaluated:
+                            evaluated_t[t_key] += meters
 
         tot_m = sum(z_m.values()) + race_m
         total_time_s = sum(z_time_s.values()) + race_time_s
@@ -4483,6 +4499,14 @@ def athlete_year_calendar_view(request):
             "week_phase_style": week_phase_style,
             "week_phase_label": phase_label.get(week_phase, ""),
             "sum_tot_km": _format_km(tot_m),
+            "show_evaluated_totals": show_evaluated_totals,
+            "evaluated_km": {
+                "total": _format_km(sum(evaluated_z.values()) + evaluated_race),
+                "race": _km_str_with_small(evaluated_race),
+                **{f"z{zone}": _km_str_with_small(meters) for zone, meters in evaluated_z.items()},
+                **{f"t{key.lower()}": _km_str_with_small(meters) for key, meters in evaluated_t.items()},
+            },
+            "evaluated_alt": {f"z{zone}": minutes for zone, minutes in evaluated_alt.items()},
             "sum_z1_km": _km_str_with_small(z_m["1"]),
             "sum_z2_km": _km_str_with_small(z_m["2"]),
             "sum_z3_km": _km_str_with_small(z_m["3"]),

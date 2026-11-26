@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- Athlete Diary toont in de actuele week `Evaluated / total` voor kilometers (totaal en zones), Alternative en Strength wanneer trainingsevaluaties zichtbaar zijn. Het eerste getal telt de geëvalueerde AM/PM-dagdelen. `Not done` blijft uitgesloten. Andere weken tonen één waarde.
+
 - In Athlete Diary verschuiven `Previous week` en `Next week` de startweek telkens exact zeven dagen achteruit of vooruit, ook over jaargrenzen. `Today` zet de startweek terug naar de huidige week. De datumkeuze `Start week` gebruikt hetzelfde compacte datumveld als Individual Plans; er is geen losse jaarkeuze meer.
 
 - Z7 staat voor Strength-minuten en gebruikt middengrijs (`#999999`). In Diary en Individual Plans heet het zichtbare weeklabel `Strength`; Stats neemt dezelfde interne Z7 mee in ALT-totalen en houdt daar de benaming `ALT Z7`.

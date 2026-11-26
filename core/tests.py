@@ -6549,6 +6549,26 @@ class SlotModalSaveTests(TestCase):
         self.assertGreater(float(pm_cell["session_km"]), float(static_cell["session_km"]))
         self.assertContains(explicit, '<tr data-flex-pause-mode="always_static">')
 
+    def test_ayc_current_week_totals_show_evaluated_amounts(self):
+        user, plan, athlete = self._user_plan_and_athlete()
+        day = date.today() - timedelta(days=date.today().weekday())
+        for slot_index, km in ((1, 4), (2, 6)):
+            slot = TrainingSlot.objects.create(plan=plan, athlete=athlete, date=day, slot_index=slot_index)
+            TrainingSegment.objects.create(slot=slot, order=1, type="CORE", text=f"{km}km Z1",
+                                           distance_m=km*1000, norm_distance_m=km*1000, zone="1")
+            TrainingSegment.objects.create(slot=slot, order=2, type="ALT", text="20' Z2", duration_s=1200, zone="2")
+            TrainingSegment.objects.create(slot=slot, order=3, type="CORE2", text="15 min")
+        AthleteDayCheck.objects.create(athlete=athlete, date=day, slot_index=1, updated_by=user,
+                                       status=AthleteDayCheck.STATUS_DONE_AS_PLANNED)
+        response = self.client.get(f"/athlete/year/?start={day-timedelta(days=7)}&athlete={athlete.id}")
+        self.assertContains(response, "T 4.0/10.0", count=2)
+        weekly = response.context["week_rows"]
+        self.assertFalse(weekly[0]["show_evaluated_totals"])
+        self.assertEqual(weekly[1]["evaluated_alt"]["z2"], 20)
+        self.assertEqual(weekly[1]["evaluated_alt"]["z7"], 15)
+        self.assertEqual(weekly[1]["alt_z7_min"], 30)
+        self.assertFalse(weekly[2]["show_evaluated_totals"])
+
     def test_ayc_week_totals_exclude_not_done_running_and_alternative_load(self):
         user, plan, athlete = self._user_plan_and_athlete()
         day = date.today()
@@ -6614,9 +6634,9 @@ class SlotModalSaveTests(TestCase):
         self.assertContains(response,'class="session-zone-pill session-zone-z2" title="Alternative Z2: 10 min">10</span>')
         self.assertContains(response,'class="session-zone-pill session-zone-z4" title="Alternative Z4: 24 min">24</span>')
 
-        self.assertContains(response,'ALT Z2 10 min')
-        self.assertContains(response,'ALT Z4 24 min')
-        self.assertNotContains(response,'ALT Z1 30 min')
+        self.assertContains(response,'ALT Z2 0/10 min')
+        self.assertContains(response,'ALT Z4 0/24 min')
+        self.assertNotContains(response,'ALT Z1 0/30 min')
 
     def test_base_planning_autosave_allows_intermediate_overlapping_blocks(self):
         user, _, athlete = self._user_plan_and_athlete()
