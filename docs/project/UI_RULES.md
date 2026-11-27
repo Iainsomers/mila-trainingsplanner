@@ -4,7 +4,7 @@
 
 - In Athlete Diary verschuiven `Previous week` en `Next week` de startweek telkens exact zeven dagen achteruit of vooruit, ook over jaargrenzen. `Today` zet de startweek terug naar de huidige week. De datumkeuze `Start week` gebruikt hetzelfde compacte datumveld als Individual Plans; er is geen losse jaarkeuze meer.
 
-- Z7 staat voor Strength-minuten en gebruikt middengrijs (`#999999`). In Diary en Individual Plans heet het zichtbare weeklabel `Strength`; Stats neemt dezelfde interne Z7 mee in ALT-totalen en houdt daar de benaming `ALT Z7`.
+- Z7 staat voor Strength-minuten en gebruikt middengrijs (`#999999`). In Athlete Diary en Individual Plans krijgen Strength-segmenten in het dagdeel hetzelfde middengrijs als het weeklabel `Strength`. Stats neemt dezelfde interne Z7 mee in ALT-totalen en houdt daar de benaming `ALT Z7`.
 
 - Stats staat als vierde tegel onder Views op de coachhoofdpagina, met dezelfde compacte kaartopmaak als de andere Views. Het verschijnt onafhankelijk van de Under Dev-schakelaar en staat niet meer in Under Dev. Titel en browsertitel zijn Stats, zonder ontwikkellabel. Geen selectieformulier of Selection-knop; direct het bestaande responsieve weekoverzicht. De terugknop gaat naar de coachhoofdpagina en de individuele grafiek terug naar Stats.
 
