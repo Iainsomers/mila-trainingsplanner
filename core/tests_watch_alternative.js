@@ -35,6 +35,17 @@ function checkButtons() {
       assert.deepEqual(invoked.at(-1)[1],fields.main ? loads : []);
     }
   }
+  const parent = element('div');
+  const strength = {strength: "Strength Training 54'53\""};
+  render(parent, [{parts: [{description: strength.strength, training_fields: strength,
+    watch_loads: [], e_usable: true, e_validation: 'checked-strength'}]}], '', 'E');
+  const flatten = node => [node, ...node.children.flatMap(flatten)];
+  const actions = flatten(parent).filter(node => node.tag === 'button');
+  assert.deepEqual(actions.map(node => node.textContent), ['Use AM', 'Use PM', 'Add AM', 'Add PM']);
+  for (const button of actions) assert.ok(!button.disabled);
+  actions[1].listeners.click({preventDefault() {}});
+  assert.deepEqual(invoked.at(-1).slice(0, 3), [strength, [], 2]);
+  assert.equal(invoked.at(-1)[6], 'checked-strength');
 }
 checkButtons();
 
@@ -118,6 +129,17 @@ async function check() {
       assert.deepEqual(JSON.parse(saved.data.get('watch_loads')),loads);
     }
   }
+  let payload;
+  const save = new Function('activeDate', 'activeAthlete', 'getCookie', 'fetch', 'window', 'document',
+    source + '\nreturn useWatchTraining;')('2026-11-27', '42', () => 'csrf',
+    async (url, request) => { payload = request.body; return {ok: true}; },
+    {location: {reload() {}}, alert(message) { throw Error(message); }},
+    {querySelectorAll() { return []; }});
+  save({strength: "Strength Training 54'53\""}, [], 2, {textContent: 'Use PM'}, 'E', false, 'checked-strength');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(payload.get('watch_strength_text'), "Strength Training 54'53\"");
+  assert.equal(payload.get('watch_validation'), 'checked-strength');
+  assert.equal(payload.get('alt_text'), '');
   console.log('Watch Alternative save handler: C/D, AM/PM and running imports passed.');
 }
 check().catch(error => { console.error(error); process.exitCode = 1; });
