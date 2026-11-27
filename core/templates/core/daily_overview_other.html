@@ -101,16 +101,23 @@
     box-shadow: none;
     transform: none;
   }
-  .quick-report-table { width: 100%; max-width: 52rem; table-layout: fixed; }
+  .quick-report-table { width: 100%; table-layout: fixed; }
   .quick-report-table th, .quick-report-table td { vertical-align: top; overflow-wrap: anywhere; }
-  .quick-report-table th:first-child { width: 33%; }
-  .quick-report-table th:nth-child(2) { width: 31%; }
-  .quick-report-dots { display: flex; flex-wrap: wrap; gap: .2rem; }
-  .quick-report-dot { display: grid; place-items: center; width: 1.4rem; height: 1.4rem; padding: 0; border: 0; background: transparent; }
-  .quick-report-dot::before { content: ""; width: .65rem; height: .65rem; border-radius: 50%; background: #adb5bd; }
-  .quick-report-dot.green::before { background: #198754; }
-  .quick-report-dot.yellow::before { background: #e4a900; }
-  .quick-report-dot.red::before { background: #dc3545; }
+  .quick-report-table th:first-child { width: 22%; }
+  .quick-report-table th:nth-child(2) { width: 50%; }
+  .quick-report-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .2rem; }
+  .quick-report-preview { display: flex; align-items: center; gap: .35rem; min-width: 0; min-height: 1.5rem; padding: .12rem .35rem; border: 1px solid #e4e9ee; border-radius: .25rem; background: #f8f9fa; color: inherit; text-align: left; font-size: .8rem; }
+  .quick-report-preview:hover { background: #edf1f5; }
+  .quick-report-preview span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quick-report-preview::before { content: ""; flex: 0 0 .48rem; height: .48rem; border-radius: 50%; background: #adb5bd; }
+  .quick-report-preview.green::before { background: #198754; }
+  .quick-report-preview.yellow::before { background: #e4a900; }
+  .quick-report-preview.red::before { background: #dc3545; }
+  .quick-report-vitals { display: flex; flex-wrap: wrap; gap: .15rem .5rem; }
+  @media (max-width: 575.98px) {
+    .quick-report-previews { grid-template-columns: minmax(0, 1fr); }
+    .quick-report-table th:nth-child(2) { width: 42%; }
+  }
   .quick-report-warning { color: #b02a37; font-weight: 700; }
   .quick-report-dialog { max-width: min(28rem, calc(100% - 2rem)); white-space: normal; }
   .quick-report-comment { overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -264,12 +271,13 @@
             {% for row in report_rows %}
               <tr>
                 <th scope="row">{{ row.athlete.name }}</th>
-                <td><div class="quick-report-dots">
+                <td><div class="quick-report-previews">
                   {% for evaluation in row.evaluations %}
-                    <button type="button" class="quick-report-dot {{ evaluation.color }}"
-                            aria-label="{{ row.athlete.name }} · {{ evaluation.date|date:'d-m-Y' }} {{ evaluation.slot_label }}"
+                    <button type="button" class="quick-report-preview {{ evaluation.color }}"
+                            aria-haspopup="dialog"
+                            aria-label="{{ row.athlete.name }} · {{ evaluation.date|date:'d-m-Y' }} {{ evaluation.slot_label }} · {{ evaluation.evaluation_text|truncatechars:60 }}"
                             title="{{ evaluation.date|date:'d-m-Y' }} {{ evaluation.slot_label }}"
-                            onclick="document.getElementById('quick-eval-{{ row.athlete.id }}-{{ forloop.counter }}').showModal()"></button>
+                            onclick="document.getElementById('quick-eval-{{ row.athlete.id }}-{{ forloop.counter }}').showModal()"><span>{{ evaluation.evaluation_text|truncatechars:60 }}</span></button>
                     <dialog id="quick-eval-{{ row.athlete.id }}-{{ forloop.counter }}" class="quick-report-dialog border rounded shadow p-3">
                       <h3 class="h6">{{ row.athlete.name }} · {{ evaluation.date|date:"d-m-Y" }} {{ evaluation.slot_label }}</h3>
                       <p class="quick-report-comment">{{ evaluation.evaluation_text }}</p>
@@ -277,7 +285,11 @@
                     </dialog>
                   {% endfor %}
                 </div></td>
-                <td>{% if row.vitals %}<span class="quick-report-warning" title="{% for vital in row.vitals %}{{ vital.date|date:'d-m-Y' }}: {{ vital.score }}{% if not forloop.last %} · {% endif %}{% endfor %}">{{ row.vitals.0.score }}</span>{% endif %}</td>
+                <td><div class="quick-report-vitals">
+                  {% for vital in row.vitals %}
+                    <span class="quick-report-warning" title="{{ vital.date|date:'d-m-Y' }}">{{ vital.score }}</span>
+                  {% endfor %}
+                </div></td>
                 <td>{% if row.missed %}<span class="quick-report-warning">{{ row.missed }}</span>{% endif %}</td>
               </tr>
             {% endfor %}

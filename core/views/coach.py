@@ -13924,7 +13924,7 @@ def daily_overview_other_view(request):
                     if slot and not _slot_is_visually_empty(slot):
                         report_rows[athlete.id]["missed"] += 1
         for row in report_rows.values():
-            row["vitals"].sort(key=lambda vital: vital["score"])
+            row["vitals"].sort(key=lambda vital: vital["date"], reverse=True)
         return render(request, "core/daily_overview_other.html", {
             "overview_mode": requested_view,
             "report_hours": report_hours,

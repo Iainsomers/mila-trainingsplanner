@@ -2105,7 +2105,9 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual(row["athlete"], athlete)
         warnings = row["vitals"]
         self.assertEqual(len(warnings), 2)
-        self.assertEqual({row["date"] for row in warnings}, {today - timedelta(days=1), today})
+        self.assertEqual([warning["date"] for warning in warnings], [today, today - timedelta(days=1)])
+        for warning in warnings:
+            self.assertContains(response, f'title="{warning["date"]:%d-%m-%Y}">{warning["score"]}</span>')
         self.assertContains(response, 'scope="row">Two Warning Days</th>', count=1)
 
     def test_quick_coach_report_excludes_recently_imported_vitals_outside_day_window(self):
@@ -2176,6 +2178,8 @@ class PlanningOverviewTests(TestCase):
         self.assertEqual([entry["color"] for entry in rows["Long Text Athlete"]["evaluations"]], ["yellow", "green"])
         self.assertEqual([entry["color"] for entry in rows["Red Athlete"]["evaluations"]], ["red"])
         self.assertContains(response, 'scope="row">Long Text Athlete</th>', count=1)
+        self.assertContains(response, 'class="quick-report-preview yellow"')
+        self.assertContains(response, 'aria-haspopup="dialog"')
         self.assertContains(response, "This evaluation has enough text to appear.")
         self.assertNotContains(response, "Normal Athlete")
 
