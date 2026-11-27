@@ -2195,12 +2195,19 @@ class PlanningOverviewTests(TestCase):
         today = timezone.localdate()
         old_check = AthleteDayCheck.objects.create(
             athlete=visible, date=today - timedelta(days=1), slot_index=1, updated_by=coach,
+            status=AthleteDayCheck.STATUS_DONE_AS_PLANNED,
             pain=AthleteDayCheck.PAIN_SERIOUS, comment="Old but important evaluation with a long comment",
         )
         AthleteDayCheck.objects.filter(pk=old_check.pk).update(
             updated_at=timezone.now() - timedelta(hours=25),
         )
-        AthleteDayCheck.objects.create(
+        plan = TrainingPlan.objects.create(owner=coach, name="Flex Planner evaluation detail")
+        for index, text in ((1, "5 km Z1"), (2, "8 km Z2")):
+            slot = TrainingSlot.objects.create(
+                plan=plan, athlete=visible, date=old_check.date, slot_index=index,
+            )
+            slot.segments.create(type="CORE", text=text)
+        private_check = AthleteDayCheck.objects.create(
             athlete=private, date=today, slot_index=1, updated_by=other,
             pain=AthleteDayCheck.PAIN_SERIOUS, comment="This long evaluation must stay private.",
         )
@@ -2216,6 +2223,14 @@ class PlanningOverviewTests(TestCase):
         self.assertNotContains(one_day, "Old Evaluation")
         self.assertContains(two_days, "Old Evaluation")
         self.assertNotContains(two_days, "Private Evaluation")
+        self.assertContains(two_days, f"hours=48&amp;training_evaluation={old_check.pk}")
+        params = {"view": "quick_coach_report", "hours": "48", "training_evaluation": old_check.pk}
+        detail = self.client.get("/coach/daily-overview-other/", params)
+        self.assertEqual(detail.json(), {"segments": [{"label": "Main", "text": "5 km Z1"}]})
+        self.assertEqual(self.client.get("/coach/daily-overview-other/", {**params, "hours": "24"}).status_code, 404)
+        self.assertEqual(self.client.get(
+            "/coach/daily-overview-other/", {**params, "training_evaluation": private_check.pk},
+        ).status_code, 404)
 
     def test_quick_coach_report_warns_after_four_days_without_evaluations(self):
         coach = get_user_model().objects.create_user(username="missed-report", is_staff=True)

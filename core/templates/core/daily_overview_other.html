@@ -103,6 +103,8 @@
   }
   .quick-report-table { width: 100%; table-layout: fixed; }
   .quick-report-table th, .quick-report-table td { vertical-align: top; overflow-wrap: anywhere; }
+  .quick-report-table tr > * + * { border-inline-start: 1px solid #dee2e6; }
+  .quick-report-table thead th { text-align: center; vertical-align: middle; }
   .quick-report-table th:first-child { width: 22%; }
   .quick-report-table th:nth-child(2) { width: 50%; }
   .quick-report-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .2rem; }
@@ -278,8 +280,13 @@
                             aria-label="{{ row.athlete.name }} · {{ evaluation.date|date:'d-m-Y' }} {{ evaluation.slot_label }} · {{ evaluation.evaluation_text|truncatechars:60 }}"
                             title="{{ evaluation.date|date:'d-m-Y' }} {{ evaluation.slot_label }}"
                             onclick="document.getElementById('quick-eval-{{ row.athlete.id }}-{{ forloop.counter }}').showModal()"><span>{{ evaluation.evaluation_text|truncatechars:60 }}</span></button>
-                    <dialog id="quick-eval-{{ row.athlete.id }}-{{ forloop.counter }}" class="quick-report-dialog border rounded shadow p-3">
+                    <dialog id="quick-eval-{{ row.athlete.id }}-{{ forloop.counter }}" class="quick-report-dialog border rounded shadow p-3"
+                            data-training-url="?view=quick_coach_report&amp;hours={{ report_hours }}&amp;training_evaluation={{ evaluation.id }}">
                       <h3 class="h6">{{ row.athlete.name }} · {{ evaluation.date|date:"d-m-Y" }} {{ evaluation.slot_label }}</h3>
+                      <section class="small bg-light rounded p-2 mb-3">
+                        <h4 class="h6 mb-1">Training</h4>
+                        <div data-quick-training aria-live="polite"></div>
+                      </section>
                       <p class="quick-report-comment">{{ evaluation.evaluation_text }}</p>
                       <form method="dialog"><button class="btn btn-sm btn-outline-secondary">Close</button></form>
                     </dialog>
@@ -295,6 +302,34 @@
             {% endfor %}
           </tbody>
         </table>
+        <script>
+          document.querySelectorAll(".quick-report-dialog").forEach(dialog => {
+            const training = dialog.querySelector("[data-quick-training]");
+            dialog.addEventListener("toggle", async () => {
+              if (!dialog.open || dialog.dataset.trainingState) return;
+              dialog.dataset.trainingState = "loading";
+              training.textContent = "Loading training…";
+              try {
+                const response = await fetch(dialog.dataset.trainingUrl);
+                if (!response.ok) throw new Error("Training request failed");
+                const {segments} = await response.json();
+                training.textContent = segments.length ? "" : "No training found for this session.";
+                for (const {label, text} of segments) {
+                  const line = document.createElement("div");
+                  line.className = "quick-report-comment";
+                  const heading = document.createElement("strong");
+                  heading.textContent = label + " ";
+                  line.append(heading, text);
+                  training.append(line);
+                }
+                dialog.dataset.trainingState = "loaded";
+              } catch {
+                delete dialog.dataset.trainingState;
+                training.textContent = "Training could not be loaded. Reopen to try again.";
+              }
+            });
+          });
+        </script>
       {% else %}
         <p class="text-muted mb-0">No warnings in the selected period.</p>
       {% endif %}

@@ -13600,6 +13600,26 @@ def daily_overview_other_view(request):
         window_end = today
         report_until = timezone.now()
         report_since = report_until - timedelta(hours=report_hours)
+        evaluation_first_date = current_time.date() - timedelta(days=(report_hours // 24) - 1)
+        visible_training_report_ids = {
+            athlete.id for athlete in athletes
+            if athlete.id in training_visible_athlete_ids and athlete.training_reports_enabled
+        }
+        report_evaluations = AthleteDayCheck.objects.filter(
+            athlete_id__in=visible_training_report_ids,
+            updated_at__range=(report_since, report_until),
+            date__range=(evaluation_first_date, today),
+            slot_index__in=(1, 2),
+        )
+        if "training_evaluation" in request.GET:
+            evaluation_id = _parse_int(request.GET["training_evaluation"])
+            check = get_object_or_404(
+                report_evaluations.select_related("athlete__owner"), pk=evaluation_id,
+            )
+            if len((check.comment or "").strip()) <= 30:
+                return HttpResponse(status=404)
+            from core.injury_overview import training_for_evaluation
+            return JsonResponse({"segments": training_for_evaluation(check)})
         current_vitals_date = current_time.date() - timedelta(days=1) if current_time.hour < 8 else current_time.date()
         first_vitals_date = current_vitals_date - timedelta(days=(report_hours // 24) - 1)
         snapshot_dates_by_athlete = {}
@@ -13642,25 +13662,12 @@ def daily_overview_other_view(request):
                 )
                 if score <= -5:
                     report_rows[athlete_id]["vitals"].append({"score": score, "date": snapshot_date})
-        evaluation_first_date = current_time.date() - timedelta(days=(report_hours // 24) - 1)
-        visible_training_report_ids = {
-            athlete.id for athlete in athletes
-            if athlete.id in training_visible_athlete_ids and athlete.training_reports_enabled
-        }
         fitness_colors = {
             AthleteDayCheck.PAIN_NONE: "green",
             AthleteDayCheck.PAIN_SOME: "yellow",
             AthleteDayCheck.PAIN_SERIOUS: "red",
         }
-        for check in (
-            AthleteDayCheck.objects.filter(
-                athlete_id__in=visible_training_report_ids,
-                updated_at__gte=report_since,
-                updated_at__lte=report_until,
-                date__range=(evaluation_first_date, current_time.date()),
-                slot_index__in=(1, 2),
-            ).order_by("date", "slot_index")
-        ):
+        for check in report_evaluations.order_by("date", "slot_index"):
             evaluation_text = (check.comment or "").strip()
             if len(evaluation_text) <= 30:
                 continue
@@ -13669,6 +13676,7 @@ def daily_overview_other_view(request):
                 "slot_label": "AM" if check.slot_index == 1 else "PM",
                 "color": fitness_colors.get(check.pain, "unknown"),
                 "evaluation_text": evaluation_text,
+                "id": check.id,
             })
     if requested_view == "log":
         if not _is_coach_user(request.user):
