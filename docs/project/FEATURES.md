@@ -1,5 +1,7 @@
 # Functionele onderdelen
 
+- In Athlete Diary kunnen bevoegde coaches via `React` een bericht bij een AM- of PM-training plaatsen, ook vóór de atleet de evaluatie invult. Het bericht verschijnt bij de training en in de bestaande pop-up voor de atleet. Een openstaande evaluatie blijft openstaan.
+
 - Staff Team Overview gebruikt een tegelpagina zonder namenlijst: Vitals, Information Quality en Injury/Issue Overview openen de bestaande teamoverzichten; Training opent het bestaande Daily Coach Overview als Quick Coach Report. De 24-uurslog blijft beschikbaar via een kleine tegel onderaan.
 
 - Athlete Diary gebruikt een rollend bereik van 53 weken vanaf `Start week`. Previous/Next week verplaatsen dit bereik zonder jaargrens; oude links met `year=` blijven als overgang ondersteund.

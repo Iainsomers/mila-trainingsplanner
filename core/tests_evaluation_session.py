@@ -263,6 +263,35 @@ assert.ok(row.cells.slice(4).every(cell => !cell.children[1].hidden));
         self.assertEqual(self.client.post(self.url, {**payload, "evaluation_reaction": "list"}).json(),
                          {"reactions": [{"initials": "IS", "text": "<Good work>"}]})
 
+    def test_coach_can_reply_before_the_athlete_evaluates(self):
+        AthleteDayCheck.objects.create(
+            athlete=self.athlete, date=self.day, slot_index=2, updated_by=self.coach,
+            watch_activity_id="watch-import",
+        )
+        for slot in (1, 2):
+            response = self.client.post(self.url, {
+                "evaluation_reaction": "create", "date": self.day.isoformat(),
+                "slot_index": slot, "reaction_text": f"Please evaluate session {slot}.",
+            })
+            self.assertEqual(response.status_code, 200)
+            evaluation = AthleteDayCheck.objects.get(athlete=self.athlete, date=self.day, slot_index=slot)
+            self.assertFalse(evaluation.has_evaluation)
+            self.assertEqual(evaluation.watch_activity_id, "watch-import" if slot == 2 else "")
+
+        runner = get_user_model().objects.create_user(username="Evaluation_Runner")
+        self.client.force_login(runner)
+        page = self.client.get(self.url)
+        self.assertContains(page, 'id="evaluationReactionNotice"')
+        self.assertContains(page, "Please evaluate session 1.")
+        self.assertContains(page, "Please evaluate session 2.")
+        response = self.client.post(self.url, {
+            "report_submit": "1", "date": self.day.isoformat(), "slot_index": 1,
+            "check_status": AthleteDayCheck.STATUS_DONE_AS_PLANNED, "pain": AthleteDayCheck.PAIN_NONE,
+        })
+        self.assertEqual(response.status_code, 200)
+        reply = EvaluationReaction.objects.select_related("evaluation").get(evaluation__slot_index=1)
+        self.assertTrue(reply.evaluation.has_evaluation)
+
     def test_week_report_trainer_comment_notifies_only_for_changes(self):
         self.athlete.week_report_enabled = True
         self.athlete.save(update_fields=["week_report_enabled"])

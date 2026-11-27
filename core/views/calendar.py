@@ -3535,11 +3535,16 @@ def _evaluation_reaction_response(request, athlete, is_coach, action):
         if not is_coach or not _can_edit_coach_owner(request, athlete.owner_id):
             return JsonResponse({}, status=403)
         body = request.POST.get("reaction_text", "").strip()
-        evaluation = AthleteDayCheck.objects.filter(athlete=athlete, date=day, slot_index=slot).first()
-        if not body or len(body) > 2000 or not evaluation or not evaluation.comment.strip():
-            return JsonResponse({"error": "Save an evaluation comment first and enter a reply of up to 2000 characters."}, status=400)
-        EvaluationReaction.objects.create(evaluation=evaluation, author=request.user,
-                                          initials=EvaluationReaction.author_initials(request.user), text=body)
+        if not body or len(body) > 2000:
+            return JsonResponse({"error": "Enter a reply of up to 2000 characters."}, status=400)
+        with transaction.atomic():
+            evaluation, _ = AthleteDayCheck.objects.get_or_create(
+                athlete=athlete, date=day, slot_index=slot, defaults={"updated_by": request.user},
+            )
+            EvaluationReaction.objects.create(
+                evaluation=evaluation, author=request.user,
+                initials=EvaluationReaction.author_initials(request.user), text=body,
+            )
     elif action != "list":
         return JsonResponse({}, status=400)
     session_reactions = reactions.filter(evaluation__date=day, evaluation__slot_index=slot).select_related("author").order_by("pk")
