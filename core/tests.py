@@ -12185,6 +12185,11 @@ class TrainerStatsTests(TestCase):
         self.assertEqual([tick["label"] for tick in heart_rate["ticks"]], [30, 40, 45, 50, 55, 60, 70])
         self.assertEqual(len(quality["ticks"]), 1)
         self.assertEqual(quality["points"][0]["y"], response.context["chart"]["grid"][3])
+        red, light_red, _, light_green, green = response.context["chart"]["bands"]
+        self.assertAlmostEqual(red["height"] / light_red["height"], 5 / 32, places=5)
+        self.assertAlmostEqual(green["height"] / light_green["height"], 5 / 32, places=5)
+        grid = response.context["chart"]["grid"]
+        self.assertAlmostEqual(grid[1] - grid[0], 2 * (grid[2] - grid[1]), places=3)
         self.assertEqual(hrv["sample_count"], 2)
         self.assertEqual(self.client.get(f"{path}vitals/", {"weeks": "bad"}).context["weeks"], 4)
         for days_ago in range(10, 16):

@@ -14,6 +14,7 @@ VITAL_SERIES = (
 )
 PLOT_LEFT, PLOT_RIGHT = 122, 778
 PLOT_TOP, PLOT_BOTTOM = 38, 291
+PLOT_SD_LIMIT = 2 + 5 / 32
 
 
 def daily_vital_chart(athlete, baseline_start, start, end):
@@ -49,11 +50,13 @@ def daily_vital_chart(athlete, baseline_start, start, end):
         return round(PLOT_LEFT + (PLOT_RIGHT - PLOT_LEFT) * index / (len(days) - 1), 2)
 
     def position_y(score):
-        return round(PLOT_TOP + (PLOT_BOTTOM - PLOT_TOP) * (3 - score) / 6, 2)
+        return round(
+            PLOT_TOP + (PLOT_BOTTOM - PLOT_TOP) * (PLOT_SD_LIMIT - score) / (2 * PLOT_SD_LIMIT), 4,
+        )
 
-    limits = [-3, -2, -1, 1, 2, 3]
+    limits = [-PLOT_SD_LIMIT, -2, -1, 1, 2, PLOT_SD_LIMIT]
     bands = [
-        {"y": position_y(top), "height": round(position_y(bottom) - position_y(top), 2), "color": color}
+        {"y": position_y(top), "height": round(position_y(bottom) - position_y(top), 4), "color": color}
         for bottom, top, color in zip(limits, limits[1:], ("very-low", "low", "normal", "high", "very-high"))
     ]
     tick_scores = (2, 1, 0.5, 0, -0.5, -1, -2)

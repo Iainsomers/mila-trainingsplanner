@@ -90,7 +90,7 @@
                     <line class="vital-axis" x1="{{ series.axis_x|add:-5 }}" x2="{{ series.axis_x|add:-5 }}" y1="{{ chart.top }}" y2="{{ chart.bottom }}"/>
                   {% endif %}
                   {% for tick in series.ticks %}
-                    <text x="{{ series.axis_x }}" y="{{ tick.y|unlocalize }}" dy=".35em" text-anchor="{{ series.axis_anchor }}">{{ tick.label|floatformat:"-1" }}</text>
+                    <text x="{{ series.axis_x }}" y="{{ tick.y|unlocalize }}" dy=".35em" text-anchor="{{ series.axis_anchor }}">{{ tick.label|floatformat:"-2" }}</text>
                   {% endfor %}
                 {% endif %}
                 {% if series.points %}<path class="vital-chart-line" d="{{ series.path }}"/>{% endif %}
