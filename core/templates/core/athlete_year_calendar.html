@@ -1317,7 +1317,7 @@
                   <span class="ayc-mobile-overview-km">
                     {% if slot.km %}<span><strong>{{ slot.km }}</strong></span>{% endif %}
                     {% for zone in slot.zones %}<span class="total-pill total-z{{ zone.zone }}">Z{{ zone.zone }} {{ zone.km }} km</span>{% endfor %}
-                    {% for zone in slot.alt_zones %}<span class="total-pill total-z{{ zone.zone }}">A Z{{ zone.zone }} {{ zone.minutes }} min</span>{% endfor %}
+                    {% for zone in slot.alt_zones %}<span class="total-pill total-z{{ zone.zone }}">A Z{{ zone.zone }} {{ zone.minutes }}'</span>{% endfor %}
                     {% if not slot.km and not slot.zones and not slot.alt_zones %}—{% endif %}
                   </span>
                   <span>{% if slot.status %}<span class="visually-hidden">{{ slot.status.label }}</span><span
