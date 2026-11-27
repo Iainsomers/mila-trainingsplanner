@@ -707,6 +707,15 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    def test_compact_alternative_sequence_counts_every_between_rep_pause_in_z1(self):
+        from core.alternative import parse_alternative_text, segment_zone_durations
+        text = "Elliptical 1×(12' - 10' - 8' - 6' - 5' - 4' - 3' - 2' - 1') Z2>Z3 p1"
+        segment = SimpleNamespace(text=text, duration_s=12 * 60)
+        self.assertEqual(parse_alternative_text(text).duration_s, 59 * 60)
+        self.assertEqual(segment_zone_durations(segment, lambda _: 0),
+                         [("2", 1530), ("3", 1530), ("1", 480)])
+        self.assertEqual(parse_alternative_text("Elliptical 6×6' Z2 p1'").duration_s, 41 * 60)
+
     def test_preview_formats_only_pauses_over_ninety_seconds(self):
         from core.watch_ai_structure import description
         preview = description({"main": '2×(10×400 m Z3 p135") sp359 // 3×200 m p90 // 2×200 m p135m'})

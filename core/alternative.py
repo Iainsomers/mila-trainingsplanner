@@ -79,20 +79,15 @@ def expand_time_notation(text):
         return None
 
 
-def parse_alternative_text(text):
-    from core.parser import ParseResult, parse_segment_text
-    expanded = expand_time_notation(text)
-    if expanded:
-        zones = {zone for zone,_ in expanded}
-        return ParseResult(ok=True,duration_s=round(sum(seconds for _,seconds in expanded)),
-            zone=int(next(iter(zones))) if len(zones)==1 else None,raw=text)
+def _compact_pause_loads(text):
     compact_sequence = re.search(
-        r"\b(\d+)\s*[×x*]\s*\(([^)]+)\)\s*Z([1-6])\s*>\s*Z?([1-6])\s+p\s*(\d+(?:[.,]\d+)?)\s*$",
+        r"\b(\d+)\s*[×x*]\s*(?:\(([^)]+)\)|([^()]+?))\s*Z([1-6])"
+        r"(?:\s*>\s*Z?([1-6]))?\s+p\s*(\d+(?:[.,]\d+)?)\s*(?:(['′’])(\d{1,2})?[\"″]?|([\"″]|s|sec))?\s*$",
         text or "", re.IGNORECASE,
     )
     if compact_sequence:
         reps = int(compact_sequence.group(1))
-        atoms = [item.strip() for item in re.split(r"\s*(?://+|-)\s*", compact_sequence.group(2)) if item.strip()]
+        atoms = re.split(r"\s*(?://+|-)\s*", (compact_sequence[2] or compact_sequence[3]).strip())
         seconds = []
         for atom in atoms:
             minute = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*['′’]", atom)
@@ -104,8 +99,28 @@ def parse_alternative_text(text):
             else:
                 seconds = []
                 break
-        if 1 <= reps <= 60 and seconds and all(0 < value <= 86400 for value in seconds):
-            return ParseResult(ok=True, duration_s=round(reps * sum(seconds)), zone=None, raw=text)
+        pause = float(compact_sequence[6].replace(",", "."))
+        if compact_sequence[7]:
+            pause = pause * 60 + int(compact_sequence[8] or 0)
+        elif not compact_sequence[9] and pause <= 10:
+            pause *= 60
+        if 1 <= reps <= 60 and seconds and all(0 < value <= 86400 for value in seconds) and 0 < pause <= 86400:
+            start, end = int(compact_sequence[4]), int(compact_sequence[5] or compact_sequence[4])
+            step = 1 if end >= start else -1
+            zones = range(start, end + step, step)
+            loads = [(str(zone), reps * sum(seconds) / len(zones)) for zone in zones]
+            pauses = reps * len(seconds) - 1
+            return loads + ([("1", pauses * pause)] if pauses else [])
+    return []
+
+
+def parse_alternative_text(text):
+    from core.parser import ParseResult, parse_segment_text
+    expanded = expand_time_notation(text) or _compact_pause_loads(text)
+    if expanded:
+        zones = {zone for zone,_ in expanded}
+        return ParseResult(ok=True,duration_s=round(sum(seconds for _,seconds in expanded)),
+            zone=int(next(iter(zones))) if len(zones)==1 else None,raw=text)
     return parse_segment_text(text,zone_required=False)
 
 
@@ -145,6 +160,9 @@ def zone_durations(text, fallback_zone, stored_seconds, duration_for_text):
     parts = split_alternative_segments(text)
     output = []
     for part in parts or ['']:
+        if compact := _compact_pause_loads(part):
+            output.extend(compact)
+            continue
         match = re.search(r'\bz\s*([1-6])\s*(?:>|-)\s*z?\s*([1-6])\b', part, re.I)
         if match:
             start, end = map(int, match.groups())
