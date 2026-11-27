@@ -8819,24 +8819,14 @@ class SlotModalSaveTests(TestCase):
         self.assertIn('class="ayc-mobile-vitals-avg"', template_source)
         self.assertIn('document.body.appendChild(modalEl);', template_source)
 
-    def test_mobile_diary_week_view_setting_opens_compact_overview(self):
+    def test_mobile_diary_defaults_to_week_and_keeps_day_compact(self):
         _, _, athlete = self._user_plan_and_athlete()
-        self.assertFalse(athlete.mobile_diary_week_view)
-
         response = self.client.get(f"/athlete/year/?start=2026-12-28&athlete={athlete.id}")
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'class="ayc-mobile is-week-view"', html=False)
+        self.assertContains(response, 'class="ayc-mobile is-week-view"')
+        self.assertContains(response, 'data-overview-day="2026-12-28"')
         self.assertContains(response, 'type="hidden" name="start" value="2026-12-28"', html=False)
-
-        athlete.mobile_diary_week_view = True
-        athlete.save(update_fields=["mobile_diary_week_view"])
-        response = self.client.get(f"/athlete/year/?start=2026-12-28&athlete={athlete.id}")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'class="ayc-mobile is-week-view"', html=False)
-        self.assertContains(response, ".ayc-mobile.is-week-view .ayc-mobile-day { display: none; }", html=False)
-        self.assertContains(response, ".ayc-mobile.is-week-view .ayc-mobile-day-nav { display: none; }", html=False)
-        self.assertContains(response, 'data-overview-day="2026-12-28"', html=False)
+        self.assertContains(response, ".ayc-mobile:not(.is-week-view) .ayc-mobile-week-report { display: none; }")
+        self.assertContains(response, ".ayc-mobile:not(.is-week-view) .ayc-mobile-summary,")
 
     def test_simple_diary_view_is_staff_only_and_keeps_evaluations(self):
         coach, plan, athlete = self._user_plan_and_athlete()
@@ -11392,18 +11382,16 @@ class AthleteTimeInputFormatTests(TestCase):
         settings_page = self.client.get("/athlete/settings/")
         self.assertContains(settings_page, "Start on Diary")
         self.assertContains(settings_page, 'name="start_on_ayc"')
-        self.assertContains(settings_page, "Week view in mob diary")
-        self.assertContains(settings_page, 'name="mobile_diary_week_view"')
+        self.assertNotContains(settings_page, 'name="mobile_diary_week_view"')
 
         response = self.client.post(
             "/athlete/settings/",
-            {**form_data, "start_on_ayc": "on", "mobile_diary_week_view": "on"},
+            {**form_data, "start_on_ayc": "on"},
         )
 
         self.assertEqual(response.status_code, 302)
         athlete.refresh_from_db()
         self.assertTrue(athlete.start_on_ayc)
-        self.assertTrue(athlete.mobile_diary_week_view)
 
     def test_coach_can_change_start_on_ayc_setting_for_athlete(self):
         coach = get_user_model().objects.create_user(
@@ -11426,7 +11414,6 @@ class AthleteTimeInputFormatTests(TestCase):
             "z4_pace": "4:30",
             "z5_pace": "4:00",
             "start_on_ayc": "on",
-            "mobile_diary_week_view": "on",
         }
 
         self.client.force_login(coach)
@@ -11435,7 +11422,6 @@ class AthleteTimeInputFormatTests(TestCase):
         self.assertEqual(response.status_code, 302)
         athlete.refresh_from_db()
         self.assertTrue(athlete.start_on_ayc)
-        self.assertTrue(athlete.mobile_diary_week_view)
 
 
 class TrainingSegmentLabelTests(TestCase):

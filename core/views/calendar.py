@@ -4733,7 +4733,6 @@ def athlete_year_calendar_view(request):
             "show_garmin_e": bool(selected_athlete),
             "show_session_km": bool(selected_athlete and getattr(selected_athlete, "see_session_km", True)),
             "show_session_zones": bool(selected_athlete and getattr(selected_athlete, "see_session_zones", True)),
-            "mobile_diary_week_view": bool(selected_athlete and getattr(selected_athlete, "mobile_diary_week_view", False)),
             "show_training_reports": show_training_reports,
             "unread_evaluation_reactions": list(EvaluationReaction.objects.filter(
                 evaluation__athlete=selected_athlete, read_at__isnull=True,

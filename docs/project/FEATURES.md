@@ -62,7 +62,7 @@ Atleten voor wie `Year Planner Whereabouts` is ingeschakeld kunnen in hun eigen 
 
 - Alternative toont en totaliseert tijd per zone voor Z1 tot en met Z6. Z4–Z6 worden net als Z1–Z3 in sessiekoppen en weektotalen getoond, zonder als hardloopkilometers mee te tellen.
 
-- In de mobiele Athlete Diary wissel je met Day / Week tussen één dag en zeven compacte dagsamenvattingen. Elke samenvatting opent de gekozen dag. `Week view in mob diary` bepaalt alleen de openingsstand.
+- In de mobiele Athlete Diary wissel je met Day / Week tussen één dag en zeven compacte dagsamenvattingen. Elke samenvatting opent de gekozen dag. Mobiel is Week de standaard. Day laat weektotalen en weekrapport weg.
 
 - Alleen het formulier `Evaluatie seizoen 2025-2026` van Honoré Hoedt krijgt bij Filled forms de kolommen `Coach comment` en `Plan`, per gewone vraag en per matrixregel. Bevoegde edit-coaches kunnen wijzigen; view-only coaches en de betreffende atleet kunnen alleen lezen. De atleet ziet de velden bij het eigen ingevulde formulier. Wijzigingen slaan automatisch op bij verlaten van het veld. Deze notities staan apart van de atleetantwoorden in EvaluationResponse.coach_feedback en wijzigen de antwoorden of submitted_at niet. Bestaande ingevulde formulieren krijgen lege coachvelden; andere vragenlijsten behouden hun weergave.
 

@@ -1095,6 +1095,8 @@
     }
     .ayc-mobile-week-report .week-report-box { min-height: 112px; padding: 7px; }
     .ayc-mobile-week-report .week-report-field { min-height: 78px; font-size: .78rem; }
+    .ayc-mobile:not(.is-week-view) .ayc-mobile-summary,
+    .ayc-mobile:not(.is-week-view) .ayc-mobile-week-report { display: none; }
     #mobileVitalsModal .modal-dialog { margin: 0; max-width: none; height: 100%; }
     #mobileVitalsModal .modal-content { min-height: 100%; border: 0; border-radius: 0; }
   }
@@ -1228,7 +1230,7 @@
     {% endif %}
   </form>
 
-  <div class="ayc-mobile{% if mobile_diary_week_view %} is-week-view{% endif %}">
+  <div class="ayc-mobile is-week-view">
     <div class="ayc-mobile-toolbar">
       {% if is_coach_user %}
       <form method="get">
@@ -1258,9 +1260,9 @@
       </div>
       <div class="ayc-mobile-view-switch" role="group" aria-label="Diary view">
         <button type="button" id="aycMobileDayView"
-                aria-pressed="{% if mobile_diary_week_view %}false{% else %}true{% endif %}">Day</button>
+                aria-pressed="false">Day</button>
         <button type="button" id="aycMobileWeekView"
-                aria-pressed="{% if mobile_diary_week_view %}true{% else %}false{% endif %}">Week</button>
+                aria-pressed="true">Week</button>
       </div>
       {% if show_oura_vitals_import %}
       <button type="button" class="btn btn-sm btn-outline-primary" data-oura-import-open>Use Oura data</button>
