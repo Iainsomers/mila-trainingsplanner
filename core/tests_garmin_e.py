@@ -707,6 +707,32 @@ class GarminEValidationTests(SimpleTestCase):
 
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
+    @patch("core.views.garmin_e.ask_model")
+    def test_strength_activity_imports_only_into_strength(self, model):
+        from core.models import TrainingSlot
+        from core.strength import strength_duration_s
+        self.record.distance_m = None
+        self.record.duration_s = 3293
+        self.record.analysis_data = {"activity_metrics": {"sport": "STRENGTH_TRAINING", "average_hr": 88}}
+        self.record.save()
+        part = self.client.get(self.url, {**self.query, "preview": "measured"}).json()["results"][0]["parts"][0]
+        self.assertTrue(part["e_usable"])
+        self.assertEqual(part["training_fields"], {"strength": "Strength Training 54'53\""})
+        url = reverse("slot_modal", args=[2026, 11, 14, 2]) + "?" + urlencode({
+            "athlete": self.athlete.pk, "source": "athlete_year",
+        })
+        self.assertEqual(self.client.post(url, {"core_text": "2000m Z1", "alt_text": "Bike 30' Z1"}).status_code, 200)
+        response = self.client.post(url, {
+            "watch_origin": "watch_e", "watch_strength_text": part["training_fields"]["strength"],
+            "watch_validation": part["e_validation"], "watch_loads": "[]",
+        })
+        self.assertEqual(response.status_code, 204, response.content[:500])
+        slot = TrainingSlot.objects.get(athlete=self.athlete, date="2026-11-14", slot_index=2)
+        self.assertEqual(strength_duration_s(slot.segments.get(type="CORE2").text), 3293)
+        self.assertEqual(slot.segments.get(type="ALT").text, "Bike 30' Z1")
+        self.assertEqual(slot.core_text(), "2000m Z1")
+        model.assert_not_called()
+
     def test_compact_alternative_sequence_counts_every_between_rep_pause_in_z1(self):
         from core.alternative import parse_alternative_text, segment_zone_durations
         text = "Elliptical 1×(12' - 10' - 8' - 6' - 5' - 4' - 3' - 2' - 1') Z2>Z3 p1"

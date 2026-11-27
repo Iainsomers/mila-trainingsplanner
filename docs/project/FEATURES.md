@@ -716,3 +716,5 @@ De Lactate-tabel toont opgeslagen regels en een lege invoerregel. Na invoer van 
 Opgeslagen lactaatwaarden verschijnen per rep bij het Diary-klokje. De Lactate-invoer toont gemiddelde HR en HR last 10% apart. Voor Garmin C/D/E gebruikt het klokje HR last 10% uit dezelfde eind-HR-berekening, met een venster van minimaal 15 seconden en gemiddelde hartslag bij reps korter dan 15 seconden.
 
 Bij het Diary-klokje verschijnen Lac en RPE per rep als voor de betreffende kolom minstens één waarde is ingevuld.
+
+Garmin E toont opnames met Strength Training als Strength met gemeten duur. Use vervangt de Strength-tekst van het dagdeel en Add voegt de registratie toe. Main en Alternative blijven behouden.

@@ -1414,7 +1414,12 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
             if request.POST.get("sprint_text"):
                 fields["sprint"] = request.POST["sprint_text"]
             alternative = request.POST.get("alt_text","")
-            if alternative and not any(fields.values()):
+            strength = request.POST.get("watch_strength_text", "")
+            if strength and not alternative and not any(fields.values()):
+                fields = {"strength": strength}
+            elif strength:
+                raise ValueError
+            elif alternative and not any(fields.values()):
                 fields = {"alt":alternative}
             elif alternative:
                 raise ValueError
@@ -1474,6 +1479,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         return HttpResponse("Future training can only be edited by a coach.", status=403)
 
     preserve_watch_fields = (request.POST.get('watch_origin') or '').strip().lower() in {'watch_a','watch_b','watch_c','watch_d','watch_e'}
+    strength_only = (request.POST.get('watch_origin') or '').strip().lower() == 'watch_e' and bool(request.POST.get("watch_strength_text"))
     alternative_only = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative'
     alternative_replace = preserve_watch_fields and request.POST.get('watch_fields') == 'alternative_replace'
     running_add = preserve_watch_fields and request.POST.get('watch_fields') == 'running_add'
@@ -1484,10 +1490,10 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     # Add AM/PM appends a new Alternative segment. Use AM/PM keeps the
     # replacement semantics for the complete running/Alternative part.
     watch_sprint = request.POST.get('watch_origin') == 'watch_e' and bool(request.POST.get('sprint_text', '').strip())
-    watch_replaced_types = set() if alternative_only else {'WU', 'CORE', 'CD'}
+    watch_replaced_types = set() if alternative_only or strength_only else {'WU', 'CORE', 'CD'}
     if watch_sprint:
         watch_replaced_types.add('SPR')
-    if not running_add and not alternative_only:
+    if not running_add and not alternative_only and not strength_only:
         watch_replaced_types.add('ALT')
     # Trainingsbuilder toggles (uit session)
     tb_show_wu = _tb_flag(request, "tb_show_wu", True)
@@ -1808,7 +1814,7 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
         slot.segments.exclude(type__in=watch_replaced_types).delete()
         for payload in protected_watch_segments:
             slot.segments.create(**payload)
-        if alternative_only or append_running:
+        if alternative_only or append_running or strength_only:
             # Preserve measured running data and version history when inheriting
             # a complete workout into a personal override.
             for field in ('source', 'watch_loads', 'watch_main_reps', 'watch_plan_snapshot', 'watch_training_snapshot'):
@@ -1822,6 +1828,25 @@ def slot_modal(request, yyyy, mm, dd, slot_index):
     sprint_seg = slot.segments.filter(type="SPR").order_by("order", "id").first()
     core_seg = slot.segments.filter(type="CORE").order_by("order", "id").first()
     core2_seg = slot.segments.filter(type="CORE2").order_by("order", "id").first()
+    if strength_only:
+        from core.strength import clear_strength_metrics
+        strength_text = request.POST["watch_strength_text"]
+        segment = core2_seg or TrainingSegment(slot=slot, type="CORE2", order=2)
+        if request.POST.get("watch_fields") == "strength_add" and segment.text:
+            strength_text = "\n".join(dict.fromkeys([*segment.text.splitlines(), strength_text]))
+        segment.text = strength_text
+        clear_strength_metrics(segment)
+        segment.parsed_at = timezone.now()
+        segment.save()
+        apply_segment_order(slot, form_segment_order)
+        if slot.source == "planned":
+            slot.source = "watch_e"
+            if slot.watch_plan_snapshot is None:
+                slot.watch_plan_snapshot = original_watch_plan
+        slot.watch_training_snapshot = _watch_version_payload(slot)
+        slot.save(update_fields=["source", "watch_plan_snapshot", "watch_training_snapshot", "updated_at"])
+        _bump_stats_version()
+        return HttpResponse(status=204)
     alt_segs = list(slot.segments.filter(type="ALT").order_by("order", "id"))
     cd_seg = slot.segments.filter(type="CD").order_by("order", "id").first()
 

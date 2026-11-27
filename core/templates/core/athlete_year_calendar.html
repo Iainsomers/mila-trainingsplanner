@@ -3128,7 +3128,7 @@
             });
             box.appendChild(alternatives);
           }
-          var hasUsableTrainingFields = !!(fields.main || fields.alt || fields.alternative);
+          var hasUsableTrainingFields = !!(fields.main || fields.alt || fields.alternative || fields.strength);
           var canDiscussGarminE = model === "E" && (part.watch_loads || []).length;
           if (hasUsableTrainingFields || canDiscussGarminE) {
             var actions = document.createElement("div");
@@ -3348,7 +3348,7 @@
     if (model === "E" && eAutoTasks.length) eAutoTasks[0]();
   }
   function useWatchTraining(fields, watchLoads, slotIndex, button, model, add, validation) {
-    if (!activeDate || !activeAthlete || !fields || !(fields.main || fields.alt || fields.alternative)) return;
+    if (!activeDate || !activeAthlete || !fields || !(fields.main || fields.alt || fields.alternative || fields.strength)) return;
     var originalLabel = button.textContent;
     button.disabled = true;
     button.textContent = "Saving...";
@@ -3360,7 +3360,10 @@
     if (fields.sprint) formData.append("sprint_text", fields.sprint);
     formData.append("core_text", fields.main || "");
     formData.append("alt_text", fields.alt || fields.alternative || "");
-    if (!fields.main && (fields.alt || fields.alternative)) {
+    if (fields.strength) {
+      formData.append("watch_strength_text", fields.strength);
+      if (add) formData.append("watch_fields", "strength_add");
+    } else if (!fields.main && (fields.alt || fields.alternative)) {
       formData.append("watch_fields", add ? "alternative" : "alternative_replace");
     } else if (add) {
       formData.append("watch_fields", "running_add");

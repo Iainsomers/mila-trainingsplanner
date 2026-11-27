@@ -179,6 +179,15 @@ def garmin_type_e_ayc_view(request):
                 part["ai_structure_status"] = "e_unavailable"
                 continue
             fields = part.get("training_fields") or {}
+            if part.get("alternative_label") in {"Strength Training", "Strength"} and part.get("alternative_duration_s"):
+                seconds = max(1, round(part["alternative_duration_s"]))
+                minutes, remainder = divmod(seconds, 60)
+                duration = f"{minutes}'{remainder:02d}\"" if remainder else f"{minutes}'"
+                strength = f"Strength Training {duration}"
+                part.update(training_fields={"strength": strength}, description=strength, watch_loads=[],
+                            e_usable=permitted, ai_structure_status="e_validated" if permitted else "e_unavailable")
+                part.pop("analysis_note", None)
+                continue
             is_alternative = bool(fields.get("alt"))
             # Chat is most valuable when fixed recognition could not name a
             # Main yet. Valid measured running laps are enough to open E; only
