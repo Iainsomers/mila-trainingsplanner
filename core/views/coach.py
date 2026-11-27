@@ -13677,36 +13677,6 @@ def daily_overview_other_view(request):
                 "fitness_symbol": fitness_symbols.get(check.pain, "⚪"),
                 "evaluation_text": evaluation_text or "—",
             })
-        watch_source_labels = {
-            "watch_a": "Polar A",
-            "watch_b": "Polar B",
-            "watch_c": "Garmin C",
-            "watch_d": "Garmin D",
-            "watch_e": "Garmin E",
-        }
-        for slot in (
-            TrainingSlot.objects.filter(
-                athlete_id__in=athlete_ids,
-                updated_at__gte=report_since,
-                updated_at__lte=report_until,
-                date__range=(evaluation_first_date, current_time.date()),
-                slot_index__in=(1, 2),
-            ).filter(
-                Q(source__in=watch_source_labels)
-                | Q(watch_training_snapshot__source__in=watch_source_labels)
-            ).select_related("athlete")
-        ):
-            effective_watch_source = slot.source
-            if effective_watch_source not in watch_source_labels and isinstance(slot.watch_training_snapshot, dict):
-                effective_watch_source = slot.watch_training_snapshot.get("source", "")
-            report_rows.append({
-                "kind": "watch_training",
-                "athlete": slot.athlete,
-                "warning": "Watch Training",
-                "date": slot.date,
-                "slot_label": "AM" if slot.slot_index == 1 else "PM",
-                "watch_label": watch_source_labels[effective_watch_source],
-            })
         report_rows.sort(key=lambda row: (row["date"], row["athlete"].name), reverse=True)
         return render(request, "core/daily_overview_other.html", {
             "overview_mode": "quick_coach_report",

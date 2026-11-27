@@ -250,8 +250,6 @@
         {% for row in report_rows %}
           {% if row.kind == 'important_evaluation' %}
             <div class="quick-report-item"><strong>{{ row.athlete.name }}</strong>: {{ row.warning }} {{ row.date|date:"d-m-Y" }} {{ row.slot_label }}, <span title="Fitness">{{ row.fitness_symbol }}</span>, {{ row.evaluation_text }}</div>
-          {% elif row.kind == 'watch_training' %}
-            <div class="quick-report-item"><strong>{{ row.athlete.name }}</strong>: {{ row.warning }} {{ row.date|date:"d-m-Y" }} {{ row.slot_label }}, {{ row.watch_label }}</div>
           {% else %}
             <div class="quick-report-item"><strong>{{ row.athlete.name }}</strong>: {{ row.warning }} {{ row.score }} <span class="text-muted small">· {{ row.date|date:"d-m-Y" }}</span></div>
           {% endif %}

@@ -1,5 +1,7 @@
 # Actuele status
 
+- 27 november — De losse Watch Training-regels zijn uit Quick Coach Report gehaald. Het klokje blijft bij de training beschikbaar.
+
 - 26 november — Garmin E toont één doorlopend Alternative-blok vanaf één minuut als minuten en seconden (bijvoorbeeld 19′14″), ook zonder bruikbare lapzone. De exacte meetduur blijft in de Watch-gegevens. Een oude secondenpreview kan bij heropenen worden herberekend.
 
 - 24 november — Het Garmin E-klokje leest meerdere gevalideerde werkreps rechtstreeks uit de opgeslagen lapmarkeringen. Gemengde sets en een apart slotblok blijven samen zichtbaar, ook bij bestaande trainingen met die markeringen.

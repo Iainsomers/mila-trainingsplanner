@@ -2215,7 +2215,7 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(two_days, "Old Evaluation")
         self.assertNotContains(two_days, "Private Evaluation")
 
-    def test_quick_coach_report_lists_slots_that_show_a_watch_clock(self):
+    def test_quick_coach_report_omits_slots_that_show_a_watch_clock(self):
         coach = get_user_model().objects.create_user(
             username="quick-report-watch", password="secret", is_staff=True,
         )
@@ -2259,11 +2259,11 @@ class PlanningOverviewTests(TestCase):
             "view": "quick_coach_report", "hours": "48",
         })
 
-        self.assertContains(one_day, f"Watch Athlete</strong>: Watch Training {today:%d-%m-%Y} AM, Garmin C", html=False)
-        self.assertContains(one_day, f"Watch Athlete</strong>: Watch Training {today:%d-%m-%Y} PM, Polar A", html=False)
+        self.assertNotContains(one_day, "Watch Training")
+        self.assertNotContains(one_day, "Polar A")
         self.assertNotContains(one_day, "Private Watch Athlete")
         self.assertNotContains(one_day, "Garmin D")
-        self.assertContains(two_days, f"Watch Athlete</strong>: Watch Training {(today - timedelta(days=1)):%d-%m-%Y} PM, Garmin D", html=False)
+        self.assertNotContains(two_days, "Watch Training")
 
     def test_athlete_team_follows_coach_team(self):
         coach = get_user_model().objects.create_user(
