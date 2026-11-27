@@ -12177,6 +12177,8 @@ class TrainerStatsTests(TestCase):
         self.assertContains(workload, 'class="btn btn-dark" aria-current="page">Workload</a>')
         response = self.client.get(f"{path}vitals/", {"weeks": 2})
         self.assertContains(response, f'/planning/stats/athlete/{teammate.pk}/vitals/?weeks=2')
+        self.assertContains(response, '<summary class="d-block" id="stats-athlete-menu"')
+        self.assertNotContains(response, 'data-bs-toggle="dropdown"')
         self.assertNotContains(response, workload_only.name)
         self.assertContains(response, 'class="btn btn-dark" aria-current="page">Vitals</a>')
         self.assertContains(response, 'class="vital-chart" viewBox=', count=1)
