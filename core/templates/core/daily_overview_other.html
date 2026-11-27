@@ -106,7 +106,7 @@
   .quick-report-table tr > * + * { border-inline-start: 1px solid #dee2e6; }
   .quick-report-table thead th { text-align: center; vertical-align: middle; }
   .quick-report-table th:first-child { width: 22%; }
-  .quick-report-table th:nth-child(2) { width: 50%; }
+  .quick-report-table th:last-child { width: 14%; }
   .quick-report-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .2rem; }
   .quick-report-preview { display: flex; align-items: center; gap: .35rem; min-width: 0; min-height: 1.5rem; padding: .12rem .35rem; border: 1px solid #e4e9ee; border-radius: .25rem; background: #f8f9fa; color: inherit; text-align: left; font-size: .8rem; }
   .quick-report-preview:hover { background: #edf1f5; }
@@ -115,10 +115,11 @@
   .quick-report-preview.green::before { background: #198754; }
   .quick-report-preview.yellow::before { background: #e4a900; }
   .quick-report-preview.red::before { background: #dc3545; }
-  .quick-report-vitals { display: flex; flex-wrap: wrap; gap: .15rem .5rem; }
+  .quick-report-table td.quick-report-vitals-cell { vertical-align: middle; }
+  .quick-report-vitals { display: flex; flex-wrap: wrap; justify-content: center; gap: .15rem .5rem; }
   @media (max-width: 575.98px) {
     .quick-report-previews { grid-template-columns: minmax(0, 1fr); }
-    .quick-report-table th:nth-child(2) { width: 42%; }
+    .quick-report-table th:last-child { width: 20%; }
   }
   .quick-report-warning { color: #b02a37; font-weight: 700; }
   .quick-report-dialog { max-width: min(28rem, calc(100% - 2rem)); white-space: normal; }
@@ -269,7 +270,7 @@
       </form>
       {% if report_rows %}
         <table class="table table-sm quick-report-table mb-0">
-          <thead><tr><th scope="col">Athlete</th><th scope="col">Evaluations</th><th scope="col">Vitals</th><th scope="col">Missed evaluations</th></tr></thead>
+          <thead><tr><th scope="col">Athlete</th><th scope="col">Evaluations</th><th scope="col">Vitals</th></tr></thead>
           <tbody>
             {% for row in report_rows %}
               <tr>
@@ -292,13 +293,14 @@
                       <form method="dialog"><button class="btn btn-sm btn-outline-secondary">Close</button></form>
                     </dialog>
                   {% endfor %}
-                </div></td>
-                <td><div class="quick-report-vitals">
+                </div>
+                  {% if row.missed %}<div class="quick-report-warning{% if row.evaluations %} mt-1{% endif %}">Missed evaluations: {{ row.missed }}</div>{% endif %}
+                </td>
+                <td class="quick-report-vitals-cell"><div class="quick-report-vitals">
                   {% for vital in row.vitals %}
                     <span class="quick-report-warning" title="{{ vital.date|date:'d-m-Y' }}">{{ vital.score }}</span>
                   {% endfor %}
                 </div></td>
-                <td>{% if row.missed %}<span class="quick-report-warning">{{ row.missed }}</span>{% endif %}</td>
               </tr>
             {% endfor %}
           </tbody>

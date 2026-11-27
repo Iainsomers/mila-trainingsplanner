@@ -2260,6 +2260,8 @@ class PlanningOverviewTests(TestCase):
         row, = response.context["report_rows"]
         self.assertEqual(row["athlete"], athletes[0])
         self.assertEqual(row["missed"], 2)
+        self.assertContains(response, '<div class="quick-report-warning">Missed evaluations: 2</div>')
+        self.assertNotContains(response, '<th scope="col">Missed evaluations</th>')
 
     def test_quick_coach_report_omits_slots_that_show_a_watch_clock(self):
         coach = get_user_model().objects.create_user(
