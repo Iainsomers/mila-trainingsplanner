@@ -1,6 +1,7 @@
 # UI- en taalafspraken
 
 - Stats → Vitals heeft een 1-/3-daagse schakelaar en gekleurde selectievakjes voor de vier reeksen. De browser onthoudt beide voorkeuren per account.
+- Op individuele Stats-pagina’s kunnen coaches via de grote atletennaam wisselen. De gekozen Workload- of Vitals-periode blijft behouden. In Vitals toont het menu alleen toegankelijke atleten met Daily vitals ingeschakeld.
 
 - De Workload–Vitals-schakelaar toont de actieve pagina met witte tekst op een donkere knop.
 

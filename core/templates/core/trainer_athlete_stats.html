@@ -31,9 +31,9 @@
 
 {% block content %}
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
     <div>
-      <h1 class="mb-1">{{ athlete.name }}</h1>
+      {% include "core/partials/athlete_stats_heading.html" %}
       <div class="text-muted">Weekly distance · {{ period_start|date:"d M Y" }} – {{ period_end|date:"d M Y" }}</div>
     </div>
     {% if athlete_self_stats %}

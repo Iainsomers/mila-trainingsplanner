@@ -12153,6 +12153,12 @@ class TrainerStatsTests(TestCase):
         athlete = Athlete.objects.create(
             owner=coach, name="Vital Chart Runner", birth_year=2000, gender="X", daily_vitals_enabled=True,
         )
+        teammate = Athlete.objects.create(
+            owner=coach, name="Vital Chart Teammate", birth_year=2000, gender="X", daily_vitals_enabled=True,
+        )
+        workload_only = Athlete.objects.create(
+            owner=coach, name="Workload Only Runner", birth_year=2000, gender="X",
+        )
         today = timezone.localdate()
         for days_ago, data in (
             (220, {"sleep_hours": 90}),
@@ -12167,8 +12173,11 @@ class TrainerStatsTests(TestCase):
         path = f"/planning/stats/athlete/{athlete.pk}/"
         workload = self.client.get(path)
         self.assertContains(workload, f'href="{path}vitals/"')
+        self.assertContains(workload, f'/planning/stats/athlete/{workload_only.pk}/?months=6&amp;period=0')
         self.assertContains(workload, 'class="btn btn-dark" aria-current="page">Workload</a>')
         response = self.client.get(f"{path}vitals/", {"weeks": 2})
+        self.assertContains(response, f'/planning/stats/athlete/{teammate.pk}/vitals/?weeks=2')
+        self.assertNotContains(response, workload_only.name)
         self.assertContains(response, 'class="btn btn-dark" aria-current="page">Vitals</a>')
         self.assertContains(response, 'class="vital-chart" viewBox=', count=1)
         self.assertContains(response, 'class="vital-band-very-high"', count=1)

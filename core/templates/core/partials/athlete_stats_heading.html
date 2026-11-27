@@ -1,0 +1,24 @@
+{% if stats_athletes %}
+  <div class="dropdown">
+    <h1 class="mb-1">
+      <button type="button" class="dropdown-toggle border-0 bg-transparent p-0 text-reset text-start text-break"
+              id="stats-athlete-menu" data-bs-toggle="dropdown" aria-expanded="false">{{ athlete.name }}</button>
+    </h1>
+    <ul class="dropdown-menu overflow-auto" style="max-height: min(24rem, 60vh)" aria-labelledby="stats-athlete-menu">
+      {% for option in stats_athletes %}
+        <li>
+          {% if vitals_active %}
+            {% url 'trainer_athlete_vitals' option.pk as option_url %}
+          {% else %}
+            {% url 'trainer_athlete_stats' option.pk as option_url %}
+          {% endif %}
+          <a class="dropdown-item text-wrap{% if option.pk == athlete.pk %} active{% endif %}"
+             href="{{ option_url }}?{% if vitals_active %}weeks={{ weeks }}{% else %}months={{ selected_months }}&amp;period={{ period_index }}{% endif %}"
+             {% if option.pk == athlete.pk %}aria-current="page"{% endif %}>{{ option.name }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% else %}
+  <h1 class="mb-1">{{ athlete.name }}</h1>
+{% endif %}

@@ -35,7 +35,7 @@
 <main class="container py-4" data-vitals-preferences="mila:vitals:{{ request.user.pk }}">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-      <h1 class="mb-1">{{ athlete.name }}</h1>
+      {% include "core/partials/athlete_stats_heading.html" %}
       <div class="text-muted">Daily vitals · {{ period_start|date:"d M Y" }} – {{ period_end|date:"d M Y" }}</div>
     </div>
     {% if athlete_self_stats %}

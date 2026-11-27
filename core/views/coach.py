@@ -12829,12 +12829,15 @@ def trainer_stats_view(request):
 @require_GET
 def trainer_athlete_stats_view(request, athlete_id, vitals=False):
     athlete_self_stats = not (request.user.is_staff or request.user.is_superuser)
+    stats_athletes = ()
     if athlete_self_stats:
         athlete = _athlete_for_user(request.user)
         if not athlete or athlete.pk != athlete_id:
             return HttpResponseForbidden("Not allowed")
     else:
-        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
+        accessible_athletes = _filter_owned(Athlete.objects.all(), request)
+        athlete = get_object_or_404(accessible_athletes, id=athlete_id)
+        stats_athletes = accessible_athletes.order_by("name", "pk")
     show_stats_vitals = athlete.daily_vitals_enabled and evaluation_visibility_for_request(
         request, athlete.owner, athlete_self=athlete_self_stats,
     )["vitals"]
@@ -12849,6 +12852,7 @@ def trainer_athlete_stats_view(request, athlete_id, vitals=False):
         return render(request, "core/trainer_athlete_vitals.html", {
             "athlete": athlete,
             "athlete_self_stats": athlete_self_stats,
+            "stats_athletes": () if athlete_self_stats else stats_athletes.filter(daily_vitals_enabled=True),
             "show_stats_vitals": show_stats_vitals,
             "vitals_active": True,
             "weeks": weeks,
@@ -13099,6 +13103,7 @@ def trainer_athlete_stats_view(request, athlete_id, vitals=False):
     )
 
     return render(request, "core/trainer_athlete_stats.html", {
+        "stats_athletes": stats_athletes,
         "show_stats_vitals": show_stats_vitals,
         "athlete": athlete,
         "athlete_self_stats": athlete_self_stats,
