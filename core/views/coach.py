@@ -13591,13 +13591,13 @@ def daily_overview_other_view(request):
         for athlete in athletes
         if evaluation_visibility_for_request(request, athlete.owner)["vitals"]
     }
-    if requested_view == "quick_coach_report":
-        try:
-            report_hours = int(request.GET.get("hours", 24))
-        except (TypeError, ValueError):
-            report_hours = 24
-        report_hours = min(168, max(24, report_hours))
-        report_hours = min(168, max(24, round(report_hours / 24) * 24))
+    quick_report = requested_view == "quick_coach_report"
+    if quick_report:
+        report_periods = (24, 48, 72, 120)
+        requested_hours = request.GET.get("hours", "48")
+        report_hours = next((hours for hours in report_periods if str(hours) == requested_hours), 48)
+        window_start = today - timedelta(days=4)
+        window_end = today
         report_until = timezone.now()
         report_since = report_until - timedelta(hours=report_hours)
         current_vitals_date = current_time.date() - timedelta(days=1) if current_time.hour < 8 else current_time.date()
@@ -13623,7 +13623,10 @@ def daily_overview_other_view(request):
             "vital-extreme-green-dark": 3,
             "vital-extreme-green-light": 1,
         }
-        report_rows = []
+        report_rows = {
+            athlete.id: {"athlete": athlete, "vitals": [], "evaluations": [], "missed": 0}
+            for athlete in athletes
+        }
         for snapshot_date in sorted({day for days in snapshot_dates_by_athlete.values() for day in days}):
             snapshot_rows, _, _, _ = _relative_vital_rows(
                 athletes, visible_vital_athlete_ids, current_time, as_of_date=snapshot_date,
@@ -13638,23 +13641,16 @@ def daily_overview_other_view(request):
                     for class_key in ("low_class", "high_class")
                 )
                 if score <= -5:
-                    report_rows.append({
-                        "kind": "relative_vitals",
-                        "athlete": row["athlete"],
-                        "warning": "Relative Vitals Warning",
-                        "score": score,
-                        "date": snapshot_date,
-                    })
+                    report_rows[athlete_id]["vitals"].append({"score": score, "date": snapshot_date})
         evaluation_first_date = current_time.date() - timedelta(days=(report_hours // 24) - 1)
         visible_training_report_ids = {
             athlete.id for athlete in athletes
             if athlete.id in training_visible_athlete_ids and athlete.training_reports_enabled
         }
-        fitness_symbols = {
-            AthleteDayCheck.PAIN_NONE: "🟢",
-            AthleteDayCheck.PAIN_SOME: "🟠",
-            AthleteDayCheck.PAIN_SERIOUS: "🔴",
-            "": "⚪",
+        fitness_colors = {
+            AthleteDayCheck.PAIN_NONE: "green",
+            AthleteDayCheck.PAIN_SOME: "yellow",
+            AthleteDayCheck.PAIN_SERIOUS: "red",
         }
         for check in (
             AthleteDayCheck.objects.filter(
@@ -13663,28 +13659,17 @@ def daily_overview_other_view(request):
                 updated_at__lte=report_until,
                 date__range=(evaluation_first_date, current_time.date()),
                 slot_index__in=(1, 2),
-            ).select_related("athlete")
+            ).order_by("date", "slot_index")
         ):
             evaluation_text = (check.comment or "").strip()
-            if check.pain not in {AthleteDayCheck.PAIN_SOME, AthleteDayCheck.PAIN_SERIOUS} and len(evaluation_text) <= 30:
+            if len(evaluation_text) <= 30:
                 continue
-            report_rows.append({
-                "kind": "important_evaluation",
-                "athlete": check.athlete,
-                "warning": "Important Evaluation",
+            report_rows[check.athlete_id]["evaluations"].append({
                 "date": check.date,
                 "slot_label": "AM" if check.slot_index == 1 else "PM",
-                "fitness_symbol": fitness_symbols.get(check.pain, "⚪"),
-                "evaluation_text": evaluation_text or "—",
+                "color": fitness_colors.get(check.pain, "unknown"),
+                "evaluation_text": evaluation_text,
             })
-        report_rows.sort(key=lambda row: (row["date"], row["athlete"].name), reverse=True)
-        return render(request, "core/daily_overview_other.html", {
-            "overview_mode": "quick_coach_report",
-            "report_hours": report_hours,
-            "report_since": report_since,
-            "report_until": report_until,
-            "report_rows": report_rows,
-        })
     if requested_view == "log":
         if not _is_coach_user(request.user):
             return HttpResponseForbidden("The activity log is available to staff only.")
@@ -13798,47 +13783,29 @@ def daily_overview_other_view(request):
         return render(request, "core/daily_overview_other.html", {
             "overview_mode": requested_view, "injury_rows": rows,
         })
-    # Last filled calendar date, including entries older than the ten-day score window.
-    last_vital_dates = dict(
-        AthleteDailyVital.objects.filter(
-            athlete_id__in=visible_vital_athlete_ids, date__lte=today,
-        ).filter(
-            Q(sleep_hours__isnull=False) | Q(sleep_quality__isnull=False)
-            | Q(morning_hr__isnull=False) | Q(hrv__isnull=False)
-        ).values("athlete_id").annotate(last=Max("date")).values_list("athlete_id", "last")
-    )
-    last_evaluation_dates = dict(
-        AthleteDayCheck.objects.filter(
-            athlete_id__in=training_visible_athlete_ids, date__lte=today,
-        ).annotate(clean_comment=Trim("comment")).filter(
-            Q(checked=True) | ~Q(status="") | Q(rpe__isnull=False)
-            | ~Q(pain="") | ~Q(clean_comment="")
-        ).values("athlete_id").annotate(last=Max("date")).values_list("athlete_id", "last")
-    )
-
-    def last_date_label(dates, athlete_id):
-        last = dates.get(athlete_id)
-        return last.strftime("%d-%m-%Y") if last else "—"
-
-    vital_completion_counts = {}
-    if visible_vital_athlete_ids:
-        for vital in AthleteDailyVital.objects.filter(
-            athlete_id__in=visible_vital_athlete_ids,
-            date__range=(window_start, window_end),
-        ).only("athlete_id", "sleep_hours", "sleep_quality", "morning_hr", "hrv"):
-            vital_completion_counts[vital.athlete_id] = vital_completion_counts.get(vital.athlete_id, 0) + sum(
-                getattr(vital, field) is not None
-                for field in ("sleep_hours", "sleep_quality", "morning_hr", "hrv")
-            )
-
     plans = list(
         _filter_owned(TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name"), request)
         .exclude(name__startswith="Flex Planner")
     )
-    flex_plan_by_athlete = {
-        athlete.id: _get_athlete_year_flex_plan(active_coach, athlete, window_start, window_end)
-        for athlete in athletes
-    }
+    if quick_report:
+        flex_owner_by_athlete = {
+            athlete.id: active_coach.id if active_coach.is_staff else athlete.owner_id
+            for athlete in athletes if athlete.id in visible_training_report_ids
+        }
+        flex_plan_by_owner = {}
+        for plan in TrainingPlan.objects.filter(
+            owner_id__in=set(flex_owner_by_athlete.values()), name__startswith="Flex Planner",
+        ).order_by("id"):
+            flex_plan_by_owner.setdefault(plan.owner_id, plan)
+        flex_plan_by_athlete = {
+            athlete_id: flex_plan_by_owner.get(owner_id)
+            for athlete_id, owner_id in flex_owner_by_athlete.items()
+        }
+    else:
+        flex_plan_by_athlete = {
+            athlete.id: _get_athlete_year_flex_plan(active_coach, athlete, window_start, window_end)
+            for athlete in athletes
+        }
     flex_plan_ids = {plan.id for plan in flex_plan_by_athlete.values() if plan}
     plan_targets = {}
     for plan in plans:
@@ -13926,6 +13893,80 @@ def daily_overview_other_view(request):
             )
         return None
 
+    def planned_slot_for(athlete, day, slot_index):
+        slot, flex_blocks_base = effective_slot_for(athlete, day, slot_index)
+        if not slot and not flex_blocks_base:
+            base_slot = _base_planning_slot_for_day(
+                base_blocks_by_athlete, athlete.id, day, slot_index
+            )
+            if base_slot:
+                if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
+                    slot = _virtual_slot_from_base_training(base_slot.training_text)
+                elif base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER:
+                    slot = trainer_slot_lookup.get((base_slot.trainer_plan_id, day, slot_index))
+        return slot
+
+    if quick_report:
+        completed_days = [window_start + timedelta(days=offset) for offset in range(4)]
+        for athlete in athletes:
+            if athlete.id not in visible_training_report_ids:
+                continue
+            if any(
+                check.effective_status
+                for day in (*completed_days, today)
+                for slot_index in (1, 2)
+                if (check := check_lookup.get((athlete.id, day, slot_index)))
+            ):
+                continue
+            for day in completed_days:
+                for slot_index in (1, 2):
+                    slot = planned_slot_for(athlete, day, slot_index)
+                    if slot and not _slot_is_visually_empty(slot):
+                        report_rows[athlete.id]["missed"] += 1
+        for row in report_rows.values():
+            row["vitals"].sort(key=lambda vital: vital["score"])
+        return render(request, "core/daily_overview_other.html", {
+            "overview_mode": requested_view,
+            "report_hours": report_hours,
+            "report_periods": report_periods,
+            "report_rows": [
+                row for row in report_rows.values() if row["vitals"] or row["evaluations"] or row["missed"]
+            ],
+        })
+
+    # Last filled calendar date, including entries older than the ten-day score window.
+    last_vital_dates = dict(
+        AthleteDailyVital.objects.filter(
+            athlete_id__in=visible_vital_athlete_ids, date__lte=today,
+        ).filter(
+            Q(sleep_hours__isnull=False) | Q(sleep_quality__isnull=False)
+            | Q(morning_hr__isnull=False) | Q(hrv__isnull=False)
+        ).values("athlete_id").annotate(last=Max("date")).values_list("athlete_id", "last")
+    )
+    last_evaluation_dates = dict(
+        AthleteDayCheck.objects.filter(
+            athlete_id__in=training_visible_athlete_ids, date__lte=today,
+        ).annotate(clean_comment=Trim("comment")).filter(
+            Q(checked=True) | ~Q(status="") | Q(rpe__isnull=False)
+            | ~Q(pain="") | ~Q(clean_comment="")
+        ).values("athlete_id").annotate(last=Max("date")).values_list("athlete_id", "last")
+    )
+
+    def last_date_label(dates, athlete_id):
+        last = dates.get(athlete_id)
+        return last.strftime("%d-%m-%Y") if last else "—"
+
+    vital_completion_counts = {}
+    if visible_vital_athlete_ids:
+        for vital in AthleteDailyVital.objects.filter(
+            athlete_id__in=visible_vital_athlete_ids,
+            date__range=(window_start, window_end),
+        ).only("athlete_id", "sleep_hours", "sleep_quality", "morning_hr", "hrv"):
+            vital_completion_counts[vital.athlete_id] = vital_completion_counts.get(vital.athlete_id, 0) + sum(
+                getattr(vital, field) is not None
+                for field in ("sleep_hours", "sleep_quality", "morning_hr", "hrv")
+            )
+
     counts = []
     for athlete in athletes:
         pending = 0
@@ -13940,16 +13981,7 @@ def daily_overview_other_view(request):
                 for slot_index in (1, 2):
                     if day == today and not today_slots_available[slot_index]:
                         continue
-                    slot, flex_blocks_base = effective_slot_for(athlete, day, slot_index)
-                    if not slot and not flex_blocks_base:
-                        base_slot = _base_planning_slot_for_day(
-                            base_blocks_by_athlete, athlete.id, day, slot_index
-                        )
-                        if base_slot:
-                            if base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINING:
-                                slot = _virtual_slot_from_base_training(base_slot.training_text)
-                            elif base_slot.mode == AthleteBasePlanningSlot.MODE_TRAINER:
-                                slot = trainer_slot_lookup.get((base_slot.trainer_plan_id, day, slot_index))
+                    slot = planned_slot_for(athlete, day, slot_index)
                     if slot and not _slot_is_visually_empty(slot):
                         check = check_lookup.get((athlete.id, day, slot_index))
                         if check and check.has_evaluation:

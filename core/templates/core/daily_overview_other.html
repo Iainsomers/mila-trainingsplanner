@@ -101,11 +101,19 @@
     box-shadow: none;
     transform: none;
   }
-  .quick-report-controls { max-width: 34rem; }
-  .quick-report-slider { width: min(100%, 28rem); }
-  .quick-report-list { max-width: 52rem; }
-  .quick-report-item { border-bottom: 1px solid #e4e9ee; padding: .7rem 0; }
-  .quick-report-item:last-child { border-bottom: 0; }
+  .quick-report-table { width: 100%; max-width: 52rem; table-layout: fixed; }
+  .quick-report-table th, .quick-report-table td { vertical-align: top; overflow-wrap: anywhere; }
+  .quick-report-table th:first-child { width: 33%; }
+  .quick-report-table th:nth-child(2) { width: 31%; }
+  .quick-report-dots { display: flex; flex-wrap: wrap; gap: .2rem; }
+  .quick-report-dot { display: grid; place-items: center; width: 1.4rem; height: 1.4rem; padding: 0; border: 0; background: transparent; }
+  .quick-report-dot::before { content: ""; width: .65rem; height: .65rem; border-radius: 50%; background: #adb5bd; }
+  .quick-report-dot.green::before { background: #198754; }
+  .quick-report-dot.yellow::before { background: #e4a900; }
+  .quick-report-dot.red::before { background: #dc3545; }
+  .quick-report-warning { color: #b02a37; font-weight: 700; }
+  .quick-report-dialog { max-width: min(28rem, calc(100% - 2rem)); white-space: normal; }
+  .quick-report-comment { overflow-wrap: anywhere; white-space: pre-wrap; }
   .staff-overview-tile-content { min-width: 0; }
   .staff-overview-tile-heading { display: flex; align-items: center; gap: .5rem; }
   .staff-overview-tile-icon {
@@ -240,23 +248,44 @@
   <section class="overview-block" aria-labelledby="quick-report-heading">
     <div class="overview-content">
       <h2 id="quick-report-heading" class="h5 mb-3">Quick Coach Report</h2>
-      <form method="get" class="quick-report-controls mb-3">
+      <form method="get" class="d-flex align-items-center gap-2 mb-3">
         <input type="hidden" name="view" value="quick_coach_report">
-        <label for="quick-report-hours" class="form-label mb-1">Look back: <output id="quick-report-hours-output" for="quick-report-hours">{{ report_hours }}</output> hours</label>
-        <input id="quick-report-hours" class="form-range quick-report-slider" type="range" name="hours" min="24" max="168" step="24" value="{{ report_hours }}" oninput="document.getElementById('quick-report-hours-output').value=this.value" onchange="this.form.requestSubmit()">
+        <label for="quick-report-hours" class="small">Look back</label>
+        <select id="quick-report-hours" class="form-select form-select-sm w-auto" name="hours" onchange="this.form.requestSubmit()">
+          {% for hours in report_periods %}
+            <option value="{{ hours }}"{% if hours == report_hours %} selected{% endif %}>{{ hours }} hr</option>
+          {% endfor %}
+        </select>
       </form>
-      <p class="text-muted small">Warnings based on relevant updates from the selected period.</p>
-      <div class="quick-report-list">
-        {% for row in report_rows %}
-          {% if row.kind == 'important_evaluation' %}
-            <div class="quick-report-item"><strong>{{ row.athlete.name }}</strong>: {{ row.warning }} {{ row.date|date:"d-m-Y" }} {{ row.slot_label }}, <span title="Fitness">{{ row.fitness_symbol }}</span>, {{ row.evaluation_text }}</div>
-          {% else %}
-            <div class="quick-report-item"><strong>{{ row.athlete.name }}</strong>: {{ row.warning }} {{ row.score }} <span class="text-muted small">· {{ row.date|date:"d-m-Y" }}</span></div>
-          {% endif %}
-        {% empty %}
-          <p class="text-muted mb-0">No warnings in the selected period.</p>
-        {% endfor %}
-      </div>
+      {% if report_rows %}
+        <table class="table table-sm quick-report-table mb-0">
+          <thead><tr><th scope="col">Athlete</th><th scope="col">Evaluations</th><th scope="col">Vitals</th><th scope="col">Missed evaluations</th></tr></thead>
+          <tbody>
+            {% for row in report_rows %}
+              <tr>
+                <th scope="row">{{ row.athlete.name }}</th>
+                <td><div class="quick-report-dots">
+                  {% for evaluation in row.evaluations %}
+                    <button type="button" class="quick-report-dot {{ evaluation.color }}"
+                            aria-label="{{ row.athlete.name }} · {{ evaluation.date|date:'d-m-Y' }} {{ evaluation.slot_label }}"
+                            title="{{ evaluation.date|date:'d-m-Y' }} {{ evaluation.slot_label }}"
+                            onclick="document.getElementById('quick-eval-{{ row.athlete.id }}-{{ forloop.counter }}').showModal()"></button>
+                    <dialog id="quick-eval-{{ row.athlete.id }}-{{ forloop.counter }}" class="quick-report-dialog border rounded shadow p-3">
+                      <h3 class="h6">{{ row.athlete.name }} · {{ evaluation.date|date:"d-m-Y" }} {{ evaluation.slot_label }}</h3>
+                      <p class="quick-report-comment">{{ evaluation.evaluation_text }}</p>
+                      <form method="dialog"><button class="btn btn-sm btn-outline-secondary">Close</button></form>
+                    </dialog>
+                  {% endfor %}
+                </div></td>
+                <td>{% if row.vitals %}<span class="quick-report-warning" title="{% for vital in row.vitals %}{{ vital.date|date:'d-m-Y' }}: {{ vital.score }}{% if not forloop.last %} · {% endif %}{% endfor %}">{{ row.vitals.0.score }}</span>{% endif %}</td>
+                <td>{% if row.missed %}<span class="quick-report-warning">{{ row.missed }}</span>{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="text-muted mb-0">No warnings in the selected period.</p>
+      {% endif %}
     </div>
   </section>
   {% elif overview_mode == 'log' %}

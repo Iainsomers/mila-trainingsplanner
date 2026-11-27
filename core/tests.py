@@ -1992,25 +1992,25 @@ class PlanningOverviewTests(TestCase):
         self.client.force_login(coach)
 
         response = self.client.get("/coach/daily-overview-other/", {
-            "view": "quick_coach_report",
+            "view": "quick_coach_report", "hours": "24",
         })
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["report_hours"], 24)
         self.assertContains(response, "Juan Zijderland")
-        self.assertContains(response, "Relative Vitals Warning -12")
+        self.assertEqual(response.context["report_rows"][0]["vitals"][0]["score"], -12)
         self.assertNotContains(response, "Old Warning")
         self.assertNotContains(response, "Mild Warning")
-        self.assertContains(response, 'type="range" name="hours" min="24" max="168" step="24"', html=False)
+        self.assertContains(response, 'id="quick-report-hours"')
 
         expanded = self.client.get("/coach/daily-overview-other/", {
-            "view": "quick_coach_report", "hours": "48",
+            "view": "quick_coach_report",
         })
         self.assertEqual(expanded.context["report_hours"], 48)
         self.assertContains(expanded, "Juan Zijderland")
         self.assertContains(expanded, "Old Warning")
 
-    def test_quick_coach_report_clamps_invalid_hours_and_hides_private_vitals(self):
+    def test_quick_coach_report_defaults_invalid_hours_and_hides_private_vitals(self):
         coach = get_user_model().objects.create_user(
             username="quick-report-visible", password="secret", is_staff=True,
         )
@@ -2027,8 +2027,8 @@ class PlanningOverviewTests(TestCase):
             "view": "quick_coach_report", "hours": "999",
         })
 
-        self.assertEqual(invalid.context["report_hours"], 24)
-        self.assertEqual(oversized.context["report_hours"], 168)
+        self.assertEqual(invalid.context["report_hours"], 48)
+        self.assertEqual(oversized.context["report_hours"], 48)
         self.assertNotContains(invalid, "Private Warning")
 
     def test_quick_coach_report_uses_yesterdays_warning_in_48_hour_view(self):
@@ -2071,7 +2071,7 @@ class PlanningOverviewTests(TestCase):
 
         self.assertNotContains(current, "Recovered Athlete")
         self.assertContains(historical, "Recovered Athlete")
-        self.assertContains(historical, "Relative Vitals Warning -12")
+        self.assertEqual(historical.context["report_rows"][0]["vitals"][0]["score"], -12)
 
     def test_quick_coach_report_lists_each_warning_day_instead_of_only_the_lowest(self):
         coach = get_user_model().objects.create_user(
@@ -2101,10 +2101,12 @@ class PlanningOverviewTests(TestCase):
             "view": "quick_coach_report", "hours": "48",
         })
 
-        warnings = [row for row in response.context["report_rows"] if row["athlete"] == athlete]
+        row, = response.context["report_rows"]
+        self.assertEqual(row["athlete"], athlete)
+        warnings = row["vitals"]
         self.assertEqual(len(warnings), 2)
         self.assertEqual({row["date"] for row in warnings}, {today - timedelta(days=1), today})
-        self.assertContains(response, "Two Warning Days", count=2)
+        self.assertContains(response, 'scope="row">Two Warning Days</th>', count=1)
 
     def test_quick_coach_report_excludes_recently_imported_vitals_outside_day_window(self):
         coach = get_user_model().objects.create_user(
@@ -2114,7 +2116,7 @@ class PlanningOverviewTests(TestCase):
             owner=coach, name="Imported Old Warning", birth_year=2000, gender="X",
         )
         today = timezone.localdate()
-        warning_date = today - timedelta(days=5)
+        warning_date = today - timedelta(days=4)
         AthleteDailyVital.objects.create(
             athlete=athlete, date=warning_date - timedelta(days=2),
             sleep_hours=8, sleep_quality=8, morning_hr=45, hrv=80,
@@ -2132,30 +2134,29 @@ class PlanningOverviewTests(TestCase):
         one_day = self.client.get("/coach/daily-overview-other/", {
             "view": "quick_coach_report", "hours": "24",
         })
-        six_days = self.client.get("/coach/daily-overview-other/", {
-            "view": "quick_coach_report", "hours": "144",
+        five_days = self.client.get("/coach/daily-overview-other/", {
+            "view": "quick_coach_report", "hours": "120",
         })
 
         self.assertNotContains(one_day, "Imported Old Warning")
-        self.assertContains(six_days, "Imported Old Warning")
-        self.assertContains(six_days, "Relative Vitals Warning -8")
+        self.assertContains(five_days, "Imported Old Warning")
+        self.assertEqual(five_days.context["report_rows"][0]["vitals"][0]["score"], -8)
 
-    def test_quick_coach_report_lists_important_evaluations(self):
+    def test_quick_coach_report_groups_long_evaluations(self):
         coach = get_user_model().objects.create_user(
             username="quick-report-evaluations", password="secret", is_staff=True,
         )
-        yellow = Athlete.objects.create(owner=coach, name="Yellow Athlete", birth_year=2000, gender="X")
         red = Athlete.objects.create(owner=coach, name="Red Athlete", birth_year=2000, gender="X")
         long_text = Athlete.objects.create(owner=coach, name="Long Text Athlete", birth_year=2000, gender="X")
         normal = Athlete.objects.create(owner=coach, name="Normal Athlete", birth_year=2000, gender="X")
         today = timezone.localdate()
         AthleteDayCheck.objects.create(
-            athlete=yellow, date=today, slot_index=1, updated_by=coach,
-            pain=AthleteDayCheck.PAIN_SOME, comment="Korte tekst",
+            athlete=long_text, date=today, slot_index=1, updated_by=coach,
+            pain=AthleteDayCheck.PAIN_SOME, comment="This evaluation has enough text to appear.",
         )
         AthleteDayCheck.objects.create(
             athlete=red, date=today, slot_index=2, updated_by=coach,
-            pain=AthleteDayCheck.PAIN_SERIOUS, comment="",
+            pain=AthleteDayCheck.PAIN_SERIOUS, comment="This serious issue also has a longer comment.",
         )
         AthleteDayCheck.objects.create(
             athlete=long_text, date=today, slot_index=2, updated_by=coach,
@@ -2171,14 +2172,11 @@ class PlanningOverviewTests(TestCase):
             "view": "quick_coach_report", "hours": "24",
         })
 
-        self.assertContains(response, f"Yellow Athlete</strong>: Important Evaluation {today:%d-%m-%Y} AM,", html=False)
-        self.assertContains(response, "🟠")
-        self.assertContains(response, "Korte tekst")
-        self.assertContains(response, f"Red Athlete</strong>: Important Evaluation {today:%d-%m-%Y} PM,", html=False)
-        self.assertContains(response, "🔴")
-        self.assertContains(response, ", —")
-        self.assertContains(response, "Long Text Athlete")
-        self.assertContains(response, "🟢")
+        rows = {row["athlete"].name: row for row in response.context["report_rows"]}
+        self.assertEqual([entry["color"] for entry in rows["Long Text Athlete"]["evaluations"]], ["yellow", "green"])
+        self.assertEqual([entry["color"] for entry in rows["Red Athlete"]["evaluations"]], ["red"])
+        self.assertContains(response, 'scope="row">Long Text Athlete</th>', count=1)
+        self.assertContains(response, "This evaluation has enough text to appear.")
         self.assertNotContains(response, "Normal Athlete")
 
     def test_quick_coach_report_important_evaluation_respects_time_date_and_access(self):
@@ -2193,14 +2191,14 @@ class PlanningOverviewTests(TestCase):
         today = timezone.localdate()
         old_check = AthleteDayCheck.objects.create(
             athlete=visible, date=today - timedelta(days=1), slot_index=1, updated_by=coach,
-            pain=AthleteDayCheck.PAIN_SERIOUS, comment="Old but important",
+            pain=AthleteDayCheck.PAIN_SERIOUS, comment="Old but important evaluation with a long comment",
         )
         AthleteDayCheck.objects.filter(pk=old_check.pk).update(
             updated_at=timezone.now() - timedelta(hours=25),
         )
         AthleteDayCheck.objects.create(
             athlete=private, date=today, slot_index=1, updated_by=other,
-            pain=AthleteDayCheck.PAIN_SERIOUS, comment="Must stay private",
+            pain=AthleteDayCheck.PAIN_SERIOUS, comment="This long evaluation must stay private.",
         )
         self.client.force_login(coach)
 
@@ -2214,6 +2212,35 @@ class PlanningOverviewTests(TestCase):
         self.assertNotContains(one_day, "Old Evaluation")
         self.assertContains(two_days, "Old Evaluation")
         self.assertNotContains(two_days, "Private Evaluation")
+
+    def test_quick_coach_report_warns_after_four_days_without_evaluations(self):
+        coach = get_user_model().objects.create_user(username="missed-report", is_staff=True)
+        plan = TrainingPlan.objects.create(owner=coach, name="Flex Planner missed report")
+        today = timezone.localdate()
+        athletes = [
+            Athlete.objects.create(owner=coach, name=name, birth_year=2000, gender="X")
+            for name in ("Behind", "Evaluated", "Reports disabled")
+        ]
+        athletes[2].training_reports_enabled = False
+        athletes[2].save(update_fields=["training_reports_enabled"])
+        for athlete in athletes:
+            for days_ago in (0, 1, 4, 5):
+                slot = TrainingSlot.objects.create(
+                    plan=plan, athlete=athlete, date=today - timedelta(days=days_ago), slot_index=1,
+                )
+                slot.segments.create(type="CORE", text="5 km Z1")
+        AthleteDayCheck.objects.create(
+            athlete=athletes[0], date=today - timedelta(days=1), updated_by=coach,
+        )
+        AthleteDayCheck.objects.create(
+            athlete=athletes[1], date=today - timedelta(days=4), updated_by=coach,
+            status=AthleteDayCheck.STATUS_NOT_DONE,
+        )
+        self.client.force_login(coach)
+        response = self.client.get("/coach/daily-overview-other/", {"view": "quick_coach_report", "hours": "24"})
+        row, = response.context["report_rows"]
+        self.assertEqual(row["athlete"], athletes[0])
+        self.assertEqual(row["missed"], 2)
 
     def test_quick_coach_report_omits_slots_that_show_a_watch_clock(self):
         coach = get_user_model().objects.create_user(
