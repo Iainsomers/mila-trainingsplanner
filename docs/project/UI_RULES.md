@@ -119,7 +119,7 @@ mySASY gebruikt de officiële ongewijzigde `mySASY account`-knop en het Powered 
 
 - De geïnstalleerde mobiele app start via de loginroute. Als een bestaande beginscherm-snelkoppeling rechtstreeks de rootpagina opent, brengt `Start op AYC` een ingelogde atleet alsnog naar de eigen AYC; een Dashboard-link binnen de app blijft werken. Trainers en atleten zonder die voorkeur gaan naar het dashboard.
 - In de AM/PM-evaluatiepopup staat `Pain` compact naast RPE. Gebruik de opties 🟢 Fit, 🟠 Some issues, pls explain! en 🔴 Serious issue, talk to staff!; de standaardkeuze is Fit. Verberg de keuzelijst wanneer de coachinstelling uitstaat.
-- In de AYC-trainingsevaluatie heten de horlogeknoppen `Polar A`, `Polar B` en `Garmin C`. Een compacte, aanklikbare klokindicator rechtsboven in een AM/PM-cel markeert een overgenomen horlogetraining en opent een mobiel-passende popup met de verwerkte Main-reps: afstand, tijd en min/km. Toon de indicator ook als de sessietotalen uitstaan.
+- In de AYC-trainingsevaluatie heten de horlogeknoppen `Polar A`, `Polar B` en `Garmin E`. Een compacte, aanklikbare klokindicator rechtsboven in een AM/PM-cel markeert een overgenomen horlogetraining en opent een mobiel-passende popup met de verwerkte Main-reps: afstand, tijd en min/km. Toon de indicator ook als de sessietotalen uitstaan.
 - De Garmin C-lapresultaten tonen ook `Last 15s HR`; op smalle schermen moet de tabel horizontaal te scrollen zijn zodat alle kolommen bereikbaar blijven.
 - Een bruikbare Type A-omschrijving toont de acties `Use AM` en `Use PM` rechts naast de omschrijving; op smalle schermen mogen deze knoppen onder de tekst afbreken.
 - Toon één week tegelijk.
@@ -497,3 +497,5 @@ Toon p en sp boven 90 seconden in minuten en seconden in de trainingsweergave en
 De mobiele Day / Week-schakelaar gebruikt een neutrale achtergrond en een lichte actieve knop. Evaluatiesymbolen zijn groen voor vinkjes, rood voor kruisjes, oranje voor pijlen en blauw voor een open rondje. De vorige-weekknop laadt oudere weken zodra de eerste geladen week is bereikt en behoudt de weergavestand.
 
 De mobiele Week-kaart kleurt alleen de kop met het kilometertotaal volgens de trainingsfase. De zonekilometers en vitals staan op een neutrale achtergrond. Een week met meerdere fases heet Mixed.
+
+De horlogeknoppen in de Athlete Diary-evaluatie zijn Polar A, Polar B en Garmin E. Eerder opgeslagen Garmin C/D-resultaten blijven beschikbaar via het klokje.
