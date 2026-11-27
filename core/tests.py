@@ -12165,8 +12165,11 @@ class TrainerStatsTests(TestCase):
 
         self.client.force_login(coach)
         path = f"/planning/stats/athlete/{athlete.pk}/"
-        self.assertContains(self.client.get(path), f'href="{path}vitals/"')
+        workload = self.client.get(path)
+        self.assertContains(workload, f'href="{path}vitals/"')
+        self.assertContains(workload, 'class="btn btn-dark" aria-current="page">Workload</a>')
         response = self.client.get(f"{path}vitals/", {"weeks": 2})
+        self.assertContains(response, 'class="btn btn-dark" aria-current="page">Vitals</a>')
         self.assertContains(response, 'class="vital-chart" viewBox=', count=1)
         self.assertContains(response, 'class="vital-band-very-high"', count=1)
         self.assertContains(response, 'value="10"')

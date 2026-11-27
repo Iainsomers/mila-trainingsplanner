@@ -1,6 +1,6 @@
 {% if show_stats_vitals %}
   <nav class="btn-group btn-group-sm mb-3" aria-label="Athlete statistics">
-    <a href="{% url 'trainer_athlete_stats' athlete.pk %}" class="btn btn-outline-secondary{% if not vitals_active %} active{% endif %}"{% if not vitals_active %} aria-current="page"{% endif %}>Workload</a>
-    <a href="{% url 'trainer_athlete_vitals' athlete.pk %}" class="btn btn-outline-secondary{% if vitals_active %} active{% endif %}"{% if vitals_active %} aria-current="page"{% endif %}>Vitals</a>
+    <a href="{% url 'trainer_athlete_stats' athlete.pk %}" class="btn {% if vitals_active %}btn-outline-secondary{% else %}btn-dark{% endif %}"{% if not vitals_active %} aria-current="page"{% endif %}>Workload</a>
+    <a href="{% url 'trainer_athlete_vitals' athlete.pk %}" class="btn {% if vitals_active %}btn-dark{% else %}btn-outline-secondary{% endif %}"{% if vitals_active %} aria-current="page"{% endif %}>Vitals</a>
   </nav>
 {% endif %}
