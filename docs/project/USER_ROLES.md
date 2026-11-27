@@ -1,5 +1,7 @@
 # Gebruikersrollen en toegang
 
+- De individuele Vitals-pagina in Stats volgt de bestaande Daily vitals-instelling en zichtbaarheid per coach. Een atleet kan uitsluitend de eigen vitals zien.
+
 - Stats is een gewone coach-View, onafhankelijk van Under Dev. Het coachoverzicht volgt de bestaande actieve coachfilter. Elke atleet kan de eigen grafiek via de Stats-tegel openen, ongeacht openstaande evaluaties. Atleten hebben geen toegang tot het teamoverzicht of andermans grafiek.
 
 - De mySASY-diagnostiek is uitsluitend zichtbaar voor coaches met toegang tot de betreffende atleet en diens vitals. GET leest de gecachte, ontdane API-respons. Expliciet ophalen gebruikt POST met CSRF en volgt de bestaande blokkade voor een actieve view-only coachweergave. Atleten krijgen het testvak en de diagnostische JSON niet, ook niet via de directe coachroute. Ontkoppelen, uitschakelen of opnieuw koppelen verwijdert de vorige testgegevens.

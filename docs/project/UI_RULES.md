@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- In Stats → Vitals staan slaapduur en slaapkwaliteit links met schalen links, ochtendhartslag en HRV rechts met schalen rechts. Op mobiel staan de grafieken onder elkaar. De periode wisselt met radioknoppen.
+
 - Athlete Diary toont in de actuele week `Evaluated / total` voor kilometers (totaal en zones), Alternative en Strength wanneer trainingsevaluaties zichtbaar zijn. Het eerste getal telt de geëvalueerde AM/PM-dagdelen. `Not done` blijft uitgesloten. Andere weken tonen één waarde.
 
 - In Athlete Diary verschuiven `Previous week` en `Next week` de startweek telkens exact zeven dagen achteruit of vooruit, ook over jaargrenzen. `Today` zet de startweek terug naar de huidige week. De datumkeuze `Start week` gebruikt hetzelfde compacte datumveld als Individual Plans; er is geen losse jaarkeuze meer.

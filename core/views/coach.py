@@ -12827,20 +12827,44 @@ def trainer_stats_view(request):
 
 @login_required
 @require_GET
-def trainer_athlete_stats_view(request, athlete_id):
+def trainer_athlete_stats_view(request, athlete_id, vitals=False):
     athlete_self_stats = not (request.user.is_staff or request.user.is_superuser)
-    available_plans = TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name")
     if athlete_self_stats:
         athlete = _athlete_for_user(request.user)
         if not athlete or athlete.pk != athlete_id:
             return HttpResponseForbidden("Not allowed")
+    else:
+        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
+    show_stats_vitals = athlete.daily_vitals_enabled and evaluation_visibility_for_request(
+        request, athlete.owner, athlete_self=athlete_self_stats,
+    )["vitals"]
+    if vitals:
+        if not show_stats_vitals:
+            return HttpResponseForbidden("Not allowed")
+        from core.vital_charts import VITAL_PERIODS, daily_vital_charts
+
+        weeks = next((period for period in VITAL_PERIODS if str(period) == request.GET.get("weeks")), 4)
+        today = timezone.localdate()
+        start = today - timedelta(days=weeks * 7 - 1)
+        return render(request, "core/trainer_athlete_vitals.html", {
+            "athlete": athlete,
+            "athlete_self_stats": athlete_self_stats,
+            "show_stats_vitals": show_stats_vitals,
+            "vitals_active": True,
+            "weeks": weeks,
+            "periods": VITAL_PERIODS,
+            "period_start": start,
+            "period_end": today,
+            "chart_columns": daily_vital_charts(athlete, _add_months(today, -6), start, today),
+        })
+    available_plans = TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name")
+    if athlete_self_stats:
         owner_id = athlete.owner_id
         coach_settings = CoachSettings.objects.filter(user_id=owner_id).first()
         plans = list(available_plans.filter(
             Q(owner_id=owner_id) | Q(athletes=athlete) | Q(groups__athletes=athlete) | Q(slots__athlete=athlete)
         ).distinct())
     else:
-        athlete = get_object_or_404(_filter_owned(Athlete.objects.all(), request), id=athlete_id)
         active_coach = _active_coach_user(request)
         owner_id = active_coach.pk
         coach_settings, _ = CoachSettings.objects.get_or_create(user=active_coach)
@@ -13075,6 +13099,7 @@ def trainer_athlete_stats_view(request, athlete_id):
     )
 
     return render(request, "core/trainer_athlete_stats.html", {
+        "show_stats_vitals": show_stats_vitals,
         "athlete": athlete,
         "athlete_self_stats": athlete_self_stats,
         "weeks": weeks,

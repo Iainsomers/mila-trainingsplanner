@@ -12148,6 +12148,51 @@ class FlexPlannerAltTotalsTests(TestCase):
 
 
 class TrainerStatsTests(TestCase):
+    def test_daily_vitals_chart_uses_six_month_baselines_and_inverts_heart_rate(self):
+        coach = get_user_model().objects.create_user(username="vital-charts-coach", is_staff=True)
+        athlete = Athlete.objects.create(
+            owner=coach, name="Vital Chart Runner", birth_year=2000, gender="X", daily_vitals_enabled=True,
+        )
+        today = timezone.localdate()
+        for days_ago, data in (
+            (220, {"sleep_hours": 90}),
+            (90, {"sleep_hours": 6}),
+            (2, {"sleep_hours": 8, "morning_hr": 40, "hrv": 70}),
+            (1, {"sleep_quality": 8}),
+            (0, {"sleep_hours": 10, "morning_hr": 60, "hrv": 80}),
+        ):
+            AthleteDailyVital.objects.create(athlete=athlete, date=today - timedelta(days=days_ago), **data)
+
+        self.client.force_login(coach)
+        path = f"/planning/stats/athlete/{athlete.pk}/"
+        self.assertContains(self.client.get(path), f'href="{path}vitals/"')
+        response = self.client.get(f"{path}vitals/", {"weeks": 2})
+        self.assertContains(response, 'class="vital-band-very-high"')
+        self.assertContains(response, 'value="10"')
+        self.assertEqual(response.context["period_start"], today - timedelta(days=13))
+        sleep, quality = response.context["chart_columns"][0]
+        heart_rate, hrv = response.context["chart_columns"][1]
+        self.assertEqual(sleep["sample_count"], 3)
+        self.assertEqual(sleep["mean"], 8)
+        self.assertAlmostEqual(sleep["deviation"], (8 / 3) ** .5)
+        self.assertEqual(sleep["path"].count("M"), 2)
+        self.assertGreater(sleep["points"][0]["y"], sleep["points"][1]["y"])
+        self.assertLess(heart_rate["points"][0]["y"], heart_rate["points"][1]["y"])
+        self.assertEqual(heart_rate["axis_anchor"], "start")
+        self.assertEqual(sleep["axis_anchor"], "end")
+        self.assertEqual(quality["bands"], [])
+        self.assertEqual(hrv["sample_count"], 2)
+        self.assertEqual(self.client.get(f"{path}vitals/", {"weeks": "bad"}).context["weeks"], 4)
+
+        other = get_user_model().objects.create_user(username="vital-charts-other", is_staff=True)
+        self.client.force_login(other)
+        self.assertEqual(self.client.get(f"{path}vitals/").status_code, 404)
+        self.client.force_login(coach)
+        athlete.daily_vitals_enabled = False
+        athlete.save(update_fields=["daily_vitals_enabled"])
+        self.assertNotContains(self.client.get(path), f'href="{path}vitals/"')
+        self.assertEqual(self.client.get(f"{path}vitals/").status_code, 403)
+
     def test_own_stats_tile_and_page_are_available_with_pending_evaluations(self):
         user = get_user_model().objects.create_user(username="Self Stats")
         coach = get_user_model().objects.create_user(username="stats-owner", is_staff=True)

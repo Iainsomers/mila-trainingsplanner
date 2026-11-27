@@ -241,6 +241,7 @@ urlpatterns = [
     path("planning/focus-points/", focus_points_view, name="focus_points"),
     path("planning/stats/", trainer_stats_view, name="trainer_stats"),
     path("planning/stats/athlete/<int:athlete_id>/", trainer_athlete_stats_view, name="trainer_athlete_stats"),
+    path("planning/stats/athlete/<int:athlete_id>/vitals/", trainer_athlete_stats_view, {"vitals": True}, name="trainer_athlete_vitals"),
     path("planning/base/", athlete_base_planning_view, name="athlete_base_planning"),
     path("planning/trainer/", trainer_planning_view, name="trainer_planning"),
     path("planning/trainer/<int:plan_id>/", trainer_planning_detail_view, name="trainer_planning_detail"),

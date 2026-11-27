@@ -1,0 +1,118 @@
+{% extends "core/base.html" %}
+{% load l10n %}
+
+{% block title %}{{ athlete.name }} | Vitals{% endblock %}
+
+{% block extra_head %}
+<style>
+  .vital-chart-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .vital-chart-column { display: grid; gap: 1rem; }
+  .vital-chart-panel { min-width: 0; }
+  .vital-chart { display: block; width: 100%; height: auto; }
+  .vital-chart text { font-size: 12px; fill: #495057; }
+  .vital-chart-axis, .vital-chart-grid { stroke: #455361; vector-effect: non-scaling-stroke; }
+  .vital-chart-grid { opacity: .18; }
+  .vital-chart-axis { opacity: .5; }
+  .vital-chart-line { fill: none; stroke: #172d53; stroke-width: 1.7; vector-effect: non-scaling-stroke; }
+  .vital-chart-point { fill: #172d53; stroke: #fff; stroke-width: .8; }
+  .vital-chart-target { fill: transparent; cursor: pointer; }
+  .vital-chart-target:is(:hover, :focus) + .vital-chart-point { fill: #fff; stroke: #172d53; stroke-width: 2; }
+  .vital-band-very-high { fill: #398459; }
+  .vital-band-high { fill: #c4e6cb; }
+  .vital-band-normal { fill: #fff; }
+  .vital-band-low { fill: #f8d5d9; }
+  .vital-band-very-low { fill: #bb555d; }
+  .vital-periods label { display: inline-flex; gap: .3rem; align-items: center; white-space: nowrap; }
+  @media (max-width: 767.98px) {
+    .vital-chart-columns { grid-template-columns: minmax(0, 1fr); }
+    .vital-chart text { font-size: 15px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="mb-1">{{ athlete.name }}</h1>
+      <div class="text-muted">Daily vitals · {{ period_start|date:"d M Y" }} – {{ period_end|date:"d M Y" }}</div>
+    </div>
+    {% if athlete_self_stats %}
+      <a href="{% url 'planning_overview' %}" class="btn btn-outline-secondary">Back</a>
+    {% else %}
+      <a href="{% url 'trainer_stats' %}" class="btn btn-outline-secondary">Back to stats</a>
+    {% endif %}
+  </div>
+
+  {% include "core/partials/athlete_stats_switch.html" %}
+  <form method="get" class="mb-3">
+    <fieldset class="vital-periods d-flex flex-wrap gap-3">
+      <legend class="visually-hidden">Look back</legend>
+      {% for period in periods %}
+        <label><input class="form-check-input mt-0" type="radio" name="weeks" value="{{ period }}" {% if period == weeks %}checked{% endif %} onchange="this.form.requestSubmit()"> {{ period }} weeks</label>
+      {% endfor %}
+    </fieldset>
+    <noscript><button class="btn btn-sm btn-outline-secondary mt-2">Show</button></noscript>
+  </form>
+
+  <div class="vital-chart-columns">
+    {% for column in chart_columns %}
+      <div class="vital-chart-column">
+        {% for chart in column %}
+          <section class="card vital-chart-panel">
+            <div class="card-body">
+              <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-1 mb-1">
+                <h2 class="h6 mb-0">{{ chart.title }}{% if chart.unit %} <span class="text-muted fw-normal">({{ chart.unit }})</span>{% endif %}</h2>
+                {% if chart.sample_count %}
+                  <small class="text-muted">6 mo · Avg {{ chart.mean|floatformat:"-2" }} · SD {{ chart.deviation|floatformat:"-2" }} · n={{ chart.sample_count }}</small>
+                {% endif %}
+              </div>
+              {% if chart.points %}
+                <svg class="vital-chart" viewBox="0 0 500 164" role="group" aria-label="{{ chart.title }} by day{% if chart.reverse %}, lower values are higher on the chart{% endif %}">
+                  {% for band in chart.bands %}
+                    <rect class="vital-band-{{ band.color }}" x="{{ chart.left }}" y="{{ band.y|unlocalize }}" width="442" height="{{ band.height|unlocalize }}"/>
+                  {% endfor %}
+                  {% for tick in chart.ticks %}
+                    <line class="vital-chart-grid" x1="{{ chart.left }}" x2="{{ chart.right }}" y1="{{ tick.y|unlocalize }}" y2="{{ tick.y|unlocalize }}"/>
+                    <text x="{{ chart.axis_x }}" y="{{ tick.y|unlocalize }}" dy=".35em" text-anchor="{{ chart.axis_anchor }}">{{ tick.label|floatformat:"-1" }}</text>
+                  {% endfor %}
+                  <line class="vital-chart-axis" x1="{% if chart.axis_right %}{{ chart.right }}{% else %}{{ chart.left }}{% endif %}" x2="{% if chart.axis_right %}{{ chart.right }}{% else %}{{ chart.left }}{% endif %}" y1="12" y2="138"/>
+                  {% for tick in chart.dates %}
+                    <text x="{{ tick.x|unlocalize }}" y="157" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ tick.date|date:"d M" }}</text>
+                  {% endfor %}
+                  <path class="vital-chart-line" d="{{ chart.path }}"/>
+                  {% for point in chart.points %}
+                    <circle class="vital-chart-target" cx="{{ point.x|unlocalize }}" cy="{{ point.y|unlocalize }}" r="8" tabindex="0" role="button" data-reading="{{ point.date|date:'d M Y' }} · {{ point.value|floatformat:'-2' }} {{ chart.unit }}" aria-label="{{ point.date|date:'d M Y' }} · {{ point.value|floatformat:'-2' }} {{ chart.unit }}">
+                      <title>{{ point.date|date:"d M Y" }} · {{ point.value|floatformat:"-2" }} {{ chart.unit }}</title>
+                    </circle>
+                    <circle class="vital-chart-point" cx="{{ point.x|unlocalize }}" cy="{{ point.y|unlocalize }}" r="2.8" pointer-events="none"/>
+                  {% endfor %}
+                </svg>
+                <output class="d-block small text-muted" data-vital-reading>&nbsp;</output>
+              {% else %}
+                <p class="small text-muted mt-3 mb-0">No measurements in this period.</p>
+              {% endif %}
+            </div>
+          </section>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+  <p class="small text-muted mt-3 mb-0">Bands mark 1 and 2 standard deviations from the six-month average. Lower morning HR is plotted higher.</p>
+</main>
+<script>
+  document.querySelectorAll(".vital-chart-target").forEach(point => {
+    const showReading = () => {
+      point.closest(".vital-chart-panel").querySelector("[data-vital-reading]").textContent = point.dataset.reading;
+    };
+    point.addEventListener("focus", showReading);
+    point.addEventListener("click", showReading);
+    point.addEventListener("keydown", event => {
+      if (event.key === " " || event.key === "Enter") {
+        event.preventDefault();
+        showReading();
+      }
+    });
+  });
+</script>
+{% endblock %}
