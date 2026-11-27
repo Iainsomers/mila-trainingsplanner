@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- Het 3-daags gemiddelde in Stats → Vitals gebruikt op een meetdag de ingevulde waarden van die dag en de twee voorafgaande kalenderdagen. De zesmaandsreferentie gebruikt de oorspronkelijke dagwaarden.
+
 - Individuele Stats-vitals gebruiken een voortschrijdende referentie van zes kalendermaanden tot en met vandaag. Het gemiddelde en de populatiestandaardafwijking worden per vital berekend over geldige ingevulde metingen. De vier reeksen delen één standaardafwijkingsschaal, met dezelfde kleurbanden bij één en twee standaardafwijkingen aan beide kanten van het gemiddelde. Elke as toont de oorspronkelijke meetwaarden. Bij nul spreiding staat de reeks op de middenlijn. De lijn verbindt opeenvolgende beschikbare metingen over lege dagen heen. Lege dagen krijgen geen meetpunt en tellen niet mee in het gemiddelde en de standaardafwijking. De kleurbanden hebben een vaste hoogte. Meetpunten boven +2 of onder −2 standaardafwijkingen staan op de boven- of onderrand van de grafiek. De exacte waarde staat bij het meetpunt. Ochtendhartslag loopt omgekeerd, met lagere waarden bovenaan.
 
 - Het zichtbare Athlete Diary-bereik begint op de maandag van `Start week` en bevat 53 volledige kalenderweken. Het bereik is niet begrensd door 31 december. Een handmatig gekozen datum binnen een week wordt eerst naar de maandag van die week genormaliseerd.

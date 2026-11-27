@@ -1,5 +1,7 @@
 # UI- en taalafspraken
 
+- Stats → Vitals heeft een 1-/3-daagse schakelaar en gekleurde selectievakjes voor de vier reeksen. De browser onthoudt beide voorkeuren per account.
+
 - De Workload–Vitals-schakelaar toont de actieve pagina met witte tekst op een donkere knop.
 
 - In Stats → Vitals heeft de gezamenlijke grafiek de schalen voor slaapduur en slaapkwaliteit links en voor ochtendhartslag en HRV rechts. De assen tonen de oorspronkelijke waarden op 0, ±0,5, ±1 en ±2 standaardafwijkingen. Slaapduur en slaapkwaliteit worden met één decimaal weergegeven en ochtendhartslag en HRV als hele getallen. De vier doorlopende lijnen hebben verschillende kleuren. De buitenste onderste band is knalrood. De donkergroene en knalrode band zijn elk 5/32 zo hoog als de aangrenzende lichte band. Op mobiel kan de grafiek horizontaal scrollen. De periode wisselt met radioknoppen.

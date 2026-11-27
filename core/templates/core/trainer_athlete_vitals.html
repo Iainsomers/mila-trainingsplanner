@@ -24,13 +24,15 @@
   .vital-band-low { fill: #ffc7cd; }
   .vital-band-very-low { fill: #ff263b; }
   .vital-legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
-  .vital-legend strong::before { content: ""; display: inline-block; width: .65em; height: .65em; margin-right: .3em; border-radius: 50%; background: currentColor; }
+  .vital-legend label { display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; }
+  .vital-legend input { accent-color: currentColor; }
+  .vital-chart [hidden] { display: none; }
   .vital-periods label { display: inline-flex; gap: .3rem; align-items: center; white-space: nowrap; }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="container py-4">
+<main class="container py-4" data-vitals-preferences="mila:vitals:{{ request.user.pk }}">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
       <h1 class="mb-1">{{ athlete.name }}</h1>
@@ -54,12 +56,20 @@
     <noscript><button class="btn btn-sm btn-outline-secondary mt-2">Show</button></noscript>
   </form>
 
+  <div class="form-check form-switch mb-3">
+    <input class="form-check-input" type="checkbox" role="switch" id="vitals-three-day">
+    <label class="form-check-label" for="vitals-three-day">3-day average</label>
+    <span class="small text-muted ms-1" id="vitals-average-mode" aria-live="polite">1 day</span>
+  </div>
   <section class="card vital-chart-panel">
     <div class="card-body">
       <div class="vital-legend small mb-2">
         {% for series in chart.series %}
           <div>
-            <strong class="vital-{{ series.key }}">{{ series.title }}</strong>
+            <label class="vital-{{ series.key }}">
+              <input type="checkbox" data-vital-toggle="{{ series.key }}" checked>
+              <strong>{{ series.title }}</strong>
+            </label>
             {% if series.sample_count %}
               <span class="text-muted">6 mo · Avg {{ series.mean|floatformat:series.decimals }} · SD {{ series.deviation|floatformat:series.decimals }} · n={{ series.sample_count }}</span>
             {% endif %}
@@ -79,7 +89,7 @@
               <text class="text-muted" x="{{ tick.x|unlocalize }}" y="310" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ tick.date|date:"d M" }}</text>
             {% endfor %}
             {% for series in chart.series %}
-              <g class="vital-{{ series.key }}">
+              <g class="vital-{{ series.key }}" data-vital-series="{{ series.key }}">
                 <text x="{{ series.axis_x }}" y="27" text-anchor="{{ series.axis_anchor }}" font-weight="600">{% if series.key == "sleep_hours" %}Sleep (h){% elif series.key == "sleep_quality" %}Quality{% elif series.key == "morning_hr" %}HR (bpm){% else %}HRV (ms){% endif %}</text>
                 {% if series.ticks %}
                   {% if series.axis_anchor == "end" %}
@@ -91,12 +101,16 @@
                     <text x="{{ series.axis_x }}" y="{{ tick.y|unlocalize }}" dy=".35em" text-anchor="{{ series.axis_anchor }}">{{ tick.label|floatformat:series.decimals }}</text>
                   {% endfor %}
                 {% endif %}
-                {% if series.points %}<path class="vital-chart-line" d="{{ series.path }}"/>{% endif %}
-                {% for point in series.points %}
+                {% for plot in series.plots %}
+                <g data-vital-window="{{ plot.window }}"{% if plot.window == 3 %} hidden{% endif %}>
+                {% if plot.points %}<path class="vital-chart-line" d="{{ plot.path }}"/>{% endif %}
+                {% for point in plot.points %}
                   <circle class="vital-chart-target" cx="{{ point.x|unlocalize }}" cy="{{ point.y|unlocalize }}" r="7" tabindex="0" role="button" data-reading="{{ series.title }} · {{ point.date|date:'d M Y' }} · {{ point.value|floatformat:series.decimals }} {{ series.unit }}" aria-label="{{ series.title }} · {{ point.date|date:'d M Y' }} · {{ point.value|floatformat:series.decimals }} {{ series.unit }}">
                     <title>{{ series.title }} · {{ point.date|date:"d M Y" }} · {{ point.value|floatformat:series.decimals }} {{ series.unit }}</title>
                   </circle>
                   <circle class="vital-chart-point" cx="{{ point.x|unlocalize }}" cy="{{ point.y|unlocalize }}" r="2.8" pointer-events="none"/>
+                {% endfor %}
+                </g>
                 {% endfor %}
               </g>
             {% endfor %}
@@ -111,18 +125,61 @@
   <p class="small text-muted mt-3 mb-0">Values above +2 SD or below −2 SD are plotted at the top or bottom edge. Select a point for its exact value. Lower morning HR is plotted higher.</p>
 </main>
 <script>
-  document.querySelectorAll(".vital-chart-target").forEach(point => {
-    const showReading = () => {
-      point.closest(".vital-chart-panel").querySelector("[data-vital-reading]").textContent = point.dataset.reading;
-    };
-    point.addEventListener("focus", showReading);
-    point.addEventListener("click", showReading);
-    point.addEventListener("keydown", event => {
-      if (event.key === " " || event.key === "Enter") {
-        event.preventDefault();
-        showReading();
-      }
+  (() => {
+    const page = document.querySelector("[data-vitals-preferences]");
+    const key = page.dataset.vitalsPreferences;
+    const average = page.querySelector("#vitals-three-day");
+    const mode = page.querySelector("#vitals-average-mode");
+    const toggles = [...page.querySelectorAll("[data-vital-toggle]")];
+    const reading = page.querySelector("[data-vital-reading]");
+    let saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem(key)) || {};
+    } catch {}
+    average.checked = saved.threeDay === true;
+    const hidden = Array.isArray(saved.hidden) ? saved.hidden : [];
+    toggles.forEach(toggle => {
+      toggle.checked = !hidden.includes(toggle.dataset.vitalToggle);
     });
-  });
+
+    function update() {
+      const window = average.checked ? "3" : "1";
+      mode.textContent = average.checked ? "3 days" : "1 day";
+      page.querySelectorAll("[data-vital-window]").forEach(plot => {
+        plot.toggleAttribute("hidden", plot.dataset.vitalWindow !== window);
+      });
+      toggles.forEach(toggle => {
+        page.querySelector(`[data-vital-series="${toggle.dataset.vitalToggle}"]`)?.toggleAttribute("hidden", !toggle.checked);
+      });
+      if (reading) reading.textContent = " ";
+    }
+
+    function save() {
+      update();
+      try {
+        localStorage.setItem(key, JSON.stringify({
+          threeDay: average.checked,
+          hidden: toggles.filter(toggle => !toggle.checked).map(toggle => toggle.dataset.vitalToggle),
+        }));
+      } catch {}
+    }
+
+    average.addEventListener("change", save);
+    toggles.forEach(toggle => toggle.addEventListener("change", save));
+    update();
+    page.querySelectorAll(".vital-chart-target").forEach(point => {
+      const showReading = () => {
+        reading.textContent = point.dataset.reading;
+      };
+      point.addEventListener("focus", showReading);
+      point.addEventListener("click", showReading);
+      point.addEventListener("keydown", event => {
+        if (event.key === " " || event.key === "Enter") {
+          event.preventDefault();
+          showReading();
+        }
+      });
+    });
+  })();
 </script>
 {% endblock %}

@@ -40,11 +40,7 @@ def daily_vital_chart(athlete, baseline_start, start, end):
             continue
         average, deviation = mean(values.values()), pstdev(values.values())
         direction = -1 if field == "morning_hr" else 1
-        standardized = {
-            day: direction * (value - average) / deviation if deviation else 0
-            for day, value in values.items() if start <= day <= end
-        }
-        item.update({"mean": average, "deviation": deviation, "direction": direction, "standardized": standardized})
+        item.update({"mean": average, "deviation": deviation, "direction": direction})
 
     def x(index):
         return round(PLOT_LEFT + (PLOT_RIGHT - PLOT_LEFT) * index / (len(days) - 1), 2)
@@ -63,18 +59,24 @@ def daily_vital_chart(athlete, baseline_start, start, end):
     for item in series:
         if not item["sample_count"]:
             continue
-        scores = item.pop("standardized")
         direction = item.pop("direction")
-        commands = []
-        for index, day in enumerate(days):
-            if day not in scores:
-                continue
-            score = scores[day]
-            y = PLOT_BOTTOM if score < -2 else PLOT_TOP if score > 2 else position_y(score)
-            point = {"x": x(index), "y": y, "date": day, "value": measurements[item["key"]][day]}
-            item["points"].append(point)
-            commands.append(f"{'L' if commands else 'M'} {point['x']} {point['y']}")
-        item["path"] = " ".join(commands)
+        values = measurements[item["key"]]
+        item["plots"] = []
+        for window in (1, 3):
+            points, commands = [], []
+            for index, day in enumerate(days):
+                if day not in values:
+                    continue
+                dates = [day - timedelta(days=offset) for offset in range(window)]
+                value = mean(values[date] for date in dates if date in values)
+                score = direction * (value - item["mean"]) / item["deviation"] if item["deviation"] else 0
+                y = PLOT_BOTTOM if score < -2 else PLOT_TOP if score > 2 else position_y(score)
+                point = {"x": x(index), "y": y, "date": day, "value": value}
+                points.append(point)
+                commands.append(f"{'L' if commands else 'M'} {point['x']} {point['y']}")
+            item["plots"].append({"window": window, "points": points, "path": " ".join(commands)})
+        daily = item["plots"][0]
+        item.update({"points": daily["points"], "path": daily["path"]})
         item["ticks"] = [
             {"y": position_y(score), "label": item["mean"] + direction * score * item["deviation"]}
             for score in (tick_scores if item["deviation"] else (0,))
