@@ -12195,8 +12195,12 @@ class TrainerStatsTests(TestCase):
         self.assertEqual(outlier_chart["grid"], response.context["chart"]["grid"])
         outlier = outlier_chart["series"][3]["points"][-1]
         self.assertEqual(outlier["value"], 300)
-        self.assertLess(outlier["y"], outlier_chart["grid"][0])
-        self.assertGreater(outlier["y"], outlier_chart["top"])
+        self.assertEqual(outlier["y"], outlier_chart["top"])
+        AthleteDailyVital.objects.filter(athlete=athlete, date=today).update(hrv=10)
+        outlier_chart = self.client.get(f"{path}vitals/", {"weeks": 2}).context["chart"]
+        outlier = outlier_chart["series"][3]["points"][-1]
+        self.assertEqual(outlier["value"], 10)
+        self.assertEqual(outlier["y"], outlier_chart["bottom"])
 
         other = get_user_model().objects.create_user(username="vital-charts-other", is_staff=True)
         self.client.force_login(other)

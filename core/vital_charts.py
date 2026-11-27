@@ -28,7 +28,6 @@ def daily_vital_chart(athlete, baseline_start, start, end):
 
     days = [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
     series = []
-    lowest_score, highest_score = -2, 2
     for field, title, unit, axis_x, axis_anchor in VITAL_SERIES:
         values = measurements[field]
         item = {
@@ -44,23 +43,10 @@ def daily_vital_chart(athlete, baseline_start, start, end):
             day: direction * (value - average) / deviation if deviation else 0
             for day, value in values.items() if start <= day <= end
         }
-        lowest_score = min(lowest_score, min(standardized.values(), default=0))
-        highest_score = max(highest_score, max(standardized.values(), default=0))
         item.update({"mean": average, "deviation": deviation, "direction": direction, "standardized": standardized})
-
-    lower_bound = min(-3, lowest_score * 1.12)
-    upper_bound = max(3, highest_score * 1.12)
 
     def x(index):
         return round(PLOT_LEFT + (PLOT_RIGHT - PLOT_LEFT) * index / (len(days) - 1), 2)
-
-    def y(score):
-        # Fit outliers within the fixed one-unit tails, keeping the center linear.
-        if score < -2:
-            score = -2 - (-2 - score) / (-2 - lower_bound)
-        elif score > 2:
-            score = 2 + (score - 2) / (upper_bound - 2)
-        return position_y(score)
 
     def position_y(score):
         return round(PLOT_TOP + (PLOT_BOTTOM - PLOT_TOP) * (3 - score) / 6, 2)
@@ -82,13 +68,15 @@ def daily_vital_chart(athlete, baseline_start, start, end):
             if day not in scores:
                 previous = False
                 continue
-            point = {"x": x(index), "y": y(scores[day]), "date": day, "value": measurements[item["key"]][day]}
+            score = scores[day]
+            y = PLOT_BOTTOM if score < -2 else PLOT_TOP if score > 2 else position_y(score)
+            point = {"x": x(index), "y": y, "date": day, "value": measurements[item["key"]][day]}
             item["points"].append(point)
             commands.append(f"{'L' if previous else 'M'} {point['x']} {point['y']}")
             previous = True
         item["path"] = " ".join(commands)
         item["ticks"] = [
-            {"y": y(score), "label": item["mean"] + direction * score * item["deviation"]}
+            {"y": position_y(score), "label": item["mean"] + direction * score * item["deviation"]}
             for score in (tick_scores if item["deviation"] else (0,))
         ]
 
@@ -96,7 +84,7 @@ def daily_vital_chart(athlete, baseline_start, start, end):
         "series": series,
         "has_points": any(item["points"] for item in series),
         "bands": bands,
-        "grid": [y(score) for score in tick_scores],
+        "grid": [position_y(score) for score in tick_scores],
         "dates": [
             {"x": x(index), "date": days[index]}
             for index in (round((len(days) - 1) * step / 5) for step in range(6))
