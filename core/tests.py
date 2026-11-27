@@ -12167,11 +12167,11 @@ class TrainerStatsTests(TestCase):
         path = f"/planning/stats/athlete/{athlete.pk}/"
         self.assertContains(self.client.get(path), f'href="{path}vitals/"')
         response = self.client.get(f"{path}vitals/", {"weeks": 2})
-        self.assertContains(response, 'class="vital-band-very-high"')
+        self.assertContains(response, 'class="vital-chart" viewBox=', count=1)
+        self.assertContains(response, 'class="vital-band-very-high"', count=1)
         self.assertContains(response, 'value="10"')
         self.assertEqual(response.context["period_start"], today - timedelta(days=13))
-        sleep, quality = response.context["chart_columns"][0]
-        heart_rate, hrv = response.context["chart_columns"][1]
+        sleep, quality, heart_rate, hrv = response.context["chart"]["series"]
         self.assertEqual(sleep["sample_count"], 3)
         self.assertEqual(sleep["mean"], 8)
         self.assertAlmostEqual(sleep["deviation"], (8 / 3) ** .5)
@@ -12180,7 +12180,10 @@ class TrainerStatsTests(TestCase):
         self.assertLess(heart_rate["points"][0]["y"], heart_rate["points"][1]["y"])
         self.assertEqual(heart_rate["axis_anchor"], "start")
         self.assertEqual(sleep["axis_anchor"], "end")
-        self.assertEqual(quality["bands"], [])
+        self.assertEqual(heart_rate["points"][0]["y"], hrv["points"][1]["y"])
+        self.assertEqual(heart_rate["points"][0]["y"], response.context["chart"]["grid"][3])
+        self.assertEqual(len(quality["ticks"]), 1)
+        self.assertEqual(quality["points"][0]["y"], response.context["chart"]["grid"][2])
         self.assertEqual(hrv["sample_count"], 2)
         self.assertEqual(self.client.get(f"{path}vitals/", {"weeks": "bad"}).context["weeks"], 4)
 

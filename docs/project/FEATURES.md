@@ -1,6 +1,6 @@
 # Functionele onderdelen
 
-- De individuele Stats-pagina heeft een Workload–Vitals-schakelaar. Vitals laat vier afzonderlijke daggrafieken zien over 2, 4, 6 of 10 weken, standaard 4. Een meetpunt toont de datum en exacte waarde.
+- De individuele Stats-pagina heeft een Workload–Vitals-schakelaar. Vitals toont vier dagelijkse meetreeksen in één grafiek over 2, 4, 6 of 10 weken, standaard 4. Een meetpunt toont de datum en exacte waarde.
 
 - In Athlete Diary kunnen bevoegde coaches via `React` een bericht bij een AM- of PM-training plaatsen, ook vóór de atleet de evaluatie invult. Het bericht verschijnt bij de training en in de bestaande pop-up voor de atleet. Een openstaande evaluatie blijft openstaan.
 

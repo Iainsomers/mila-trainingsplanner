@@ -1,6 +1,6 @@
 # Data-, invoer- en rekenregels
 
-- Individuele Stats-vitals gebruiken een voortschrijdende referentie van zes kalendermaanden tot en met vandaag. Het gemiddelde en de populatiestandaardafwijking worden per vital berekend over geldige ingevulde metingen. Kleurbanden beginnen bij één en twee standaardafwijkingen boven en onder het gemiddelde. Bij nul spreiding blijft de plot wit. Ontbrekende dagen onderbreken de lijn. Elke onafhankelijke schaal omvat alle getoonde metingen en de grenswaarden van de kleurbanden. Ochtendhartslag loopt omgekeerd, met lagere waarden bovenaan.
+- Individuele Stats-vitals gebruiken een voortschrijdende referentie van zes kalendermaanden tot en met vandaag. Het gemiddelde en de populatiestandaardafwijking worden per vital berekend over geldige ingevulde metingen. De vier reeksen delen één standaardafwijkingsschaal, met dezelfde kleurbanden bij één en twee standaardafwijkingen aan beide kanten van het gemiddelde. Elke as toont de oorspronkelijke meetwaarden. Bij nul spreiding staat de reeks op de middenlijn. Ontbrekende dagen onderbreken de lijn. De schaal omvat alle getoonde metingen. Ochtendhartslag loopt omgekeerd, met lagere waarden bovenaan.
 
 - Het zichtbare Athlete Diary-bereik begint op de maandag van `Start week` en bevat 53 volledige kalenderweken. Het bereik is niet begrensd door 31 december. Een handmatig gekozen datum binnen een week wordt eerst naar de maandag van die week genormaliseerd.
 

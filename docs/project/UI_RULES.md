@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-- In Stats → Vitals staan slaapduur en slaapkwaliteit links met schalen links, ochtendhartslag en HRV rechts met schalen rechts. Op mobiel staan de grafieken onder elkaar. De periode wisselt met radioknoppen.
+- In Stats → Vitals heeft de gezamenlijke grafiek de schalen voor slaapduur en slaapkwaliteit links en voor ochtendhartslag en HRV rechts. De buitenste onderste band is knalrood. Op mobiel kan de grafiek horizontaal scrollen. De periode wisselt met radioknoppen.
 
 - Athlete Diary toont in de actuele week `Evaluated / total` voor kilometers (totaal en zones), Alternative en Strength wanneer trainingsevaluaties zichtbaar zijn. Het eerste getal telt de geëvalueerde AM/PM-dagdelen. `Not done` blijft uitgesloten. Andere weken tonen één waarde.
 

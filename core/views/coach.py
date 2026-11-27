@@ -12841,7 +12841,7 @@ def trainer_athlete_stats_view(request, athlete_id, vitals=False):
     if vitals:
         if not show_stats_vitals:
             return HttpResponseForbidden("Not allowed")
-        from core.vital_charts import VITAL_PERIODS, daily_vital_charts
+        from core.vital_charts import VITAL_PERIODS, daily_vital_chart
 
         weeks = next((period for period in VITAL_PERIODS if str(period) == request.GET.get("weeks")), 4)
         today = timezone.localdate()
@@ -12855,7 +12855,7 @@ def trainer_athlete_stats_view(request, athlete_id, vitals=False):
             "periods": VITAL_PERIODS,
             "period_start": start,
             "period_end": today,
-            "chart_columns": daily_vital_charts(athlete, _add_months(today, -6), start, today),
+            "chart": daily_vital_chart(athlete, _add_months(today, -6), start, today),
         })
     available_plans = TrainingPlan.objects.exclude(plan_kind=TrainingPlan.PLAN_KIND_YEAR_BASIS).order_by("name")
     if athlete_self_stats:
