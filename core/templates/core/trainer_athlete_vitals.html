@@ -10,13 +10,11 @@
   .vital-chart text { font-size: 12px; fill: currentColor; }
   .vital-chart-grid { stroke: #455361; opacity: .2; vector-effect: non-scaling-stroke; }
   .vital-axis { stroke: currentColor; opacity: .45; vector-effect: non-scaling-stroke; }
-  .vital-sleep_hours { color: #172d66; }
-  .vital-sleep_quality { color: #652c79; }
-  .vital-morning_hr { color: #802b08; }
-  .vital-hrv { color: #075b58; }
-  .vital-chart-line { fill: none; stroke: currentColor; stroke-width: 2; vector-effect: non-scaling-stroke; }
-  .vital-sleep_quality .vital-chart-line { stroke-dasharray: 5 3; }
-  .vital-hrv .vital-chart-line { stroke-dasharray: 2 2; }
+  .vital-sleep_hours { color: #004cdb; }
+  .vital-sleep_quality { color: #8700ad; }
+  .vital-morning_hr { color: #a83a00; }
+  .vital-hrv { color: #006e68; }
+  .vital-chart-line { fill: none; stroke: currentColor; stroke-width: 2.6; vector-effect: non-scaling-stroke; }
   .vital-chart-point { fill: currentColor; stroke: #fff; stroke-width: .8; }
   .vital-chart-target { fill: transparent; cursor: pointer; }
   .vital-chart-target:is(:hover, :focus) + .vital-chart-point { fill: #fff; stroke: currentColor; stroke-width: 2; }
@@ -63,7 +61,7 @@
           <div>
             <strong class="vital-{{ series.key }}">{{ series.title }}</strong>
             {% if series.sample_count %}
-              <span class="text-muted">6 mo · Avg {{ series.mean|floatformat:"-2" }} · SD {{ series.deviation|floatformat:"-2" }} · n={{ series.sample_count }}</span>
+              <span class="text-muted">6 mo · Avg {{ series.mean|floatformat:series.decimals }} · SD {{ series.deviation|floatformat:series.decimals }} · n={{ series.sample_count }}</span>
             {% endif %}
           </div>
         {% endfor %}
@@ -90,13 +88,13 @@
                     <line class="vital-axis" x1="{{ series.axis_x|add:-5 }}" x2="{{ series.axis_x|add:-5 }}" y1="{{ chart.top }}" y2="{{ chart.bottom }}"/>
                   {% endif %}
                   {% for tick in series.ticks %}
-                    <text x="{{ series.axis_x }}" y="{{ tick.y|unlocalize }}" dy=".35em" text-anchor="{{ series.axis_anchor }}">{{ tick.label|floatformat:"-2" }}</text>
+                    <text x="{{ series.axis_x }}" y="{{ tick.y|unlocalize }}" dy=".35em" text-anchor="{{ series.axis_anchor }}">{{ tick.label|floatformat:series.decimals }}</text>
                   {% endfor %}
                 {% endif %}
                 {% if series.points %}<path class="vital-chart-line" d="{{ series.path }}"/>{% endif %}
                 {% for point in series.points %}
-                  <circle class="vital-chart-target" cx="{{ point.x|unlocalize }}" cy="{{ point.y|unlocalize }}" r="7" tabindex="0" role="button" data-reading="{{ series.title }} · {{ point.date|date:'d M Y' }} · {{ point.value|floatformat:'-2' }} {{ series.unit }}" aria-label="{{ series.title }} · {{ point.date|date:'d M Y' }} · {{ point.value|floatformat:'-2' }} {{ series.unit }}">
-                    <title>{{ series.title }} · {{ point.date|date:"d M Y" }} · {{ point.value|floatformat:"-2" }} {{ series.unit }}</title>
+                  <circle class="vital-chart-target" cx="{{ point.x|unlocalize }}" cy="{{ point.y|unlocalize }}" r="7" tabindex="0" role="button" data-reading="{{ series.title }} · {{ point.date|date:'d M Y' }} · {{ point.value|floatformat:series.decimals }} {{ series.unit }}" aria-label="{{ series.title }} · {{ point.date|date:'d M Y' }} · {{ point.value|floatformat:series.decimals }} {{ series.unit }}">
+                    <title>{{ series.title }} · {{ point.date|date:"d M Y" }} · {{ point.value|floatformat:series.decimals }} {{ series.unit }}</title>
                   </circle>
                   <circle class="vital-chart-point" cx="{{ point.x|unlocalize }}" cy="{{ point.y|unlocalize }}" r="2.8" pointer-events="none"/>
                 {% endfor %}

@@ -1,6 +1,6 @@
 # UI- en taalafspraken
 
-- In Stats → Vitals heeft de gezamenlijke grafiek de schalen voor slaapduur en slaapkwaliteit links en voor ochtendhartslag en HRV rechts. De assen tonen de oorspronkelijke waarden op 0, ±0,5, ±1 en ±2 standaardafwijkingen. De buitenste onderste band is knalrood. De donkergroene en knalrode band zijn elk 5/32 zo hoog als de aangrenzende lichte band. Op mobiel kan de grafiek horizontaal scrollen. De periode wisselt met radioknoppen.
+- In Stats → Vitals heeft de gezamenlijke grafiek de schalen voor slaapduur en slaapkwaliteit links en voor ochtendhartslag en HRV rechts. De assen tonen de oorspronkelijke waarden op 0, ±0,5, ±1 en ±2 standaardafwijkingen. Slaapduur en slaapkwaliteit worden met één decimaal weergegeven en ochtendhartslag en HRV als hele getallen. De vier doorlopende lijnen hebben verschillende kleuren. De buitenste onderste band is knalrood. De donkergroene en knalrode band zijn elk 5/32 zo hoog als de aangrenzende lichte band. Op mobiel kan de grafiek horizontaal scrollen. De periode wisselt met radioknoppen.
 
 - Athlete Diary toont in de actuele week `Evaluated / total` voor kilometers (totaal en zones), Alternative en Strength wanneer trainingsevaluaties zichtbaar zijn. Het eerste getal telt de geëvalueerde AM/PM-dagdelen. `Not done` blijft uitgesloten. Andere weken tonen één waarde.
 

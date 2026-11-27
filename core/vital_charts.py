@@ -7,10 +7,10 @@ from core.models import AthleteDailyVital
 
 VITAL_PERIODS = (2, 4, 6, 10)
 VITAL_SERIES = (
-    ("sleep_hours", "Sleep time", "h", 47, "end"),
-    ("sleep_quality", "Sleep quality", "", 112, "end"),
-    ("morning_hr", "Morning HR", "bpm", 788, "start"),
-    ("hrv", "HRV", "ms", 853, "start"),
+    ("sleep_hours", "Sleep time", "h", 47, "end", 1),
+    ("sleep_quality", "Sleep quality", "", 112, "end", 1),
+    ("morning_hr", "Morning HR", "bpm", 788, "start", 0),
+    ("hrv", "HRV", "ms", 853, "start", 0),
 )
 PLOT_LEFT, PLOT_RIGHT = 122, 778
 PLOT_TOP, PLOT_BOTTOM = 38, 291
@@ -29,11 +29,11 @@ def daily_vital_chart(athlete, baseline_start, start, end):
 
     days = [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
     series = []
-    for field, title, unit, axis_x, axis_anchor in VITAL_SERIES:
+    for field, title, unit, axis_x, axis_anchor, decimals in VITAL_SERIES:
         values = measurements[field]
         item = {
             "key": field, "title": title, "unit": unit, "axis_x": axis_x, "axis_anchor": axis_anchor,
-            "sample_count": len(values), "points": [], "ticks": [],
+            "decimals": decimals, "sample_count": len(values), "points": [], "ticks": [],
         }
         series.append(item)
         if not values:
@@ -66,17 +66,14 @@ def daily_vital_chart(athlete, baseline_start, start, end):
         scores = item.pop("standardized")
         direction = item.pop("direction")
         commands = []
-        previous = False
         for index, day in enumerate(days):
             if day not in scores:
-                previous = False
                 continue
             score = scores[day]
             y = PLOT_BOTTOM if score < -2 else PLOT_TOP if score > 2 else position_y(score)
             point = {"x": x(index), "y": y, "date": day, "value": measurements[item["key"]][day]}
             item["points"].append(point)
-            commands.append(f"{'L' if previous else 'M'} {point['x']} {point['y']}")
-            previous = True
+            commands.append(f"{'L' if commands else 'M'} {point['x']} {point['y']}")
         item["path"] = " ".join(commands)
         item["ticks"] = [
             {"y": position_y(score), "label": item["mean"] + direction * score * item["deviation"]}
