@@ -38,6 +38,9 @@ class EvaluationSessionTests(TestCase):
         TrainingSlot.objects.get(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=1).segments.create(
             type="WU", text="Warmup-only label", order=0,
         )
+        TrainingSlot.objects.get(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=1).segments.create(
+            type="ALT", text="Elliptical 15' Z1", zone="1", duration_s=900, order=4,
+        )
         TrainingSlot.objects.get(plan=self.plan, athlete=self.athlete, date=self.day, slot_index=2).segments.filter(
             type="CORE",
         ).update(zone="3", reps=6, distance_m=400, norm_distance_m=2400, parse_ok=True)
@@ -60,6 +63,7 @@ class EvaluationSessionTests(TestCase):
         self.assertEqual(pm["zones"], [{"zone": "3", "km": "2.4"}])
         self.assertEqual(pm["km"], "2.4 km")
         self.assertContains(response, '<span class="total-pill total-z3">Z3 2.4 km</span>', html=True)
+        self.assertContains(response, '<span class="total-pill total-z1">A Z1 15 min</span>', html=True)
 
     @skipUnless(shutil.which("node"), "Node required for mobile Diary navigation")
     def test_mobile_week_overview_opens_day_and_keeps_selected_week(self):

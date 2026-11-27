@@ -4629,6 +4629,7 @@ def athlete_year_calendar_view(request):
                         "label": label,
                         "km": f"{cell['session_km']} km" if cell["session_km"] else "",
                         "zones": [zone for zone in cell["session_zones"] if zone["zone"] != "1"],
+                        "alt_zones": cell["session_alt_zones"],
                         "status": (
                             _flex_check_payload(cell["check"])
                             or ({"label": "Not evaluated", "icon": "○"} if cell["slot"] and cell["day"] <= today else None)
