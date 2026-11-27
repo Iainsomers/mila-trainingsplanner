@@ -123,6 +123,7 @@
   .quick-report-warning { color: #b02a37; font-weight: 700; }
   .quick-report-dialog { max-width: min(28rem, calc(100% - 2rem)); white-space: normal; }
   .quick-report-comment { overflow-wrap: anywhere; white-space: pre-wrap; }
+  .quick-report-zone-pill { display: inline-block; max-width: 100%; padding: 1px 5px; border-radius: 6px; }
   .staff-overview-tile-content { min-width: 0; }
   .staff-overview-tile-heading { display: flex; align-items: center; gap: .5rem; }
   .staff-overview-tile-icon {
@@ -303,6 +304,7 @@
           </tbody>
         </table>
         <script>
+          {% include "core/partials/progressive_pill_colors.js.html" %}
           document.querySelectorAll(".quick-report-dialog").forEach(dialog => {
             const training = dialog.querySelector("[data-quick-training]");
             dialog.addEventListener("toggle", async () => {
@@ -314,14 +316,26 @@
                 if (!response.ok) throw new Error("Training request failed");
                 const {segments} = await response.json();
                 training.textContent = segments.length ? "" : "No training found for this session.";
-                for (const {label, text} of segments) {
+                for (const {label, text, zone} of segments) {
                   const line = document.createElement("div");
                   line.className = "quick-report-comment";
                   const heading = document.createElement("strong");
                   heading.textContent = label + " ";
-                  line.append(heading, text);
+                  const pill = document.createElement("span");
+                  pill.textContent = text;
+                  if (label !== "Strength") {
+                    const color = flexZoneColor(zone || text.match(/\bz\s*([1-6])\b/i)?.[1]);
+                    if (color) {
+                      pill.className = "quick-report-zone-pill";
+                      pill.style.backgroundColor = color;
+                      pill.dataset.flexSegment = "";
+                      pill.dataset.flexSourceText = text;
+                    }
+                  }
+                  line.append(heading, pill);
                   training.append(line);
                 }
+                applyFlexProgressivePillColors();
                 dialog.dataset.trainingState = "loaded";
               } catch {
                 delete dialog.dataset.trainingState;

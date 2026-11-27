@@ -55,5 +55,9 @@ def training_for_evaluation(check):
             if program:
                 text = '\n'.join(filter(None, [program.name, text]))
             if text:
-                output.append({'label':labels.get(segment.type, segment.type), 'text':text})
+                output.append({
+                    'label': labels.get(segment.type, segment.type),
+                    'text': text,
+                    'zone': (segment.zone or '') if segment.type != 'CORE2' else '',
+                })
     return output

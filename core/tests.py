@@ -2206,7 +2206,7 @@ class PlanningOverviewTests(TestCase):
             slot = TrainingSlot.objects.create(
                 plan=plan, athlete=visible, date=old_check.date, slot_index=index,
             )
-            slot.segments.create(type="CORE", text=text)
+            slot.segments.create(type="CORE", text=text, zone=str(index))
         private_check = AthleteDayCheck.objects.create(
             athlete=private, date=today, slot_index=1, updated_by=other,
             pain=AthleteDayCheck.PAIN_SERIOUS, comment="This long evaluation must stay private.",
@@ -2226,7 +2226,7 @@ class PlanningOverviewTests(TestCase):
         self.assertContains(two_days, f"hours=48&amp;training_evaluation={old_check.pk}")
         params = {"view": "quick_coach_report", "hours": "48", "training_evaluation": old_check.pk}
         detail = self.client.get("/coach/daily-overview-other/", params)
-        self.assertEqual(detail.json(), {"segments": [{"label": "Main", "text": "5 km Z1"}]})
+        self.assertEqual(detail.json(), {"segments": [{"label": "Main", "text": "5 km Z1", "zone": "1"}]})
         self.assertEqual(self.client.get("/coach/daily-overview-other/", {**params, "hours": "24"}).status_code, 404)
         self.assertEqual(self.client.get(
             "/coach/daily-overview-other/", {**params, "training_evaluation": private_check.pk},
