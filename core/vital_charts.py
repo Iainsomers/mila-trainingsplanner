@@ -28,7 +28,7 @@ def daily_vital_chart(athlete, baseline_start, start, end):
 
     days = [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
     series = []
-    max_distance = 2
+    lowest_score, highest_score = -2, 2
     for field, title, unit, axis_x, axis_anchor in VITAL_SERIES:
         values = measurements[field]
         item = {
@@ -44,23 +44,25 @@ def daily_vital_chart(athlete, baseline_start, start, end):
             day: direction * (value - average) / deviation if deviation else 0
             for day, value in values.items() if start <= day <= end
         }
-        max_distance = max(max_distance, max(map(abs, standardized.values()), default=0))
+        lowest_score = min(lowest_score, min(standardized.values(), default=0))
+        highest_score = max(highest_score, max(standardized.values(), default=0))
         item.update({"mean": average, "deviation": deviation, "direction": direction, "standardized": standardized})
 
-    extent = max_distance * 1.12
+    lower_bound = lowest_score * 1.12
+    upper_bound = highest_score * 1.12
 
     def x(index):
         return round(PLOT_LEFT + (PLOT_RIGHT - PLOT_LEFT) * index / (len(days) - 1), 2)
 
     def y(score):
-        return round(PLOT_TOP + (PLOT_BOTTOM - PLOT_TOP) * (extent - score) / (2 * extent), 2)
+        return round(PLOT_TOP + (PLOT_BOTTOM - PLOT_TOP) * (upper_bound - score) / (upper_bound - lower_bound), 2)
 
-    limits = [-extent, -2, -1, 1, 2, extent]
+    limits = [lower_bound, -2, -1, 1, 2, upper_bound]
     bands = [
         {"y": y(top), "height": round(y(bottom) - y(top), 2), "color": color}
         for bottom, top, color in zip(limits, limits[1:], ("very-low", "low", "normal", "high", "very-high"))
     ]
-    tick_scores = (-2, -1, 0, 1, 2)
+    tick_scores = (2, 1, 0.5, 0, -0.5, -1, -2)
     for item in series:
         if not item["sample_count"]:
             continue

@@ -12181,9 +12181,10 @@ class TrainerStatsTests(TestCase):
         self.assertEqual(heart_rate["axis_anchor"], "start")
         self.assertEqual(sleep["axis_anchor"], "end")
         self.assertEqual(heart_rate["points"][0]["y"], hrv["points"][1]["y"])
-        self.assertEqual(heart_rate["points"][0]["y"], response.context["chart"]["grid"][3])
+        self.assertEqual(heart_rate["points"][0]["y"], response.context["chart"]["grid"][1])
+        self.assertEqual([tick["label"] for tick in heart_rate["ticks"]], [30, 40, 45, 50, 55, 60, 70])
         self.assertEqual(len(quality["ticks"]), 1)
-        self.assertEqual(quality["points"][0]["y"], response.context["chart"]["grid"][2])
+        self.assertEqual(quality["points"][0]["y"], response.context["chart"]["grid"][3])
         self.assertEqual(hrv["sample_count"], 2)
         self.assertEqual(self.client.get(f"{path}vitals/", {"weeks": "bad"}).context["weeks"], 4)
 
