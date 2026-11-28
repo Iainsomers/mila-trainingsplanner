@@ -766,6 +766,8 @@ class GarminEEndpointTests(TestCase):
         for message in (
             'maak er netjes 39*(45"z3-15"z1) van door de laatste lap te verlengen naar 15s',
             "ok zo ja en nu dat ook als preview",
+            "probeer nu nog eens",
+            "je moet aanpassingen van minder dan 1% van de totale tijd gewoon accepteren",
         ):
             with self.subTest(message=message):
                 response = self.chat(message)

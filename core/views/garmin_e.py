@@ -309,13 +309,21 @@ def garmin_type_e_ayc_view(request):
                 )
                 if is_alternative and confirmed and pending_transfer:
                     explicit_compact = state["pending"]["proposal"]
-                if is_alternative and not explicit_compact and not state.get("pending") and message and re.fullmatch(
-                    r"\s*(?:(?:ok|ja|zo|yes|okay)[,\s]+)*(?:(?:en\s+)?(?:nu\s+)?dat\s+(?:ook\s+)?als\s+preview|doe\s+dat|apply\s+(?:it|that)(?:\s+to\s+the\s+preview)?)\s*[.!]?\s*",
-                    message, re.I,
-                ):
+                retry_alternative = re.compile(
+                    r"\s*(?:(?:ok|ja|zo|yes|okay)[,\s]+)*(?:"
+                    r"(?:en\s+)?(?:nu\s+)?dat\s+(?:ook\s+)?als\s+preview|doe\s+dat"
+                    r"|apply\s+(?:it|that)(?:\s+to\s+the\s+preview)?"
+                    r"|probeer(?:\s+nu)?\s+(?:nog\s+eens|opnieuw)|try\s+again"
+                    r"|(?:je\s+moet\s+)?(?:aanpassingen|correcties)\s+van\s+minder\s+dan\s+1\s*%"
+                    r"\s+van\s+de\s+totale\s+tijd\s+(?:gewoon\s+)?accepteren)\s*[.!]?\s*",
+                    re.I,
+                )
+                if (is_alternative and not explicit_compact and not state.get("pending")
+                        and retry_alternative.fullmatch(message or "")):
                     previous_message = next((
                         entry["content"] for entry in reversed(state["history"])
                         if entry["role"] == "user" and not entry.get("automatic")
+                        and not retry_alternative.fullmatch(entry["content"])
                     ), "")
                     previous_alt = (state["part"].get("training_fields") or {}).get("alt", "")
                     explicit_compact = (

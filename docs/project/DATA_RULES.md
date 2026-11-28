@@ -1,7 +1,7 @@
 # Data-, invoer- en rekenregels
 
 - Garmin E past een expliciete Alternative-duurcorrectie op de laatste lap rechtstreeks toe wanneer het verschil maximaal 1% van de gemeten trainingsduur is. Compacte paren kunnen de opgegeven presentatiezones tonen met behoud van de gemeten HR-zones en seconden in de totalen.
-- Garmin E verwerkt een uitvoerbare wijzigingsopdracht direct in de gecontroleerde preview. Een expliciet vervolgverzoek om de vorige gebruikersopdracht in de preview te zetten laat die opdracht opnieuw controleren.
+- Garmin E verwerkt een uitvoerbare wijzigingsopdracht direct in de gecontroleerde preview. Een expliciet vervolgverzoek, een herhaalopdracht of een verwijzing naar de 1%-regel probeert de laatste inhoudelijke gebruikersopdracht opnieuw. Opeenvolgende herhaalberichten tellen daarbij niet als inhoudelijke opdrachten.
 
 - Het 3-daags gemiddelde in Stats → Vitals gebruikt op een meetdag de ingevulde waarden van die dag en de twee voorafgaande kalenderdagen. De zesmaandsreferentie gebruikt de oorspronkelijke dagwaarden.
 
