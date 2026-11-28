@@ -467,7 +467,7 @@ def apply_explicit_zone_labels(proposal, message):
     return updated, True
 
 
-def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0):
+def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0, previous_alt=""):
     """Translate a user-written WU–repeated pair–optional tail–CD notation.
 
     This parses explicit intent, not a particular workout pattern. Every atom
@@ -501,14 +501,27 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
                              "recovery_seconds": pause, "interval_work_zone": str(zone),
                              "cooldown_transfer": cooldown_transfer},
         }
+    # A literal pair can cover the recording without a separate cooldown.
+    # The last recovery may have stopped a few seconds early.
+    pair_notation = r"(\d+)\s*[×x*]\s*\(([^()]*)\)"
+    whole_pair = r"\s*(?:(\d+)\s*['′’]\s*(?:WU|Z1)\s*//\s*)?" + pair_notation + r"\s*"
+    pair_only = re.fullmatch(whole_pair, message, re.I)
+    final_lap_request = re.fullmatch(
+        r"\s*(?:make (?:the )?(?:last|final) (?:lap|recovery)|maak (?:de )?laatste (?:lap|pauze))\s*(?:op |to )?(\d+)\s*(?:[\"″]|s(?:ec)?)\s*[.!]?",
+        message, re.I,
+    )
+    if not pair_only and final_lap_request:
+        prior_pair = re.search(pair_notation, previous_alt, re.I)
+        if prior_pair and len(facts) // 2 == int(prior_pair[1]) + 1:
+            pair_only = re.fullmatch(whole_pair, f"{len(facts) // 2}×({prior_pair[2]})", re.I)
     notation = re.search(
         r"\b(?:wu|warm[ -]?up)\b\s*[-–—/]\s*(\d+)\s*[×x*]\s*\(([^()]*)\)"
         r"(.*?)\s*[-–—/]\s*\b(?:cd|cool[ -]?down)\b",
         message, re.I,
     )
-    if not notation:
+    if not notation and not pair_only:
         return None
-    count = int(notation[1])
+    count = int(pair_only[2] if pair_only else notation[1])
     if not 1 <= count <= 60:
         return None
 
@@ -527,10 +540,37 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
             return None
         return round(seconds), match[3]
 
-    pair_values = re.split(r"\s*[-–—/]\s*", notation[2].strip())
+    pair_values = re.split(r"\s*[-–—/]\s*", (pair_only[3] if pair_only else notation[2]).strip())
     pair = [atom(value) for value in pair_values]
     if len(pair) != 2 or any(value is None for value in pair):
         return None
+    if pair_only:
+        warmup = len(facts) - count * 2
+        if warmup not in (0, 1) or (pair_only[1] and warmup != 1):
+            return None
+        work, pause = pair
+        if final_lap_request and int(final_lap_request[1]) != pause[0]:
+            return None
+        if warmup and facts[0]["duration_s"] < 2 * max(work[0], pause[0]):
+            return None
+        for index, fact in enumerate(facts[warmup:]):
+            measured = fact["duration_s"]
+            target = pair[index % 2][0]
+            if abs(measured - target) <= max(2, target * .06):
+                continue
+            if index != count * 2 - 1 or not 0 < target - measured <= min(6, target / 2):
+                return None
+        return {
+            "warmup_laps": [1] if warmup else [],
+            "recovery_laps": list(range(warmup + 2, len(facts) + 1, 2)),
+            "reps": [{"laps": [lap], "target_seconds": work[0]}
+                     for lap in range(warmup + 1, len(facts), 2)],
+            "format": "compact",
+            "presentation": {
+                "recovery_seconds": pause[0], "work_zone": work[1], "recovery_zone": pause[1],
+                **({"warmup_seconds": int(pair_only[1]) * 60} if pair_only[1] else {}),
+            },
+        }
     tail_text = notation[3].strip().strip("-–—/ ")
     tail_values = [] if not tail_text else re.split(r"\s*[-–—/]\s*", tail_text)
     tail = [atom(value) for value in tail_values]

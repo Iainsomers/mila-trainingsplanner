@@ -301,7 +301,9 @@ def garmin_type_e_ayc_view(request):
                 deadline = monotonic()+26
                 initial_retry_used = False
                 explicit_compact = (
-                    explicit_alternative_compact_proposal(facts, message)
+                    explicit_alternative_compact_proposal(
+                        facts, message, previous_alt=(state["part"].get("training_fields") or {}).get("alt", ""),
+                    )
                     if is_alternative else None
                 )
                 if is_alternative and confirmed and pending_transfer:

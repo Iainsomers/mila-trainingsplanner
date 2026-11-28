@@ -39,6 +39,28 @@ def fixture():
 
 
 class GarminEValidationTests(SimpleTestCase):
+    def test_short_final_recovery_can_use_the_nominal_pair_duration(self):
+        athlete = SimpleNamespace(zone_hr_bpm={"1": "145", "2": "146-160", "3": "161-175"}, alternative_hr_correction=0)
+        durations = [300] + [45, 15] * 38 + [45, 9]
+        part = {
+            "training_fields": {"alt": "Elliptical"}, "alternative_label": "Elliptical",
+            "alternative_laps": [
+                {"seconds": seconds, "average_hr": 170 if index % 2 else 110}
+                for index, seconds in enumerate(durations)
+            ],
+        }
+        for message in ('39*(45"z3-15"z1)', 'make the last lap 15"'):
+            with self.subTest(message=message):
+                proposal = explicit_alternative_compact_proposal(
+                    lap_facts(part), message, previous_alt="Elliptical 38×(45s Z3 - 15s Z1) // Elliptical 45s Z3 // Elliptical 9s",
+                )
+                checked = checked_proposal(part, proposal, athlete=athlete, zone_basis="hr")
+                self.assertEqual(checked["training_fields"]["alt"], "Elliptical 5' Z1 // Elliptical 39×(45s Z3 - 15s Z1)")
+                self.assertEqual(sum(load["seconds"] for load in checked["watch_loads"]), sum(durations))
+                self.assertEqual(checked["watch_loads"][-1]["alt_laps"][-1]["seconds"], 9)
+        part["alternative_laps"][2]["seconds"] = 9
+        self.assertIsNone(explicit_alternative_compact_proposal(lap_facts(part), '39*(45"z3-15"z1)'))
+
     def test_watch_clock_keeps_all_e_reps_in_mixed_sets(self):
         distances = [1800, 1300, 800] * 2 + [800, 800]
         loads = [{"segment": "CORE", "work_rep": True, "ai_rep": i,

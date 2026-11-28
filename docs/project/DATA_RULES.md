@@ -1,5 +1,7 @@
 # Data-, invoer- en rekenregels
 
+- Garmin E kan bij expliciete compacte Alternative-paren de laatste herstelronde maximaal zes seconden korter accepteren, zolang minstens de helft is gemeten en alle overige laps bij het patroon passen. De preview gebruikt de nominale pauze en de totalen behouden de gemeten seconden.
+
 - Het 3-daags gemiddelde in Stats → Vitals gebruikt op een meetdag de ingevulde waarden van die dag en de twee voorafgaande kalenderdagen. De zesmaandsreferentie gebruikt de oorspronkelijke dagwaarden.
 
 - Individuele Stats-vitals gebruiken een voortschrijdende referentie van zes kalendermaanden tot en met vandaag. Het gemiddelde en de populatiestandaardafwijking worden per vital berekend over geldige ingevulde metingen. De vier reeksen delen één standaardafwijkingsschaal, met dezelfde kleurbanden bij één en twee standaardafwijkingen aan beide kanten van het gemiddelde. Elke as toont de oorspronkelijke meetwaarden. Bij nul spreiding staat de reeks op de middenlijn. De lijn verbindt opeenvolgende beschikbare metingen over lege dagen heen. Lege dagen krijgen geen meetpunt en tellen niet mee in het gemiddelde en de standaardafwijking. De kleurbanden hebben een vaste hoogte. Meetpunten boven +2 of onder −2 standaardafwijkingen staan op de boven- of onderrand van de grafiek. De exacte waarde staat bij het meetpunt. Ochtendhartslag loopt omgekeerd, met lagere waarden bovenaan.
