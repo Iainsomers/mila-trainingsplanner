@@ -1,6 +1,6 @@
 # Data-, invoer- en rekenregels
 
-- Garmin E kan bij expliciete compacte Alternative-paren de laatste herstelronde maximaal zes seconden korter accepteren, zolang minstens de helft is gemeten en alle overige laps bij het patroon passen. De preview gebruikt de nominale pauze en de totalen behouden de gemeten seconden.
+- Garmin E accepteert compacte Alternative-paren als notatie of in een gewone opdracht. Een verzoek om de laatste pauze af te ronden hergebruikt het eenduidige patroon uit de gecontroleerde preview. De toegestane afwijking is zes seconden of 0,5% van de trainingsduur als dat meer is, met een maximum van 15 seconden en de helft van de nominale pauze. Alle overige laps moeten bij het patroon passen. De preview gebruikt de nominale pauze en de totalen behouden de gemeten seconden.
 
 - Het 3-daags gemiddelde in Stats → Vitals gebruikt op een meetdag de ingevulde waarden van die dag en de twee voorafgaande kalenderdagen. De zesmaandsreferentie gebruikt de oorspronkelijke dagwaarden.
 

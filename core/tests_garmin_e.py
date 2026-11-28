@@ -49,7 +49,11 @@ class GarminEValidationTests(SimpleTestCase):
                 for index, seconds in enumerate(durations)
             ],
         }
-        for message in ('39*(45"z3-15"z1)', 'make the last lap 15"'):
+        for message in (
+            '39*(45"z3-15"z1)', 'maak er 39*(45"z3-15"z1) van', 'make the last lap 15"',
+            'ja maar negeer dat die laatste pauze 6s tekort was',
+            'please round the final recovery to the normal duration',
+        ):
             with self.subTest(message=message):
                 proposal = explicit_alternative_compact_proposal(
                     lap_facts(part), message, previous_alt="Elliptical 38×(45s Z3 - 15s Z1) // Elliptical 45s Z3 // Elliptical 9s",
@@ -58,6 +62,9 @@ class GarminEValidationTests(SimpleTestCase):
                 self.assertEqual(checked["training_fields"]["alt"], "Elliptical 5' Z1 // Elliptical 39×(45s Z3 - 15s Z1)")
                 self.assertEqual(sum(load["seconds"] for load in checked["watch_loads"]), sum(durations))
                 self.assertEqual(checked["watch_loads"][-1]["alt_laps"][-1]["seconds"], 9)
+        part["alternative_laps"][-1]["seconds"] = 6
+        self.assertIsNone(explicit_alternative_compact_proposal(lap_facts(part), '39*(45"z3-15"z1)'))
+        part["alternative_laps"][-1]["seconds"] = 9
         part["alternative_laps"][2]["seconds"] = 9
         self.assertIsNone(explicit_alternative_compact_proposal(lap_facts(part), '39*(45"z3-15"z1)'))
 

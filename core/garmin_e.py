@@ -506,14 +506,30 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
     pair_notation = r"(\d+)\s*[×x*]\s*\(([^()]*)\)"
     whole_pair = r"\s*(?:(\d+)\s*['′’]\s*(?:WU|Z1)\s*//\s*)?" + pair_notation + r"\s*"
     pair_only = re.fullmatch(whole_pair, message, re.I)
+    if not pair_only:
+        pair_only = re.fullmatch(
+            r"\s*(?:maak(?:\s+er)?|noteer(?:\s+(?:dit|het))?\s+als|"
+            r"make(?:\s+it)?|(?:show|write)(?:\s+it)?\s+as)\s+"
+            + whole_pair + r"(?:van)?\s*[.!]?\s*",
+            message, re.I,
+        )
     final_lap_request = re.fullmatch(
         r"\s*(?:make (?:the )?(?:last|final) (?:lap|recovery)|maak (?:de )?laatste (?:lap|pauze))\s*(?:op |to )?(\d+)\s*(?:[\"″]|s(?:ec)?)\s*[.!]?",
         message, re.I,
     )
-    if not pair_only and final_lap_request:
-        prior_pair = re.search(pair_notation, previous_alt, re.I)
-        if prior_pair and len(facts) // 2 == int(prior_pair[1]) + 1:
-            pair_only = re.fullmatch(whole_pair, f"{len(facts) // 2}×({prior_pair[2]})", re.I)
+    end_rounding = re.search(
+        r"^\s*(?:(?:ja|yes|maar|but|please|graag)[,\s]+)*"
+        r"(?:negeer|rond|ignore|round|allow|accept|treat)\b.*\b(?:"
+        r"laatste\s+(?:pauze|herstel(?:ronde)?|lap)|(?:last|final)\s+(?:pause|recovery|lap))\b",
+        message, re.I,
+    )
+    if not pair_only and (final_lap_request or end_rounding):
+        prior_pairs = re.findall(pair_notation, previous_alt, re.I)
+        if len(prior_pairs) == 1:
+            prior_count, prior_pattern = prior_pairs[0]
+            count = len(facts) // 2
+            if count in (int(prior_count), int(prior_count) + 1):
+                pair_only = re.fullmatch(whole_pair, f"{count}×({prior_pattern})", re.I)
     notation = re.search(
         r"\b(?:wu|warm[ -]?up)\b\s*[-–—/]\s*(\d+)\s*[×x*]\s*\(([^()]*)\)"
         r"(.*?)\s*[-–—/]\s*\b(?:cd|cool[ -]?down)\b",
@@ -553,12 +569,14 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
             return None
         if warmup and facts[0]["duration_s"] < 2 * max(work[0], pause[0]):
             return None
+        session_seconds = sum(fact["duration_s"] for fact in facts)
+        final_shortfall = min(15, pause[0] / 2, max(6, session_seconds * .005))
         for index, fact in enumerate(facts[warmup:]):
             measured = fact["duration_s"]
             target = pair[index % 2][0]
             if abs(measured - target) <= max(2, target * .06):
                 continue
-            if index != count * 2 - 1 or not 0 < target - measured <= min(6, target / 2):
+            if index != count * 2 - 1 or not 0 < target - measured <= final_shortfall:
                 return None
         return {
             "warmup_laps": [1] if warmup else [],
