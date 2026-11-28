@@ -467,6 +467,32 @@ def apply_explicit_zone_labels(proposal, message):
     return updated, True
 
 
+def requested_final_lap_seconds(message):
+    match = re.fullmatch(
+        r"\s*(?:"
+        r"(?:maak|zet)\s+(?:van\s+)?(?:de\s+)?laatste\s+(?:lap|ronde|pauze)\s+(?:op\s+)?(\d+)"
+        r"|make\s+(?:the\s+)?(?:last|final)\s+(?:lap|recovery)\s+(?:to\s+)?(\d+)"
+        r"|maak\s+van\s+(?:die\s+)?\d+\s*s\s+(\d+)"
+        r")\s*(?:[\"″]|s(?:ec(?:onden?)?)?)"
+        r"(?:\s+(?:in|voor)\s+de\s+laatste\s+(?:lap|ronde|pauze))?\s*[.!]?\s*",
+        message or "", re.I,
+    )
+    return int(next(value for value in match.groups() if value)) if match else None
+
+
+def correct_alternative_final_lap(facts, message, previous):
+    target = requested_final_lap_seconds(message)
+    if (not target or not facts
+            or abs(target - facts[-1]["duration_s"]) > .01 * sum(fact["duration_s"] for fact in facts)):
+        return None
+    if not previous and len(facts) != 1:
+        return None
+    proposal = deepcopy(previous) if previous else {"reps": [{"laps": [1], "target_seconds": round(facts[0]["duration_s"])}]}
+    proposal["format"] = "compact"
+    proposal.setdefault("presentation", {})["final_lap_seconds"] = target
+    return proposal
+
+
 def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0, previous_alt=""):
     """Translate a user-written WU–repeated pair–optional tail–CD notation.
 
@@ -513,17 +539,14 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
             + whole_pair + r"(?:van)?\s*[.!]?\s*",
             message, re.I,
         )
-    final_lap_request = re.fullmatch(
-        r"\s*(?:make (?:the )?(?:last|final) (?:lap|recovery)|maak (?:de )?laatste (?:lap|pauze))\s*(?:op |to )?(\d+)\s*(?:[\"″]|s(?:ec)?)\s*[.!]?",
-        message, re.I,
-    )
+    final_seconds = requested_final_lap_seconds(message)
     end_rounding = re.search(
         r"^\s*(?:(?:ja|yes|maar|but|please|graag)[,\s]+)*"
         r"(?:negeer|rond|ignore|round|allow|accept|treat)\b.*\b(?:"
         r"laatste\s+(?:pauze|herstel(?:ronde)?|lap)|(?:last|final)\s+(?:pause|recovery|lap))\b",
         message, re.I,
     )
-    if not pair_only and (final_lap_request or end_rounding):
+    if not pair_only and (final_seconds is not None or end_rounding):
         prior_pairs = re.findall(pair_notation, previous_alt, re.I)
         if len(prior_pairs) == 1:
             prior_count, prior_pattern = prior_pairs[0]
@@ -565,18 +588,17 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
         if warmup not in (0, 1) or (pair_only[1] and warmup != 1):
             return None
         work, pause = pair
-        if final_lap_request and int(final_lap_request[1]) != pause[0]:
+        if final_seconds is not None and final_seconds != pause[0]:
             return None
         if warmup and facts[0]["duration_s"] < 2 * max(work[0], pause[0]):
             return None
         session_seconds = sum(fact["duration_s"] for fact in facts)
-        final_shortfall = min(15, pause[0] / 2, max(6, session_seconds * .005))
+        final_tolerance = session_seconds * .01
         for index, fact in enumerate(facts[warmup:]):
             measured = fact["duration_s"]
             target = pair[index % 2][0]
-            if abs(measured - target) <= max(2, target * .06):
-                continue
-            if index != count * 2 - 1 or not 0 < target - measured <= final_shortfall:
+            tolerance = final_tolerance if index == count * 2 - 1 else max(2, target * .06)
+            if abs(measured - target) > tolerance:
                 return None
         return {
             "warmup_laps": [1] if warmup else [],
@@ -585,7 +607,8 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
                      for lap in range(warmup + 1, len(facts), 2)],
             "format": "compact",
             "presentation": {
-                "recovery_seconds": pause[0], "work_zone": work[1], "recovery_zone": pause[1],
+                "recovery_seconds": pause[0], "final_lap_seconds": pause[0],
+                "user_display_zones": {"Work": work[1], "Recovery": pause[1]},
                 **({"warmup_seconds": int(pair_only[1]) * 60} if pair_only[1] else {}),
             },
         }
@@ -1314,6 +1337,17 @@ def compact_alternative(part, result, entries, presentation):
             raise ValueError(f"The {role} summary zone is not supported by the measured blocks.")
         selected_zones[role] = selected
         summary_zone_labels[role] = selected
+    final_target = presentation.get("final_lap_seconds")
+    if final_target is not None:
+        measured_final = part["alternative_laps"][-1]["seconds"]
+        if (type(final_target) is not int or final_target <= 0
+                or abs(final_target - measured_final) > .01 * sum(entry["seconds"] for entry in entries)):
+            raise ValueError("The final lap correction exceeds 1% of the recorded session.")
+    user_display_zones = presentation.get("user_display_zones") or {}
+    if (not isinstance(user_display_zones, dict)
+            or any(role not in {"Work", "Recovery"} or zone not in set("123456")
+                   for role, zone in user_display_zones.items())):
+        raise ValueError("Invalid Alternative display zones.")
     display = []
     transfer = presentation.get("cooldown_transfer") or 0
     transfer_index = next((index for index, entry in enumerate(entries) if entry["role"] == "Cooldown"), None)
@@ -1332,12 +1366,15 @@ def compact_alternative(part, result, entries, presentation):
         if not isinstance(target,(int,float)) or isinstance(target,bool) or not math.isfinite(target) or target<=0:
             raise ValueError("Compact Alternative durations must be positive measured targets.")
         tolerance = max(15,target*.06) if role=="Work" else max(30,target*.06)
+        if final_target is not None and index == len(entries) - 1:
+            target = seconds + final_target - measured_final
+            tolerance = abs(target - seconds)
         if abs(target-seconds)>tolerance:
             raise ValueError(f"{role}: nominal {target:g}s does not fit measured {seconds:g}s.")
         # A literal duration-zone correction is more specific than the
         # repeated-role summary (e.g. a differently zoned trailing work atom).
         zone = entry["zone"] if entry.get("explicit_zone") else selected_zones.get(role,entry["zone"])
-        display.append((target,zone,role))
+        display.append((target,user_display_zones.get(role, zone),role))
     def atom(item):
         seconds,zone,_ = item
         seconds = round(seconds,3)

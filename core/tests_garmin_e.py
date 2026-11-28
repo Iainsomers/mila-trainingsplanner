@@ -15,6 +15,7 @@ from core.garmin_e import (
     ask_model,
     checked_proposal,
     complete_partial_running_proposal,
+    correct_alternative_final_lap,
     explicit_alternative_compact_proposal,
     explicit_distance_sets,
     lap_facts,
@@ -45,14 +46,15 @@ class GarminEValidationTests(SimpleTestCase):
         part = {
             "training_fields": {"alt": "Elliptical"}, "alternative_label": "Elliptical",
             "alternative_laps": [
-                {"seconds": seconds, "average_hr": 170 if index % 2 else 110}
-                for index, seconds in enumerate(durations)
+                {"seconds": seconds, "average_hr": 110}
+                for seconds in durations
             ],
         }
         for message in (
             '39*(45"z3-15"z1)', 'maak er 39*(45"z3-15"z1) van', 'make the last lap 15"',
             'ja maar negeer dat die laatste pauze 6s tekort was',
             'please round the final recovery to the normal duration',
+            'maak van de laatste lap 15s', 'maak van die 9s 15s in de laatste lap',
         ):
             with self.subTest(message=message):
                 proposal = explicit_alternative_compact_proposal(
@@ -62,11 +64,26 @@ class GarminEValidationTests(SimpleTestCase):
                 self.assertEqual(checked["training_fields"]["alt"], "Elliptical 5' Z1 // Elliptical 39×(45s Z3 - 15s Z1)")
                 self.assertEqual(sum(load["seconds"] for load in checked["watch_loads"]), sum(durations))
                 self.assertEqual(checked["watch_loads"][-1]["alt_laps"][-1]["seconds"], 9)
-        part["alternative_laps"][-1]["seconds"] = 6
+                self.assertEqual(checked["watch_loads"][-1]["alt_laps"][0]["zone"], "1")
+        part["alternative_laps"][-1]["seconds"] = 50
         self.assertIsNone(explicit_alternative_compact_proposal(lap_facts(part), '39*(45"z3-15"z1)'))
         part["alternative_laps"][-1]["seconds"] = 9
         part["alternative_laps"][2]["seconds"] = 9
         self.assertIsNone(explicit_alternative_compact_proposal(lap_facts(part), '39*(45"z3-15"z1)'))
+
+    def test_one_percent_final_lap_correction_without_a_repeated_pair(self):
+        part = {
+            "training_fields": {"alt": "Elliptical"}, "alternative_label": "Elliptical",
+            "alternative_laps": [{"seconds": 591, "average_hr": 110}, {"seconds": 9, "average_hr": 110}],
+        }
+        facts = lap_facts(part)
+        previous = {"cooldown_laps": [2], "reps": [{"laps": [1], "target_seconds": 591}]}
+        proposal = correct_alternative_final_lap(facts, "maak van de laatste lap 15s", previous)
+        athlete = SimpleNamespace(zone_hr_bpm={"1": "145"}, alternative_hr_correction=0)
+        checked = checked_proposal(part, proposal, athlete=athlete, zone_basis="hr")
+        self.assertTrue(checked["training_fields"]["alt"].endswith("Elliptical 15s Z1"))
+        self.assertEqual(checked["watch_loads"][-1]["seconds"], 9)
+        self.assertIsNone(correct_alternative_final_lap(facts, "maak van de laatste lap 16s", previous))
 
     def test_watch_clock_keeps_all_e_reps_in_mixed_sets(self):
         distances = [1800, 1300, 800] * 2 + [800, 800]

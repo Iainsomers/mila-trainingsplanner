@@ -25,6 +25,7 @@ from core.garmin_e import (
     explicit_running_plan,
     distance_set_notation,
     explicit_alternative_compact_proposal,
+    correct_alternative_final_lap,
     lap_facts,
     localize_garmin_e_notice,
     prefer_measured_time_groups,
@@ -301,9 +302,9 @@ def garmin_type_e_ayc_view(request):
                 deadline = monotonic()+26
                 initial_retry_used = False
                 explicit_compact = (
-                    explicit_alternative_compact_proposal(
+                    (explicit_alternative_compact_proposal(
                         facts, message, previous_alt=(state["part"].get("training_fields") or {}).get("alt", ""),
-                    )
+                    ) or correct_alternative_final_lap(facts, message, state["proposal"]))
                     if is_alternative else None
                 )
                 if is_alternative and confirmed and pending_transfer:
