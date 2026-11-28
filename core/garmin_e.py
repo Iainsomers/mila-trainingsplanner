@@ -78,7 +78,10 @@ measured time and ask for confirmation before using the nominal notation. Never 
 already applied. The server preserves all actual times and only permits this after explicit yes.
 For continuous running put the consecutive running laps in ONE distance rep. Slow transfers
 are recovery. Never infer unrecorded recovery duration. Your prose is not the usable training:
-only a complete, checked lap assignment can update the preview. Do not output model-generated
+only a complete, checked lap assignment can update the preview. When the user asks for a change
+and you find a usable interpretation, return its complete assignment with intent:update in the
+same reply. Do not offer an alternative notation in prose if you cannot supply its assignment.
+Do not output model-generated
 pace, HR, totals, training text or URLs; the server calculates those from measurements.
 Only the validated Alternative presentation schema below can request a supported summary zone.
 For Alternative, an explicit user correction such as `45s Z1 and 30s Z2` labels every matching
@@ -534,9 +537,11 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
     pair_only = re.fullmatch(whole_pair, message, re.I)
     if not pair_only:
         pair_only = re.fullmatch(
-            r"\s*(?:maak(?:\s+er)?|noteer(?:\s+(?:dit|het))?\s+als|"
+            r"\s*(?:maak(?:\s+er)?(?:\s+netjes)?|noteer(?:\s+(?:dit|het))?\s+als|"
             r"make(?:\s+it)?|(?:show|write)(?:\s+it)?\s+as)\s+"
-            + whole_pair + r"(?:van)?\s*[.!]?\s*",
+            + whole_pair + r"(?:van)?"
+            r"(?:\s+door\s+de\s+laatste\s+(?:lap|ronde|pauze)\s+te\s+verlengen\s+naar\s+\d+\s*(?:s|seconden|[\"″]))?"
+            r"\s*[.!]?\s*",
             message, re.I,
         )
     final_seconds = requested_final_lap_seconds(message)

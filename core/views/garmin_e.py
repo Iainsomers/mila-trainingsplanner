@@ -309,6 +309,19 @@ def garmin_type_e_ayc_view(request):
                 )
                 if is_alternative and confirmed and pending_transfer:
                     explicit_compact = state["pending"]["proposal"]
+                if is_alternative and not explicit_compact and not state.get("pending") and message and re.fullmatch(
+                    r"\s*(?:(?:ok|ja|zo|yes|okay)[,\s]+)*(?:(?:en\s+)?(?:nu\s+)?dat\s+(?:ook\s+)?als\s+preview|doe\s+dat|apply\s+(?:it|that)(?:\s+to\s+the\s+preview)?)\s*[.!]?\s*",
+                    message, re.I,
+                ):
+                    previous_message = next((
+                        entry["content"] for entry in reversed(state["history"])
+                        if entry["role"] == "user" and not entry.get("automatic")
+                    ), "")
+                    previous_alt = (state["part"].get("training_fields") or {}).get("alt", "")
+                    explicit_compact = (
+                        explicit_alternative_compact_proposal(facts, previous_message, previous_alt=previous_alt)
+                        or correct_alternative_final_lap(facts, previous_message, state["proposal"])
+                    )
                 if is_alternative and not explicit_compact and message:
                     transfer = re.search(
                         r"(?:pak|haal|neem|take|move)\s+(?:er\s+)?(\d+)\s*['′’]\s*(?:van|from)\b",
@@ -551,6 +564,8 @@ def garmin_type_e_ayc_view(request):
                 updated = candidate or deepcopy(state["part"])
                 updated.pop("e_history",None)
                 if not candidate and wants_update and not state.get("pending"):
+                    if not error and not final_recovery:
+                        reply = "The checked proposal is unchanged because the requested change did not produce a complete lap assignment."
                     reply += ("\n\nThe previous checked proposal is still available below."
                               if state["part"].get("e_usable") else
                               "\n\nThere is no usable checked proposal yet.")

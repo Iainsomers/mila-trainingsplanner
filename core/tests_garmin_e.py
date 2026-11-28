@@ -754,6 +754,30 @@ class GarminEValidationTests(SimpleTestCase):
 @override_settings(GARMIN_CLIENT_ID="test",GARMIN_CLIENT_SECRET="test",GARMIN_REDIRECT_URI="https://example.org/callback/")
 class GarminEEndpointTests(TestCase):
     @patch("core.views.garmin_e.ask_model")
+    def test_natural_final_lap_command_updates_the_checked_preview(self, model):
+        durations = [300] + [45, 15] * 38 + [45, 9]
+        self.record.distance_m = None
+        self.record.duration_s = sum(durations)
+        self.record.analysis_data = {
+            "activity_metrics": {"sport": "ELLIPTICAL", "average_hr": 140},
+            "laps": [{"elapsed_time": seconds, "avg_heart_rate": 140} for seconds in durations],
+        }
+        self.record.save()
+        for message in (
+            'maak er netjes 39*(45"z3-15"z1) van door de laatste lap te verlengen naar 15s',
+            "ok zo ja en nu dat ook als preview",
+        ):
+            with self.subTest(message=message):
+                response = self.chat(message)
+                self.assertEqual(response.status_code, 200)
+                preview = response.json()["results"][0]["parts"][0]
+                self.assertTrue(preview["e_usable"], preview.get("chat_reply"))
+                self.assertIn("39×(45s Z3 - 15s Z1)", preview["training_fields"]["alt"])
+                self.assertEqual(preview["watch_loads"][-1]["alt_laps"][-1]["seconds"], 9)
+                self.assertTrue(preview["e_validation"])
+        model.assert_not_called()
+
+    @patch("core.views.garmin_e.ask_model")
     def test_strength_activity_imports_only_into_strength(self, model):
         from core.models import TrainingSlot
         from core.strength import strength_duration_s
