@@ -329,6 +329,7 @@ def garmin_type_e_ayc_view(request):
                     explicit_compact = (
                         explicit_alternative_compact_proposal(facts, previous_message, previous_alt=previous_alt)
                         or correct_alternative_final_lap(facts, previous_message, state["proposal"])
+                        or explicit_alternative_compact_proposal(facts, "", previous_alt=previous_alt, retry_preview=True)
                     )
                 if is_alternative and not explicit_compact and message:
                     transfer = re.search(

@@ -777,6 +777,19 @@ class GarminEEndpointTests(TestCase):
                 self.assertIn("39×(45s Z3 - 15s Z1)", preview["training_fields"]["alt"])
                 self.assertEqual(preview["watch_loads"][-1]["alt_laps"][-1]["seconds"], 9)
                 self.assertTrue(preview["e_validation"])
+        from core.models import GarminEConversation
+        conversation = GarminEConversation.objects.get(athlete=self.athlete)
+        conversation.state["history"] = [
+            {"role": "user", "content": "je moet aanpassingen van minder dan 1% van de totale tijd gewoon accepteren"},
+            {"role": "assistant", "content": "The preview was unchanged."},
+        ]
+        conversation.state["part"]["training_fields"]["alt"] = (
+            "Elliptical 5' Z1 // Elliptical 38×(45s Z3 - 15s Z1) // Elliptical 45s Z3 // Elliptical 9s"
+        )
+        conversation.save(update_fields=["state"])
+        preview = self.chat("probeer nog eens").json()["results"][0]["parts"][0]
+        self.assertIn("39×(45s Z3 - 15s Z1)", preview["training_fields"]["alt"])
+        self.assertEqual(preview["watch_loads"][-1]["alt_laps"][-1]["seconds"], 9)
         model.assert_not_called()
 
     @patch("core.views.garmin_e.ask_model")

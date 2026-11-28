@@ -496,7 +496,7 @@ def correct_alternative_final_lap(facts, message, previous):
     return proposal
 
 
-def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0, previous_alt=""):
+def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0, previous_alt="", retry_preview=False):
     """Translate a user-written WU–repeated pair–optional tail–CD notation.
 
     This parses explicit intent, not a particular workout pattern. Every atom
@@ -551,12 +551,13 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
         r"laatste\s+(?:pauze|herstel(?:ronde)?|lap)|(?:last|final)\s+(?:pause|recovery|lap))\b",
         message, re.I,
     )
-    if not pair_only and (final_seconds is not None or end_rounding):
+    if not pair_only and (final_seconds is not None or end_rounding or retry_preview):
         prior_pairs = re.findall(pair_notation, previous_alt, re.I)
         if len(prior_pairs) == 1:
             prior_count, prior_pattern = prior_pairs[0]
             count = len(facts) // 2
-            if count in (int(prior_count), int(prior_count) + 1):
+            valid_counts = (int(prior_count) + 1,) if retry_preview else (int(prior_count), int(prior_count) + 1)
+            if count in valid_counts:
                 pair_only = re.fullmatch(whole_pair, f"{count}×({prior_pattern})", re.I)
     notation = re.search(
         r"\b(?:wu|warm[ -]?up)\b\s*[-–—/]\s*(\d+)\s*[×x*]\s*\(([^()]*)\)"
@@ -593,6 +594,8 @@ def explicit_alternative_compact_proposal(facts, message, *, cooldown_transfer=0
         if warmup not in (0, 1) or (pair_only[1] and warmup != 1):
             return None
         work, pause = pair
+        if retry_preview and facts[-1]["duration_s"] >= pause[0]:
+            return None
         if final_seconds is not None and final_seconds != pause[0]:
             return None
         if warmup and facts[0]["duration_s"] < 2 * max(work[0], pause[0]):
